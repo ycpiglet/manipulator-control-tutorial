@@ -7,6 +7,29 @@ from html import escape
 from pathlib import Path
 from typing import Any
 
+INDEX_METRIC_KEYS = (
+    "max_abs_position",
+    "overshoot_percent",
+    "settling_time",
+    "steady_state_error",
+    "max_control_effort",
+    "max_abs_tracking_error",
+    "final_tracking_error",
+    "max_abs_control_force",
+    "max_joint_error_norm",
+    "final_joint_error_norm",
+    "max_task_error_norm",
+    "final_task_error_norm",
+    "min_manipulability",
+    "max_jacobian_condition",
+    "max_abs_tau_cmd",
+    "max_cartesian_error_cm",
+    "final_cartesian_error_cm",
+    "max_wall_penetration_cm",
+    "max_wall_retreat_cm",
+    "max_abs_virtual_wall_force",
+)
+
 
 def write_run_report(output_path: str | Path) -> Path:
     output = Path(output_path)
@@ -198,12 +221,15 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
                 "duration": summary.get("duration", ""),
                 "report": f"{child.name}/report.html" if report_path.exists() else child.name,
                 "modified": modified,
+                "summary": summary,
             }
         )
     return sorted(runs, key=lambda run: float(run["modified"]), reverse=True)
 
 
 def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
+    metric_keys = _index_metric_keys(runs)
+    metric_headers = "".join(f"<th>{escape(_metric_label(key))}</th>" for key in metric_keys)
     rows = "\n".join(
         (
             "<tr>"
@@ -211,12 +237,16 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
             f"<td>{escape(str(run['lab_name']))}</td>"
             f"<td>{escape(_format_value(run['duration']))}</td>"
             f"<td>{escape(str(run['samples']))}</td>"
-            "</tr>"
+            + "".join(
+                f"<td>{escape(_format_value(run.get('summary', {}).get(key, '')))}</td>"
+                for key in metric_keys
+            )
+            + "</tr>"
         )
         for run in runs
     )
     if not rows:
-        rows = '<tr><td colspan="4">No run reports were found yet.</td></tr>'
+        rows = f'<tr><td colspan="{4 + len(metric_keys)}">No run reports were found yet.</td></tr>'
 
     return f"""<!doctype html>
 <html lang="en">
@@ -254,10 +284,14 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
       border-collapse: collapse;
       width: 100%;
     }}
+    .table-wrap {{
+      overflow-x: auto;
+    }}
     th, td {{
       border-bottom: 1px solid #edf0f3;
       padding: 9px 10px;
       text-align: left;
+      white-space: nowrap;
     }}
     th {{
       color: #3f4752;
@@ -273,15 +307,34 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
     <h1>MuJoCo Control Lab outputs</h1>
     <section>
       <p>Open a run report to inspect summary values, notes, plots, and saved artifacts.</p>
-      <table>
-        <thead><tr><th>Run</th><th>Lab</th><th>Duration [s]</th><th>Samples</th></tr></thead>
-        <tbody>{rows}</tbody>
-      </table>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Run</th><th>Lab</th><th>Duration [s]</th><th>Samples</th>{metric_headers}</tr></thead>
+          <tbody>{rows}</tbody>
+        </table>
+      </div>
     </section>
   </main>
 </body>
 </html>
 """
+
+
+def _index_metric_keys(runs: list[dict[str, Any]]) -> list[str]:
+    summaries = [run.get("summary", {}) for run in runs]
+    return [
+        key
+        for key in INDEX_METRIC_KEYS
+        if any(_has_display_value(summary.get(key)) for summary in summaries)
+    ]
+
+
+def _has_display_value(value: Any) -> bool:
+    return value is not None and value != ""
+
+
+def _metric_label(key: str) -> str:
+    return key.replace("_", " ")
 
 
 def _read_json(path: Path) -> dict[str, Any]:

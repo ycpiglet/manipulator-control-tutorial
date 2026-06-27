@@ -150,6 +150,19 @@ class LearnerMenuTests(unittest.TestCase):
 
             opener.assert_called_once_with(index)
 
+    def test_launch_outputs_index_creates_index_when_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            index = Path(tmp) / "outputs" / "index.html"
+
+            with (
+                patch("mclab.learner_menu.PROJECT_ROOT", Path(tmp)),
+                patch("mclab.learner_menu.open_path") as opener,
+            ):
+                launch_outputs_index()
+
+            self.assertTrue(index.exists())
+            opener.assert_called_once_with(index)
+
     def test_parse_run_output_path_detects_completed_run(self) -> None:
         parsed = parse_run_output_path(r"Run complete: C:\tmp\outputs\20260627_150117_lab04_panda")
 

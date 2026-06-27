@@ -11,6 +11,7 @@ from threading import Thread
 from typing import Any
 
 from mclab.config import PROJECT_ROOT
+from mclab.sim.reporting import write_outputs_index
 
 RUN_COMPLETE_PREFIX = "Run complete:"
 DOC_PATHS = {
@@ -431,9 +432,9 @@ def launch_outputs_folder() -> subprocess.Popen[Any] | None:
 def launch_outputs_index() -> subprocess.Popen[Any] | None:
     outputs = PROJECT_ROOT / "outputs"
     index = outputs / "index.html"
-    if index.exists():
-        return open_path(index)
-    return launch_outputs_folder()
+    if not index.exists():
+        write_outputs_index(outputs)
+    return open_path(index)
 
 
 def launch_latest_output(latest_output: dict[str, Path | None]) -> subprocess.Popen[Any] | None:

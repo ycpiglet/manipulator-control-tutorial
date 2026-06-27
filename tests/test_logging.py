@@ -72,7 +72,7 @@ class LoggingTests(unittest.TestCase):
             output = Path(temp_dir) / "20260627_150117_lab01_msd"
             (output / "plots").mkdir(parents=True)
             (output / "summary.json").write_text(
-                '{"lab_name": "lab01_msd", "samples": 10, "duration": 0.18}',
+                '{"lab_name": "lab01_msd", "samples": 10, "duration": 0.18, "max_abs_position": 0.24}',
                 encoding="utf-8",
             )
             (output / "notes.md").write_text("# Demo\n", encoding="utf-8")
@@ -84,6 +84,8 @@ class LoggingTests(unittest.TestCase):
             html = index.read_text(encoding="utf-8")
             self.assertIn("20260627_150117_lab01_msd/report.html", html)
             self.assertIn("lab01_msd", html)
+            self.assertIn("max abs position", html)
+            self.assertIn("0.24", html)
 
     def test_outputs_index_handles_empty_outputs_folder(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
