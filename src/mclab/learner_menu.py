@@ -47,6 +47,15 @@ class BatchMenuAction:
     watch: str
 
 
+@dataclass(frozen=True)
+class LearningPathStep:
+    title: str
+    action_kind: str
+    group: str
+    label: str
+    description: str
+
+
 BATCH_ACTIONS: tuple[BatchMenuAction, ...] = (
     BatchMenuAction(
         group="Comparison Batches",
@@ -87,6 +96,73 @@ BATCH_ACTIONS: tuple[BatchMenuAction, ...] = (
         description="Run soft and stiff Panda virtual wall cases.",
         try_this="Compare wall penetration, virtual force, retreat, and hand X motion.",
         watch="How wall stiffness and damping change the contact-like response.",
+    ),
+)
+
+
+LEARNING_PATH: tuple[LearningPathStep, ...] = (
+    LearningPathStep(
+        title="1. Feel 1D physics",
+        action_kind="run",
+        group="Lab01 Mass-Spring-Damper",
+        label="Auto demo",
+        description="Start with position, velocity, force, and energy.",
+    ),
+    LearningPathStep(
+        title="2. Disturb and tune",
+        action_kind="run",
+        group="Lab01 Mass-Spring-Damper",
+        label="Interactive",
+        description="Push the mass and tune mass, damping, and stiffness live.",
+    ),
+    LearningPathStep(
+        title="3. Close the loop",
+        action_kind="run",
+        group="Lab02 PID Control",
+        label="Auto demo",
+        description="Watch PID tracking, error, and control force.",
+    ),
+    LearningPathStep(
+        title="4. Tune PID live",
+        action_kind="run",
+        group="Lab02 PID Control",
+        label="Interactive",
+        description="Disturb the plant and tune target, Kp, Ki, Kd, and force limit.",
+    ),
+    LearningPathStep(
+        title="5. Move 2DOF joints",
+        action_kind="run",
+        group="Lab03 2DOF Arm and Trajectories",
+        label="2DOF joint-space",
+        description="Track shoulder and elbow targets on the two-link arm.",
+    ),
+    LearningPathStep(
+        title="6. Control the hand",
+        action_kind="run",
+        group="Lab03 2DOF Arm and Trajectories",
+        label="2DOF task-space",
+        description="Move the end-effector toward an XY target with the Jacobian.",
+    ),
+    LearningPathStep(
+        title="7. Hold Panda",
+        action_kind="run",
+        group="Lab04 Panda Manipulator",
+        label="Neutral hold",
+        description="Use a stable neutral pose as the full manipulator baseline.",
+    ),
+    LearningPathStep(
+        title="8. Touch virtual wall",
+        action_kind="run",
+        group="Lab04 Panda Manipulator",
+        label="Virtual wall",
+        description="Tune wall position, stiffness, damping, and retreat gain.",
+    ),
+    LearningPathStep(
+        title="9. Compare the course",
+        action_kind="batch",
+        group="Comparison Batches",
+        label="All compare",
+        description="Generate the full comparison report set across all labs.",
     ),
 )
 
@@ -497,6 +573,26 @@ def launch_batch_action(action: BatchMenuAction) -> subprocess.Popen[str]:
     )
 
 
+def learning_path_target(step: LearningPathStep) -> MenuAction | BatchMenuAction:
+    actions: tuple[MenuAction | BatchMenuAction, ...]
+    if step.action_kind == "run":
+        actions = MENU_ACTIONS
+    elif step.action_kind == "batch":
+        actions = BATCH_ACTIONS
+    else:
+        raise ValueError(f"Unknown learning path action kind: {step.action_kind}")
+
+    for action in actions:
+        if action.group == step.group and action.label == step.label:
+            return action
+    raise ValueError(f"Learning path target was not found: {step.group} - {step.label}")
+
+
+def learning_path_text(step: LearningPathStep) -> str:
+    action = learning_path_target(step)
+    return f"{step.description}\nRun: {action.group} - {action.label}\nWatch: {action.watch}"
+
+
 def parse_run_output_path(line: str) -> Path | None:
     stripped = line.strip()
     for prefix in COMPLETE_PREFIXES:
@@ -674,8 +770,8 @@ def main() -> int:
 
     root = tk.Tk()
     root.title("MuJoCo Control Lab")
-    root.geometry("980x720")
-    root.minsize(840, 600)
+    root.geometry("1120x820")
+    root.minsize(960, 700)
 
     outer = ttk.Frame(root, padding=16)
     outer.pack(fill="both", expand=True)
@@ -700,6 +796,30 @@ def main() -> int:
     ttk.Button(search_bar, text="Clear", command=lambda: search.set("")).pack(side="left")
     match_count = ttk.Label(search_bar)
     match_count.pack(side="left", padx=(12, 0))
+
+    path_frame = ttk.LabelFrame(outer, text="Recommended learning path", padding=10)
+    path_frame.pack(fill="x", pady=(0, 10))
+    for column_index in range(3):
+        path_frame.columnconfigure(column_index, weight=1)
+    for step_index, step in enumerate(LEARNING_PATH):
+        row_index, column_index = divmod(step_index, 3)
+        cell = ttk.Frame(path_frame)
+        cell.grid(row=row_index, column=column_index, sticky="ew", padx=(0, 12), pady=(0, 8))
+        ttk.Button(
+            cell,
+            text=step.title,
+            width=22,
+            command=lambda selected=step: _launch_learning_path_from_menu(
+                selected,
+                status,
+                root=root,
+                latest_output=latest_output,
+                latest_button=latest_button,
+            ),
+        ).pack(anchor="w")
+        ttk.Label(cell, text=learning_path_text(step), wraplength=280, justify="left").pack(
+            anchor="w", pady=(4, 0)
+        )
 
     batch_frame = ttk.LabelFrame(outer, text="Comparison batches", padding=10)
     batch_frame.pack(fill="x", pady=(0, 10))
@@ -802,6 +922,33 @@ def main() -> int:
 
     root.mainloop()
     return 0
+
+
+def _launch_learning_path_from_menu(
+    step: LearningPathStep,
+    status: Any,
+    *,
+    root: Any | None = None,
+    latest_output: dict[str, Path | None] | None = None,
+    latest_button: Any | None = None,
+) -> None:
+    action = learning_path_target(step)
+    if isinstance(action, BatchMenuAction):
+        _launch_batch_from_menu(
+            action,
+            status,
+            root=root,
+            latest_output=latest_output,
+            latest_button=latest_button,
+        )
+        return
+    _launch_from_menu(
+        action,
+        status,
+        root=root,
+        latest_output=latest_output,
+        latest_button=latest_button,
+    )
 
 
 def _launch_from_menu(

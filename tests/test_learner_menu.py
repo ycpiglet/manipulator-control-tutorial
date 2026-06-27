@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from mclab.config import load_config  # noqa: E402
 from mclab.learner_menu import (  # noqa: E402
     BATCH_ACTIONS,
+    LEARNING_PATH,
     MENU_ACTIONS,
     _set_status_after_run,
     action_config_path,
@@ -19,6 +20,8 @@ from mclab.learner_menu import (  # noqa: E402
     build_batch_args,
     build_run_args,
     filter_menu_actions,
+    learning_path_target,
+    learning_path_text,
     lesson_text_for_batch,
     lesson_text,
     launch_outputs_index,
@@ -107,6 +110,28 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertIn("Try:", text)
                 self.assertIn("Watch:", text)
                 self.assertIn("Runs:", text)
+
+    def test_recommended_learning_path_targets_real_actions(self) -> None:
+        self.assertGreaterEqual(len(LEARNING_PATH), 8)
+        self.assertEqual(LEARNING_PATH[0].title, "1. Feel 1D physics")
+        self.assertEqual(LEARNING_PATH[-1].label, "All compare")
+
+        for step in LEARNING_PATH:
+            with self.subTest(step=step.title):
+                action = learning_path_target(step)
+                text = learning_path_text(step)
+                self.assertIn("Run:", text)
+                self.assertIn("Watch:", text)
+                if step.action_kind == "run":
+                    self.assertIn(action, MENU_ACTIONS)
+                    args = build_run_args(action)
+                    self.assertIn("--open-report", args)
+                    self.assertIn("--viewer", args)
+                else:
+                    self.assertIn(action, BATCH_ACTIONS)
+                    args = build_batch_args(action)
+                    self.assertIn("--open-report", args)
+                    self.assertNotIn("--viewer", args)
 
     def test_menu_actions_have_valid_guided_lesson_cards(self) -> None:
         for action in MENU_ACTIONS:

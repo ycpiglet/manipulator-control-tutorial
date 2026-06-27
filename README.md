@@ -149,6 +149,20 @@ Windows PowerShell에서 가장 쉬운 방법:
 | Lab03 | 2DOF joint-space, 2DOF task-space, singularity, interactive XY target tuning, step/trapezoidal/minimum-jerk/S-curve profiles |
 | Lab04 | neutral hold, joint trajectories, hand X motion, Cartesian reach, soft/stiff virtual wall, joint target nudge, virtual wall |
 
+처음 학습자는 메뉴 상단의 `Recommended learning path`를 순서대로 따라가면 됩니다.
+
+| Step | Menu button | What it builds |
+|---|---|---|
+| 1 | `Feel 1D physics` | mass-spring-damper의 위치, 속도, 힘, 에너지 |
+| 2 | `Disturb and tune` | 외란과 mass/damping/stiffness live tuning |
+| 3 | `Close the loop` | PID tracking, error, control force |
+| 4 | `Tune PID live` | target/Kp/Ki/Kd/force limit 조정 |
+| 5 | `Move 2DOF joints` | 2DOF joint-space tracking |
+| 6 | `Control the hand` | Jacobian 기반 task-space hand control |
+| 7 | `Hold Panda` | 7DOF Panda neutral hold baseline |
+| 8 | `Touch virtual wall` | virtual wall stiffness/damping 체험 |
+| 9 | `Compare the course` | 모든 batch 비교 리포트 생성 |
+
 개별 랩을 바로 실행하고 싶으면:
 
 ```powershell
@@ -468,6 +482,20 @@ Main comparison scenarios in the menu:
 | Lab02 | low/high P gain, PD damping, saturation, windup vs anti-windup, sensor noise, control delay, interactive disturbance |
 | Lab03 | 2DOF joint-space, 2DOF task-space, singularity, interactive XY target tuning, step/trapezoidal/minimum-jerk/S-curve profiles |
 | Lab04 | neutral hold, joint trajectories, hand X motion, Cartesian reach, soft/stiff virtual wall, joint target nudge, virtual wall |
+
+First-time learners can follow the `Recommended learning path` at the top of the menu.
+
+| Step | Menu button | What it builds |
+|---|---|---|
+| 1 | `Feel 1D physics` | mass-spring-damper position, velocity, force, and energy |
+| 2 | `Disturb and tune` | disturbance plus live mass/damping/stiffness tuning |
+| 3 | `Close the loop` | PID tracking, error, and control force |
+| 4 | `Tune PID live` | target/Kp/Ki/Kd/force limit tuning |
+| 5 | `Move 2DOF joints` | 2DOF joint-space tracking |
+| 6 | `Control the hand` | Jacobian-based task-space hand control |
+| 7 | `Hold Panda` | 7DOF Panda neutral-hold baseline |
+| 8 | `Touch virtual wall` | virtual wall stiffness/damping behavior |
+| 9 | `Compare the course` | full batch comparison report set |
 
 To launch individual labs directly:
 
