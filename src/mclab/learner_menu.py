@@ -64,6 +64,9 @@ class LearningPathProgress:
     latest_output: Path | None = None
 
 
+LearningPathProgressItem = tuple[LearningPathStep, LearningPathProgress]
+
+
 BATCH_ACTIONS: tuple[BatchMenuAction, ...] = (
     BatchMenuAction(
         group="Comparison Batches",
@@ -624,6 +627,34 @@ def learning_path_progress_text(
     return f"{learning_path_text(step)}\n{status}"
 
 
+def learning_path_progress_items(
+    outputs_root: Path | None = None,
+) -> tuple[LearningPathProgressItem, ...]:
+    return tuple((step, learning_path_progress(step, outputs_root)) for step in LEARNING_PATH)
+
+
+def next_learning_path_step(
+    progress_items: tuple[LearningPathProgressItem, ...] | None = None,
+) -> LearningPathStep | None:
+    items = progress_items if progress_items is not None else learning_path_progress_items()
+    for step, progress in items:
+        if not progress.completed:
+            return step
+    return None
+
+
+def learning_path_summary_text(
+    progress_items: tuple[LearningPathProgressItem, ...] | None = None,
+) -> str:
+    items = progress_items if progress_items is not None else learning_path_progress_items()
+    total = len(items)
+    completed = sum(1 for _step, progress in items if progress.completed)
+    next_step = next_learning_path_step(items)
+    if next_step is None:
+        return f"Progress: {completed}/{total} complete. Course path complete - open All reports to review."
+    return f"Progress: {completed}/{total} complete. Next: {next_step.title} - {next_step.description}"
+
+
 def _latest_matching_output(action: MenuAction | BatchMenuAction, outputs_root: Path) -> Path | None:
     if not outputs_root.exists():
         return None
@@ -880,10 +911,37 @@ def main() -> int:
     latest_output: dict[str, Path | None] = {"path": None}
     search = tk.StringVar(value="")
     path_status_vars: list[tuple[LearningPathStep, Any]] = []
+    path_summary = tk.StringVar(value=learning_path_summary_text())
+    next_step_ref: dict[str, LearningPathStep | None] = {"step": next_learning_path_step()}
+    next_button_ref: dict[str, Any | None] = {"button": None}
 
     def refresh_learning_path_progress() -> None:
+        progress_items: list[LearningPathProgressItem] = []
         for step, variable in path_status_vars:
-            variable.set(learning_path_progress_text(step))
+            progress = learning_path_progress(step)
+            progress_items.append((step, progress))
+            variable.set(learning_path_progress_text(step, progress))
+        items = tuple(progress_items) if progress_items else learning_path_progress_items()
+        next_step = next_learning_path_step(items)
+        next_step_ref["step"] = next_step
+        path_summary.set(learning_path_summary_text(items))
+        next_button = next_button_ref["button"]
+        if next_button is not None:
+            next_button.state(["disabled"] if next_step is None else ["!disabled"])
+
+    def launch_next_learning_path_step() -> None:
+        step = next_step_ref["step"]
+        if step is None:
+            status.set("Learning path is complete. Open all reports to review the saved runs.")
+            return
+        _launch_learning_path_from_menu(
+            step,
+            status,
+            root=root,
+            latest_output=latest_output,
+            latest_button=latest_button,
+            progress_callback=refresh_learning_path_progress,
+        )
 
     search_bar = ttk.Frame(outer)
     search_bar.pack(fill="x", pady=(0, 10))
@@ -898,10 +956,19 @@ def main() -> int:
     path_frame.pack(fill="x", pady=(0, 10))
     for column_index in range(3):
         path_frame.columnconfigure(column_index, weight=1)
+    path_header = ttk.Frame(path_frame)
+    path_header.grid(row=0, column=0, columnspan=3, sticky="ew", pady=(0, 8))
+    path_header.columnconfigure(0, weight=1)
+    ttk.Label(path_header, textvariable=path_summary, wraplength=760, justify="left").grid(
+        row=0, column=0, sticky="w"
+    )
+    next_button = ttk.Button(path_header, text="Run next", command=launch_next_learning_path_step)
+    next_button.grid(row=0, column=1, sticky="e", padx=(12, 0))
+    next_button_ref["button"] = next_button
     for step_index, step in enumerate(LEARNING_PATH):
         row_index, column_index = divmod(step_index, 3)
         cell = ttk.Frame(path_frame)
-        cell.grid(row=row_index, column=column_index, sticky="ew", padx=(0, 12), pady=(0, 8))
+        cell.grid(row=row_index + 1, column=column_index, sticky="ew", padx=(0, 12), pady=(0, 8))
         progress_text = tk.StringVar(value=learning_path_progress_text(step))
         path_status_vars.append((step, progress_text))
         ttk.Button(
@@ -920,6 +987,7 @@ def main() -> int:
         ttk.Label(cell, textvariable=progress_text, wraplength=280, justify="left").pack(
             anchor="w", pady=(4, 0)
         )
+    refresh_learning_path_progress()
 
     batch_frame = ttk.LabelFrame(outer, text="Comparison batches", padding=10)
     batch_frame.pack(fill="x", pady=(0, 10))

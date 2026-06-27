@@ -14,6 +14,7 @@ from mclab.config import load_config  # noqa: E402
 from mclab.learner_menu import (  # noqa: E402
     BATCH_ACTIONS,
     LEARNING_PATH,
+    LearningPathProgress,
     MENU_ACTIONS,
     _set_status_after_run,
     action_config_path,
@@ -21,14 +22,17 @@ from mclab.learner_menu import (  # noqa: E402
     build_batch_args,
     build_run_args,
     filter_menu_actions,
+    learning_path_progress_items,
     learning_path_progress,
     learning_path_progress_text,
+    learning_path_summary_text,
     learning_path_target,
     learning_path_text,
     lesson_text_for_batch,
     lesson_text,
     launch_outputs_index,
     launch_latest_output,
+    next_learning_path_step,
     open_editable_path,
     parameter_hint,
     parse_run_output_path,
@@ -166,6 +170,7 @@ class LearnerMenuTests(unittest.TestCase):
             first_progress = learning_path_progress(first_step, outputs)
             last_progress = learning_path_progress(last_step, outputs)
             second_progress = learning_path_progress(LEARNING_PATH[1], outputs)
+            progress_items = learning_path_progress_items(outputs)
 
         self.assertTrue(first_progress.completed)
         self.assertEqual(first_progress.latest_output.name, "run_lab01")
@@ -174,6 +179,19 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(last_progress.latest_output.name, "all_batches")
         self.assertFalse(second_progress.completed)
         self.assertIn("Status: Not run yet", learning_path_progress_text(LEARNING_PATH[1], second_progress))
+        self.assertEqual(next_learning_path_step(progress_items), LEARNING_PATH[1])
+        self.assertIn("Progress: 2/9 complete", learning_path_summary_text(progress_items))
+        self.assertIn("Next: 2. Disturb and tune", learning_path_summary_text(progress_items))
+
+    def test_recommended_learning_path_summary_detects_completion(self) -> None:
+        progress_items = tuple(
+            (step, LearningPathProgress(completed=True, latest_output=Path(f"run_{index}")))
+            for index, step in enumerate(LEARNING_PATH, start=1)
+        )
+
+        self.assertIsNone(next_learning_path_step(progress_items))
+        self.assertIn("Progress: 9/9 complete", learning_path_summary_text(progress_items))
+        self.assertIn("Course path complete", learning_path_summary_text(progress_items))
 
     def test_menu_actions_have_valid_guided_lesson_cards(self) -> None:
         for action in MENU_ACTIONS:
