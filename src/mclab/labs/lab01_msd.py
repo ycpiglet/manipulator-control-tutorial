@@ -8,6 +8,7 @@ from typing import Any
 from mclab.config import resolve_project_path
 from mclab.learning_guides import guide_for_config
 from mclab.sim.interaction import (
+    InteractionLog,
     KeyForcePulse,
     LiveStatus,
     LiveTuning,
@@ -56,9 +57,10 @@ def run(
     force_config = config.get("force_input", config.get("external_force", 0.0))
     damping = float(config.get("damping", 0.0))
 
-    key_force = KeyForcePulse(config)
+    interaction_log = InteractionLog()
+    key_force = KeyForcePulse(config, event_log=interaction_log)
     run_guide = guide_for_config(config_path=str(config_path or ""), lab_name=lab_name)
-    live_tuning = _live_tuning(config)
+    live_tuning = _live_tuning(config, interaction_log)
     live_status = LiveStatus(
         [
             StatusSpec("position", "Position [m]"),
@@ -94,6 +96,7 @@ def run(
         while data.time < sim_time:
             if not viewer_is_running(viewer_handle):
                 break
+            interaction_log.set_time(float(data.time))
             mass = live_tuning.value("mass", mass)
             damping = live_tuning.value("damping", damping)
             stiffness = live_tuning.value("stiffness", stiffness)
@@ -151,14 +154,19 @@ def run(
                 pause_viewer_at_end(viewer_handle, enabled=pause_at_end)
             viewer_handle.close()
 
-    summary = _summary(logger.rows)
-    output_path = logger.save(summary=summary, notes=_notes(config))
+    summary = {**_summary(logger.rows), **interaction_log.summary()}
+    events = interaction_log.events()
+    output_path = logger.save_with_artifacts(
+        summary=summary,
+        notes=_notes(config),
+        interaction_events=events if events else None,
+    )
     if plot:
         _save_plots(output_path, logger.rows, plot_selection or config.get("plots"))
     return resolve_project_path(output_path)
 
 
-def _live_tuning(config: dict[str, Any]) -> LiveTuning:
+def _live_tuning(config: dict[str, Any], interaction_log: InteractionLog | None = None) -> LiveTuning:
     interaction = dict(config.get("interaction", {}))
     if not bool(interaction.get("live_tuning", False)):
         return LiveTuning([])
@@ -167,7 +175,8 @@ def _live_tuning(config: dict[str, Any]) -> LiveTuning:
             SliderSpec("mass", "Mass [kg]", 0.2, 5.0, float(config.get("mass", 1.0)), 0.1),
             SliderSpec("damping", "Damping [N s/m]", 0.0, 12.0, float(config.get("damping", 0.0)), 0.1),
             SliderSpec("stiffness", "Stiffness [N/m]", 0.0, 120.0, float(config.get("stiffness", 0.0)), 1.0),
-        ]
+        ],
+        event_log=interaction_log,
     )
 
 

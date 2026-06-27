@@ -57,11 +57,21 @@ class RunLogger:
         self.rows.append(_flatten_mapping(row))
 
     def save(self, summary: Mapping[str, Any] | None = None, notes: str = "") -> Path:
+        return self.save_with_artifacts(summary=summary, notes=notes)
+
+    def save_with_artifacts(
+        self,
+        summary: Mapping[str, Any] | None = None,
+        notes: str = "",
+        *,
+        interaction_events: list[Mapping[str, Any]] | None = None,
+    ) -> Path:
         self._save_config_snapshot()
         self._save_csv()
         self._save_states()
         self._save_summary(summary or {})
         self._save_notes(notes)
+        self._save_interaction_events(interaction_events)
         write_run_report(self.output_path)
         return self.output_path
 
@@ -136,6 +146,14 @@ class RunLogger:
     def _save_notes(self, notes: str) -> None:
         content = notes.strip() + "\n" if notes.strip() else f"# {self.lab_name}\n"
         (self.output_path / "notes.md").write_text(content, encoding="utf-8")
+
+    def _save_interaction_events(self, events: list[Mapping[str, Any]] | None) -> None:
+        if events is None:
+            return
+        (self.output_path / "interaction_events.json").write_text(
+            json.dumps(list(events), indent=2),
+            encoding="utf-8",
+        )
 
 
 def _flatten_mapping(row: Mapping[str, Any]) -> dict[str, Any]:

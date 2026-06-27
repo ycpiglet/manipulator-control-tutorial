@@ -28,11 +28,55 @@ class StatusSpec:
     label: str
 
 
+class InteractionLog:
+    """Thread-safe record of learner actions during an interactive run."""
+
+    def __init__(self, max_events: int = 500) -> None:
+        self.max_events = max(1, int(max_events))
+        self._events: list[dict[str, Any]] = []
+        self._current_time: float | None = None
+        self._lock = Lock()
+
+    def set_time(self, time: float) -> None:
+        with self._lock:
+            self._current_time = float(time)
+
+    def record(self, kind: str, name: str, value: Any = None, *, label: str = "") -> None:
+        with self._lock:
+            event = {
+                "time": self._current_time,
+                "kind": str(kind),
+                "name": str(name),
+                "label": str(label or name),
+                "value": _event_value(value),
+            }
+            self._events.append(event)
+            if len(self._events) > self.max_events:
+                self._events = self._events[-self.max_events :]
+
+    def events(self) -> list[dict[str, Any]]:
+        with self._lock:
+            return [dict(event) for event in self._events]
+
+    def summary(self) -> dict[str, Any]:
+        events = self.events()
+        if not events:
+            return {}
+        last_time = events[-1].get("time")
+        return {
+            "interaction_events": len(events),
+            "last_interaction_time": last_time,
+            "last_interaction": events[-1].get("label") or events[-1].get("name"),
+        }
+
+
 class LiveTuning:
-    def __init__(self, specs: list[SliderSpec]) -> None:
+    def __init__(self, specs: list[SliderSpec], event_log: InteractionLog | None = None) -> None:
         self.specs = specs
         self.enabled = bool(specs)
         self._values = {spec.name: float(spec.initial) for spec in specs}
+        self._specs = {spec.name: spec for spec in specs}
+        self._event_log = event_log
         self._lock = Lock()
 
     def value(self, name: str, default: float) -> float:
@@ -40,9 +84,21 @@ class LiveTuning:
             return float(self._values.get(name, default))
 
     def set_value(self, name: str, value: float) -> None:
+        should_record = False
+        number = float(value)
+        spec = self._specs.get(name)
         with self._lock:
             if name in self._values:
-                self._values[name] = float(value)
+                old_value = self._values[name]
+                self._values[name] = number
+                should_record = abs(old_value - number) > 1e-12
+        if should_record and self._event_log is not None:
+            self._event_log.record(
+                "slider",
+                name,
+                number,
+                label=spec.label if spec is not None else name,
+            )
 
 
 class LiveStatus:
@@ -70,7 +126,7 @@ class KeyForcePulse:
     A/D and left/right arrow keys so the interaction works on common keyboards.
     """
 
-    def __init__(self, config: dict[str, Any]) -> None:
+    def __init__(self, config: dict[str, Any], event_log: InteractionLog | None = None) -> None:
         interaction = dict(config.get("interaction", {}))
         self.enabled = bool(interaction.get("key_force", False))
         self.magnitude = float(interaction.get("force", 25.0))
@@ -82,6 +138,7 @@ class KeyForcePulse:
         self._value = 0.0
         self._until = -1.0
         self._time = 0.0
+        self._event_log = event_log
         self._lock = Lock()
 
     def update_time(self, time: float) -> None:
@@ -98,11 +155,11 @@ class KeyForcePulse:
 
     def trigger_left(self) -> None:
         if self.enabled:
-            self._start_pulse(-self.magnitude)
+            self._start_pulse(-self.magnitude, self.left_label)
 
     def trigger_right(self) -> None:
         if self.enabled:
-            self._start_pulse(self.magnitude)
+            self._start_pulse(self.magnitude, self.right_label)
 
     def value(self, time: float) -> float:
         if not self.enabled:
@@ -112,14 +169,16 @@ class KeyForcePulse:
                 return self._value
             return 0.0
 
-    def _start_pulse(self, value: float) -> None:
+    def _start_pulse(self, value: float, label: str) -> None:
         with self._lock:
             self._value = value
             self._until = self._time + self.duration
+        if self._event_log is not None:
+            self._event_log.record("button", "manual_force", value, label=label)
 
 
 class TargetOffsetControl:
-    def __init__(self, config: dict[str, Any]) -> None:
+    def __init__(self, config: dict[str, Any], event_log: InteractionLog | None = None) -> None:
         interaction = dict(config.get("interaction", {}))
         self.enabled = bool(interaction.get("target_nudge", False))
         self.panel_enabled = bool(interaction.get("panel", False))
@@ -129,6 +188,7 @@ class TargetOffsetControl:
         self.right_label = "Joint Target +  D / Right"
         self.panel_description = f"Target offset step: {self.step:g} rad, limit: +/-{self.limit:g} rad"
         self._offset = 0.0
+        self._event_log = event_log
         self._lock = Lock()
 
     def key_callback(self, key: int) -> None:
@@ -156,6 +216,10 @@ class TargetOffsetControl:
     def _add_offset(self, delta: float) -> None:
         with self._lock:
             self._offset = max(-self.limit, min(self.limit, self._offset + delta))
+            offset = self._offset
+        if self._event_log is not None:
+            label = self.left_label if delta < 0.0 else self.right_label
+            self._event_log.record("button", "joint_target_offset", offset, label=label)
 
 
 class InteractionPanel:
@@ -320,3 +384,12 @@ def _format_status_value(value: Any) -> str:
     except (TypeError, ValueError):
         return str(value)
     return f"{number:.3f}"
+
+
+def _event_value(value: Any) -> Any:
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return str(value)

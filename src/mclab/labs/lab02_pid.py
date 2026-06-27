@@ -12,6 +12,7 @@ from mclab.config import resolve_project_path
 from mclab.controllers.pid import PIDController
 from mclab.learning_guides import guide_for_config
 from mclab.sim.interaction import (
+    InteractionLog,
     KeyForcePulse,
     LiveStatus,
     LiveTuning,
@@ -77,9 +78,10 @@ def run(
     delay_steps = max(0, int(round(float(config.get("control_delay", 0.0)) / dt)))
     delay_buffer: deque[float] = deque([0.0] * delay_steps, maxlen=delay_steps)
 
-    key_force = KeyForcePulse(config)
+    interaction_log = InteractionLog()
+    key_force = KeyForcePulse(config, event_log=interaction_log)
     run_guide = guide_for_config(config_path=str(config_path or ""), lab_name=lab_name)
-    live_tuning = _live_tuning(config, pid_config, output_limit_value)
+    live_tuning = _live_tuning(config, pid_config, output_limit_value, interaction_log)
     live_status = LiveStatus(
         [
             StatusSpec("target", "Target [m]"),
@@ -115,6 +117,7 @@ def run(
         while data.time < sim_time:
             if not viewer_is_running(viewer_handle):
                 break
+            interaction_log.set_time(float(data.time))
             key_force.update_time(float(data.time))
             position, velocity, _ = slider_state(data, handles)
             measured_position = position + (random.gauss(0.0, noise_std) if noise_std > 0.0 else 0.0)
@@ -191,14 +194,24 @@ def run(
                 pause_viewer_at_end(viewer_handle, enabled=pause_at_end)
             viewer_handle.close()
 
-    summary = {**step_response_metrics(logger.rows), **_summary(logger.rows, config)}
-    output_path = logger.save(summary=summary, notes=_notes(config))
+    summary = {**step_response_metrics(logger.rows), **_summary(logger.rows, config), **interaction_log.summary()}
+    events = interaction_log.events()
+    output_path = logger.save_with_artifacts(
+        summary=summary,
+        notes=_notes(config),
+        interaction_events=events if events else None,
+    )
     if plot:
         _save_plots(output_path, logger.rows, plot_selection or config.get("plots"))
     return resolve_project_path(output_path)
 
 
-def _live_tuning(config: dict[str, Any], pid_config: dict[str, Any], output_limit: float) -> LiveTuning:
+def _live_tuning(
+    config: dict[str, Any],
+    pid_config: dict[str, Any],
+    output_limit: float,
+    interaction_log: InteractionLog | None = None,
+) -> LiveTuning:
     interaction = dict(config.get("interaction", {}))
     if not bool(interaction.get("live_tuning", False)):
         return LiveTuning([])
@@ -210,7 +223,8 @@ def _live_tuning(config: dict[str, Any], pid_config: dict[str, Any], output_limi
             SliderSpec("ki", "Ki", 0.0, 20.0, float(pid_config.get("ki", 0.0)), 0.1),
             SliderSpec("kd", "Kd", 0.0, 40.0, float(pid_config.get("kd", 4.0)), 0.5),
             SliderSpec("output_limit", "Force limit [N]", 5.0, 200.0, output_limit, 1.0),
-        ]
+        ],
+        event_log=interaction_log,
     )
 
 

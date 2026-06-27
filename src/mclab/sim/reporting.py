@@ -33,6 +33,7 @@ INDEX_METRIC_KEYS = (
     "max_wall_penetration_cm",
     "max_wall_retreat_cm",
     "max_abs_virtual_wall_force",
+    "interaction_events",
 )
 
 
@@ -42,8 +43,9 @@ def write_run_report(output_path: str | Path) -> Path:
     summary = _read_json(output / "summary.json")
     notes = _read_text(output / "notes.md")
     plots = sorted((output / "plots").glob("*.png"))
+    interaction_events = _read_json_list(output / "interaction_events.json")
 
-    html = _render_report(output, summary, notes, plots)
+    html = _render_report(output, summary, notes, plots, interaction_events)
     report_path = output / "report.html"
     report_path.write_text(html, encoding="utf-8")
     write_outputs_index(output.parent)
@@ -59,9 +61,16 @@ def write_outputs_index(outputs_root: str | Path) -> Path:
     return index_path
 
 
-def _render_report(output: Path, summary: dict[str, Any], notes: str, plots: list[Path]) -> str:
+def _render_report(
+    output: Path,
+    summary: dict[str, Any],
+    notes: str,
+    plots: list[Path],
+    interaction_events: list[dict[str, Any]],
+) -> str:
     title = _report_title(output, summary)
     learning_guide = _learning_guide_section(guide_for_run_summary(summary))
+    interaction_section = _interaction_section(interaction_events)
     rows = "\n".join(
         f"<tr><th>{escape(str(key))}</th><td>{escape(_format_value(value))}</td></tr>"
         for key, value in summary.items()
@@ -83,7 +92,14 @@ def _render_report(output: Path, summary: dict[str, Any], notes: str, plots: lis
 
     file_links = "\n".join(
         f'<li><a href="{escape(name)}">{escape(name)}</a></li>'
-        for name in ("config.yaml", "summary.json", "notes.md", "log.csv", "states.npz")
+        for name in (
+            "config.yaml",
+            "summary.json",
+            "notes.md",
+            "log.csv",
+            "states.npz",
+            "interaction_events.json",
+        )
         if (output / name).exists()
     )
     if not file_links:
@@ -203,6 +219,7 @@ def _render_report(output: Path, summary: dict[str, Any], notes: str, plots: lis
   <main>
     <h1>{escape(title)} report</h1>
     {learning_guide}
+    {interaction_section}
     <section>
       <h2>Summary</h2>
       <table>{rows}</table>
@@ -250,6 +267,39 @@ def _learning_guide_section(guide: RunGuide | None) -> str:
         '<div class="guide-grid">'
         f"{body}"
         "</div>"
+        "</section>"
+    )
+
+
+def _interaction_section(events: list[dict[str, Any]]) -> str:
+    if not events:
+        return ""
+    shown_events = events[-20:]
+    rows = "\n".join(
+        (
+            "<tr>"
+            f"<td>{escape(_format_value(event.get('time')))}</td>"
+            f"<td>{escape(str(event.get('kind', '')))}</td>"
+            f"<td>{escape(str(event.get('label') or event.get('name') or ''))}</td>"
+            f"<td>{escape(str(event.get('name', '')))}</td>"
+            f"<td>{escape(_format_value(event.get('value')))}</td>"
+            "</tr>"
+        )
+        for event in shown_events
+    )
+    count_text = (
+        f"Showing the latest {len(shown_events)} of {len(events)} learner actions."
+        if len(events) > len(shown_events)
+        else f"{len(events)} learner action{'s' if len(events) != 1 else ''} recorded."
+    )
+    return (
+        "<section>"
+        "<h2>Interaction Log</h2>"
+        f'<p class="empty">{escape(count_text)}</p>'
+        "<table>"
+        "<thead><tr><th>Time [s]</th><th>Type</th><th>Control</th><th>Name</th><th>Value</th></tr></thead>"
+        f"<tbody>{rows}</tbody>"
+        "</table>"
         "</section>"
     )
 
@@ -494,6 +544,18 @@ def _read_json(path: Path) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return payload if isinstance(payload, dict) else {}
+
+
+def _read_json_list(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(payload, list):
+        return []
+    return [item for item in payload if isinstance(item, dict)]
 
 
 def _read_text(path: Path) -> str:

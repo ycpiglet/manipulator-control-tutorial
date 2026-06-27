@@ -8,6 +8,7 @@ from typing import Any
 from mclab.config import resolve_project_path
 from mclab.learning_guides import guide_for_config
 from mclab.sim.interaction import (
+    InteractionLog,
     KeyForcePulse,
     LiveStatus,
     LiveTuning,
@@ -115,9 +116,10 @@ def _run_slider_trajectory(
     force_limit_value = max(abs(limit) for limit in (lower_limit, upper_limit) if limit is not None) if force_limit else 200.0
     kt = float(config.get("torque_constant", 1.0))
 
-    key_force = KeyForcePulse(config)
+    interaction_log = InteractionLog()
+    key_force = KeyForcePulse(config, event_log=interaction_log)
     run_guide = guide_for_config(config_path=str(config_path or ""), lab_name=lab_name)
-    live_tuning = _live_tuning(config, controller_config, force_limit_value)
+    live_tuning = _live_tuning(config, controller_config, force_limit_value, interaction_log)
     live_status = LiveStatus(
         [
             StatusSpec("target", "Target [m]"),
@@ -153,6 +155,7 @@ def _run_slider_trajectory(
         while data.time < sim_time:
             if not viewer_is_running(viewer_handle):
                 break
+            interaction_log.set_time(float(data.time))
             key_force.update_time(float(data.time))
             position, velocity, _ = slider_state(data, handles)
             target = trajectory.evaluate(float(data.time))
@@ -212,8 +215,13 @@ def _run_slider_trajectory(
                 pause_viewer_at_end(viewer_handle, enabled=pause_at_end)
             viewer_handle.close()
 
-    summary = _summary(logger.rows)
-    output_path = logger.save(summary=summary, notes=_notes(config))
+    summary = {**_summary(logger.rows), **interaction_log.summary()}
+    events = interaction_log.events()
+    output_path = logger.save_with_artifacts(
+        summary=summary,
+        notes=_notes(config),
+        interaction_events=events if events else None,
+    )
     if plot:
         _save_plots(output_path, logger.rows, plot_selection or config.get("plots"))
     return resolve_project_path(output_path)
@@ -259,9 +267,10 @@ def _run_two_link_arm(
     start_xy = forward_kinematics(initial_q, geometry)
     target_xy_goal = _pair(config.get("target_xy", start_xy), "target_xy")
 
-    panel_control = KeyForcePulse(config)
+    interaction_log = InteractionLog()
+    panel_control = KeyForcePulse(config, event_log=interaction_log)
     run_guide = guide_for_config(config_path=str(config_path or ""), lab_name=lab_name)
-    live_tuning = _two_link_live_tuning(config, mode, controller_config, torque_limit, target_xy_goal)
+    live_tuning = _two_link_live_tuning(config, mode, controller_config, torque_limit, target_xy_goal, interaction_log)
     live_status = LiveStatus(
         [
             StatusSpec("q1", "q1 [rad]"),
@@ -301,6 +310,7 @@ def _run_two_link_arm(
         while data.time < sim_time:
             if not viewer_is_running(viewer_handle):
                 break
+            interaction_log.set_time(float(data.time))
 
             q, qdot = _two_link_state(data, handles)
             target = trajectory.evaluate(float(data.time))
@@ -403,14 +413,24 @@ def _run_two_link_arm(
                 pause_viewer_at_end(viewer_handle, enabled=pause_at_end)
             viewer_handle.close()
 
-    summary = _two_link_summary(logger.rows)
-    output_path = logger.save(summary=summary, notes=_two_link_notes(config))
+    summary = {**_two_link_summary(logger.rows), **interaction_log.summary()}
+    events = interaction_log.events()
+    output_path = logger.save_with_artifacts(
+        summary=summary,
+        notes=_two_link_notes(config),
+        interaction_events=events if events else None,
+    )
     if plot:
         _save_two_link_plots(output_path, logger.rows, plot_selection or config.get("plots"))
     return resolve_project_path(output_path)
 
 
-def _live_tuning(config: dict[str, Any], controller_config: dict[str, Any], force_limit: float) -> LiveTuning:
+def _live_tuning(
+    config: dict[str, Any],
+    controller_config: dict[str, Any],
+    force_limit: float,
+    interaction_log: InteractionLog | None = None,
+) -> LiveTuning:
     interaction = dict(config.get("interaction", {}))
     if not bool(interaction.get("live_tuning", False)):
         return LiveTuning([])
@@ -420,7 +440,8 @@ def _live_tuning(config: dict[str, Any], controller_config: dict[str, Any], forc
             SliderSpec("kp", "Tracking Kp", 0.0, 250.0, float(controller_config.get("kp", 120.0)), 1.0),
             SliderSpec("kd", "Tracking Kd", 0.0, 60.0, float(controller_config.get("kd", 18.0)), 0.5),
             SliderSpec("force_limit", "Force limit [N]", 10.0, 250.0, force_limit, 1.0),
-        ]
+        ],
+        event_log=interaction_log,
     )
 
 
@@ -430,6 +451,7 @@ def _two_link_live_tuning(
     controller_config: dict[str, Any],
     torque_limit: tuple[float, float],
     target_xy: tuple[float, float],
+    interaction_log: InteractionLog | None = None,
 ) -> LiveTuning:
     interaction = dict(config.get("interaction", {}))
     if not bool(interaction.get("live_tuning", False)):
@@ -442,7 +464,8 @@ def _two_link_live_tuning(
                 SliderSpec("task_kp", "Task stiffness", 5.0, 180.0, float(controller_config.get("task_kp", 90.0)), 1.0),
                 SliderSpec("task_kd", "Task damping", 0.0, 45.0, float(controller_config.get("task_kd", 16.0)), 0.5),
                 SliderSpec("torque_limit", "Torque limit [N m]", 5.0, 80.0, max(torque_limit), 1.0),
-            ]
+            ],
+            event_log=interaction_log,
         )
     return LiveTuning(
         [
@@ -451,7 +474,8 @@ def _two_link_live_tuning(
             SliderSpec("joint_kp", "Joint Kp scale", 0.2, 2.0, 1.0, 0.05),
             SliderSpec("joint_kd", "Joint Kd scale", 0.2, 2.0, 1.0, 0.05),
             SliderSpec("torque_limit", "Torque limit [N m]", 5.0, 80.0, max(torque_limit), 1.0),
-        ]
+        ],
+        event_log=interaction_log,
     )
 
 

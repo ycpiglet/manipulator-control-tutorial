@@ -45,7 +45,19 @@ class LoggingTests(unittest.TestCase):
                 output_dir=Path(temp_dir) / "run",
             )
             logger.record(time=0.0, position=0.1)
-            output = logger.save(summary={"max_position": 0.1, "settling_time": None}, notes="# Lab01\nCheck position.")
+            output = logger.save_with_artifacts(
+                summary={"max_position": 0.1, "settling_time": None, "interaction_events": 1},
+                notes="# Lab01\nCheck position.",
+                interaction_events=[
+                    {
+                        "time": 0.01,
+                        "kind": "slider",
+                        "name": "stiffness",
+                        "label": "Stiffness [N/m]",
+                        "value": 80.0,
+                    }
+                ],
+            )
 
             report = output / "report.html"
             self.assertTrue(report.exists())
@@ -57,8 +69,13 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("mass, damping, stiffness", html)
             self.assertIn("max_position", html)
             self.assertIn("n/a", html)
+            self.assertIn("Interaction Log", html)
+            self.assertIn("Stiffness [N/m]", html)
+            self.assertIn("interaction_events.json", html)
             self.assertIn("Check position.", html)
             self.assertIn("config.yaml", html)
+            events = json.loads((output / "interaction_events.json").read_text(encoding="utf-8"))
+            self.assertEqual(events[0]["name"], "stiffness")
             summary = json.loads((output / "summary.json").read_text(encoding="utf-8"))
             self.assertEqual(summary["config_path"], "configs/lab01_msd/default.yaml")
             self.assertEqual(summary["config_name"], "default")

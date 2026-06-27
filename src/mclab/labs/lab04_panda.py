@@ -8,6 +8,7 @@ from typing import Any
 from mclab.config import resolve_project_path
 from mclab.learning_guides import guide_for_config
 from mclab.sim.interaction import (
+    InteractionLog,
     LiveStatus,
     LiveTuning,
     SliderSpec,
@@ -77,9 +78,10 @@ def run(
     if not 0 <= controlled_joint_index < 7:
         raise ValueError("controlled_joint_index must be in [0, 6]")
 
-    target_offset = TargetOffsetControl(config)
+    interaction_log = InteractionLog()
+    target_offset = TargetOffsetControl(config, event_log=interaction_log)
     run_guide = guide_for_config(config_path=str(config_path or ""), lab_name=lab_name)
-    live_tuning = _live_tuning(config)
+    live_tuning = _live_tuning(config, interaction_log)
     live_status = LiveStatus(
         [
             StatusSpec("joint_offset", "Target offset [rad]"),
@@ -116,6 +118,7 @@ def run(
         while data.time < sim_time:
             if not viewer_is_running(viewer_handle):
                 break
+            interaction_log.set_time(float(data.time))
             target_q = home_q.copy()
             target = trajectory.evaluate(float(data.time))
             button_joint_offset = target_offset.value()
@@ -233,8 +236,13 @@ def run(
                 pause_viewer_at_end(viewer_handle, enabled=pause_at_end)
             viewer_handle.close()
 
-    summary = _summary(logger.rows)
-    output_path = logger.save(summary=summary, notes=_notes(config))
+    summary = {**_summary(logger.rows), **interaction_log.summary()}
+    events = interaction_log.events()
+    output_path = logger.save_with_artifacts(
+        summary=summary,
+        notes=_notes(config),
+        interaction_events=events if events else None,
+    )
     if plot:
         _save_plots(output_path, logger.rows, plot_selection or config.get("plots"))
     return resolve_project_path(output_path)
@@ -292,7 +300,7 @@ def _trajectory_config(config: dict[str, Any], home_q: list[float]) -> dict[str,
     return trajectory
 
 
-def _live_tuning(config: dict[str, Any]) -> LiveTuning:
+def _live_tuning(config: dict[str, Any], interaction_log: InteractionLog | None = None) -> LiveTuning:
     interaction = dict(config.get("interaction", {}))
     if not bool(interaction.get("live_tuning", False)):
         return LiveTuning([])
@@ -306,7 +314,8 @@ def _live_tuning(config: dict[str, Any]) -> LiveTuning:
                 SliderSpec("target_y", "Target Y [m]", -0.35, 0.35, target_position[1], 0.005),
                 SliderSpec("target_z", "Target Z [m]", 0.35, 0.80, target_position[2], 0.005),
                 SliderSpec("cartesian_gain", "Cartesian gain", 0.2, 2.0, float(target_config.get("gain", 1.0)), 0.05),
-            ]
+            ],
+            event_log=interaction_log,
         )
     wall_config = dict(config.get("virtual_wall", {}))
     return LiveTuning(
@@ -337,7 +346,8 @@ def _live_tuning(config: dict[str, Any]) -> LiveTuning:
                 float(wall_config.get("cartesian_retreat_gain", 0.4)),
                 0.05,
             ),
-        ]
+        ],
+        event_log=interaction_log,
     )
 
 
