@@ -122,7 +122,12 @@ class BatchTests(unittest.TestCase):
                     encoding="utf-8",
                 )
                 (run_dir / "summary.json").write_text(
-                    '{"lab_name": "lab02_pid", "overshoot_percent": 0.0}',
+                    json.dumps(
+                        {
+                            "lab_name": "lab02_pid",
+                            "overshoot_percent": 0.0 if scenario.label == "baseline" else 12.5,
+                        }
+                    ),
                     encoding="utf-8",
                 )
                 (run_dir / "report.html").write_text("<html></html>", encoding="utf-8")
@@ -134,6 +139,9 @@ class BatchTests(unittest.TestCase):
             self.assertTrue((output / "comparison_plots" / "position_compare.png").exists())
             self.assertTrue((output / "comparison_plots" / "error_compare.png").exists())
             report_html = (output / "report.html").read_text(encoding="utf-8")
+            self.assertIn("Metric Highlights", report_html)
+            self.assertIn("overshoot percent", report_html)
+            self.assertIn("high gain", report_html)
             self.assertIn("Parameter Differences", report_html)
             self.assertIn("controller.kp", report_html)
             self.assertIn("Comparison Plots", report_html)

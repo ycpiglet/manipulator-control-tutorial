@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 import csv
+import math
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from datetime import datetime
@@ -306,6 +307,7 @@ def _render_batch_report(output: Path, guide: BatchGuide, rows: list[dict[str, A
     metric_keys = _display_metric_keys(guide, rows)
     question_items = "\n".join(f"<li>{escape(question)}</li>" for question in guide.questions)
     scenario_cards = "\n".join(_scenario_card(row, metric_keys) for row in rows)
+    metric_highlights = _metric_highlights(rows, metric_keys)
     parameter_differences = _parameter_differences(rows)
     comparison_plots = _comparison_plots(output)
     plot_previews = _plot_previews(rows, guide.preview_plots)
@@ -444,6 +446,7 @@ def _render_batch_report(output: Path, guide: BatchGuide, rows: list[dict[str, A
       <h2>Scenario Cards</h2>
       <div class="scenario-grid">{scenario_cards}</div>
     </section>
+    {metric_highlights}
     {parameter_differences}
     {comparison_plots}
     {plot_previews}
@@ -524,6 +527,43 @@ def _parameter_differences(rows: list[dict[str, Any]]) -> str:
         "<table>"
         f"<thead><tr><th>Parameter</th>{headers}</tr></thead>"
         f"<tbody>{body}</tbody>"
+        "</table>"
+        "</div>"
+        "</section>"
+    )
+
+
+def _metric_highlights(rows: list[dict[str, Any]], metric_keys: list[str]) -> str:
+    highlight_rows: list[str] = []
+    for key in metric_keys:
+        values = [
+            (str(row["label"]), numeric)
+            for row in rows
+            if (numeric := _as_finite_float(row.get("summary", {}).get(key))) is not None
+        ]
+        if len(values) < 2:
+            continue
+        min_label, min_value = min(values, key=lambda item: item[1])
+        max_label, max_value = max(values, key=lambda item: item[1])
+        highlight_rows.append(
+            "<tr>"
+            f"<td>{escape(_label(key))}</td>"
+            f"<td>{escape(min_label)}</td>"
+            f"<td>{escape(_format_value(min_value))}</td>"
+            f"<td>{escape(max_label)}</td>"
+            f"<td>{escape(_format_value(max_value))}</td>"
+            "</tr>"
+        )
+    if not highlight_rows:
+        return ""
+    return (
+        "<section>"
+        "<h2>Metric Highlights</h2>"
+        '<p class="muted">Min/max values are descriptive comparisons, not automatic grades.</p>'
+        '<div class="table-wrap">'
+        "<table>"
+        "<thead><tr><th>Metric</th><th>Minimum scenario</th><th>Minimum</th><th>Maximum scenario</th><th>Maximum</th></tr></thead>"
+        f"<tbody>{''.join(highlight_rows)}</tbody>"
         "</table>"
         "</div>"
         "</section>"
@@ -737,6 +777,14 @@ def _format_value(value: Any) -> str:
     if isinstance(value, (list, tuple, dict)):
         return json.dumps(value, ensure_ascii=False)
     return str(value)
+
+
+def _as_finite_float(value: Any) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
 
 
 def _label(key: str) -> str:
