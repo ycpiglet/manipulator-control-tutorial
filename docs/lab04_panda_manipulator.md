@@ -8,7 +8,7 @@ The Menagerie Panda model is position-actuated. In this implementation:
 - `tau_cmd` is logged from MuJoCo `data.actuator_force`.
 - `current_proxy = tau_cmd / Kt`, with `Kt = 1.0` by default.
 - End-effector position is logged from the `hand` body.
-- The virtual wall demo computes a repulsive task-space force and maps it to a small target-joint offset for stable educational behavior.
+- The virtual wall demo computes a repulsive task-space force and maps it to a small target-joint retreat for stable educational behavior.
 
 For `configs/lab04_panda/joint_pd.yaml`, the main controlled variable is joint 4, represented by `controlled_joint_index: 3`.
 
@@ -19,7 +19,7 @@ Read the plots in this order:
 3. `torque.png` or `current_proxy.png`: check how much actuator effort the motion required.
 4. `end_effector.png`: check how the joint motion moved the hand in Cartesian space.
 
-For the virtual wall demo, also check `virtual_wall.png` for wall force and penetration.
+For the virtual wall demos, also check `virtual_wall.png` for wall force, penetration, and retreat distance.
 
 The MuJoCo viewer side panels are not the main control interface for this lab. The Python simulation loop writes actuator `ctrl` values from the YAML target at every step. If you edit actuator controls in the viewer, the loop overwrites them during the run; after `--pause-at-end`, physics stepping has stopped. Learner-facing launchers hide the side panels and use the `MCLab Interaction` window instead.
 
@@ -46,11 +46,21 @@ Interactive virtual wall demo:
 
 Use the `MCLab Interaction` sliders to move the virtual wall and tune wall stiffness, damping, and retreat gain while the Panda moves toward the wall. Watch the live wall penetration and wall force in the panel, then compare `end_effector.png` and `virtual_wall.png` after the run.
 
+Soft/stiff wall comparison:
+
+```bash
+python -m mclab run lab04 --config configs/lab04_panda/wall_soft.yaml --headless --plot --plots wall_compare
+python -m mclab run lab04 --config configs/lab04_panda/wall_stiff.yaml --headless --plot --plots wall_compare
+```
+
+Use the same trajectory and compare `virtual_wall.png`. The soft wall should allow more penetration with lower virtual force and smaller target retreat. The stiff wall should show higher virtual force and stronger retreat. The summary file also reports `max_wall_penetration_cm`, `max_wall_retreat_cm`, and `max_abs_virtual_wall_force`.
+
 Headless runs:
 
 ```bash
 python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless --plot
 python -m mclab run lab04 --config configs/lab04_panda/impedance_wall.yaml --headless --plot
+python -m mclab run lab04 --config configs/lab04_panda/wall_stiff.yaml --headless --plot --plots wall_compare
 ```
 
 Full viewer command:

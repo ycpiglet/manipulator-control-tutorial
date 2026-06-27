@@ -119,9 +119,11 @@ def run(
 
             ee_position, ee_velocity, jacobian = _end_effector_state(mujoco, model, data, handles)
             wall_force = [0.0, 0.0, 0.0]
+            wall_retreat = 0.0
             wall_config = _wall_config(config, live_tuning)
             if mode in {"impedance_wall", "virtual_wall", "wall"}:
                 wall_force = _virtual_wall_force(ee_position, ee_velocity, wall_config)
+                wall_retreat = _wall_retreat_distance(ee_position, wall_force, wall_config)
                 target_q = _apply_wall_target_offset(
                     target_q,
                     jacobian,
@@ -175,11 +177,14 @@ def run(
                 force_virtual=wall_force,
                 wall_penetration=wall_penetration,
                 wall_penetration_cm=100.0 * wall_penetration,
+                wall_retreat=wall_retreat,
+                wall_retreat_cm=100.0 * wall_retreat,
                 tuned_joint_target_offset=tuned_joint_offset,
                 tuned_wall_x=float(wall_config.get("wall_x", 10.0)),
                 tuned_wall_stiffness=float(wall_config.get("stiffness", 0.0)),
                 tuned_wall_damping=float(wall_config.get("damping", 0.0)),
                 tuned_wall_retreat_gain=float(wall_config.get("cartesian_retreat_gain", 0.0)),
+                tuned_wall_force_retreat_gain=float(wall_config.get("force_retreat_gain", 0.0)),
             )
         completed = True
     finally:
@@ -295,6 +300,7 @@ def _wall_config(config: dict[str, Any], live_tuning: LiveTuning) -> dict[str, A
         "wall_retreat_gain",
         float(wall_config.get("cartesian_retreat_gain", 1.2)),
     )
+    wall_config["force_retreat_gain"] = float(wall_config.get("force_retreat_gain", 0.00008))
     return wall_config
 
 
@@ -337,14 +343,7 @@ def _apply_wall_target_offset(
 
     if not any(abs(force) > 1e-12 for force in wall_force):
         return target_q
-    wall_x = float(wall_config.get("wall_x", 0.52))
-    penetration = max(0.0, ee_position[0] - wall_x)
-    cartesian_gain = float(wall_config.get("cartesian_retreat_gain", 1.2))
-    max_cartesian_retreat = float(wall_config.get("max_cartesian_retreat", 0.04))
-    desired_task_offset = np.asarray(
-        [-min(max_cartesian_retreat, penetration * cartesian_gain), 0.0, 0.0],
-        dtype=float,
-    )
+    desired_task_offset = np.asarray([-_wall_retreat_distance(ee_position, wall_force, wall_config), 0.0, 0.0])
     damping = float(wall_config.get("damped_least_squares", 0.08))
     task_matrix = jacobian @ jacobian.T + (damping**2) * np.eye(3)
     joint_offset = jacobian.T @ np.linalg.solve(task_matrix, desired_task_offset)
@@ -356,6 +355,20 @@ def _apply_wall_target_offset(
         offset = scale * float(delta_q)
         adjusted[index] += max(-max_offset, min(max_offset, offset))
     return adjusted
+
+
+def _wall_retreat_distance(
+    ee_position: list[float],
+    wall_force: list[float],
+    wall_config: dict[str, Any],
+) -> float:
+    wall_x = float(wall_config.get("wall_x", 0.52))
+    penetration = max(0.0, ee_position[0] - wall_x)
+    cartesian_gain = float(wall_config.get("cartesian_retreat_gain", 1.2))
+    force_retreat_gain = float(wall_config.get("force_retreat_gain", 0.00008))
+    max_cartesian_retreat = float(wall_config.get("max_cartesian_retreat", 0.04))
+    force_retreat = max(0.0, -float(wall_force[0])) * force_retreat_gain
+    return min(max_cartesian_retreat, penetration * cartesian_gain + force_retreat)
 
 
 def _clip_to_ctrl_range(model: Any, actuator_ids: list[int], target_q: list[float]) -> list[float]:
@@ -387,6 +400,9 @@ def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
             if key.startswith("tau_cmd_")
         ),
         "max_wall_penetration": max(float(row.get("wall_penetration", 0.0)) for row in rows),
+        "max_wall_penetration_cm": max(float(row.get("wall_penetration_cm", 0.0)) for row in rows),
+        "max_wall_retreat_cm": max(float(row.get("wall_retreat_cm", 0.0)) for row in rows),
+        "max_abs_virtual_wall_force": max(abs(float(row.get("force_virtual_0", 0.0))) for row in rows),
         "final_x_ee_0": rows[-1].get("x_ee_0"),
         "final_x_ee_1": rows[-1].get("x_ee_1"),
         "final_x_ee_2": rows[-1].get("x_ee_2"),
@@ -409,7 +425,13 @@ def _save_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSe
             "virtual_wall.png",
             "Virtual Wall Response",
             "force / penetration",
-            ["force_virtual_0", "wall_penetration_cm"],
+            ["force_virtual_0", "wall_penetration_cm", "wall_retreat_cm"],
+        ),
+        (
+            "wall_parameters.png",
+            "Virtual Wall Parameters",
+            "parameter value",
+            ["tuned_wall_stiffness", "tuned_wall_damping", "tuned_wall_retreat_gain"],
         ),
     ]
     presets = {
@@ -417,6 +439,7 @@ def _save_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSe
         "control": ["position", "error", "torque", "current_proxy"],
         "cartesian": ["end_effector", "torque", "error"],
         "wall": ["end_effector", "virtual_wall", "torque", "error"],
+        "wall_compare": ["end_effector", "virtual_wall", "wall_parameters", "torque", "error"],
     }
     save_time_series_plots(output_path, rows, select_plot_specs(specs, selection, presets=presets))
 

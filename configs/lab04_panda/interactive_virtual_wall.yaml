@@ -20,6 +20,7 @@ virtual_wall:
   stiffness: 260.0
   damping: 12.0
   cartesian_retreat_gain: 0.4
+  force_retreat_gain: 0.00008
   max_cartesian_retreat: 0.015
   damped_least_squares: 0.08
 interaction:

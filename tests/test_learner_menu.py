@@ -30,6 +30,8 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(("Lab04 Panda Manipulator", "Neutral hold"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Reach X"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Joint target"), labels)
+        self.assertIn(("Lab04 Panda Manipulator", "Soft wall"), labels)
+        self.assertIn(("Lab04 Panda Manipulator", "Stiff wall"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Virtual wall"), labels)
 
     def test_menu_actions_launch_learner_viewer_commands(self) -> None:
