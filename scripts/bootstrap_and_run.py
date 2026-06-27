@@ -27,6 +27,7 @@ VERIFY_VARIANTS = [
     ("lab02", "configs/lab02_pid/pd_damped.yaml"),
     ("lab03", "configs/lab03_2dof/task_space_2dof.yaml"),
     ("lab03", "configs/lab03_2dof/singularity_2dof.yaml"),
+    ("lab03", "configs/lab03_2dof/dls_singularity_2dof.yaml"),
     ("lab03", "configs/lab03_2dof/trapezoidal.yaml"),
     ("lab03", "configs/lab03_2dof/step.yaml"),
     ("lab04", "configs/lab04_panda/neutral_hold.yaml"),

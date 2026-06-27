@@ -29,6 +29,7 @@ from mclab.sim.one_dof import configure_slider_plant, slider_state
 from mclab.sim.plotting import PlotSelection, save_time_series_plots, select_plot_specs
 from mclab.sim.two_link import (
     TwoLinkGeometry,
+    damped_least_squares_joint_velocity,
     end_effector_velocity,
     forward_kinematics,
     inverse_kinematics,
@@ -38,6 +39,11 @@ from mclab.sim.two_link import (
     manipulability,
 )
 from mclab.trajectories import build_trajectory
+
+
+TASK_SPACE_MODES = {"task_space", "cartesian", "jacobian"}
+DLS_MODES = {"task_space_dls", "dls", "damped_least_squares"}
+TWO_LINK_MODES = {"joint_space", *TASK_SPACE_MODES, *DLS_MODES}
 
 
 def run(
@@ -267,6 +273,8 @@ def _run_two_link_arm(
     target_q_goal = _pair(config.get("target_q", [0.9, -1.1]), "target_q")
     start_xy = forward_kinematics(initial_q, geometry)
     target_xy_goal = _pair(config.get("target_xy", start_xy), "target_xy")
+    dls_target_q = list(initial_q)
+    simulation_dt = float(model.opt.timestep)
 
     interaction_log = InteractionLog()
     panel_control = KeyForcePulse(config, event_log=interaction_log)
@@ -319,7 +327,27 @@ def _run_two_link_arm(
             alpha = target.position
             alpha_dot = target.velocity
 
-            if mode in {"task_space", "cartesian", "jacobian"}:
+            if mode in DLS_MODES:
+                target_xy_goal = (
+                    live_tuning.value("target_x", target_xy_goal[0]),
+                    live_tuning.value("target_y", target_xy_goal[1]),
+                )
+                command = _dls_task_space_command(
+                    q=q,
+                    qdot=qdot,
+                    target_q_state=dls_target_q,
+                    start_xy=start_xy,
+                    goal_xy=target_xy_goal,
+                    alpha=alpha,
+                    alpha_dot=alpha_dot,
+                    dt=simulation_dt,
+                    geometry=geometry,
+                    controller_config=controller_config,
+                    live_tuning=live_tuning,
+                    torque_limit=torque_limit,
+                )
+                dls_target_q = list(command["target_q"])
+            elif mode in TASK_SPACE_MODES:
                 target_xy_goal = (
                     live_tuning.value("target_x", target_xy_goal[0]),
                     live_tuning.value("target_y", target_xy_goal[1]),
@@ -379,11 +407,12 @@ def _run_two_link_arm(
                 q2=q[1],
                 ee_x=x_ee[0],
                 ee_y=x_ee[1],
-                error=task_error_norm if mode in {"task_space", "cartesian", "jacobian"} else joint_error_norm,
+                error=task_error_norm if mode in TASK_SPACE_MODES | DLS_MODES else joint_error_norm,
                 tau=max_tau,
                 condition=condition_capped,
                 manipulability=manipulability_value,
             )
+            dls_fields = _dls_log_fields(command)
             logger.record(
                 time=float(data.time),
                 mode=mode,
@@ -405,6 +434,7 @@ def _run_two_link_arm(
                 tuned_kp=command["kp"],
                 tuned_kd=command["kd"],
                 tuned_torque_limit=command["torque_limit"],
+                **dls_fields,
             )
         completed = True
     finally:
@@ -458,7 +488,32 @@ def _two_link_live_tuning(
     interaction = dict(config.get("interaction", {}))
     if not bool(interaction.get("live_tuning", False)):
         return LiveTuning([])
-    if mode in {"task_space", "cartesian", "jacobian"}:
+    if mode in DLS_MODES:
+        return LiveTuning(
+            [
+                SliderSpec("target_x", "Target X [m]", -0.95, 1.05, target_xy[0], 0.01),
+                SliderSpec("target_y", "Target Y [m]", -0.85, 0.85, target_xy[1], 0.01),
+                SliderSpec(
+                    "dls_gain",
+                    "DLS task gain [1/s]",
+                    0.5,
+                    12.0,
+                    float(controller_config.get("dls_gain", 4.0)),
+                    0.1,
+                ),
+                SliderSpec(
+                    "dls_damping",
+                    "DLS damping",
+                    0.0,
+                    0.4,
+                    float(controller_config.get("dls_damping", 0.08)),
+                    0.01,
+                ),
+                SliderSpec("torque_limit", "Torque limit [N m]", 5.0, 80.0, max(torque_limit), 1.0),
+            ],
+            event_log=interaction_log,
+        )
+    if mode in TASK_SPACE_MODES:
         return LiveTuning(
             [
                 SliderSpec("target_x", "Target X [m]", -0.95, 0.95, target_xy[0], 0.01),
@@ -595,6 +650,73 @@ def _task_space_command(
     }
 
 
+def _dls_task_space_command(
+    *,
+    q: list[float],
+    qdot: list[float],
+    target_q_state: list[float],
+    start_xy: tuple[float, float],
+    goal_xy: tuple[float, float],
+    alpha: float,
+    alpha_dot: float,
+    dt: float,
+    geometry: TwoLinkGeometry,
+    controller_config: dict[str, Any],
+    live_tuning: LiveTuning,
+    torque_limit: tuple[float, float],
+) -> dict[str, Any]:
+    x_ee = forward_kinematics(q, geometry)
+    target_xy = [start_xy[index] + alpha * (goal_xy[index] - start_xy[index]) for index in range(2)]
+    target_xdot = [alpha_dot * (goal_xy[index] - start_xy[index]) for index in range(2)]
+    error = [target_xy[index] - x_ee[index] for index in range(2)]
+
+    dls_gain = live_tuning.value("dls_gain", float(controller_config.get("dls_gain", 4.0)))
+    dls_damping = abs(live_tuning.value("dls_damping", float(controller_config.get("dls_damping", 0.08))))
+    max_task_speed = abs(float(controller_config.get("max_task_speed", 0.55)))
+    max_joint_speed = abs(float(controller_config.get("max_joint_speed", 2.8)))
+    max_joint_error = abs(float(controller_config.get("max_joint_error", 0.35)))
+
+    task_velocity = [target_xdot[index] + dls_gain * error[index] for index in range(2)]
+    task_velocity = _clip_vector_norm(task_velocity, max_task_speed)
+    qdot_dls = list(
+        damped_least_squares_joint_velocity(
+            q,
+            task_velocity,
+            geometry,
+            damping=dls_damping,
+        )
+    )
+    qdot_dls = _clip_vector_norm(qdot_dls, max_joint_speed)
+    target_q = [target_q_state[index] + qdot_dls[index] * dt for index in range(2)]
+    target_q = [
+        q[index] + _clip(target_q[index] - q[index], -max_joint_error, max_joint_error)
+        for index in range(2)
+    ]
+
+    kp_base = _gain_pair(controller_config.get("kp", [80.0, 60.0]), "kp")
+    kd_base = _gain_pair(controller_config.get("kd", [8.0, 6.0]), "kd")
+    limit_value = abs(live_tuning.value("torque_limit", max(torque_limit)))
+    limit = (min(torque_limit[0], limit_value), min(torque_limit[1], limit_value))
+    tau = []
+    for index in range(2):
+        command = kp_base[index] * (target_q[index] - q[index])
+        command += kd_base[index] * (qdot_dls[index] - qdot[index])
+        tau.append(_clip(command, -limit[index], limit[index]))
+
+    return {
+        "target_q": target_q,
+        "target_xy": target_xy,
+        "tau": tau,
+        "kp": sum(kp_base) * 0.5,
+        "kd": sum(kd_base) * 0.5,
+        "torque_limit": max(limit),
+        "dls_damping": dls_damping,
+        "dls_gain": dls_gain,
+        "dls_task_speed": _norm(task_velocity),
+        "dls_joint_speed": _norm(qdot_dls),
+    }
+
+
 def _save_two_link_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSelection = None) -> None:
     specs = [
         ("position.png", "2DOF Joint Position Tracking", "joint position [rad]", ["q_0", "q_1", "target_q_0", "target_q_1"]),
@@ -608,12 +730,19 @@ def _save_two_link_plots(output_path: Path, rows: list[dict[str, Any]], selectio
             "condition / manipulability",
             ["jacobian_condition", "manipulability", "jacobian_determinant"],
         ),
+        (
+            "dls.png",
+            "2DOF Damped Least-Squares Command",
+            "speed / damping",
+            ["dls_task_speed", "dls_joint_speed", "dls_damping"],
+        ),
     ]
     presets = {
         "essential": ["position", "end_effector", "torque", "error"],
         "joint": ["position", "torque", "error"],
         "task": ["end_effector", "torque", "error"],
         "singularity": ["position", "end_effector", "torque", "singularity", "error"],
+        "dls": ["end_effector", "torque", "singularity", "dls", "error"],
         "control": ["position", "end_effector", "torque", "current_proxy", "singularity", "error"],
     }
     save_time_series_plots(output_path, rows, select_plot_specs(specs, selection, presets=presets))
@@ -622,7 +751,7 @@ def _save_two_link_plots(output_path: Path, rows: list[dict[str, Any]], selectio
 def _two_link_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
     if not rows:
         return {}
-    return {
+    summary = {
         "max_joint_error_norm": max(float(row["joint_error_norm"]) for row in rows),
         "final_joint_error_norm": rows[-1]["joint_error_norm"],
         "max_task_error_norm": max(float(row["task_error_norm"]) for row in rows),
@@ -636,6 +765,16 @@ def _two_link_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
             if key.startswith("tau_cmd_")
         ),
     }
+    dls_joint_speeds = _finite_row_values(rows, "dls_joint_speed")
+    if dls_joint_speeds:
+        summary.update(
+            {
+                "max_dls_joint_speed": max(dls_joint_speeds),
+                "max_dls_task_speed": max(_finite_row_values(rows, "dls_task_speed")),
+                "dls_damping": rows[-1].get("dls_damping"),
+            }
+        )
+    return summary
 
 
 def _two_link_notes(config: dict[str, Any]) -> str:
@@ -649,6 +788,7 @@ This run uses a planar two-link MuJoCo arm with torque motors at the shoulder an
 
 Joint-space mode tracks desired joint angles with PD torque control.
 Task-space mode uses a Jacobian-transpose PD command on end-effector position.
+DLS task-space mode converts hand velocity commands through a damped least-squares inverse Jacobian.
 Singularity metrics log Jacobian determinant, manipulability, and condition number.
 """
 
@@ -656,12 +796,7 @@ Singularity metrics log Jacobian determinant, manipulability, and condition numb
 def _is_two_link_config(config: dict[str, Any]) -> bool:
     plant = str(config.get("plant", "")).lower()
     mode = str(config.get("mode", "")).lower()
-    return plant in {"two_link", "two_link_arm", "2dof", "2dof_arm"} or mode in {
-        "joint_space",
-        "task_space",
-        "cartesian",
-        "jacobian",
-    }
+    return plant in {"two_link", "two_link_arm", "2dof", "2dof_arm"} or mode in TWO_LINK_MODES
 
 
 def _two_link_geometry(config: dict[str, Any]) -> TwoLinkGeometry:
@@ -685,6 +820,31 @@ def _gain_pair(value: Any, name: str) -> tuple[float, float]:
 
 def _norm(values: list[float]) -> float:
     return sum(value * value for value in values) ** 0.5
+
+
+def _clip_vector_norm(values: list[float], limit: float) -> list[float]:
+    norm = _norm(values)
+    if limit <= 0.0 or norm <= limit or norm == 0.0:
+        return values
+    scale = limit / norm
+    return [value * scale for value in values]
+
+
+def _finite_row_values(rows: list[dict[str, Any]], key: str) -> list[float]:
+    values: list[float] = []
+    for row in rows:
+        try:
+            value = float(row.get(key))
+        except (TypeError, ValueError):
+            continue
+        if value == value and value not in {float("inf"), float("-inf")}:
+            values.append(value)
+    return values
+
+
+def _dls_log_fields(command: dict[str, Any]) -> dict[str, Any]:
+    keys = ("dls_damping", "dls_gain", "dls_task_speed", "dls_joint_speed")
+    return {key: command[key] for key in keys if key in command}
 
 
 def _cap_infinite(value: float, cap: float = 1.0e6) -> float:

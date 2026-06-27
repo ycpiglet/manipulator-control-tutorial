@@ -75,6 +75,51 @@ def end_effector_velocity(
     )
 
 
+def damped_least_squares_inverse(
+    q: list[float] | tuple[float, float],
+    geometry: TwoLinkGeometry,
+    *,
+    damping: float = 0.08,
+) -> tuple[tuple[float, float], tuple[float, float]]:
+    """Return J^T (J J^T + lambda^2 I)^-1 for the planar arm."""
+
+    matrix = jacobian(q, geometry)
+    a, b = matrix[0]
+    c, d = matrix[1]
+    lambda_sq = max(0.0, float(damping)) ** 2
+
+    jj_00 = a * a + b * b + lambda_sq
+    jj_01 = a * c + b * d
+    jj_11 = c * c + d * d + lambda_sq
+    determinant = jj_00 * jj_11 - jj_01 * jj_01
+    if abs(determinant) < 1.0e-12:
+        determinant = 1.0e-12 if determinant >= 0.0 else -1.0e-12
+
+    inv_00 = jj_11 / determinant
+    inv_01 = -jj_01 / determinant
+    inv_11 = jj_00 / determinant
+
+    return (
+        (a * inv_00 + c * inv_01, a * inv_01 + c * inv_11),
+        (b * inv_00 + d * inv_01, b * inv_01 + d * inv_11),
+    )
+
+
+def damped_least_squares_joint_velocity(
+    q: list[float] | tuple[float, float],
+    task_velocity: list[float] | tuple[float, float],
+    geometry: TwoLinkGeometry,
+    *,
+    damping: float = 0.08,
+) -> tuple[float, float]:
+    inverse = damped_least_squares_inverse(q, geometry, damping=damping)
+    vx, vy = float(task_velocity[0]), float(task_velocity[1])
+    return (
+        inverse[0][0] * vx + inverse[0][1] * vy,
+        inverse[1][0] * vx + inverse[1][1] * vy,
+    )
+
+
 def inverse_kinematics(
     target_xy: list[float] | tuple[float, float],
     geometry: TwoLinkGeometry,

@@ -30,6 +30,7 @@ INDEX_METRIC_KEYS = (
     "min_manipulability",
     "max_jacobian_condition",
     "max_abs_tau_cmd",
+    "max_dls_joint_speed",
     "max_cartesian_error_cm",
     "final_cartesian_error_cm",
     "max_wall_penetration_cm",
@@ -71,6 +72,10 @@ CONFIG_HIGHLIGHT_KEYS = (
     "tracking_controller.kd",
     "tracking_controller.task_kp",
     "tracking_controller.task_kd",
+    "tracking_controller.dls_gain",
+    "tracking_controller.dls_damping",
+    "tracking_controller.max_task_speed",
+    "tracking_controller.max_joint_speed",
     "tracking_controller.force_limit",
     "tracking_controller.torque_limit",
     "link_lengths",
@@ -834,6 +839,11 @@ def _plot_guidance(filename: str) -> tuple[str, str] | None:
         return (
             "PID Terms",
             "Compare P, I, and D contributions. Large integral buildup or noisy derivative terms explain many controller surprises.",
+        )
+    if "dls" in name:
+        return (
+            "Damped Least Squares",
+            "Compare task speed, joint speed, and damping. More damping usually calms joint motion near singularity but leaves more task error.",
         )
     if "current_proxy" in name:
         return (

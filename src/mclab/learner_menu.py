@@ -96,9 +96,9 @@ BATCH_ACTIONS: tuple[BatchMenuAction, ...] = (
         group="Comparison Batches",
         label="Lab03 2DOF compare",
         batch_name="lab03_2dof_compare",
-        description="Run joint-space, task-space, and singularity 2DOF arm cases.",
-        try_this="Compare joint error, hand error, torque, and manipulability overlays.",
-        watch="How task-space control and singularity change the arm response.",
+        description="Run joint-space, task-space, singularity, and DLS 2DOF arm cases.",
+        try_this="Compare joint error, hand error, torque, manipulability, and DLS joint speed.",
+        watch="How task-space control, singularity, and DLS damping change the arm response.",
     ),
     BatchMenuAction(
         group="Comparison Batches",
@@ -368,6 +368,16 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
         description="The arm approaches a nearly straight singular posture.",
         try_this="Compare the singularity plot against the normal joint-space demo.",
         watch="Jacobian condition number rises while manipulability falls.",
+    ),
+    MenuAction(
+        group="Lab03 2DOF Arm and Trajectories",
+        label="2DOF DLS singularity",
+        lab_name="lab03",
+        config_path="configs/lab03_2dof/dls_singularity_2dof.yaml",
+        plots="dls",
+        description="Damped least-squares limits inverse-Jacobian motion near the workspace edge.",
+        try_this="Compare dls.png against the plain singularity demo.",
+        watch="DLS joint speed, damping, condition number, and torque.",
     ),
     MenuAction(
         group="Lab03 2DOF Arm and Trajectories",
@@ -828,6 +838,8 @@ def parameter_hint(action: MenuAction) -> str:
     if action.lab_name == "lab03":
         if label == "2dof interactive":
             return "live sliders: Target X/Y, task stiffness, task damping, torque limit"
+        if label == "2dof dls singularity":
+            return "target_xy, tracking_controller.dls_gain, tracking_controller.dls_damping"
         if label == "2dof task-space":
             return "target_xy, tracking_controller.task_kp, tracking_controller.task_kd"
         if label in {"2dof joint-space", "2dof singularity"}:

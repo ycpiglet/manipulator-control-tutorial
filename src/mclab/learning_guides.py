@@ -217,6 +217,14 @@ RUN_GUIDES: dict[str, RunGuide] = {
         "Manipulability falling while Jacobian condition number rises.",
         "Change target_q to approach the singularity more or less aggressively.",
     ),
+    "configs/lab03_2dof/dls_singularity_2dof.yaml": RunGuide(
+        "Lab03 2DOF DLS Singularity",
+        "Damped least-squares limits the inverse-Jacobian command near a poorly conditioned target.",
+        "Compare dls.png, singularity.png, and torque.png against the singularity run.",
+        "target_xy, tracking_controller.dls_gain, tracking_controller.dls_damping",
+        "DLS joint speed, task speed, damping, condition number, and tracking error.",
+        "Lower dls_damping carefully and watch whether joint speed and torque rise.",
+    ),
     "configs/lab03_2dof/interactive_2dof.yaml": RunGuide(
         "Lab03 2DOF Interactive",
         "Tune hand target and task-space gains while the 2DOF arm runs.",

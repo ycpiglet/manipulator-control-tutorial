@@ -71,6 +71,7 @@ BATCH_SETS: dict[str, tuple[BatchScenario, ...]] = {
         BatchScenario("joint_space", "lab03", "configs/lab03_2dof/joint_space_2dof.yaml", "essential"),
         BatchScenario("task_space", "lab03", "configs/lab03_2dof/task_space_2dof.yaml", "task"),
         BatchScenario("singularity", "lab03", "configs/lab03_2dof/singularity_2dof.yaml", "singularity"),
+        BatchScenario("dls_singularity", "lab03", "configs/lab03_2dof/dls_singularity_2dof.yaml", "dls"),
     ),
     "lab04_wall_compare": (
         BatchScenario("soft_wall", "lab04", "configs/lab04_panda/wall_soft.yaml", "wall_compare"),
@@ -135,15 +136,20 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
     ),
     "lab03_2dof_compare": BatchGuide(
         title="Lab03 2DOF Manipulator Comparison",
-        focus="Compare joint-space tracking, task-space hand control, and near-singular motion on the same 2DOF arm.",
+        focus=(
+            "Compare joint-space tracking, task-space hand control, near-singular motion, "
+            "and damped least-squares singularity handling on the same 2DOF arm."
+        ),
         questions=(
             "Which controller keeps joint error small, and which keeps hand error small?",
             "What happens to manipulability and Jacobian condition near the singular posture?",
+            "How does DLS damping limit joint speed near a poorly conditioned target?",
             "How do the torque plots change when the task is expressed in end-effector space?",
         ),
         followups=(
             "Copy `configs/lab03_2dof/task_space_2dof.yaml` and move `target_xy` closer to the workspace edge.",
             "Copy `configs/lab03_2dof/singularity_2dof.yaml` and change `target_q` to approach a straighter arm.",
+            "Copy `configs/lab03_2dof/dls_singularity_2dof.yaml` and vary `tracking_controller.dls_damping`.",
             "Lower `tracking_controller.torque_limit` and compare how joint and task errors grow.",
         ),
         metric_keys=(
@@ -154,13 +160,15 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             "min_manipulability",
             "max_jacobian_condition",
             "max_abs_tau_cmd",
+            "max_dls_joint_speed",
         ),
-        preview_plots=("end_effector.png", "error.png", "singularity.png"),
+        preview_plots=("dls.png", "end_effector.png", "singularity.png", "error.png"),
         comparison_specs=(
             ("joint_error_compare.png", "Joint Error Norm Comparison", "error norm", "joint_error_norm"),
             ("task_error_compare.png", "Task Error Norm Comparison", "error norm", "task_error_norm"),
             ("hand_x_compare.png", "End-Effector X Comparison", "x [m]", "x_ee_0"),
             ("manipulability_compare.png", "Manipulability Comparison", "manipulability", "manipulability"),
+            ("dls_joint_speed_compare.png", "DLS Joint Speed Comparison", "joint speed", "dls_joint_speed"),
         ),
     ),
     "lab04_wall_compare": BatchGuide(

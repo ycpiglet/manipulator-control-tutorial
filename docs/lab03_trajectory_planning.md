@@ -48,6 +48,20 @@ python -m mclab run lab03 --config configs/lab03_2dof/singularity_2dof.yaml --pl
 
 This moves the arm toward a nearly straight posture. In `singularity.png`, the Jacobian condition number should rise while manipulability falls. That is the visual cue that the same end-effector command becomes harder to realize with well-conditioned joint motion.
 
+Damped least-squares singularity demo:
+
+```bash
+python -m mclab run lab03 --config configs/lab03_2dof/dls_singularity_2dof.yaml --viewer --realtime --pause-at-end --plot --plots dls
+```
+
+This moves the hand toward the workspace edge using a damped least-squares inverse Jacobian:
+
+```text
+qdot_cmd = J(q)^T * (J(q) * J(q)^T + lambda^2 I)^-1 * xdot_cmd
+```
+
+Use the `MCLab Interaction` sliders to change `DLS task gain` and `DLS damping` while the arm moves. Lower damping follows the hand command more aggressively but can demand faster joint motion near a singular posture. Higher damping is calmer but may leave more task-space error. Compare `dls.png`, `singularity.png`, `torque.png`, and `error.png` after the run.
+
 Interactive 2DOF demo:
 
 ```powershell

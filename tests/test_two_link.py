@@ -9,6 +9,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from mclab.sim.two_link import (  # noqa: E402
     TwoLinkGeometry,
+    damped_least_squares_joint_velocity,
     forward_kinematics,
     inverse_kinematics,
     jacobian,
@@ -62,3 +63,26 @@ class TwoLinkKinematicsTests(unittest.TestCase):
 
         self.assertAlmostEqual(manipulability([0.0, 1.57079632679], geometry), 0.27, places=6)
         self.assertLess(jacobian_condition_number([0.0, 1.57079632679], geometry), 3.0)
+
+    def test_damped_least_squares_maps_task_velocity_near_regular_pose(self) -> None:
+        geometry = TwoLinkGeometry(link1=0.6, link2=0.45)
+        q = [0.25, -1.0]
+        task_velocity = [0.04, 0.03]
+
+        qdot = damped_least_squares_joint_velocity(q, task_velocity, geometry, damping=1e-6)
+        matrix = jacobian(q, geometry)
+        reconstructed = (
+            matrix[0][0] * qdot[0] + matrix[0][1] * qdot[1],
+            matrix[1][0] * qdot[0] + matrix[1][1] * qdot[1],
+        )
+
+        self.assertAlmostEqual(reconstructed[0], task_velocity[0], places=5)
+        self.assertAlmostEqual(reconstructed[1], task_velocity[1], places=5)
+
+    def test_damped_least_squares_stays_bounded_at_singularity(self) -> None:
+        geometry = TwoLinkGeometry(link1=0.6, link2=0.45)
+
+        qdot = damped_least_squares_joint_velocity([0.0, 0.0], [0.2, 0.0], geometry, damping=0.08)
+
+        self.assertAlmostEqual(qdot[0], 0.0)
+        self.assertAlmostEqual(qdot[1], 0.0)
