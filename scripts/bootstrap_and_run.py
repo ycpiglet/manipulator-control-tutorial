@@ -33,6 +33,8 @@ VERIFY_VARIANTS = [
     ("lab04", "configs/lab04_panda/neutral_hold.yaml"),
     ("lab04", "configs/lab04_panda/reach_x.yaml"),
     ("lab04", "configs/lab04_panda/cartesian_reach.yaml"),
+    ("lab04", "configs/lab04_panda/cartesian_soft.yaml"),
+    ("lab04", "configs/lab04_panda/cartesian_stiff.yaml"),
     ("lab04", "configs/lab04_panda/wall_soft.yaml"),
     ("lab04", "configs/lab04_panda/wall_stiff.yaml"),
     ("lab04", "configs/lab04_panda/impedance_wall.yaml"),

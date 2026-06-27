@@ -77,6 +77,11 @@ BATCH_SETS: dict[str, tuple[BatchScenario, ...]] = {
         BatchScenario("soft_wall", "lab04", "configs/lab04_panda/wall_soft.yaml", "wall_compare"),
         BatchScenario("stiff_wall", "lab04", "configs/lab04_panda/wall_stiff.yaml", "wall_compare"),
     ),
+    "lab04_cartesian_compare": (
+        BatchScenario("baseline_reach", "lab04", "configs/lab04_panda/cartesian_reach.yaml", "cartesian_reach"),
+        BatchScenario("soft_reach", "lab04", "configs/lab04_panda/cartesian_soft.yaml", "cartesian_reach"),
+        BatchScenario("stiff_reach", "lab04", "configs/lab04_panda/cartesian_stiff.yaml", "cartesian_reach"),
+    ),
 }
 
 BATCH_GUIDES: dict[str, BatchGuide] = {
@@ -198,6 +203,38 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             ("wall_penetration_compare.png", "Wall Penetration Comparison", "penetration [cm]", "wall_penetration_cm"),
             ("wall_force_compare.png", "Virtual Wall Force Comparison", "force", "force_virtual_0"),
             ("wall_retreat_compare.png", "Wall Retreat Comparison", "retreat [cm]", "wall_retreat_cm"),
+        ),
+    ),
+    "lab04_cartesian_compare": BatchGuide(
+        title="Lab04 Panda Cartesian Reach Comparison",
+        focus=(
+            "Compare baseline, soft, and stiff Cartesian reach settings before adding the virtual wall."
+        ),
+        questions=(
+            "Which reach setting reduces final hand error most quickly?",
+            "How do actuator force traces change when the reach command is more aggressive?",
+            "Does a softer reach leave more Cartesian error even though the motion is calmer?",
+        ),
+        followups=(
+            "Copy `configs/lab04_panda/cartesian_soft.yaml` and raise `cartesian_target.gain` gradually.",
+            "Copy `configs/lab04_panda/cartesian_stiff.yaml` and lower `cartesian_target.max_step` to calm the response.",
+            "Move `cartesian_target.position` a few centimeters and compare final Cartesian error.",
+        ),
+        metric_keys=(
+            "max_cartesian_error_cm",
+            "final_cartesian_error_cm",
+            "max_joint_error_norm",
+            "max_abs_tau_cmd",
+            "final_x_ee_0",
+            "final_x_ee_1",
+            "final_x_ee_2",
+        ),
+        preview_plots=("cartesian_error.png", "end_effector.png", "torque.png"),
+        comparison_specs=(
+            ("cartesian_error_compare.png", "Cartesian Error Comparison", "error [cm]", "cartesian_error_cm"),
+            ("hand_x_compare.png", "Panda Hand X Comparison", "x [m]", "x_ee_0"),
+            ("hand_y_compare.png", "Panda Hand Y Comparison", "y [m]", "x_ee_1"),
+            ("shoulder_actuator_compare.png", "Shoulder Actuator Force Comparison", "force / torque proxy", "tau_cmd_0"),
         ),
     ),
 }
@@ -975,12 +1012,17 @@ def _metric_row(row: dict[str, Any], metric_keys: list[str]) -> str:
 
 def _display_metric_keys(guide: BatchGuide, rows: list[dict[str, Any]]) -> list[str]:
     summaries = [row.get("summary", {}) for row in rows]
-    keys = guide.metric_keys + tuple(key for key in INDEX_METRIC_KEYS if key not in guide.metric_keys)
-    return [
+    primary_keys = [
         key
-        for key in keys
+        for key in guide.metric_keys
         if any(_has_value(summary.get(key)) for summary in summaries)
     ]
+    extra_keys = [
+        key
+        for key in INDEX_METRIC_KEYS
+        if key not in guide.metric_keys and any(_has_interesting_metric_value(summary.get(key)) for summary in summaries)
+    ]
+    return primary_keys + extra_keys
 
 
 def _available_plot_paths(run_dir: Path) -> dict[str, str]:
@@ -1070,6 +1112,15 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 def _has_value(value: Any) -> bool:
     return value is not None and value != ""
+
+
+def _has_interesting_metric_value(value: Any) -> bool:
+    if not _has_value(value):
+        return False
+    number = _as_finite_float(value)
+    if number is None:
+        return True
+    return abs(number) > 1e-12
 
 
 def _format_value(value: Any) -> str:

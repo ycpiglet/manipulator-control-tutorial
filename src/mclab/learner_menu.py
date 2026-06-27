@@ -108,6 +108,14 @@ BATCH_ACTIONS: tuple[BatchMenuAction, ...] = (
         try_this="Compare wall penetration, virtual force, retreat, and hand X motion.",
         watch="How wall stiffness and damping change the contact-like response.",
     ),
+    BatchMenuAction(
+        group="Comparison Batches",
+        label="Lab04 Cartesian compare",
+        batch_name="lab04_cartesian_compare",
+        description="Run baseline, soft, and stiff Panda Cartesian reach cases.",
+        try_this="Compare Cartesian error, hand position, and actuator effort.",
+        watch="How reach gain and step limits trade tracking error against effort.",
+    ),
 )
 
 
@@ -162,14 +170,21 @@ LEARNING_PATH: tuple[LearningPathStep, ...] = (
         description="Use a stable neutral pose as the full manipulator baseline.",
     ),
     LearningPathStep(
-        title="8. Touch virtual wall",
+        title="8. Reach in Cartesian",
+        action_kind="run",
+        group="Lab04 Panda Manipulator",
+        label="Cartesian reach",
+        description="Move the Panda hand toward an XYZ target before adding wall response.",
+    ),
+    LearningPathStep(
+        title="9. Touch virtual wall",
         action_kind="run",
         group="Lab04 Panda Manipulator",
         label="Virtual wall",
         description="Tune wall position, stiffness, damping, and retreat gain.",
     ),
     LearningPathStep(
-        title="9. Compare the course",
+        title="10. Compare the course",
         action_kind="batch",
         group="Comparison Batches",
         label="All compare",
@@ -488,6 +503,26 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
         description="Move the Panda hand toward an explicit XYZ target.",
         try_this="Compare target_x_ee and x_ee in end_effector.png.",
         watch="Cartesian error, actuator force, and joint tracking error.",
+    ),
+    MenuAction(
+        group="Lab04 Panda Manipulator",
+        label="Soft Cartesian",
+        lab_name="lab04",
+        config_path="configs/lab04_panda/cartesian_soft.yaml",
+        plots="cartesian_reach",
+        description="A softer Cartesian reach command moves calmly toward the hand target.",
+        try_this="Run before Stiff Cartesian and compare cartesian_error.png.",
+        watch="Larger remaining hand error with a calmer target-offset command.",
+    ),
+    MenuAction(
+        group="Lab04 Panda Manipulator",
+        label="Stiff Cartesian",
+        lab_name="lab04",
+        config_path="configs/lab04_panda/cartesian_stiff.yaml",
+        plots="cartesian_reach",
+        description="A stiffer Cartesian reach command pursues the same hand target more aggressively.",
+        try_this="Run after Soft Cartesian and compare torque.png.",
+        watch="Smaller hand error and any changes in actuator force traces.",
     ),
     MenuAction(
         group="Lab04 Panda Manipulator",
@@ -854,7 +889,7 @@ def parameter_hint(action: MenuAction) -> str:
     if action.lab_name == "lab04":
         if label == "cartesian interactive":
             return "live sliders: Target X/Y/Z, Cartesian gain; YAML: cartesian_target.*"
-        if label == "cartesian reach":
+        if "cartesian" in label:
             return "cartesian_target.position, cartesian_target.gain, cartesian_target.max_step"
         if "wall" in label:
             return "virtual_wall.wall_x, virtual_wall.stiffness, virtual_wall.damping, virtual_wall.force_retreat_gain"

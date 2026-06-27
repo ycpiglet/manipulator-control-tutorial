@@ -22,6 +22,7 @@ class BatchTests(unittest.TestCase):
         self.assertIn("lab02_pid_compare", batch.list_batch_sets())
         self.assertIn("lab03_2dof_compare", batch.list_batch_sets())
         self.assertIn("lab04_wall_compare", batch.list_batch_sets())
+        self.assertIn("lab04_cartesian_compare", batch.list_batch_sets())
 
         for batch_name, scenarios in batch.BATCH_SETS.items():
             with self.subTest(batch=batch_name):
@@ -142,12 +143,33 @@ class BatchTests(unittest.TestCase):
             report_html = (output / "report.html").read_text(encoding="utf-8")
             self.assertIn("All Comparison Batches", report_html)
             self.assertIn("lab01_msd_compare/report.html", report_html)
+            self.assertIn("lab04_cartesian_compare/report.html", report_html)
             self.assertIn("lab04_wall_compare/report.html", report_html)
             self.assertIn("lab01_msd_compare/report.html", (output / "index.html").read_text(encoding="utf-8"))
 
     def test_run_batch_rejects_unknown_batch_name(self) -> None:
         with self.assertRaises(ValueError):
             batch.run_batch("missing_batch")
+
+    def test_display_metric_keys_skip_unrelated_all_zero_fallback_metrics(self) -> None:
+        guide = batch.BATCH_GUIDES["lab04_cartesian_compare"]
+        rows = [
+            {
+                "summary": {
+                    "final_cartesian_error_cm": 0.6,
+                    "max_wall_penetration_cm": 0.0,
+                    "max_wall_retreat_cm": 0.0,
+                    "max_abs_virtual_wall_force": 0.0,
+                }
+            }
+        ]
+
+        keys = batch._display_metric_keys(guide, rows)
+
+        self.assertIn("final_cartesian_error_cm", keys)
+        self.assertNotIn("max_wall_penetration_cm", keys)
+        self.assertNotIn("max_wall_retreat_cm", keys)
+        self.assertNotIn("max_abs_virtual_wall_force", keys)
 
     def test_comparison_plots_are_written_from_run_logs(self) -> None:
         scenarios = (

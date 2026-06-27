@@ -148,7 +148,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Config", html)
             self.assertIn("Progress Snapshot", html)
             self.assertIn("Learning Path", html)
-            self.assertIn("1/9 steps complete", html)
+            self.assertIn("1/10 steps complete", html)
             self.assertIn("1. Feel 1D physics", html)
             self.assertIn("2. Disturb and tune", html)
             self.assertIn("Not run yet", html)
@@ -206,8 +206,8 @@ class LoggingTests(unittest.TestCase):
 
             html = index.read_text(encoding="utf-8")
             self.assertIn("Learning Path", html)
-            self.assertIn("1/9 steps complete", html)
-            self.assertIn("9. Compare the course", html)
+            self.assertIn("1/10 steps complete", html)
+            self.assertIn("10. Compare the course", html)
             self.assertIn("20260627_151000_all_batches/report.html", html)
 
     def test_outputs_index_handles_empty_outputs_folder(self) -> None:

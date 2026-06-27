@@ -77,6 +77,8 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(("Lab04 Panda Manipulator", "Neutral hold"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Reach X"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Cartesian reach"), labels)
+        self.assertIn(("Lab04 Panda Manipulator", "Soft Cartesian"), labels)
+        self.assertIn(("Lab04 Panda Manipulator", "Stiff Cartesian"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Cartesian interactive"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Joint target"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Soft wall"), labels)
@@ -105,6 +107,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Lab02 PID compare", labels)
         self.assertIn("Lab03 2DOF compare", labels)
         self.assertIn("Lab04 wall compare", labels)
+        self.assertIn("Lab04 Cartesian compare", labels)
 
         for action in BATCH_ACTIONS:
             with self.subTest(label=action.label):
@@ -181,7 +184,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertFalse(second_progress.completed)
         self.assertIn("Status: Not run yet", learning_path_progress_text(LEARNING_PATH[1], second_progress))
         self.assertEqual(next_learning_path_step(progress_items), LEARNING_PATH[1])
-        self.assertIn("Progress: 2/9 complete", learning_path_summary_text(progress_items))
+        self.assertIn("Progress: 2/10 complete", learning_path_summary_text(progress_items))
         self.assertIn("Next: 2. Disturb and tune", learning_path_summary_text(progress_items))
 
     def test_recommended_learning_path_summary_detects_completion(self) -> None:
@@ -191,7 +194,7 @@ class LearnerMenuTests(unittest.TestCase):
         )
 
         self.assertIsNone(next_learning_path_step(progress_items))
-        self.assertIn("Progress: 9/9 complete", learning_path_summary_text(progress_items))
+        self.assertIn("Progress: 10/10 complete", learning_path_summary_text(progress_items))
         self.assertIn("Course path complete", learning_path_summary_text(progress_items))
 
     def test_menu_actions_have_valid_guided_lesson_cards(self) -> None:
@@ -241,6 +244,10 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(
             "dls_damping",
             parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF DLS singularity")]),
+        )
+        self.assertIn(
+            "cartesian_target.gain",
+            parameter_hint(by_label[("Lab04 Panda Manipulator", "Soft Cartesian")]),
         )
         self.assertIn("virtual_wall.stiffness", parameter_hint(by_label[("Lab04 Panda Manipulator", "Virtual wall")]))
 

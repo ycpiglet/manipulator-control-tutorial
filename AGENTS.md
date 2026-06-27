@@ -54,6 +54,7 @@ Implemented and verified:
 - Lab03 FK, IK helper, analytic Jacobian, joint-space tracking, and task-space Jacobian-transpose PD
 - Lab04 Franka Emika Panda manipulator using MuJoCo Menagerie
 - Lab04 Cartesian reach with damped-least-squares Jacobian target offsets
+- Lab04 soft/stiff Cartesian reach comparison configs and batch report
 - Lab04 deterministic virtual wall with soft/stiff stiffness-damping comparison configs
 - YAML configs, MuJoCo XML models, docs, and tests for the implemented labs
 
@@ -210,6 +211,7 @@ Implemented so far:
 - neutral pose hold
 - joint-space trajectory tracking with Menagerie position actuators
 - Cartesian reach using damped-least-squares Jacobian target offsets
+- soft/stiff Cartesian reach comparison using Cartesian error and actuator effort metrics
 - deterministic virtual wall with Jacobian-based target retreat
 - soft/stiff wall comparison using wall force, penetration, and retreat metrics
 - interactive wall position/stiffness/damping/retreat tuning
@@ -276,4 +278,4 @@ The full project is course-demo ready when:
 
 ## Next Best Task
 
-Continue expanding Lab04 impedance comparison lessons or add Lab03 condition-aware task-control comparisons. Do not add web, ROS2, or Isaac Sim scope before the local MuJoCo labs are stable.
+Continue expanding Lab04 impedance/wall lessons or add Lab03 condition-aware task-control comparisons. Do not add web, ROS2, or Isaac Sim scope before the local MuJoCo labs are stable.

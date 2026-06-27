@@ -138,11 +138,16 @@ INDEX_LEARNING_PATH: tuple[IndexPathStep, ...] = (
     ),
     IndexPathStep("7. Hold Panda", "Stable neutral-hold baseline for Panda.", "configs/lab04_panda/neutral_hold.yaml"),
     IndexPathStep(
-        "8. Touch virtual wall",
+        "8. Reach in Cartesian",
+        "Panda hand reaches an explicit XYZ target.",
+        "configs/lab04_panda/cartesian_reach.yaml",
+    ),
+    IndexPathStep(
+        "9. Touch virtual wall",
         "Interactive Panda virtual wall behavior.",
         "configs/lab04_panda/interactive_virtual_wall.yaml",
     ),
-    IndexPathStep("9. Compare the course", "Full comparison report set.", batch_name="all"),
+    IndexPathStep("10. Compare the course", "Full comparison report set.", batch_name="all"),
 )
 
 

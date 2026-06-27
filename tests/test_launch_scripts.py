@@ -60,6 +60,7 @@ class LaunchScriptTests(unittest.TestCase):
             "run_batch_lab02.cmd": "lab02_pid_compare",
             "run_batch_lab03.cmd": "lab03_2dof_compare",
             "run_batch_lab04.cmd": "lab04_wall_compare",
+            "run_batch_lab04_cartesian.cmd": "lab04_cartesian_compare",
             "run_all_batches.cmd": "all",
         }
 
@@ -73,5 +74,7 @@ class LaunchScriptTests(unittest.TestCase):
 
         lab04_text = (ROOT / "run_batch_lab04.cmd").read_text(encoding="utf-8")
         self.assertIn("third_party\\mujoco_menagerie\\franka_emika_panda\\scene.xml", lab04_text)
+        lab04_cartesian_text = (ROOT / "run_batch_lab04_cartesian.cmd").read_text(encoding="utf-8")
+        self.assertIn("third_party\\mujoco_menagerie\\franka_emika_panda\\scene.xml", lab04_cartesian_text)
         all_text = (ROOT / "run_all_batches.cmd").read_text(encoding="utf-8")
         self.assertIn("third_party\\mujoco_menagerie\\franka_emika_panda\\scene.xml", all_text)

@@ -49,6 +49,16 @@ python -m mclab run lab04 --config configs/lab04_panda/interactive_cartesian_rea
 
 The automatic demo moves the hand toward a fixed XYZ target. The interactive demo opens sliders for target X/Y/Z and Cartesian gain. Compare `x_ee_*` and `target_x_ee_*` in `end_effector.png`, then check `cartesian_error.png`.
 
+Soft/stiff Cartesian reach comparison:
+
+```bash
+python -m mclab run lab04 --config configs/lab04_panda/cartesian_soft.yaml --headless --plot --plots cartesian_reach
+python -m mclab run lab04 --config configs/lab04_panda/cartesian_stiff.yaml --headless --plot --plots cartesian_reach
+python -m mclab batch lab04_cartesian_compare --open-report
+```
+
+Use this comparison before the virtual wall demos. The soft reach uses lower Cartesian gain, smaller step limits, and more DLS damping, so it should move more calmly but can leave more hand error. The stiff reach pursues the same XYZ target more aggressively and should reduce final Cartesian error. Compare `cartesian_error.png`, `end_effector.png`, and `torque.png`, then use the batch report to inspect the parameter difference table and actuator-force traces.
+
 Interactive virtual wall demo:
 
 ```powershell

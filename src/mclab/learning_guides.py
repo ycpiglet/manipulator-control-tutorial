@@ -273,6 +273,22 @@ RUN_GUIDES: dict[str, RunGuide] = {
         "Cartesian error, actuator force, and joint tracking error.",
         "Move the target by a few centimeters and rerun.",
     ),
+    "configs/lab04_panda/cartesian_soft.yaml": RunGuide(
+        "Lab04 Soft Cartesian Reach",
+        "A softer Cartesian reach command moves calmly but may leave more hand error.",
+        "Run before the stiff reach case and compare cartesian_error.png.",
+        "cartesian_target.gain, cartesian_target.max_step, cartesian_target.damped_least_squares",
+        "Final Cartesian error, hand path smoothness, and actuator force traces.",
+        "Raise gain gradually and compare the error-effort tradeoff.",
+    ),
+    "configs/lab04_panda/cartesian_stiff.yaml": RunGuide(
+        "Lab04 Stiff Cartesian Reach",
+        "A stiffer Cartesian reach command pursues the same hand target more aggressively.",
+        "Compare directly against the soft reach case.",
+        "cartesian_target.gain, cartesian_target.max_step, cartesian_target.max_joint_offset",
+        "Lower Cartesian error, actuator force traces, and joint tracking error.",
+        "Lower max_step to calm the response without changing the target.",
+    ),
     "configs/lab04_panda/interactive_cartesian_reach.yaml": RunGuide(
         "Lab04 Cartesian Interactive",
         "Tune hand target and Cartesian gain while the viewer runs.",
