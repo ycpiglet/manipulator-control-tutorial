@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from mclab.cli import LABS, main  # noqa: E402
+from mclab.cli import build_parser  # noqa: E402
 
 
 class CliImportTests(unittest.TestCase):
@@ -17,3 +18,19 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("lab03", LABS)
         self.assertIn("lab04", LABS)
         self.assertEqual(main(["list"]), 0)
+
+    def test_cli_accepts_viewer_quality_of_life_options(self) -> None:
+        args = build_parser().parse_args(
+            [
+                "run",
+                "lab04",
+                "--config",
+                "configs/lab04_panda/joint_pd.yaml",
+                "--viewer",
+                "--realtime",
+                "--pause-at-end",
+            ]
+        )
+        self.assertTrue(args.viewer)
+        self.assertTrue(args.realtime)
+        self.assertTrue(args.pause_at_end)

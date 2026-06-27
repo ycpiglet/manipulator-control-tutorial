@@ -7,7 +7,13 @@ from typing import Any
 
 from mclab.config import resolve_project_path
 from mclab.sim.logging import RunLogger
-from mclab.sim.mujoco_utils import load_model_and_data, maybe_launch_viewer
+from mclab.sim.mujoco_utils import (
+    load_model_and_data,
+    maybe_launch_viewer,
+    pause_viewer_at_end,
+    sync_viewer,
+    viewer_clock,
+)
 from mclab.sim.one_dof import configure_slider_plant, force_input_at, mechanical_energy, slider_state
 from mclab.sim.plotting import save_time_series_plots
 
@@ -20,6 +26,8 @@ def run(
     plot: bool = False,
     viewer: bool = False,
     headless: bool = False,
+    realtime: bool = False,
+    pause_at_end: bool = False,
     seed: int | None = None,
 ) -> Path:
     del seed
@@ -36,13 +44,21 @@ def run(
     force_config = config.get("force_input", config.get("external_force", 0.0))
 
     viewer_handle = maybe_launch_viewer(mujoco, model, data, enabled=viewer and not headless)
+    wall_start = viewer_clock()
+    sim_start = float(data.time)
+    completed = False
     try:
         while data.time < sim_time:
             force = force_input_at(float(data.time), force_config)
             data.ctrl[handles.actuator_id] = force
             mujoco.mj_step(model, data)
-            if viewer_handle is not None:
-                viewer_handle.sync()
+            sync_viewer(
+                viewer_handle,
+                data,
+                realtime=realtime,
+                wall_start=wall_start,
+                sim_start=sim_start,
+            )
 
             position, velocity, acceleration = slider_state(data, handles)
             kinetic, potential, total = mechanical_energy(
@@ -63,8 +79,11 @@ def run(
                 potential_energy=potential,
                 total_energy=total,
             )
+        completed = True
     finally:
         if viewer_handle is not None:
+            if completed:
+                pause_viewer_at_end(viewer_handle, enabled=pause_at_end)
             viewer_handle.close()
 
     summary = _summary(logger.rows)
@@ -119,4 +138,3 @@ m x_ddot + c x_dot + k x = F
 - damping: {config.get("damping", 0.0)}
 - stiffness: {config.get("stiffness", 0.0)}
 """
-

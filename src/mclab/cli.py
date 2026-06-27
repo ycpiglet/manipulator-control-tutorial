@@ -45,6 +45,8 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--config", required=True, help="YAML config path.")
     run_parser.add_argument("--viewer", action="store_true", help="Open MuJoCo viewer.")
     run_parser.add_argument("--headless", action="store_true", help="Run without viewer.")
+    run_parser.add_argument("--realtime", action="store_true", help="Pace viewer runs near wall-clock time.")
+    run_parser.add_argument("--pause-at-end", action="store_true", help="Keep viewer open after the run completes.")
     run_parser.add_argument("--plot", action="store_true", help="Save standard plots.")
     run_parser.add_argument("--output-dir", help="Output directory override.")
     run_parser.add_argument("--seed", type=int, help="Random seed for noisy experiments.")
@@ -72,6 +74,8 @@ def main(argv: list[str] | None = None) -> int:
             plot=args.plot,
             viewer=args.viewer,
             headless=args.headless,
+            realtime=args.realtime,
+            pause_at_end=args.pause_at_end,
             seed=args.seed,
         )
         print(f"Run complete: {output_path}")

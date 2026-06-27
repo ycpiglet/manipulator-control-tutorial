@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from time import perf_counter, sleep
 from typing import Any
 
 from mclab.config import resolve_project_path
@@ -36,3 +37,42 @@ def maybe_launch_viewer(mujoco: Any, model: Any, data: Any, *, enabled: bool) ->
         raise RuntimeError("MuJoCo viewer could not be launched in this environment.") from exc
     return mujoco_viewer.launch_passive(model, data)
 
+
+def viewer_clock() -> float:
+    return perf_counter()
+
+
+def sync_viewer(
+    viewer_handle: Any | None,
+    data: Any,
+    *,
+    realtime: bool = False,
+    wall_start: float | None = None,
+    sim_start: float = 0.0,
+) -> None:
+    if viewer_handle is None:
+        return
+    viewer_handle.sync()
+    if realtime and wall_start is not None:
+        target_wall_time = wall_start + max(0.0, float(data.time) - sim_start)
+        delay = target_wall_time - perf_counter()
+        if delay > 0.0:
+            sleep(min(delay, 0.05))
+
+
+def pause_viewer_at_end(viewer_handle: Any | None, *, enabled: bool) -> None:
+    if viewer_handle is None or not enabled:
+        return
+
+    is_running = getattr(viewer_handle, "is_running", None)
+    if not callable(is_running):
+        input("Simulation complete. Press Enter to close the MuJoCo viewer...")
+        return
+
+    print("Simulation complete. Close the MuJoCo viewer window to exit.")
+    try:
+        while bool(is_running()):
+            viewer_handle.sync()
+            sleep(1.0 / 30.0)
+    except KeyboardInterrupt:
+        pass

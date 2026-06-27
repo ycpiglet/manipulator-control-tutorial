@@ -11,7 +11,13 @@ from typing import Any
 
 from mclab.config import resolve_project_path
 from mclab.sim.logging import RunLogger
-from mclab.sim.mujoco_utils import load_model_and_data, maybe_launch_viewer
+from mclab.sim.mujoco_utils import (
+    load_model_and_data,
+    maybe_launch_viewer,
+    pause_viewer_at_end,
+    sync_viewer,
+    viewer_clock,
+)
 from mclab.sim.one_dof import configure_slider_plant, slider_state
 from mclab.sim.plotting import save_time_series_plots
 from mclab.trajectories import build_trajectory
@@ -25,6 +31,8 @@ def run(
     plot: bool = False,
     viewer: bool = False,
     headless: bool = False,
+    realtime: bool = False,
+    pause_at_end: bool = False,
     seed: int | None = None,
 ) -> Path:
     del seed
@@ -46,6 +54,9 @@ def run(
     kt = float(config.get("torque_constant", 1.0))
 
     viewer_handle = maybe_launch_viewer(mujoco, model, data, enabled=viewer and not headless)
+    wall_start = viewer_clock()
+    sim_start = float(data.time)
+    completed = False
     try:
         while data.time < sim_time:
             position, velocity, _ = slider_state(data, handles)
@@ -56,8 +67,13 @@ def run(
 
             data.ctrl[handles.actuator_id] = control_force
             mujoco.mj_step(model, data)
-            if viewer_handle is not None:
-                viewer_handle.sync()
+            sync_viewer(
+                viewer_handle,
+                data,
+                realtime=realtime,
+                wall_start=wall_start,
+                sim_start=sim_start,
+            )
 
             position, velocity, acceleration = slider_state(data, handles)
             logger.record(
@@ -74,8 +90,11 @@ def run(
                 control_force=control_force,
                 current_proxy=control_force / kt,
             )
+        completed = True
     finally:
         if viewer_handle is not None:
+            if completed:
+                pause_viewer_at_end(viewer_handle, enabled=pause_at_end)
             viewer_handle.close()
 
     summary = _summary(logger.rows)
@@ -153,4 +172,3 @@ Generated profiles include target position, velocity, acceleration, and jerk.
 - start: {trajectory.get("start", trajectory.get("start_position", 0.0))}
 - end: {trajectory.get("end", trajectory.get("goal_position", 1.0))}
 """
-

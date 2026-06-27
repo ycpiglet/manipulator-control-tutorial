@@ -206,16 +206,16 @@ python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless 
 .\.venv\Scripts\python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless --plot
 ```
 
-Viewer를 띄우고 싶으면 `--headless` 대신 `--viewer`를 사용합니다.
+Viewer를 띄우고 움직임을 실제 시간에 가깝게 보려면 `--headless` 대신 `--viewer --realtime`을 사용합니다. 실행이 끝난 뒤 창을 유지하려면 `--pause-at-end`를 함께 붙입니다.
 
 ```bash
-python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --viewer --plot
+python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --viewer --realtime --pause-at-end --plot
 ```
 
 CLI 형식:
 
 ```bash
-python -m mclab run <lab_name> --config <config_path> [--headless] [--viewer] [--plot] [--output-dir <path>]
+python -m mclab run <lab_name> --config <config_path> [--headless] [--viewer] [--realtime] [--pause-at-end] [--plot] [--output-dir <path>]
 ```
 
 사용 가능한 lab 이름 확인:
@@ -318,6 +318,7 @@ python -m ruff check src tests scripts
 - `mujoco_menagerie`가 없다는 오류가 나면 `python scripts/bootstrap_and_run.py --setup-only`를 실행합니다.
 - `python -m mclab`가 동작하지 않으면 가상환경을 활성화했는지 확인하거나 `.\.venv\Scripts\python -m mclab ...` 형식으로 실행합니다.
 - Viewer가 열리지 않으면 먼저 `--headless --plot`으로 실행해 시뮬레이션 자체가 정상인지 확인합니다.
+- Viewer가 잠깐 뜨고 닫히면 정상 종료된 것입니다. 오래 보려면 `--viewer --realtime --pause-at-end`를 사용하거나 YAML의 `sim_time` 값을 늘립니다.
 - `outputs/`가 너무 커지면 필요한 결과만 남기고 실행 결과 폴더를 삭제해도 됩니다.
 
 ---
@@ -404,16 +405,16 @@ Without activating the virtual environment on Windows:
 .\.venv\Scripts\python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless --plot
 ```
 
-Use `--viewer` instead of `--headless` to open the MuJoCo viewer:
+Use `--viewer --realtime` instead of `--headless` to open the MuJoCo viewer and pace motion close to wall-clock time. Add `--pause-at-end` to keep the window open after the simulation finishes.
 
 ```bash
-python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --viewer --plot
+python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --viewer --realtime --pause-at-end --plot
 ```
 
 CLI shape:
 
 ```bash
-python -m mclab run <lab_name> --config <config_path> [--headless] [--viewer] [--plot] [--output-dir <path>]
+python -m mclab run <lab_name> --config <config_path> [--headless] [--viewer] [--realtime] [--pause-at-end] [--plot] [--output-dir <path>]
 ```
 
 List available labs:
@@ -516,6 +517,7 @@ python -m ruff check src tests scripts
 - If `mujoco_menagerie` is missing, run `python scripts/bootstrap_and_run.py --setup-only`.
 - If `python -m mclab` fails, activate `.venv` or run `.\.venv\Scripts\python -m mclab ...`.
 - If the viewer does not open, first run with `--headless --plot` to confirm that simulation works.
+- If the viewer opens briefly and closes, the run completed normally. Use `--viewer --realtime --pause-at-end` or increase `sim_time` in the YAML config.
 - If `outputs/` grows too large, you can delete old run folders safely.
 
 ---

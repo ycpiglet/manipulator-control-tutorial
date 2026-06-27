@@ -7,7 +7,13 @@ from typing import Any
 
 from mclab.config import resolve_project_path
 from mclab.sim.logging import RunLogger
-from mclab.sim.mujoco_utils import load_model_and_data, maybe_launch_viewer
+from mclab.sim.mujoco_utils import (
+    load_model_and_data,
+    maybe_launch_viewer,
+    pause_viewer_at_end,
+    sync_viewer,
+    viewer_clock,
+)
 from mclab.sim.plotting import save_time_series_plots
 from mclab.trajectories import build_trajectory
 
@@ -27,6 +33,8 @@ def run(
     plot: bool = False,
     viewer: bool = False,
     headless: bool = False,
+    realtime: bool = False,
+    pause_at_end: bool = False,
     seed: int | None = None,
 ) -> Path:
     del seed
@@ -57,6 +65,9 @@ def run(
         raise ValueError("controlled_joint_index must be in [0, 6]")
 
     viewer_handle = maybe_launch_viewer(mujoco, model, data, enabled=viewer and not headless)
+    wall_start = viewer_clock()
+    sim_start = float(data.time)
+    completed = False
     try:
         while data.time < sim_time:
             target_q = home_q.copy()
@@ -78,8 +89,13 @@ def run(
             target_q = _clip_to_ctrl_range(model, handles["actuator_ids"], target_q)
             _apply_arm_control(data, handles["actuator_ids"], target_q, config)
             mujoco.mj_step(model, data)
-            if viewer_handle is not None:
-                viewer_handle.sync()
+            sync_viewer(
+                viewer_handle,
+                data,
+                realtime=realtime,
+                wall_start=wall_start,
+                sim_start=sim_start,
+            )
 
             q = [float(data.qpos[index]) for index in handles["qpos_indices"]]
             qdot = [float(data.qvel[index]) for index in handles["dof_indices"]]
@@ -107,8 +123,11 @@ def run(
                 wall_penetration=wall_penetration,
                 wall_penetration_cm=100.0 * wall_penetration,
             )
+        completed = True
     finally:
         if viewer_handle is not None:
+            if completed:
+                pause_viewer_at_end(viewer_handle, enabled=pause_at_end)
             viewer_handle.close()
 
     summary = _summary(logger.rows)
