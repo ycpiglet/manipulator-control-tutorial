@@ -17,7 +17,8 @@ from mclab.learner_menu import (  # noqa: E402
     action_doc_path,
     build_run_args,
     lesson_text,
-    open_path,
+    launch_latest_output,
+    open_editable_path,
     parameter_hint,
     parse_run_output_path,
 )
@@ -108,7 +109,7 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertTrue(action_config_path(action).exists())
                 self.assertTrue(action_doc_path(action).exists())
 
-    def test_open_path_prefers_vscode_for_files_when_available(self) -> None:
+    def test_open_editable_path_prefers_vscode_for_files_when_available(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "demo.yaml"
             path.write_text("lab: demo\n", encoding="utf-8")
@@ -117,9 +118,21 @@ class LearnerMenuTests(unittest.TestCase):
                 patch("mclab.learner_menu.shutil.which", return_value="code"),
                 patch("mclab.learner_menu.subprocess.Popen") as popen,
             ):
-                open_path(path)
+                open_editable_path(path)
 
             popen.assert_called_once_with(["code", "-r", str(path)])
+
+    def test_launch_latest_output_opens_report_when_available(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_path = Path(tmp) / "run"
+            run_path.mkdir()
+            report = run_path / "report.html"
+            report.write_text("<html></html>", encoding="utf-8")
+
+            with patch("mclab.learner_menu.open_path") as opener:
+                launch_latest_output({"path": run_path})
+
+            opener.assert_called_once_with(report)
 
     def test_parse_run_output_path_detects_completed_run(self) -> None:
         parsed = parse_run_output_path(r"Run complete: C:\tmp\outputs\20260627_150117_lab04_panda")

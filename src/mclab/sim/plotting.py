@@ -6,6 +6,8 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from mclab.sim.reporting import write_run_report
+
 
 PlotSpec = tuple[str, str, str, Sequence[str]]
 PlotSelection = str | Sequence[str] | None
@@ -49,6 +51,8 @@ def save_time_series_plots(
         axis.legend()
         fig.savefig(plot_dir / filename, dpi=150)
         plt.close(fig)
+
+    write_run_report(output)
 
 
 def select_plot_specs(

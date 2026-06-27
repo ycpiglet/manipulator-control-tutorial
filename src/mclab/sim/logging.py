@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from mclab.config import PROJECT_ROOT, resolve_project_path
+from mclab.sim.reporting import write_run_report
 
 
 def create_output_path(lab_name: str, output_dir: str | Path | None = None) -> Path:
@@ -61,6 +62,7 @@ class RunLogger:
         self._save_states()
         self._save_summary(summary or {})
         self._save_notes(notes)
+        write_run_report(self.output_path)
         return self.output_path
 
     def _save_config_snapshot(self) -> None:

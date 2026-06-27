@@ -415,11 +415,11 @@ def action_doc_path(action: MenuAction) -> Path:
 
 
 def launch_action_config(action: MenuAction) -> subprocess.Popen[Any] | None:
-    return open_path(action_config_path(action))
+    return open_editable_path(action_config_path(action))
 
 
 def launch_action_doc(action: MenuAction) -> subprocess.Popen[Any] | None:
-    return open_path(action_doc_path(action))
+    return open_editable_path(action_doc_path(action))
 
 
 def launch_outputs_folder() -> subprocess.Popen[Any] | None:
@@ -432,15 +432,13 @@ def launch_latest_output(latest_output: dict[str, Path | None]) -> subprocess.Po
     path = latest_output.get("path")
     if path is None:
         return None
-    return open_path(path)
+    report = path / "report.html"
+    return open_path(report if report.exists() else path)
 
 
 def open_path(path: Path) -> subprocess.Popen[Any] | None:
     if not path.exists():
         return None
-    code_command = shutil.which("code")
-    if path.is_file() and code_command:
-        return subprocess.Popen([code_command, "-r", str(path)])
     if sys.platform.startswith("win"):
         import os
 
@@ -449,6 +447,15 @@ def open_path(path: Path) -> subprocess.Popen[Any] | None:
     if sys.platform == "darwin":
         return subprocess.Popen(["open", str(path)])
     return subprocess.Popen(["xdg-open", str(path)])
+
+
+def open_editable_path(path: Path) -> subprocess.Popen[Any] | None:
+    if not path.exists():
+        return None
+    code_command = shutil.which("code")
+    if path.is_file() and code_command:
+        return subprocess.Popen([code_command, "-r", str(path)])
+    return open_path(path)
 
 
 def parameter_hint(action: MenuAction) -> str:
@@ -587,7 +594,7 @@ def main() -> int:
     bottom = ttk.Frame(outer)
     bottom.pack(fill="x", pady=(12, 0))
     ttk.Button(bottom, text="Open outputs folder", command=launch_outputs_folder).pack(side="left")
-    latest_button = ttk.Button(bottom, text="Open latest run", command=lambda: launch_latest_output(latest_output))
+    latest_button = ttk.Button(bottom, text="Open latest report", command=lambda: launch_latest_output(latest_output))
     latest_button.pack(side="left", padx=(8, 0))
     latest_button.state(["disabled"])
     ttk.Label(bottom, textvariable=status).pack(side="left", padx=12)
