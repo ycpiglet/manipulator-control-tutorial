@@ -16,12 +16,23 @@ from mclab.config import PROJECT_ROOT, resolve_project_path
 def create_output_path(lab_name: str, output_dir: str | Path | None = None) -> Path:
     if output_dir is not None:
         path = resolve_project_path(output_dir)
+        path.mkdir(parents=True, exist_ok=True)
     else:
         stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        path = PROJECT_ROOT / "outputs" / f"{stamp}_{lab_name}"
-    path.mkdir(parents=True, exist_ok=True)
+        path = _create_unique_output_directory(PROJECT_ROOT / "outputs" / f"{stamp}_{lab_name}")
     (path / "plots").mkdir(exist_ok=True)
     return path
+
+
+def _create_unique_output_directory(base_path: Path) -> Path:
+    for index in range(1000):
+        path = base_path if index == 0 else base_path.with_name(f"{base_path.name}_{index:03d}")
+        try:
+            path.mkdir(parents=True, exist_ok=False)
+            return path
+        except FileExistsError:
+            continue
+    raise RuntimeError(f"Could not create a unique output directory for {base_path}")
 
 
 class RunLogger:
@@ -140,4 +151,3 @@ def _dump_basic_yaml(data: Mapping[str, Any], indent: int = 0) -> str:
         else:
             lines.append(f"{prefix}{key}: {value}")
     return "\n".join(lines) + "\n"
-

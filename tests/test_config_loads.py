@@ -12,18 +12,7 @@ from mclab.config import load_config  # noqa: E402
 
 class ConfigLoadTests(unittest.TestCase):
     def test_lab_configs_load(self) -> None:
-        paths = [
-            "configs/lab01_msd/default.yaml",
-            "configs/lab01_msd/interactive_pull.yaml",
-            "configs/lab02_pid/default.yaml",
-            "configs/lab02_pid/interactive_disturbance.yaml",
-            "configs/lab03_2dof/minimum_jerk.yaml",
-            "configs/lab03_2dof/interactive_tracking.yaml",
-            "configs/lab04_panda/joint_pd.yaml",
-            "configs/lab04_panda/interactive_joint_hold.yaml",
-            "configs/lab04_panda/interactive_virtual_wall.yaml",
-            "configs/lab04_panda/impedance_wall.yaml",
-        ]
+        paths = sorted(str(path.relative_to(ROOT)) for path in (ROOT / "configs").rglob("*.yaml"))
         for path in paths:
             with self.subTest(path=path):
                 config = load_config(path)

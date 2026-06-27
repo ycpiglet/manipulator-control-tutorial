@@ -134,7 +134,16 @@ Windows PowerShell에서 가장 쉬운 방법:
 .\run_mclab.cmd
 ```
 
-이 명령은 학습자용 메뉴를 엽니다. 메뉴에서 Lab01-04의 자동 데모, interactive 데모, Panda virtual wall 데모를 버튼으로 실행할 수 있습니다. 각 데모는 사이드 패널 없는 MuJoCo viewer를 열고, 필요한 경우 `MCLab Interaction` 버튼/슬라이더/상태 창을 함께 띄웁니다.
+이 명령은 학습자용 메뉴를 엽니다. 메뉴에서 Lab01-04의 자동 데모, 비교 시나리오, interactive 데모, Panda virtual wall 데모를 버튼으로 실행할 수 있습니다. 각 항목에는 `Try` / `Watch` 안내가 붙어 있어 학습자가 무엇을 바꿔보고 무엇을 관찰해야 하는지 바로 알 수 있습니다. 각 데모는 사이드 패널 없는 MuJoCo viewer를 열고, 필요한 경우 `MCLab Interaction` 버튼/슬라이더/상태 창을 함께 띄웁니다.
+
+메뉴에 포함된 주요 비교 시나리오:
+
+| Lab | Scenario examples |
+|---|---|
+| Lab01 | underdamped, overdamped, high/low stiffness, interactive pull |
+| Lab02 | low/high P gain, PD damping, saturation, windup vs anti-windup, interactive disturbance |
+| Lab03 | step, trapezoidal, minimum-jerk, S-curve, interactive tracking |
+| Lab04 | neutral hold, joint trajectories, hand X motion, joint target nudge, virtual wall |
 
 개별 랩을 바로 실행하고 싶으면:
 
@@ -401,7 +410,16 @@ The easiest option on Windows PowerShell:
 .\run_mclab.cmd
 ```
 
-This opens the learner menu. From the menu, learners can launch Lab01-04 auto demos, interactive demos, and the Panda virtual wall demo with buttons. Each demo opens a MuJoCo viewer without side panels and, when needed, a separate `MCLab Interaction` button/slider/status window.
+This opens the learner menu. From the menu, learners can launch Lab01-04 auto demos, comparison scenarios, interactive demos, and the Panda virtual wall demo with buttons. Each item includes `Try` / `Watch` guidance so learners know what to change and what to observe. Each demo opens a MuJoCo viewer without side panels and, when needed, a separate `MCLab Interaction` button/slider/status window.
+
+Main comparison scenarios in the menu:
+
+| Lab | Scenario examples |
+|---|---|
+| Lab01 | underdamped, overdamped, high/low stiffness, interactive pull |
+| Lab02 | low/high P gain, PD damping, saturation, windup vs anti-windup, interactive disturbance |
+| Lab03 | step, trapezoidal, minimum-jerk, S-curve, interactive tracking |
+| Lab04 | neutral hold, joint trajectories, hand X motion, joint target nudge, virtual wall |
 
 To launch individual labs directly:
 
