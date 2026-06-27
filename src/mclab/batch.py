@@ -63,6 +63,15 @@ BATCH_SETS: dict[str, tuple[BatchScenario, ...]] = {
         BatchScenario("sensor_noise", "lab02", "configs/lab02_pid/measurement_noise.yaml", "pid"),
         BatchScenario("control_delay", "lab02", "configs/lab02_pid/control_delay.yaml"),
     ),
+    "lab03_2dof_compare": (
+        BatchScenario("joint_space", "lab03", "configs/lab03_2dof/joint_space_2dof.yaml", "essential"),
+        BatchScenario("task_space", "lab03", "configs/lab03_2dof/task_space_2dof.yaml", "task"),
+        BatchScenario("singularity", "lab03", "configs/lab03_2dof/singularity_2dof.yaml", "singularity"),
+    ),
+    "lab04_wall_compare": (
+        BatchScenario("soft_wall", "lab04", "configs/lab04_panda/wall_soft.yaml", "wall_compare"),
+        BatchScenario("stiff_wall", "lab04", "configs/lab04_panda/wall_stiff.yaml", "wall_compare"),
+    ),
 }
 
 BATCH_GUIDES: dict[str, BatchGuide] = {
@@ -108,6 +117,55 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             ("position_compare.png", "Position Tracking Comparison", "position [m]", "position"),
             ("error_compare.png", "Tracking Error Comparison", "error [m]", "position_error"),
             ("control_force_compare.png", "Control Force Comparison", "force [N]", "control_force"),
+        ),
+    ),
+    "lab03_2dof_compare": BatchGuide(
+        title="Lab03 2DOF Manipulator Comparison",
+        focus="Compare joint-space tracking, task-space hand control, and near-singular motion on the same 2DOF arm.",
+        questions=(
+            "Which controller keeps joint error small, and which keeps hand error small?",
+            "What happens to manipulability and Jacobian condition near the singular posture?",
+            "How do the torque plots change when the task is expressed in end-effector space?",
+        ),
+        metric_keys=(
+            "max_joint_error_norm",
+            "final_joint_error_norm",
+            "max_task_error_norm",
+            "final_task_error_norm",
+            "min_manipulability",
+            "max_jacobian_condition",
+            "max_abs_tau_cmd",
+        ),
+        preview_plots=("end_effector.png", "error.png", "singularity.png"),
+        comparison_specs=(
+            ("joint_error_compare.png", "Joint Error Norm Comparison", "error norm", "joint_error_norm"),
+            ("task_error_compare.png", "Task Error Norm Comparison", "error norm", "task_error_norm"),
+            ("hand_x_compare.png", "End-Effector X Comparison", "x [m]", "x_ee_0"),
+            ("manipulability_compare.png", "Manipulability Comparison", "manipulability", "manipulability"),
+        ),
+    ),
+    "lab04_wall_compare": BatchGuide(
+        title="Lab04 Panda Virtual Wall Comparison",
+        focus="Compare soft and stiff virtual wall settings on the Panda end-effector response.",
+        questions=(
+            "Which wall allows more penetration before retreating?",
+            "How much more virtual wall force does the stiff wall produce?",
+            "How does the hand X position change as retreat and damping increase?",
+        ),
+        metric_keys=(
+            "max_wall_penetration_cm",
+            "max_wall_retreat_cm",
+            "max_abs_virtual_wall_force",
+            "max_joint_error_norm",
+            "max_abs_tau_cmd",
+            "final_x_ee_0",
+        ),
+        preview_plots=("virtual_wall.png", "end_effector.png", "error.png"),
+        comparison_specs=(
+            ("hand_x_compare.png", "Panda Hand X Comparison", "x [m]", "x_ee_0"),
+            ("wall_penetration_compare.png", "Wall Penetration Comparison", "penetration [cm]", "wall_penetration_cm"),
+            ("wall_force_compare.png", "Virtual Wall Force Comparison", "force", "force_virtual_0"),
+            ("wall_retreat_compare.png", "Wall Retreat Comparison", "retreat [cm]", "wall_retreat_cm"),
         ),
     ),
 }

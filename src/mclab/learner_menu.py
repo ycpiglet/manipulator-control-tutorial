@@ -64,6 +64,22 @@ BATCH_ACTIONS: tuple[BatchMenuAction, ...] = (
         try_this="Open the generated index and compare overshoot, settling, and effort.",
         watch="Which controller choice trades speed for overshoot or noisy force.",
     ),
+    BatchMenuAction(
+        group="Comparison Batches",
+        label="Lab03 2DOF compare",
+        batch_name="lab03_2dof_compare",
+        description="Run joint-space, task-space, and singularity 2DOF arm cases.",
+        try_this="Compare joint error, hand error, torque, and manipulability overlays.",
+        watch="How task-space control and singularity change the arm response.",
+    ),
+    BatchMenuAction(
+        group="Comparison Batches",
+        label="Lab04 wall compare",
+        batch_name="lab04_wall_compare",
+        description="Run soft and stiff Panda virtual wall cases.",
+        try_this="Compare wall penetration, virtual force, retreat, and hand X motion.",
+        watch="How wall stiffness and damping change the contact-like response.",
+    ),
 )
 
 
@@ -677,10 +693,12 @@ def main() -> int:
 
     batch_frame = ttk.LabelFrame(outer, text="Comparison batches", padding=10)
     batch_frame.pack(fill="x", pady=(0, 10))
-    for column_index, action in enumerate(BATCH_ACTIONS):
-        cell = ttk.Frame(batch_frame)
-        cell.grid(row=0, column=column_index, sticky="ew", padx=(0, 12))
+    for column_index in range(2):
         batch_frame.columnconfigure(column_index, weight=1)
+    for action_index, action in enumerate(BATCH_ACTIONS):
+        row_index, column_index = divmod(action_index, 2)
+        cell = ttk.Frame(batch_frame)
+        cell.grid(row=row_index, column=column_index, sticky="ew", padx=(0, 12), pady=(0, 8))
         ttk.Button(
             cell,
             text=action.label,

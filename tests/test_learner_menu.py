@@ -89,6 +89,8 @@ class LearnerMenuTests(unittest.TestCase):
         labels = {action.label for action in BATCH_ACTIONS}
         self.assertIn("Lab01 compare", labels)
         self.assertIn("Lab02 PID compare", labels)
+        self.assertIn("Lab03 2DOF compare", labels)
+        self.assertIn("Lab04 wall compare", labels)
 
         for action in BATCH_ACTIONS:
             with self.subTest(label=action.label):

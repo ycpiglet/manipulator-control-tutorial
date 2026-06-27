@@ -18,10 +18,14 @@ class BatchTests(unittest.TestCase):
     def test_batch_sets_reference_valid_configs(self) -> None:
         self.assertIn("lab01_msd_compare", batch.list_batch_sets())
         self.assertIn("lab02_pid_compare", batch.list_batch_sets())
+        self.assertIn("lab03_2dof_compare", batch.list_batch_sets())
+        self.assertIn("lab04_wall_compare", batch.list_batch_sets())
 
         for batch_name, scenarios in batch.BATCH_SETS.items():
             with self.subTest(batch=batch_name):
                 self.assertGreaterEqual(len(scenarios), 2)
+                self.assertIn(batch_name, batch.BATCH_GUIDES)
+                self.assertTrue(batch.BATCH_GUIDES[batch_name].comparison_specs)
             for scenario in scenarios:
                 with self.subTest(batch=batch_name, scenario=scenario.label):
                     self.assertIn(scenario.lab_name, batch.LAB_RUNNERS)
