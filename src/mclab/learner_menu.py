@@ -5,9 +5,13 @@ from __future__ import annotations
 import subprocess
 import sys
 from dataclasses import dataclass
+from pathlib import Path
+from threading import Thread
 from typing import Any
 
 from mclab.config import PROJECT_ROOT
+
+RUN_COMPLETE_PREFIX = "Run complete:"
 
 
 @dataclass(frozen=True)
@@ -374,18 +378,48 @@ def build_run_args(action: MenuAction) -> list[str]:
     ]
 
 
-def launch_action(action: MenuAction) -> subprocess.Popen[Any]:
-    return subprocess.Popen(build_run_args(action), cwd=PROJECT_ROOT)
+def launch_action(action: MenuAction) -> subprocess.Popen[str]:
+    return subprocess.Popen(
+        build_run_args(action),
+        cwd=PROJECT_ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )
+
+
+def parse_run_output_path(line: str) -> Path | None:
+    stripped = line.strip()
+    if not stripped.startswith(RUN_COMPLETE_PREFIX):
+        return None
+    raw_path = stripped.removeprefix(RUN_COMPLETE_PREFIX).strip()
+    if not raw_path:
+        return None
+    return Path(raw_path)
 
 
 def launch_outputs_folder() -> subprocess.Popen[Any] | None:
     outputs = PROJECT_ROOT / "outputs"
     outputs.mkdir(exist_ok=True)
+    return open_path(outputs)
+
+
+def launch_latest_output(latest_output: dict[str, Path | None]) -> subprocess.Popen[Any] | None:
+    path = latest_output.get("path")
+    if path is None:
+        return None
+    return open_path(path)
+
+
+def open_path(path: Path) -> subprocess.Popen[Any] | None:
+    if not path.exists():
+        return None
     if sys.platform.startswith("win"):
-        return subprocess.Popen(["explorer", str(outputs)])
+        return subprocess.Popen(["explorer", str(path)])
     if sys.platform == "darwin":
-        return subprocess.Popen(["open", str(outputs)])
-    return subprocess.Popen(["xdg-open", str(outputs)])
+        return subprocess.Popen(["open", str(path)])
+    return subprocess.Popen(["xdg-open", str(path)])
 
 
 def lesson_text(action: MenuAction) -> str:
@@ -417,6 +451,7 @@ def main() -> int:
     subtitle.pack(anchor="w", pady=(4, 12))
 
     status = tk.StringVar(value="Ready.")
+    latest_output: dict[str, Path | None] = {"path": None}
 
     canvas = tk.Canvas(outer, highlightthickness=0)
     scrollbar = ttk.Scrollbar(outer, orient="vertical", command=canvas.yview)
@@ -442,7 +477,13 @@ def main() -> int:
                 frame,
                 text=action.label,
                 width=16,
-                command=lambda selected=action: _launch_from_menu(selected, status),
+                command=lambda selected=action: _launch_from_menu(
+                    selected,
+                    status,
+                    root=root,
+                    latest_output=latest_output,
+                    latest_button=latest_button,
+                ),
             ).grid(row=action_index, column=0, sticky="w", padx=(0, 12), pady=4)
             ttk.Label(frame, text=lesson_text(action), wraplength=680, justify="left").grid(
                 row=action_index, column=1, sticky="w", pady=4
@@ -451,12 +492,84 @@ def main() -> int:
     bottom = ttk.Frame(outer)
     bottom.pack(fill="x", pady=(12, 0))
     ttk.Button(bottom, text="Open outputs folder", command=launch_outputs_folder).pack(side="left")
+    latest_button = ttk.Button(bottom, text="Open latest run", command=lambda: launch_latest_output(latest_output))
+    latest_button.pack(side="left", padx=(8, 0))
+    latest_button.state(["disabled"])
     ttk.Label(bottom, textvariable=status).pack(side="left", padx=12)
 
     root.mainloop()
     return 0
 
 
-def _launch_from_menu(action: MenuAction, status: Any) -> None:
+def _launch_from_menu(
+    action: MenuAction,
+    status: Any,
+    *,
+    root: Any | None = None,
+    latest_output: dict[str, Path | None] | None = None,
+    latest_button: Any | None = None,
+) -> None:
     process = launch_action(action)
     status.set(f"Started {action.group} - {action.label} (pid {process.pid}). Close the viewer to finish.")
+    Thread(
+        target=_watch_process,
+        args=(process, action, status),
+        kwargs={"root": root, "latest_output": latest_output, "latest_button": latest_button},
+        daemon=True,
+    ).start()
+
+
+def _watch_process(
+    process: subprocess.Popen[str],
+    action: MenuAction,
+    status: Any,
+    *,
+    root: Any | None = None,
+    latest_output: dict[str, Path | None] | None = None,
+    latest_button: Any | None = None,
+) -> None:
+    output_path: Path | None = None
+    if process.stdout is not None:
+        for line in process.stdout:
+            parsed = parse_run_output_path(line)
+            if parsed is not None:
+                output_path = parsed
+    return_code = process.wait()
+    _set_status_after_run(
+        action,
+        status,
+        return_code,
+        output_path,
+        root=root,
+        latest_output=latest_output,
+        latest_button=latest_button,
+    )
+
+
+def _set_status_after_run(
+    action: MenuAction,
+    status: Any,
+    return_code: int,
+    output_path: Path | None,
+    *,
+    root: Any | None = None,
+    latest_output: dict[str, Path | None] | None = None,
+    latest_button: Any | None = None,
+) -> None:
+    def update_ui() -> None:
+        if return_code == 0:
+            if output_path is not None:
+                if latest_output is not None:
+                    latest_output["path"] = output_path
+                if latest_button is not None:
+                    latest_button.state(["!disabled"])
+                status.set(f"Completed {action.group} - {action.label}. Latest run: {output_path}")
+            else:
+                status.set(f"Completed {action.group} - {action.label}. Open the outputs folder for results.")
+            return
+        status.set(f"Failed {action.group} - {action.label} with exit code {return_code}.")
+
+    if root is not None:
+        root.after(0, update_ui)
+    else:
+        update_ui()

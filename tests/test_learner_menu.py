@@ -8,7 +8,29 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from mclab.config import load_config  # noqa: E402
-from mclab.learner_menu import MENU_ACTIONS, build_run_args, lesson_text  # noqa: E402
+from mclab.learner_menu import (  # noqa: E402
+    MENU_ACTIONS,
+    _set_status_after_run,
+    build_run_args,
+    lesson_text,
+    parse_run_output_path,
+)
+
+
+class FakeStatus:
+    def __init__(self) -> None:
+        self.value = ""
+
+    def set(self, value: str) -> None:
+        self.value = value
+
+
+class FakeButton:
+    def __init__(self) -> None:
+        self.state_calls: list[list[str]] = []
+
+    def state(self, states: list[str]) -> None:
+        self.state_calls.append(states)
 
 
 class LearnerMenuTests(unittest.TestCase):
@@ -60,3 +82,42 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertIn("Watch:", text)
                 config = load_config(action.config_path)
                 self.assertIn("model_path", config)
+
+    def test_parse_run_output_path_detects_completed_run(self) -> None:
+        parsed = parse_run_output_path(r"Run complete: C:\tmp\outputs\20260627_150117_lab04_panda")
+
+        self.assertIsNotNone(parsed)
+        assert parsed is not None
+        self.assertEqual(parsed.name, "20260627_150117_lab04_panda")
+
+    def test_parse_run_output_path_ignores_noncompletion_lines(self) -> None:
+        self.assertIsNone(parse_run_output_path("Simulation complete. Close the MuJoCo viewer window to exit."))
+        self.assertIsNone(parse_run_output_path("Run complete: "))
+
+    def test_completed_run_status_enables_latest_output_button(self) -> None:
+        status = FakeStatus()
+        button = FakeButton()
+        latest_output: dict[str, Path | None] = {"path": None}
+        output_path = Path(r"C:\tmp\outputs\20260627_150117_lab04_panda")
+
+        _set_status_after_run(
+            MENU_ACTIONS[0],
+            status,
+            0,
+            output_path,
+            latest_output=latest_output,
+            latest_button=button,
+        )
+
+        self.assertEqual(latest_output["path"], output_path)
+        self.assertEqual(button.state_calls, [["!disabled"]])
+        self.assertIn("Completed", status.value)
+        self.assertIn(str(output_path), status.value)
+
+    def test_failed_run_status_reports_exit_code(self) -> None:
+        status = FakeStatus()
+
+        _set_status_after_run(MENU_ACTIONS[0], status, 2, None)
+
+        self.assertIn("Failed", status.value)
+        self.assertIn("exit code 2", status.value)
