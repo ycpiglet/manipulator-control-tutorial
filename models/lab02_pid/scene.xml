@@ -1,0 +1,18 @@
+<mujoco model="lab02_pid_control">
+  <compiler angle="radian"/>
+  <option timestep="0.002" gravity="0 0 0"/>
+
+  <worldbody>
+    <light name="key" pos="0 -2 2" dir="0 1 -1"/>
+    <geom name="rail" type="capsule" fromto="-1.5 0 -0.08 1.5 0 -0.08" size="0.01" rgba="0.4 0.4 0.4 1"/>
+    <body name="block" pos="0 0 0">
+      <joint name="slider" type="slide" axis="1 0 0" damping="1" stiffness="0" springref="0" limited="true" range="-2 2"/>
+      <geom name="block_geom" type="box" size="0.05 0.05 0.05" mass="1" rgba="0.1 0.65 0.35 1"/>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <motor name="force_x" joint="slider" gear="1" ctrllimited="true" ctrlrange="-500 500"/>
+  </actuator>
+</mujoco>
+

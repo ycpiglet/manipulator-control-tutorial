@@ -1,0 +1,16 @@
+model_path: third_party/mujoco_menagerie/franka_emika_panda/scene.xml
+mode: joint_trajectory
+sim_time: 5.0
+dt: 0.002
+home_q: [0.0, 0.0, 0.0, -1.57079, 0.0, 1.57079, -0.7853]
+finger_q: [0.04, 0.04]
+gripper_ctrl: 255.0
+torque_constant: 1.0
+controlled_joint_index: 5
+trajectory:
+  type: s_curve
+  start: 1.57079
+  end: 1.25
+  duration: 2.0
+  start_time: 0.5
+

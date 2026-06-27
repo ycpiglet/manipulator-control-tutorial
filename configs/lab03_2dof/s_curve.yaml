@@ -1,0 +1,21 @@
+model_path: models/lab03_2dof/scene.xml
+sim_time: 4.0
+dt: 0.002
+mass: 1.0
+damping: 0.8
+stiffness: 0.0
+initial_position: 0.0
+initial_velocity: 0.0
+torque_constant: 1.0
+trajectory:
+  type: s_curve
+  start: 0.0
+  end: 0.6
+  duration: 2.0
+  start_time: 0.4
+tracking_controller:
+  kp: 120.0
+  kd: 18.0
+  feedforward_acceleration: true
+  force_limit: 150.0
+

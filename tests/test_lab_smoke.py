@@ -1,0 +1,51 @@
+from __future__ import annotations
+
+import importlib.util
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
+from mclab.config import load_config  # noqa: E402
+from mclab.labs import lab01_msd, lab02_pid, lab03_2dof, lab04_panda  # noqa: E402
+
+
+@unittest.skipIf(importlib.util.find_spec("mujoco") is None, "MuJoCo is not installed")
+class LabSmokeTests(unittest.TestCase):
+    def test_lab01_runs_headless_when_mujoco_is_available(self) -> None:
+        config = load_config("configs/lab01_msd/default.yaml")
+        config["sim_time"] = 0.02
+        with tempfile.TemporaryDirectory() as tmp:
+            output = lab01_msd.run(config, output_dir=Path(tmp) / "lab01", headless=True)
+            self.assertTrue((output / "log.csv").exists())
+            self.assertTrue((output / "summary.json").exists())
+
+    def test_lab02_runs_headless_when_mujoco_is_available(self) -> None:
+        config = load_config("configs/lab02_pid/default.yaml")
+        config["sim_time"] = 0.02
+        with tempfile.TemporaryDirectory() as tmp:
+            output = lab02_pid.run(config, output_dir=Path(tmp) / "lab02", headless=True)
+            self.assertTrue((output / "log.csv").exists())
+            self.assertTrue((output / "summary.json").exists())
+
+    def test_lab03_runs_headless_when_mujoco_is_available(self) -> None:
+        config = load_config("configs/lab03_2dof/minimum_jerk.yaml")
+        config["sim_time"] = 0.02
+        with tempfile.TemporaryDirectory() as tmp:
+            output = lab03_2dof.run(config, output_dir=Path(tmp) / "lab03", headless=True)
+            self.assertTrue((output / "log.csv").exists())
+            self.assertTrue((output / "summary.json").exists())
+
+    def test_lab04_runs_headless_when_assets_are_available(self) -> None:
+        if not (ROOT / "third_party/mujoco_menagerie/franka_emika_panda/scene.xml").exists():
+            self.skipTest("MuJoCo Menagerie has not been fetched")
+
+        config = load_config("configs/lab04_panda/neutral_hold.yaml")
+        config["sim_time"] = 0.02
+        with tempfile.TemporaryDirectory() as tmp:
+            output = lab04_panda.run(config, output_dir=Path(tmp) / "lab04", headless=True)
+            self.assertTrue((output / "log.csv").exists())
+            self.assertTrue((output / "summary.json").exists())
