@@ -105,6 +105,9 @@ class LoggingTests(unittest.TestCase):
             html = report.read_text(encoding="utf-8")
             self.assertIn("plots/position.png", html)
             self.assertIn("position.png", html)
+            self.assertIn("Plot Guide", html)
+            self.assertIn("Position", html)
+            self.assertIn("steady-state error", html)
 
     def test_run_report_updates_parent_outputs_index(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

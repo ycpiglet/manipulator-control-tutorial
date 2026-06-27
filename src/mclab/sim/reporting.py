@@ -119,6 +119,7 @@ def _render_report(
     reproduce_section = _reproduce_section(summary)
     result_check = _result_check_section(summary)
     interaction_section = _interaction_section(interaction_events)
+    plot_guide = _plot_guide_section(plots)
     rows = "\n".join(
         f"<tr><th>{escape(str(key))}</th><td>{escape(_format_value(value))}</td></tr>"
         for key, value in summary.items()
@@ -176,7 +177,7 @@ def _render_report(
       max-width: 1120px;
       margin: 0 auto;
     }}
-    h1, h2 {{
+    h1, h2, h3 {{
       margin: 0 0 12px;
       letter-spacing: 0;
     }}
@@ -185,6 +186,9 @@ def _render_report(
     }}
     h2 {{
       font-size: 20px;
+    }}
+    h3 {{
+      font-size: 16px;
     }}
     section {{
       background: #ffffff;
@@ -212,6 +216,30 @@ def _render_report(
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
       gap: 16px;
+    }}
+    .plot-guide {{
+      margin-bottom: 16px;
+    }}
+    .plot-guide-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+    }}
+    .plot-guide-card {{
+      border: 1px solid #e0e4ea;
+      border-radius: 8px;
+      padding: 12px;
+      background: #fbfcfd;
+    }}
+    .plot-guide-card strong {{
+      display: block;
+      margin-bottom: 6px;
+    }}
+    .plot-guide-card span {{
+      display: block;
+      color: #596270;
+      font-size: 13px;
+      margin-bottom: 8px;
     }}
     .guide-grid {{
       display: grid;
@@ -313,6 +341,7 @@ def _render_report(
     </section>
     <section>
       <h2>Plots</h2>
+      {plot_guide}
       <div class="plots">{plot_cards}</div>
     </section>
     <section>
@@ -507,6 +536,118 @@ def _interaction_section(events: list[dict[str, Any]]) -> str:
         "</table>"
         "</section>"
     )
+
+
+def _plot_guide_section(plots: list[Path]) -> str:
+    cards: list[str] = []
+    for plot in plots:
+        card = _plot_guide_card(plot)
+        if card:
+            cards.append(card)
+    if not cards:
+        return ""
+    return (
+        '<div class="plot-guide">'
+        "<h3>Plot Guide</h3>"
+        '<div class="plot-guide-grid">'
+        f"{''.join(cards)}"
+        "</div>"
+        "</div>"
+    )
+
+
+def _plot_guide_card(plot: Path) -> str:
+    guidance = _plot_guidance(plot.name)
+    if guidance is None:
+        return ""
+    title, detail = guidance
+    return (
+        '<article class="plot-guide-card">'
+        f"<strong>{escape(title)}</strong>"
+        f"<span>{escape(plot.name)}</span>"
+        f'<p class="empty">{escape(detail)}</p>'
+        "</article>"
+    )
+
+
+def _plot_guidance(filename: str) -> tuple[str, str] | None:
+    name = filename.lower()
+    if "virtual_wall" in name:
+        return (
+            "Virtual Wall",
+            "Watch penetration, wall force, and retreat. A useful wall demo shows contact response without runaway motion.",
+        )
+    if "wall_parameters" in name:
+        return (
+            "Wall Parameters",
+            "Connect slider changes to wall position, stiffness, damping, and retreat settings used during the run.",
+        )
+    if "end_effector" in name:
+        return (
+            "End Effector",
+            "Compare hand position against the target path. This is the clearest plot for task-space control behavior.",
+        )
+    if "cartesian_error" in name:
+        return (
+            "Cartesian Error",
+            "Check whether hand error falls and stays small. Persistent error usually means target, gain, or actuator limits need attention.",
+        )
+    if "pid_terms" in name:
+        return (
+            "PID Terms",
+            "Compare P, I, and D contributions. Large integral buildup or noisy derivative terms explain many controller surprises.",
+        )
+    if "current_proxy" in name:
+        return (
+            "Current Proxy",
+            "Use this as an actuator effort proxy. Peaks show where the command would demand more motor current.",
+        )
+    if "singularity" in name:
+        return (
+            "Singularity",
+            "Low manipulability or high condition number means the same hand motion can require much larger joint motion or torque.",
+        )
+    if "torque" in name:
+        return (
+            "Torque",
+            "Look for peaks, clipping, and sign changes. High torque often comes from aggressive targets or gains.",
+        )
+    if "control_force" in name or "force" in name:
+        return (
+            "Force / Control Effort",
+            "Compare effort against motion. Saturation, chatter, or delayed sign changes are good clues for tuning.",
+        )
+    if "energy" in name:
+        return (
+            "Energy",
+            "Energy should decay with damping in passive demos. Slow decay means the system will keep oscillating longer.",
+        )
+    if "jerk" in name:
+        return (
+            "Jerk",
+            "Jerk shows abrupt changes in acceleration. Smoother profiles are easier for actuators to track.",
+        )
+    if "acceleration" in name:
+        return (
+            "Acceleration",
+            "Spikes indicate abrupt commands or aggressive gains. Smooth acceleration usually produces calmer effort plots.",
+        )
+    if "velocity" in name:
+        return (
+            "Velocity",
+            "Use velocity to see oscillation and settling. A well damped run loses speed cleanly near the target.",
+        )
+    if "error" in name:
+        return (
+            "Error",
+            "Check how quickly error shrinks and whether it settles near zero without repeated sign changes.",
+        )
+    if "position" in name:
+        return (
+            "Position",
+            "Compare actual motion against target or reference. Look for overshoot, lag, oscillation, and steady-state error.",
+        )
+    return None
 
 
 def _discover_runs(root: Path) -> list[dict[str, Any]]:
