@@ -98,6 +98,25 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("max abs position", html)
             self.assertIn("0.24", html)
 
+    def test_outputs_index_links_to_batch_index_when_no_run_report_exists(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "20260627_151000_lab02_pid_compare"
+            output.mkdir()
+            (output / "summary.json").write_text(
+                (
+                    '{"lab_name": "batch", "config_name": "lab02_pid_compare", '
+                    '"samples": 9, "duration": ""}'
+                ),
+                encoding="utf-8",
+            )
+            (output / "index.html").write_text("<html>batch</html>", encoding="utf-8")
+
+            index = write_outputs_index(temp_dir)
+
+            html = index.read_text(encoding="utf-8")
+            self.assertIn("20260627_151000_lab02_pid_compare/index.html", html)
+            self.assertIn("lab02_pid_compare", html)
+
     def test_outputs_index_handles_empty_outputs_folder(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             index = write_outputs_index(temp_dir)

@@ -10,10 +10,13 @@ from pathlib import Path
 from threading import Thread
 from typing import Any
 
+from mclab.batch import BATCH_SETS
 from mclab.config import PROJECT_ROOT
 from mclab.sim.reporting import write_outputs_index
 
 RUN_COMPLETE_PREFIX = "Run complete:"
+BATCH_COMPLETE_PREFIX = "Batch complete:"
+COMPLETE_PREFIXES = (RUN_COMPLETE_PREFIX, BATCH_COMPLETE_PREFIX)
 DOC_PATHS = {
     "lab01": "docs/lab01_mass_spring_damper.md",
     "lab02": "docs/lab02_pid_control.md",
@@ -32,6 +35,36 @@ class MenuAction:
     description: str
     try_this: str
     watch: str
+
+
+@dataclass(frozen=True)
+class BatchMenuAction:
+    group: str
+    label: str
+    batch_name: str
+    description: str
+    try_this: str
+    watch: str
+
+
+BATCH_ACTIONS: tuple[BatchMenuAction, ...] = (
+    BatchMenuAction(
+        group="Comparison Batches",
+        label="Lab01 compare",
+        batch_name="lab01_msd_compare",
+        description="Run baseline, damping, and stiffness mass-spring-damper cases.",
+        try_this="Open the generated index and compare max position and settling behavior.",
+        watch="Which physical parameter changes oscillation frequency and damping.",
+    ),
+    BatchMenuAction(
+        group="Comparison Batches",
+        label="Lab02 PID compare",
+        batch_name="lab02_pid_compare",
+        description="Run gain, saturation, windup, noise, and delay PID cases.",
+        try_this="Open the generated index and compare overshoot, settling, and effort.",
+        watch="Which controller choice trades speed for overshoot or noisy force.",
+    ),
+)
 
 
 MENU_ACTIONS: tuple[MenuAction, ...] = (
@@ -417,14 +450,37 @@ def launch_action(action: MenuAction) -> subprocess.Popen[str]:
     )
 
 
+def build_batch_args(action: BatchMenuAction) -> list[str]:
+    return [
+        sys.executable,
+        "-m",
+        "mclab",
+        "batch",
+        action.batch_name,
+    ]
+
+
+def launch_batch_action(action: BatchMenuAction) -> subprocess.Popen[str]:
+    return subprocess.Popen(
+        build_batch_args(action),
+        cwd=PROJECT_ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )
+
+
 def parse_run_output_path(line: str) -> Path | None:
     stripped = line.strip()
-    if not stripped.startswith(RUN_COMPLETE_PREFIX):
-        return None
-    raw_path = stripped.removeprefix(RUN_COMPLETE_PREFIX).strip()
-    if not raw_path:
-        return None
-    return Path(raw_path)
+    for prefix in COMPLETE_PREFIXES:
+        if not stripped.startswith(prefix):
+            continue
+        raw_path = stripped.removeprefix(prefix).strip()
+        if not raw_path:
+            return None
+        return Path(raw_path)
+    return None
 
 
 def action_config_path(action: MenuAction) -> Path:
@@ -461,8 +517,17 @@ def launch_latest_output(latest_output: dict[str, Path | None]) -> subprocess.Po
     path = latest_output.get("path")
     if path is None:
         return None
+    return open_path(_preferred_output_entry(path))
+
+
+def _preferred_output_entry(path: Path) -> Path:
     report = path / "report.html"
-    return open_path(report if report.exists() else path)
+    if report.exists():
+        return report
+    index = path / "index.html"
+    if index.exists():
+        return index
+    return path
 
 
 def open_path(path: Path) -> subprocess.Popen[Any] | None:
@@ -610,6 +675,28 @@ def main() -> int:
     match_count = ttk.Label(search_bar)
     match_count.pack(side="left", padx=(12, 0))
 
+    batch_frame = ttk.LabelFrame(outer, text="Comparison batches", padding=10)
+    batch_frame.pack(fill="x", pady=(0, 10))
+    for column_index, action in enumerate(BATCH_ACTIONS):
+        cell = ttk.Frame(batch_frame)
+        cell.grid(row=0, column=column_index, sticky="ew", padx=(0, 12))
+        batch_frame.columnconfigure(column_index, weight=1)
+        ttk.Button(
+            cell,
+            text=action.label,
+            width=18,
+            command=lambda selected=action: _launch_batch_from_menu(
+                selected,
+                status,
+                root=root,
+                latest_output=latest_output,
+                latest_button=latest_button,
+            ),
+        ).pack(anchor="w")
+        ttk.Label(cell, text=lesson_text_for_batch(action), wraplength=360, justify="left").pack(
+            anchor="w", pady=(4, 0)
+        )
+
     canvas = tk.Canvas(outer, highlightthickness=0)
     scrollbar = ttk.Scrollbar(outer, orient="vertical", command=canvas.yview)
     scroll_frame = ttk.Frame(canvas)
@@ -707,9 +794,27 @@ def _launch_from_menu(
     ).start()
 
 
+def _launch_batch_from_menu(
+    action: BatchMenuAction,
+    status: Any,
+    *,
+    root: Any | None = None,
+    latest_output: dict[str, Path | None] | None = None,
+    latest_button: Any | None = None,
+) -> None:
+    process = launch_batch_action(action)
+    status.set(f"Started {action.group} - {action.label} (pid {process.pid}).")
+    Thread(
+        target=_watch_process,
+        args=(process, action, status),
+        kwargs={"root": root, "latest_output": latest_output, "latest_button": latest_button},
+        daemon=True,
+    ).start()
+
+
 def _watch_process(
     process: subprocess.Popen[str],
-    action: MenuAction,
+    action: MenuAction | BatchMenuAction,
     status: Any,
     *,
     root: Any | None = None,
@@ -735,7 +840,7 @@ def _watch_process(
 
 
 def _set_status_after_run(
-    action: MenuAction,
+    action: MenuAction | BatchMenuAction,
     status: Any,
     return_code: int,
     output_path: Path | None,
@@ -751,8 +856,7 @@ def _set_status_after_run(
                     latest_output["path"] = output_path
                 if latest_button is not None:
                     latest_button.state(["!disabled"])
-                report = output_path / "report.html"
-                latest = report if report.exists() else output_path
+                latest = _preferred_output_entry(output_path)
                 status.set(f"Completed {action.group} - {action.label}. Latest report: {latest}")
             else:
                 status.set(f"Completed {action.group} - {action.label}. Open the outputs folder for results.")
@@ -763,3 +867,13 @@ def _set_status_after_run(
         root.after(0, update_ui)
     else:
         update_ui()
+
+
+def lesson_text_for_batch(action: BatchMenuAction) -> str:
+    scenario_count = len(BATCH_SETS[action.batch_name])
+    return (
+        f"{action.description}\n"
+        f"Try: {action.try_this}\n"
+        f"Watch: {action.watch}\n"
+        f"Runs: {scenario_count} scenarios"
+    )

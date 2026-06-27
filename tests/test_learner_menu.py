@@ -11,12 +11,15 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from mclab.config import load_config  # noqa: E402
 from mclab.learner_menu import (  # noqa: E402
+    BATCH_ACTIONS,
     MENU_ACTIONS,
     _set_status_after_run,
     action_config_path,
     action_doc_path,
+    build_batch_args,
     build_run_args,
     filter_menu_actions,
+    lesson_text_for_batch,
     lesson_text,
     launch_outputs_index,
     launch_latest_output,
@@ -81,6 +84,23 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertIn("--plot", args)
                 self.assertIn(action.config_path, args)
                 self.assertEqual(args[-2:], ["--plots", action.plots])
+
+    def test_batch_actions_launch_headless_comparison_commands(self) -> None:
+        labels = {action.label for action in BATCH_ACTIONS}
+        self.assertIn("Lab01 compare", labels)
+        self.assertIn("Lab02 PID compare", labels)
+
+        for action in BATCH_ACTIONS:
+            with self.subTest(label=action.label):
+                args = build_batch_args(action)
+                self.assertEqual(args[1:4], ["-m", "mclab", "batch"])
+                self.assertEqual(args[-1], action.batch_name)
+                self.assertNotIn("--viewer", args)
+                self.assertNotIn("--show-viewer-ui", args)
+                text = lesson_text_for_batch(action)
+                self.assertIn("Try:", text)
+                self.assertIn("Watch:", text)
+                self.assertIn("Runs:", text)
 
     def test_menu_actions_have_valid_guided_lesson_cards(self) -> None:
         for action in MENU_ACTIONS:
@@ -159,6 +179,18 @@ class LearnerMenuTests(unittest.TestCase):
 
             opener.assert_called_once_with(report)
 
+    def test_launch_latest_output_opens_index_for_batch_when_available(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            batch_path = Path(tmp) / "batch"
+            batch_path.mkdir()
+            index = batch_path / "index.html"
+            index.write_text("<html></html>", encoding="utf-8")
+
+            with patch("mclab.learner_menu.open_path") as opener:
+                launch_latest_output({"path": batch_path})
+
+            opener.assert_called_once_with(index)
+
     def test_launch_outputs_index_opens_index_when_available(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp) / "outputs"
@@ -193,6 +225,13 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIsNotNone(parsed)
         assert parsed is not None
         self.assertEqual(parsed.name, "20260627_150117_lab04_panda")
+
+    def test_parse_run_output_path_detects_completed_batch(self) -> None:
+        parsed = parse_run_output_path(r"Batch complete: C:\tmp\outputs\20260627_151000_lab02_pid_compare")
+
+        self.assertIsNotNone(parsed)
+        assert parsed is not None
+        self.assertEqual(parsed.name, "20260627_151000_lab02_pid_compare")
 
     def test_parse_run_output_path_ignores_noncompletion_lines(self) -> None:
         self.assertIsNone(parse_run_output_path("Simulation complete. Close the MuJoCo viewer window to exit."))

@@ -209,11 +209,16 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
         if not child.is_dir():
             continue
         summary = _read_json(child / "summary.json")
-        if not summary and not (child / "report.html").exists():
-            continue
         report_path = child / "report.html"
+        index_path = child / "index.html"
+        if not summary and not report_path.exists() and not index_path.exists():
+            continue
         modified = max(
-            (path.stat().st_mtime for path in (report_path, child / "summary.json") if path.exists()),
+            (
+                path.stat().st_mtime
+                for path in (report_path, index_path, child / "summary.json")
+                if path.exists()
+            ),
             default=child.stat().st_mtime,
         )
         runs.append(
@@ -224,7 +229,7 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
                 "config_path": summary.get("config_path", ""),
                 "samples": summary.get("samples", ""),
                 "duration": summary.get("duration", ""),
-                "report": f"{child.name}/report.html" if report_path.exists() else child.name,
+                "report": _run_link(child, report_path, index_path),
                 "modified": modified,
                 "summary": summary,
             }
@@ -353,6 +358,14 @@ def _config_cell(run: dict[str, Any]) -> str:
     config_name = str(run.get("config_name") or "")
     config_path = str(run.get("config_path") or "")
     return config_path or config_name
+
+
+def _run_link(child: Path, report_path: Path, index_path: Path) -> str:
+    if report_path.exists():
+        return f"{child.name}/report.html"
+    if index_path.exists():
+        return f"{child.name}/index.html"
+    return child.name
 
 
 def _read_json(path: Path) -> dict[str, Any]:

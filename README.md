@@ -165,6 +165,15 @@ Windows PowerShell에서 가장 쉬운 방법:
 | `.\run_lab03.cmd` | 2DOF arm viewer | `position`, `end_effector`, `torque`, `error` |
 | `.\run_lab04.cmd` | Panda viewer | `position`, `error` |
 
+여러 조건을 한 번에 비교하려면 메뉴의 `Comparison batches` 버튼을 누르거나 CLI batch를 실행합니다.
+
+```powershell
+python -m mclab batch lab01_msd_compare
+python -m mclab batch lab02_pid_compare
+```
+
+batch는 viewer 없이 여러 config를 순서대로 실행하고, `outputs/<timestamp>_<batch_name>/index.html`에 비교 표를 저장합니다. Lab01 batch는 damping/stiffness 차이를, Lab02 batch는 gain, saturation, windup, sensor noise, control delay 차이를 한 번에 비교할 때 씁니다.
+
 직접 외란을 주며 물리 현상을 보고 싶으면 interactive launcher를 사용합니다.
 
 ```powershell
@@ -462,6 +471,15 @@ Each command opens the matching viewer without side panels and saves only the la
 | `.\run_lab02.cmd` | PID viewer | `position`, `control_force`, `error` |
 | `.\run_lab03.cmd` | 2DOF arm viewer | `position`, `end_effector`, `torque`, `error` |
 | `.\run_lab04.cmd` | Panda viewer | `position`, `error` |
+
+To compare several conditions at once, use the `Comparison batches` buttons in the menu or run a CLI batch:
+
+```powershell
+python -m mclab batch lab01_msd_compare
+python -m mclab batch lab02_pid_compare
+```
+
+Batches run several configs without opening viewers and save a comparison table to `outputs/<timestamp>_<batch_name>/index.html`. The Lab01 batch compares damping/stiffness cases, and the Lab02 batch compares gain, saturation, windup, sensor noise, and control delay cases.
 
 Use the interactive launchers when learners should disturb the system and watch the physics respond:
 

@@ -6,6 +6,7 @@ import argparse
 from collections.abc import Callable
 from pathlib import Path
 
+from .batch import BATCH_SETS, run_batch
 from .config import load_config
 from .learner_menu import main as learner_menu_main
 from .labs import lab01_msd, lab02_pid, lab03_2dof, lab04_panda
@@ -67,6 +68,12 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--output-dir", help="Output directory override.")
     run_parser.add_argument("--seed", type=int, help="Random seed for noisy experiments.")
 
+    batch_parser = subparsers.add_parser("batch", help="Run a learner comparison batch.")
+    batch_parser.add_argument("batch_name", choices=sorted(BATCH_SETS), help="Batch set to run.")
+    batch_parser.add_argument("--output-dir", help="Output directory override.")
+    batch_parser.add_argument("--no-plot", action="store_true", help="Skip plot image generation.")
+    batch_parser.add_argument("--seed", type=int, help="Random seed for noisy experiments.")
+
     return parser
 
 
@@ -77,6 +84,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.command in {None, "list"}:
         print("Available labs:")
         for name in sorted(LABS):
+            print(f"  {name}")
+        print("Available batches:")
+        for name in sorted(BATCH_SETS):
             print(f"  {name}")
         return 0
 
@@ -100,6 +110,16 @@ def main(argv: list[str] | None = None) -> int:
             seed=args.seed,
         )
         print(f"Run complete: {output_path}")
+        return 0
+
+    if args.command == "batch":
+        output_path = run_batch(
+            args.batch_name,
+            output_dir=Path(args.output_dir) if args.output_dir else None,
+            plot=not args.no_plot,
+            seed=args.seed,
+        )
+        print(f"Batch complete: {output_path}")
         return 0
 
     parser.error(f"Unknown command: {args.command}")
