@@ -18,6 +18,7 @@ from mclab.learner_menu import (  # noqa: E402
     build_run_args,
     lesson_text,
     open_path,
+    parameter_hint,
     parse_run_output_path,
 )
 
@@ -84,9 +85,22 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertTrue(action.watch)
                 text = lesson_text(action)
                 self.assertIn("Try:", text)
+                self.assertIn("Change:", text)
                 self.assertIn("Watch:", text)
+                self.assertTrue(parameter_hint(action))
                 config = load_config(action.config_path)
                 self.assertIn("model_path", config)
+
+    def test_parameter_hints_point_to_key_learning_knobs(self) -> None:
+        by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
+
+        self.assertIn("damping", parameter_hint(by_label[("Lab01 Mass-Spring-Damper", "Underdamped")]))
+        self.assertIn("controller.anti_windup", parameter_hint(by_label[("Lab02 PID Control", "Windup")]))
+        self.assertIn(
+            "target_xy",
+            parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF task-space")]),
+        )
+        self.assertIn("virtual_wall.stiffness", parameter_hint(by_label[("Lab04 Panda Manipulator", "Virtual wall")]))
 
     def test_menu_actions_link_to_existing_config_and_lesson_files(self) -> None:
         for action in MENU_ACTIONS:

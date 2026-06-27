@@ -451,8 +451,62 @@ def open_path(path: Path) -> subprocess.Popen[Any] | None:
     return subprocess.Popen(["xdg-open", str(path)])
 
 
+def parameter_hint(action: MenuAction) -> str:
+    label = action.label.lower()
+    config_name = Path(action.config_path).name
+
+    if action.lab_name == "lab01":
+        if label == "interactive":
+            return "live sliders: mass, damping, stiffness; YAML: interaction.force"
+        if "damped" in label:
+            return "damping, stiffness, initial_position"
+        if "stiffness" in label:
+            return "stiffness, damping, initial_position"
+        return "mass, damping, stiffness, initial_position, force_input.magnitude"
+
+    if action.lab_name == "lab02":
+        if label == "interactive":
+            return "live sliders: target, Kp, Ki, Kd, force limit; YAML: controller.*"
+        if label in {"windup", "anti-windup"}:
+            return "controller.ki, controller.anti_windup, controller.output_limit"
+        if label == "saturation":
+            return "controller.output_limit, target.end"
+        if "gain" in label or label == "pd damping":
+            return "controller.kp, controller.kd, target.end"
+        return "target.end, controller.kp, controller.ki, controller.kd, controller.output_limit"
+
+    if action.lab_name == "lab03":
+        if label == "2dof interactive":
+            return "live sliders: Target X/Y, task stiffness, task damping, torque limit"
+        if label == "2dof task-space":
+            return "target_xy, tracking_controller.task_kp, tracking_controller.task_kd"
+        if label in {"2dof joint-space", "2dof singularity"}:
+            return "initial_q, target_q, trajectory.duration, tracking_controller.kp, tracking_controller.kd"
+        if config_name == "interactive_tracking.yaml":
+            return "live sliders: target offset, Kp, Kd, force limit"
+        return (
+            "trajectory.type, trajectory.duration, tracking_controller.kp, "
+            "tracking_controller.kd, tracking_controller.force_limit"
+        )
+
+    if action.lab_name == "lab04":
+        if label == "cartesian interactive":
+            return "live sliders: Target X/Y/Z, Cartesian gain; YAML: cartesian_target.*"
+        if label == "cartesian reach":
+            return "cartesian_target.position, cartesian_target.gain, cartesian_target.max_step"
+        if "wall" in label:
+            return "virtual_wall.wall_x, virtual_wall.stiffness, virtual_wall.damping, virtual_wall.force_retreat_gain"
+        if label == "joint target":
+            return "interaction.target_step, interaction.target_limit, trajectory.end"
+        if label == "neutral hold":
+            return "home_q, sim_time"
+        return "controlled_joint_index, trajectory.start, trajectory.end, trajectory.duration"
+
+    return "config YAML values"
+
+
 def lesson_text(action: MenuAction) -> str:
-    return f"{action.description}\nTry: {action.try_this}\nWatch: {action.watch}"
+    return f"{action.description}\nTry: {action.try_this}\nChange: {parameter_hint(action)}\nWatch: {action.watch}"
 
 
 def main() -> int:
