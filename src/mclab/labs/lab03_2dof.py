@@ -35,6 +35,7 @@ def run(
     headless: bool = False,
     realtime: bool = False,
     pause_at_end: bool = False,
+    show_viewer_ui: bool = True,
     plot_selection: PlotSelection = None,
     seed: int | None = None,
 ) -> Path:
@@ -63,6 +64,7 @@ def run(
         data,
         enabled=viewer and not headless,
         key_callback=key_force.key_callback if key_force.enabled else None,
+        show_ui=show_viewer_ui,
     )
     interaction_panel = (
         maybe_start_interaction_panel(key_force, title="MCLab Lab03 Interaction")

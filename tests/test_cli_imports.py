@@ -27,6 +27,7 @@ class CliImportTests(unittest.TestCase):
                 "--config",
                 "configs/lab04_panda/joint_pd.yaml",
                 "--viewer",
+                "--hide-viewer-ui",
                 "--realtime",
                 "--pause-at-end",
                 "--plots",
@@ -34,6 +35,7 @@ class CliImportTests(unittest.TestCase):
             ]
         )
         self.assertTrue(args.viewer)
+        self.assertTrue(args.hide_viewer_ui)
         self.assertTrue(args.realtime)
         self.assertTrue(args.pause_at_end)
         self.assertEqual(args.plots, "essential")

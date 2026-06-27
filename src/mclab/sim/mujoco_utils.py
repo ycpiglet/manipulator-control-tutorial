@@ -35,6 +35,7 @@ def maybe_launch_viewer(
     *,
     enabled: bool,
     key_callback: Any | None = None,
+    show_ui: bool = True,
 ) -> Any | None:
     if not enabled:
         return None
@@ -42,7 +43,13 @@ def maybe_launch_viewer(
         from mujoco import viewer as mujoco_viewer  # type: ignore
     except Exception as exc:  # pragma: no cover - depends on local GUI support.
         raise RuntimeError("MuJoCo viewer could not be launched in this environment.") from exc
-    return mujoco_viewer.launch_passive(model, data, key_callback=key_callback)
+    return mujoco_viewer.launch_passive(
+        model,
+        data,
+        key_callback=key_callback,
+        show_left_ui=show_ui,
+        show_right_ui=show_ui,
+    )
 
 
 def viewer_clock() -> float:

@@ -24,5 +24,8 @@ class LaunchScriptTests(unittest.TestCase):
                 text = (ROOT / filename).read_text(encoding="utf-8")
                 self.assertIn(f"-m mclab run {lab_name}", text)
                 self.assertIn(f"--config {config_path}", text)
-                self.assertIn("--viewer --realtime --pause-at-end --plot --plots essential", text)
+                self.assertIn(
+                    "--viewer --hide-viewer-ui --realtime --pause-at-end --plot --plots essential",
+                    text,
+                )
                 self.assertIn("scripts\\bootstrap_and_run.py", text)

@@ -10,4 +10,4 @@ goto run
 python "scripts\bootstrap_and_run.py" --setup-only
 
 :run
-".venv\Scripts\python.exe" -m mclab run lab03 --config configs\lab03_2dof\interactive_tracking.yaml --viewer --realtime --pause-at-end --plot --plots essential
+".venv\Scripts\python.exe" -m mclab run lab03 --config configs\lab03_2dof\interactive_tracking.yaml --viewer --hide-viewer-ui --realtime --pause-at-end --plot --plots essential

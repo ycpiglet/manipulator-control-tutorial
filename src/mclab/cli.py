@@ -47,6 +47,7 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--headless", action="store_true", help="Run without viewer.")
     run_parser.add_argument("--realtime", action="store_true", help="Pace viewer runs near wall-clock time.")
     run_parser.add_argument("--pause-at-end", action="store_true", help="Keep viewer open after the run completes.")
+    run_parser.add_argument("--hide-viewer-ui", action="store_true", help="Hide MuJoCo viewer side panels.")
     run_parser.add_argument("--plot", action="store_true", help="Save standard plots.")
     run_parser.add_argument(
         "--plots",
@@ -80,6 +81,7 @@ def main(argv: list[str] | None = None) -> int:
             headless=args.headless,
             realtime=args.realtime,
             pause_at_end=args.pause_at_end,
+            show_viewer_ui=not args.hide_viewer_ui,
             plot_selection=args.plots,
             seed=args.seed,
         )
