@@ -131,10 +131,20 @@ outputs/
 Windows PowerShell에서 가장 쉬운 방법:
 
 ```powershell
+.\run_lab01.cmd
+.\run_lab02.cmd
+.\run_lab03.cmd
 .\run_lab04.cmd
 ```
 
-이 명령은 Lab04 Panda viewer를 열고, 핵심 그래프인 `position.png`와 `error.png`만 저장합니다. `.venv`나 MuJoCo Menagerie가 없으면 먼저 자동 setup을 실행합니다.
+각 명령은 해당 viewer를 열고, 랩별 핵심 그래프만 저장합니다. `.venv`가 없으면 먼저 자동 setup을 실행합니다. `run_lab04.cmd`는 MuJoCo Menagerie가 없을 때도 setup을 실행합니다.
+
+| Command | Opens | Essential plots |
+|---|---|---|
+| `.\run_lab01.cmd` | mass-spring-damper viewer | `position`, `velocity`, `force` |
+| `.\run_lab02.cmd` | PID viewer | `position`, `control_force`, `error` |
+| `.\run_lab03.cmd` | trajectory viewer | `position`, `velocity`, `torque`, `error` |
+| `.\run_lab04.cmd` | Panda viewer | `position`, `error` |
 
 전체 검증을 한 번에 돌리려면:
 
@@ -229,7 +239,7 @@ python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless 
 
 Lab04 `joint_pd.yaml`에서 가장 먼저 확인할 것은 `position.png`의 `q_3`와 `target_q_3`, 그리고 `error.png`의 tracking error입니다. 현재 데모는 Panda의 4번째 관절, 즉 `controlled_joint_index: 3`을 minimum-jerk 목표 위치로 움직이는 조인트 위치 제어 예제입니다.
 
-MuJoCo viewer 양옆 패널은 이 프로젝트의 주 제어 UI가 아닙니다. 현재 랩은 Python loop가 매 step마다 actuator `ctrl` 값을 YAML 기반 target으로 다시 넣습니다. 따라서 viewer side panel에서 actuator 값을 바꿔도 실행 중에는 곧바로 덮어써지고, `--pause-at-end`로 멈춘 뒤에는 물리 step이 진행되지 않아 움직임이 보이지 않습니다. 실험 값은 `configs/`의 YAML을 바꿔서 제어합니다.
+MuJoCo viewer 양옆 패널은 이 프로젝트의 주 제어 UI가 아닙니다. 현재 랩들은 Python loop가 매 step마다 actuator `ctrl` 값을 YAML 기반 target이나 controller output으로 다시 넣습니다. 따라서 viewer side panel에서 actuator 값을 바꿔도 실행 중에는 곧바로 덮어써지고, `--pause-at-end`로 멈춘 뒤에는 물리 step이 진행되지 않아 움직임이 보이지 않습니다. 실험 값은 `configs/`의 YAML을 바꿔서 제어합니다.
 
 CLI 형식:
 
@@ -358,10 +368,20 @@ python -m ruff check src tests scripts
 The easiest option on Windows PowerShell:
 
 ```powershell
+.\run_lab01.cmd
+.\run_lab02.cmd
+.\run_lab03.cmd
 .\run_lab04.cmd
 ```
 
-This opens the Lab04 Panda viewer and saves only the essential plots, `position.png` and `error.png`. If `.venv` or MuJoCo Menagerie is missing, it runs setup first.
+Each command opens the matching viewer and saves only the lab's essential plots. If `.venv` is missing, it runs setup first. `run_lab04.cmd` also runs setup when MuJoCo Menagerie is missing.
+
+| Command | Opens | Essential plots |
+|---|---|---|
+| `.\run_lab01.cmd` | mass-spring-damper viewer | `position`, `velocity`, `force` |
+| `.\run_lab02.cmd` | PID viewer | `position`, `control_force`, `error` |
+| `.\run_lab03.cmd` | trajectory viewer | `position`, `velocity`, `torque`, `error` |
+| `.\run_lab04.cmd` | Panda viewer | `position`, `error` |
 
 To run the full verification suite:
 
@@ -456,7 +476,7 @@ python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless 
 
 For Lab04 `joint_pd.yaml`, check `q_3` versus `target_q_3` in `position.png` first, then the tracking error in `error.png`. This demo controls Panda joint 4, represented by `controlled_joint_index: 3`, with a minimum-jerk target position.
 
-The MuJoCo viewer side panels are not the main control UI for this project. The Python loop writes actuator `ctrl` values from the YAML-based target at every simulation step. If you change actuator values in the viewer side panel, they are overwritten during the run; after `--pause-at-end`, physics stepping has stopped, so slider edits do not move the robot. Change experiment parameters in YAML under `configs/`.
+The MuJoCo viewer side panels are not the main control UI for this project. The Python loops write actuator `ctrl` values from YAML-based targets or controller outputs at every simulation step. If you change actuator values in the viewer side panel, they are overwritten during the run; after `--pause-at-end`, physics stepping has stopped, so slider edits do not move the robot. Change experiment parameters in YAML under `configs/`.
 
 CLI shape:
 

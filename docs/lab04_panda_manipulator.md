@@ -25,10 +25,20 @@ The MuJoCo viewer side panels are not the main control interface for this lab. T
 
 Run:
 
-```bash
+```powershell
 .\run_lab04.cmd
+```
+
+Headless runs:
+
+```bash
 python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless --plot
 python -m mclab run lab04 --config configs/lab04_panda/impedance_wall.yaml --headless --plot
+```
+
+Full viewer command:
+
+```bash
 python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --viewer --realtime --pause-at-end --plot --plots essential
 ```
 
