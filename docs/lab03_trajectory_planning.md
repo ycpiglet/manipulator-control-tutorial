@@ -8,6 +8,8 @@ The main controlled variables are:
 - end-effector X/Y position in task-space mode
 - torque and current proxy at both joints
 
+In the 2DOF viewer, green marks the target hand position and blue marks the current hand position. When the Jacobian condition number exceeds the configured warning threshold, the current hand marker turns orange to indicate a near-singular posture.
+
 Run:
 
 ```powershell
@@ -68,7 +70,7 @@ Interactive 2DOF demo:
 .\run_lab03_interactive.cmd
 ```
 
-Use the small `MCLab Interaction` window next to the viewer. Move `Target X`, `Target Y`, `Task stiffness`, `Task damping`, and `Torque limit` while the simulation is running, and use `Reset sliders` to return to the starting values. Press `Mark observation` when a response is worth comparing later in the report's `Observation Markers` section. Use `Live status` to read `q1`, `q2`, hand X/Y, error norm, and max torque.
+Use the small `MCLab Interaction` window next to the viewer. Move `Target X`, `Target Y`, `Task stiffness`, `Task damping`, and `Torque limit` while the simulation is running, and use `Reset sliders` to return to the starting values. Watch the green target marker and blue hand marker move in the viewer; an orange hand marker means the arm is near a poorly conditioned posture. Press `Mark observation` when a response is worth comparing later in the report's `Observation Markers` section. Use `Live status` to read `q1`, `q2`, hand X/Y, error norm, and max torque.
 
 The older 1D trajectory profile demos are still available for comparing motion profiles before applying the idea to the arm:
 

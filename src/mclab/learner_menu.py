@@ -371,8 +371,8 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
         config_path="configs/lab03_2dof/task_space_2dof.yaml",
         plots="task",
         description="The arm moves its hand toward an XY target with Jacobian-transpose PD.",
-        try_this="Compare against joint-space tracking.",
-        watch="Hand X/Y tracking and joint torque distribution.",
+        try_this="Watch the blue hand point move toward the green target point.",
+        watch="Hand X/Y tracking, task error, and joint torque distribution.",
     ),
     MenuAction(
         group="Lab03 2DOF Arm and Trajectories",
@@ -381,7 +381,7 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
         config_path="configs/lab03_2dof/singularity_2dof.yaml",
         plots="singularity",
         description="The arm approaches a nearly straight singular posture.",
-        try_this="Compare the singularity plot against the normal joint-space demo.",
+        try_this="Watch for the orange hand marker near the workspace edge.",
         watch="Jacobian condition number rises while manipulability falls.",
     ),
     MenuAction(
@@ -391,7 +391,7 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
         config_path="configs/lab03_2dof/dls_singularity_2dof.yaml",
         plots="dls",
         description="Damped least-squares limits inverse-Jacobian motion near the workspace edge.",
-        try_this="Compare dls.png against the plain singularity demo.",
+        try_this="Watch the hand marker near the workspace edge, then compare dls.png.",
         watch="DLS joint speed, damping, condition number, and torque.",
     ),
     MenuAction(
@@ -401,8 +401,8 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
         config_path="configs/lab03_2dof/interactive_2dof.yaml",
         plots="task",
         description="Tune the hand target, task stiffness, damping, and torque limit live.",
-        try_this="Move target X/Y sliders, then change stiffness and damping.",
-        watch="Live status hand position, error norm, and max torque.",
+        try_this="Move target X/Y sliders and watch the green target point move.",
+        watch="Live status hand position, target marker, error norm, and max torque.",
     ),
     MenuAction(
         group="Lab03 2DOF Arm and Trajectories",
@@ -872,11 +872,11 @@ def parameter_hint(action: MenuAction) -> str:
 
     if action.lab_name == "lab03":
         if label == "2dof interactive":
-            return "live sliders: Target X/Y, task stiffness, task damping, torque limit"
+            return "live sliders: Target X/Y, task stiffness, task damping, torque limit; YAML: viewer_guides.*"
         if label == "2dof dls singularity":
-            return "target_xy, tracking_controller.dls_gain, tracking_controller.dls_damping"
+            return "target_xy, tracking_controller.dls_gain, tracking_controller.dls_damping, viewer_guides.condition_threshold"
         if label == "2dof task-space":
-            return "target_xy, tracking_controller.task_kp, tracking_controller.task_kd"
+            return "target_xy, tracking_controller.task_kp, tracking_controller.task_kd, viewer_guides.enabled"
         if label in {"2dof joint-space", "2dof singularity"}:
             return "initial_q, target_q, trajectory.duration, tracking_controller.kp, tracking_controller.kd"
         if config_name == "interactive_tracking.yaml":

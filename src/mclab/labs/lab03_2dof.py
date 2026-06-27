@@ -18,9 +18,11 @@ from mclab.sim.interaction import (
 )
 from mclab.sim.logging import RunLogger
 from mclab.sim.mujoco_utils import (
+    add_viewer_sphere,
     load_model_and_data,
     maybe_launch_viewer,
     pause_viewer_at_end,
+    reset_viewer_overlays,
     sync_viewer,
     viewer_clock,
     viewer_is_running,
@@ -260,6 +262,7 @@ def _run_two_link_arm(
 
     sim_time = float(config.get("sim_time", 5.0))
     mode = str(config.get("mode", "joint_space")).lower()
+    viewer_guides = _two_link_viewer_guides(config)
     geometry = _two_link_geometry(config)
     initial_q = _pair(config.get("initial_q", [0.25, -1.0]), "initial_q")
     _set_two_link_state(data, handles, initial_q)
@@ -382,13 +385,6 @@ def _run_two_link_arm(
                 data.ctrl[actuator_id] = command["tau"][index]
 
             mujoco.mj_step(model, data)
-            sync_viewer(
-                viewer_handle,
-                data,
-                realtime=realtime,
-                wall_start=wall_start,
-                sim_start=sim_start,
-            )
 
             q, qdot = _two_link_state(data, handles)
             x_ee = forward_kinematics(q, geometry)
@@ -411,6 +407,21 @@ def _run_two_link_arm(
                 tau=max_tau,
                 condition=condition_capped,
                 manipulability=manipulability_value,
+            )
+            _update_two_link_viewer_guides(
+                mujoco,
+                viewer_handle,
+                guide_config=viewer_guides,
+                x_ee=x_ee,
+                target_xy=command["target_xy"],
+                condition=condition_capped,
+            )
+            sync_viewer(
+                viewer_handle,
+                data,
+                realtime=realtime,
+                wall_start=wall_start,
+                sim_start=sim_start,
             )
             dls_fields = _dls_log_fields(command)
             logger.record(
@@ -455,6 +466,58 @@ def _run_two_link_arm(
     if plot:
         _save_two_link_plots(output_path, logger.rows, plot_selection or config.get("plots"))
     return resolve_project_path(output_path)
+
+
+def _two_link_viewer_guides(config: dict[str, Any]) -> dict[str, bool | float]:
+    guide_config = dict(config.get("viewer_guides", {}))
+    return {
+        "enabled": bool(guide_config.get("enabled", True)),
+        "hand": bool(guide_config.get("hand", True)),
+        "target": bool(guide_config.get("target", True)),
+        "condition_warning": bool(guide_config.get("condition_warning", True)),
+        "condition_threshold": float(guide_config.get("condition_threshold", 20.0)),
+    }
+
+
+def _update_two_link_viewer_guides(
+    mujoco: Any,
+    viewer_handle: Any | None,
+    *,
+    guide_config: dict[str, bool | float],
+    x_ee: tuple[float, float],
+    target_xy: list[float],
+    condition: float,
+) -> None:
+    if viewer_handle is None:
+        return
+    reset_viewer_overlays(viewer_handle)
+    if not bool(guide_config.get("enabled", True)):
+        return
+
+    if bool(guide_config.get("target", True)):
+        add_viewer_sphere(
+            mujoco,
+            viewer_handle,
+            _two_link_guide_position(target_xy),
+            radius=0.035,
+            rgba=[0.10, 0.82, 0.28, 0.85],
+        )
+
+    if bool(guide_config.get("hand", True)):
+        threshold = float(guide_config.get("condition_threshold", 20.0))
+        warning_enabled = bool(guide_config.get("condition_warning", True))
+        hand_color = [1.0, 0.48, 0.10, 0.90] if warning_enabled and condition >= threshold else [0.10, 0.42, 1.0, 0.78]
+        add_viewer_sphere(
+            mujoco,
+            viewer_handle,
+            _two_link_guide_position(x_ee),
+            radius=0.026,
+            rgba=hand_color,
+        )
+
+
+def _two_link_guide_position(xy: tuple[float, float] | list[float]) -> list[float]:
+    return [float(xy[0]), float(xy[1]), 0.11]
 
 
 def _live_tuning(

@@ -52,6 +52,7 @@ Implemented and verified:
 - Lab02 PID control on the same MuJoCo plant
 - Lab03 trajectory planning plus a torque-actuated 2DOF planar arm
 - Lab03 FK, IK helper, analytic Jacobian, joint-space tracking, and task-space Jacobian-transpose PD
+- Lab03 viewer visual guides for 2DOF hand target, current hand position, and singularity warning state
 - Lab04 Franka Emika Panda manipulator using MuJoCo Menagerie
 - Lab04 Cartesian reach with damped-least-squares Jacobian target offsets
 - Lab04 soft/stiff Cartesian reach comparison configs and batch report

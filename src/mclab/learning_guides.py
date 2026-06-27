@@ -204,7 +204,7 @@ RUN_GUIDES: dict[str, RunGuide] = {
     "configs/lab03_2dof/task_space_2dof.yaml": RunGuide(
         "Lab03 2DOF Task Space",
         "The hand moves toward an XY target through the Jacobian.",
-        "Compare hand error against the joint-space run.",
+        "In the viewer, compare the blue hand point with the green target point.",
         "target_xy, tracking_controller.task_kp, tracking_controller.task_kd",
         "End-effector X/Y motion, task error, and torque distribution.",
         "Move target_xy closer to the workspace edge and rerun.",
@@ -212,7 +212,7 @@ RUN_GUIDES: dict[str, RunGuide] = {
     "configs/lab03_2dof/singularity_2dof.yaml": RunGuide(
         "Lab03 2DOF Singularity",
         "The arm approaches a nearly straight, poorly conditioned posture.",
-        "Compare manipulability and condition number against normal motion.",
+        "Watch for the orange hand marker, then compare manipulability and condition number.",
         "initial_q, target_q, trajectory.duration, tracking_controller.kp, tracking_controller.kd",
         "Manipulability falling while Jacobian condition number rises.",
         "Change target_q to approach the singularity more or less aggressively.",
@@ -220,7 +220,7 @@ RUN_GUIDES: dict[str, RunGuide] = {
     "configs/lab03_2dof/dls_singularity_2dof.yaml": RunGuide(
         "Lab03 2DOF DLS Singularity",
         "Damped least-squares limits the inverse-Jacobian command near a poorly conditioned target.",
-        "Compare dls.png, singularity.png, and torque.png against the singularity run.",
+        "Watch the hand marker near the workspace edge, then compare DLS plots.",
         "target_xy, tracking_controller.dls_gain, tracking_controller.dls_damping",
         "DLS joint speed, task speed, damping, condition number, and tracking error.",
         "Lower dls_damping carefully and watch whether joint speed and torque rise.",
@@ -228,8 +228,8 @@ RUN_GUIDES: dict[str, RunGuide] = {
     "configs/lab03_2dof/interactive_2dof.yaml": RunGuide(
         "Lab03 2DOF Interactive",
         "Tune hand target and task-space gains while the 2DOF arm runs.",
-        "Move Target X/Y sliders, then change task stiffness, damping, and torque limit.",
-        "live sliders: Target X/Y, task stiffness, task damping, torque limit",
+        "Move Target X/Y sliders and watch the green target point move.",
+        "live sliders: Target X/Y, task stiffness, task damping, torque limit; YAML: viewer_guides.*",
         "Live hand position, error norm, and max torque.",
         "Close the viewer and compare hand error against the chosen target.",
     ),

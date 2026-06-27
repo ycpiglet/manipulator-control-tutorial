@@ -21,3 +21,6 @@ tracking_controller:
 interaction:
   panel: true
   live_tuning: true
+viewer_guides:
+  enabled: true
+  condition_threshold: 20.0

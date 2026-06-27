@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import sys
+import types
 import unittest
 from pathlib import Path
+from unittest.mock import Mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from mclab.labs.lab03_2dof import _two_link_viewer_guides, _update_two_link_viewer_guides  # noqa: E402
 from mclab.sim.two_link import (  # noqa: E402
     TwoLinkGeometry,
     damped_least_squares_joint_velocity,
@@ -86,3 +89,66 @@ class TwoLinkKinematicsTests(unittest.TestCase):
 
         self.assertAlmostEqual(qdot[0], 0.0)
         self.assertAlmostEqual(qdot[1], 0.0)
+
+    def test_two_link_viewer_guides_default_to_enabled(self) -> None:
+        guides = _two_link_viewer_guides({})
+
+        self.assertTrue(guides["enabled"])
+        self.assertTrue(guides["target"])
+        self.assertTrue(guides["hand"])
+        self.assertEqual(guides["condition_threshold"], 20.0)
+        self.assertFalse(_two_link_viewer_guides({"viewer_guides": {"enabled": False}})["enabled"])
+
+    def test_two_link_viewer_guides_draw_target_and_hand(self) -> None:
+        def init_geom(geom, geom_type, size, pos, mat, rgba):
+            geom.geom_type = geom_type
+            geom.pos = [float(value) for value in pos]
+            geom.rgba = [float(value) for value in rgba]
+
+        fake_mujoco = types.SimpleNamespace(
+            mjv_initGeom=Mock(side_effect=init_geom),
+            mjtGeom=types.SimpleNamespace(mjGEOM_SPHERE="sphere"),
+            mjtCatBit=types.SimpleNamespace(mjCAT_DECOR="decor"),
+        )
+        scene = types.SimpleNamespace(ngeom=0, geoms=[types.SimpleNamespace() for _ in range(3)])
+        viewer = types.SimpleNamespace(user_scn=scene)
+
+        _update_two_link_viewer_guides(
+            fake_mujoco,
+            viewer,
+            guide_config={
+                "enabled": True,
+                "hand": True,
+                "target": True,
+                "condition_warning": True,
+                "condition_threshold": 20.0,
+            },
+            x_ee=(0.50, 0.20),
+            target_xy=[0.62, 0.42],
+            condition=5.0,
+        )
+
+        self.assertEqual(scene.ngeom, 2)
+        self.assertEqual(scene.geoms[0].geom_type, "sphere")
+        self.assertEqual(scene.geoms[0].pos, [0.62, 0.42, 0.11])
+        self.assertEqual(scene.geoms[1].geom_type, "sphere")
+        self.assertEqual(scene.geoms[1].rgba, [0.1, 0.42, 1.0, 0.78])
+
+        _update_two_link_viewer_guides(
+            fake_mujoco,
+            viewer,
+            guide_config={
+                "enabled": True,
+                "hand": True,
+                "target": False,
+                "condition_warning": True,
+                "condition_threshold": 20.0,
+            },
+            x_ee=(1.03, 0.02),
+            target_xy=[1.05, 0.0],
+            condition=45.0,
+        )
+
+        self.assertEqual(scene.ngeom, 1)
+        self.assertEqual(scene.geoms[0].pos, [1.03, 0.02, 0.11])
+        self.assertEqual(scene.geoms[0].rgba, [1.0, 0.48, 0.1, 0.9])
