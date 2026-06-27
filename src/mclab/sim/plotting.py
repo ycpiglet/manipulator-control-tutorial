@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
 
 PlotSpec = tuple[str, str, str, Sequence[str]]
+PlotSelection = str | Sequence[str] | None
 
 
 def save_time_series_plots(
@@ -50,9 +51,54 @@ def save_time_series_plots(
         plt.close(fig)
 
 
+def select_plot_specs(
+    specs: Sequence[PlotSpec],
+    selection: PlotSelection = None,
+    *,
+    presets: Mapping[str, Sequence[str]] | None = None,
+) -> list[PlotSpec]:
+    tokens = _selection_tokens(selection)
+    if not tokens or "all" in tokens:
+        return list(specs)
+
+    preset_map = {
+        _plot_name(name): [_plot_name(item) for item in names]
+        for name, names in (presets or {}).items()
+    }
+    requested: list[str] = []
+    for token in tokens:
+        requested.extend(preset_map.get(token, [token]))
+
+    available = {_plot_name(spec[0]) for spec in specs}
+    unknown = sorted(set(requested) - available)
+    if unknown:
+        preset_names = sorted(preset_map)
+        suffix = f" Presets: {', '.join(preset_names)}." if preset_names else ""
+        raise ValueError(
+            f"Unknown plot selection(s): {', '.join(unknown)}. "
+            f"Available plots: {', '.join(sorted(available))}.{suffix}"
+        )
+
+    requested_set = set(requested)
+    return [spec for spec in specs if _plot_name(spec[0]) in requested_set]
+
+
+def _selection_tokens(selection: PlotSelection) -> list[str]:
+    if selection is None:
+        return []
+    if isinstance(selection, str):
+        values = selection.split(",")
+    else:
+        values = list(selection)
+    return [_plot_name(value) for value in values if str(value).strip()]
+
+
+def _plot_name(value: str) -> str:
+    return Path(str(value).strip()).stem.lower().replace("-", "_")
+
+
 def _as_float(value: Any) -> float:
     try:
         return float(value)
     except (TypeError, ValueError):
         return float("nan")
-

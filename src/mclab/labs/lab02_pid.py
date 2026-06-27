@@ -19,7 +19,7 @@ from mclab.sim.mujoco_utils import (
     viewer_clock,
 )
 from mclab.sim.one_dof import configure_slider_plant, slider_state
-from mclab.sim.plotting import save_time_series_plots
+from mclab.sim.plotting import PlotSelection, save_time_series_plots, select_plot_specs
 from mclab.trajectories import build_trajectory
 
 
@@ -33,6 +33,7 @@ def run(
     headless: bool = False,
     realtime: bool = False,
     pause_at_end: bool = False,
+    plot_selection: PlotSelection = None,
     seed: int | None = None,
 ) -> Path:
     lab_name = "lab02_pid"
@@ -122,34 +123,39 @@ def run(
     summary = step_response_metrics(logger.rows)
     output_path = logger.save(summary=summary, notes=_notes(config))
     if plot:
-        save_time_series_plots(
-            output_path,
-            logger.rows,
-            [
-                (
-                    "position.png",
-                    "PID Position Tracking",
-                    "position [m]",
-                    ["position", "target_position"],
-                ),
-                ("velocity.png", "Plant Velocity", "velocity [m/s]", ["velocity"]),
-                ("acceleration.png", "Plant Acceleration", "acceleration [m/s^2]", ["acceleration"]),
-                (
-                    "control_force.png",
-                    "PID Control Effort",
-                    "force [N]",
-                    ["control_force", "control_unsaturated"],
-                ),
-                (
-                    "pid_terms.png",
-                    "PID Terms",
-                    "force contribution [N]",
-                    ["pid_p", "pid_i", "pid_d"],
-                ),
-                ("error.png", "Tracking Error", "error [m]", ["position_error"]),
-            ],
-        )
+        _save_plots(output_path, logger.rows, plot_selection or config.get("plots"))
     return resolve_project_path(output_path)
+
+
+def _save_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSelection = None) -> None:
+    specs = [
+        (
+            "position.png",
+            "PID Position Tracking",
+            "position [m]",
+            ["position", "target_position"],
+        ),
+        ("velocity.png", "Plant Velocity", "velocity [m/s]", ["velocity"]),
+        ("acceleration.png", "Plant Acceleration", "acceleration [m/s^2]", ["acceleration"]),
+        (
+            "control_force.png",
+            "PID Control Effort",
+            "force [N]",
+            ["control_force", "control_unsaturated"],
+        ),
+        (
+            "pid_terms.png",
+            "PID Terms",
+            "force contribution [N]",
+            ["pid_p", "pid_i", "pid_d"],
+        ),
+        ("error.png", "Tracking Error", "error [m]", ["position_error"]),
+    ]
+    presets = {
+        "essential": ["position", "control_force", "error"],
+        "pid": ["position", "control_force", "pid_terms", "error"],
+    }
+    save_time_series_plots(output_path, rows, select_plot_specs(specs, selection, presets=presets))
 
 
 def _limits(value: Any) -> tuple[float | None, float | None]:

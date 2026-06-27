@@ -212,10 +212,19 @@ Viewer를 띄우고 움직임을 실제 시간에 가깝게 보려면 `--headles
 python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --viewer --realtime --pause-at-end --plot
 ```
 
+필요한 그래프만 저장하려면 `--plots`를 붙입니다.
+
+```bash
+python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --viewer --realtime --pause-at-end --plot --plots essential
+python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless --plot --plots position,error,torque
+```
+
+Lab04 `joint_pd.yaml`에서 가장 먼저 확인할 것은 `position.png`의 `q_3`와 `target_q_3`, 그리고 `error.png`의 tracking error입니다. 현재 데모는 Panda의 4번째 관절, 즉 `controlled_joint_index: 3`을 minimum-jerk 목표 위치로 움직이는 조인트 위치 제어 예제입니다.
+
 CLI 형식:
 
 ```bash
-python -m mclab run <lab_name> --config <config_path> [--headless] [--viewer] [--realtime] [--pause-at-end] [--plot] [--output-dir <path>]
+python -m mclab run <lab_name> --config <config_path> [--headless] [--viewer] [--realtime] [--pause-at-end] [--plot] [--plots <preset_or_names>] [--output-dir <path>]
 ```
 
 사용 가능한 lab 이름 확인:
@@ -254,6 +263,15 @@ python -m mclab run lab02 --config configs/lab02_pid/my_pid_test.yaml --headless
 | Lab02 PID | `configs/lab02_pid/*.yaml` | `controller.kp`, `controller.ki`, `controller.kd`, `controller.output_limit`, `measurement_noise_std`, `control_delay` |
 | Lab03 Trajectory | `configs/lab03_2dof/*.yaml` | `trajectory.type`, `trajectory.start`, `trajectory.end`, `trajectory.duration`, `tracking_controller.kp`, `tracking_controller.kd` |
 | Lab04 Panda | `configs/lab04_panda/*.yaml` | `controlled_joint_index`, `trajectory.end`, `virtual_wall.wall_x`, `virtual_wall.stiffness`, `virtual_wall.damping` |
+
+Plot preset:
+
+| Lab | Presets |
+|---|---|
+| Lab01 MSD | `essential`, `energy` |
+| Lab02 PID | `essential`, `pid` |
+| Lab03 Trajectory | `essential`, `profile`, `control` |
+| Lab04 Panda | `essential`, `control`, `cartesian`, `wall` |
 
 Lab02 PID 예시:
 
@@ -411,10 +429,19 @@ Use `--viewer --realtime` instead of `--headless` to open the MuJoCo viewer and 
 python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --viewer --realtime --pause-at-end --plot
 ```
 
+To save only the plots you need, add `--plots`.
+
+```bash
+python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --viewer --realtime --pause-at-end --plot --plots essential
+python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless --plot --plots position,error,torque
+```
+
+For Lab04 `joint_pd.yaml`, check `q_3` versus `target_q_3` in `position.png` first, then the tracking error in `error.png`. This demo controls Panda joint 4, represented by `controlled_joint_index: 3`, with a minimum-jerk target position.
+
 CLI shape:
 
 ```bash
-python -m mclab run <lab_name> --config <config_path> [--headless] [--viewer] [--realtime] [--pause-at-end] [--plot] [--output-dir <path>]
+python -m mclab run <lab_name> --config <config_path> [--headless] [--viewer] [--realtime] [--pause-at-end] [--plot] [--plots <preset_or_names>] [--output-dir <path>]
 ```
 
 List available labs:
@@ -453,6 +480,15 @@ Common parameters:
 | Lab02 PID | `configs/lab02_pid/*.yaml` | `controller.kp`, `controller.ki`, `controller.kd`, `controller.output_limit`, `measurement_noise_std`, `control_delay` |
 | Lab03 Trajectory | `configs/lab03_2dof/*.yaml` | `trajectory.type`, `trajectory.start`, `trajectory.end`, `trajectory.duration`, `tracking_controller.kp`, `tracking_controller.kd` |
 | Lab04 Panda | `configs/lab04_panda/*.yaml` | `controlled_joint_index`, `trajectory.end`, `virtual_wall.wall_x`, `virtual_wall.stiffness`, `virtual_wall.damping` |
+
+Plot presets:
+
+| Lab | Presets |
+|---|---|
+| Lab01 MSD | `essential`, `energy` |
+| Lab02 PID | `essential`, `pid` |
+| Lab03 Trajectory | `essential`, `profile`, `control` |
+| Lab04 Panda | `essential`, `control`, `cartesian`, `wall` |
 
 Lab02 PID example:
 

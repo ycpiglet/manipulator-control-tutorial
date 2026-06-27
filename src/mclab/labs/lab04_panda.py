@@ -14,7 +14,7 @@ from mclab.sim.mujoco_utils import (
     sync_viewer,
     viewer_clock,
 )
-from mclab.sim.plotting import save_time_series_plots
+from mclab.sim.plotting import PlotSelection, save_time_series_plots, select_plot_specs
 from mclab.trajectories import build_trajectory
 
 
@@ -35,6 +35,7 @@ def run(
     headless: bool = False,
     realtime: bool = False,
     pause_at_end: bool = False,
+    plot_selection: PlotSelection = None,
     seed: int | None = None,
 ) -> Path:
     del seed
@@ -133,7 +134,7 @@ def run(
     summary = _summary(logger.rows)
     output_path = logger.save(summary=summary, notes=_notes(config))
     if plot:
-        _save_plots(output_path, logger.rows)
+        _save_plots(output_path, logger.rows, plot_selection or config.get("plots"))
     return resolve_project_path(output_path)
 
 
@@ -284,29 +285,32 @@ def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def _save_plots(output_path: Path, rows: list[dict[str, Any]]) -> None:
+def _save_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSelection = None) -> None:
     q_keys = [f"q_{index}" for index in range(7)]
     target_keys = [f"target_q_{index}" for index in range(7)]
     tau_keys = [f"tau_cmd_{index}" for index in range(7)]
     current_keys = [f"current_proxy_{index}" for index in range(7)]
-    save_time_series_plots(
-        output_path,
-        rows,
-        [
-            ("position.png", "Panda Joint Positions", "joint position [rad]", q_keys + target_keys),
-            ("velocity.png", "Panda Joint Velocities", "joint velocity [rad/s]", [f"qdot_{index}" for index in range(7)]),
-            ("torque.png", "Panda Actuator Force", "force / torque proxy", tau_keys),
-            ("current_proxy.png", "Panda Current Proxy", "current proxy", current_keys),
-            ("end_effector.png", "End-Effector Position", "position [m]", ["x_ee_0", "x_ee_1", "x_ee_2"]),
-            ("error.png", "Joint Tracking Error Norm", "norm [rad]", ["error_norm"]),
-            (
-                "virtual_wall.png",
-                "Virtual Wall Response",
-                "force / penetration",
-                ["force_virtual_0", "wall_penetration_cm"],
-            ),
-        ],
-    )
+    specs = [
+        ("position.png", "Panda Joint Positions", "joint position [rad]", q_keys + target_keys),
+        ("velocity.png", "Panda Joint Velocities", "joint velocity [rad/s]", [f"qdot_{index}" for index in range(7)]),
+        ("torque.png", "Panda Actuator Force", "force / torque proxy", tau_keys),
+        ("current_proxy.png", "Panda Current Proxy", "current proxy", current_keys),
+        ("end_effector.png", "End-Effector Position", "position [m]", ["x_ee_0", "x_ee_1", "x_ee_2"]),
+        ("error.png", "Joint Tracking Error Norm", "norm [rad]", ["error_norm"]),
+        (
+            "virtual_wall.png",
+            "Virtual Wall Response",
+            "force / penetration",
+            ["force_virtual_0", "wall_penetration_cm"],
+        ),
+    ]
+    presets = {
+        "essential": ["position", "error"],
+        "control": ["position", "error", "torque", "current_proxy"],
+        "cartesian": ["end_effector", "torque", "error"],
+        "wall": ["end_effector", "virtual_wall", "torque", "error"],
+    }
+    save_time_series_plots(output_path, rows, select_plot_specs(specs, selection, presets=presets))
 
 
 def _notes(config: dict[str, Any]) -> str:

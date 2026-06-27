@@ -19,7 +19,7 @@ from mclab.sim.mujoco_utils import (
     viewer_clock,
 )
 from mclab.sim.one_dof import configure_slider_plant, slider_state
-from mclab.sim.plotting import save_time_series_plots
+from mclab.sim.plotting import PlotSelection, save_time_series_plots, select_plot_specs
 from mclab.trajectories import build_trajectory
 
 
@@ -33,6 +33,7 @@ def run(
     headless: bool = False,
     realtime: bool = False,
     pause_at_end: bool = False,
+    plot_selection: PlotSelection = None,
     seed: int | None = None,
 ) -> Path:
     del seed
@@ -100,35 +101,41 @@ def run(
     summary = _summary(logger.rows)
     output_path = logger.save(summary=summary, notes=_notes(config))
     if plot:
-        save_time_series_plots(
-            output_path,
-            logger.rows,
-            [
-                (
-                    "position.png",
-                    "Trajectory Position Tracking",
-                    "position [m]",
-                    ["position", "target_position"],
-                ),
-                (
-                    "velocity.png",
-                    "Trajectory Velocity",
-                    "velocity [m/s]",
-                    ["velocity", "target_velocity"],
-                ),
-                (
-                    "acceleration.png",
-                    "Trajectory Acceleration",
-                    "acceleration [m/s^2]",
-                    ["acceleration", "target_acceleration"],
-                ),
-                ("jerk.png", "Trajectory Jerk", "jerk [m/s^3]", ["target_jerk"]),
-                ("torque.png", "Control Effort", "force / torque proxy", ["control_force"]),
-                ("current_proxy.png", "Current Proxy", "current proxy", ["current_proxy"]),
-                ("error.png", "Tracking Error", "error [m]", ["position_error"]),
-            ],
-        )
+        _save_plots(output_path, logger.rows, plot_selection or config.get("plots"))
     return resolve_project_path(output_path)
+
+
+def _save_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSelection = None) -> None:
+    specs = [
+        (
+            "position.png",
+            "Trajectory Position Tracking",
+            "position [m]",
+            ["position", "target_position"],
+        ),
+        (
+            "velocity.png",
+            "Trajectory Velocity",
+            "velocity [m/s]",
+            ["velocity", "target_velocity"],
+        ),
+        (
+            "acceleration.png",
+            "Trajectory Acceleration",
+            "acceleration [m/s^2]",
+            ["acceleration", "target_acceleration"],
+        ),
+        ("jerk.png", "Trajectory Jerk", "jerk [m/s^3]", ["target_jerk"]),
+        ("torque.png", "Control Effort", "force / torque proxy", ["control_force"]),
+        ("current_proxy.png", "Current Proxy", "current proxy", ["current_proxy"]),
+        ("error.png", "Tracking Error", "error [m]", ["position_error"]),
+    ]
+    presets = {
+        "essential": ["position", "velocity", "torque", "error"],
+        "profile": ["position", "velocity", "acceleration", "jerk"],
+        "control": ["position", "torque", "current_proxy", "error"],
+    }
+    save_time_series_plots(output_path, rows, select_plot_specs(specs, selection, presets=presets))
 
 
 def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:

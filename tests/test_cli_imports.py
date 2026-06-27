@@ -29,8 +29,11 @@ class CliImportTests(unittest.TestCase):
                 "--viewer",
                 "--realtime",
                 "--pause-at-end",
+                "--plots",
+                "essential",
             ]
         )
         self.assertTrue(args.viewer)
         self.assertTrue(args.realtime)
         self.assertTrue(args.pause_at_end)
+        self.assertEqual(args.plots, "essential")

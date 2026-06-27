@@ -15,7 +15,7 @@ from mclab.sim.mujoco_utils import (
     viewer_clock,
 )
 from mclab.sim.one_dof import configure_slider_plant, force_input_at, mechanical_energy, slider_state
-from mclab.sim.plotting import save_time_series_plots
+from mclab.sim.plotting import PlotSelection, save_time_series_plots, select_plot_specs
 
 
 def run(
@@ -28,6 +28,7 @@ def run(
     headless: bool = False,
     realtime: bool = False,
     pause_at_end: bool = False,
+    plot_selection: PlotSelection = None,
     seed: int | None = None,
 ) -> Path:
     del seed
@@ -89,28 +90,33 @@ def run(
     summary = _summary(logger.rows)
     output_path = logger.save(summary=summary, notes=_notes(config))
     if plot:
-        save_time_series_plots(
-            output_path,
-            logger.rows,
-            [
-                ("position.png", "Mass-Spring-Damper Position", "position [m]", ["position"]),
-                ("velocity.png", "Mass-Spring-Damper Velocity", "velocity [m/s]", ["velocity"]),
-                (
-                    "acceleration.png",
-                    "Mass-Spring-Damper Acceleration",
-                    "acceleration [m/s^2]",
-                    ["acceleration"],
-                ),
-                ("force.png", "Applied Force", "force [N]", ["external_force"]),
-                (
-                    "energy.png",
-                    "Mechanical Energy",
-                    "energy [J]",
-                    ["kinetic_energy", "potential_energy", "total_energy"],
-                ),
-            ],
-        )
+        _save_plots(output_path, logger.rows, plot_selection or config.get("plots"))
     return resolve_project_path(output_path)
+
+
+def _save_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSelection = None) -> None:
+    specs = [
+        ("position.png", "Mass-Spring-Damper Position", "position [m]", ["position"]),
+        ("velocity.png", "Mass-Spring-Damper Velocity", "velocity [m/s]", ["velocity"]),
+        (
+            "acceleration.png",
+            "Mass-Spring-Damper Acceleration",
+            "acceleration [m/s^2]",
+            ["acceleration"],
+        ),
+        ("force.png", "Applied Force", "force [N]", ["external_force"]),
+        (
+            "energy.png",
+            "Mechanical Energy",
+            "energy [J]",
+            ["kinetic_energy", "potential_energy", "total_energy"],
+        ),
+    ]
+    presets = {
+        "essential": ["position", "velocity", "force"],
+        "energy": ["position", "energy"],
+    }
+    save_time_series_plots(output_path, rows, select_plot_specs(specs, selection, presets=presets))
 
 
 def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:

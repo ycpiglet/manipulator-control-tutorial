@@ -48,6 +48,10 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--realtime", action="store_true", help="Pace viewer runs near wall-clock time.")
     run_parser.add_argument("--pause-at-end", action="store_true", help="Keep viewer open after the run completes.")
     run_parser.add_argument("--plot", action="store_true", help="Save standard plots.")
+    run_parser.add_argument(
+        "--plots",
+        help="Plot preset or comma-separated plot names, for example: essential or position,error.",
+    )
     run_parser.add_argument("--output-dir", help="Output directory override.")
     run_parser.add_argument("--seed", type=int, help="Random seed for noisy experiments.")
 
@@ -76,6 +80,7 @@ def main(argv: list[str] | None = None) -> int:
             headless=args.headless,
             realtime=args.realtime,
             pause_at_end=args.pause_at_end,
+            plot_selection=args.plots,
             seed=args.seed,
         )
         print(f"Run complete: {output_path}")

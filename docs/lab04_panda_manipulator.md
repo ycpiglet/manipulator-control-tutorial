@@ -10,11 +10,23 @@ The Menagerie Panda model is position-actuated. In this implementation:
 - End-effector position is logged from the `hand` body.
 - The virtual wall demo computes a repulsive task-space force and maps it to a small target-joint offset for stable educational behavior.
 
+For `configs/lab04_panda/joint_pd.yaml`, the main controlled variable is joint 4, represented by `controlled_joint_index: 3`.
+
+Read the plots in this order:
+
+1. `position.png`: check whether `q_3` follows `target_q_3`.
+2. `error.png`: check whether the joint tracking error remains small.
+3. `torque.png` or `current_proxy.png`: check how much actuator effort the motion required.
+4. `end_effector.png`: check how the joint motion moved the hand in Cartesian space.
+
+For the virtual wall demo, also check `virtual_wall.png` for wall force and penetration.
+
 Run:
 
 ```bash
 python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless --plot
 python -m mclab run lab04 --config configs/lab04_panda/impedance_wall.yaml --headless --plot
+python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --viewer --realtime --pause-at-end --plot --plots essential
 ```
 
 If `third_party/mujoco_menagerie` is missing, run the project bootstrap:
@@ -22,4 +34,3 @@ If `third_party/mujoco_menagerie` is missing, run the project bootstrap:
 ```bash
 python scripts/bootstrap_and_run.py --setup-only
 ```
-
