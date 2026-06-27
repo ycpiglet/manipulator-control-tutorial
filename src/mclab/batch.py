@@ -7,12 +7,13 @@ import re
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from datetime import datetime
+from html import escape
 from pathlib import Path
 from typing import Any
 
 from mclab.config import PROJECT_ROOT, load_config, resolve_project_path
 from mclab.labs import lab01_msd, lab02_pid, lab03_2dof, lab04_panda
-from mclab.sim.reporting import write_outputs_index
+from mclab.sim.reporting import INDEX_METRIC_KEYS, write_outputs_index
 
 LabRunner = Callable[..., Path]
 
@@ -30,6 +31,14 @@ class BatchScenario:
     lab_name: str
     config_path: str
     plots: str = "essential"
+
+
+@dataclass(frozen=True)
+class BatchGuide:
+    title: str
+    focus: str
+    questions: tuple[str, ...]
+    metric_keys: tuple[str, ...]
 
 
 BATCH_SETS: dict[str, tuple[BatchScenario, ...]] = {
@@ -50,6 +59,42 @@ BATCH_SETS: dict[str, tuple[BatchScenario, ...]] = {
         BatchScenario("anti_windup", "lab02", "configs/lab02_pid/pid_anti_windup.yaml"),
         BatchScenario("sensor_noise", "lab02", "configs/lab02_pid/measurement_noise.yaml", "pid"),
         BatchScenario("control_delay", "lab02", "configs/lab02_pid/control_delay.yaml"),
+    ),
+}
+
+BATCH_GUIDES: dict[str, BatchGuide] = {
+    "lab01_msd_compare": BatchGuide(
+        title="Lab01 Mass-Spring-Damper Comparison",
+        focus="Compare how damping and stiffness change free response, force, and remaining energy.",
+        questions=(
+            "Which case oscillates the most before settling?",
+            "Which case returns slowly even though it barely overshoots?",
+            "How does stiffness change the motion frequency and peak restoring force?",
+        ),
+        metric_keys=(
+            "max_abs_position",
+            "final_position",
+            "final_velocity",
+            "final_total_energy",
+        ),
+    ),
+    "lab02_pid_compare": BatchGuide(
+        title="Lab02 PID Control Comparison",
+        focus="Compare speed, overshoot, control effort, windup, sensor noise, and delay sensitivity.",
+        questions=(
+            "Which controller reaches the target fastest, and what did it cost in overshoot or force?",
+            "How do windup and anti-windup differ after saturation?",
+            "How do measurement noise and control delay show up in the plots and metrics?",
+        ),
+        metric_keys=(
+            "overshoot_percent",
+            "settling_time",
+            "steady_state_error",
+            "max_control_effort",
+            "measurement_noise_std",
+            "control_delay",
+            "max_abs_measurement_error",
+        ),
     ),
 }
 
@@ -108,6 +153,7 @@ def run_batch(
         encoding="utf-8",
     )
     write_outputs_index(batch_output)
+    write_batch_report(batch_output, batch_name, scenarios)
     write_outputs_index(batch_output.parent)
     return batch_output
 
@@ -121,6 +167,27 @@ def create_batch_output_path(batch_name: str, output_dir: str | Path | None = No
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     base_path = PROJECT_ROOT / "outputs" / f"{stamp}_{batch_name}"
     return _create_unique_directory(base_path)
+
+
+def write_batch_report(
+    batch_output: str | Path,
+    batch_name: str,
+    scenarios: tuple[BatchScenario, ...],
+) -> Path:
+    output = Path(batch_output)
+    guide = BATCH_GUIDES.get(
+        batch_name,
+        BatchGuide(
+            title=batch_name.replace("_", " ").title(),
+            focus="Compare the scenario reports and summary metrics.",
+            questions=("Open each run report and compare the response plots.",),
+            metric_keys=INDEX_METRIC_KEYS,
+        ),
+    )
+    rows = _batch_rows(output, scenarios)
+    report = output / "report.html"
+    report.write_text(_render_batch_report(output, guide, rows), encoding="utf-8")
+    return report
 
 
 def _create_unique_directory(base_path: Path) -> Path:
@@ -137,3 +204,225 @@ def _create_unique_directory(base_path: Path) -> Path:
 def _safe_name(value: str) -> str:
     normalized = re.sub(r"[^A-Za-z0-9_.-]+", "_", value.strip())
     return normalized.strip("._") or "scenario"
+
+
+def _batch_rows(output: Path, scenarios: tuple[BatchScenario, ...]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for scenario in scenarios:
+        run_dir = output / _safe_name(scenario.label)
+        summary = _read_json(run_dir / "summary.json")
+        rows.append(
+            {
+                "label": scenario.label,
+                "lab_name": scenario.lab_name,
+                "config_path": scenario.config_path,
+                "run_dir": run_dir.name,
+                "report": f"{run_dir.name}/report.html" if (run_dir / "report.html").exists() else run_dir.name,
+                "summary": summary,
+            }
+        )
+    return rows
+
+
+def _render_batch_report(output: Path, guide: BatchGuide, rows: list[dict[str, Any]]) -> str:
+    metric_keys = _display_metric_keys(guide, rows)
+    question_items = "\n".join(f"<li>{escape(question)}</li>" for question in guide.questions)
+    scenario_cards = "\n".join(_scenario_card(row, metric_keys) for row in rows)
+    metric_headers = "".join(f"<th>{escape(_label(key))}</th>" for key in metric_keys)
+    metric_rows = "\n".join(_metric_row(row, metric_keys) for row in rows)
+    if not metric_rows:
+        metric_rows = f'<tr><td colspan="{3 + len(metric_keys)}">No scenario summaries were found.</td></tr>'
+
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{escape(guide.title)}</title>
+  <style>
+    :root {{
+      color-scheme: light;
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: #202124;
+      background: #f6f7f9;
+    }}
+    body {{
+      margin: 0;
+      padding: 24px;
+    }}
+    main {{
+      max-width: 1120px;
+      margin: 0 auto;
+    }}
+    h1, h2, p {{
+      margin-top: 0;
+      letter-spacing: 0;
+    }}
+    h1 {{
+      font-size: 28px;
+      margin-bottom: 8px;
+    }}
+    h2 {{
+      font-size: 20px;
+      margin-bottom: 12px;
+    }}
+    section {{
+      background: #ffffff;
+      border: 1px solid #d9dde3;
+      border-radius: 8px;
+      margin-top: 16px;
+      padding: 16px;
+    }}
+    .scenario-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+    }}
+    .scenario {{
+      border: 1px solid #e0e4ea;
+      border-radius: 8px;
+      padding: 12px;
+      background: #ffffff;
+    }}
+    .scenario h3 {{
+      margin: 0 0 8px;
+      font-size: 16px;
+    }}
+    .muted {{
+      color: #596270;
+      font-size: 13px;
+    }}
+    .metric {{
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      border-top: 1px solid #edf0f3;
+      padding-top: 7px;
+      margin-top: 7px;
+      font-size: 13px;
+    }}
+    .table-wrap {{
+      overflow-x: auto;
+    }}
+    table {{
+      border-collapse: collapse;
+      width: 100%;
+    }}
+    th, td {{
+      border-bottom: 1px solid #edf0f3;
+      padding: 9px 10px;
+      text-align: left;
+      white-space: nowrap;
+    }}
+    th {{
+      color: #3f4752;
+      font-weight: 600;
+    }}
+    a {{
+      color: #0b57d0;
+    }}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>{escape(guide.title)}</h1>
+    <section>
+      <h2>Learning Focus</h2>
+      <p>{escape(guide.focus)}</p>
+      <ul>{question_items}</ul>
+      <p class="muted"><a href="index.html">Open the detailed run index</a> for every saved artifact.</p>
+    </section>
+    <section>
+      <h2>Scenario Cards</h2>
+      <div class="scenario-grid">{scenario_cards}</div>
+    </section>
+    <section>
+      <h2>Metric Table</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Scenario</th><th>Lab</th><th>Config</th>{metric_headers}</tr></thead>
+          <tbody>{metric_rows}</tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
+"""
+
+
+def _scenario_card(row: dict[str, Any], metric_keys: list[str]) -> str:
+    summary = row.get("summary", {})
+    metrics = "\n".join(
+        (
+            '<div class="metric">'
+            f"<span>{escape(_label(key))}</span>"
+            f"<strong>{escape(_format_value(summary.get(key)))}</strong>"
+            "</div>"
+        )
+        for key in metric_keys[:4]
+        if _has_value(summary.get(key))
+    )
+    if not metrics:
+        metrics = '<p class="muted">No summary metrics were saved.</p>'
+    return (
+        '<article class="scenario">'
+        f'<h3><a href="{escape(str(row["report"]))}">{escape(str(row["label"]))}</a></h3>'
+        f'<p class="muted">{escape(str(row["config_path"]))}</p>'
+        f"{metrics}"
+        "</article>"
+    )
+
+
+def _metric_row(row: dict[str, Any], metric_keys: list[str]) -> str:
+    summary = row.get("summary", {})
+    values = "".join(
+        f"<td>{escape(_format_value(summary.get(key)))}</td>"
+        for key in metric_keys
+    )
+    return (
+        "<tr>"
+        f'<td><a href="{escape(str(row["report"]))}">{escape(str(row["label"]))}</a></td>'
+        f"<td>{escape(str(row['lab_name']))}</td>"
+        f"<td>{escape(str(row['config_path']))}</td>"
+        f"{values}"
+        "</tr>"
+    )
+
+
+def _display_metric_keys(guide: BatchGuide, rows: list[dict[str, Any]]) -> list[str]:
+    summaries = [row.get("summary", {}) for row in rows]
+    keys = guide.metric_keys + tuple(key for key in INDEX_METRIC_KEYS if key not in guide.metric_keys)
+    return [
+        key
+        for key in keys
+        if any(_has_value(summary.get(key)) for summary in summaries)
+    ]
+
+
+def _read_json(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _has_value(value: Any) -> bool:
+    return value is not None and value != ""
+
+
+def _format_value(value: Any) -> str:
+    if value is None or value == "":
+        return "n/a"
+    if isinstance(value, float):
+        return f"{value:.6g}"
+    if isinstance(value, (list, tuple, dict)):
+        return json.dumps(value, ensure_ascii=False)
+    return str(value)
+
+
+def _label(key: str) -> str:
+    return key.replace("_", " ")

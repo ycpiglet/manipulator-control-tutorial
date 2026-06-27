@@ -80,9 +80,14 @@ class BatchTests(unittest.TestCase):
             self.assertTrue((output / "demo_scenario" / "summary.json").exists())
             self.assertTrue((output / "batch_summary.json").exists())
             self.assertTrue((output / "summary.json").exists())
+            self.assertTrue((output / "report.html").exists())
             self.assertIn("demo_scenario/report.html", (output / "index.html").read_text(encoding="utf-8"))
+            report_html = (output / "report.html").read_text(encoding="utf-8")
+            self.assertIn("Learning Focus", report_html)
+            self.assertIn("demo scenario", report_html)
+            self.assertIn("max abs position", report_html)
             parent_index = output.parent / "index.html"
-            self.assertIn("batch_output/index.html", parent_index.read_text(encoding="utf-8"))
+            self.assertIn("batch_output/report.html", parent_index.read_text(encoding="utf-8"))
 
     def test_run_batch_rejects_unknown_batch_name(self) -> None:
         with self.assertRaises(ValueError):

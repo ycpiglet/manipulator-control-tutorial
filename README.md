@@ -172,7 +172,7 @@ python -m mclab batch lab01_msd_compare
 python -m mclab batch lab02_pid_compare
 ```
 
-batch는 viewer 없이 여러 config를 순서대로 실행하고, `outputs/<timestamp>_<batch_name>/index.html`에 비교 표를 저장합니다. Lab01 batch는 damping/stiffness 차이를, Lab02 batch는 gain, saturation, windup, sensor noise, control delay 차이를 한 번에 비교할 때 씁니다.
+batch는 viewer 없이 여러 config를 순서대로 실행하고, `outputs/<timestamp>_<batch_name>/report.html`에 학습자용 비교 리포트를 저장합니다. 같은 폴더의 `index.html`은 모든 개별 실행 report와 artifact를 여는 상세 목록입니다. Lab01 batch는 damping/stiffness 차이를, Lab02 batch는 gain, saturation, windup, sensor noise, control delay 차이를 한 번에 비교할 때 씁니다.
 
 직접 외란을 주며 물리 현상을 보고 싶으면 interactive launcher를 사용합니다.
 
@@ -479,7 +479,7 @@ python -m mclab batch lab01_msd_compare
 python -m mclab batch lab02_pid_compare
 ```
 
-Batches run several configs without opening viewers and save a comparison table to `outputs/<timestamp>_<batch_name>/index.html`. The Lab01 batch compares damping/stiffness cases, and the Lab02 batch compares gain, saturation, windup, sensor noise, and control delay cases.
+Batches run several configs without opening viewers and save a learner-facing comparison report to `outputs/<timestamp>_<batch_name>/report.html`. The `index.html` in the same folder is the detailed list of every individual run report and artifact. The Lab01 batch compares damping/stiffness cases, and the Lab02 batch compares gain, saturation, windup, sensor noise, and control delay cases.
 
 Use the interactive launchers when learners should disturb the system and watch the physics respond:
 
