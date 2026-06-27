@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 import tempfile
 import unittest
@@ -20,6 +21,8 @@ from mclab.learner_menu import (  # noqa: E402
     build_batch_args,
     build_run_args,
     filter_menu_actions,
+    learning_path_progress,
+    learning_path_progress_text,
     learning_path_target,
     learning_path_text,
     lesson_text_for_batch,
@@ -132,6 +135,45 @@ class LearnerMenuTests(unittest.TestCase):
                     args = build_batch_args(action)
                     self.assertIn("--open-report", args)
                     self.assertNotIn("--viewer", args)
+
+    def test_recommended_learning_path_reads_saved_progress(self) -> None:
+        first_step = LEARNING_PATH[0]
+        last_step = LEARNING_PATH[-1]
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            run_dir = outputs / "run_lab01"
+            run_dir.mkdir()
+            (run_dir / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab01_msd",
+                        "config_path": "configs/lab01_msd/default.yaml",
+                        "config_name": "default",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (run_dir / "report.html").write_text("<html></html>", encoding="utf-8")
+
+            batch_dir = outputs / "all_batches"
+            batch_dir.mkdir()
+            (batch_dir / "summary.json").write_text(
+                json.dumps({"lab_name": "batch_group", "batch_name": "all", "config_name": "all"}),
+                encoding="utf-8",
+            )
+            (batch_dir / "report.html").write_text("<html></html>", encoding="utf-8")
+
+            first_progress = learning_path_progress(first_step, outputs)
+            last_progress = learning_path_progress(last_step, outputs)
+            second_progress = learning_path_progress(LEARNING_PATH[1], outputs)
+
+        self.assertTrue(first_progress.completed)
+        self.assertEqual(first_progress.latest_output.name, "run_lab01")
+        self.assertIn("Status: Done - latest run_lab01", learning_path_progress_text(first_step, first_progress))
+        self.assertTrue(last_progress.completed)
+        self.assertEqual(last_progress.latest_output.name, "all_batches")
+        self.assertFalse(second_progress.completed)
+        self.assertIn("Status: Not run yet", learning_path_progress_text(LEARNING_PATH[1], second_progress))
 
     def test_menu_actions_have_valid_guided_lesson_cards(self) -> None:
         for action in MENU_ACTIONS:

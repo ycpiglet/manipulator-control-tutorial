@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 import shutil
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Thread
@@ -54,6 +56,12 @@ class LearningPathStep:
     group: str
     label: str
     description: str
+
+
+@dataclass(frozen=True)
+class LearningPathProgress:
+    completed: bool
+    latest_output: Path | None = None
 
 
 BATCH_ACTIONS: tuple[BatchMenuAction, ...] = (
@@ -593,6 +601,90 @@ def learning_path_text(step: LearningPathStep) -> str:
     return f"{step.description}\nRun: {action.group} - {action.label}\nWatch: {action.watch}"
 
 
+def learning_path_progress(
+    step: LearningPathStep,
+    outputs_root: Path | None = None,
+) -> LearningPathProgress:
+    action = learning_path_target(step)
+    root = outputs_root if outputs_root is not None else PROJECT_ROOT / "outputs"
+    latest = _latest_matching_output(action, root)
+    return LearningPathProgress(completed=latest is not None, latest_output=latest)
+
+
+def learning_path_progress_text(
+    step: LearningPathStep,
+    progress: LearningPathProgress | None = None,
+) -> str:
+    current = progress if progress is not None else learning_path_progress(step)
+    status = (
+        f"Status: Done - latest {current.latest_output.name}"
+        if current.latest_output is not None
+        else "Status: Not run yet"
+    )
+    return f"{learning_path_text(step)}\n{status}"
+
+
+def _latest_matching_output(action: MenuAction | BatchMenuAction, outputs_root: Path) -> Path | None:
+    if not outputs_root.exists():
+        return None
+    matches: list[tuple[float, Path]] = []
+    for output_path, summary, modified in _iter_output_summaries(outputs_root):
+        if _summary_matches_action(summary, action):
+            matches.append((modified, output_path))
+    if not matches:
+        return None
+    return max(matches, key=lambda item: item[0])[1]
+
+
+def _iter_output_summaries(outputs_root: Path) -> list[tuple[Path, dict[str, Any], float]]:
+    summaries: list[tuple[Path, dict[str, Any], float]] = []
+    for child in outputs_root.iterdir():
+        if not child.is_dir():
+            continue
+        summary_path = child / "summary.json"
+        summary = _read_json(summary_path)
+        if not summary:
+            continue
+        modified = max(
+            (
+                path.stat().st_mtime
+                for path in (child / "report.html", child / "index.html", summary_path)
+                if path.exists()
+            ),
+            default=child.stat().st_mtime,
+        )
+        summaries.append((child, summary, modified))
+    return summaries
+
+
+def _summary_matches_action(summary: dict[str, Any], action: MenuAction | BatchMenuAction) -> bool:
+    if isinstance(action, BatchMenuAction):
+        batch_name = str(summary.get("batch_name") or summary.get("config_name") or "")
+        return batch_name == action.batch_name
+
+    config_path = _normalize_config_path(str(summary.get("config_path") or ""))
+    if config_path:
+        return config_path == _normalize_config_path(action.config_path)
+
+    config_name = str(summary.get("config_name") or "")
+    lab_name = str(summary.get("lab_name") or "")
+    return config_name == Path(action.config_path).stem and action.lab_name in lab_name
+
+
+def _normalize_config_path(value: str) -> str:
+    return value.replace("\\", "/").lstrip("./").lower()
+
+
+def _read_json(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
 def parse_run_output_path(line: str) -> Path | None:
     stripped = line.strip()
     for prefix in COMPLETE_PREFIXES:
@@ -787,6 +879,11 @@ def main() -> int:
     status = tk.StringVar(value="Ready.")
     latest_output: dict[str, Path | None] = {"path": None}
     search = tk.StringVar(value="")
+    path_status_vars: list[tuple[LearningPathStep, Any]] = []
+
+    def refresh_learning_path_progress() -> None:
+        for step, variable in path_status_vars:
+            variable.set(learning_path_progress_text(step))
 
     search_bar = ttk.Frame(outer)
     search_bar.pack(fill="x", pady=(0, 10))
@@ -805,6 +902,8 @@ def main() -> int:
         row_index, column_index = divmod(step_index, 3)
         cell = ttk.Frame(path_frame)
         cell.grid(row=row_index, column=column_index, sticky="ew", padx=(0, 12), pady=(0, 8))
+        progress_text = tk.StringVar(value=learning_path_progress_text(step))
+        path_status_vars.append((step, progress_text))
         ttk.Button(
             cell,
             text=step.title,
@@ -815,9 +914,10 @@ def main() -> int:
                 root=root,
                 latest_output=latest_output,
                 latest_button=latest_button,
+                progress_callback=refresh_learning_path_progress,
             ),
         ).pack(anchor="w")
-        ttk.Label(cell, text=learning_path_text(step), wraplength=280, justify="left").pack(
+        ttk.Label(cell, textvariable=progress_text, wraplength=280, justify="left").pack(
             anchor="w", pady=(4, 0)
         )
 
@@ -839,6 +939,7 @@ def main() -> int:
                 root=root,
                 latest_output=latest_output,
                 latest_button=latest_button,
+                progress_callback=refresh_learning_path_progress,
             ),
         ).pack(anchor="w")
         ttk.Label(cell, text=lesson_text_for_batch(action), wraplength=360, justify="left").pack(
@@ -856,7 +957,8 @@ def main() -> int:
 
     bottom = ttk.Frame(outer)
     bottom.pack(fill="x", pady=(12, 0))
-    ttk.Button(bottom, text="Open all reports", command=launch_outputs_index).pack(side="left")
+    ttk.Button(bottom, text="Refresh path", command=refresh_learning_path_progress).pack(side="left")
+    ttk.Button(bottom, text="Open all reports", command=launch_outputs_index).pack(side="left", padx=(8, 0))
     ttk.Button(bottom, text="Open outputs folder", command=launch_outputs_folder).pack(side="left", padx=(8, 0))
     latest_button = ttk.Button(bottom, text="Open latest report", command=lambda: launch_latest_output(latest_output))
     latest_button.pack(side="left", padx=(8, 0))
@@ -897,6 +999,7 @@ def main() -> int:
                         root=root,
                         latest_output=latest_output,
                         latest_button=latest_button,
+                        progress_callback=refresh_learning_path_progress,
                     ),
                 ).grid(row=action_index, column=0, sticky="w", padx=(0, 12), pady=4)
                 ttk.Button(
@@ -931,6 +1034,7 @@ def _launch_learning_path_from_menu(
     root: Any | None = None,
     latest_output: dict[str, Path | None] | None = None,
     latest_button: Any | None = None,
+    progress_callback: Callable[[], None] | None = None,
 ) -> None:
     action = learning_path_target(step)
     if isinstance(action, BatchMenuAction):
@@ -940,6 +1044,7 @@ def _launch_learning_path_from_menu(
             root=root,
             latest_output=latest_output,
             latest_button=latest_button,
+            progress_callback=progress_callback,
         )
         return
     _launch_from_menu(
@@ -948,6 +1053,7 @@ def _launch_learning_path_from_menu(
         root=root,
         latest_output=latest_output,
         latest_button=latest_button,
+        progress_callback=progress_callback,
     )
 
 
@@ -958,13 +1064,19 @@ def _launch_from_menu(
     root: Any | None = None,
     latest_output: dict[str, Path | None] | None = None,
     latest_button: Any | None = None,
+    progress_callback: Callable[[], None] | None = None,
 ) -> None:
     process = launch_action(action)
     status.set(f"Started {action.group} - {action.label} (pid {process.pid}). Close the viewer to finish.")
     Thread(
         target=_watch_process,
         args=(process, action, status),
-        kwargs={"root": root, "latest_output": latest_output, "latest_button": latest_button},
+        kwargs={
+            "root": root,
+            "latest_output": latest_output,
+            "latest_button": latest_button,
+            "progress_callback": progress_callback,
+        },
         daemon=True,
     ).start()
 
@@ -976,13 +1088,19 @@ def _launch_batch_from_menu(
     root: Any | None = None,
     latest_output: dict[str, Path | None] | None = None,
     latest_button: Any | None = None,
+    progress_callback: Callable[[], None] | None = None,
 ) -> None:
     process = launch_batch_action(action)
     status.set(f"Started {action.group} - {action.label} (pid {process.pid}).")
     Thread(
         target=_watch_process,
         args=(process, action, status),
-        kwargs={"root": root, "latest_output": latest_output, "latest_button": latest_button},
+        kwargs={
+            "root": root,
+            "latest_output": latest_output,
+            "latest_button": latest_button,
+            "progress_callback": progress_callback,
+        },
         daemon=True,
     ).start()
 
@@ -995,6 +1113,7 @@ def _watch_process(
     root: Any | None = None,
     latest_output: dict[str, Path | None] | None = None,
     latest_button: Any | None = None,
+    progress_callback: Callable[[], None] | None = None,
 ) -> None:
     output_path: Path | None = None
     if process.stdout is not None:
@@ -1011,6 +1130,7 @@ def _watch_process(
         root=root,
         latest_output=latest_output,
         latest_button=latest_button,
+        progress_callback=progress_callback,
     )
 
 
@@ -1023,6 +1143,7 @@ def _set_status_after_run(
     root: Any | None = None,
     latest_output: dict[str, Path | None] | None = None,
     latest_button: Any | None = None,
+    progress_callback: Callable[[], None] | None = None,
 ) -> None:
     def update_ui() -> None:
         if return_code == 0:
@@ -1035,6 +1156,8 @@ def _set_status_after_run(
                 status.set(f"Completed {action.group} - {action.label}. Latest report: {latest}")
             else:
                 status.set(f"Completed {action.group} - {action.label}. Open the outputs folder for results.")
+            if progress_callback is not None:
+                progress_callback()
             return
         status.set(f"Failed {action.group} - {action.label} with exit code {return_code}.")
 
