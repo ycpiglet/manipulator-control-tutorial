@@ -83,6 +83,9 @@ class LoggingTests(unittest.TestCase):
                 "python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot",
                 html,
             )
+            self.assertIn("Config Highlights", html)
+            self.assertIn("force_input.magnitude", html)
+            self.assertIn("stiffness", html)
             self.assertIn("Result Check", html)
             self.assertIn("Data saved", html)
             self.assertIn("Learner actions", html)

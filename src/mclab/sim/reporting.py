@@ -8,6 +8,7 @@ from html import escape
 from pathlib import Path
 from typing import Any
 
+from mclab.config import load_config
 from mclab.learning_guides import RunGuide, guide_for_run_summary
 
 INDEX_METRIC_KEYS = (
@@ -35,6 +36,63 @@ INDEX_METRIC_KEYS = (
     "max_wall_retreat_cm",
     "max_abs_virtual_wall_force",
     "interaction_events",
+)
+
+CONFIG_HIGHLIGHT_KEYS = (
+    "sim_time",
+    "dt",
+    "mode",
+    "plant",
+    "mass",
+    "damping",
+    "stiffness",
+    "initial_position",
+    "initial_velocity",
+    "force_input.type",
+    "force_input.magnitude",
+    "force_input.start_time",
+    "target.type",
+    "target.start",
+    "target.end",
+    "target.start_time",
+    "controller.kp",
+    "controller.ki",
+    "controller.kd",
+    "controller.output_limit",
+    "controller.anti_windup",
+    "measurement_noise_std",
+    "control_delay",
+    "trajectory.type",
+    "trajectory.start",
+    "trajectory.end",
+    "trajectory.duration",
+    "trajectory.start_time",
+    "tracking_controller.kp",
+    "tracking_controller.kd",
+    "tracking_controller.task_kp",
+    "tracking_controller.task_kd",
+    "tracking_controller.force_limit",
+    "tracking_controller.torque_limit",
+    "link_lengths",
+    "initial_q",
+    "target_q",
+    "target_xy",
+    "controlled_joint_index",
+    "cartesian_target.position",
+    "cartesian_target.offset",
+    "cartesian_target.gain",
+    "cartesian_target.max_step",
+    "virtual_wall.wall_x",
+    "virtual_wall.stiffness",
+    "virtual_wall.damping",
+    "virtual_wall.force_retreat_gain",
+    "interaction.key_force",
+    "interaction.force",
+    "interaction.duration",
+    "interaction.target_nudge",
+    "interaction.target_step",
+    "interaction.target_limit",
+    "interaction.live_tuning",
 )
 
 
@@ -88,10 +146,11 @@ def write_run_report(output_path: str | Path) -> Path:
     output.mkdir(parents=True, exist_ok=True)
     summary = _read_json(output / "summary.json")
     notes = _read_text(output / "notes.md")
+    config = _read_config(output / "config.yaml")
     plots = sorted((output / "plots").glob("*.png"))
     interaction_events = _read_json_list(output / "interaction_events.json")
 
-    html = _render_report(output, summary, notes, plots, interaction_events)
+    html = _render_report(output, summary, notes, plots, interaction_events, config)
     report_path = output / "report.html"
     report_path.write_text(html, encoding="utf-8")
     write_outputs_index(output.parent)
@@ -113,10 +172,12 @@ def _render_report(
     notes: str,
     plots: list[Path],
     interaction_events: list[dict[str, Any]],
+    config: dict[str, Any],
 ) -> str:
     title = _report_title(output, summary)
     learning_guide = _learning_guide_section(guide_for_run_summary(summary))
     reproduce_section = _reproduce_section(summary)
+    config_highlights = _config_highlights_section(config)
     result_check = _result_check_section(summary)
     observation_markers = _observation_markers_section(interaction_events)
     interaction_section = _interaction_section(interaction_events)
@@ -275,6 +336,26 @@ def _render_report(
       display: block;
       margin-bottom: 8px;
     }}
+    .config-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }}
+    .config-card {{
+      border: 1px solid #e0e4ea;
+      border-radius: 8px;
+      padding: 12px;
+      background: #fbfcfd;
+    }}
+    .config-card strong {{
+      display: block;
+      margin-bottom: 6px;
+      overflow-wrap: anywhere;
+    }}
+    .config-card span {{
+      color: #596270;
+      overflow-wrap: anywhere;
+    }}
     .check-grid {{
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -373,6 +454,7 @@ def _render_report(
     <h1>{escape(title)} report</h1>
     {learning_guide}
     {reproduce_section}
+    {config_highlights}
     {result_check}
     {observation_markers}
     {interaction_section}
@@ -467,6 +549,55 @@ def _cli_lab_name(lab_name: str) -> str:
     if "lab04" in normalized or "panda" in normalized:
         return "lab04"
     return ""
+
+
+def _config_highlights_section(config: dict[str, Any]) -> str:
+    pairs = _config_highlight_pairs(config)
+    if not pairs:
+        return ""
+    cards = "\n".join(
+        (
+            '<article class="config-card">'
+            f"<strong>{escape(key)}</strong>"
+            f"<span>{escape(_format_value(value))}</span>"
+            "</article>"
+        )
+        for key, value in pairs
+    )
+    return (
+        "<section>"
+        "<h2>Config Highlights</h2>"
+        '<p class="empty">Edit these YAML values, rerun, then compare the response and report.</p>'
+        '<div class="config-grid">'
+        f"{cards}"
+        "</div>"
+        "</section>"
+    )
+
+
+def _config_highlight_pairs(config: dict[str, Any]) -> list[tuple[str, Any]]:
+    flattened = _flatten_config(config)
+    if not flattened:
+        return []
+    pairs = [(key, flattened[key]) for key in CONFIG_HIGHLIGHT_KEYS if key in flattened]
+    if not pairs:
+        pairs = [
+            (key, value)
+            for key, value in flattened.items()
+            if key not in {"model_path"} and not key.startswith("model_path.")
+        ]
+    return pairs[:28]
+
+
+def _flatten_config(config: dict[str, Any], prefix: str = "") -> dict[str, Any]:
+    flattened: dict[str, Any] = {}
+    for key, value in config.items():
+        path = f"{prefix}.{key}" if prefix else str(key)
+        if isinstance(value, dict):
+            flattened.update(_flatten_config(value, path))
+        else:
+            flattened[path] = value
+    return flattened
 
 
 def _result_check_section(summary: dict[str, Any]) -> str:
@@ -1096,6 +1227,15 @@ def _read_json_list(path: Path) -> list[dict[str, Any]]:
     if not isinstance(payload, list):
         return []
     return [item for item in payload if isinstance(item, dict)]
+
+
+def _read_config(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    try:
+        return load_config(path)
+    except Exception:
+        return {}
 
 
 def _read_text(path: Path) -> str:

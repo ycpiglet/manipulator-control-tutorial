@@ -442,7 +442,7 @@ outputs/
 - `log.csv`: 시간별 position, velocity, control force, torque/current proxy 등
 - `states.npz`: NumPy로 읽기 좋은 배열 데이터
 - `summary.json`: config 이름, overshoot, settling time, tracking error 같은 요약 지표
-- `report.html`: `Try` / `Change` / `Watch` 학습 가이드, 재현 실행 명령, 자동 결과 점검, observation marker, 요약값, notes, plot 이미지와 plot 해석 가이드를 한 화면에서 보는 실행 리포트
+- `report.html`: `Try` / `Change` / `Watch` 학습 가이드, 재현 실행 명령, config highlights, 자동 결과 점검, observation marker, 요약값, notes, plot 이미지와 plot 해석 가이드를 한 화면에서 보는 실행 리포트
 - `outputs/index.html`: 추천 학습 경로 진행표, Lab별 진행 요약, 실행 리포트, `Lesson` / `Next` 안내, 핵심 summary metric을 최신순으로 비교하는 목록 페이지
 - `plots/`: 강의 자료에 바로 쓰기 좋은 PNG plot
 
@@ -779,7 +779,7 @@ outputs/
 - `log.csv`: time-series signals such as position, velocity, control force, torque/current proxy
 - `states.npz`: NumPy-friendly arrays
 - `summary.json`: config name and metrics such as overshoot, settling time, tracking error
-- `report.html`: a one-page run report with `Try` / `Change` / `Watch` learning guidance, reproduce commands, automatic result checks, observation markers, summary values, notes, plot images, and plot interpretation guides
+- `report.html`: a one-page run report with `Try` / `Change` / `Watch` learning guidance, reproduce commands, config highlights, automatic result checks, observation markers, summary values, notes, plot images, and plot interpretation guides
 - `outputs/index.html`: a newest-first index with the recommended learning path, lab progress cards, run reports, `Lesson` / `Next` guidance, and key summary metrics
 - `plots/`: PNG plots suitable for quick inspection or lecture slides
 
