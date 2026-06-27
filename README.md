@@ -214,7 +214,7 @@ batch는 viewer 없이 여러 config를 순서대로 실행하고, `outputs/<tim
 .\run_lab04_wall_interactive.cmd
 ```
 
-Interactive launcher는 사이드 패널 없는 MuJoCo viewer와 함께 작은 `MCLab Interaction` 창을 엽니다. Lab01-03에서는 `Pull Left` / `Push Right` 버튼이 mass에 짧은 힘 펄스를 넣고, 슬라이더로 주요 파라미터를 실행 중에 바꿉니다. 키보드는 viewer 창에 포커스가 있을 때 `A` 또는 왼쪽 화살표, `D` 또는 오른쪽 화살표도 지원합니다. Lab04에서는 버튼으로 제어 중인 관절 목표를 이동하고, wall 데모에서는 virtual wall 파라미터도 슬라이더로 바꿉니다. 슬라이더를 여러 번 바꾼 뒤에는 `Reset sliders`로 실행 시작값으로 되돌릴 수 있습니다. 중요한 순간에는 `Mark observation`을 눌러 현재 슬라이더와 live status 값을 저장할 수 있습니다. 창 아래쪽의 `Live status` 영역은 위치, 오차, 힘, 에너지, wall penetration처럼 지금 관찰해야 할 핵심 숫자만 보여줍니다. 버튼이나 슬라이더를 사용한 경우 실행 리포트의 `Interaction Log`와 `interaction_events.json`에 조작 이력이 저장됩니다.
+Interactive launcher는 사이드 패널 없는 MuJoCo viewer와 함께 작은 `MCLab Interaction` 창을 엽니다. Lab01-03에서는 `Pull Left` / `Push Right` 버튼이 mass에 짧은 힘 펄스를 넣고, 슬라이더로 주요 파라미터를 실행 중에 바꿉니다. 키보드는 viewer 창에 포커스가 있을 때 `A` 또는 왼쪽 화살표, `D` 또는 오른쪽 화살표도 지원합니다. Lab04에서는 버튼으로 제어 중인 관절 목표를 이동하고, wall 데모에서는 virtual wall 파라미터도 슬라이더로 바꿉니다. 슬라이더를 여러 번 바꾼 뒤에는 `Reset sliders`로 실행 시작값으로 되돌릴 수 있습니다. 중요한 순간에는 `Mark observation`을 눌러 현재 슬라이더와 live status 값을 저장할 수 있으며, 실행 리포트의 `Observation Markers` 카드에서 다시 볼 수 있습니다. 창 아래쪽의 `Live status` 영역은 위치, 오차, 힘, 에너지, wall penetration처럼 지금 관찰해야 할 핵심 숫자만 보여줍니다. 버튼이나 슬라이더를 사용한 경우 실행 리포트의 `Interaction Log`와 `interaction_events.json`에 조작 이력이 저장됩니다.
 
 무엇을 보면 되는지:
 
@@ -442,7 +442,7 @@ outputs/
 - `log.csv`: 시간별 position, velocity, control force, torque/current proxy 등
 - `states.npz`: NumPy로 읽기 좋은 배열 데이터
 - `summary.json`: config 이름, overshoot, settling time, tracking error 같은 요약 지표
-- `report.html`: `Try` / `Change` / `Watch` 학습 가이드, 재현 실행 명령, 자동 결과 점검, 요약값, notes, plot 이미지와 plot 해석 가이드를 한 화면에서 보는 실행 리포트
+- `report.html`: `Try` / `Change` / `Watch` 학습 가이드, 재현 실행 명령, 자동 결과 점검, observation marker, 요약값, notes, plot 이미지와 plot 해석 가이드를 한 화면에서 보는 실행 리포트
 - `outputs/index.html`: 추천 학습 경로 진행표, Lab별 진행 요약, 실행 리포트, `Lesson` / `Next` 안내, 핵심 summary metric을 최신순으로 비교하는 목록 페이지
 - `plots/`: 강의 자료에 바로 쓰기 좋은 PNG plot
 
@@ -549,7 +549,7 @@ Use the interactive launchers when learners should disturb the system and watch 
 .\run_lab04_wall_interactive.cmd
 ```
 
-Each interactive launcher opens the MuJoCo viewer without side panels plus a small `MCLab Interaction` window. In Lab01-03, `Pull Left` / `Push Right` applies short force pulses to the mass, and sliders tune key parameters while the simulation is running. Keyboard shortcuts also work when the viewer has focus: `A` or left arrow for left, `D` or right arrow for right. In Lab04, the buttons nudge the controlled joint target, and the wall demo adds virtual wall sliders. After changing sliders, use `Reset sliders` to return to the values from the start of the run. Press `Mark observation` at important moments to save the current slider and live status values. The `Live status` area shows only the key values learners should watch now, such as position, error, force, energy, and wall penetration. When learners use buttons or sliders, the run report adds an `Interaction Log` and saves the raw events in `interaction_events.json`.
+Each interactive launcher opens the MuJoCo viewer without side panels plus a small `MCLab Interaction` window. In Lab01-03, `Pull Left` / `Push Right` applies short force pulses to the mass, and sliders tune key parameters while the simulation is running. Keyboard shortcuts also work when the viewer has focus: `A` or left arrow for left, `D` or right arrow for right. In Lab04, the buttons nudge the controlled joint target, and the wall demo adds virtual wall sliders. After changing sliders, use `Reset sliders` to return to the values from the start of the run. Press `Mark observation` at important moments to save the current slider and live status values, then review them in the run report's `Observation Markers` cards. The `Live status` area shows only the key values learners should watch now, such as position, error, force, energy, and wall penetration. When learners use buttons or sliders, the run report adds an `Interaction Log` and saves the raw events in `interaction_events.json`.
 
 What to observe:
 
@@ -779,7 +779,7 @@ outputs/
 - `log.csv`: time-series signals such as position, velocity, control force, torque/current proxy
 - `states.npz`: NumPy-friendly arrays
 - `summary.json`: config name and metrics such as overshoot, settling time, tracking error
-- `report.html`: a one-page run report with `Try` / `Change` / `Watch` learning guidance, reproduce commands, automatic result checks, summary values, notes, plot images, and plot interpretation guides
+- `report.html`: a one-page run report with `Try` / `Change` / `Watch` learning guidance, reproduce commands, automatic result checks, observation markers, summary values, notes, plot images, and plot interpretation guides
 - `outputs/index.html`: a newest-first index with the recommended learning path, lab progress cards, run reports, `Lesson` / `Next` guidance, and key summary metrics
 - `plots/`: PNG plots suitable for quick inspection or lecture slides
 

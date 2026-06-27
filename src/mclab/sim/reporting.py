@@ -118,6 +118,7 @@ def _render_report(
     learning_guide = _learning_guide_section(guide_for_run_summary(summary))
     reproduce_section = _reproduce_section(summary)
     result_check = _result_check_section(summary)
+    observation_markers = _observation_markers_section(interaction_events)
     interaction_section = _interaction_section(interaction_events)
     plot_guide = _plot_guide_section(plots)
     rows = "\n".join(
@@ -289,6 +290,45 @@ def _render_report(
       display: block;
       margin-bottom: 6px;
     }}
+    .marker-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+    }}
+    .marker-card {{
+      border: 1px solid #e0e4ea;
+      border-radius: 8px;
+      padding: 12px;
+      background: #fbfcfd;
+    }}
+    .marker-card > strong {{
+      display: block;
+      margin-bottom: 6px;
+    }}
+    .marker-time {{
+      display: block;
+      color: #596270;
+      font-size: 13px;
+      margin-bottom: 10px;
+    }}
+    .marker-group {{
+      margin-top: 10px;
+    }}
+    .marker-group ul {{
+      list-style: none;
+      padding: 0;
+      margin: 6px 0 0;
+    }}
+    .marker-group li {{
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      border-top: 1px solid #edf0f3;
+      padding: 5px 0;
+    }}
+    .marker-group span {{
+      color: #596270;
+    }}
     .check-state {{
       display: inline-block;
       margin-bottom: 8px;
@@ -334,6 +374,7 @@ def _render_report(
     {learning_guide}
     {reproduce_section}
     {result_check}
+    {observation_markers}
     {interaction_section}
     <section>
       <h2>Summary</h2>
@@ -535,6 +576,72 @@ def _interaction_section(events: list[dict[str, Any]]) -> str:
         f"<tbody>{rows}</tbody>"
         "</table>"
         "</section>"
+    )
+
+
+def _observation_markers_section(events: list[dict[str, Any]]) -> str:
+    markers = [event for event in events if _is_observation_marker(event)]
+    if not markers:
+        return ""
+    shown_markers = markers[-12:]
+    cards = "\n".join(
+        _observation_marker_card(marker, marker_index + 1)
+        for marker_index, marker in enumerate(shown_markers)
+    )
+    count_text = (
+        f"Showing the latest {len(shown_markers)} of {len(markers)} marked observations."
+        if len(markers) > len(shown_markers)
+        else f"{len(markers)} marked observation{'s' if len(markers) != 1 else ''} saved."
+    )
+    return (
+        "<section>"
+        "<h2>Observation Markers</h2>"
+        f'<p class="empty">{escape(count_text)}</p>'
+        '<div class="marker-grid">'
+        f"{cards}"
+        "</div>"
+        "</section>"
+    )
+
+
+def _is_observation_marker(event: dict[str, Any]) -> bool:
+    return str(event.get("kind", "")).lower() == "marker" and str(event.get("name", "")).lower() == "observation"
+
+
+def _observation_marker_card(event: dict[str, Any], marker_index: int) -> str:
+    payload = event.get("value")
+    value = payload if isinstance(payload, dict) else {}
+    sliders = _marker_value_group("Sliders", value.get("sliders"))
+    status = _marker_value_group("Live status", value.get("status"))
+    body = sliders + status
+    if not body:
+        body = '<p class="empty">No slider or status snapshot was saved for this marker.</p>'
+    return (
+        '<article class="marker-card">'
+        f"<strong>Observation {marker_index}</strong>"
+        f'<span class="marker-time">time {_format_value(event.get("time"))} s</span>'
+        f"{body}"
+        "</article>"
+    )
+
+
+def _marker_value_group(title: str, values: Any) -> str:
+    if not isinstance(values, dict) or not values:
+        return ""
+    rows = "\n".join(
+        (
+            "<li>"
+            f"<span>{escape(str(key))}</span>"
+            f"<strong>{escape(_format_value(value))}</strong>"
+            "</li>"
+        )
+        for key, value in values.items()
+    )
+    return (
+        '<div class="marker-group">'
+        f"<strong>{escape(title)}</strong>"
+        f"<ul>{rows}</ul>"
+        "</div>"
     )
 
 
