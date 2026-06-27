@@ -75,6 +75,7 @@ class LiveTuning:
         self.specs = specs
         self.enabled = bool(specs)
         self._values = {spec.name: float(spec.initial) for spec in specs}
+        self._initial_values = dict(self._values)
         self._specs = {spec.name: spec for spec in specs}
         self._event_log = event_log
         self._lock = Lock()
@@ -99,6 +100,18 @@ class LiveTuning:
                 number,
                 label=spec.label if spec is not None else name,
             )
+
+    def reset(self) -> dict[str, float]:
+        with self._lock:
+            changed = any(
+                abs(self._values.get(name, initial) - initial) > 1e-12
+                for name, initial in self._initial_values.items()
+            )
+            self._values = dict(self._initial_values)
+            values = dict(self._values)
+        if changed and self._event_log is not None:
+            self._event_log.record("button", "reset_sliders", None, label="Reset sliders")
+        return values
 
 
 class LiveStatus:
@@ -298,7 +311,25 @@ def maybe_start_interaction_panel(
                 row += 1
 
             if tuning_enabled and tuning is not None:
-                tk.Label(frame, text="Live tuning").grid(row=row, column=0, columnspan=2, pady=(12, 4))
+                tuning_header = tk.Frame(frame)
+                tuning_header.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(12, 4))
+                tuning_header.columnconfigure(0, weight=1)
+                tk.Label(tuning_header, text="Live tuning").grid(row=0, column=0, sticky="w")
+                scale_widgets: dict[str, Any] = {}
+
+                def reset_sliders() -> None:
+                    values = tuning.reset()
+                    for name, value in values.items():
+                        scale = scale_widgets.get(name)
+                        if scale is not None:
+                            scale.set(value)
+
+                tk.Button(tuning_header, text="Reset sliders", command=reset_sliders).grid(
+                    row=0,
+                    column=1,
+                    sticky="e",
+                    padx=(12, 0),
+                )
                 row += 1
                 for spec in tuning.specs:
                     scale = tk.Scale(
@@ -312,6 +343,7 @@ def maybe_start_interaction_panel(
                         command=lambda raw_value, name=spec.name: tuning.set_value(name, float(raw_value)),
                     )
                     scale.set(spec.initial)
+                    scale_widgets[spec.name] = scale
                     scale.grid(row=row, column=0, columnspan=2, sticky="ew", pady=2)
                     row += 1
 

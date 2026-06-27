@@ -73,6 +73,28 @@ class KeyForcePulseTests(unittest.TestCase):
         )
         self.assertEqual(log.summary()["interaction_events"], 1)
 
+    def test_live_tuning_reset_restores_initial_values(self) -> None:
+        log = InteractionLog()
+        log.set_time(2.5)
+        tuning = LiveTuning(
+            [
+                SliderSpec("kp", "Kp", 0.0, 100.0, 20.0, 1.0),
+                SliderSpec("kd", "Kd", 0.0, 50.0, 4.0, 0.5),
+            ],
+            event_log=log,
+        )
+
+        tuning.set_value("kp", 55.0)
+        tuning.set_value("kd", 11.0)
+        reset_values = tuning.reset()
+
+        self.assertEqual(reset_values, {"kp": 20.0, "kd": 4.0})
+        self.assertEqual(tuning.value("kp", 0.0), 20.0)
+        self.assertEqual(tuning.value("kd", 0.0), 4.0)
+        self.assertEqual([event["kind"] for event in log.events()], ["slider", "slider", "button"])
+        self.assertEqual(log.events()[-1]["name"], "reset_sliders")
+        self.assertEqual(log.events()[-1]["label"], "Reset sliders")
+
     def test_live_status_formats_dashboard_values(self) -> None:
         status = LiveStatus([StatusSpec("position", "Position [m]"), StatusSpec("mode", "Mode")])
 

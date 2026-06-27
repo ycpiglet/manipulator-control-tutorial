@@ -55,7 +55,7 @@ Interactive virtual wall demo:
 .\run_lab04_wall_interactive.cmd
 ```
 
-Use the `MCLab Interaction` sliders to move the virtual wall and tune wall stiffness, damping, and retreat gain while the Panda moves toward the wall. Watch the live wall penetration and wall force in the panel, then compare `end_effector.png` and `virtual_wall.png` after the run.
+Use the `MCLab Interaction` sliders to move the virtual wall and tune wall stiffness, damping, and retreat gain while the Panda moves toward the wall. Use `Reset sliders` to return to the starting wall settings after exploring. Watch the live wall penetration and wall force in the panel, then compare `end_effector.png` and `virtual_wall.png` after the run.
 
 Soft/stiff wall comparison:
 

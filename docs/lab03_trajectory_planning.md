@@ -54,7 +54,7 @@ Interactive 2DOF demo:
 .\run_lab03_interactive.cmd
 ```
 
-Use the small `MCLab Interaction` window next to the viewer. Move `Target X`, `Target Y`, `Task stiffness`, `Task damping`, and `Torque limit` while the simulation is running. Use `Live status` to read `q1`, `q2`, hand X/Y, error norm, and max torque.
+Use the small `MCLab Interaction` window next to the viewer. Move `Target X`, `Target Y`, `Task stiffness`, `Task damping`, and `Torque limit` while the simulation is running, and use `Reset sliders` to return to the starting values. Use `Live status` to read `q1`, `q2`, hand X/Y, error norm, and max torque.
 
 The older 1D trajectory profile demos are still available for comparing motion profiles before applying the idea to the arm:
 

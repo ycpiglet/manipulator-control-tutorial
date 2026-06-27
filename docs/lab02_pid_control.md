@@ -23,7 +23,7 @@ Interactive disturbance demo:
 .\run_lab02_interactive.cmd
 ```
 
-Use the small `MCLab Interaction` window next to the viewer. Click `Pull Left` or `Push Right` to disturb the mass. Keyboard shortcuts also work when the viewer has focus: `A` / left arrow or `D` / right arrow. Use the live sliders to change target position, `Kp`, `Ki`, `Kd`, and force limit while the simulation is running. Watch the PID controller push the mass back to the target position, and use `Live status` to compare target, position, error, PID force, and disturbance force.
+Use the small `MCLab Interaction` window next to the viewer. Click `Pull Left` or `Push Right` to disturb the mass. Keyboard shortcuts also work when the viewer has focus: `A` / left arrow or `D` / right arrow. Use the live sliders to change target position, `Kp`, `Ki`, `Kd`, and force limit while the simulation is running, and use `Reset sliders` to return to the starting values. Watch the PID controller push the mass back to the target position, and use `Live status` to compare target, position, error, PID force, and disturbance force.
 
 Headless run:
 
