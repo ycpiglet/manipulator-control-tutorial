@@ -40,6 +40,7 @@ class BatchGuide:
     title: str
     focus: str
     questions: tuple[str, ...]
+    followups: tuple[str, ...]
     metric_keys: tuple[str, ...]
     preview_plots: tuple[str, ...]
     comparison_specs: tuple[tuple[str, str, str, str], ...]
@@ -84,6 +85,11 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             "Which case returns slowly even though it barely overshoots?",
             "How does stiffness change the motion frequency and peak restoring force?",
         ),
+        followups=(
+            "Copy `configs/lab01_msd/underdamped.yaml` and double `damping` to see when oscillation disappears.",
+            "Copy `configs/lab01_msd/high_stiffness.yaml` and reduce `mass` to watch frequency change.",
+            "Add a larger `force_input.magnitude` and compare peak position against the baseline.",
+        ),
         metric_keys=(
             "max_abs_position",
             "final_position",
@@ -103,6 +109,11 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             "Which controller reaches the target fastest, and what did it cost in overshoot or force?",
             "How do windup and anti-windup differ after saturation?",
             "How do measurement noise and control delay show up in the plots and metrics?",
+        ),
+        followups=(
+            "Copy `configs/lab02_pid/p_high_gain.yaml` and raise `controller.kd` until overshoot drops.",
+            "Copy `configs/lab02_pid/measurement_noise.yaml` and compare `controller.kd` values under noise.",
+            "Copy `configs/lab02_pid/control_delay.yaml` and reduce `controller.kp` to recover stability.",
         ),
         metric_keys=(
             "overshoot_percent",
@@ -128,6 +139,11 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             "What happens to manipulability and Jacobian condition near the singular posture?",
             "How do the torque plots change when the task is expressed in end-effector space?",
         ),
+        followups=(
+            "Copy `configs/lab03_2dof/task_space_2dof.yaml` and move `target_xy` closer to the workspace edge.",
+            "Copy `configs/lab03_2dof/singularity_2dof.yaml` and change `target_q` to approach a straighter arm.",
+            "Lower `tracking_controller.torque_limit` and compare how joint and task errors grow.",
+        ),
         metric_keys=(
             "max_joint_error_norm",
             "final_joint_error_norm",
@@ -152,6 +168,11 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             "Which wall allows more penetration before retreating?",
             "How much more virtual wall force does the stiff wall produce?",
             "How does the hand X position change as retreat and damping increase?",
+        ),
+        followups=(
+            "Copy `configs/lab04_panda/wall_soft.yaml` and raise `virtual_wall.stiffness` gradually.",
+            "Copy `configs/lab04_panda/wall_stiff.yaml` and lower `virtual_wall.damping` to inspect force spikes.",
+            "Move `virtual_wall.wall_x` and compare when the hand first reaches the virtual wall.",
         ),
         metric_keys=(
             "max_wall_penetration_cm",
@@ -256,6 +277,7 @@ def write_batch_report(
             title=batch_name.replace("_", " ").title(),
             focus="Compare the scenario reports and summary metrics.",
             questions=("Open each run report and compare the response plots.",),
+            followups=("Copy one scenario config, change a single parameter, and rerun the batch.",),
             metric_keys=INDEX_METRIC_KEYS,
             preview_plots=("position.png",),
             comparison_specs=(),
@@ -306,6 +328,7 @@ def _batch_rows(output: Path, scenarios: tuple[BatchScenario, ...]) -> list[dict
 def _render_batch_report(output: Path, guide: BatchGuide, rows: list[dict[str, Any]]) -> str:
     metric_keys = _display_metric_keys(guide, rows)
     question_items = "\n".join(f"<li>{escape(question)}</li>" for question in guide.questions)
+    next_experiments = _next_experiments(guide)
     scenario_cards = "\n".join(_scenario_card(row, metric_keys) for row in rows)
     metric_highlights = _metric_highlights(rows, metric_keys)
     parameter_differences = _parameter_differences(rows)
@@ -442,6 +465,7 @@ def _render_batch_report(output: Path, guide: BatchGuide, rows: list[dict[str, A
       <ul>{question_items}</ul>
       <p class="muted"><a href="index.html">Open the detailed run index</a> for every saved artifact.</p>
     </section>
+    {next_experiments}
     <section>
       <h2>Scenario Cards</h2>
       <div class="scenario-grid">{scenario_cards}</div>
@@ -485,6 +509,20 @@ def _scenario_card(row: dict[str, Any], metric_keys: list[str]) -> str:
         f'<p class="muted">{escape(str(row["config_path"]))}</p>'
         f"{metrics}"
         "</article>"
+    )
+
+
+def _next_experiments(guide: BatchGuide) -> str:
+    if not guide.followups:
+        return ""
+    items = "\n".join(f"<li>{escape(item)}</li>" for item in guide.followups)
+    return (
+        "<section>"
+        "<h2>Next Experiments</h2>"
+        "<ul>"
+        f"{items}"
+        "</ul>"
+        "</section>"
     )
 
 
