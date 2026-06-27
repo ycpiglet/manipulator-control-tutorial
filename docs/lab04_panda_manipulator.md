@@ -36,7 +36,7 @@ Interactive perturb demo:
 .\run_lab04_interactive.cmd
 ```
 
-Use the small `MCLab Interaction` window next to the viewer. Click `Joint Target -` or `Joint Target +` to nudge the controlled joint target and observe the position-actuated controller response.
+Use the small `MCLab Interaction` window next to the viewer. Click `Joint Target -` or `Joint Target +` to nudge the controlled joint target and observe the position-actuated controller response. Use `Live status` to read target offset, joint error norm, hand X position, wall penetration, and wall force while the viewer is running.
 
 Interactive virtual wall demo:
 
@@ -44,7 +44,7 @@ Interactive virtual wall demo:
 .\run_lab04_wall_interactive.cmd
 ```
 
-Use the `MCLab Interaction` sliders to move the virtual wall and tune wall stiffness, damping, and retreat gain while the Panda moves toward the wall. Watch `end_effector.png` and `virtual_wall.png` after the run to compare wall penetration and virtual force.
+Use the `MCLab Interaction` sliders to move the virtual wall and tune wall stiffness, damping, and retreat gain while the Panda moves toward the wall. Watch the live wall penetration and wall force in the panel, then compare `end_effector.png` and `virtual_wall.png` after the run.
 
 Headless runs:
 

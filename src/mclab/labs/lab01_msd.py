@@ -6,7 +6,14 @@ from pathlib import Path
 from typing import Any
 
 from mclab.config import resolve_project_path
-from mclab.sim.interaction import KeyForcePulse, LiveTuning, SliderSpec, maybe_start_interaction_panel
+from mclab.sim.interaction import (
+    KeyForcePulse,
+    LiveStatus,
+    LiveTuning,
+    SliderSpec,
+    StatusSpec,
+    maybe_start_interaction_panel,
+)
 from mclab.sim.logging import RunLogger
 from mclab.sim.mujoco_utils import (
     load_model_and_data,
@@ -50,6 +57,14 @@ def run(
 
     key_force = KeyForcePulse(config)
     live_tuning = _live_tuning(config)
+    live_status = LiveStatus(
+        [
+            StatusSpec("position", "Position [m]"),
+            StatusSpec("velocity", "Velocity [m/s]"),
+            StatusSpec("force", "Applied force [N]"),
+            StatusSpec("energy", "Total energy [J]"),
+        ]
+    )
     viewer_handle = maybe_launch_viewer(
         mujoco,
         model,
@@ -59,7 +74,12 @@ def run(
         show_ui=show_viewer_ui,
     )
     interaction_panel = (
-        maybe_start_interaction_panel(key_force, title="MCLab Lab01 Interaction", tuning=live_tuning)
+        maybe_start_interaction_panel(
+            key_force,
+            title="MCLab Lab01 Interaction",
+            tuning=live_tuning,
+            status=live_status,
+        )
         if viewer and not headless
         else None
     )
@@ -103,6 +123,7 @@ def run(
                 stiffness=stiffness,
                 spring_reference=spring_reference,
             )
+            live_status.set_values(position=position, velocity=velocity, force=force, energy=total)
             logger.record(
                 time=float(data.time),
                 position=position,

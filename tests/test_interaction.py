@@ -7,7 +7,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from mclab.sim.interaction import KeyForcePulse, LiveTuning, SliderSpec, TargetOffsetControl  # noqa: E402
+from mclab.sim.interaction import (  # noqa: E402
+    KeyForcePulse,
+    LiveStatus,
+    LiveTuning,
+    SliderSpec,
+    StatusSpec,
+    TargetOffsetControl,
+)
 
 
 class KeyForcePulseTests(unittest.TestCase):
@@ -45,3 +52,14 @@ class KeyForcePulseTests(unittest.TestCase):
         tuning.set_value("kp", 42.0)
         self.assertEqual(tuning.value("kp", 0.0), 42.0)
         self.assertEqual(tuning.value("missing", 7.0), 7.0)
+
+    def test_live_status_formats_dashboard_values(self) -> None:
+        status = LiveStatus([StatusSpec("position", "Position [m]"), StatusSpec("mode", "Mode")])
+
+        self.assertEqual(status.snapshot()["position"], "--")
+        status.set_values(position=1.23456, mode="tracking", ignored=99.0)
+
+        snapshot = status.snapshot()
+        self.assertEqual(snapshot["position"], "1.235")
+        self.assertEqual(snapshot["mode"], "tracking")
+        self.assertNotIn("ignored", snapshot)

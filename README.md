@@ -134,7 +134,7 @@ Windows PowerShell에서 가장 쉬운 방법:
 .\run_mclab.cmd
 ```
 
-이 명령은 학습자용 메뉴를 엽니다. 메뉴에서 Lab01-04의 자동 데모, interactive 데모, Panda virtual wall 데모를 버튼으로 실행할 수 있습니다. 각 데모는 사이드 패널 없는 MuJoCo viewer를 열고, 필요한 경우 `MCLab Interaction` 버튼/슬라이더 창을 함께 띄웁니다.
+이 명령은 학습자용 메뉴를 엽니다. 메뉴에서 Lab01-04의 자동 데모, interactive 데모, Panda virtual wall 데모를 버튼으로 실행할 수 있습니다. 각 데모는 사이드 패널 없는 MuJoCo viewer를 열고, 필요한 경우 `MCLab Interaction` 버튼/슬라이더/상태 창을 함께 띄웁니다.
 
 개별 랩을 바로 실행하고 싶으면:
 
@@ -164,7 +164,7 @@ Windows PowerShell에서 가장 쉬운 방법:
 .\run_lab04_wall_interactive.cmd
 ```
 
-Interactive launcher는 사이드 패널 없는 MuJoCo viewer와 함께 작은 `MCLab Interaction` 버튼 창을 엽니다. Lab01-03에서는 `Pull Left` / `Push Right` 버튼이 mass에 짧은 힘 펄스를 넣고, 슬라이더로 주요 파라미터를 실행 중에 바꿉니다. 키보드는 viewer 창에 포커스가 있을 때 `A` 또는 왼쪽 화살표, `D` 또는 오른쪽 화살표도 지원합니다. Lab04에서는 버튼으로 제어 중인 관절 목표를 이동하고, wall 데모에서는 virtual wall 파라미터도 슬라이더로 바꿉니다.
+Interactive launcher는 사이드 패널 없는 MuJoCo viewer와 함께 작은 `MCLab Interaction` 창을 엽니다. Lab01-03에서는 `Pull Left` / `Push Right` 버튼이 mass에 짧은 힘 펄스를 넣고, 슬라이더로 주요 파라미터를 실행 중에 바꿉니다. 키보드는 viewer 창에 포커스가 있을 때 `A` 또는 왼쪽 화살표, `D` 또는 오른쪽 화살표도 지원합니다. Lab04에서는 버튼으로 제어 중인 관절 목표를 이동하고, wall 데모에서는 virtual wall 파라미터도 슬라이더로 바꿉니다. 창 아래쪽의 `Live status` 영역은 위치, 오차, 힘, 에너지, wall penetration처럼 지금 관찰해야 할 핵심 숫자만 보여줍니다.
 
 무엇을 보면 되는지:
 
@@ -269,7 +269,7 @@ python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless 
 
 Lab04 `joint_pd.yaml`에서 가장 먼저 확인할 것은 `position.png`의 `q_3`와 `target_q_3`, 그리고 `error.png`의 tracking error입니다. 현재 데모는 Panda의 4번째 관절, 즉 `controlled_joint_index: 3`을 minimum-jerk 목표 위치로 움직이는 조인트 위치 제어 예제입니다.
 
-MuJoCo viewer 양옆 패널은 이 프로젝트의 주 제어 UI가 아닙니다. 현재 랩들은 Python loop가 매 step마다 actuator `ctrl` 값을 YAML 기반 target이나 controller output으로 다시 넣습니다. 따라서 viewer side panel에서 actuator 값을 바꿔도 실행 중에는 곧바로 덮어써지고, `--pause-at-end`로 멈춘 뒤에는 물리 step이 진행되지 않아 움직임이 보이지 않습니다. 그래서 학습자용 launcher는 `--hide-viewer-ui`로 사이드 패널을 숨깁니다. 실험 값은 `configs/`의 YAML이나 `MCLab Interaction` 창으로 제어합니다.
+MuJoCo viewer 양옆 패널은 이 프로젝트의 주 제어 UI가 아닙니다. 현재 랩들은 Python loop가 매 step마다 actuator `ctrl` 값을 YAML 기반 target이나 controller output으로 다시 넣습니다. 따라서 viewer side panel에서 actuator 값을 바꿔도 실행 중에는 곧바로 덮어써지고, `--pause-at-end`로 멈춘 뒤에는 물리 step이 진행되지 않아 움직임이 보이지 않습니다. 그래서 학습자용 launcher는 `--hide-viewer-ui`로 사이드 패널을 숨깁니다. 실험 값은 `configs/`의 YAML이나 `MCLab Interaction` 창으로 제어하고, 실행 중 핵심 상태도 그 창에서 확인합니다.
 
 CLI 형식:
 
@@ -401,7 +401,7 @@ The easiest option on Windows PowerShell:
 .\run_mclab.cmd
 ```
 
-This opens the learner menu. From the menu, learners can launch Lab01-04 auto demos, interactive demos, and the Panda virtual wall demo with buttons. Each demo opens a MuJoCo viewer without side panels and, when needed, a separate `MCLab Interaction` button/slider window.
+This opens the learner menu. From the menu, learners can launch Lab01-04 auto demos, interactive demos, and the Panda virtual wall demo with buttons. Each demo opens a MuJoCo viewer without side panels and, when needed, a separate `MCLab Interaction` button/slider/status window.
 
 To launch individual labs directly:
 
@@ -431,7 +431,7 @@ Use the interactive launchers when learners should disturb the system and watch 
 .\run_lab04_wall_interactive.cmd
 ```
 
-Each interactive launcher opens the MuJoCo viewer without side panels plus a small `MCLab Interaction` button window. In Lab01-03, `Pull Left` / `Push Right` applies short force pulses to the mass, and sliders tune key parameters while the simulation is running. Keyboard shortcuts also work when the viewer has focus: `A` or left arrow for left, `D` or right arrow for right. In Lab04, the buttons nudge the controlled joint target, and the wall demo adds virtual wall sliders.
+Each interactive launcher opens the MuJoCo viewer without side panels plus a small `MCLab Interaction` window. In Lab01-03, `Pull Left` / `Push Right` applies short force pulses to the mass, and sliders tune key parameters while the simulation is running. Keyboard shortcuts also work when the viewer has focus: `A` or left arrow for left, `D` or right arrow for right. In Lab04, the buttons nudge the controlled joint target, and the wall demo adds virtual wall sliders. The `Live status` area shows only the key values learners should watch now, such as position, error, force, energy, and wall penetration.
 
 What to observe:
 
@@ -536,7 +536,7 @@ python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless 
 
 For Lab04 `joint_pd.yaml`, check `q_3` versus `target_q_3` in `position.png` first, then the tracking error in `error.png`. This demo controls Panda joint 4, represented by `controlled_joint_index: 3`, with a minimum-jerk target position.
 
-The MuJoCo viewer side panels are not the main control UI for this project. The Python loops write actuator `ctrl` values from YAML-based targets or controller outputs at every simulation step. If you change actuator values in the viewer side panel, they are overwritten during the run; after `--pause-at-end`, physics stepping has stopped, so slider edits do not move the robot. Learner-facing launchers therefore hide the side panels with `--hide-viewer-ui`. Change experiment parameters in YAML under `configs/` or use the `MCLab Interaction` window.
+The MuJoCo viewer side panels are not the main control UI for this project. The Python loops write actuator `ctrl` values from YAML-based targets or controller outputs at every simulation step. If you change actuator values in the viewer side panel, they are overwritten during the run; after `--pause-at-end`, physics stepping has stopped, so slider edits do not move the robot. Learner-facing launchers therefore hide the side panels with `--hide-viewer-ui`. Change experiment parameters in YAML under `configs/` or use the `MCLab Interaction` window, which also shows the live status values learners need during the demo.
 
 CLI shape:
 

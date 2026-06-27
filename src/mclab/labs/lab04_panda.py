@@ -6,7 +6,14 @@ from pathlib import Path
 from typing import Any
 
 from mclab.config import resolve_project_path
-from mclab.sim.interaction import LiveTuning, SliderSpec, TargetOffsetControl, maybe_start_interaction_panel
+from mclab.sim.interaction import (
+    LiveStatus,
+    LiveTuning,
+    SliderSpec,
+    StatusSpec,
+    TargetOffsetControl,
+    maybe_start_interaction_panel,
+)
 from mclab.sim.logging import RunLogger
 from mclab.sim.mujoco_utils import (
     load_model_and_data,
@@ -70,6 +77,15 @@ def run(
 
     target_offset = TargetOffsetControl(config)
     live_tuning = _live_tuning(config)
+    live_status = LiveStatus(
+        [
+            StatusSpec("joint_offset", "Target offset [rad]"),
+            StatusSpec("error_norm", "Joint error norm"),
+            StatusSpec("ee_x", "Hand X [m]"),
+            StatusSpec("wall_penetration_cm", "Wall penetration [cm]"),
+            StatusSpec("wall_force_x", "Wall force X [N]"),
+        ]
+    )
     viewer_handle = maybe_launch_viewer(
         mujoco,
         model,
@@ -79,7 +95,12 @@ def run(
         show_ui=show_viewer_ui,
     )
     interaction_panel = (
-        maybe_start_interaction_panel(target_offset, title="MCLab Lab04 Interaction", tuning=live_tuning)
+        maybe_start_interaction_panel(
+            target_offset,
+            title="MCLab Lab04 Interaction",
+            tuning=live_tuning,
+            status=live_status,
+        )
         if viewer and not headless
         else None
     )
@@ -92,8 +113,9 @@ def run(
                 break
             target_q = home_q.copy()
             target = trajectory.evaluate(float(data.time))
+            button_joint_offset = target_offset.value()
             tuned_joint_offset = live_tuning.value("joint_target_offset", 0.0)
-            target_q[controlled_joint_index] = target.position + target_offset.value() + tuned_joint_offset
+            target_q[controlled_joint_index] = target.position + button_joint_offset + tuned_joint_offset
 
             ee_position, ee_velocity, jacobian = _end_effector_state(mujoco, model, data, handles)
             wall_force = [0.0, 0.0, 0.0]
@@ -130,6 +152,14 @@ def run(
                 0.0,
                 ee_position[0] - float(wall_config.get("wall_x", 10.0)),
             )
+            error_norm = _norm(position_errors)
+            live_status.set_values(
+                joint_offset=button_joint_offset + tuned_joint_offset,
+                error_norm=error_norm,
+                ee_x=ee_position[0],
+                wall_penetration_cm=100.0 * wall_penetration,
+                wall_force_x=wall_force[0],
+            )
             logger.record(
                 time=float(data.time),
                 q=q,
@@ -141,7 +171,7 @@ def run(
                 x_ee=ee_position,
                 xdot_ee=ee_velocity,
                 position_error=position_errors,
-                error_norm=_norm(position_errors),
+                error_norm=error_norm,
                 force_virtual=wall_force,
                 wall_penetration=wall_penetration,
                 wall_penetration_cm=100.0 * wall_penetration,

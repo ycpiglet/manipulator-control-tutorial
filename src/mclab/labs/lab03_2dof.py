@@ -10,7 +10,14 @@ from pathlib import Path
 from typing import Any
 
 from mclab.config import resolve_project_path
-from mclab.sim.interaction import KeyForcePulse, LiveTuning, SliderSpec, maybe_start_interaction_panel
+from mclab.sim.interaction import (
+    KeyForcePulse,
+    LiveStatus,
+    LiveTuning,
+    SliderSpec,
+    StatusSpec,
+    maybe_start_interaction_panel,
+)
 from mclab.sim.logging import RunLogger
 from mclab.sim.mujoco_utils import (
     load_model_and_data,
@@ -60,6 +67,15 @@ def run(
 
     key_force = KeyForcePulse(config)
     live_tuning = _live_tuning(config, controller_config, force_limit_value)
+    live_status = LiveStatus(
+        [
+            StatusSpec("target", "Target [m]"),
+            StatusSpec("position", "Position [m]"),
+            StatusSpec("error", "Tracking error [m]"),
+            StatusSpec("control", "Control force [N]"),
+            StatusSpec("manual", "Disturbance [N]"),
+        ]
+    )
     viewer_handle = maybe_launch_viewer(
         mujoco,
         model,
@@ -69,7 +85,12 @@ def run(
         show_ui=show_viewer_ui,
     )
     interaction_panel = (
-        maybe_start_interaction_panel(key_force, title="MCLab Lab03 Interaction", tuning=live_tuning)
+        maybe_start_interaction_panel(
+            key_force,
+            title="MCLab Lab03 Interaction",
+            tuning=live_tuning,
+            status=live_status,
+        )
         if viewer and not headless
         else None
     )
@@ -104,6 +125,13 @@ def run(
             )
 
             position, velocity, acceleration = slider_state(data, handles)
+            live_status.set_values(
+                target=target_position,
+                position=position,
+                error=target_position - position,
+                control=control_force,
+                manual=manual_force,
+            )
             logger.record(
                 time=float(data.time),
                 position=position,

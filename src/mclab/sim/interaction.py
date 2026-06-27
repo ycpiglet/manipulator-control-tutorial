@@ -22,6 +22,12 @@ class SliderSpec:
     resolution: float
 
 
+@dataclass(frozen=True)
+class StatusSpec:
+    name: str
+    label: str
+
+
 class LiveTuning:
     def __init__(self, specs: list[SliderSpec]) -> None:
         self.specs = specs
@@ -37,6 +43,24 @@ class LiveTuning:
         with self._lock:
             if name in self._values:
                 self._values[name] = float(value)
+
+
+class LiveStatus:
+    def __init__(self, specs: list[StatusSpec]) -> None:
+        self.specs = specs
+        self.enabled = bool(specs)
+        self._values = {spec.name: "--" for spec in specs}
+        self._lock = Lock()
+
+    def set_values(self, **values: Any) -> None:
+        with self._lock:
+            for name, value in values.items():
+                if name in self._values:
+                    self._values[name] = _format_status_value(value)
+
+    def snapshot(self) -> dict[str, str]:
+        with self._lock:
+            return dict(self._values)
 
 
 class KeyForcePulse:
@@ -147,11 +171,13 @@ def maybe_start_interaction_panel(
     *,
     title: str,
     tuning: LiveTuning | None = None,
+    status: LiveStatus | None = None,
 ) -> InteractionPanel | None:
     control_enabled = bool(getattr(control, "enabled", False))
     panel_enabled = bool(getattr(control, "panel_enabled", False))
     tuning_enabled = bool(tuning is not None and tuning.enabled)
-    if not panel_enabled or not (control_enabled or tuning_enabled):
+    status_enabled = bool(status is not None and status.enabled)
+    if not panel_enabled or not (control_enabled or tuning_enabled or status_enabled):
         return None
 
     try:
@@ -207,6 +233,31 @@ def maybe_start_interaction_panel(
                     scale.set(spec.initial)
                     scale.grid(row=row, column=0, columnspan=2, sticky="ew", pady=2)
                     row += 1
+
+            if status_enabled and status is not None:
+                tk.Label(frame, text="Live status").grid(row=row, column=0, columnspan=2, pady=(12, 4))
+                row += 1
+                status_vars: dict[str, Any] = {}
+                for spec in status.specs:
+                    tk.Label(frame, text=spec.label, anchor="w").grid(row=row, column=0, sticky="w", padx=4, pady=2)
+                    variable = tk.StringVar(value="--")
+                    status_vars[spec.name] = variable
+                    tk.Label(frame, textvariable=variable, width=14, anchor="e").grid(
+                        row=row,
+                        column=1,
+                        sticky="e",
+                        padx=4,
+                        pady=2,
+                    )
+                    row += 1
+
+                def refresh_status() -> None:
+                    snapshot = status.snapshot()
+                    for name, variable in status_vars.items():
+                        variable.set(snapshot.get(name, "--"))
+                    root.after(200, refresh_status)
+
+                refresh_status()
             root.mainloop()
         except Exception as exc:  # pragma: no cover - depends on local GUI support.
             print(f"Interaction panel stopped: {exc}")
@@ -223,3 +274,15 @@ def maybe_start_interaction_panel(
                 pass
 
     return InteractionPanel(close)
+
+
+def _format_status_value(value: Any) -> str:
+    if value is None:
+        return "--"
+    if isinstance(value, bool):
+        return str(value)
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    return f"{number:.3f}"
