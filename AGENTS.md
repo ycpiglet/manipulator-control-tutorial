@@ -50,7 +50,8 @@ Implemented and verified:
 - Phase 0 package skeleton, CLI, config loading, logger, plotting helper
 - Lab01 mass-spring-damper on a MuJoCo slide-joint plant
 - Lab02 PID control on the same MuJoCo plant
-- Incremental Lab03 trajectory planning and 1D trajectory tracking
+- Lab03 trajectory planning plus a torque-actuated 2DOF planar arm
+- Lab03 FK, IK helper, analytic Jacobian, joint-space tracking, and task-space Jacobian-transpose PD
 - Lab04 Franka Emika Panda manipulator using MuJoCo Menagerie
 - YAML configs, MuJoCo XML models, docs, and tests for the implemented labs
 
@@ -61,11 +62,12 @@ python -m pytest -q
 python scripts/bootstrap_and_run.py --verify
 python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot
 python -m mclab run lab02 --config configs/lab02_pid/default.yaml --headless --plot
-python -m mclab run lab03 --config configs/lab03_2dof/minimum_jerk.yaml --headless --plot
+python -m mclab run lab03 --config configs/lab03_2dof/joint_space_2dof.yaml --headless --plot
+python -m mclab run lab03 --config configs/lab03_2dof/task_space_2dof.yaml --headless --plot --plots task
 python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless --plot
 ```
 
-The later full `lab03` 2DOF manipulator should build on the trajectory modules already implemented here. `lab04` currently uses Menagerie position actuators; do not treat it as a raw torque-control digital twin.
+The older Lab03 1D trajectory configs are still available for profile comparison. `lab04` currently uses Menagerie position actuators; do not treat it as a raw torque-control digital twin.
 
 ### Phase 0 - Package Skeleton
 
@@ -173,6 +175,18 @@ Build:
 - singularity demo
 - torque/current proxy plots
 
+Implemented so far:
+
+- FK, IK helper, and analytic Jacobian in `src/mclab/sim/two_link.py`
+- torque-actuated MuJoCo model in `models/lab03_2dof/two_link.xml`
+- joint-space and task-space configs
+- interactive task-space target/stiffness/damping/torque tuning
+- standard logs and plots for joint position, end-effector position, torque, current proxy, and error
+
+Remaining likely extension:
+
+- singularity demo and explicit Jacobian conditioning visualization
+
 ### Phase 6 - Lab04 Advanced Control
 
 Goal: turn the POC into the course-facing manipulator demo.
@@ -248,4 +262,4 @@ The full project is course-demo ready when:
 
 ## Next Best Task
 
-Expand `lab03` from 1D trajectory planning into the planned 2DOF manipulator, or add more `lab04` demos. Do not add web, ROS2, or Isaac Sim scope before the local MuJoCo labs are stable.
+Add a Lab03 singularity/conditioning demo or continue expanding Lab04 impedance demos. Do not add web, ROS2, or Isaac Sim scope before the local MuJoCo labs are stable.

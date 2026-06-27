@@ -16,7 +16,7 @@ MENAGERIE = ROOT / "third_party" / "mujoco_menagerie"
 DEFAULT_LABS = [
     ("lab01", "configs/lab01_msd/default.yaml"),
     ("lab02", "configs/lab02_pid/default.yaml"),
-    ("lab03", "configs/lab03_2dof/minimum_jerk.yaml"),
+    ("lab03", "configs/lab03_2dof/joint_space_2dof.yaml"),
     ("lab04", "configs/lab04_panda/joint_pd.yaml"),
 ]
 
@@ -25,6 +25,7 @@ VERIFY_VARIANTS = [
     ("lab01", "configs/lab01_msd/over_damped.yaml"),
     ("lab02", "configs/lab02_pid/p_low_gain.yaml"),
     ("lab02", "configs/lab02_pid/pd_damped.yaml"),
+    ("lab03", "configs/lab03_2dof/task_space_2dof.yaml"),
     ("lab03", "configs/lab03_2dof/trapezoidal.yaml"),
     ("lab03", "configs/lab03_2dof/step.yaml"),
     ("lab04", "configs/lab04_panda/neutral_hold.yaml"),

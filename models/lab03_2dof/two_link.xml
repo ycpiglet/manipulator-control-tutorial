@@ -1,0 +1,36 @@
+<mujoco model="lab03_two_link_arm">
+  <compiler angle="radian"/>
+  <option timestep="0.002" gravity="0 0 0"/>
+
+  <default>
+    <joint damping="0.15" armature="0.01" limited="true"/>
+    <geom type="capsule" size="0.035" density="550" rgba="0.20 0.48 0.86 1"/>
+    <motor ctrllimited="true" ctrlrange="-80 80"/>
+  </default>
+
+  <worldbody>
+    <light name="key" pos="0 -2 2" dir="0 1 -1"/>
+    <camera name="top" pos="0 0 2.2" xyaxes="1 0 0 0 1 0"/>
+    <geom name="floor_grid" type="plane" size="1.4 1.4 0.01" rgba="0.92 0.92 0.88 1"/>
+    <geom name="x_axis" type="capsule" fromto="-1.2 0 0.002 1.2 0 0.002" size="0.004" rgba="0.8 0.2 0.2 1"/>
+    <geom name="y_axis" type="capsule" fromto="0 -1.2 0.004 0 1.2 0.004" size="0.004" rgba="0.2 0.5 0.2 1"/>
+
+    <body name="link1" pos="0 0 0.05">
+      <joint name="shoulder" type="hinge" axis="0 0 1" range="-3.14159 3.14159"/>
+      <geom name="link1_geom" fromto="0 0 0 0.6 0 0"/>
+      <geom name="shoulder_marker" type="sphere" size="0.055" rgba="0.1 0.1 0.1 1"/>
+
+      <body name="link2" pos="0.6 0 0">
+        <joint name="elbow" type="hinge" axis="0 0 1" range="-2.7 2.7"/>
+        <geom name="link2_geom" fromto="0 0 0 0.45 0 0" rgba="0.92 0.56 0.2 1"/>
+        <geom name="elbow_marker" type="sphere" size="0.045" rgba="0.1 0.1 0.1 1"/>
+        <site name="ee" pos="0.45 0 0" size="0.045" rgba="0.0 0.0 0.0 1"/>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <motor name="shoulder_motor" joint="shoulder" gear="1"/>
+    <motor name="elbow_motor" joint="elbow" gear="1"/>
+  </actuator>
+</mujoco>

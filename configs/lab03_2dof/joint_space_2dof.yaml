@@ -1,0 +1,19 @@
+plant: two_link_arm
+model_path: models/lab03_2dof/two_link.xml
+mode: joint_space
+sim_time: 5.0
+dt: 0.002
+link_lengths: [0.6, 0.45]
+initial_q: [0.35, -0.75]
+target_q: [1.05, -1.15]
+torque_constant: 1.0
+trajectory:
+  type: minimum_jerk
+  start: 0.0
+  end: 1.0
+  duration: 2.4
+  start_time: 0.4
+tracking_controller:
+  kp: [85.0, 60.0]
+  kd: [9.0, 6.0]
+  torque_limit: [45.0, 35.0]

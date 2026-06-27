@@ -14,6 +14,7 @@ class ModelXmlTests(unittest.TestCase):
             ROOT / "models/lab01_msd/scene.xml",
             ROOT / "models/lab02_pid/scene.xml",
             ROOT / "models/lab03_2dof/scene.xml",
+            ROOT / "models/lab03_2dof/two_link.xml",
         ]:
             with self.subTest(path=path):
                 tree = ElementTree.parse(path)

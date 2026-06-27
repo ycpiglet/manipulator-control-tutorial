@@ -88,18 +88,18 @@ current_proxy = torque_command / Kt
 ```bash
 python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot
 python -m mclab run lab02 --config configs/lab02_pid/default.yaml --headless --plot
-python -m mclab run lab03 --config configs/lab03_2dof/minimum_jerk.yaml --headless --plot
+python -m mclab run lab03 --config configs/lab03_2dof/joint_space_2dof.yaml --headless --plot
 python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless --plot
 ```
 
-현재 `lab03`은 2DOF 매니퓰레이터 전체 구현 전 단계로, 1D MuJoCo plant에서 step, trapezoidal, minimum-jerk, S-curve trajectory를 생성하고 추종하는 trajectory planning lab입니다.
+현재 `lab03`은 실제 2DOF planar arm을 포함합니다. `joint_space_2dof.yaml`은 어깨/팔꿈치 joint-space PD trajectory tracking을 보여주고, `task_space_2dof.yaml`은 FK/Jacobian 기반 end-effector task-space 제어를 보여줍니다. 기존 1D step, trapezoidal, minimum-jerk, S-curve trajectory 비교 config도 profile 학습용으로 유지됩니다.
 
 목표 실행 방식:
 
 ```bash
 python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --viewer
 python -m mclab run lab04 --config configs/lab04_panda/impedance_wall.yaml --viewer
-python -m mclab run lab03 --config configs/lab03_2dof/minimum_jerk.yaml --viewer
+python -m mclab run lab03 --config configs/lab03_2dof/joint_space_2dof.yaml --viewer
 python -m mclab run lab02 --config configs/lab02_pid/default.yaml --plot
 python -m mclab run lab01 --config configs/lab01_msd/default.yaml --plot
 ```
@@ -142,7 +142,7 @@ Windows PowerShell에서 가장 쉬운 방법:
 |---|---|
 | Lab01 | underdamped, overdamped, high/low stiffness, interactive pull |
 | Lab02 | low/high P gain, PD damping, saturation, windup vs anti-windup, interactive disturbance |
-| Lab03 | step, trapezoidal, minimum-jerk, S-curve, interactive tracking |
+| Lab03 | 2DOF joint-space, 2DOF task-space, interactive XY target tuning, step/trapezoidal/minimum-jerk/S-curve profiles |
 | Lab04 | neutral hold, joint trajectories, hand X motion, joint target nudge, virtual wall |
 
 개별 랩을 바로 실행하고 싶으면:
@@ -160,7 +160,7 @@ Windows PowerShell에서 가장 쉬운 방법:
 |---|---|---|
 | `.\run_lab01.cmd` | mass-spring-damper viewer | `position`, `velocity`, `force` |
 | `.\run_lab02.cmd` | PID viewer | `position`, `control_force`, `error` |
-| `.\run_lab03.cmd` | trajectory viewer | `position`, `velocity`, `torque`, `error` |
+| `.\run_lab03.cmd` | 2DOF arm viewer | `position`, `end_effector`, `torque`, `error` |
 | `.\run_lab04.cmd` | Panda viewer | `position`, `error` |
 
 직접 외란을 주며 물리 현상을 보고 싶으면 interactive launcher를 사용합니다.
@@ -181,7 +181,7 @@ Interactive launcher는 사이드 패널 없는 MuJoCo viewer와 함께 작은 `
 |---|---|---|
 | `.\run_lab01_interactive.cmd` | mass에 좌/우 힘 펄스, `mass/damping/stiffness` 슬라이더 | 자유 진동, 감쇠, 복원력 |
 | `.\run_lab02_interactive.cmd` | PID plant에 좌/우 외란, `target/Kp/Ki/Kd/force limit` 슬라이더 | PID가 목표 위치로 복원하는 과정 |
-| `.\run_lab03_interactive.cmd` | trajectory tracker에 좌/우 외란, `target offset/Kp/Kd/force limit` 슬라이더 | 계획 경로에서 벗어난 뒤 회복하는 과정 |
+| `.\run_lab03_interactive.cmd` | 2DOF arm의 `target X/Y`, `task stiffness/damping`, `torque limit` 슬라이더 | 손끝 목표 위치, Jacobian 제어 오차, 토크 제한 |
 | `.\run_lab04_interactive.cmd` | Panda 관절 목표 nudge | 목표 관절 위치 변화와 tracking error |
 | `.\run_lab04_wall_interactive.cmd` | Panda 관절 목표 nudge, `wall X/stiffness/damping/retreat gain` 슬라이더 | virtual wall 위치와 강성/감쇠 변화 |
 
@@ -253,7 +253,7 @@ python scripts/bootstrap_and_run.py --setup-only
 ```bash
 python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot
 python -m mclab run lab02 --config configs/lab02_pid/default.yaml --headless --plot
-python -m mclab run lab03 --config configs/lab03_2dof/minimum_jerk.yaml --headless --plot
+python -m mclab run lab03 --config configs/lab03_2dof/joint_space_2dof.yaml --headless --plot
 python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless --plot
 ```
 
@@ -320,7 +320,7 @@ python -m mclab run lab02 --config configs/lab02_pid/my_pid_test.yaml --headless
 |---|---|---|
 | Lab01 MSD | `configs/lab01_msd/*.yaml` | `mass`, `damping`, `stiffness`, `initial_position`, `force_input.magnitude` |
 | Lab02 PID | `configs/lab02_pid/*.yaml` | `controller.kp`, `controller.ki`, `controller.kd`, `controller.output_limit`, `measurement_noise_std`, `control_delay` |
-| Lab03 Trajectory | `configs/lab03_2dof/*.yaml` | `trajectory.type`, `trajectory.start`, `trajectory.end`, `trajectory.duration`, `tracking_controller.kp`, `tracking_controller.kd` |
+| Lab03 2DOF/Trajectory | `configs/lab03_2dof/*.yaml` | `mode`, `initial_q`, `target_q`, `target_xy`, `trajectory.type`, `tracking_controller.kp`, `tracking_controller.task_kp`, `tracking_controller.task_kd` |
 | Lab04 Panda | `configs/lab04_panda/*.yaml` | `controlled_joint_index`, `trajectory.end`, `virtual_wall.wall_x`, `virtual_wall.stiffness`, `virtual_wall.damping` |
 
 Plot preset:
@@ -329,7 +329,7 @@ Plot preset:
 |---|---|
 | Lab01 MSD | `essential`, `energy` |
 | Lab02 PID | `essential`, `pid` |
-| Lab03 Trajectory | `essential`, `profile`, `control` |
+| Lab03 2DOF/Trajectory | `essential`, `profile`, `joint`, `task`, `control` |
 | Lab04 Panda | `essential`, `control`, `cartesian`, `wall` |
 
 Lab02 PID 예시:
@@ -343,15 +343,22 @@ controller:
   anti_windup: true
 ```
 
-Lab03 trajectory 예시:
+Lab03 2DOF task-space 예시:
 
 ```yaml
+plant: two_link_arm
+mode: task_space
+target_xy: [0.62, 0.42]
 trajectory:
   type: minimum_jerk
   start: 0.0
-  end: 0.6
-  duration: 2.0
+  end: 1.0
+  duration: 2.6
   start_time: 0.4
+tracking_controller:
+  task_kp: 95.0
+  task_kd: 18.0
+  torque_limit: [50.0, 38.0]
 ```
 
 Lab04 virtual wall 예시:
@@ -418,7 +425,7 @@ Main comparison scenarios in the menu:
 |---|---|
 | Lab01 | underdamped, overdamped, high/low stiffness, interactive pull |
 | Lab02 | low/high P gain, PD damping, saturation, windup vs anti-windup, interactive disturbance |
-| Lab03 | step, trapezoidal, minimum-jerk, S-curve, interactive tracking |
+| Lab03 | 2DOF joint-space, 2DOF task-space, interactive XY target tuning, step/trapezoidal/minimum-jerk/S-curve profiles |
 | Lab04 | neutral hold, joint trajectories, hand X motion, joint target nudge, virtual wall |
 
 To launch individual labs directly:
@@ -436,7 +443,7 @@ Each command opens the matching viewer without side panels and saves only the la
 |---|---|---|
 | `.\run_lab01.cmd` | mass-spring-damper viewer | `position`, `velocity`, `force` |
 | `.\run_lab02.cmd` | PID viewer | `position`, `control_force`, `error` |
-| `.\run_lab03.cmd` | trajectory viewer | `position`, `velocity`, `torque`, `error` |
+| `.\run_lab03.cmd` | 2DOF arm viewer | `position`, `end_effector`, `torque`, `error` |
 | `.\run_lab04.cmd` | Panda viewer | `position`, `error` |
 
 Use the interactive launchers when learners should disturb the system and watch the physics respond:
@@ -457,7 +464,7 @@ What to observe:
 |---|---|---|
 | `.\run_lab01_interactive.cmd` | left/right force pulse, `mass/damping/stiffness` sliders | free oscillation, damping, restoring force |
 | `.\run_lab02_interactive.cmd` | left/right disturbance, `target/Kp/Ki/Kd/force limit` sliders | PID disturbance rejection |
-| `.\run_lab03_interactive.cmd` | left/right disturbance, `target offset/Kp/Kd/force limit` sliders | recovery after leaving the planned trajectory |
+| `.\run_lab03_interactive.cmd` | 2DOF arm `target X/Y`, `task stiffness/damping`, `torque limit` sliders | hand target motion, Jacobian control error, torque limits |
 | `.\run_lab04_interactive.cmd` | Panda joint target nudge | target position changes and tracking error |
 | `.\run_lab04_wall_interactive.cmd` | Panda joint target nudge, `wall X/stiffness/damping/retreat gain` sliders | virtual wall position, stiffness, and damping effects |
 
@@ -529,7 +536,7 @@ After activating the virtual environment:
 ```bash
 python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot
 python -m mclab run lab02 --config configs/lab02_pid/default.yaml --headless --plot
-python -m mclab run lab03 --config configs/lab03_2dof/minimum_jerk.yaml --headless --plot
+python -m mclab run lab03 --config configs/lab03_2dof/joint_space_2dof.yaml --headless --plot
 python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless --plot
 ```
 
@@ -596,7 +603,7 @@ Common parameters:
 |---|---|---|
 | Lab01 MSD | `configs/lab01_msd/*.yaml` | `mass`, `damping`, `stiffness`, `initial_position`, `force_input.magnitude` |
 | Lab02 PID | `configs/lab02_pid/*.yaml` | `controller.kp`, `controller.ki`, `controller.kd`, `controller.output_limit`, `measurement_noise_std`, `control_delay` |
-| Lab03 Trajectory | `configs/lab03_2dof/*.yaml` | `trajectory.type`, `trajectory.start`, `trajectory.end`, `trajectory.duration`, `tracking_controller.kp`, `tracking_controller.kd` |
+| Lab03 2DOF/Trajectory | `configs/lab03_2dof/*.yaml` | `mode`, `initial_q`, `target_q`, `target_xy`, `trajectory.type`, `tracking_controller.kp`, `tracking_controller.task_kp`, `tracking_controller.task_kd` |
 | Lab04 Panda | `configs/lab04_panda/*.yaml` | `controlled_joint_index`, `trajectory.end`, `virtual_wall.wall_x`, `virtual_wall.stiffness`, `virtual_wall.damping` |
 
 Plot presets:
@@ -605,7 +612,7 @@ Plot presets:
 |---|---|
 | Lab01 MSD | `essential`, `energy` |
 | Lab02 PID | `essential`, `pid` |
-| Lab03 Trajectory | `essential`, `profile`, `control` |
+| Lab03 2DOF/Trajectory | `essential`, `profile`, `joint`, `task`, `control` |
 | Lab04 Panda | `essential`, `control`, `cartesian`, `wall` |
 
 Lab02 PID example:
@@ -619,15 +626,22 @@ controller:
   anti_windup: true
 ```
 
-Lab03 trajectory example:
+Lab03 2DOF task-space example:
 
 ```yaml
+plant: two_link_arm
+mode: task_space
+target_xy: [0.62, 0.42]
 trajectory:
   type: minimum_jerk
   start: 0.0
-  end: 0.6
-  duration: 2.0
+  end: 1.0
+  duration: 2.6
   start_time: 0.4
+tracking_controller:
+  task_kp: 95.0
+  task_kd: 18.0
+  torque_limit: [50.0, 38.0]
 ```
 
 Lab04 virtual wall example:
@@ -806,11 +820,16 @@ python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --viewer
 - task-space trajectory
 - torque/current proxy plot
 
-현재 선행 구현:
+현재 구현됨:
 
-- `lab03` trajectory planning on a 1D MuJoCo plant
+- torque-actuated planar 2DOF MuJoCo arm
+- FK, IK helper, analytic Jacobian
+- joint-space trajectory tracking
+- task-space Jacobian-transpose PD tracking
+- interactive task target/stiffness/damping/torque tuning
+- joint position, end-effector, torque, current proxy, error plots
 - step, trapezoidal, quintic/minimum-jerk, S-curve trajectory generators
-- target position/velocity/acceleration/jerk logging and plotting
+- legacy 1D trajectory profile configs for comparing target position/velocity/acceleration/jerk
 
 ### Phase 5 — 6/7DOF advanced control
 

@@ -32,10 +32,18 @@ class LabSmokeTests(unittest.TestCase):
             self.assertTrue((output / "summary.json").exists())
 
     def test_lab03_runs_headless_when_mujoco_is_available(self) -> None:
-        config = load_config("configs/lab03_2dof/minimum_jerk.yaml")
+        config = load_config("configs/lab03_2dof/joint_space_2dof.yaml")
         config["sim_time"] = 0.02
         with tempfile.TemporaryDirectory() as tmp:
             output = lab03_2dof.run(config, output_dir=Path(tmp) / "lab03", headless=True)
+            self.assertTrue((output / "log.csv").exists())
+            self.assertTrue((output / "summary.json").exists())
+
+    def test_lab03_task_space_runs_headless_when_mujoco_is_available(self) -> None:
+        config = load_config("configs/lab03_2dof/task_space_2dof.yaml")
+        config["sim_time"] = 0.02
+        with tempfile.TemporaryDirectory() as tmp:
+            output = lab03_2dof.run(config, output_dir=Path(tmp) / "lab03_task", headless=True)
             self.assertTrue((output / "log.csv").exists())
             self.assertTrue((output / "summary.json").exists())
 

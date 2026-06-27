@@ -1,16 +1,12 @@
-# Lab03 Trajectory Planning
+# Lab03 2DOF Arm and Trajectory Planning
 
-This incremental Lab03 focuses on trajectory profiles before the later 2DOF manipulator implementation.
-It generates target position, velocity, acceleration, and jerk, then tracks the profile on the same MuJoCo slide-joint plant.
+This lab bridges the 1D plants and the Panda manipulator with a planar two-link MuJoCo arm.
 
-The main controlled variable is slider position over time. The key lesson is how the chosen trajectory profile changes velocity, acceleration, jerk, and control effort.
+The main controlled variables are:
 
-Read the plots in this order:
-
-1. `position.png`: check whether position follows the planned profile.
-2. `velocity.png`: compare the motion smoothness.
-3. `torque.png`: check the force/torque proxy required by the profile.
-4. `error.png`: check tracking quality.
+- shoulder and elbow joint angles in joint-space mode
+- end-effector X/Y position in task-space mode
+- torque and current proxy at both joints
 
 Run:
 
@@ -18,24 +14,44 @@ Run:
 .\run_lab03.cmd
 ```
 
-Interactive disturbance demo:
+This opens the 2DOF arm joint-space demo:
+
+```bash
+python -m mclab run lab03 --config configs/lab03_2dof/joint_space_2dof.yaml --viewer --hide-viewer-ui --realtime --pause-at-end --plot --plots essential
+```
+
+Read the plots in this order:
+
+1. `position.png`: check whether `q_0` and `q_1` follow their joint targets.
+2. `end_effector.png`: check how joint motion changes hand X/Y position.
+3. `torque.png`: check how much shoulder and elbow torque the motion used.
+4. `error.png`: compare joint-space and task-space error norms.
+
+Task-space demo:
+
+```bash
+python -m mclab run lab03 --config configs/lab03_2dof/task_space_2dof.yaml --plot --headless --plots task
+```
+
+This uses analytic FK and a Jacobian-transpose PD command:
+
+```text
+tau = J(q)^T * (Kp * (x_target - x_ee) + Kd * (xdot_target - xdot_ee))
+```
+
+Interactive 2DOF demo:
 
 ```powershell
 .\run_lab03_interactive.cmd
 ```
 
-Use the small `MCLab Interaction` window next to the viewer. Click `Pull Left` or `Push Right` to disturb the tracker. Keyboard shortcuts also work when the viewer has focus: `A` / left arrow or `D` / right arrow. Use the live sliders to change target offset, tracking `Kp`, tracking `Kd`, and force limit while the simulation is running. Watch how the controller recovers to the planned trajectory or final target, and use `Live status` to read target, position, tracking error, control force, and disturbance force.
+Use the small `MCLab Interaction` window next to the viewer. Move `Target X`, `Target Y`, `Task stiffness`, `Task damping`, and `Torque limit` while the simulation is running. Use `Live status` to read `q1`, `q2`, hand X/Y, error norm, and max torque.
 
-Headless run:
-
-```bash
-python -m mclab run lab03 --config configs/lab03_2dof/minimum_jerk.yaml --plot --headless
-```
-
-Compare profiles:
+The older 1D trajectory profile demos are still available for comparing motion profiles before applying the idea to the arm:
 
 ```bash
 python -m mclab run lab03 --config configs/lab03_2dof/step.yaml --plot --headless
 python -m mclab run lab03 --config configs/lab03_2dof/trapezoidal.yaml --plot --headless
+python -m mclab run lab03 --config configs/lab03_2dof/minimum_jerk.yaml --plot --headless
 python -m mclab run lab03 --config configs/lab03_2dof/s_curve.yaml --plot --headless
 ```

@@ -18,8 +18,8 @@ class LaunchScriptTests(unittest.TestCase):
             "run_lab01_interactive.cmd": ("lab01", "configs\\lab01_msd\\interactive_pull.yaml", "essential"),
             "run_lab02.cmd": ("lab02", "configs\\lab02_pid\\default.yaml", "essential"),
             "run_lab02_interactive.cmd": ("lab02", "configs\\lab02_pid\\interactive_disturbance.yaml", "essential"),
-            "run_lab03.cmd": ("lab03", "configs\\lab03_2dof\\minimum_jerk.yaml", "essential"),
-            "run_lab03_interactive.cmd": ("lab03", "configs\\lab03_2dof\\interactive_tracking.yaml", "essential"),
+            "run_lab03.cmd": ("lab03", "configs\\lab03_2dof\\joint_space_2dof.yaml", "essential"),
+            "run_lab03_interactive.cmd": ("lab03", "configs\\lab03_2dof\\interactive_2dof.yaml", "task"),
             "run_lab04.cmd": ("lab04", "configs\\lab04_panda\\joint_pd.yaml", "essential"),
             "run_lab04_interactive.cmd": ("lab04", "configs\\lab04_panda\\interactive_joint_hold.yaml", "essential"),
             "run_lab04_wall_interactive.cmd": (
