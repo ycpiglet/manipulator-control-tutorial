@@ -98,6 +98,13 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("20260627_150117_lab01_msd/report.html", html)
             self.assertIn("lab01_msd", html)
             self.assertIn("Config", html)
+            self.assertIn("Progress Snapshot", html)
+            self.assertIn("Lab01", html)
+            self.assertIn("1 saved run", html)
+            self.assertIn("Lesson", html)
+            self.assertIn("Next", html)
+            self.assertIn("Lab01 Baseline", html)
+            self.assertIn("Run underdamped", html)
             self.assertIn("configs/lab01_msd/default.yaml", html)
             self.assertIn("max abs position", html)
             self.assertIn("0.24", html)
@@ -120,6 +127,9 @@ class LoggingTests(unittest.TestCase):
             html = index.read_text(encoding="utf-8")
             self.assertIn("20260627_151000_lab02_pid_compare/index.html", html)
             self.assertIn("lab02_pid_compare", html)
+            self.assertIn("Progress Snapshot", html)
+            self.assertIn("Batches", html)
+            self.assertIn("1 saved run", html)
 
     def test_outputs_index_handles_empty_outputs_folder(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -127,3 +137,4 @@ class LoggingTests(unittest.TestCase):
 
             html = index.read_text(encoding="utf-8")
             self.assertIn("No run reports were found yet.", html)
+            self.assertIn("No saved runs yet.", html)

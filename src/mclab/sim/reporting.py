@@ -264,6 +264,7 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
         index_path = child / "index.html"
         if not summary and not report_path.exists() and not index_path.exists():
             continue
+        guide = guide_for_run_summary(summary)
         modified = max(
             (
                 path.stat().st_mtime
@@ -283,6 +284,8 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
                 "report": _run_link(child, report_path, index_path),
                 "modified": modified,
                 "summary": summary,
+                "lesson_title": guide.title if guide is not None else "",
+                "next_step": guide.next_step if guide is not None else "",
             }
         )
     return sorted(runs, key=lambda run: float(run["modified"]), reverse=True)
@@ -291,12 +294,15 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
 def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
     metric_keys = _index_metric_keys(runs)
     metric_headers = "".join(f"<th>{escape(_metric_label(key))}</th>" for key in metric_keys)
+    progress_cards = _progress_cards(runs)
     rows = "\n".join(
         (
             "<tr>"
             f'<td><a href="{escape(str(run["report"]))}">{escape(str(run["name"]))}</a></td>'
             f"<td>{escape(str(run['lab_name']))}</td>"
             f"<td>{escape(_config_cell(run))}</td>"
+            f"<td>{escape(str(run.get('lesson_title', '')))}</td>"
+            f"<td>{escape(str(run.get('next_step', '')))}</td>"
             f"<td>{escape(_format_value(run['duration']))}</td>"
             f"<td>{escape(str(run['samples']))}</td>"
             + "".join(
@@ -308,7 +314,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
         for run in runs
     )
     if not rows:
-        rows = f'<tr><td colspan="{5 + len(metric_keys)}">No run reports were found yet.</td></tr>'
+        rows = f'<tr><td colspan="{7 + len(metric_keys)}">No run reports were found yet.</td></tr>'
 
     return f"""<!doctype html>
 <html lang="en">
@@ -349,6 +355,26 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
     .table-wrap {{
       overflow-x: auto;
     }}
+    .progress-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }}
+    .progress-card {{
+      border: 1px solid #e0e4ea;
+      border-radius: 8px;
+      padding: 12px;
+      background: #ffffff;
+    }}
+    .progress-card strong {{
+      display: block;
+      margin-bottom: 6px;
+    }}
+    .muted {{
+      color: #596270;
+      font-size: 13px;
+    }}
     th, td {{
       border-bottom: 1px solid #edf0f3;
       padding: 9px 10px;
@@ -368,10 +394,14 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
   <main>
     <h1>MuJoCo Control Lab outputs</h1>
     <section>
-      <p>Open a run report to inspect summary values, notes, plots, and saved artifacts.</p>
+      <h2>Progress Snapshot</h2>
+      <p>Open a run report to inspect the learning guide, summary values, notes, plots, and saved artifacts.</p>
+      {progress_cards}
+    </section>
+    <section>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Run</th><th>Lab</th><th>Config</th><th>Duration [s]</th><th>Samples</th>{metric_headers}</tr></thead>
+          <thead><tr><th>Run</th><th>Lab</th><th>Config</th><th>Lesson</th><th>Next</th><th>Duration [s]</th><th>Samples</th>{metric_headers}</tr></thead>
           <tbody>{rows}</tbody>
         </table>
       </div>
@@ -380,6 +410,43 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
 </body>
 </html>
 """
+
+
+def _progress_cards(runs: list[dict[str, Any]]) -> str:
+    if not runs:
+        return '<p class="muted">No saved runs yet. Start with `run_mclab.cmd` or one of the `run_lab*.cmd` launchers.</p>'
+    categories = (
+        ("Lab01", "lab01"),
+        ("Lab02", "lab02"),
+        ("Lab03", "lab03"),
+        ("Lab04", "lab04"),
+        ("Batches", "batch"),
+    )
+    cards = []
+    for label, key in categories:
+        matches = [_run for _run in runs if _run_matches_category(_run, key)]
+        latest = matches[0] if matches else None
+        latest_link = (
+            f'<a href="{escape(str(latest["report"]))}">{escape(str(latest["name"]))}</a>'
+            if latest is not None
+            else "Not run yet"
+        )
+        cards.append(
+            "<div class=\"progress-card\">"
+            f"<strong>{escape(label)}</strong>"
+            f'<span class="muted">{len(matches)} saved run{"s" if len(matches) != 1 else ""}</span>'
+            f'<p class="muted">Latest: {latest_link}</p>'
+            "</div>"
+        )
+    return '<div class="progress-grid">' + "\n".join(cards) + "</div>"
+
+
+def _run_matches_category(run: dict[str, Any], key: str) -> bool:
+    text = " ".join(
+        str(run.get(name, ""))
+        for name in ("lab_name", "config_name", "config_path", "name")
+    ).lower()
+    return key in text
 
 
 def _index_metric_keys(runs: list[dict[str, Any]]) -> list[str]:
