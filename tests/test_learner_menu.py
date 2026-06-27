@@ -82,8 +82,10 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertIn("--realtime", args)
                 self.assertIn("--pause-at-end", args)
                 self.assertIn("--plot", args)
+                self.assertIn("--open-report", args)
                 self.assertIn(action.config_path, args)
-                self.assertEqual(args[-2:], ["--plots", action.plots])
+                plot_index = args.index("--plots")
+                self.assertEqual(args[plot_index + 1], action.plots)
 
     def test_batch_actions_launch_headless_comparison_commands(self) -> None:
         labels = {action.label for action in BATCH_ACTIONS}

@@ -38,6 +38,7 @@ class LaunchScriptTests(unittest.TestCase):
                     f"--viewer --realtime --pause-at-end --plot --plots {plot_selection}",
                     text,
                 )
+                self.assertIn("--open-report", text)
                 self.assertIn("scripts\\bootstrap_and_run.py", text)
 
     def test_batch_launchers_use_headless_comparison_batches(self) -> None:

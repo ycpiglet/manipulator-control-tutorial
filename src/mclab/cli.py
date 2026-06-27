@@ -68,6 +68,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Plot preset or comma-separated plot names, for example: essential or position,error.",
     )
     run_parser.add_argument("--output-dir", help="Output directory override.")
+    run_parser.add_argument("--open-report", action="store_true", help="Open the run report after completion.")
     run_parser.add_argument("--seed", type=int, help="Random seed for noisy experiments.")
 
     batch_parser = subparsers.add_parser("batch", help="Run a learner comparison batch.")
@@ -117,6 +118,8 @@ def main(argv: list[str] | None = None) -> int:
             seed=args.seed,
         )
         print(f"Run complete: {output_path}")
+        if args.open_report:
+            _open_path(_preferred_output_entry(output_path))
         return 0
 
     if args.command == "batch":
@@ -131,14 +134,14 @@ def main(argv: list[str] | None = None) -> int:
             output_path = run_batch(args.batch_name, **batch_kwargs)
         print(f"Batch complete: {output_path}")
         if args.open_report:
-            _open_path(_preferred_batch_report(output_path))
+            _open_path(_preferred_output_entry(output_path))
         return 0
 
     parser.error(f"Unknown command: {args.command}")
     return 2
 
 
-def _preferred_batch_report(output_path: Path) -> Path:
+def _preferred_output_entry(output_path: Path) -> Path:
     report = output_path / "report.html"
     if report.exists():
         return report

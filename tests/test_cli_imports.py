@@ -109,6 +109,7 @@ class CliImportTests(unittest.TestCase):
                 "--pause-at-end",
                 "--plots",
                 "essential",
+                "--open-report",
             ]
         )
         self.assertTrue(args.viewer)
@@ -116,3 +117,34 @@ class CliImportTests(unittest.TestCase):
         self.assertTrue(args.realtime)
         self.assertTrue(args.pause_at_end)
         self.assertEqual(args.plots, "essential")
+        self.assertTrue(args.open_report)
+
+    def test_cli_opens_run_report_when_requested(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "run"
+            output.mkdir()
+            report = output / "report.html"
+            report.write_text("<html></html>", encoding="utf-8")
+
+            def fake_runner(_config: dict[str, object], **_kwargs: object) -> Path:
+                return output
+
+            with (
+                patch.dict("mclab.cli.LABS", {"unit_lab": fake_runner}, clear=False),
+                patch("mclab.cli.load_config", return_value={"model_path": "demo.xml"}),
+                patch("mclab.cli._open_path") as opener,
+            ):
+                self.assertEqual(
+                    main(
+                        [
+                            "run",
+                            "unit_lab",
+                            "--config",
+                            "configs/lab01_msd/default.yaml",
+                            "--open-report",
+                        ]
+                    ),
+                    0,
+                )
+
+            opener.assert_called_once_with(report)

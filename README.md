@@ -104,6 +104,8 @@ python -m mclab run lab02 --config configs/lab02_pid/default.yaml --plot
 python -m mclab run lab01 --config configs/lab01_msd/default.yaml --plot
 ```
 
+CLI로 직접 실행할 때도 완료 후 리포트를 바로 열고 싶으면 `--open-report`를 추가합니다.
+
 각 실행은 다음 결과물을 남깁니다.
 
 ```text
@@ -136,7 +138,7 @@ Windows PowerShell에서 가장 쉬운 방법:
 .\run_mclab.cmd
 ```
 
-이 명령은 학습자용 메뉴를 엽니다. 메뉴에서 Lab01-04의 자동 데모, 비교 시나리오, interactive 데모, Panda virtual wall 데모를 버튼으로 실행할 수 있습니다. 검색창에 `PID`, `noise`, `wall`, `interactive` 같은 키워드를 넣으면 관련 시나리오만 바로 볼 수 있습니다. 각 항목에는 `Try` / `Change` / `Watch` 안내가 붙어 있어 학습자가 무엇을 해보고, 어떤 YAML 파라미터를 바꾸고, 무엇을 관찰해야 하는지 바로 알 수 있습니다. `Config`는 해당 YAML 파라미터 파일을 열고, `Lesson`은 랩 설명 문서를 엽니다. 각 데모는 사이드 패널 없는 MuJoCo viewer를 열고, 필요한 경우 `MCLab Interaction` 창을 함께 띄웁니다. 이 창에는 현재 데모의 `Try` / `Change` / `Watch` 안내, 버튼, 슬라이더, live status가 표시됩니다. batch 비교 버튼은 완료 후 `report.html`을 자동으로 엽니다. 실행이 끝나면 메뉴 상태줄에 최신 결과 폴더가 표시되고, `Open latest report`로 실행 리포트를 다시 열 수 있습니다. 여러 실행 결과를 다시 보려면 `Open all reports`로 `outputs/index.html`을 엽니다.
+이 명령은 학습자용 메뉴를 엽니다. 메뉴에서 Lab01-04의 자동 데모, 비교 시나리오, interactive 데모, Panda virtual wall 데모를 버튼으로 실행할 수 있습니다. 검색창에 `PID`, `noise`, `wall`, `interactive` 같은 키워드를 넣으면 관련 시나리오만 바로 볼 수 있습니다. 각 항목에는 `Try` / `Change` / `Watch` 안내가 붙어 있어 학습자가 무엇을 해보고, 어떤 YAML 파라미터를 바꾸고, 무엇을 관찰해야 하는지 바로 알 수 있습니다. `Config`는 해당 YAML 파라미터 파일을 열고, `Lesson`은 랩 설명 문서를 엽니다. 각 데모는 사이드 패널 없는 MuJoCo viewer를 열고, 필요한 경우 `MCLab Interaction` 창을 함께 띄웁니다. 이 창에는 현재 데모의 `Try` / `Change` / `Watch` 안내, 버튼, 슬라이더, live status가 표시됩니다. run과 batch 버튼은 완료 후 `report.html`을 자동으로 엽니다. 실행이 끝나면 메뉴 상태줄에 최신 결과 폴더가 표시되고, `Open latest report`로 실행 리포트를 다시 열 수 있습니다. 여러 실행 결과를 다시 보려면 `Open all reports`로 `outputs/index.html`을 엽니다.
 
 메뉴에 포함된 주요 비교 시나리오:
 
@@ -156,7 +158,7 @@ Windows PowerShell에서 가장 쉬운 방법:
 .\run_lab04.cmd
 ```
 
-각 명령은 해당 viewer를 사이드 패널 없이 열고, 랩별 핵심 그래프만 저장합니다. `.venv`가 없으면 먼저 자동 setup을 실행합니다. `run_lab04.cmd`는 MuJoCo Menagerie가 없을 때도 setup을 실행합니다.
+각 명령은 해당 viewer를 사이드 패널 없이 열고, 랩별 핵심 그래프를 저장한 뒤 실행 리포트를 자동으로 엽니다. `.venv`가 없으면 먼저 자동 setup을 실행합니다. `run_lab04.cmd`는 MuJoCo Menagerie가 없을 때도 setup을 실행합니다.
 
 | Command | Opens | Essential plots |
 |---|---|---|
@@ -456,7 +458,7 @@ The easiest option on Windows PowerShell:
 .\run_mclab.cmd
 ```
 
-This opens the learner menu. From the menu, learners can launch Lab01-04 auto demos, comparison scenarios, interactive demos, and the Panda virtual wall demo with buttons. Type keywords such as `PID`, `noise`, `wall`, or `interactive` in the search box to filter scenarios. Each item includes `Try` / `Change` / `Watch` guidance so learners know what to try, which YAML parameters to edit, and what to observe. `Config` opens the matching YAML parameter file, and `Lesson` opens the lab notes. Each demo opens a MuJoCo viewer without side panels and, when needed, a separate `MCLab Interaction` window. That window shows the current demo's `Try` / `Change` / `Watch` guide, buttons, sliders, and live status. Batch comparison buttons open `report.html` automatically after completion. After a run finishes, the menu status line shows the latest output folder and `Open latest report` reopens the run report directly. Use `Open all reports` to open `outputs/index.html` for previous runs.
+This opens the learner menu. From the menu, learners can launch Lab01-04 auto demos, comparison scenarios, interactive demos, and the Panda virtual wall demo with buttons. Type keywords such as `PID`, `noise`, `wall`, or `interactive` in the search box to filter scenarios. Each item includes `Try` / `Change` / `Watch` guidance so learners know what to try, which YAML parameters to edit, and what to observe. `Config` opens the matching YAML parameter file, and `Lesson` opens the lab notes. Each demo opens a MuJoCo viewer without side panels and, when needed, a separate `MCLab Interaction` window. That window shows the current demo's `Try` / `Change` / `Watch` guide, buttons, sliders, and live status. Run and batch buttons open `report.html` automatically after completion. After a run finishes, the menu status line shows the latest output folder and `Open latest report` reopens the run report directly. Use `Open all reports` to open `outputs/index.html` for previous runs.
 
 Main comparison scenarios in the menu:
 
@@ -476,7 +478,7 @@ To launch individual labs directly:
 .\run_lab04.cmd
 ```
 
-Each command opens the matching viewer without side panels and saves only the lab's essential plots. If `.venv` is missing, it runs setup first. `run_lab04.cmd` also runs setup when MuJoCo Menagerie is missing.
+Each command opens the matching viewer without side panels, saves the lab's essential plots, and opens the run report after completion. If `.venv` is missing, it runs setup first. `run_lab04.cmd` also runs setup when MuJoCo Menagerie is missing.
 
 | Command | Opens | Essential plots |
 |---|---|---|
@@ -600,6 +602,8 @@ python -m mclab run lab02 --config configs/lab02_pid/default.yaml --headless --p
 python -m mclab run lab03 --config configs/lab03_2dof/joint_space_2dof.yaml --headless --plot
 python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless --plot
 ```
+
+Add `--open-report` when you want the run report to open automatically after a direct CLI run.
 
 Without activating the virtual environment on Windows:
 

@@ -460,6 +460,7 @@ def build_run_args(action: MenuAction) -> list[str]:
         "--plot",
         "--plots",
         action.plots,
+        "--open-report",
     ]
 
 

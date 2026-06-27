@@ -10,4 +10,4 @@ goto run
 python "scripts\bootstrap_and_run.py" --setup-only
 
 :run
-".venv\Scripts\python.exe" -m mclab run lab03 --config configs\lab03_2dof\interactive_2dof.yaml --viewer --realtime --pause-at-end --plot --plots task
+".venv\Scripts\python.exe" -m mclab run lab03 --config configs\lab03_2dof\interactive_2dof.yaml --viewer --realtime --pause-at-end --plot --plots task --open-report
