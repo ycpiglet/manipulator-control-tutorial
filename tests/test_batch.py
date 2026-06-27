@@ -97,6 +97,41 @@ class BatchTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             batch.run_batch("missing_batch")
 
+    def test_comparison_plots_are_written_from_run_logs(self) -> None:
+        scenarios = (
+            batch.BatchScenario("baseline", "lab02", "configs/lab02_pid/default.yaml"),
+            batch.BatchScenario("high gain", "lab02", "configs/lab02_pid/p_high_gain.yaml"),
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "batch_output"
+            for scenario in scenarios:
+                run_dir = output / scenario.label.replace(" ", "_")
+                run_dir.mkdir(parents=True)
+                (run_dir / "log.csv").write_text(
+                    (
+                        "time,position,position_error,control_force\n"
+                        "0.0,0.0,0.2,12.0\n"
+                        "0.1,0.1,0.1,6.0\n"
+                        "0.2,0.2,0.0,0.0\n"
+                    ),
+                    encoding="utf-8",
+                )
+                (run_dir / "summary.json").write_text(
+                    '{"lab_name": "lab02_pid", "overshoot_percent": 0.0}',
+                    encoding="utf-8",
+                )
+                (run_dir / "report.html").write_text("<html></html>", encoding="utf-8")
+
+            written = batch.write_comparison_plots(output, "lab02_pid_compare", scenarios)
+            batch.write_batch_report(output, "lab02_pid_compare", scenarios)
+
+            self.assertTrue(written)
+            self.assertTrue((output / "comparison_plots" / "position_compare.png").exists())
+            self.assertTrue((output / "comparison_plots" / "error_compare.png").exists())
+            report_html = (output / "report.html").read_text(encoding="utf-8")
+            self.assertIn("Comparison Plots", report_html)
+            self.assertIn("comparison_plots/position_compare.png", report_html)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import csv
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from datetime import datetime
@@ -40,6 +41,7 @@ class BatchGuide:
     questions: tuple[str, ...]
     metric_keys: tuple[str, ...]
     preview_plots: tuple[str, ...]
+    comparison_specs: tuple[tuple[str, str, str, str], ...]
 
 
 BATCH_SETS: dict[str, tuple[BatchScenario, ...]] = {
@@ -79,6 +81,10 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             "final_total_energy",
         ),
         preview_plots=("position.png", "force.png"),
+        comparison_specs=(
+            ("position_compare.png", "Position Comparison", "position [m]", "position"),
+            ("force_compare.png", "Applied Force Comparison", "force [N]", "control_force"),
+        ),
     ),
     "lab02_pid_compare": BatchGuide(
         title="Lab02 PID Control Comparison",
@@ -98,6 +104,11 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             "max_abs_measurement_error",
         ),
         preview_plots=("position.png", "control_force.png", "error.png"),
+        comparison_specs=(
+            ("position_compare.png", "Position Tracking Comparison", "position [m]", "position"),
+            ("error_compare.png", "Tracking Error Comparison", "error [m]", "position_error"),
+            ("control_force_compare.png", "Control Force Comparison", "force [N]", "control_force"),
+        ),
     ),
 }
 
@@ -156,6 +167,8 @@ def run_batch(
         encoding="utf-8",
     )
     write_outputs_index(batch_output)
+    if plot:
+        write_comparison_plots(batch_output, batch_name, scenarios)
     write_batch_report(batch_output, batch_name, scenarios)
     write_outputs_index(batch_output.parent)
     return batch_output
@@ -186,6 +199,7 @@ def write_batch_report(
             questions=("Open each run report and compare the response plots.",),
             metric_keys=INDEX_METRIC_KEYS,
             preview_plots=("position.png",),
+            comparison_specs=(),
         ),
     )
     rows = _batch_rows(output, scenarios)
@@ -233,6 +247,7 @@ def _render_batch_report(output: Path, guide: BatchGuide, rows: list[dict[str, A
     metric_keys = _display_metric_keys(guide, rows)
     question_items = "\n".join(f"<li>{escape(question)}</li>" for question in guide.questions)
     scenario_cards = "\n".join(_scenario_card(row, metric_keys) for row in rows)
+    comparison_plots = _comparison_plots(output)
     plot_previews = _plot_previews(rows, guide.preview_plots)
     metric_headers = "".join(f"<th>{escape(_label(key))}</th>" for key in metric_keys)
     metric_rows = "\n".join(_metric_row(row, metric_keys) for row in rows)
@@ -312,18 +327,23 @@ def _render_batch_report(output: Path, guide: BatchGuide, rows: list[dict[str, A
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 12px;
     }}
-    .preview {{
+    .comparison-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 12px;
+    }}
+    .preview, .comparison {{
       border: 1px solid #e0e4ea;
       border-radius: 8px;
       overflow: hidden;
       background: #ffffff;
     }}
-    .preview img {{
+    .preview img, .comparison img {{
       display: block;
       width: 100%;
       height: auto;
     }}
-    .preview figcaption {{
+    .preview figcaption, .comparison figcaption {{
       border-top: 1px solid #e0e4ea;
       padding: 8px 10px;
       color: #596270;
@@ -364,6 +384,7 @@ def _render_batch_report(output: Path, guide: BatchGuide, rows: list[dict[str, A
       <h2>Scenario Cards</h2>
       <div class="scenario-grid">{scenario_cards}</div>
     </section>
+    {comparison_plots}
     {plot_previews}
     <section>
       <h2>Metric Table</h2>
@@ -436,6 +457,31 @@ def _plot_previews(rows: list[dict[str, Any]], preview_plots: tuple[str, ...]) -
     )
 
 
+def _comparison_plots(output: Path) -> str:
+    plot_dir = output / "comparison_plots"
+    if not plot_dir.exists():
+        return ""
+    figures = "\n".join(
+        (
+            '<figure class="comparison">'
+            f'<img src="comparison_plots/{escape(plot.name)}" alt="{escape(plot.stem)}">'
+            f"<figcaption>{escape(plot.name)}</figcaption>"
+            "</figure>"
+        )
+        for plot in sorted(plot_dir.glob("*.png"))
+    )
+    if not figures:
+        return ""
+    return (
+        "<section>"
+        "<h2>Comparison Plots</h2>"
+        '<div class="comparison-grid">'
+        + figures
+        + "</div>"
+        "</section>"
+    )
+
+
 def _metric_row(row: dict[str, Any], metric_keys: list[str]) -> str:
     summary = row.get("summary", {})
     values = "".join(
@@ -472,6 +518,63 @@ def _available_plot_paths(run_dir: Path) -> dict[str, str]:
     }
 
 
+def write_comparison_plots(
+    batch_output: str | Path,
+    batch_name: str,
+    scenarios: tuple[BatchScenario, ...],
+) -> list[Path]:
+    guide = BATCH_GUIDES.get(batch_name)
+    if guide is None or not guide.comparison_specs:
+        return []
+
+    try:
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt  # type: ignore
+    except ModuleNotFoundError as exc:
+        raise RuntimeError("matplotlib is required when batch plots are enabled.") from exc
+
+    output = Path(batch_output)
+    plot_dir = output / "comparison_plots"
+    plot_dir.mkdir(parents=True, exist_ok=True)
+    datasets = [
+        (scenario.label, _read_csv_rows(output / _safe_name(scenario.label) / "log.csv"))
+        for scenario in scenarios
+    ]
+    written: list[Path] = []
+    for filename, title, ylabel, signal_key in guide.comparison_specs:
+        available = [
+            (label, rows)
+            for label, rows in datasets
+            if rows and any(signal_key in row for row in rows)
+        ]
+        if not available:
+            continue
+        fig, axis = plt.subplots(figsize=(8.5, 4.8), constrained_layout=True)
+        for label, rows in available:
+            time = [_as_float(row.get("time", index)) for index, row in enumerate(rows)]
+            values = [_as_float(row.get(signal_key)) for row in rows]
+            axis.plot(time, values, label=label)
+        axis.set_title(title)
+        axis.set_xlabel("time [s]")
+        axis.set_ylabel(ylabel)
+        axis.grid(True, alpha=0.3)
+        axis.legend(fontsize="small")
+        target = plot_dir / filename
+        fig.savefig(target, dpi=150)
+        plt.close(fig)
+        written.append(target)
+    return written
+
+
+def _read_csv_rows(path: Path) -> list[dict[str, str]]:
+    if not path.exists():
+        return []
+    with path.open(newline="", encoding="utf-8") as stream:
+        return list(csv.DictReader(stream))
+
+
 def _read_json(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {}
@@ -498,3 +601,10 @@ def _format_value(value: Any) -> str:
 
 def _label(key: str) -> str:
     return key.replace("_", " ")
+
+
+def _as_float(value: Any) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float("nan")
