@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from mclab.sim.logging import RunLogger, create_output_path  # noqa: E402
-from mclab.sim.reporting import write_run_report  # noqa: E402
+from mclab.sim.reporting import write_outputs_index, write_run_report  # noqa: E402
 
 
 class FixedDatetime:
@@ -66,3 +66,28 @@ class LoggingTests(unittest.TestCase):
             html = report.read_text(encoding="utf-8")
             self.assertIn("plots/position.png", html)
             self.assertIn("position.png", html)
+
+    def test_run_report_updates_parent_outputs_index(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "20260627_150117_lab01_msd"
+            (output / "plots").mkdir(parents=True)
+            (output / "summary.json").write_text(
+                '{"lab_name": "lab01_msd", "samples": 10, "duration": 0.18}',
+                encoding="utf-8",
+            )
+            (output / "notes.md").write_text("# Demo\n", encoding="utf-8")
+
+            write_run_report(output)
+
+            index = Path(temp_dir) / "index.html"
+            self.assertTrue(index.exists())
+            html = index.read_text(encoding="utf-8")
+            self.assertIn("20260627_150117_lab01_msd/report.html", html)
+            self.assertIn("lab01_msd", html)
+
+    def test_outputs_index_handles_empty_outputs_folder(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            index = write_outputs_index(temp_dir)
+
+            html = index.read_text(encoding="utf-8")
+            self.assertIn("No run reports were found yet.", html)

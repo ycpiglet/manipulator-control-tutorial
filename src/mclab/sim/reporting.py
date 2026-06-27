@@ -18,7 +18,17 @@ def write_run_report(output_path: str | Path) -> Path:
     html = _render_report(output, summary, notes, plots)
     report_path = output / "report.html"
     report_path.write_text(html, encoding="utf-8")
+    write_outputs_index(output.parent)
     return report_path
+
+
+def write_outputs_index(outputs_root: str | Path) -> Path:
+    root = Path(outputs_root)
+    root.mkdir(parents=True, exist_ok=True)
+    runs = _discover_runs(root)
+    index_path = root / "index.html"
+    index_path.write_text(_render_outputs_index(root, runs), encoding="utf-8")
+    return index_path
 
 
 def _render_report(output: Path, summary: dict[str, Any], notes: str, plots: list[Path]) -> str:
@@ -160,6 +170,113 @@ def _render_report(output: Path, summary: dict[str, Any], notes: str, plots: lis
     <section>
       <h2>Files</h2>
       <ul>{file_links}</ul>
+    </section>
+  </main>
+</body>
+</html>
+"""
+
+
+def _discover_runs(root: Path) -> list[dict[str, Any]]:
+    runs: list[dict[str, Any]] = []
+    for child in root.iterdir():
+        if not child.is_dir():
+            continue
+        summary = _read_json(child / "summary.json")
+        if not summary and not (child / "report.html").exists():
+            continue
+        report_path = child / "report.html"
+        modified = max(
+            (path.stat().st_mtime for path in (report_path, child / "summary.json") if path.exists()),
+            default=child.stat().st_mtime,
+        )
+        runs.append(
+            {
+                "name": child.name,
+                "lab_name": summary.get("lab_name", ""),
+                "samples": summary.get("samples", ""),
+                "duration": summary.get("duration", ""),
+                "report": f"{child.name}/report.html" if report_path.exists() else child.name,
+                "modified": modified,
+            }
+        )
+    return sorted(runs, key=lambda run: float(run["modified"]), reverse=True)
+
+
+def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
+    rows = "\n".join(
+        (
+            "<tr>"
+            f'<td><a href="{escape(str(run["report"]))}">{escape(str(run["name"]))}</a></td>'
+            f"<td>{escape(str(run['lab_name']))}</td>"
+            f"<td>{escape(_format_value(run['duration']))}</td>"
+            f"<td>{escape(str(run['samples']))}</td>"
+            "</tr>"
+        )
+        for run in runs
+    )
+    if not rows:
+        rows = '<tr><td colspan="4">No run reports were found yet.</td></tr>'
+
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MuJoCo Control Lab outputs</title>
+  <style>
+    :root {{
+      color-scheme: light;
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: #202124;
+      background: #f6f7f9;
+    }}
+    body {{
+      margin: 0;
+      padding: 24px;
+    }}
+    main {{
+      max-width: 1120px;
+      margin: 0 auto;
+    }}
+    section {{
+      background: #ffffff;
+      border: 1px solid #d9dde3;
+      border-radius: 8px;
+      margin-top: 16px;
+      padding: 16px;
+    }}
+    h1, p {{
+      margin-top: 0;
+      letter-spacing: 0;
+    }}
+    table {{
+      border-collapse: collapse;
+      width: 100%;
+    }}
+    th, td {{
+      border-bottom: 1px solid #edf0f3;
+      padding: 9px 10px;
+      text-align: left;
+    }}
+    th {{
+      color: #3f4752;
+      font-weight: 600;
+    }}
+    a {{
+      color: #0b57d0;
+    }}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>MuJoCo Control Lab outputs</h1>
+    <section>
+      <p>Open a run report to inspect summary values, notes, plots, and saved artifacts.</p>
+      <table>
+        <thead><tr><th>Run</th><th>Lab</th><th>Duration [s]</th><th>Samples</th></tr></thead>
+        <tbody>{rows}</tbody>
+      </table>
     </section>
   </main>
 </body>

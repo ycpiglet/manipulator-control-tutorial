@@ -17,6 +17,7 @@ from mclab.learner_menu import (  # noqa: E402
     action_doc_path,
     build_run_args,
     lesson_text,
+    launch_outputs_index,
     launch_latest_output,
     open_editable_path,
     parameter_hint,
@@ -133,6 +134,21 @@ class LearnerMenuTests(unittest.TestCase):
                 launch_latest_output({"path": run_path})
 
             opener.assert_called_once_with(report)
+
+    def test_launch_outputs_index_opens_index_when_available(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            outputs.mkdir()
+            index = outputs / "index.html"
+            index.write_text("<html></html>", encoding="utf-8")
+
+            with (
+                patch("mclab.learner_menu.PROJECT_ROOT", Path(tmp)),
+                patch("mclab.learner_menu.open_path") as opener,
+            ):
+                launch_outputs_index()
+
+            opener.assert_called_once_with(index)
 
     def test_parse_run_output_path_detects_completed_run(self) -> None:
         parsed = parse_run_output_path(r"Run complete: C:\tmp\outputs\20260627_150117_lab04_panda")

@@ -428,6 +428,14 @@ def launch_outputs_folder() -> subprocess.Popen[Any] | None:
     return open_path(outputs)
 
 
+def launch_outputs_index() -> subprocess.Popen[Any] | None:
+    outputs = PROJECT_ROOT / "outputs"
+    index = outputs / "index.html"
+    if index.exists():
+        return open_path(index)
+    return launch_outputs_folder()
+
+
 def launch_latest_output(latest_output: dict[str, Path | None]) -> subprocess.Popen[Any] | None:
     path = latest_output.get("path")
     if path is None:
@@ -593,7 +601,8 @@ def main() -> int:
 
     bottom = ttk.Frame(outer)
     bottom.pack(fill="x", pady=(12, 0))
-    ttk.Button(bottom, text="Open outputs folder", command=launch_outputs_folder).pack(side="left")
+    ttk.Button(bottom, text="Open all reports", command=launch_outputs_index).pack(side="left")
+    ttk.Button(bottom, text="Open outputs folder", command=launch_outputs_folder).pack(side="left", padx=(8, 0))
     latest_button = ttk.Button(bottom, text="Open latest report", command=lambda: launch_latest_output(latest_output))
     latest_button.pack(side="left", padx=(8, 0))
     latest_button.state(["disabled"])
@@ -665,7 +674,9 @@ def _set_status_after_run(
                     latest_output["path"] = output_path
                 if latest_button is not None:
                     latest_button.state(["!disabled"])
-                status.set(f"Completed {action.group} - {action.label}. Latest run: {output_path}")
+                report = output_path / "report.html"
+                latest = report if report.exists() else output_path
+                status.set(f"Completed {action.group} - {action.label}. Latest report: {latest}")
             else:
                 status.set(f"Completed {action.group} - {action.label}. Open the outputs folder for results.")
             return

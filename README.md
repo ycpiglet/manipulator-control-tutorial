@@ -108,6 +108,7 @@ python -m mclab run lab01 --config configs/lab01_msd/default.yaml --plot
 
 ```text
 outputs/
+├── index.html
 └── <timestamp>_<lab_name>/
     ├── config.yaml
     ├── log.csv
@@ -135,7 +136,7 @@ Windows PowerShell에서 가장 쉬운 방법:
 .\run_mclab.cmd
 ```
 
-이 명령은 학습자용 메뉴를 엽니다. 메뉴에서 Lab01-04의 자동 데모, 비교 시나리오, interactive 데모, Panda virtual wall 데모를 버튼으로 실행할 수 있습니다. 각 항목에는 `Try` / `Change` / `Watch` 안내가 붙어 있어 학습자가 무엇을 해보고, 어떤 YAML 파라미터를 바꾸고, 무엇을 관찰해야 하는지 바로 알 수 있습니다. `Config`는 해당 YAML 파라미터 파일을 열고, `Lesson`은 랩 설명 문서를 엽니다. 각 데모는 사이드 패널 없는 MuJoCo viewer를 열고, 필요한 경우 `MCLab Interaction` 버튼/슬라이더/상태 창을 함께 띄웁니다. 실행이 끝나면 메뉴 상태줄에 최신 결과 폴더가 표시되고, `Open latest report`로 실행 리포트를 바로 열 수 있습니다.
+이 명령은 학습자용 메뉴를 엽니다. 메뉴에서 Lab01-04의 자동 데모, 비교 시나리오, interactive 데모, Panda virtual wall 데모를 버튼으로 실행할 수 있습니다. 각 항목에는 `Try` / `Change` / `Watch` 안내가 붙어 있어 학습자가 무엇을 해보고, 어떤 YAML 파라미터를 바꾸고, 무엇을 관찰해야 하는지 바로 알 수 있습니다. `Config`는 해당 YAML 파라미터 파일을 열고, `Lesson`은 랩 설명 문서를 엽니다. 각 데모는 사이드 패널 없는 MuJoCo viewer를 열고, 필요한 경우 `MCLab Interaction` 버튼/슬라이더/상태 창을 함께 띄웁니다. 실행이 끝나면 메뉴 상태줄에 최신 결과 폴더가 표시되고, `Open latest report`로 실행 리포트를 바로 열 수 있습니다. 여러 실행 결과를 다시 보려면 `Open all reports`로 `outputs/index.html`을 엽니다.
 
 메뉴에 포함된 주요 비교 시나리오:
 
@@ -388,6 +389,7 @@ cartesian_target:
 
 ```text
 outputs/
+├── index.html
 └── <run_name>/
     ├── config.yaml
     ├── log.csv
@@ -402,6 +404,7 @@ outputs/
 - `states.npz`: NumPy로 읽기 좋은 배열 데이터
 - `summary.json`: overshoot, settling time, tracking error 같은 요약 지표
 - `report.html`: 요약값, notes, plot 이미지를 한 화면에서 보는 실행 리포트
+- `outputs/index.html`: 여러 실행 리포트를 최신순으로 여는 목록 페이지
 - `plots/`: 강의 자료에 바로 쓰기 좋은 PNG plot
 
 ### 검증 명령
@@ -431,7 +434,7 @@ The easiest option on Windows PowerShell:
 .\run_mclab.cmd
 ```
 
-This opens the learner menu. From the menu, learners can launch Lab01-04 auto demos, comparison scenarios, interactive demos, and the Panda virtual wall demo with buttons. Each item includes `Try` / `Change` / `Watch` guidance so learners know what to try, which YAML parameters to edit, and what to observe. `Config` opens the matching YAML parameter file, and `Lesson` opens the lab notes. Each demo opens a MuJoCo viewer without side panels and, when needed, a separate `MCLab Interaction` button/slider/status window. After a run finishes, the menu status line shows the latest output folder and `Open latest report` opens the run report directly.
+This opens the learner menu. From the menu, learners can launch Lab01-04 auto demos, comparison scenarios, interactive demos, and the Panda virtual wall demo with buttons. Each item includes `Try` / `Change` / `Watch` guidance so learners know what to try, which YAML parameters to edit, and what to observe. `Config` opens the matching YAML parameter file, and `Lesson` opens the lab notes. Each demo opens a MuJoCo viewer without side panels and, when needed, a separate `MCLab Interaction` button/slider/status window. After a run finishes, the menu status line shows the latest output folder and `Open latest report` opens the run report directly. Use `Open all reports` to open `outputs/index.html` for previous runs.
 
 Main comparison scenarios in the menu:
 
@@ -684,6 +687,7 @@ Each run writes artifacts under `outputs/`.
 
 ```text
 outputs/
+├── index.html
 └── <run_name>/
     ├── config.yaml
     ├── log.csv
@@ -698,6 +702,7 @@ outputs/
 - `states.npz`: NumPy-friendly arrays
 - `summary.json`: metrics such as overshoot, settling time, tracking error
 - `report.html`: a one-page run report with summary values, notes, and plot images
+- `outputs/index.html`: a newest-first index of run reports
 - `plots/`: PNG plots suitable for quick inspection or lecture slides
 
 ### Verification
