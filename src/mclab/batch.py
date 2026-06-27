@@ -292,6 +292,7 @@ def _batch_rows(output: Path, scenarios: tuple[BatchScenario, ...]) -> list[dict
                 "label": scenario.label,
                 "lab_name": scenario.lab_name,
                 "config_path": scenario.config_path,
+                "config": _load_config_for_report(run_dir, scenario.config_path),
                 "run_dir": run_dir.name,
                 "report": f"{run_dir.name}/report.html" if (run_dir / "report.html").exists() else run_dir.name,
                 "summary": summary,
@@ -305,6 +306,7 @@ def _render_batch_report(output: Path, guide: BatchGuide, rows: list[dict[str, A
     metric_keys = _display_metric_keys(guide, rows)
     question_items = "\n".join(f"<li>{escape(question)}</li>" for question in guide.questions)
     scenario_cards = "\n".join(_scenario_card(row, metric_keys) for row in rows)
+    parameter_differences = _parameter_differences(rows)
     comparison_plots = _comparison_plots(output)
     plot_previews = _plot_previews(rows, guide.preview_plots)
     metric_headers = "".join(f"<th>{escape(_label(key))}</th>" for key in metric_keys)
@@ -442,6 +444,7 @@ def _render_batch_report(output: Path, guide: BatchGuide, rows: list[dict[str, A
       <h2>Scenario Cards</h2>
       <div class="scenario-grid">{scenario_cards}</div>
     </section>
+    {parameter_differences}
     {comparison_plots}
     {plot_previews}
     <section>
@@ -480,6 +483,77 @@ def _scenario_card(row: dict[str, Any], metric_keys: list[str]) -> str:
         f"{metrics}"
         "</article>"
     )
+
+
+def _parameter_differences(rows: list[dict[str, Any]]) -> str:
+    if not rows:
+        return ""
+    flattened = [
+        (str(row["label"]), _flatten_config(row.get("config", {})))
+        for row in rows
+    ]
+    keys = sorted(
+        {
+            key
+            for _label_name, config in flattened
+            for key in config
+            if _has_different_values(key, flattened)
+        }
+    )
+    if not keys:
+        body = f'<tr><td colspan="{1 + len(rows)}">No differing config values were found.</td></tr>'
+    else:
+        body = "\n".join(
+            (
+                "<tr>"
+                f"<td>{escape(key)}</td>"
+                + "".join(
+                    f"<td>{escape(_format_value(config.get(key)))}</td>"
+                    for _label_name, config in flattened
+                )
+                + "</tr>"
+            )
+            for key in keys
+        )
+    headers = "".join(f"<th>{escape(str(row['label']))}</th>" for row in rows)
+    return (
+        "<section>"
+        "<h2>Parameter Differences</h2>"
+        '<p class="muted">Only YAML values that differ across scenarios are shown. n/a means the value is omitted in that YAML file.</p>'
+        '<div class="table-wrap">'
+        "<table>"
+        f"<thead><tr><th>Parameter</th>{headers}</tr></thead>"
+        f"<tbody>{body}</tbody>"
+        "</table>"
+        "</div>"
+        "</section>"
+    )
+
+
+def _has_different_values(key: str, flattened: list[tuple[str, dict[str, Any]]]) -> bool:
+    values = {_normalized_config_value(config.get(key)) for _label_name, config in flattened}
+    return len(values) > 1
+
+
+def _flatten_config(value: Any, prefix: str = "") -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    flattened: dict[str, Any] = {}
+    for key, child in value.items():
+        path = f"{prefix}.{key}" if prefix else str(key)
+        if isinstance(child, dict):
+            flattened.update(_flatten_config(child, path))
+        else:
+            flattened[path] = child
+    return flattened
+
+
+def _normalized_config_value(value: Any) -> str:
+    if isinstance(value, float):
+        return f"{value:.12g}"
+    if isinstance(value, (list, tuple, dict)):
+        return json.dumps(value, sort_keys=True, ensure_ascii=False)
+    return str(value)
 
 
 def _plot_previews(rows: list[dict[str, Any]], preview_plots: tuple[str, ...]) -> str:
@@ -574,6 +648,14 @@ def _available_plot_paths(run_dir: Path) -> dict[str, str]:
         path.name: f"{run_dir.name}/plots/{path.name}"
         for path in sorted(plots_dir.glob("*.png"))
     }
+
+
+def _load_config_for_report(run_dir: Path, config_path: str) -> dict[str, Any]:
+    snapshot = run_dir / "config.yaml"
+    try:
+        return load_config(snapshot if snapshot.exists() else config_path)
+    except (OSError, ValueError):
+        return {}
 
 
 def write_comparison_plots(

@@ -92,6 +92,7 @@ class BatchTests(unittest.TestCase):
             self.assertIn("Learning Focus", report_html)
             self.assertIn("demo scenario", report_html)
             self.assertIn("max abs position", report_html)
+            self.assertIn("Parameter Differences", report_html)
             self.assertIn("Plot Previews", report_html)
             self.assertIn("demo_scenario/plots/position.png", report_html)
             parent_index = output.parent / "index.html"
@@ -133,6 +134,8 @@ class BatchTests(unittest.TestCase):
             self.assertTrue((output / "comparison_plots" / "position_compare.png").exists())
             self.assertTrue((output / "comparison_plots" / "error_compare.png").exists())
             report_html = (output / "report.html").read_text(encoding="utf-8")
+            self.assertIn("Parameter Differences", report_html)
+            self.assertIn("controller.kp", report_html)
             self.assertIn("Comparison Plots", report_html)
             self.assertIn("comparison_plots/position_compare.png", report_html)
 
