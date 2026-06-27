@@ -20,6 +20,18 @@ class CliImportTests(unittest.TestCase):
         self.assertEqual(main(["list"]), 0)
 
     def test_cli_accepts_viewer_quality_of_life_options(self) -> None:
+        default_args = build_parser().parse_args(
+            [
+                "run",
+                "lab04",
+                "--config",
+                "configs/lab04_panda/joint_pd.yaml",
+                "--viewer",
+            ]
+        )
+        self.assertTrue(default_args.viewer)
+        self.assertFalse(default_args.show_viewer_ui)
+
         args = build_parser().parse_args(
             [
                 "run",
@@ -27,7 +39,7 @@ class CliImportTests(unittest.TestCase):
                 "--config",
                 "configs/lab04_panda/joint_pd.yaml",
                 "--viewer",
-                "--hide-viewer-ui",
+                "--show-viewer-ui",
                 "--realtime",
                 "--pause-at-end",
                 "--plots",
@@ -35,7 +47,7 @@ class CliImportTests(unittest.TestCase):
             ]
         )
         self.assertTrue(args.viewer)
-        self.assertTrue(args.hide_viewer_ui)
+        self.assertTrue(args.show_viewer_ui)
         self.assertTrue(args.realtime)
         self.assertTrue(args.pause_at_end)
         self.assertEqual(args.plots, "essential")

@@ -42,7 +42,7 @@ def run(
     headless: bool = False,
     realtime: bool = False,
     pause_at_end: bool = False,
-    show_viewer_ui: bool = True,
+    show_viewer_ui: bool = False,
     plot_selection: PlotSelection = None,
     seed: int | None = None,
 ) -> Path:

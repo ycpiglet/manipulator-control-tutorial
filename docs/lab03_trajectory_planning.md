@@ -17,7 +17,7 @@ Run:
 This opens the 2DOF arm joint-space demo:
 
 ```bash
-python -m mclab run lab03 --config configs/lab03_2dof/joint_space_2dof.yaml --viewer --hide-viewer-ui --realtime --pause-at-end --plot --plots essential
+python -m mclab run lab03 --config configs/lab03_2dof/joint_space_2dof.yaml --viewer --realtime --pause-at-end --plot --plots essential
 ```
 
 Read the plots in this order:

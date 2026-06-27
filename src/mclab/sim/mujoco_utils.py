@@ -35,7 +35,7 @@ def maybe_launch_viewer(
     *,
     enabled: bool,
     key_callback: Any | None = None,
-    show_ui: bool = True,
+    show_ui: bool = False,
 ) -> Any | None:
     if not enabled:
         return None

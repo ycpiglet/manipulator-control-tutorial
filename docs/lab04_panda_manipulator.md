@@ -23,7 +23,7 @@ Read the plots in this order:
 
 For the virtual wall demos, also check `virtual_wall.png` for wall force, penetration, and retreat distance.
 
-The MuJoCo viewer side panels are not the main control interface for this lab. The Python simulation loop writes actuator `ctrl` values from the YAML target at every step. If you edit actuator controls in the viewer, the loop overwrites them during the run; after `--pause-at-end`, physics stepping has stopped. Learner-facing launchers hide the side panels and use the `MCLab Interaction` window instead.
+The MuJoCo viewer side panels are not the main control interface for this lab. The Python simulation loop writes actuator `ctrl` values from the YAML target at every step. If you edit actuator controls in the viewer, the loop overwrites them during the run; after `--pause-at-end`, physics stepping has stopped. Viewer side panels are hidden by default, and learner-facing interaction uses the `MCLab Interaction` window instead.
 
 Run:
 
@@ -44,7 +44,7 @@ Cartesian reach demo:
 
 ```bash
 python -m mclab run lab04 --config configs/lab04_panda/cartesian_reach.yaml --headless --plot --plots cartesian_reach
-python -m mclab run lab04 --config configs/lab04_panda/interactive_cartesian_reach.yaml --viewer --hide-viewer-ui --realtime --pause-at-end --plot --plots cartesian_reach
+python -m mclab run lab04 --config configs/lab04_panda/interactive_cartesian_reach.yaml --viewer --realtime --pause-at-end --plot --plots cartesian_reach
 ```
 
 The automatic demo moves the hand toward a fixed XYZ target. The interactive demo opens sliders for target X/Y/Z and Cartesian gain. Compare `x_ee_*` and `target_x_ee_*` in `end_effector.png`, then check `cartesian_error.png`.
@@ -78,7 +78,7 @@ python -m mclab run lab04 --config configs/lab04_panda/wall_stiff.yaml --headles
 Full viewer command:
 
 ```bash
-python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --viewer --hide-viewer-ui --realtime --pause-at-end --plot --plots essential
+python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --viewer --realtime --pause-at-end --plot --plots essential
 ```
 
 If `third_party/mujoco_menagerie` is missing, run the project bootstrap:

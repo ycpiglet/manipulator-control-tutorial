@@ -48,7 +48,7 @@ def run(
     headless: bool = False,
     realtime: bool = False,
     pause_at_end: bool = False,
-    show_viewer_ui: bool = True,
+    show_viewer_ui: bool = False,
     plot_selection: PlotSelection = None,
     seed: int | None = None,
 ) -> Path:
@@ -91,7 +91,7 @@ def _run_slider_trajectory(
     headless: bool = False,
     realtime: bool = False,
     pause_at_end: bool = False,
-    show_viewer_ui: bool = True,
+    show_viewer_ui: bool = False,
     plot_selection: PlotSelection = None,
     seed: int | None = None,
 ) -> Path:
@@ -226,7 +226,7 @@ def _run_two_link_arm(
     headless: bool = False,
     realtime: bool = False,
     pause_at_end: bool = False,
-    show_viewer_ui: bool = True,
+    show_viewer_ui: bool = False,
     plot_selection: PlotSelection = None,
     seed: int | None = None,
 ) -> Path:

@@ -35,7 +35,7 @@ class LaunchScriptTests(unittest.TestCase):
                 self.assertIn(f"-m mclab run {lab_name}", text)
                 self.assertIn(f"--config {config_path}", text)
                 self.assertIn(
-                    f"--viewer --hide-viewer-ui --realtime --pause-at-end --plot --plots {plot_selection}",
+                    f"--viewer --realtime --pause-at-end --plot --plots {plot_selection}",
                     text,
                 )
                 self.assertIn("scripts\\bootstrap_and_run.py", text)

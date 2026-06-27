@@ -42,7 +42,7 @@ class LearnerMenuTests(unittest.TestCase):
                 args = build_run_args(action)
                 self.assertEqual(args[1:4], ["-m", "mclab", "run"])
                 self.assertIn("--viewer", args)
-                self.assertIn("--hide-viewer-ui", args)
+                self.assertNotIn("--show-viewer-ui", args)
                 self.assertIn("--realtime", args)
                 self.assertIn("--pause-at-end", args)
                 self.assertIn("--plot", args)

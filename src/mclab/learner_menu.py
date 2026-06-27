@@ -366,7 +366,6 @@ def build_run_args(action: MenuAction) -> list[str]:
         "--config",
         action.config_path,
         "--viewer",
-        "--hide-viewer-ui",
         "--realtime",
         "--pause-at-end",
         "--plot",
