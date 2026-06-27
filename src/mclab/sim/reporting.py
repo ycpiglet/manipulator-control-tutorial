@@ -117,6 +117,7 @@ def _render_report(
     title = _report_title(output, summary)
     learning_guide = _learning_guide_section(guide_for_run_summary(summary))
     reproduce_section = _reproduce_section(summary)
+    result_check = _result_check_section(summary)
     interaction_section = _interaction_section(interaction_events)
     rows = "\n".join(
         f"<tr><th>{escape(str(key))}</th><td>{escape(_format_value(value))}</td></tr>"
@@ -245,6 +246,28 @@ def _render_report(
       display: block;
       margin-bottom: 8px;
     }}
+    .check-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }}
+    .check-card {{
+      border: 1px solid #e0e4ea;
+      border-radius: 8px;
+      padding: 12px;
+      background: #fbfcfd;
+    }}
+    .check-card strong {{
+      display: block;
+      margin-bottom: 6px;
+    }}
+    .check-state {{
+      display: inline-block;
+      margin-bottom: 8px;
+      color: #3f4752;
+      font-size: 13px;
+      font-weight: 600;
+    }}
     .plot {{
       margin: 0;
       border: 1px solid #e0e4ea;
@@ -282,6 +305,7 @@ def _render_report(
     <h1>{escape(title)} report</h1>
     {learning_guide}
     {reproduce_section}
+    {result_check}
     {interaction_section}
     <section>
       <h2>Summary</h2>
@@ -373,6 +397,83 @@ def _cli_lab_name(lab_name: str) -> str:
     if "lab04" in normalized or "panda" in normalized:
         return "lab04"
     return ""
+
+
+def _result_check_section(summary: dict[str, Any]) -> str:
+    checks = _result_checks(summary)
+    if not checks:
+        return ""
+    cards = "\n".join(
+        (
+            '<article class="check-card">'
+            f"<strong>{escape(title)}</strong>"
+            f'<span class="check-state">{escape(state)}</span>'
+            f'<p class="empty">{escape(detail)}</p>'
+            "</article>"
+        )
+        for title, state, detail in checks
+    )
+    return (
+        "<section>"
+        "<h2>Result Check</h2>"
+        '<p class="empty">These prompts are teaching aids, not pass/fail grades.</p>'
+        '<div class="check-grid">'
+        f"{cards}"
+        "</div>"
+        "</section>"
+    )
+
+
+def _result_checks(summary: dict[str, Any]) -> list[tuple[str, str, str]]:
+    checks: list[tuple[str, str, str]] = []
+    samples = _number(summary.get("samples"))
+    if samples is not None:
+        state = "OK" if samples > 0 else "Review"
+        checks.append(("Data saved", state, f"{_format_value(samples)} samples recorded."))
+
+    duration = _number(summary.get("duration"))
+    if duration is not None and duration > 0.0:
+        checks.append(("Simulation time", "OK", f"{_format_value(duration)} seconds simulated."))
+
+    _add_abs_limit_check(checks, summary, "final_tracking_error", "Final tracking error", 0.02, "m")
+    _add_abs_limit_check(checks, summary, "final_joint_error_norm", "Final joint error", 0.1, "rad norm")
+    _add_abs_limit_check(checks, summary, "final_task_error_norm", "Final hand error", 0.05, "m norm")
+    _add_abs_limit_check(checks, summary, "final_cartesian_error_cm", "Final Cartesian error", 2.0, "cm")
+
+    overshoot = _number(summary.get("overshoot_percent"))
+    if overshoot is not None:
+        state = "OK" if overshoot <= 20.0 else "Inspect"
+        checks.append(("Overshoot", state, f"{_format_value(overshoot)} percent peak overshoot."))
+
+    condition = _number(summary.get("max_jacobian_condition"))
+    if condition is not None:
+        state = "OK" if condition <= 100.0 else "Inspect"
+        checks.append(("Jacobian condition", state, f"Maximum condition number {_format_value(condition)}."))
+
+    wall_penetration = _number(summary.get("max_wall_penetration_cm"))
+    if wall_penetration is not None and wall_penetration > 0.0:
+        checks.append(("Virtual wall", "Inspect", f"Maximum penetration {_format_value(wall_penetration)} cm."))
+
+    interaction_events = _number(summary.get("interaction_events"))
+    if interaction_events is not None and interaction_events > 0.0:
+        checks.append(("Learner actions", "Recorded", f"{_format_value(interaction_events)} interaction events saved."))
+
+    return checks
+
+
+def _add_abs_limit_check(
+    checks: list[tuple[str, str, str]],
+    summary: dict[str, Any],
+    key: str,
+    title: str,
+    limit: float,
+    unit: str,
+) -> None:
+    value = _number(summary.get(key))
+    if value is None:
+        return
+    state = "OK" if abs(value) <= limit else "Inspect"
+    checks.append((title, state, f"{_format_value(value)} {unit}; suggested limit {_format_value(limit)}."))
 
 
 def _interaction_section(events: list[dict[str, Any]]) -> str:
@@ -763,6 +864,13 @@ def _format_value(value: Any) -> str:
     if isinstance(value, (list, tuple, dict)):
         return json.dumps(value, ensure_ascii=False)
     return str(value)
+
+
+def _number(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _relative(root: Path, target: Path) -> str:
