@@ -549,6 +549,30 @@ def lesson_text(action: MenuAction) -> str:
     return f"{action.description}\nTry: {action.try_this}\nChange: {parameter_hint(action)}\nWatch: {action.watch}"
 
 
+def filter_menu_actions(query: str, actions: tuple[MenuAction, ...] = MENU_ACTIONS) -> tuple[MenuAction, ...]:
+    terms = [term for term in query.lower().split() if term]
+    if not terms:
+        return actions
+    return tuple(action for action in actions if _action_matches_terms(action, terms))
+
+
+def _action_matches_terms(action: MenuAction, terms: list[str]) -> bool:
+    text = " ".join(
+        (
+            action.group,
+            action.label,
+            action.lab_name,
+            action.config_path,
+            action.plots,
+            action.description,
+            action.try_this,
+            action.watch,
+            parameter_hint(action),
+        )
+    ).lower()
+    return all(term in text for term in terms)
+
+
 def main() -> int:
     try:
         import tkinter as tk
@@ -569,12 +593,22 @@ def main() -> int:
     title.pack(anchor="w")
     subtitle = ttk.Label(
         outer,
-        text="Choose a guided scenario, run it, then use the MCLab Interaction window to disturb, tune, and observe.",
+        text="Choose or search for a guided scenario, then disturb, tune, observe, and compare the run report.",
     )
     subtitle.pack(anchor="w", pady=(4, 12))
 
     status = tk.StringVar(value="Ready.")
     latest_output: dict[str, Path | None] = {"path": None}
+    search = tk.StringVar(value="")
+
+    search_bar = ttk.Frame(outer)
+    search_bar.pack(fill="x", pady=(0, 10))
+    ttk.Label(search_bar, text="Search").pack(side="left")
+    search_entry = ttk.Entry(search_bar, textvariable=search, width=42)
+    search_entry.pack(side="left", padx=(8, 8))
+    ttk.Button(search_bar, text="Clear", command=lambda: search.set("")).pack(side="left")
+    match_count = ttk.Label(search_bar)
+    match_count.pack(side="left", padx=(12, 0))
 
     canvas = tk.Canvas(outer, highlightthickness=0)
     scrollbar = ttk.Scrollbar(outer, orient="vertical", command=canvas.yview)
@@ -585,45 +619,6 @@ def main() -> int:
     canvas.pack(side="left", fill="both", expand=True)
     scrollbar.pack(side="right", fill="y")
 
-    grouped: dict[str, list[MenuAction]] = {}
-    for action in MENU_ACTIONS:
-        grouped.setdefault(action.group, []).append(action)
-
-    row = 0
-    for group, actions in grouped.items():
-        frame = ttk.LabelFrame(scroll_frame, text=group, padding=12)
-        frame.grid(row=row, column=0, sticky="ew", pady=6)
-        frame.columnconfigure(3, weight=1)
-        row += 1
-        for action_index, action in enumerate(actions):
-            ttk.Button(
-                frame,
-                text=action.label,
-                width=16,
-                command=lambda selected=action: _launch_from_menu(
-                    selected,
-                    status,
-                    root=root,
-                    latest_output=latest_output,
-                    latest_button=latest_button,
-                ),
-            ).grid(row=action_index, column=0, sticky="w", padx=(0, 12), pady=4)
-            ttk.Button(
-                frame,
-                text="Config",
-                width=8,
-                command=lambda selected=action: launch_action_config(selected),
-            ).grid(row=action_index, column=1, sticky="w", padx=(0, 6), pady=4)
-            ttk.Button(
-                frame,
-                text="Lesson",
-                width=8,
-                command=lambda selected=action: launch_action_doc(selected),
-            ).grid(row=action_index, column=2, sticky="w", padx=(0, 12), pady=4)
-            ttk.Label(frame, text=lesson_text(action), wraplength=560, justify="left").grid(
-                row=action_index, column=3, sticky="w", pady=4
-            )
-
     bottom = ttk.Frame(outer)
     bottom.pack(fill="x", pady=(12, 0))
     ttk.Button(bottom, text="Open all reports", command=launch_outputs_index).pack(side="left")
@@ -632,6 +627,63 @@ def main() -> int:
     latest_button.pack(side="left", padx=(8, 0))
     latest_button.state(["disabled"])
     ttk.Label(bottom, textvariable=status).pack(side="left", padx=12)
+
+    def render_actions(*_args: Any) -> None:
+        for child in scroll_frame.winfo_children():
+            child.destroy()
+
+        matched = filter_menu_actions(search.get())
+        match_count.configure(text=f"{len(matched)} of {len(MENU_ACTIONS)} scenarios")
+        if not matched:
+            ttk.Label(scroll_frame, text="No matching scenarios. Try PID, noise, wall, 2DOF, or interactive.").grid(
+                row=0, column=0, sticky="w", pady=12
+            )
+            canvas.configure(scrollregion=canvas.bbox("all"))
+            return
+
+        grouped: dict[str, list[MenuAction]] = {}
+        for action in matched:
+            grouped.setdefault(action.group, []).append(action)
+
+        row = 0
+        for group, actions in grouped.items():
+            frame = ttk.LabelFrame(scroll_frame, text=group, padding=12)
+            frame.grid(row=row, column=0, sticky="ew", pady=6)
+            frame.columnconfigure(3, weight=1)
+            row += 1
+            for action_index, action in enumerate(actions):
+                ttk.Button(
+                    frame,
+                    text=action.label,
+                    width=16,
+                    command=lambda selected=action: _launch_from_menu(
+                        selected,
+                        status,
+                        root=root,
+                        latest_output=latest_output,
+                        latest_button=latest_button,
+                    ),
+                ).grid(row=action_index, column=0, sticky="w", padx=(0, 12), pady=4)
+                ttk.Button(
+                    frame,
+                    text="Config",
+                    width=8,
+                    command=lambda selected=action: launch_action_config(selected),
+                ).grid(row=action_index, column=1, sticky="w", padx=(0, 6), pady=4)
+                ttk.Button(
+                    frame,
+                    text="Lesson",
+                    width=8,
+                    command=lambda selected=action: launch_action_doc(selected),
+                ).grid(row=action_index, column=2, sticky="w", padx=(0, 12), pady=4)
+                ttk.Label(frame, text=lesson_text(action), wraplength=560, justify="left").grid(
+                    row=action_index, column=3, sticky="w", pady=4
+                )
+        canvas.configure(scrollregion=canvas.bbox("all"))
+
+    search.trace_add("write", render_actions)
+    render_actions()
+    search_entry.focus_set()
 
     root.mainloop()
     return 0

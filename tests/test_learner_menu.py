@@ -16,6 +16,7 @@ from mclab.learner_menu import (  # noqa: E402
     action_config_path,
     action_doc_path,
     build_run_args,
+    filter_menu_actions,
     lesson_text,
     launch_outputs_index,
     launch_latest_output,
@@ -94,6 +95,25 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertTrue(parameter_hint(action))
                 config = load_config(action.config_path)
                 self.assertIn("model_path", config)
+
+    def test_filter_menu_actions_matches_search_terms(self) -> None:
+        labels = {action.label for action in filter_menu_actions("pid noise")}
+        self.assertIn("Sensor noise", labels)
+        self.assertNotIn("Control delay", labels)
+
+        wall_labels = {action.label for action in filter_menu_actions("wall stiffness")}
+        self.assertIn("Soft wall", wall_labels)
+        self.assertIn("Stiff wall", wall_labels)
+        self.assertIn("Virtual wall", wall_labels)
+
+        interactive_labels = {action.label for action in filter_menu_actions("interactive")}
+        self.assertIn("Interactive", interactive_labels)
+        self.assertIn("2DOF interactive", interactive_labels)
+        self.assertIn("Cartesian interactive", interactive_labels)
+
+    def test_filter_menu_actions_empty_query_returns_all_actions(self) -> None:
+        self.assertEqual(filter_menu_actions(""), MENU_ACTIONS)
+        self.assertEqual(filter_menu_actions("   "), MENU_ACTIONS)
 
     def test_parameter_hints_point_to_key_learning_knobs(self) -> None:
         by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
