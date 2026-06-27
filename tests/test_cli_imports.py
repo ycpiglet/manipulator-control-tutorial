@@ -44,6 +44,11 @@ class CliImportTests(unittest.TestCase):
         self.assertTrue(args.open_report)
         self.assertEqual(args.seed, 7)
 
+        all_args = build_parser().parse_args(["batch", "all", "--no-plot"])
+        self.assertEqual(all_args.command, "batch")
+        self.assertEqual(all_args.batch_name, "all")
+        self.assertTrue(all_args.no_plot)
+
     def test_cli_opens_batch_report_when_requested(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "batch"
@@ -58,6 +63,25 @@ class CliImportTests(unittest.TestCase):
                 self.assertEqual(main(["batch", "lab01_msd_compare", "--open-report"]), 0)
 
             runner.assert_called_once()
+            opener.assert_called_once_with(report)
+
+    def test_cli_runs_all_batches_when_requested(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "all_batches"
+            output.mkdir()
+            report = output / "report.html"
+            report.write_text("<html></html>", encoding="utf-8")
+
+            with (
+                patch("mclab.cli.run_all_batches", return_value=output) as runner,
+                patch("mclab.cli.run_batch") as single_runner,
+                patch("mclab.cli._open_path") as opener,
+            ):
+                self.assertEqual(main(["batch", "all", "--no-plot", "--open-report"]), 0)
+
+            runner.assert_called_once()
+            self.assertFalse(runner.call_args.kwargs["plot"])
+            single_runner.assert_not_called()
             opener.assert_called_once_with(report)
 
     def test_cli_accepts_viewer_quality_of_life_options(self) -> None:

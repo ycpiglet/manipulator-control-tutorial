@@ -87,6 +87,7 @@ class LearnerMenuTests(unittest.TestCase):
 
     def test_batch_actions_launch_headless_comparison_commands(self) -> None:
         labels = {action.label for action in BATCH_ACTIONS}
+        self.assertIn("All compare", labels)
         self.assertIn("Lab01 compare", labels)
         self.assertIn("Lab02 PID compare", labels)
         self.assertIn("Lab03 2DOF compare", labels)

@@ -172,6 +172,7 @@ Windows PowerShell에서 가장 쉬운 방법:
 .\run_batch_lab02.cmd
 .\run_batch_lab03.cmd
 .\run_batch_lab04.cmd
+.\run_all_batches.cmd
 ```
 
 동일한 작업을 CLI로 직접 실행하려면:
@@ -181,9 +182,10 @@ python -m mclab batch lab01_msd_compare
 python -m mclab batch lab02_pid_compare
 python -m mclab batch lab03_2dof_compare
 python -m mclab batch lab04_wall_compare
+python -m mclab batch all
 ```
 
-batch는 viewer 없이 여러 config를 순서대로 실행하고, `outputs/<timestamp>_<batch_name>/report.html`에 학습자용 비교 리포트를 저장합니다. `run_batch_*.cmd` 런처는 완료 후 이 리포트를 자동으로 엽니다. CLI에서 직접 열고 싶으면 `--open-report`를 추가합니다. 리포트에는 학습 질문, 다음 실험 제안, scenario 카드, metric min/max highlights, YAML parameter difference table, 여러 시나리오를 한 그래프에 겹친 comparison plots, 핵심 metric table, plot preview가 포함됩니다. 같은 폴더의 `index.html`은 모든 개별 실행 report와 artifact를 여는 상세 목록입니다. Lab01 batch는 damping/stiffness 차이, Lab02 batch는 gain/saturation/windup/noise/delay 차이, Lab03 batch는 joint-space/task-space/singularity 차이, Lab04 batch는 soft/stiff virtual wall 차이를 한 번에 비교할 때 씁니다.
+batch는 viewer 없이 여러 config를 순서대로 실행하고, `outputs/<timestamp>_<batch_name>/report.html`에 학습자용 비교 리포트를 저장합니다. `run_batch_*.cmd` 런처는 완료 후 이 리포트를 자동으로 엽니다. CLI에서 직접 열고 싶으면 `--open-report`를 추가합니다. 리포트에는 학습 질문, 다음 실험 제안, scenario 카드, metric min/max highlights, YAML parameter difference table, 여러 시나리오를 한 그래프에 겹친 comparison plots, 핵심 metric table, plot preview가 포함됩니다. 같은 폴더의 `index.html`은 모든 개별 실행 report와 artifact를 여는 상세 목록입니다. Lab01 batch는 damping/stiffness 차이, Lab02 batch는 gain/saturation/windup/noise/delay 차이, Lab03 batch는 joint-space/task-space/singularity 차이, Lab04 batch는 soft/stiff virtual wall 차이를 한 번에 비교할 때 씁니다. 전체 코스 자료를 한 번에 만들려면 `.\run_all_batches.cmd` 또는 `python -m mclab batch all --open-report`를 실행합니다. 이 명령은 `outputs/<timestamp>_all_batches/report.html` 상위 리포트를 만들고, 그 안에서 네 개 batch 리포트로 이동할 수 있게 합니다.
 
 직접 외란을 주며 물리 현상을 보고 싶으면 interactive launcher를 사용합니다.
 
@@ -490,6 +492,7 @@ To compare several conditions at once, use the `Comparison batches` buttons in t
 .\run_batch_lab02.cmd
 .\run_batch_lab03.cmd
 .\run_batch_lab04.cmd
+.\run_all_batches.cmd
 ```
 
 To run the same batches directly through the CLI:
@@ -499,9 +502,10 @@ python -m mclab batch lab01_msd_compare
 python -m mclab batch lab02_pid_compare
 python -m mclab batch lab03_2dof_compare
 python -m mclab batch lab04_wall_compare
+python -m mclab batch all
 ```
 
-Batches run several configs without opening viewers and save a learner-facing comparison report to `outputs/<timestamp>_<batch_name>/report.html`. The `run_batch_*.cmd` launchers open this report automatically when the batch finishes. Add `--open-report` when running directly through the CLI to get the same behavior. The report includes learning questions, suggested next experiments, scenario cards, metric min/max highlights, a YAML parameter difference table, comparison plots that overlay multiple scenarios on the same graph, a key metric table, and plot previews. The `index.html` in the same folder is the detailed list of every individual run report and artifact. The Lab01 batch compares damping/stiffness cases, Lab02 compares gain/saturation/windup/noise/delay cases, Lab03 compares joint-space/task-space/singularity cases, and Lab04 compares soft/stiff virtual wall cases.
+Batches run several configs without opening viewers and save a learner-facing comparison report to `outputs/<timestamp>_<batch_name>/report.html`. The `run_batch_*.cmd` launchers open this report automatically when the batch finishes. Add `--open-report` when running directly through the CLI to get the same behavior. The report includes learning questions, suggested next experiments, scenario cards, metric min/max highlights, a YAML parameter difference table, comparison plots that overlay multiple scenarios on the same graph, a key metric table, and plot previews. The `index.html` in the same folder is the detailed list of every individual run report and artifact. The Lab01 batch compares damping/stiffness cases, Lab02 compares gain/saturation/windup/noise/delay cases, Lab03 compares joint-space/task-space/singularity cases, and Lab04 compares soft/stiff virtual wall cases. To generate the full course report set at once, run `.\run_all_batches.cmd` or `python -m mclab batch all --open-report`. This creates `outputs/<timestamp>_all_batches/report.html`, which links to all four batch reports.
 
 Use the interactive launchers when learners should disturb the system and watch the physics respond:
 

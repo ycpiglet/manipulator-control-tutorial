@@ -16,6 +16,8 @@ from mclab.config import load_config  # noqa: E402
 
 class BatchTests(unittest.TestCase):
     def test_batch_sets_reference_valid_configs(self) -> None:
+        self.assertNotIn(batch.ALL_BATCH_NAME, batch.list_batch_sets())
+        self.assertIn(batch.ALL_BATCH_NAME, batch.list_batch_sets(include_all=True))
         self.assertIn("lab01_msd_compare", batch.list_batch_sets())
         self.assertIn("lab02_pid_compare", batch.list_batch_sets())
         self.assertIn("lab03_2dof_compare", batch.list_batch_sets())
@@ -98,6 +100,50 @@ class BatchTests(unittest.TestCase):
             self.assertIn("demo_scenario/plots/position.png", report_html)
             parent_index = output.parent / "index.html"
             self.assertIn("batch_output/report.html", parent_index.read_text(encoding="utf-8"))
+
+    def test_run_all_batches_creates_group_report(self) -> None:
+        def fake_run_batch(batch_name: str, **kwargs: object) -> Path:
+            output = Path(kwargs["output_dir"])
+            output.mkdir(parents=True, exist_ok=True)
+            (output / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "batch",
+                        "config_name": batch_name,
+                        "samples": len(batch.BATCH_SETS[batch_name]),
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (output / "report.html").write_text("<html></html>", encoding="utf-8")
+            return output
+
+        expected_batches = list(batch.list_batch_sets())
+        expected_scenarios = sum(len(scenarios) for scenarios in batch.BATCH_SETS.values())
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch("mclab.batch.run_batch", side_effect=fake_run_batch) as runner:
+                output = batch.run_all_batches(
+                    output_dir=Path(tmp) / "all_output",
+                    plot=False,
+                    seed=23,
+                )
+
+            self.assertEqual([call.args[0] for call in runner.call_args_list], expected_batches)
+            for call in runner.call_args_list:
+                self.assertFalse(call.kwargs["plot"])
+                self.assertEqual(call.kwargs["seed"], 23)
+            self.assertTrue((output / "report.html").exists())
+            self.assertTrue((output / "index.html").exists())
+            summary = json.loads((output / "summary.json").read_text(encoding="utf-8"))
+            self.assertEqual(summary["batch_name"], batch.ALL_BATCH_NAME)
+            self.assertEqual(summary["scenario_runs"], expected_scenarios)
+            batch_summary = json.loads((output / "batch_summary.json").read_text(encoding="utf-8"))
+            self.assertEqual(len(batch_summary["batches"]), len(expected_batches))
+            report_html = (output / "report.html").read_text(encoding="utf-8")
+            self.assertIn("All Comparison Batches", report_html)
+            self.assertIn("lab01_msd_compare/report.html", report_html)
+            self.assertIn("lab04_wall_compare/report.html", report_html)
+            self.assertIn("lab01_msd_compare/report.html", (output / "index.html").read_text(encoding="utf-8"))
 
     def test_run_batch_rejects_unknown_batch_name(self) -> None:
         with self.assertRaises(ValueError):

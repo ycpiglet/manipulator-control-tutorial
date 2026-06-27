@@ -19,6 +19,8 @@ from mclab.sim.reporting import INDEX_METRIC_KEYS, write_outputs_index
 
 LabRunner = Callable[..., Path]
 
+ALL_BATCH_NAME = "all"
+
 LAB_RUNNERS: dict[str, LabRunner] = {
     "lab01": lab01_msd.run,
     "lab02": lab02_pid.run,
@@ -193,8 +195,11 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
 }
 
 
-def list_batch_sets() -> tuple[str, ...]:
-    return tuple(sorted(BATCH_SETS))
+def list_batch_sets(*, include_all: bool = False) -> tuple[str, ...]:
+    names = sorted(BATCH_SETS)
+    if include_all:
+        names.append(ALL_BATCH_NAME)
+    return tuple(names)
 
 
 def run_batch(
@@ -254,6 +259,68 @@ def run_batch(
     return batch_output
 
 
+def run_all_batches(
+    *,
+    output_dir: str | Path | None = None,
+    plot: bool = True,
+    seed: int | None = None,
+) -> Path:
+    group_output = create_batch_output_path("all_batches", output_dir)
+    completed: list[dict[str, Any]] = []
+    for batch_name in list_batch_sets():
+        batch_output = run_batch(
+            batch_name,
+            output_dir=group_output / batch_name,
+            plot=plot,
+            seed=seed,
+        )
+        guide = BATCH_GUIDES.get(batch_name)
+        scenario_count = len(BATCH_SETS[batch_name])
+        completed.append(
+            {
+                "batch_name": batch_name,
+                "title": guide.title if guide else batch_name.replace("_", " ").title(),
+                "output_path": str(batch_output),
+                "report": f"{batch_name}/report.html"
+                if (batch_output / "report.html").exists()
+                else f"{batch_name}/index.html",
+                "scenario_count": scenario_count,
+            }
+        )
+
+    scenario_runs = sum(int(item["scenario_count"]) for item in completed)
+    (group_output / "batch_summary.json").write_text(
+        json.dumps(
+            {
+                "batch_name": ALL_BATCH_NAME,
+                "batches": completed,
+                "scenario_runs": scenario_runs,
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    (group_output / "summary.json").write_text(
+        json.dumps(
+            {
+                "lab_name": "batch_group",
+                "config_name": ALL_BATCH_NAME,
+                "samples": scenario_runs,
+                "duration": "",
+                "batch_name": ALL_BATCH_NAME,
+                "child_batches": len(completed),
+                "scenario_runs": scenario_runs,
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    write_outputs_index(group_output)
+    write_all_batches_report(group_output, completed)
+    write_outputs_index(group_output.parent)
+    return group_output
+
+
 def create_batch_output_path(batch_name: str, output_dir: str | Path | None = None) -> Path:
     if output_dir is not None:
         path = resolve_project_path(output_dir)
@@ -286,6 +353,13 @@ def write_batch_report(
     rows = _batch_rows(output, scenarios)
     report = output / "report.html"
     report.write_text(_render_batch_report(output, guide, rows), encoding="utf-8")
+    return report
+
+
+def write_all_batches_report(batch_output: str | Path, completed_batches: list[dict[str, Any]]) -> Path:
+    output = Path(batch_output)
+    report = output / "report.html"
+    report.write_text(_render_all_batches_report(completed_batches), encoding="utf-8")
     return report
 
 
@@ -487,6 +561,142 @@ def _render_batch_report(output: Path, guide: BatchGuide, rows: list[dict[str, A
 </body>
 </html>
 """
+
+
+def _render_all_batches_report(completed_batches: list[dict[str, Any]]) -> str:
+    total_scenarios = sum(int(row.get("scenario_count", 0)) for row in completed_batches)
+    cards = "\n".join(_all_batch_card(row) for row in completed_batches)
+    rows = "\n".join(_all_batch_row(row) for row in completed_batches)
+    if not rows:
+        rows = '<tr><td colspan="3">No batch runs were found.</td></tr>'
+
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>All Comparison Batches</title>
+  <style>
+    :root {{
+      color-scheme: light;
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: #202124;
+      background: #f6f7f9;
+    }}
+    body {{
+      margin: 0;
+      padding: 24px;
+    }}
+    main {{
+      max-width: 1120px;
+      margin: 0 auto;
+    }}
+    h1, h2, p {{
+      margin-top: 0;
+      letter-spacing: 0;
+    }}
+    h1 {{
+      font-size: 28px;
+      margin-bottom: 8px;
+    }}
+    h2 {{
+      font-size: 20px;
+      margin-bottom: 12px;
+    }}
+    section {{
+      background: #ffffff;
+      border: 1px solid #d9dde3;
+      border-radius: 8px;
+      margin-top: 16px;
+      padding: 16px;
+    }}
+    .batch-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+    }}
+    .batch-card {{
+      border: 1px solid #e0e4ea;
+      border-radius: 8px;
+      padding: 12px;
+      background: #ffffff;
+    }}
+    .batch-card h3 {{
+      margin: 0 0 8px;
+      font-size: 16px;
+    }}
+    .muted {{
+      color: #596270;
+      font-size: 13px;
+    }}
+    .table-wrap {{
+      overflow-x: auto;
+    }}
+    table {{
+      border-collapse: collapse;
+      width: 100%;
+    }}
+    th, td {{
+      border-bottom: 1px solid #edf0f3;
+      padding: 9px 10px;
+      text-align: left;
+      white-space: nowrap;
+    }}
+    th {{
+      color: #3f4752;
+      font-weight: 600;
+    }}
+    a {{
+      color: #0b57d0;
+    }}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>All Comparison Batches</h1>
+    <section>
+      <h2>Learning Flow</h2>
+      <p>This run creates the complete comparison report set for Lab01 through Lab04.</p>
+      <p class="muted">{len(completed_batches)} batch reports, {total_scenarios} scenario runs. Open each batch report to compare plots, metrics, parameter differences, and follow-up experiments.</p>
+      <p class="muted"><a href="index.html">Open the detailed output index</a> for every saved artifact.</p>
+    </section>
+    <section>
+      <h2>Batch Reports</h2>
+      <div class="batch-grid">{cards}</div>
+    </section>
+    <section>
+      <h2>Summary Table</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Batch</th><th>Scenarios</th><th>Report</th></tr></thead>
+          <tbody>{rows}</tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
+"""
+
+
+def _all_batch_card(row: dict[str, Any]) -> str:
+    return (
+        '<article class="batch-card">'
+        f'<h3><a href="{escape(str(row["report"]))}">{escape(str(row["title"]))}</a></h3>'
+        f'<p class="muted">{escape(str(row["batch_name"]))}</p>'
+        f'<p>{escape(str(row["scenario_count"]))} scenarios</p>'
+        "</article>"
+    )
+
+
+def _all_batch_row(row: dict[str, Any]) -> str:
+    return (
+        "<tr>"
+        f"<td>{escape(str(row['title']))}</td>"
+        f"<td>{escape(str(row['scenario_count']))}</td>"
+        f'<td><a href="{escape(str(row["report"]))}">{escape(str(row["report"]))}</a></td>'
+        "</tr>"
+    )
 
 
 def _scenario_card(row: dict[str, Any], metric_keys: list[str]) -> str:

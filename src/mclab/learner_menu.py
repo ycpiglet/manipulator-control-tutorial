@@ -10,7 +10,7 @@ from pathlib import Path
 from threading import Thread
 from typing import Any
 
-from mclab.batch import BATCH_SETS
+from mclab.batch import ALL_BATCH_NAME, BATCH_SETS
 from mclab.config import PROJECT_ROOT
 from mclab.sim.reporting import write_outputs_index
 
@@ -48,6 +48,14 @@ class BatchMenuAction:
 
 
 BATCH_ACTIONS: tuple[BatchMenuAction, ...] = (
+    BatchMenuAction(
+        group="Comparison Batches",
+        label="All compare",
+        batch_name=ALL_BATCH_NAME,
+        description="Run every comparison batch and create a course-level report set.",
+        try_this="Open the top report, then step through Lab01 to Lab04 in order.",
+        watch="How the same control ideas scale from 1D plants to Panda virtual wall behavior.",
+    ),
     BatchMenuAction(
         group="Comparison Batches",
         label="Lab01 compare",
@@ -889,7 +897,11 @@ def _set_status_after_run(
 
 
 def lesson_text_for_batch(action: BatchMenuAction) -> str:
-    scenario_count = len(BATCH_SETS[action.batch_name])
+    scenario_count = (
+        sum(len(scenarios) for scenarios in BATCH_SETS.values())
+        if action.batch_name == ALL_BATCH_NAME
+        else len(BATCH_SETS[action.batch_name])
+    )
     return (
         f"{action.description}\n"
         f"Try: {action.try_this}\n"
