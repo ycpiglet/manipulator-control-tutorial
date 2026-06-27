@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 import tempfile
 import unittest
@@ -40,6 +41,7 @@ class LoggingTests(unittest.TestCase):
             logger = RunLogger(
                 "lab01_msd",
                 {"model_path": "models/lab01_msd/scene.xml", "mass": 1.0},
+                config_path="configs/lab01_msd/default.yaml",
                 output_dir=Path(temp_dir) / "run",
             )
             logger.record(time=0.0, position=0.1)
@@ -48,11 +50,14 @@ class LoggingTests(unittest.TestCase):
             report = output / "report.html"
             self.assertTrue(report.exists())
             html = report.read_text(encoding="utf-8")
-            self.assertIn("lab01_msd report", html)
+            self.assertIn("lab01_msd - default report", html)
             self.assertIn("max_position", html)
             self.assertIn("n/a", html)
             self.assertIn("Check position.", html)
             self.assertIn("config.yaml", html)
+            summary = json.loads((output / "summary.json").read_text(encoding="utf-8"))
+            self.assertEqual(summary["config_path"], "configs/lab01_msd/default.yaml")
+            self.assertEqual(summary["config_name"], "default")
 
     def test_run_report_includes_saved_plot_images(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -73,7 +78,10 @@ class LoggingTests(unittest.TestCase):
             output = Path(temp_dir) / "20260627_150117_lab01_msd"
             (output / "plots").mkdir(parents=True)
             (output / "summary.json").write_text(
-                '{"lab_name": "lab01_msd", "samples": 10, "duration": 0.18, "max_abs_position": 0.24}',
+                (
+                    '{"lab_name": "lab01_msd", "config_path": "configs/lab01_msd/default.yaml", '
+                    '"config_name": "default", "samples": 10, "duration": 0.18, "max_abs_position": 0.24}'
+                ),
                 encoding="utf-8",
             )
             (output / "notes.md").write_text("# Demo\n", encoding="utf-8")
@@ -85,6 +93,8 @@ class LoggingTests(unittest.TestCase):
             html = index.read_text(encoding="utf-8")
             self.assertIn("20260627_150117_lab01_msd/report.html", html)
             self.assertIn("lab01_msd", html)
+            self.assertIn("Config", html)
+            self.assertIn("configs/lab01_msd/default.yaml", html)
             self.assertIn("max abs position", html)
             self.assertIn("0.24", html)
 

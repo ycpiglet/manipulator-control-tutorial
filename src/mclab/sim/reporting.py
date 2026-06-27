@@ -58,7 +58,7 @@ def write_outputs_index(outputs_root: str | Path) -> Path:
 
 
 def _render_report(output: Path, summary: dict[str, Any], notes: str, plots: list[Path]) -> str:
-    title = str(summary.get("lab_name") or output.name)
+    title = _report_title(output, summary)
     rows = "\n".join(
         f"<tr><th>{escape(str(key))}</th><td>{escape(_format_value(value))}</td></tr>"
         for key, value in summary.items()
@@ -220,6 +220,8 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
             {
                 "name": child.name,
                 "lab_name": summary.get("lab_name", ""),
+                "config_name": summary.get("config_name", ""),
+                "config_path": summary.get("config_path", ""),
                 "samples": summary.get("samples", ""),
                 "duration": summary.get("duration", ""),
                 "report": f"{child.name}/report.html" if report_path.exists() else child.name,
@@ -238,6 +240,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
             "<tr>"
             f'<td><a href="{escape(str(run["report"]))}">{escape(str(run["name"]))}</a></td>'
             f"<td>{escape(str(run['lab_name']))}</td>"
+            f"<td>{escape(_config_cell(run))}</td>"
             f"<td>{escape(_format_value(run['duration']))}</td>"
             f"<td>{escape(str(run['samples']))}</td>"
             + "".join(
@@ -249,7 +252,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
         for run in runs
     )
     if not rows:
-        rows = f'<tr><td colspan="{4 + len(metric_keys)}">No run reports were found yet.</td></tr>'
+        rows = f'<tr><td colspan="{5 + len(metric_keys)}">No run reports were found yet.</td></tr>'
 
     return f"""<!doctype html>
 <html lang="en">
@@ -312,7 +315,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
       <p>Open a run report to inspect summary values, notes, plots, and saved artifacts.</p>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Run</th><th>Lab</th><th>Duration [s]</th><th>Samples</th>{metric_headers}</tr></thead>
+          <thead><tr><th>Run</th><th>Lab</th><th>Config</th><th>Duration [s]</th><th>Samples</th>{metric_headers}</tr></thead>
           <tbody>{rows}</tbody>
         </table>
       </div>
@@ -338,6 +341,18 @@ def _has_display_value(value: Any) -> bool:
 
 def _metric_label(key: str) -> str:
     return key.replace("_", " ")
+
+
+def _report_title(output: Path, summary: dict[str, Any]) -> str:
+    lab_name = str(summary.get("lab_name") or output.name)
+    config_name = str(summary.get("config_name") or "")
+    return f"{lab_name} - {config_name}" if config_name else lab_name
+
+
+def _config_cell(run: dict[str, Any]) -> str:
+    config_name = str(run.get("config_name") or "")
+    config_path = str(run.get("config_path") or "")
+    return config_path or config_name
 
 
 def _read_json(path: Path) -> dict[str, Any]:

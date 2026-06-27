@@ -119,10 +119,19 @@ class RunLogger:
             "samples": len(self.rows),
             "duration": self.rows[-1].get("time", 0.0) if self.rows else 0.0,
             **dict(summary),
+            **self._config_metadata(),
         }
         (self.output_path / "summary.json").write_text(
             json.dumps(payload, indent=2), encoding="utf-8"
         )
+
+    def _config_metadata(self) -> dict[str, str]:
+        if self.config_path is None:
+            return {}
+        return {
+            "config_path": self.config_path.as_posix(),
+            "config_name": self.config_path.stem,
+        }
 
     def _save_notes(self, notes: str) -> None:
         content = notes.strip() + "\n" if notes.strip() else f"# {self.lab_name}\n"

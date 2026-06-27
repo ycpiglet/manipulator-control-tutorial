@@ -402,9 +402,9 @@ outputs/
 
 - `log.csv`: 시간별 position, velocity, control force, torque/current proxy 등
 - `states.npz`: NumPy로 읽기 좋은 배열 데이터
-- `summary.json`: overshoot, settling time, tracking error 같은 요약 지표
+- `summary.json`: config 이름, overshoot, settling time, tracking error 같은 요약 지표
 - `report.html`: 요약값, notes, plot 이미지를 한 화면에서 보는 실행 리포트
-- `outputs/index.html`: 여러 실행 리포트와 핵심 summary metric을 최신순으로 비교하는 목록 페이지
+- `outputs/index.html`: config 이름, 여러 실행 리포트, 핵심 summary metric을 최신순으로 비교하는 목록 페이지
 - `plots/`: 강의 자료에 바로 쓰기 좋은 PNG plot
 
 ### 검증 명령
@@ -700,9 +700,9 @@ outputs/
 
 - `log.csv`: time-series signals such as position, velocity, control force, torque/current proxy
 - `states.npz`: NumPy-friendly arrays
-- `summary.json`: metrics such as overshoot, settling time, tracking error
+- `summary.json`: config name and metrics such as overshoot, settling time, tracking error
 - `report.html`: a one-page run report with summary values, notes, and plot images
-- `outputs/index.html`: a newest-first index of run reports and key summary metrics
+- `outputs/index.html`: a newest-first index of config names, run reports, and key summary metrics
 - `plots/`: PNG plots suitable for quick inspection or lecture slides
 
 ### Verification
