@@ -443,7 +443,7 @@ outputs/
 - `states.npz`: NumPy로 읽기 좋은 배열 데이터
 - `summary.json`: config 이름, overshoot, settling time, tracking error 같은 요약 지표
 - `report.html`: `Try` / `Change` / `Watch` 학습 가이드, 요약값, notes, plot 이미지를 한 화면에서 보는 실행 리포트
-- `outputs/index.html`: Lab별 진행 요약, 실행 리포트, `Lesson` / `Next` 안내, 핵심 summary metric을 최신순으로 비교하는 목록 페이지
+- `outputs/index.html`: 추천 학습 경로 진행표, Lab별 진행 요약, 실행 리포트, `Lesson` / `Next` 안내, 핵심 summary metric을 최신순으로 비교하는 목록 페이지
 - `plots/`: 강의 자료에 바로 쓰기 좋은 PNG plot
 
 ### 검증 명령
@@ -780,7 +780,7 @@ outputs/
 - `states.npz`: NumPy-friendly arrays
 - `summary.json`: config name and metrics such as overshoot, settling time, tracking error
 - `report.html`: a one-page run report with `Try` / `Change` / `Watch` learning guidance, summary values, notes, and plot images
-- `outputs/index.html`: a newest-first index with lab progress cards, run reports, `Lesson` / `Next` guidance, and key summary metrics
+- `outputs/index.html`: a newest-first index with the recommended learning path, lab progress cards, run reports, `Lesson` / `Next` guidance, and key summary metrics
 - `plots/`: PNG plots suitable for quick inspection or lecture slides
 
 ### Verification

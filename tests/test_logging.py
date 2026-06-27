@@ -116,6 +116,11 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("lab01_msd", html)
             self.assertIn("Config", html)
             self.assertIn("Progress Snapshot", html)
+            self.assertIn("Learning Path", html)
+            self.assertIn("1/9 steps complete", html)
+            self.assertIn("1. Feel 1D physics", html)
+            self.assertIn("2. Disturb and tune", html)
+            self.assertIn("Not run yet", html)
             self.assertIn("Lab01", html)
             self.assertIn("1 saved run", html)
             self.assertIn("Lesson", html)
@@ -147,6 +152,32 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Progress Snapshot", html)
             self.assertIn("Batches", html)
             self.assertIn("1 saved run", html)
+
+    def test_outputs_index_marks_all_batch_learning_path_step(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "20260627_151000_all_batches"
+            output.mkdir()
+            (output / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "batch_group",
+                        "config_name": "all_batches",
+                        "batch_name": "all",
+                        "samples": 4,
+                        "duration": "",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (output / "report.html").write_text("<html>all batches</html>", encoding="utf-8")
+
+            index = write_outputs_index(temp_dir)
+
+            html = index.read_text(encoding="utf-8")
+            self.assertIn("Learning Path", html)
+            self.assertIn("1/9 steps complete", html)
+            self.assertIn("9. Compare the course", html)
+            self.assertIn("20260627_151000_all_batches/report.html", html)
 
     def test_outputs_index_handles_empty_outputs_folder(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

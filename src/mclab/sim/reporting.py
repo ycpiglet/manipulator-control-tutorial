@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from html import escape
 from pathlib import Path
 from typing import Any
@@ -34,6 +35,51 @@ INDEX_METRIC_KEYS = (
     "max_wall_retreat_cm",
     "max_abs_virtual_wall_force",
     "interaction_events",
+)
+
+
+@dataclass(frozen=True)
+class IndexPathStep:
+    title: str
+    description: str
+    config_path: str = ""
+    batch_name: str = ""
+
+
+INDEX_LEARNING_PATH: tuple[IndexPathStep, ...] = (
+    IndexPathStep(
+        "1. Feel 1D physics",
+        "Mass-spring-damper baseline response.",
+        "configs/lab01_msd/default.yaml",
+    ),
+    IndexPathStep(
+        "2. Disturb and tune",
+        "Push the mass and tune physical parameters.",
+        "configs/lab01_msd/interactive_pull.yaml",
+    ),
+    IndexPathStep("3. Close the loop", "PID tracking, error, and control force.", "configs/lab02_pid/default.yaml"),
+    IndexPathStep(
+        "4. Tune PID live",
+        "Tune target, gains, and force limit.",
+        "configs/lab02_pid/interactive_disturbance.yaml",
+    ),
+    IndexPathStep(
+        "5. Move 2DOF joints",
+        "Joint-space tracking on the two-link arm.",
+        "configs/lab03_2dof/joint_space_2dof.yaml",
+    ),
+    IndexPathStep(
+        "6. Control the hand",
+        "Task-space hand control with the Jacobian.",
+        "configs/lab03_2dof/task_space_2dof.yaml",
+    ),
+    IndexPathStep("7. Hold Panda", "Stable neutral-hold baseline for Panda.", "configs/lab04_panda/neutral_hold.yaml"),
+    IndexPathStep(
+        "8. Touch virtual wall",
+        "Interactive Panda virtual wall behavior.",
+        "configs/lab04_panda/interactive_virtual_wall.yaml",
+    ),
+    IndexPathStep("9. Compare the course", "Full comparison report set.", batch_name="all"),
 )
 
 
@@ -344,6 +390,7 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
 def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
     metric_keys = _index_metric_keys(runs)
     metric_headers = "".join(f"<th>{escape(_metric_label(key))}</th>" for key in metric_keys)
+    learning_path = _learning_path_section(runs)
     progress_cards = _progress_cards(runs)
     rows = "\n".join(
         (
@@ -421,6 +468,29 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
       display: block;
       margin-bottom: 6px;
     }}
+    .path-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }}
+    .path-card {{
+      border: 1px solid #e0e4ea;
+      border-radius: 8px;
+      padding: 12px;
+      background: #ffffff;
+    }}
+    .path-card strong {{
+      display: block;
+      margin-bottom: 6px;
+    }}
+    .status {{
+      display: inline-block;
+      margin-top: 8px;
+      color: #3f4752;
+      font-size: 13px;
+      font-weight: 600;
+    }}
     .muted {{
       color: #596270;
       font-size: 13px;
@@ -443,6 +513,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
 <body>
   <main>
     <h1>MuJoCo Control Lab outputs</h1>
+    {learning_path}
     <section>
       <h2>Progress Snapshot</h2>
       <p>Open a run report to inspect the learning guide, summary values, notes, plots, and saved artifacts.</p>
@@ -460,6 +531,64 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
 </body>
 </html>
 """
+
+
+def _learning_path_section(runs: list[dict[str, Any]]) -> str:
+    items = [_learning_path_item(step, runs) for step in INDEX_LEARNING_PATH]
+    completed = sum(1 for item in items if item["run"] is not None)
+    next_item = next((item for item in items if item["run"] is None), None)
+    if next_item is None:
+        summary = f"{completed}/{len(items)} steps complete. Course path complete."
+    else:
+        summary = f"{completed}/{len(items)} steps complete. Next: {next_item['step'].title}"
+    cards = "\n".join(_learning_path_card(item) for item in items)
+    return (
+        "<section>"
+        "<h2>Learning Path</h2>"
+        f'<p class="muted">{escape(summary)}</p>'
+        '<div class="path-grid">'
+        f"{cards}"
+        "</div>"
+        "</section>"
+    )
+
+
+def _learning_path_item(step: IndexPathStep, runs: list[dict[str, Any]]) -> dict[str, Any]:
+    return {"step": step, "run": _latest_learning_path_run(step, runs)}
+
+
+def _learning_path_card(item: dict[str, Any]) -> str:
+    step: IndexPathStep = item["step"]
+    run = item["run"]
+    if run is None:
+        status = '<span class="status">Not run yet</span>'
+    else:
+        status = (
+            '<span class="status">Done</span>'
+            f'<p class="muted">Latest: <a href="{escape(str(run["report"]))}">{escape(str(run["name"]))}</a></p>'
+        )
+    return (
+        '<article class="path-card">'
+        f"<strong>{escape(step.title)}</strong>"
+        f'<p class="muted">{escape(step.description)}</p>'
+        f"{status}"
+        "</article>"
+    )
+
+
+def _latest_learning_path_run(step: IndexPathStep, runs: list[dict[str, Any]]) -> dict[str, Any] | None:
+    for run in runs:
+        summary = run.get("summary", {})
+        if step.batch_name:
+            batch_name = str(summary.get("batch_name") or summary.get("config_name") or "")
+            if batch_name == step.batch_name:
+                return run
+            continue
+        if _normalize_path(str(summary.get("config_path") or run.get("config_path") or "")) == _normalize_path(
+            step.config_path
+        ):
+            return run
+    return None
 
 
 def _progress_cards(runs: list[dict[str, Any]]) -> str:
@@ -497,6 +626,10 @@ def _run_matches_category(run: dict[str, Any], key: str) -> bool:
         for name in ("lab_name", "config_name", "config_path", "name")
     ).lower()
     return key in text
+
+
+def _normalize_path(value: str) -> str:
+    return value.replace("\\", "/").lstrip("./").lower()
 
 
 def _index_metric_keys(runs: list[dict[str, Any]]) -> list[str]:
