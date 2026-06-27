@@ -20,7 +20,7 @@ Interactive pull demo:
 .\run_lab01_interactive.cmd
 ```
 
-Use the small `MCLab Interaction` window next to the viewer. Click `Pull Left` or `Push Right` to apply a short force pulse to the mass. Keyboard shortcuts also work when the viewer has focus: `A` / left arrow or `D` / right arrow. Watch the block oscillate and settle under spring stiffness and damping.
+Use the small `MCLab Interaction` window next to the viewer. Click `Pull Left` or `Push Right` to apply a short force pulse to the mass. Keyboard shortcuts also work when the viewer has focus: `A` / left arrow or `D` / right arrow. Use the live sliders to change `mass`, `damping`, and `stiffness` while the simulation is running. Watch the block oscillate and settle under spring stiffness and damping.
 
 Headless run:
 

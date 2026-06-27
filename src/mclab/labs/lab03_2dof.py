@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from mclab.config import resolve_project_path
-from mclab.sim.interaction import KeyForcePulse, maybe_start_interaction_panel
+from mclab.sim.interaction import KeyForcePulse, LiveTuning, SliderSpec, maybe_start_interaction_panel
 from mclab.sim.logging import RunLogger
 from mclab.sim.mujoco_utils import (
     load_model_and_data,
@@ -55,9 +55,11 @@ def run(
     use_feedforward = bool(controller_config.get("feedforward_acceleration", True))
     force_limit = controller_config.get("force_limit", 200.0)
     lower_limit, upper_limit = _limits(force_limit)
+    force_limit_value = max(abs(limit) for limit in (lower_limit, upper_limit) if limit is not None) if force_limit else 200.0
     kt = float(config.get("torque_constant", 1.0))
 
     key_force = KeyForcePulse(config)
+    live_tuning = _live_tuning(config, controller_config, force_limit_value)
     viewer_handle = maybe_launch_viewer(
         mujoco,
         model,
@@ -67,7 +69,7 @@ def run(
         show_ui=show_viewer_ui,
     )
     interaction_panel = (
-        maybe_start_interaction_panel(key_force, title="MCLab Lab03 Interaction")
+        maybe_start_interaction_panel(key_force, title="MCLab Lab03 Interaction", tuning=live_tuning)
         if viewer and not headless
         else None
     )
@@ -81,9 +83,13 @@ def run(
             key_force.update_time(float(data.time))
             position, velocity, _ = slider_state(data, handles)
             target = trajectory.evaluate(float(data.time))
-            feedback = kp * (target.position - position) + kd * (target.velocity - velocity)
+            tuned_kp = live_tuning.value("kp", kp)
+            tuned_kd = live_tuning.value("kd", kd)
+            tuned_force_limit = abs(live_tuning.value("force_limit", force_limit_value))
+            target_position = target.position + live_tuning.value("target_offset", 0.0)
+            feedback = tuned_kp * (target_position - position) + tuned_kd * (target.velocity - velocity)
             feedforward = feedforward_mass * target.acceleration if use_feedforward else 0.0
-            control_force = _clip(feedback + feedforward, lower_limit, upper_limit)
+            control_force = _clip(feedback + feedforward, -tuned_force_limit, tuned_force_limit)
             manual_force = key_force.value(float(data.time))
             total_force = control_force + manual_force
 
@@ -103,15 +109,18 @@ def run(
                 position=position,
                 velocity=velocity,
                 acceleration=acceleration,
-                target_position=target.position,
+                target_position=target_position,
                 target_velocity=target.velocity,
                 target_acceleration=target.acceleration,
                 target_jerk=target.jerk,
-                position_error=target.position - position,
+                position_error=target_position - position,
                 velocity_error=target.velocity - velocity,
                 control_force=control_force,
                 manual_force=manual_force,
                 total_force=total_force,
+                tuned_kp=tuned_kp,
+                tuned_kd=tuned_kd,
+                tuned_force_limit=tuned_force_limit,
                 current_proxy=total_force / kt,
             )
         completed = True
@@ -128,6 +137,20 @@ def run(
     if plot:
         _save_plots(output_path, logger.rows, plot_selection or config.get("plots"))
     return resolve_project_path(output_path)
+
+
+def _live_tuning(config: dict[str, Any], controller_config: dict[str, Any], force_limit: float) -> LiveTuning:
+    interaction = dict(config.get("interaction", {}))
+    if not bool(interaction.get("live_tuning", False)):
+        return LiveTuning([])
+    return LiveTuning(
+        [
+            SliderSpec("target_offset", "Target offset [m]", -0.5, 0.5, 0.0, 0.01),
+            SliderSpec("kp", "Tracking Kp", 0.0, 250.0, float(controller_config.get("kp", 120.0)), 1.0),
+            SliderSpec("kd", "Tracking Kd", 0.0, 60.0, float(controller_config.get("kd", 18.0)), 0.5),
+            SliderSpec("force_limit", "Force limit [N]", 10.0, 250.0, force_limit, 1.0),
+        ]
+    )
 
 
 def _save_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSelection = None) -> None:

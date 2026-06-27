@@ -3,12 +3,40 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 from threading import Lock
 from typing import Any
 
 
 LEFT_KEYS = {ord("A"), 263}
 RIGHT_KEYS = {ord("D"), 262}
+
+
+@dataclass(frozen=True)
+class SliderSpec:
+    name: str
+    label: str
+    minimum: float
+    maximum: float
+    initial: float
+    resolution: float
+
+
+class LiveTuning:
+    def __init__(self, specs: list[SliderSpec]) -> None:
+        self.specs = specs
+        self.enabled = bool(specs)
+        self._values = {spec.name: float(spec.initial) for spec in specs}
+        self._lock = Lock()
+
+    def value(self, name: str, default: float) -> float:
+        with self._lock:
+            return float(self._values.get(name, default))
+
+    def set_value(self, name: str, value: float) -> None:
+        with self._lock:
+            if name in self._values:
+                self._values[name] = float(value)
 
 
 class KeyForcePulse:
@@ -114,8 +142,16 @@ class InteractionPanel:
         self._close()
 
 
-def maybe_start_interaction_panel(control: Any, *, title: str) -> InteractionPanel | None:
-    if not control.enabled or not control.panel_enabled:
+def maybe_start_interaction_panel(
+    control: Any,
+    *,
+    title: str,
+    tuning: LiveTuning | None = None,
+) -> InteractionPanel | None:
+    control_enabled = bool(getattr(control, "enabled", False))
+    panel_enabled = bool(getattr(control, "panel_enabled", False))
+    tuning_enabled = bool(tuning is not None and tuning.enabled)
+    if not panel_enabled or not (control_enabled or tuning_enabled):
         return None
 
     try:
@@ -137,17 +173,40 @@ def maybe_start_interaction_panel(control: Any, *, title: str) -> InteractionPan
             frame = tk.Frame(root, padx=14, pady=12)
             frame.pack()
 
-            tk.Label(frame, text="Interactive controls").grid(row=0, column=0, columnspan=2, pady=(0, 8))
-            tk.Button(frame, text=control.left_label, width=22, command=control.trigger_left).grid(
-                row=1, column=0, padx=4, pady=4
-            )
-            tk.Button(frame, text=control.right_label, width=22, command=control.trigger_right).grid(
-                row=1, column=1, padx=4, pady=4
-            )
-            tk.Label(
-                frame,
-                text=control.panel_description,
-            ).grid(row=2, column=0, columnspan=2, pady=(8, 0))
+            row = 0
+            tk.Label(frame, text="Interactive controls").grid(row=row, column=0, columnspan=2, pady=(0, 8))
+            row += 1
+            if control_enabled:
+                tk.Button(frame, text=control.left_label, width=22, command=control.trigger_left).grid(
+                    row=row, column=0, padx=4, pady=4
+                )
+                tk.Button(frame, text=control.right_label, width=22, command=control.trigger_right).grid(
+                    row=row, column=1, padx=4, pady=4
+                )
+                row += 1
+                tk.Label(
+                    frame,
+                    text=control.panel_description,
+                ).grid(row=row, column=0, columnspan=2, pady=(8, 0))
+                row += 1
+
+            if tuning_enabled and tuning is not None:
+                tk.Label(frame, text="Live tuning").grid(row=row, column=0, columnspan=2, pady=(12, 4))
+                row += 1
+                for spec in tuning.specs:
+                    scale = tk.Scale(
+                        frame,
+                        from_=spec.minimum,
+                        to=spec.maximum,
+                        resolution=spec.resolution,
+                        orient=tk.HORIZONTAL,
+                        length=360,
+                        label=spec.label,
+                        command=lambda raw_value, name=spec.name: tuning.set_value(name, float(raw_value)),
+                    )
+                    scale.set(spec.initial)
+                    scale.grid(row=row, column=0, columnspan=2, sticky="ew", pady=2)
+                    row += 1
             root.mainloop()
         except Exception as exc:  # pragma: no cover - depends on local GUI support.
             print(f"Interaction panel stopped: {exc}")

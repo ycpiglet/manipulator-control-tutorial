@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from mclab.config import resolve_project_path
-from mclab.sim.interaction import KeyForcePulse, maybe_start_interaction_panel
+from mclab.sim.interaction import KeyForcePulse, LiveTuning, SliderSpec, maybe_start_interaction_panel
 from mclab.sim.logging import RunLogger
 from mclab.sim.mujoco_utils import (
     load_model_and_data,
@@ -46,8 +46,10 @@ def run(
     stiffness = float(config.get("stiffness", 50.0))
     spring_reference = float(config.get("spring_reference", 0.0))
     force_config = config.get("force_input", config.get("external_force", 0.0))
+    damping = float(config.get("damping", 0.0))
 
     key_force = KeyForcePulse(config)
+    live_tuning = _live_tuning(config)
     viewer_handle = maybe_launch_viewer(
         mujoco,
         model,
@@ -57,17 +59,28 @@ def run(
         show_ui=show_viewer_ui,
     )
     interaction_panel = (
-        maybe_start_interaction_panel(key_force, title="MCLab Lab01 Interaction")
+        maybe_start_interaction_panel(key_force, title="MCLab Lab01 Interaction", tuning=live_tuning)
         if viewer and not headless
         else None
     )
     wall_start = viewer_clock()
     sim_start = float(data.time)
     completed = False
+    current_mass = mass
     try:
         while data.time < sim_time:
             if not viewer_is_running(viewer_handle):
                 break
+            mass = live_tuning.value("mass", mass)
+            damping = live_tuning.value("damping", damping)
+            stiffness = live_tuning.value("stiffness", stiffness)
+            if abs(mass - current_mass) > 1e-9:
+                model.body_mass[handles.body_id] = mass
+                if hasattr(mujoco, "mj_setConst"):
+                    mujoco.mj_setConst(model, data)
+                current_mass = mass
+            model.dof_damping[handles.dof_adr] = damping
+            model.jnt_stiffness[handles.joint_id] = stiffness
             key_force.update_time(float(data.time))
             input_force = force_input_at(float(data.time), force_config)
             manual_force = key_force.value(float(data.time))
@@ -98,6 +111,9 @@ def run(
                 control_force=force,
                 external_force=input_force,
                 manual_force=manual_force,
+                tuned_mass=mass,
+                tuned_damping=damping,
+                tuned_stiffness=stiffness,
                 kinetic_energy=kinetic,
                 potential_energy=potential,
                 total_energy=total,
@@ -116,6 +132,19 @@ def run(
     if plot:
         _save_plots(output_path, logger.rows, plot_selection or config.get("plots"))
     return resolve_project_path(output_path)
+
+
+def _live_tuning(config: dict[str, Any]) -> LiveTuning:
+    interaction = dict(config.get("interaction", {}))
+    if not bool(interaction.get("live_tuning", False)):
+        return LiveTuning([])
+    return LiveTuning(
+        [
+            SliderSpec("mass", "Mass [kg]", 0.2, 5.0, float(config.get("mass", 1.0)), 0.1),
+            SliderSpec("damping", "Damping [N s/m]", 0.0, 12.0, float(config.get("damping", 0.0)), 0.1),
+            SliderSpec("stiffness", "Stiffness [N/m]", 0.0, 120.0, float(config.get("stiffness", 0.0)), 1.0),
+        ]
+    )
 
 
 def _save_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSelection = None) -> None:

@@ -10,7 +10,7 @@ from typing import Any
 from mclab.analysis.metrics import step_response_metrics
 from mclab.config import resolve_project_path
 from mclab.controllers.pid import PIDController
-from mclab.sim.interaction import KeyForcePulse, maybe_start_interaction_panel
+from mclab.sim.interaction import KeyForcePulse, LiveTuning, SliderSpec, maybe_start_interaction_panel
 from mclab.sim.logging import RunLogger
 from mclab.sim.mujoco_utils import (
     load_model_and_data,
@@ -50,6 +50,7 @@ def run(
     pid_config = dict(config.get("controller", {}))
     output_limit = pid_config.get("output_limit", config.get("force_limit"))
     output_min, output_max = _limits(output_limit)
+    output_limit_value = max(abs(limit) for limit in (output_min, output_max) if limit is not None) if output_limit else 80.0
     controller = PIDController(
         kp=float(pid_config.get("kp", 40.0)),
         ki=float(pid_config.get("ki", 0.0)),
@@ -69,6 +70,7 @@ def run(
     delay_buffer: deque[float] = deque([0.0] * delay_steps, maxlen=delay_steps)
 
     key_force = KeyForcePulse(config)
+    live_tuning = _live_tuning(config, pid_config, output_limit_value)
     viewer_handle = maybe_launch_viewer(
         mujoco,
         model,
@@ -78,7 +80,7 @@ def run(
         show_ui=show_viewer_ui,
     )
     interaction_panel = (
-        maybe_start_interaction_panel(key_force, title="MCLab Lab02 Interaction")
+        maybe_start_interaction_panel(key_force, title="MCLab Lab02 Interaction", tuning=live_tuning)
         if viewer and not headless
         else None
     )
@@ -93,8 +95,15 @@ def run(
             position, velocity, _ = slider_state(data, handles)
             measured_position = position + (random.gauss(0.0, noise_std) if noise_std > 0.0 else 0.0)
             target_state = target.evaluate(float(data.time))
+            controller.kp = live_tuning.value("kp", controller.kp)
+            controller.ki = live_tuning.value("ki", controller.ki)
+            controller.kd = live_tuning.value("kd", controller.kd)
+            live_output_limit = abs(live_tuning.value("output_limit", output_limit_value))
+            controller.output_min = -live_output_limit
+            controller.output_max = live_output_limit
+            target_position = live_tuning.value("target_position", target_state.position)
             command = controller.compute(
-                setpoint=target_state.position,
+                setpoint=target_position,
                 measurement=measured_position,
                 measurement_rate=velocity,
             )
@@ -124,12 +133,16 @@ def run(
                 measured_position=measured_position,
                 velocity=velocity,
                 acceleration=acceleration,
-                target_position=target_state.position,
+                target_position=target_position,
                 target_velocity=target_state.velocity,
-                position_error=target_state.position - position,
+                position_error=target_position - position,
                 control_force=applied_force,
                 manual_force=manual_force,
                 total_force=total_force,
+                tuned_kp=controller.kp,
+                tuned_ki=controller.ki,
+                tuned_kd=controller.kd,
+                tuned_output_limit=live_output_limit,
                 control_unsaturated=command.unsaturated_value,
                 pid_p=command.proportional,
                 pid_i=command.integral,
@@ -150,6 +163,22 @@ def run(
     if plot:
         _save_plots(output_path, logger.rows, plot_selection or config.get("plots"))
     return resolve_project_path(output_path)
+
+
+def _live_tuning(config: dict[str, Any], pid_config: dict[str, Any], output_limit: float) -> LiveTuning:
+    interaction = dict(config.get("interaction", {}))
+    if not bool(interaction.get("live_tuning", False)):
+        return LiveTuning([])
+    target = dict(config.get("target", {}))
+    return LiveTuning(
+        [
+            SliderSpec("target_position", "Target position [m]", -0.8, 0.8, float(target.get("end", 0.0)), 0.01),
+            SliderSpec("kp", "Kp", 0.0, 180.0, float(pid_config.get("kp", 40.0)), 1.0),
+            SliderSpec("ki", "Ki", 0.0, 20.0, float(pid_config.get("ki", 0.0)), 0.1),
+            SliderSpec("kd", "Kd", 0.0, 40.0, float(pid_config.get("kd", 4.0)), 0.5),
+            SliderSpec("output_limit", "Force limit [N]", 5.0, 200.0, output_limit, 1.0),
+        ]
+    )
 
 
 def _save_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSelection = None) -> None:
