@@ -69,6 +69,20 @@ class InteractionLog:
             "last_interaction": events[-1].get("label") or events[-1].get("name"),
         }
 
+    def mark_observation(
+        self,
+        *,
+        sliders: dict[str, Any] | None = None,
+        status: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        value: dict[str, Any] = {}
+        if sliders:
+            value["sliders"] = dict(sliders)
+        if status:
+            value["status"] = dict(status)
+        self.record("marker", "observation", value, label="Mark observation")
+        return value
+
 
 class LiveTuning:
     def __init__(self, specs: list[SliderSpec], event_log: InteractionLog | None = None) -> None:
@@ -83,6 +97,10 @@ class LiveTuning:
     def value(self, name: str, default: float) -> float:
         with self._lock:
             return float(self._values.get(name, default))
+
+    def snapshot(self) -> dict[str, float]:
+        with self._lock:
+            return dict(self._values)
 
     def set_value(self, name: str, value: float) -> None:
         should_record = False
@@ -250,6 +268,7 @@ def maybe_start_interaction_panel(
     tuning: LiveTuning | None = None,
     status: LiveStatus | None = None,
     guide: Any | None = None,
+    event_log: InteractionLog | None = None,
 ) -> InteractionPanel | None:
     control_enabled = bool(getattr(control, "enabled", False))
     panel_enabled = bool(getattr(control, "panel_enabled", False))
@@ -347,6 +366,32 @@ def maybe_start_interaction_panel(
                     scale.grid(row=row, column=0, columnspan=2, sticky="ew", pady=2)
                     row += 1
 
+            if event_log is not None:
+                marker_frame = tk.Frame(frame)
+                marker_frame.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(12, 4))
+                marker_frame.columnconfigure(1, weight=1)
+                marker_status = tk.StringVar(value="")
+
+                def mark_observation() -> None:
+                    event_log.mark_observation(
+                        sliders=tuning.snapshot() if tuning is not None else None,
+                        status=status.snapshot() if status is not None else None,
+                    )
+                    marker_status.set(f"Marked observation {len(event_log.events())}")
+
+                tk.Button(marker_frame, text="Mark observation", command=mark_observation).grid(
+                    row=0,
+                    column=0,
+                    sticky="w",
+                )
+                tk.Label(marker_frame, textvariable=marker_status, anchor="w").grid(
+                    row=0,
+                    column=1,
+                    sticky="ew",
+                    padx=(12, 0),
+                )
+                row += 1
+
             if status_enabled and status is not None:
                 tk.Label(frame, text="Live status").grid(row=row, column=0, columnspan=2, pady=(12, 4))
                 row += 1
@@ -421,6 +466,14 @@ def _format_status_value(value: Any) -> str:
 def _event_value(value: Any) -> Any:
     if value is None:
         return None
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, dict):
+        return {str(key): _event_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_event_value(item) for item in value]
+    if isinstance(value, str):
+        return value
     try:
         return float(value)
     except (TypeError, ValueError):

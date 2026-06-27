@@ -46,7 +46,7 @@ class LoggingTests(unittest.TestCase):
             )
             logger.record(time=0.0, position=0.1)
             output = logger.save_with_artifacts(
-                summary={"max_position": 0.1, "settling_time": None, "interaction_events": 1},
+                summary={"max_position": 0.1, "settling_time": None, "interaction_events": 2},
                 notes="# Lab01\nCheck position.",
                 interaction_events=[
                     {
@@ -55,7 +55,14 @@ class LoggingTests(unittest.TestCase):
                         "name": "stiffness",
                         "label": "Stiffness [N/m]",
                         "value": 80.0,
-                    }
+                    },
+                    {
+                        "time": 0.02,
+                        "kind": "marker",
+                        "name": "observation",
+                        "label": "Mark observation",
+                        "value": {"sliders": {"stiffness": 80.0}, "status": {"energy": "0.125"}},
+                    },
                 ],
             )
 
@@ -83,6 +90,8 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("n/a", html)
             self.assertIn("Interaction Log", html)
             self.assertIn("Stiffness [N/m]", html)
+            self.assertIn("Mark observation", html)
+            self.assertIn("0.125", html)
             self.assertIn("interaction_events.json", html)
             self.assertIn("Check position.", html)
             self.assertIn("config.yaml", html)

@@ -214,7 +214,7 @@ batch는 viewer 없이 여러 config를 순서대로 실행하고, `outputs/<tim
 .\run_lab04_wall_interactive.cmd
 ```
 
-Interactive launcher는 사이드 패널 없는 MuJoCo viewer와 함께 작은 `MCLab Interaction` 창을 엽니다. Lab01-03에서는 `Pull Left` / `Push Right` 버튼이 mass에 짧은 힘 펄스를 넣고, 슬라이더로 주요 파라미터를 실행 중에 바꿉니다. 키보드는 viewer 창에 포커스가 있을 때 `A` 또는 왼쪽 화살표, `D` 또는 오른쪽 화살표도 지원합니다. Lab04에서는 버튼으로 제어 중인 관절 목표를 이동하고, wall 데모에서는 virtual wall 파라미터도 슬라이더로 바꿉니다. 슬라이더를 여러 번 바꾼 뒤에는 `Reset sliders`로 실행 시작값으로 되돌릴 수 있습니다. 창 아래쪽의 `Live status` 영역은 위치, 오차, 힘, 에너지, wall penetration처럼 지금 관찰해야 할 핵심 숫자만 보여줍니다. 버튼이나 슬라이더를 사용한 경우 실행 리포트의 `Interaction Log`와 `interaction_events.json`에 조작 이력이 저장됩니다.
+Interactive launcher는 사이드 패널 없는 MuJoCo viewer와 함께 작은 `MCLab Interaction` 창을 엽니다. Lab01-03에서는 `Pull Left` / `Push Right` 버튼이 mass에 짧은 힘 펄스를 넣고, 슬라이더로 주요 파라미터를 실행 중에 바꿉니다. 키보드는 viewer 창에 포커스가 있을 때 `A` 또는 왼쪽 화살표, `D` 또는 오른쪽 화살표도 지원합니다. Lab04에서는 버튼으로 제어 중인 관절 목표를 이동하고, wall 데모에서는 virtual wall 파라미터도 슬라이더로 바꿉니다. 슬라이더를 여러 번 바꾼 뒤에는 `Reset sliders`로 실행 시작값으로 되돌릴 수 있습니다. 중요한 순간에는 `Mark observation`을 눌러 현재 슬라이더와 live status 값을 저장할 수 있습니다. 창 아래쪽의 `Live status` 영역은 위치, 오차, 힘, 에너지, wall penetration처럼 지금 관찰해야 할 핵심 숫자만 보여줍니다. 버튼이나 슬라이더를 사용한 경우 실행 리포트의 `Interaction Log`와 `interaction_events.json`에 조작 이력이 저장됩니다.
 
 무엇을 보면 되는지:
 
@@ -549,7 +549,7 @@ Use the interactive launchers when learners should disturb the system and watch 
 .\run_lab04_wall_interactive.cmd
 ```
 
-Each interactive launcher opens the MuJoCo viewer without side panels plus a small `MCLab Interaction` window. In Lab01-03, `Pull Left` / `Push Right` applies short force pulses to the mass, and sliders tune key parameters while the simulation is running. Keyboard shortcuts also work when the viewer has focus: `A` or left arrow for left, `D` or right arrow for right. In Lab04, the buttons nudge the controlled joint target, and the wall demo adds virtual wall sliders. After changing sliders, use `Reset sliders` to return to the values from the start of the run. The `Live status` area shows only the key values learners should watch now, such as position, error, force, energy, and wall penetration. When learners use buttons or sliders, the run report adds an `Interaction Log` and saves the raw events in `interaction_events.json`.
+Each interactive launcher opens the MuJoCo viewer without side panels plus a small `MCLab Interaction` window. In Lab01-03, `Pull Left` / `Push Right` applies short force pulses to the mass, and sliders tune key parameters while the simulation is running. Keyboard shortcuts also work when the viewer has focus: `A` or left arrow for left, `D` or right arrow for right. In Lab04, the buttons nudge the controlled joint target, and the wall demo adds virtual wall sliders. After changing sliders, use `Reset sliders` to return to the values from the start of the run. Press `Mark observation` at important moments to save the current slider and live status values. The `Live status` area shows only the key values learners should watch now, such as position, error, force, energy, and wall penetration. When learners use buttons or sliders, the run report adds an `Interaction Log` and saves the raw events in `interaction_events.json`.
 
 What to observe:
 

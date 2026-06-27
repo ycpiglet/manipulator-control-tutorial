@@ -84,6 +84,7 @@ def run(
             tuning=live_tuning,
             status=live_status,
             guide=run_guide,
+            event_log=interaction_log,
         )
         if viewer and not headless
         else None

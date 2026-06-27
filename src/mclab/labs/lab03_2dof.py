@@ -144,6 +144,7 @@ def _run_slider_trajectory(
             tuning=live_tuning,
             status=live_status,
             guide=run_guide,
+            event_log=interaction_log,
         )
         if viewer and not headless
         else None
@@ -298,6 +299,7 @@ def _run_two_link_arm(
             tuning=live_tuning,
             status=live_status,
             guide=run_guide,
+            event_log=interaction_log,
         )
         if viewer and not headless
         else None
