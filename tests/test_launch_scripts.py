@@ -7,6 +7,11 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class LaunchScriptTests(unittest.TestCase):
+    def test_top_level_menu_launcher_exists(self) -> None:
+        text = (ROOT / "run_mclab.cmd").read_text(encoding="utf-8")
+        self.assertIn("scripts\\bootstrap_and_run.py", text)
+        self.assertIn("-m mclab menu", text)
+
     def test_lab_launchers_use_consistent_viewer_flags(self) -> None:
         expected = {
             "run_lab01.cmd": ("lab01", "configs\\lab01_msd\\default.yaml", "essential"),

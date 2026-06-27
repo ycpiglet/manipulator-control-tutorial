@@ -26,6 +26,7 @@ The MuJoCo viewer side panels are not the main control interface for this lab. T
 Run:
 
 ```powershell
+.\run_mclab.cmd
 .\run_lab04.cmd
 ```
 

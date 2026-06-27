@@ -131,6 +131,14 @@ outputs/
 Windows PowerShell에서 가장 쉬운 방법:
 
 ```powershell
+.\run_mclab.cmd
+```
+
+이 명령은 학습자용 메뉴를 엽니다. 메뉴에서 Lab01-04의 자동 데모, interactive 데모, Panda virtual wall 데모를 버튼으로 실행할 수 있습니다. 각 데모는 사이드 패널 없는 MuJoCo viewer를 열고, 필요한 경우 `MCLab Interaction` 버튼/슬라이더 창을 함께 띄웁니다.
+
+개별 랩을 바로 실행하고 싶으면:
+
+```powershell
 .\run_lab01.cmd
 .\run_lab02.cmd
 .\run_lab03.cmd
@@ -388,6 +396,14 @@ python -m ruff check src tests scripts
 ### Quick Start
 
 The easiest option on Windows PowerShell:
+
+```powershell
+.\run_mclab.cmd
+```
+
+This opens the learner menu. From the menu, learners can launch Lab01-04 auto demos, interactive demos, and the Panda virtual wall demo with buttons. Each demo opens a MuJoCo viewer without side panels and, when needed, a separate `MCLab Interaction` button/slider window.
+
+To launch individual labs directly:
 
 ```powershell
 .\run_lab01.cmd

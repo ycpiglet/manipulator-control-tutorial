@@ -7,6 +7,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from .config import load_config
+from .learner_menu import main as learner_menu_main
 from .labs import lab01_msd, lab02_pid, lab03_2dof, lab04_panda
 
 
@@ -39,6 +40,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command")
 
     subparsers.add_parser("list", help="List available labs.")
+    subparsers.add_parser("menu", help="Open the learner launcher menu.")
 
     run_parser = subparsers.add_parser("run", help="Run a lab.")
     run_parser.add_argument("lab_name", choices=sorted(LABS), help="Lab to run.")
@@ -68,6 +70,9 @@ def main(argv: list[str] | None = None) -> int:
         for name in sorted(LABS):
             print(f"  {name}")
         return 0
+
+    if args.command == "menu":
+        return learner_menu_main()
 
     if args.command == "run":
         config = load_config(args.config)
