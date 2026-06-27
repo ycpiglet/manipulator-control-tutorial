@@ -14,7 +14,10 @@ from mclab.sim.interaction import (  # noqa: E402
     SliderSpec,
     StatusSpec,
     TargetOffsetControl,
+    _panel_guide_rows,
+    _panel_guide_title,
 )
+from mclab.learning_guides import RunGuide  # noqa: E402
 
 
 class KeyForcePulseTests(unittest.TestCase):
@@ -63,3 +66,24 @@ class KeyForcePulseTests(unittest.TestCase):
         self.assertEqual(snapshot["position"], "1.235")
         self.assertEqual(snapshot["mode"], "tracking")
         self.assertNotIn("ignored", snapshot)
+
+    def test_panel_guidance_uses_try_change_watch_fields(self) -> None:
+        guide = RunGuide(
+            title="Demo Guide",
+            focus="Focus text",
+            try_this="Move the slider.",
+            change="controller.kp",
+            watch="Tracking error.",
+            next_step="Run the comparison.",
+        )
+
+        self.assertEqual(_panel_guide_title(guide), "Demo Guide")
+        self.assertEqual(
+            _panel_guide_rows(guide),
+            [
+                ("Try", "Move the slider."),
+                ("Change", "controller.kp"),
+                ("Watch", "Tracking error."),
+            ],
+        )
+        self.assertEqual(_panel_guide_rows(None), [])

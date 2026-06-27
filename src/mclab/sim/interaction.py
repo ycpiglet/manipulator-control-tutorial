@@ -172,6 +172,7 @@ def maybe_start_interaction_panel(
     title: str,
     tuning: LiveTuning | None = None,
     status: LiveStatus | None = None,
+    guide: Any | None = None,
 ) -> InteractionPanel | None:
     control_enabled = bool(getattr(control, "enabled", False))
     panel_enabled = bool(getattr(control, "panel_enabled", False))
@@ -202,6 +203,22 @@ def maybe_start_interaction_panel(
             row = 0
             tk.Label(frame, text="Interactive controls").grid(row=row, column=0, columnspan=2, pady=(0, 8))
             row += 1
+            guide_title = _panel_guide_title(guide)
+            guide_rows = _panel_guide_rows(guide)
+            if guide_title or guide_rows:
+                if guide_title:
+                    tk.Label(frame, text=guide_title).grid(row=row, column=0, columnspan=2, pady=(0, 4))
+                    row += 1
+                for label, text in guide_rows:
+                    tk.Label(
+                        frame,
+                        text=f"{label}: {text}",
+                        justify="left",
+                        anchor="w",
+                        wraplength=430,
+                    ).grid(row=row, column=0, columnspan=2, sticky="w", pady=1)
+                    row += 1
+                row += 1
             if control_enabled:
                 tk.Button(frame, text=control.left_label, width=22, command=control.trigger_left).grid(
                     row=row, column=0, padx=4, pady=4
@@ -274,6 +291,23 @@ def maybe_start_interaction_panel(
                 pass
 
     return InteractionPanel(close)
+
+
+def _panel_guide_title(guide: Any | None) -> str:
+    if guide is None:
+        return ""
+    return str(getattr(guide, "title", "") or "").strip()
+
+
+def _panel_guide_rows(guide: Any | None) -> list[tuple[str, str]]:
+    if guide is None:
+        return []
+    rows = [
+        ("Try", str(getattr(guide, "try_this", "") or "").strip()),
+        ("Change", str(getattr(guide, "change", "") or "").strip()),
+        ("Watch", str(getattr(guide, "watch", "") or "").strip()),
+    ]
+    return [(label, text) for label, text in rows if text]
 
 
 def _format_status_value(value: Any) -> str:

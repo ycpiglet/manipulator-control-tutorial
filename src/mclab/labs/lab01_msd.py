@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from mclab.config import resolve_project_path
+from mclab.learning_guides import guide_for_config
 from mclab.sim.interaction import (
     KeyForcePulse,
     LiveStatus,
@@ -56,6 +57,7 @@ def run(
     damping = float(config.get("damping", 0.0))
 
     key_force = KeyForcePulse(config)
+    run_guide = guide_for_config(config_path=str(config_path or ""), lab_name=lab_name)
     live_tuning = _live_tuning(config)
     live_status = LiveStatus(
         [
@@ -79,6 +81,7 @@ def run(
             title="MCLab Lab01 Interaction",
             tuning=live_tuning,
             status=live_status,
+            guide=run_guide,
         )
         if viewer and not headless
         else None

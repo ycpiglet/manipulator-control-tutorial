@@ -10,6 +10,7 @@ from typing import Any
 from mclab.analysis.metrics import step_response_metrics
 from mclab.config import resolve_project_path
 from mclab.controllers.pid import PIDController
+from mclab.learning_guides import guide_for_config
 from mclab.sim.interaction import (
     KeyForcePulse,
     LiveStatus,
@@ -77,6 +78,7 @@ def run(
     delay_buffer: deque[float] = deque([0.0] * delay_steps, maxlen=delay_steps)
 
     key_force = KeyForcePulse(config)
+    run_guide = guide_for_config(config_path=str(config_path or ""), lab_name=lab_name)
     live_tuning = _live_tuning(config, pid_config, output_limit_value)
     live_status = LiveStatus(
         [
@@ -101,6 +103,7 @@ def run(
             title="MCLab Lab02 Interaction",
             tuning=live_tuning,
             status=live_status,
+            guide=run_guide,
         )
         if viewer and not headless
         else None

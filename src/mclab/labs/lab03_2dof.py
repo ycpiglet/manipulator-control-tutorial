@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from mclab.config import resolve_project_path
+from mclab.learning_guides import guide_for_config
 from mclab.sim.interaction import (
     KeyForcePulse,
     LiveStatus,
@@ -115,6 +116,7 @@ def _run_slider_trajectory(
     kt = float(config.get("torque_constant", 1.0))
 
     key_force = KeyForcePulse(config)
+    run_guide = guide_for_config(config_path=str(config_path or ""), lab_name=lab_name)
     live_tuning = _live_tuning(config, controller_config, force_limit_value)
     live_status = LiveStatus(
         [
@@ -139,6 +141,7 @@ def _run_slider_trajectory(
             title="MCLab Lab03 Interaction",
             tuning=live_tuning,
             status=live_status,
+            guide=run_guide,
         )
         if viewer and not headless
         else None
@@ -257,6 +260,7 @@ def _run_two_link_arm(
     target_xy_goal = _pair(config.get("target_xy", start_xy), "target_xy")
 
     panel_control = KeyForcePulse(config)
+    run_guide = guide_for_config(config_path=str(config_path or ""), lab_name=lab_name)
     live_tuning = _two_link_live_tuning(config, mode, controller_config, torque_limit, target_xy_goal)
     live_status = LiveStatus(
         [
@@ -284,6 +288,7 @@ def _run_two_link_arm(
             title="MCLab Lab03 2DOF Interaction",
             tuning=live_tuning,
             status=live_status,
+            guide=run_guide,
         )
         if viewer and not headless
         else None
