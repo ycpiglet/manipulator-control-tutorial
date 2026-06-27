@@ -7,6 +7,8 @@ from html import escape
 from pathlib import Path
 from typing import Any
 
+from mclab.learning_guides import RunGuide, guide_for_run_summary
+
 INDEX_METRIC_KEYS = (
     "max_abs_position",
     "overshoot_percent",
@@ -59,6 +61,7 @@ def write_outputs_index(outputs_root: str | Path) -> Path:
 
 def _render_report(output: Path, summary: dict[str, Any], notes: str, plots: list[Path]) -> str:
     title = _report_title(output, summary)
+    learning_guide = _learning_guide_section(guide_for_run_summary(summary))
     rows = "\n".join(
         f"<tr><th>{escape(str(key))}</th><td>{escape(_format_value(value))}</td></tr>"
         for key, value in summary.items()
@@ -146,6 +149,24 @@ def _render_report(output: Path, summary: dict[str, Any], notes: str, plots: lis
       grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
       gap: 16px;
     }}
+    .guide-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px 18px;
+    }}
+    .guide-item {{
+      border-top: 1px solid #edf0f3;
+      padding-top: 8px;
+    }}
+    .guide-item strong {{
+      display: block;
+      color: #3f4752;
+      margin-bottom: 4px;
+    }}
+    .guide-item span {{
+      display: block;
+      line-height: 1.4;
+    }}
     .plot {{
       margin: 0;
       border: 1px solid #e0e4ea;
@@ -181,6 +202,7 @@ def _render_report(output: Path, summary: dict[str, Any], notes: str, plots: lis
 <body>
   <main>
     <h1>{escape(title)} report</h1>
+    {learning_guide}
     <section>
       <h2>Summary</h2>
       <table>{rows}</table>
@@ -201,6 +223,35 @@ def _render_report(output: Path, summary: dict[str, Any], notes: str, plots: lis
 </body>
 </html>
 """
+
+
+def _learning_guide_section(guide: RunGuide | None) -> str:
+    if guide is None:
+        return ""
+    items = (
+        ("Focus", guide.focus),
+        ("Try", guide.try_this),
+        ("Change", guide.change),
+        ("Watch", guide.watch),
+        ("Next", guide.next_step),
+    )
+    body = "\n".join(
+        (
+            '<div class="guide-item">'
+            f"<strong>{escape(label)}</strong>"
+            f"<span>{escape(text)}</span>"
+            "</div>"
+        )
+        for label, text in items
+    )
+    return (
+        "<section>"
+        f"<h2>{escape(guide.title)}</h2>"
+        '<div class="guide-grid">'
+        f"{body}"
+        "</div>"
+        "</section>"
+    )
 
 
 def _discover_runs(root: Path) -> list[dict[str, Any]]:
