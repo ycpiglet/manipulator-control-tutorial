@@ -21,6 +21,7 @@ class ConfigLoadTests(unittest.TestCase):
             "configs/lab03_2dof/interactive_tracking.yaml",
             "configs/lab04_panda/joint_pd.yaml",
             "configs/lab04_panda/interactive_joint_hold.yaml",
+            "configs/lab04_panda/interactive_virtual_wall.yaml",
             "configs/lab04_panda/impedance_wall.yaml",
         ]
         for path in paths:

@@ -153,9 +153,10 @@ Windows PowerShell에서 가장 쉬운 방법:
 .\run_lab02_interactive.cmd
 .\run_lab03_interactive.cmd
 .\run_lab04_interactive.cmd
+.\run_lab04_wall_interactive.cmd
 ```
 
-Interactive launcher는 사이드 패널 없는 MuJoCo viewer와 함께 작은 `MCLab Interaction` 버튼 창을 엽니다. Lab01-03에서는 `Pull Left` / `Push Right` 버튼이 mass에 짧은 힘 펄스를 넣고, 슬라이더로 주요 파라미터를 실행 중에 바꿉니다. 키보드는 viewer 창에 포커스가 있을 때 `A` 또는 왼쪽 화살표, `D` 또는 오른쪽 화살표도 지원합니다. Lab04에서는 버튼으로 제어 중인 관절 목표를 조금씩 이동합니다.
+Interactive launcher는 사이드 패널 없는 MuJoCo viewer와 함께 작은 `MCLab Interaction` 버튼 창을 엽니다. Lab01-03에서는 `Pull Left` / `Push Right` 버튼이 mass에 짧은 힘 펄스를 넣고, 슬라이더로 주요 파라미터를 실행 중에 바꿉니다. 키보드는 viewer 창에 포커스가 있을 때 `A` 또는 왼쪽 화살표, `D` 또는 오른쪽 화살표도 지원합니다. Lab04에서는 버튼으로 제어 중인 관절 목표를 이동하고, wall 데모에서는 virtual wall 파라미터도 슬라이더로 바꿉니다.
 
 무엇을 보면 되는지:
 
@@ -165,6 +166,7 @@ Interactive launcher는 사이드 패널 없는 MuJoCo viewer와 함께 작은 `
 | `.\run_lab02_interactive.cmd` | PID plant에 좌/우 외란, `target/Kp/Ki/Kd/force limit` 슬라이더 | PID가 목표 위치로 복원하는 과정 |
 | `.\run_lab03_interactive.cmd` | trajectory tracker에 좌/우 외란, `target offset/Kp/Kd/force limit` 슬라이더 | 계획 경로에서 벗어난 뒤 회복하는 과정 |
 | `.\run_lab04_interactive.cmd` | Panda 관절 목표 nudge | 목표 관절 위치 변화와 tracking error |
+| `.\run_lab04_wall_interactive.cmd` | Panda 관절 목표 nudge, `wall X/stiffness/damping/retreat gain` 슬라이더 | virtual wall 위치와 강성/감쇠 변화 |
 
 전체 검증을 한 번에 돌리려면:
 
@@ -410,9 +412,10 @@ Use the interactive launchers when learners should disturb the system and watch 
 .\run_lab02_interactive.cmd
 .\run_lab03_interactive.cmd
 .\run_lab04_interactive.cmd
+.\run_lab04_wall_interactive.cmd
 ```
 
-Each interactive launcher opens the MuJoCo viewer without side panels plus a small `MCLab Interaction` button window. In Lab01-03, `Pull Left` / `Push Right` applies short force pulses to the mass, and sliders tune key parameters while the simulation is running. Keyboard shortcuts also work when the viewer has focus: `A` or left arrow for left, `D` or right arrow for right. In Lab04, the buttons nudge the controlled joint target.
+Each interactive launcher opens the MuJoCo viewer without side panels plus a small `MCLab Interaction` button window. In Lab01-03, `Pull Left` / `Push Right` applies short force pulses to the mass, and sliders tune key parameters while the simulation is running. Keyboard shortcuts also work when the viewer has focus: `A` or left arrow for left, `D` or right arrow for right. In Lab04, the buttons nudge the controlled joint target, and the wall demo adds virtual wall sliders.
 
 What to observe:
 
@@ -422,6 +425,7 @@ What to observe:
 | `.\run_lab02_interactive.cmd` | left/right disturbance, `target/Kp/Ki/Kd/force limit` sliders | PID disturbance rejection |
 | `.\run_lab03_interactive.cmd` | left/right disturbance, `target offset/Kp/Kd/force limit` sliders | recovery after leaving the planned trajectory |
 | `.\run_lab04_interactive.cmd` | Panda joint target nudge | target position changes and tracking error |
+| `.\run_lab04_wall_interactive.cmd` | Panda joint target nudge, `wall X/stiffness/damping/retreat gain` sliders | virtual wall position, stiffness, and damping effects |
 
 To run the full verification suite:
 

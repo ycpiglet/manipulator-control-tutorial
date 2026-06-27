@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from mclab.config import resolve_project_path
-from mclab.sim.interaction import TargetOffsetControl, maybe_start_interaction_panel
+from mclab.sim.interaction import LiveTuning, SliderSpec, TargetOffsetControl, maybe_start_interaction_panel
 from mclab.sim.logging import RunLogger
 from mclab.sim.mujoco_utils import (
     load_model_and_data,
@@ -69,6 +69,7 @@ def run(
         raise ValueError("controlled_joint_index must be in [0, 6]")
 
     target_offset = TargetOffsetControl(config)
+    live_tuning = _live_tuning(config)
     viewer_handle = maybe_launch_viewer(
         mujoco,
         model,
@@ -78,7 +79,7 @@ def run(
         show_ui=show_viewer_ui,
     )
     interaction_panel = (
-        maybe_start_interaction_panel(target_offset, title="MCLab Lab04 Interaction")
+        maybe_start_interaction_panel(target_offset, title="MCLab Lab04 Interaction", tuning=live_tuning)
         if viewer and not headless
         else None
     )
@@ -91,18 +92,21 @@ def run(
                 break
             target_q = home_q.copy()
             target = trajectory.evaluate(float(data.time))
-            target_q[controlled_joint_index] = target.position + target_offset.value()
+            tuned_joint_offset = live_tuning.value("joint_target_offset", 0.0)
+            target_q[controlled_joint_index] = target.position + target_offset.value() + tuned_joint_offset
 
             ee_position, ee_velocity, jacobian = _end_effector_state(mujoco, model, data, handles)
             wall_force = [0.0, 0.0, 0.0]
+            wall_config = _wall_config(config, live_tuning)
             if mode in {"impedance_wall", "virtual_wall", "wall"}:
-                wall_force = _virtual_wall_force(ee_position, ee_velocity, dict(config.get("virtual_wall", {})))
+                wall_force = _virtual_wall_force(ee_position, ee_velocity, wall_config)
                 target_q = _apply_wall_target_offset(
                     target_q,
                     jacobian,
                     ee_position,
                     wall_force,
                     config,
+                    wall_config,
                 )
 
             target_q = _clip_to_ctrl_range(model, handles["actuator_ids"], target_q)
@@ -124,7 +128,7 @@ def run(
             position_errors = [target_q[index] - q[index] for index in range(7)]
             wall_penetration = max(
                 0.0,
-                ee_position[0] - float(config.get("virtual_wall", {}).get("wall_x", 10.0)),
+                ee_position[0] - float(wall_config.get("wall_x", 10.0)),
             )
             logger.record(
                 time=float(data.time),
@@ -141,6 +145,11 @@ def run(
                 force_virtual=wall_force,
                 wall_penetration=wall_penetration,
                 wall_penetration_cm=100.0 * wall_penetration,
+                tuned_joint_target_offset=tuned_joint_offset,
+                tuned_wall_x=float(wall_config.get("wall_x", 10.0)),
+                tuned_wall_stiffness=float(wall_config.get("stiffness", 0.0)),
+                tuned_wall_damping=float(wall_config.get("damping", 0.0)),
+                tuned_wall_retreat_gain=float(wall_config.get("cartesian_retreat_gain", 0.0)),
             )
         completed = True
     finally:
@@ -210,6 +219,55 @@ def _trajectory_config(config: dict[str, Any], home_q: list[float]) -> dict[str,
     return trajectory
 
 
+def _live_tuning(config: dict[str, Any]) -> LiveTuning:
+    interaction = dict(config.get("interaction", {}))
+    if not bool(interaction.get("live_tuning", False)):
+        return LiveTuning([])
+    wall_config = dict(config.get("virtual_wall", {}))
+    return LiveTuning(
+        [
+            SliderSpec("joint_target_offset", "Joint target offset [rad]", -0.35, 0.35, 0.0, 0.01),
+            SliderSpec("wall_x", "Virtual wall X [m]", 0.50, 0.70, float(wall_config.get("wall_x", 0.57)), 0.005),
+            SliderSpec(
+                "wall_stiffness",
+                "Wall stiffness [N/m]",
+                0.0,
+                800.0,
+                float(wall_config.get("stiffness", 260.0)),
+                10.0,
+            ),
+            SliderSpec(
+                "wall_damping",
+                "Wall damping [N s/m]",
+                0.0,
+                40.0,
+                float(wall_config.get("damping", 12.0)),
+                0.5,
+            ),
+            SliderSpec(
+                "wall_retreat_gain",
+                "Retreat gain",
+                0.0,
+                1.5,
+                float(wall_config.get("cartesian_retreat_gain", 0.4)),
+                0.05,
+            ),
+        ]
+    )
+
+
+def _wall_config(config: dict[str, Any], live_tuning: LiveTuning) -> dict[str, Any]:
+    wall_config = dict(config.get("virtual_wall", {}))
+    wall_config["wall_x"] = live_tuning.value("wall_x", float(wall_config.get("wall_x", 10.0)))
+    wall_config["stiffness"] = live_tuning.value("wall_stiffness", float(wall_config.get("stiffness", 250.0)))
+    wall_config["damping"] = live_tuning.value("wall_damping", float(wall_config.get("damping", 12.0)))
+    wall_config["cartesian_retreat_gain"] = live_tuning.value(
+        "wall_retreat_gain",
+        float(wall_config.get("cartesian_retreat_gain", 1.2)),
+    )
+    return wall_config
+
+
 def _end_effector_state(mujoco: Any, model: Any, data: Any, handles: dict[str, Any]) -> tuple[list[float], list[float], Any]:
     import numpy as np
 
@@ -243,12 +301,12 @@ def _apply_wall_target_offset(
     ee_position: list[float],
     wall_force: list[float],
     config: dict[str, Any],
+    wall_config: dict[str, Any],
 ) -> list[float]:
     import numpy as np
 
     if not any(abs(force) > 1e-12 for force in wall_force):
         return target_q
-    wall_config = dict(config.get("virtual_wall", {}))
     wall_x = float(wall_config.get("wall_x", 0.52))
     penetration = max(0.0, ee_position[0] - wall_x)
     cartesian_gain = float(wall_config.get("cartesian_retreat_gain", 1.2))
