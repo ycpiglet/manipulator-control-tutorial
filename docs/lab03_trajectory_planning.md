@@ -18,6 +18,14 @@ Run:
 .\run_lab03.cmd
 ```
 
+Interactive disturbance demo:
+
+```powershell
+.\run_lab03_interactive.cmd
+```
+
+Use `A` / left arrow or `D` / right arrow while the viewer is running to disturb the tracker. Watch how the controller recovers to the planned trajectory or final target.
+
 Headless run:
 
 ```bash

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from mclab.config import resolve_project_path
+from mclab.sim.interaction import KeyForcePulse
 from mclab.sim.logging import RunLogger
 from mclab.sim.mujoco_utils import (
     load_model_and_data,
@@ -13,6 +14,7 @@ from mclab.sim.mujoco_utils import (
     pause_viewer_at_end,
     sync_viewer,
     viewer_clock,
+    viewer_is_running,
 )
 from mclab.sim.one_dof import configure_slider_plant, force_input_at, mechanical_energy, slider_state
 from mclab.sim.plotting import PlotSelection, save_time_series_plots, select_plot_specs
@@ -44,13 +46,25 @@ def run(
     spring_reference = float(config.get("spring_reference", 0.0))
     force_config = config.get("force_input", config.get("external_force", 0.0))
 
-    viewer_handle = maybe_launch_viewer(mujoco, model, data, enabled=viewer and not headless)
+    key_force = KeyForcePulse(config)
+    viewer_handle = maybe_launch_viewer(
+        mujoco,
+        model,
+        data,
+        enabled=viewer and not headless,
+        key_callback=key_force.key_callback if key_force.enabled else None,
+    )
     wall_start = viewer_clock()
     sim_start = float(data.time)
     completed = False
     try:
         while data.time < sim_time:
-            force = force_input_at(float(data.time), force_config)
+            if not viewer_is_running(viewer_handle):
+                break
+            key_force.update_time(float(data.time))
+            input_force = force_input_at(float(data.time), force_config)
+            manual_force = key_force.value(float(data.time))
+            force = input_force + manual_force
             data.ctrl[handles.actuator_id] = force
             mujoco.mj_step(model, data)
             sync_viewer(
@@ -75,7 +89,8 @@ def run(
                 velocity=velocity,
                 acceleration=acceleration,
                 control_force=force,
-                external_force=force,
+                external_force=input_force,
+                manual_force=manual_force,
                 kinetic_energy=kinetic,
                 potential_energy=potential,
                 total_energy=total,
@@ -104,7 +119,7 @@ def _save_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSe
             "acceleration [m/s^2]",
             ["acceleration"],
         ),
-        ("force.png", "Applied Force", "force [N]", ["external_force"]),
+        ("force.png", "Applied Force", "force [N]", ["control_force", "external_force", "manual_force"]),
         (
             "energy.png",
             "Mechanical Energy",

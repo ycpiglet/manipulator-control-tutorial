@@ -29,6 +29,14 @@ Run:
 .\run_lab04.cmd
 ```
 
+Interactive perturb demo:
+
+```powershell
+.\run_lab04_interactive.cmd
+```
+
+Use the MuJoCo viewer's body select and perturb tools while the viewer is running to disturb links and observe the position-actuated controller response.
+
 Headless runs:
 
 ```bash

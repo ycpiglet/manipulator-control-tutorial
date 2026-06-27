@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from mclab.config import resolve_project_path
+from mclab.sim.interaction import KeyForcePulse
 from mclab.sim.logging import RunLogger
 from mclab.sim.mujoco_utils import (
     load_model_and_data,
@@ -17,6 +18,7 @@ from mclab.sim.mujoco_utils import (
     pause_viewer_at_end,
     sync_viewer,
     viewer_clock,
+    viewer_is_running,
 )
 from mclab.sim.one_dof import configure_slider_plant, slider_state
 from mclab.sim.plotting import PlotSelection, save_time_series_plots, select_plot_specs
@@ -54,19 +56,31 @@ def run(
     lower_limit, upper_limit = _limits(force_limit)
     kt = float(config.get("torque_constant", 1.0))
 
-    viewer_handle = maybe_launch_viewer(mujoco, model, data, enabled=viewer and not headless)
+    key_force = KeyForcePulse(config)
+    viewer_handle = maybe_launch_viewer(
+        mujoco,
+        model,
+        data,
+        enabled=viewer and not headless,
+        key_callback=key_force.key_callback if key_force.enabled else None,
+    )
     wall_start = viewer_clock()
     sim_start = float(data.time)
     completed = False
     try:
         while data.time < sim_time:
+            if not viewer_is_running(viewer_handle):
+                break
+            key_force.update_time(float(data.time))
             position, velocity, _ = slider_state(data, handles)
             target = trajectory.evaluate(float(data.time))
             feedback = kp * (target.position - position) + kd * (target.velocity - velocity)
             feedforward = feedforward_mass * target.acceleration if use_feedforward else 0.0
             control_force = _clip(feedback + feedforward, lower_limit, upper_limit)
+            manual_force = key_force.value(float(data.time))
+            total_force = control_force + manual_force
 
-            data.ctrl[handles.actuator_id] = control_force
+            data.ctrl[handles.actuator_id] = total_force
             mujoco.mj_step(model, data)
             sync_viewer(
                 viewer_handle,
@@ -89,7 +103,9 @@ def run(
                 position_error=target.position - position,
                 velocity_error=target.velocity - velocity,
                 control_force=control_force,
-                current_proxy=control_force / kt,
+                manual_force=manual_force,
+                total_force=total_force,
+                current_proxy=total_force / kt,
             )
         completed = True
     finally:
@@ -126,7 +142,7 @@ def _save_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSe
             ["acceleration", "target_acceleration"],
         ),
         ("jerk.png", "Trajectory Jerk", "jerk [m/s^3]", ["target_jerk"]),
-        ("torque.png", "Control Effort", "force / torque proxy", ["control_force"]),
+        ("torque.png", "Control Effort", "force / torque proxy", ["control_force", "manual_force", "total_force"]),
         ("current_proxy.png", "Current Proxy", "current proxy", ["current_proxy"]),
         ("error.png", "Tracking Error", "error [m]", ["position_error"]),
     ]

@@ -1,0 +1,30 @@
+from __future__ import annotations
+
+import sys
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
+from mclab.sim.interaction import KeyForcePulse  # noqa: E402
+
+
+class KeyForcePulseTests(unittest.TestCase):
+    def test_a_and_d_keys_create_short_force_pulses(self) -> None:
+        pulse = KeyForcePulse({"interaction": {"key_force": True, "force": 12.0, "duration": 0.5}})
+
+        pulse.update_time(1.0)
+        pulse.key_callback(ord("D"))
+        self.assertEqual(pulse.value(1.1), 12.0)
+        self.assertEqual(pulse.value(1.6), 0.0)
+
+        pulse.update_time(2.0)
+        pulse.key_callback(ord("A"))
+        self.assertEqual(pulse.value(2.1), -12.0)
+
+    def test_disabled_config_ignores_keys(self) -> None:
+        pulse = KeyForcePulse({})
+        pulse.update_time(1.0)
+        pulse.key_callback(ord("D"))
+        self.assertEqual(pulse.value(1.1), 0.0)

@@ -28,14 +28,21 @@ def load_model_and_data(model_path: str | Path) -> tuple[Any, Any, Any]:
     return mujoco, model, data
 
 
-def maybe_launch_viewer(mujoco: Any, model: Any, data: Any, *, enabled: bool) -> Any | None:
+def maybe_launch_viewer(
+    mujoco: Any,
+    model: Any,
+    data: Any,
+    *,
+    enabled: bool,
+    key_callback: Any | None = None,
+) -> Any | None:
     if not enabled:
         return None
     try:
         from mujoco import viewer as mujoco_viewer  # type: ignore
     except Exception as exc:  # pragma: no cover - depends on local GUI support.
         raise RuntimeError("MuJoCo viewer could not be launched in this environment.") from exc
-    return mujoco_viewer.launch_passive(model, data)
+    return mujoco_viewer.launch_passive(model, data, key_callback=key_callback)
 
 
 def viewer_clock() -> float:
@@ -60,18 +67,29 @@ def sync_viewer(
             sleep(min(delay, 0.05))
 
 
+def viewer_is_running(viewer_handle: Any | None) -> bool:
+    if viewer_handle is None:
+        return True
+    is_running = getattr(viewer_handle, "is_running", None)
+    if not callable(is_running):
+        return True
+    return bool(is_running())
+
+
 def pause_viewer_at_end(viewer_handle: Any | None, *, enabled: bool) -> None:
     if viewer_handle is None or not enabled:
         return
 
-    is_running = getattr(viewer_handle, "is_running", None)
-    if not callable(is_running):
+    if not viewer_is_running(viewer_handle):
+        return
+
+    if not callable(getattr(viewer_handle, "is_running", None)):
         input("Simulation complete. Press Enter to close the MuJoCo viewer...")
         return
 
     print("Simulation complete. Close the MuJoCo viewer window to exit.")
     try:
-        while bool(is_running()):
+        while viewer_is_running(viewer_handle):
             viewer_handle.sync()
             sleep(1.0 / 30.0)
     except KeyboardInterrupt:

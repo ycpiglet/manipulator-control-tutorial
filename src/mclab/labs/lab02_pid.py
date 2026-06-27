@@ -10,6 +10,7 @@ from typing import Any
 from mclab.analysis.metrics import step_response_metrics
 from mclab.config import resolve_project_path
 from mclab.controllers.pid import PIDController
+from mclab.sim.interaction import KeyForcePulse
 from mclab.sim.logging import RunLogger
 from mclab.sim.mujoco_utils import (
     load_model_and_data,
@@ -17,6 +18,7 @@ from mclab.sim.mujoco_utils import (
     pause_viewer_at_end,
     sync_viewer,
     viewer_clock,
+    viewer_is_running,
 )
 from mclab.sim.one_dof import configure_slider_plant, slider_state
 from mclab.sim.plotting import PlotSelection, save_time_series_plots, select_plot_specs
@@ -65,12 +67,22 @@ def run(
     delay_steps = max(0, int(round(float(config.get("control_delay", 0.0)) / dt)))
     delay_buffer: deque[float] = deque([0.0] * delay_steps, maxlen=delay_steps)
 
-    viewer_handle = maybe_launch_viewer(mujoco, model, data, enabled=viewer and not headless)
+    key_force = KeyForcePulse(config)
+    viewer_handle = maybe_launch_viewer(
+        mujoco,
+        model,
+        data,
+        enabled=viewer and not headless,
+        key_callback=key_force.key_callback if key_force.enabled else None,
+    )
     wall_start = viewer_clock()
     sim_start = float(data.time)
     completed = False
     try:
         while data.time < sim_time:
+            if not viewer_is_running(viewer_handle):
+                break
+            key_force.update_time(float(data.time))
             position, velocity, _ = slider_state(data, handles)
             measured_position = position + (random.gauss(0.0, noise_std) if noise_std > 0.0 else 0.0)
             target_state = target.evaluate(float(data.time))
@@ -86,7 +98,9 @@ def run(
             else:
                 applied_force = command.value
 
-            data.ctrl[handles.actuator_id] = applied_force
+            manual_force = key_force.value(float(data.time))
+            total_force = applied_force + manual_force
+            data.ctrl[handles.actuator_id] = total_force
             mujoco.mj_step(model, data)
             sync_viewer(
                 viewer_handle,
@@ -107,6 +121,8 @@ def run(
                 target_velocity=target_state.velocity,
                 position_error=target_state.position - position,
                 control_force=applied_force,
+                manual_force=manual_force,
+                total_force=total_force,
                 control_unsaturated=command.unsaturated_value,
                 pid_p=command.proportional,
                 pid_i=command.integral,
@@ -141,7 +157,7 @@ def _save_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSe
             "control_force.png",
             "PID Control Effort",
             "force [N]",
-            ["control_force", "control_unsaturated"],
+            ["control_force", "manual_force", "total_force", "control_unsaturated"],
         ),
         (
             "pid_terms.png",

@@ -16,6 +16,14 @@ Run:
 .\run_lab02.cmd
 ```
 
+Interactive disturbance demo:
+
+```powershell
+.\run_lab02_interactive.cmd
+```
+
+Use `A` / left arrow or `D` / right arrow while the viewer is running to disturb the mass. Watch the PID controller push it back to the target position.
+
 Headless run:
 
 ```bash

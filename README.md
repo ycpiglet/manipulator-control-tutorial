@@ -146,6 +146,17 @@ Windows PowerShell에서 가장 쉬운 방법:
 | `.\run_lab03.cmd` | trajectory viewer | `position`, `velocity`, `torque`, `error` |
 | `.\run_lab04.cmd` | Panda viewer | `position`, `error` |
 
+직접 외란을 주며 물리 현상을 보고 싶으면 interactive launcher를 사용합니다.
+
+```powershell
+.\run_lab01_interactive.cmd
+.\run_lab02_interactive.cmd
+.\run_lab03_interactive.cmd
+.\run_lab04_interactive.cmd
+```
+
+Lab01-03 interactive viewer에서는 `A` 또는 왼쪽 화살표가 왼쪽 힘 펄스, `D` 또는 오른쪽 화살표가 오른쪽 힘 펄스입니다. Lab01은 mass를 직접 밀고 놓았을 때의 자유 진동/감쇠를, Lab02는 외란 뒤 PID가 목표 위치로 되돌리는 과정을, Lab03은 trajectory tracking 중 외란 반응을 보여줍니다. Lab04는 MuJoCo viewer의 body select/perturb 기능으로 링크에 외란을 주며 관찰합니다.
+
 전체 검증을 한 번에 돌리려면:
 
 ```powershell
@@ -382,6 +393,17 @@ Each command opens the matching viewer and saves only the lab's essential plots.
 | `.\run_lab02.cmd` | PID viewer | `position`, `control_force`, `error` |
 | `.\run_lab03.cmd` | trajectory viewer | `position`, `velocity`, `torque`, `error` |
 | `.\run_lab04.cmd` | Panda viewer | `position`, `error` |
+
+Use the interactive launchers when learners should disturb the system and watch the physics respond:
+
+```powershell
+.\run_lab01_interactive.cmd
+.\run_lab02_interactive.cmd
+.\run_lab03_interactive.cmd
+.\run_lab04_interactive.cmd
+```
+
+In Lab01-03 interactive viewers, `A` or the left arrow applies a short force pulse to the left; `D` or the right arrow applies one to the right. Lab01 shows free oscillation and damping after a disturbance, Lab02 shows PID disturbance rejection, and Lab03 shows trajectory tracking under disturbance. For Lab04, use the MuJoCo viewer's body select/perturb tools to disturb links while observing the controller response.
 
 To run the full verification suite:
 

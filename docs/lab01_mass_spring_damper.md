@@ -14,6 +14,14 @@ Run:
 .\run_lab01.cmd
 ```
 
+Interactive pull demo:
+
+```powershell
+.\run_lab01_interactive.cmd
+```
+
+Use `A` / left arrow or `D` / right arrow while the viewer is running to apply short force pulses to the mass. Watch the block oscillate and settle under spring stiffness and damping.
+
 Headless run:
 
 ```bash

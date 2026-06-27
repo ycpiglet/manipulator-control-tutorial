@@ -13,6 +13,7 @@ from mclab.sim.mujoco_utils import (
     pause_viewer_at_end,
     sync_viewer,
     viewer_clock,
+    viewer_is_running,
 )
 from mclab.sim.plotting import PlotSelection, save_time_series_plots, select_plot_specs
 from mclab.trajectories import build_trajectory
@@ -71,6 +72,8 @@ def run(
     completed = False
     try:
         while data.time < sim_time:
+            if not viewer_is_running(viewer_handle):
+                break
             target_q = home_q.copy()
             target = trajectory.evaluate(float(data.time))
             target_q[controlled_joint_index] = target.position
