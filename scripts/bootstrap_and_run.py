@@ -37,6 +37,16 @@ VERIFY_VARIANTS = [
     ("lab04", "configs/lab04_panda/impedance_wall.yaml"),
 ]
 
+REQUIRED_ARTIFACTS = ("config.yaml", "summary.json", "notes.md", "log.csv", "report.html")
+REQUIRED_REPORT_SECTIONS = (
+    "Reproduce This Run",
+    "Config Highlights",
+    "Result Check",
+    "Summary",
+    "Files",
+)
+PLOT_REPORT_SECTIONS = ("Plots", "Plot Guide")
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Set up and run local MuJoCo labs.")
@@ -80,6 +90,7 @@ def main() -> int:
         if not args.no_plot:
             command.append("--plot")
         run(command)
+        verify_output_artifacts(root_output / name, expect_plots=not args.no_plot)
 
     print(f"All requested runs completed: {root_output}")
     return 0
@@ -106,6 +117,29 @@ def ensure_menagerie() -> None:
 def run(command: list[str]) -> None:
     print("\n$ " + " ".join(command))
     subprocess.run(command, cwd=ROOT, check=True)
+
+
+def verify_output_artifacts(output_dir: Path, *, expect_plots: bool) -> None:
+    missing = [name for name in REQUIRED_ARTIFACTS if not (output_dir / name).exists()]
+    if not ((output_dir / "states.npz").exists() or (output_dir / "states.json").exists()):
+        missing.append("states.npz or states.json")
+    if expect_plots and not any((output_dir / "plots").glob("*.png")):
+        missing.append("plots/*.png")
+    if missing:
+        raise RuntimeError(f"Missing output artifact(s) in {output_dir}: {', '.join(missing)}")
+
+    report_html = (output_dir / "report.html").read_text(encoding="utf-8")
+    required_sections = list(REQUIRED_REPORT_SECTIONS)
+    if expect_plots:
+        required_sections.extend(PLOT_REPORT_SECTIONS)
+    missing_sections = [section for section in required_sections if section not in report_html]
+    if missing_sections:
+        raise RuntimeError(
+            f"Missing report section(s) in {output_dir / 'report.html'}: "
+            f"{', '.join(missing_sections)}"
+        )
+
+    print(f"Verified artifacts: {output_dir}")
 
 
 if __name__ == "__main__":

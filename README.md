@@ -252,6 +252,7 @@ python scripts/bootstrap_and_run.py --verify
 - 테스트와 lint 실행
 - 네 개 시뮬레이터를 headless 모드로 실행
 - `outputs/` 아래에 로그와 plot 저장
+- 각 실행의 필수 artifact와 report 섹션 검증
 
 ### 수동 설치
 
@@ -587,6 +588,7 @@ This command performs the full local setup and verification:
 - runs tests and lint checks
 - runs all four simulators in headless mode
 - saves logs and plots under `outputs/`
+- verifies required artifacts and report sections for each run
 
 ### Manual Installation
 
