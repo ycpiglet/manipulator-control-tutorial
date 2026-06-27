@@ -49,6 +49,8 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(("Lab01 Mass-Spring-Damper", "Interactive"), labels)
         self.assertIn(("Lab02 PID Control", "Low P gain"), labels)
         self.assertIn(("Lab02 PID Control", "Anti-windup"), labels)
+        self.assertIn(("Lab02 PID Control", "Sensor noise"), labels)
+        self.assertIn(("Lab02 PID Control", "Control delay"), labels)
         self.assertIn(("Lab02 PID Control", "Interactive"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF joint-space"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF task-space"), labels)
@@ -98,6 +100,8 @@ class LearnerMenuTests(unittest.TestCase):
 
         self.assertIn("damping", parameter_hint(by_label[("Lab01 Mass-Spring-Damper", "Underdamped")]))
         self.assertIn("controller.anti_windup", parameter_hint(by_label[("Lab02 PID Control", "Windup")]))
+        self.assertIn("measurement_noise_std", parameter_hint(by_label[("Lab02 PID Control", "Sensor noise")]))
+        self.assertIn("control_delay", parameter_hint(by_label[("Lab02 PID Control", "Control delay")]))
         self.assertIn(
             "target_xy",
             parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF task-space")]),

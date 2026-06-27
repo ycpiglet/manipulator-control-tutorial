@@ -9,6 +9,7 @@ Read the plots in this order:
 1. `position.png`: check whether position follows the target.
 2. `error.png`: check tracking error, overshoot, and settling.
 3. `control_force.png`: check how hard the controller pushed.
+4. In noisy runs, compare `measured_position` against true `position` in `position.png`.
 
 Run:
 
@@ -37,4 +38,8 @@ python -m mclab run lab02 --config configs/lab02_pid/p_low_gain.yaml --plot --he
 python -m mclab run lab02 --config configs/lab02_pid/p_high_gain.yaml --plot --headless
 python -m mclab run lab02 --config configs/lab02_pid/pid_with_windup.yaml --plot --headless
 python -m mclab run lab02 --config configs/lab02_pid/pid_anti_windup.yaml --plot --headless
+python -m mclab run lab02 --config configs/lab02_pid/measurement_noise.yaml --plot --headless --plots pid
+python -m mclab run lab02 --config configs/lab02_pid/control_delay.yaml --plot --headless
 ```
+
+Use `measurement_noise_std` to simulate a noisy sensor and `control_delay` to simulate actuator or computation delay. The generated `report.html` and `outputs/index.html` include these values plus the measured-error summary so learners can compare runs without opening every CSV file.

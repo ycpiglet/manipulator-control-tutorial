@@ -143,7 +143,7 @@ Windows PowerShell에서 가장 쉬운 방법:
 | Lab | Scenario examples |
 |---|---|
 | Lab01 | underdamped, overdamped, high/low stiffness, interactive pull |
-| Lab02 | low/high P gain, PD damping, saturation, windup vs anti-windup, interactive disturbance |
+| Lab02 | low/high P gain, PD damping, saturation, windup vs anti-windup, sensor noise, control delay, interactive disturbance |
 | Lab03 | 2DOF joint-space, 2DOF task-space, singularity, interactive XY target tuning, step/trapezoidal/minimum-jerk/S-curve profiles |
 | Lab04 | neutral hold, joint trajectories, hand X motion, Cartesian reach, soft/stiff virtual wall, joint target nudge, virtual wall |
 
@@ -441,7 +441,7 @@ Main comparison scenarios in the menu:
 | Lab | Scenario examples |
 |---|---|
 | Lab01 | underdamped, overdamped, high/low stiffness, interactive pull |
-| Lab02 | low/high P gain, PD damping, saturation, windup vs anti-windup, interactive disturbance |
+| Lab02 | low/high P gain, PD damping, saturation, windup vs anti-windup, sensor noise, control delay, interactive disturbance |
 | Lab03 | 2DOF joint-space, 2DOF task-space, singularity, interactive XY target tuning, step/trapezoidal/minimum-jerk/S-curve profiles |
 | Lab04 | neutral hold, joint trajectories, hand X motion, Cartesian reach, soft/stiff virtual wall, joint target nudge, virtual wall |
 

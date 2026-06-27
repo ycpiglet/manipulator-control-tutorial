@@ -31,6 +31,16 @@ class LabSmokeTests(unittest.TestCase):
             self.assertTrue((output / "log.csv").exists())
             self.assertTrue((output / "summary.json").exists())
 
+    def test_lab02_noise_and_delay_configs_run_headless_when_mujoco_is_available(self) -> None:
+        for config_path in ("configs/lab02_pid/measurement_noise.yaml", "configs/lab02_pid/control_delay.yaml"):
+            with self.subTest(config_path=config_path):
+                config = load_config(config_path)
+                config["sim_time"] = 0.02
+                with tempfile.TemporaryDirectory() as tmp:
+                    output = lab02_pid.run(config, output_dir=Path(tmp) / "lab02", headless=True)
+                    self.assertTrue((output / "log.csv").exists())
+                    self.assertTrue((output / "summary.json").exists())
+
     def test_lab03_runs_headless_when_mujoco_is_available(self) -> None:
         config = load_config("configs/lab03_2dof/joint_space_2dof.yaml")
         config["sim_time"] = 0.02

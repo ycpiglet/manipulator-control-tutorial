@@ -43,13 +43,14 @@ class LoggingTests(unittest.TestCase):
                 output_dir=Path(temp_dir) / "run",
             )
             logger.record(time=0.0, position=0.1)
-            output = logger.save(summary={"max_position": 0.1}, notes="# Lab01\nCheck position.")
+            output = logger.save(summary={"max_position": 0.1, "settling_time": None}, notes="# Lab01\nCheck position.")
 
             report = output / "report.html"
             self.assertTrue(report.exists())
             html = report.read_text(encoding="utf-8")
             self.assertIn("lab01_msd report", html)
             self.assertIn("max_position", html)
+            self.assertIn("n/a", html)
             self.assertIn("Check position.", html)
             self.assertIn("config.yaml", html)
 

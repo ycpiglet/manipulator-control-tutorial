@@ -167,6 +167,26 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
     ),
     MenuAction(
         group="Lab02 PID Control",
+        label="Sensor noise",
+        lab_name="lab02",
+        config_path="configs/lab02_pid/measurement_noise.yaml",
+        plots="pid",
+        description="Noisy position measurement makes the controller push unevenly.",
+        try_this="Compare measured_position against true position.",
+        watch="Force jitter and larger measured tracking error.",
+    ),
+    MenuAction(
+        group="Lab02 PID Control",
+        label="Control delay",
+        lab_name="lab02",
+        config_path="configs/lab02_pid/control_delay.yaml",
+        plots="essential",
+        description="A delayed control force reacts to old error.",
+        try_this="Compare against Auto demo with the same gains.",
+        watch="Slower correction, overshoot, and settling time.",
+    ),
+    MenuAction(
+        group="Lab02 PID Control",
         label="Interactive",
         lab_name="lab02",
         config_path="configs/lab02_pid/interactive_disturbance.yaml",
@@ -487,6 +507,10 @@ def parameter_hint(action: MenuAction) -> str:
             return "controller.ki, controller.anti_windup, controller.output_limit"
         if label == "saturation":
             return "controller.output_limit, target.end"
+        if label == "sensor noise":
+            return "measurement_noise_std, controller.kp, controller.kd"
+        if label == "control delay":
+            return "control_delay, controller.kp, controller.kd"
         if "gain" in label or label == "pd damping":
             return "controller.kp, controller.kd, target.end"
         return "target.end, controller.kp, controller.ki, controller.kd, controller.output_limit"

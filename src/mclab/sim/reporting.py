@@ -13,6 +13,9 @@ INDEX_METRIC_KEYS = (
     "settling_time",
     "steady_state_error",
     "max_control_effort",
+    "measurement_noise_std",
+    "control_delay",
+    "max_abs_measurement_error",
     "max_abs_tracking_error",
     "final_tracking_error",
     "max_abs_control_force",
@@ -354,6 +357,8 @@ def _read_text(path: Path) -> str:
 
 
 def _format_value(value: Any) -> str:
+    if value is None:
+        return "n/a"
     if isinstance(value, float):
         return f"{value:.6g}"
     if isinstance(value, (list, tuple, dict)):

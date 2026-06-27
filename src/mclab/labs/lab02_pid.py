@@ -115,6 +115,7 @@ def run(
             key_force.update_time(float(data.time))
             position, velocity, _ = slider_state(data, handles)
             measured_position = position + (random.gauss(0.0, noise_std) if noise_std > 0.0 else 0.0)
+            measurement_error = measured_position - position
             target_state = target.evaluate(float(data.time))
             controller.kp = live_tuning.value("kp", controller.kp)
             controller.ki = live_tuning.value("ki", controller.ki)
@@ -159,6 +160,7 @@ def run(
                 time=float(data.time),
                 position=position,
                 measured_position=measured_position,
+                measurement_error=measurement_error,
                 velocity=velocity,
                 acceleration=acceleration,
                 target_position=target_position,
@@ -186,7 +188,7 @@ def run(
                 pause_viewer_at_end(viewer_handle, enabled=pause_at_end)
             viewer_handle.close()
 
-    summary = step_response_metrics(logger.rows)
+    summary = {**step_response_metrics(logger.rows), **_summary(logger.rows, config)}
     output_path = logger.save(summary=summary, notes=_notes(config))
     if plot:
         _save_plots(output_path, logger.rows, plot_selection or config.get("plots"))
@@ -215,7 +217,7 @@ def _save_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSe
             "position.png",
             "PID Position Tracking",
             "position [m]",
-            ["position", "target_position"],
+            ["position", "measured_position", "target_position"],
         ),
         ("velocity.png", "Plant Velocity", "velocity [m/s]", ["velocity"]),
         ("acceleration.png", "Plant Acceleration", "acceleration [m/s^2]", ["acceleration"]),
@@ -251,6 +253,21 @@ def _limits(value: Any) -> tuple[float | None, float | None]:
 
 def _optional_float(value: Any) -> float | None:
     return None if value is None else float(value)
+
+
+def _summary(rows: list[dict[str, Any]], config: dict[str, Any]) -> dict[str, Any]:
+    if not rows:
+        return {}
+    measurement_errors = [
+        abs(float(row["measurement_error"]))
+        for row in rows
+        if "measurement_error" in row
+    ]
+    return {
+        "measurement_noise_std": float(config.get("measurement_noise_std", 0.0)),
+        "control_delay": float(config.get("control_delay", 0.0)),
+        "max_abs_measurement_error": max(measurement_errors) if measurement_errors else 0.0,
+    }
 
 
 def _notes(config: dict[str, Any]) -> str:
