@@ -11,4 +11,4 @@ goto run
 python "scripts\bootstrap_and_run.py" --setup-only
 
 :run
-".venv\Scripts\python.exe" -m mclab batch lab04_wall_compare
+".venv\Scripts\python.exe" -m mclab batch lab04_wall_compare --open-report

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -30,6 +32,7 @@ class CliImportTests(unittest.TestCase):
                 "--output-dir",
                 "outputs/demo_batch",
                 "--no-plot",
+                "--open-report",
                 "--seed",
                 "7",
             ]
@@ -38,7 +41,24 @@ class CliImportTests(unittest.TestCase):
         self.assertEqual(args.batch_name, "lab02_pid_compare")
         self.assertEqual(args.output_dir, "outputs/demo_batch")
         self.assertTrue(args.no_plot)
+        self.assertTrue(args.open_report)
         self.assertEqual(args.seed, 7)
+
+    def test_cli_opens_batch_report_when_requested(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "batch"
+            output.mkdir()
+            report = output / "report.html"
+            report.write_text("<html></html>", encoding="utf-8")
+
+            with (
+                patch("mclab.cli.run_batch", return_value=output) as runner,
+                patch("mclab.cli._open_path") as opener,
+            ):
+                self.assertEqual(main(["batch", "lab01_msd_compare", "--open-report"]), 0)
+
+            runner.assert_called_once()
+            opener.assert_called_once_with(report)
 
     def test_cli_accepts_viewer_quality_of_life_options(self) -> None:
         default_args = build_parser().parse_args(

@@ -10,4 +10,4 @@ goto run
 python "scripts\bootstrap_and_run.py" --setup-only
 
 :run
-".venv\Scripts\python.exe" -m mclab batch lab01_msd_compare
+".venv\Scripts\python.exe" -m mclab batch lab01_msd_compare --open-report

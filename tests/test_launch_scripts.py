@@ -52,6 +52,7 @@ class LaunchScriptTests(unittest.TestCase):
             with self.subTest(filename=filename):
                 text = (ROOT / filename).read_text(encoding="utf-8")
                 self.assertIn(f"-m mclab batch {batch_name}", text)
+                self.assertIn("--open-report", text)
                 self.assertNotIn("--viewer", text)
                 self.assertIn("scripts\\bootstrap_and_run.py", text)
 
