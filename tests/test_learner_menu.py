@@ -29,6 +29,8 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "1D interactive"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Neutral hold"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Reach X"), labels)
+        self.assertIn(("Lab04 Panda Manipulator", "Cartesian reach"), labels)
+        self.assertIn(("Lab04 Panda Manipulator", "Cartesian interactive"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Joint target"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Soft wall"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Stiff wall"), labels)

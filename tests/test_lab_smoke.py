@@ -76,3 +76,14 @@ class LabSmokeTests(unittest.TestCase):
             output = lab04_panda.run(config, output_dir=Path(tmp) / "lab04_wall", headless=True)
             self.assertTrue((output / "log.csv").exists())
             self.assertTrue((output / "summary.json").exists())
+
+    def test_lab04_cartesian_reach_runs_headless_when_assets_are_available(self) -> None:
+        if not (ROOT / "third_party/mujoco_menagerie/franka_emika_panda/scene.xml").exists():
+            self.skipTest("MuJoCo Menagerie has not been fetched")
+
+        config = load_config("configs/lab04_panda/cartesian_reach.yaml")
+        config["sim_time"] = 0.02
+        with tempfile.TemporaryDirectory() as tmp:
+            output = lab04_panda.run(config, output_dir=Path(tmp) / "lab04_cartesian", headless=True)
+            self.assertTrue((output / "log.csv").exists())
+            self.assertTrue((output / "summary.json").exists())

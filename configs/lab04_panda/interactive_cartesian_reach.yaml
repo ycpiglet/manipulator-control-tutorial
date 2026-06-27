@@ -1,0 +1,24 @@
+model_path: third_party/mujoco_menagerie/franka_emika_panda/scene.xml
+mode: cartesian_reach
+sim_time: 120.0
+dt: 0.002
+home_q: [0.0, 0.0, 0.0, -1.57079, 0.0, 1.57079, -0.7853]
+finger_q: [0.04, 0.04]
+gripper_ctrl: 255.0
+torque_constant: 1.0
+controlled_joint_index: 3
+trajectory:
+  type: minimum_jerk
+  start: 0.0
+  end: 1.0
+  duration: 2.6
+  start_time: 0.4
+cartesian_target:
+  position: [0.60, 0.10, 0.59]
+  gain: 1.0
+  max_step: 0.06
+  max_joint_offset: 0.12
+  damped_least_squares: 0.08
+interaction:
+  panel: true
+  live_tuning: true

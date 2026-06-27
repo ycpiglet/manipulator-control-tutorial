@@ -143,7 +143,7 @@ Windows PowerShell에서 가장 쉬운 방법:
 | Lab01 | underdamped, overdamped, high/low stiffness, interactive pull |
 | Lab02 | low/high P gain, PD damping, saturation, windup vs anti-windup, interactive disturbance |
 | Lab03 | 2DOF joint-space, 2DOF task-space, singularity, interactive XY target tuning, step/trapezoidal/minimum-jerk/S-curve profiles |
-| Lab04 | neutral hold, joint trajectories, hand X motion, soft/stiff virtual wall, joint target nudge, virtual wall |
+| Lab04 | neutral hold, joint trajectories, hand X motion, Cartesian reach, soft/stiff virtual wall, joint target nudge, virtual wall |
 
 개별 랩을 바로 실행하고 싶으면:
 
@@ -321,7 +321,7 @@ python -m mclab run lab02 --config configs/lab02_pid/my_pid_test.yaml --headless
 | Lab01 MSD | `configs/lab01_msd/*.yaml` | `mass`, `damping`, `stiffness`, `initial_position`, `force_input.magnitude` |
 | Lab02 PID | `configs/lab02_pid/*.yaml` | `controller.kp`, `controller.ki`, `controller.kd`, `controller.output_limit`, `measurement_noise_std`, `control_delay` |
 | Lab03 2DOF/Trajectory | `configs/lab03_2dof/*.yaml` | `mode`, `initial_q`, `target_q`, `target_xy`, `trajectory.type`, `tracking_controller.kp`, `tracking_controller.task_kp`, `tracking_controller.task_kd` |
-| Lab04 Panda | `configs/lab04_panda/*.yaml` | `controlled_joint_index`, `trajectory.end`, `virtual_wall.wall_x`, `virtual_wall.stiffness`, `virtual_wall.damping`, `virtual_wall.force_retreat_gain` |
+| Lab04 Panda | `configs/lab04_panda/*.yaml` | `controlled_joint_index`, `trajectory.end`, `cartesian_target.position`, `virtual_wall.wall_x`, `virtual_wall.stiffness`, `virtual_wall.damping`, `virtual_wall.force_retreat_gain` |
 
 Plot preset:
 
@@ -330,7 +330,7 @@ Plot preset:
 | Lab01 MSD | `essential`, `energy` |
 | Lab02 PID | `essential`, `pid` |
 | Lab03 2DOF/Trajectory | `essential`, `profile`, `joint`, `task`, `singularity`, `control` |
-| Lab04 Panda | `essential`, `control`, `cartesian`, `wall`, `wall_compare` |
+| Lab04 Panda | `essential`, `control`, `cartesian`, `cartesian_reach`, `wall`, `wall_compare` |
 
 Lab02 PID 예시:
 
@@ -369,6 +369,16 @@ virtual_wall:
   stiffness: 260.0
   damping: 12.0
   force_retreat_gain: 0.00008
+```
+
+Lab04 Cartesian reach 예시:
+
+```yaml
+mode: cartesian_reach
+cartesian_target:
+  position: [0.60, 0.10, 0.59]
+  gain: 1.0
+  max_step: 0.06
 ```
 
 ### 결과 확인
@@ -427,7 +437,7 @@ Main comparison scenarios in the menu:
 | Lab01 | underdamped, overdamped, high/low stiffness, interactive pull |
 | Lab02 | low/high P gain, PD damping, saturation, windup vs anti-windup, interactive disturbance |
 | Lab03 | 2DOF joint-space, 2DOF task-space, singularity, interactive XY target tuning, step/trapezoidal/minimum-jerk/S-curve profiles |
-| Lab04 | neutral hold, joint trajectories, hand X motion, soft/stiff virtual wall, joint target nudge, virtual wall |
+| Lab04 | neutral hold, joint trajectories, hand X motion, Cartesian reach, soft/stiff virtual wall, joint target nudge, virtual wall |
 
 To launch individual labs directly:
 
@@ -605,7 +615,7 @@ Common parameters:
 | Lab01 MSD | `configs/lab01_msd/*.yaml` | `mass`, `damping`, `stiffness`, `initial_position`, `force_input.magnitude` |
 | Lab02 PID | `configs/lab02_pid/*.yaml` | `controller.kp`, `controller.ki`, `controller.kd`, `controller.output_limit`, `measurement_noise_std`, `control_delay` |
 | Lab03 2DOF/Trajectory | `configs/lab03_2dof/*.yaml` | `mode`, `initial_q`, `target_q`, `target_xy`, `trajectory.type`, `tracking_controller.kp`, `tracking_controller.task_kp`, `tracking_controller.task_kd` |
-| Lab04 Panda | `configs/lab04_panda/*.yaml` | `controlled_joint_index`, `trajectory.end`, `virtual_wall.wall_x`, `virtual_wall.stiffness`, `virtual_wall.damping`, `virtual_wall.force_retreat_gain` |
+| Lab04 Panda | `configs/lab04_panda/*.yaml` | `controlled_joint_index`, `trajectory.end`, `cartesian_target.position`, `virtual_wall.wall_x`, `virtual_wall.stiffness`, `virtual_wall.damping`, `virtual_wall.force_retreat_gain` |
 
 Plot presets:
 
@@ -614,7 +624,7 @@ Plot presets:
 | Lab01 MSD | `essential`, `energy` |
 | Lab02 PID | `essential`, `pid` |
 | Lab03 2DOF/Trajectory | `essential`, `profile`, `joint`, `task`, `singularity`, `control` |
-| Lab04 Panda | `essential`, `control`, `cartesian`, `wall`, `wall_compare` |
+| Lab04 Panda | `essential`, `control`, `cartesian`, `cartesian_reach`, `wall`, `wall_compare` |
 
 Lab02 PID example:
 
@@ -653,6 +663,16 @@ virtual_wall:
   stiffness: 260.0
   damping: 12.0
   force_retreat_gain: 0.00008
+```
+
+Lab04 Cartesian reach example:
+
+```yaml
+mode: cartesian_reach
+cartesian_target:
+  position: [0.60, 0.10, 0.59]
+  gain: 1.0
+  max_step: 0.06
 ```
 
 ### Reading Outputs

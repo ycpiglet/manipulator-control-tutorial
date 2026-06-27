@@ -8,6 +8,7 @@ The Menagerie Panda model is position-actuated. In this implementation:
 - `tau_cmd` is logged from MuJoCo `data.actuator_force`.
 - `current_proxy = tau_cmd / Kt`, with `Kt = 1.0` by default.
 - End-effector position is logged from the `hand` body.
+- Cartesian reach mode maps hand XYZ error to small joint target offsets with a damped least-squares Jacobian solve.
 - The virtual wall demo computes a repulsive task-space force and maps it to a small target-joint retreat for stable educational behavior.
 
 For `configs/lab04_panda/joint_pd.yaml`, the main controlled variable is joint 4, represented by `controlled_joint_index: 3`.
@@ -18,6 +19,7 @@ Read the plots in this order:
 2. `error.png`: check whether the joint tracking error remains small.
 3. `torque.png` or `current_proxy.png`: check how much actuator effort the motion required.
 4. `end_effector.png`: check how the joint motion moved the hand in Cartesian space.
+5. `cartesian_error.png`: for Cartesian reach, check whether the hand reached the XYZ target.
 
 For the virtual wall demos, also check `virtual_wall.png` for wall force, penetration, and retreat distance.
 
@@ -37,6 +39,15 @@ Interactive perturb demo:
 ```
 
 Use the small `MCLab Interaction` window next to the viewer. Click `Joint Target -` or `Joint Target +` to nudge the controlled joint target and observe the position-actuated controller response. Use `Live status` to read target offset, joint error norm, hand X position, wall penetration, and wall force while the viewer is running.
+
+Cartesian reach demo:
+
+```bash
+python -m mclab run lab04 --config configs/lab04_panda/cartesian_reach.yaml --headless --plot --plots cartesian_reach
+python -m mclab run lab04 --config configs/lab04_panda/interactive_cartesian_reach.yaml --viewer --hide-viewer-ui --realtime --pause-at-end --plot --plots cartesian_reach
+```
+
+The automatic demo moves the hand toward a fixed XYZ target. The interactive demo opens sliders for target X/Y/Z and Cartesian gain. Compare `x_ee_*` and `target_x_ee_*` in `end_effector.png`, then check `cartesian_error.png`.
 
 Interactive virtual wall demo:
 
@@ -59,6 +70,7 @@ Headless runs:
 
 ```bash
 python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless --plot
+python -m mclab run lab04 --config configs/lab04_panda/cartesian_reach.yaml --headless --plot --plots cartesian_reach
 python -m mclab run lab04 --config configs/lab04_panda/impedance_wall.yaml --headless --plot
 python -m mclab run lab04 --config configs/lab04_panda/wall_stiff.yaml --headless --plot --plots wall_compare
 ```

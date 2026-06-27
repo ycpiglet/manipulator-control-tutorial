@@ -68,6 +68,7 @@ def run(
 
     _set_initial_state(data, home_q, finger_q)
     mujoco.mj_forward(model, data)
+    initial_ee_position, _, _ = _end_effector_state(mujoco, model, data, handles)
 
     trajectory_config = _trajectory_config(config, home_q)
     trajectory = build_trajectory(trajectory_config)
@@ -82,6 +83,7 @@ def run(
             StatusSpec("joint_offset", "Target offset [rad]"),
             StatusSpec("error_norm", "Joint error norm"),
             StatusSpec("ee_x", "Hand X [m]"),
+            StatusSpec("cartesian_error_cm", "Hand error [cm]"),
             StatusSpec("wall_penetration_cm", "Wall penetration [cm]"),
             StatusSpec("wall_force_x", "Wall force X [N]"),
         ]
@@ -120,7 +122,25 @@ def run(
             ee_position, ee_velocity, jacobian = _end_effector_state(mujoco, model, data, handles)
             wall_force = [0.0, 0.0, 0.0]
             wall_retreat = 0.0
+            target_x_ee = ee_position
+            cartesian_error = [0.0, 0.0, 0.0]
             wall_config = _wall_config(config, live_tuning)
+            if mode in {"cartesian_reach", "task_space", "ee_reach"}:
+                q_before = [float(data.qpos[index]) for index in handles["qpos_indices"]]
+                target_x_ee = _cartesian_target_position(
+                    config,
+                    live_tuning,
+                    initial_ee_position,
+                    float(target.position),
+                )
+                cartesian_error = [target_x_ee[index] - ee_position[index] for index in range(3)]
+                target_q = _apply_cartesian_target_offset(
+                    q_before,
+                    jacobian,
+                    cartesian_error,
+                    config,
+                    live_tuning,
+                )
             if mode in {"impedance_wall", "virtual_wall", "wall"}:
                 wall_force = _virtual_wall_force(ee_position, ee_velocity, wall_config)
                 wall_retreat = _wall_retreat_distance(ee_position, wall_force, wall_config)
@@ -155,10 +175,17 @@ def run(
                 ee_position[0] - float(wall_config.get("wall_x", 10.0)),
             )
             error_norm = _norm(position_errors)
+            if mode in {"cartesian_reach", "task_space", "ee_reach"}:
+                cartesian_error = [target_x_ee[index] - ee_position[index] for index in range(3)]
+            else:
+                target_x_ee = ee_position
+                cartesian_error = [0.0, 0.0, 0.0]
+            cartesian_error_norm = _norm(cartesian_error)
             live_status.set_values(
                 joint_offset=button_joint_offset + tuned_joint_offset,
                 error_norm=error_norm,
                 ee_x=ee_position[0],
+                cartesian_error_cm=100.0 * cartesian_error_norm,
                 wall_penetration_cm=100.0 * wall_penetration,
                 wall_force_x=wall_force[0],
             )
@@ -172,6 +199,10 @@ def run(
                 current_proxy=current_proxy,
                 x_ee=ee_position,
                 xdot_ee=ee_velocity,
+                target_x_ee=target_x_ee,
+                cartesian_error=cartesian_error,
+                cartesian_error_norm=cartesian_error_norm,
+                cartesian_error_cm=100.0 * cartesian_error_norm,
                 position_error=position_errors,
                 error_norm=error_norm,
                 force_virtual=wall_force,
@@ -185,6 +216,10 @@ def run(
                 tuned_wall_damping=float(wall_config.get("damping", 0.0)),
                 tuned_wall_retreat_gain=float(wall_config.get("cartesian_retreat_gain", 0.0)),
                 tuned_wall_force_retreat_gain=float(wall_config.get("force_retreat_gain", 0.0)),
+                tuned_cartesian_gain=live_tuning.value(
+                    "cartesian_gain",
+                    float(dict(config.get("cartesian_target", {})).get("gain", 1.0)),
+                ),
             )
         completed = True
     finally:
@@ -258,6 +293,18 @@ def _live_tuning(config: dict[str, Any]) -> LiveTuning:
     interaction = dict(config.get("interaction", {}))
     if not bool(interaction.get("live_tuning", False)):
         return LiveTuning([])
+    mode = str(config.get("mode", "")).lower()
+    if mode in {"cartesian_reach", "task_space", "ee_reach"}:
+        target_config = dict(config.get("cartesian_target", {}))
+        target_position = _float_list(target_config.get("position", [0.60, 0.10, 0.59]), 3)
+        return LiveTuning(
+            [
+                SliderSpec("target_x", "Target X [m]", 0.35, 0.75, target_position[0], 0.005),
+                SliderSpec("target_y", "Target Y [m]", -0.35, 0.35, target_position[1], 0.005),
+                SliderSpec("target_z", "Target Z [m]", 0.35, 0.80, target_position[2], 0.005),
+                SliderSpec("cartesian_gain", "Cartesian gain", 0.2, 2.0, float(target_config.get("gain", 1.0)), 0.05),
+            ]
+        )
     wall_config = dict(config.get("virtual_wall", {}))
     return LiveTuning(
         [
@@ -289,6 +336,53 @@ def _live_tuning(config: dict[str, Any]) -> LiveTuning:
             ),
         ]
     )
+
+
+def _cartesian_target_position(
+    config: dict[str, Any],
+    live_tuning: LiveTuning,
+    initial_ee_position: list[float],
+    alpha: float,
+) -> list[float]:
+    target_config = dict(config.get("cartesian_target", {}))
+    if "position" in target_config:
+        goal = _float_list(target_config["position"], 3)
+    else:
+        offset = _float_list(target_config.get("offset", [0.05, 0.10, -0.03]), 3)
+        goal = [initial_ee_position[index] + offset[index] for index in range(3)]
+    goal = [
+        live_tuning.value("target_x", goal[0]),
+        live_tuning.value("target_y", goal[1]),
+        live_tuning.value("target_z", goal[2]),
+    ]
+    alpha = max(0.0, min(1.0, alpha))
+    return [initial_ee_position[index] + alpha * (goal[index] - initial_ee_position[index]) for index in range(3)]
+
+
+def _apply_cartesian_target_offset(
+    q: list[float],
+    jacobian: Any,
+    cartesian_error: list[float],
+    config: dict[str, Any],
+    live_tuning: LiveTuning,
+) -> list[float]:
+    import numpy as np
+
+    target_config = dict(config.get("cartesian_target", {}))
+    gain = live_tuning.value("cartesian_gain", float(target_config.get("gain", 1.0)))
+    max_step = float(target_config.get("max_step", 0.08))
+    damping = float(target_config.get("damped_least_squares", 0.08))
+    desired_task_offset = np.asarray([gain * value for value in cartesian_error], dtype=float)
+    norm = float(np.linalg.norm(desired_task_offset))
+    if norm > max_step:
+        desired_task_offset *= max_step / norm
+    task_matrix = jacobian @ jacobian.T + (damping**2) * np.eye(3)
+    joint_offset = jacobian.T @ np.linalg.solve(task_matrix, desired_task_offset)
+    max_joint_offset = float(target_config.get("max_joint_offset", 0.18))
+    adjusted = q.copy()
+    for index, delta_q in enumerate(joint_offset):
+        adjusted[index] += max(-max_joint_offset, min(max_joint_offset, float(delta_q)))
+    return adjusted
 
 
 def _wall_config(config: dict[str, Any], live_tuning: LiveTuning) -> dict[str, Any]:
@@ -403,6 +497,8 @@ def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "max_wall_penetration_cm": max(float(row.get("wall_penetration_cm", 0.0)) for row in rows),
         "max_wall_retreat_cm": max(float(row.get("wall_retreat_cm", 0.0)) for row in rows),
         "max_abs_virtual_wall_force": max(abs(float(row.get("force_virtual_0", 0.0))) for row in rows),
+        "max_cartesian_error_cm": max(float(row.get("cartesian_error_cm", 0.0)) for row in rows),
+        "final_cartesian_error_cm": rows[-1].get("cartesian_error_cm", 0.0),
         "final_x_ee_0": rows[-1].get("x_ee_0"),
         "final_x_ee_1": rows[-1].get("x_ee_1"),
         "final_x_ee_2": rows[-1].get("x_ee_2"),
@@ -419,8 +515,14 @@ def _save_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSe
         ("velocity.png", "Panda Joint Velocities", "joint velocity [rad/s]", [f"qdot_{index}" for index in range(7)]),
         ("torque.png", "Panda Actuator Force", "force / torque proxy", tau_keys),
         ("current_proxy.png", "Panda Current Proxy", "current proxy", current_keys),
-        ("end_effector.png", "End-Effector Position", "position [m]", ["x_ee_0", "x_ee_1", "x_ee_2"]),
+        (
+            "end_effector.png",
+            "End-Effector Position",
+            "position [m]",
+            ["x_ee_0", "x_ee_1", "x_ee_2", "target_x_ee_0", "target_x_ee_1", "target_x_ee_2"],
+        ),
         ("error.png", "Joint Tracking Error Norm", "norm [rad]", ["error_norm"]),
+        ("cartesian_error.png", "Cartesian Tracking Error", "error [cm]", ["cartesian_error_cm"]),
         (
             "virtual_wall.png",
             "Virtual Wall Response",
@@ -437,7 +539,8 @@ def _save_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSe
     presets = {
         "essential": ["position", "error"],
         "control": ["position", "error", "torque", "current_proxy"],
-        "cartesian": ["end_effector", "torque", "error"],
+        "cartesian": ["end_effector", "cartesian_error", "torque", "error"],
+        "cartesian_reach": ["end_effector", "cartesian_error", "torque", "current_proxy", "error"],
         "wall": ["end_effector", "virtual_wall", "torque", "error"],
         "wall_compare": ["end_effector", "virtual_wall", "wall_parameters", "torque", "error"],
     }
@@ -451,6 +554,7 @@ This lab uses the MuJoCo Menagerie Franka Emika Panda model.
 
 The Menagerie model is position-actuated, so `ctrl` is a target joint position.
 The logged `tau_cmd` and `current_proxy` come from MuJoCo actuator force output.
+Cartesian reach mode uses damped-least-squares Jacobian target offsets on top of the position actuators.
 
 - mode: {config.get("mode", "joint_trajectory")}
 - model_path: {config.get("model_path", "third_party/mujoco_menagerie/franka_emika_panda/scene.xml")}
