@@ -8,6 +8,7 @@ goto run
 
 :setup
 python "scripts\bootstrap_and_run.py" --setup-only
+if errorlevel 1 exit /b %errorlevel%
 
 :run
 ".venv\Scripts\python.exe" -m mclab run lab03 --config configs\lab03_2dof\joint_space_2dof.yaml --viewer --realtime --pause-at-end --plot --plots essential --open-report

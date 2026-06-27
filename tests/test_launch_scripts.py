@@ -38,8 +38,21 @@ class LaunchScriptTests(unittest.TestCase):
                     f"--viewer --realtime --pause-at-end --plot --plots {plot_selection}",
                     text,
                 )
+                self.assertNotIn("--show-viewer-ui", text)
                 self.assertIn("--open-report", text)
                 self.assertIn("scripts\\bootstrap_and_run.py", text)
+
+    def test_launchers_stop_when_setup_fails(self) -> None:
+        setup_command = 'scripts\\bootstrap_and_run.py" --setup-only'
+        guard_command = "if errorlevel 1 exit /b %errorlevel%"
+
+        for path in sorted(ROOT.glob("*.cmd")):
+            with self.subTest(filename=path.name):
+                text = path.read_text(encoding="utf-8")
+                if setup_command not in text:
+                    continue
+                self.assertIn(guard_command, text)
+                self.assertLess(text.index(setup_command), text.index(guard_command))
 
     def test_batch_launchers_use_headless_comparison_batches(self) -> None:
         expected = {

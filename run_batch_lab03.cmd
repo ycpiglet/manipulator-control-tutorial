@@ -8,6 +8,7 @@ goto run
 
 :setup
 python "scripts\bootstrap_and_run.py" --setup-only
+if errorlevel 1 exit /b %errorlevel%
 
 :run
 ".venv\Scripts\python.exe" -m mclab batch lab03_2dof_compare --open-report
