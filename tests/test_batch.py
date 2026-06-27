@@ -189,6 +189,8 @@ class BatchTests(unittest.TestCase):
             self.assertIn("Metric Highlights", report_html)
             self.assertIn("overshoot percent", report_html)
             self.assertIn("high gain", report_html)
+            self.assertIn("Baseline Changes", report_html)
+            self.assertIn("+12.5", report_html)
             self.assertIn("raise `controller.kd`", report_html)
             self.assertIn("Parameter Differences", report_html)
             self.assertIn("controller.kp", report_html)

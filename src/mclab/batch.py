@@ -405,6 +405,7 @@ def _render_batch_report(output: Path, guide: BatchGuide, rows: list[dict[str, A
     next_experiments = _next_experiments(guide)
     scenario_cards = "\n".join(_scenario_card(row, metric_keys) for row in rows)
     metric_highlights = _metric_highlights(rows, metric_keys)
+    baseline_changes = _baseline_metric_changes(rows, metric_keys)
     parameter_differences = _parameter_differences(rows)
     comparison_plots = _comparison_plots(output)
     plot_previews = _plot_previews(rows, guide.preview_plots)
@@ -545,6 +546,7 @@ def _render_batch_report(output: Path, guide: BatchGuide, rows: list[dict[str, A
       <div class="scenario-grid">{scenario_cards}</div>
     </section>
     {metric_highlights}
+    {baseline_changes}
     {parameter_differences}
     {comparison_plots}
     {plot_previews}
@@ -818,6 +820,51 @@ def _metric_highlights(rows: list[dict[str, Any]], metric_keys: list[str]) -> st
     )
 
 
+def _baseline_metric_changes(rows: list[dict[str, Any]], metric_keys: list[str]) -> str:
+    if len(rows) < 2 or not metric_keys:
+        return ""
+    baseline = rows[0]
+    baseline_summary = baseline.get("summary", {})
+    baseline_label = str(baseline.get("label", "baseline"))
+    change_rows: list[str] = []
+    for row in rows[1:]:
+        summary = row.get("summary", {})
+        for key in metric_keys:
+            baseline_value = _as_finite_float(baseline_summary.get(key))
+            value = _as_finite_float(summary.get(key))
+            if baseline_value is None or value is None:
+                continue
+            delta = value - baseline_value
+            if abs(delta) < 1e-12:
+                continue
+            percent = _percent_change(delta, baseline_value)
+            change_rows.append(
+                "<tr>"
+                f"<td>{escape(str(row['label']))}</td>"
+                f"<td>{escape(_label(key))}</td>"
+                f"<td>{escape(_format_value(baseline_value))}</td>"
+                f"<td>{escape(_format_value(value))}</td>"
+                f"<td>{escape(_signed_value(delta))}</td>"
+                f"<td>{escape(percent)}</td>"
+                "</tr>"
+            )
+    if not change_rows:
+        return ""
+    return (
+        "<section>"
+        "<h2>Baseline Changes</h2>"
+        f'<p class="muted">Each row compares a scenario against the first scenario, {escape(baseline_label)}. '
+        "Use this as a quick direction-of-change view before inspecting the plots.</p>"
+        '<div class="table-wrap">'
+        "<table>"
+        "<thead><tr><th>Scenario</th><th>Metric</th><th>Baseline</th><th>Scenario</th><th>Delta</th><th>Change</th></tr></thead>"
+        f"<tbody>{''.join(change_rows)}</tbody>"
+        "</table>"
+        "</div>"
+        "</section>"
+    )
+
+
 def _has_different_values(key: str, flattened: list[tuple[str, dict[str, Any]]]) -> bool:
     values = {_normalized_config_value(config.get(key)) for _label_name, config in flattened}
     return len(values) > 1
@@ -1025,6 +1072,21 @@ def _format_value(value: Any) -> str:
     if isinstance(value, (list, tuple, dict)):
         return json.dumps(value, ensure_ascii=False)
     return str(value)
+
+
+def _signed_value(value: float) -> str:
+    formatted = _format_value(abs(value))
+    if value > 0.0:
+        return f"+{formatted}"
+    if value < 0.0:
+        return f"-{formatted}"
+    return formatted
+
+
+def _percent_change(delta: float, baseline_value: float) -> str:
+    if abs(baseline_value) < 1e-12:
+        return "n/a"
+    return f"{100.0 * delta / abs(baseline_value):+.3g}%"
 
 
 def _as_finite_float(value: Any) -> float | None:
