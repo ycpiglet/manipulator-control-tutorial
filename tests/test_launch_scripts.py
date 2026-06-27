@@ -39,3 +39,21 @@ class LaunchScriptTests(unittest.TestCase):
                     text,
                 )
                 self.assertIn("scripts\\bootstrap_and_run.py", text)
+
+    def test_batch_launchers_use_headless_comparison_batches(self) -> None:
+        expected = {
+            "run_batch_lab01.cmd": "lab01_msd_compare",
+            "run_batch_lab02.cmd": "lab02_pid_compare",
+            "run_batch_lab03.cmd": "lab03_2dof_compare",
+            "run_batch_lab04.cmd": "lab04_wall_compare",
+        }
+
+        for filename, batch_name in expected.items():
+            with self.subTest(filename=filename):
+                text = (ROOT / filename).read_text(encoding="utf-8")
+                self.assertIn(f"-m mclab batch {batch_name}", text)
+                self.assertNotIn("--viewer", text)
+                self.assertIn("scripts\\bootstrap_and_run.py", text)
+
+        lab04_text = (ROOT / "run_batch_lab04.cmd").read_text(encoding="utf-8")
+        self.assertIn("third_party\\mujoco_menagerie\\franka_emika_panda\\scene.xml", lab04_text)

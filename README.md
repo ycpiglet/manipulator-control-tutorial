@@ -168,6 +168,15 @@ Windows PowerShell에서 가장 쉬운 방법:
 여러 조건을 한 번에 비교하려면 메뉴의 `Comparison batches` 버튼을 누르거나 CLI batch를 실행합니다.
 
 ```powershell
+.\run_batch_lab01.cmd
+.\run_batch_lab02.cmd
+.\run_batch_lab03.cmd
+.\run_batch_lab04.cmd
+```
+
+동일한 작업을 CLI로 직접 실행하려면:
+
+```powershell
 python -m mclab batch lab01_msd_compare
 python -m mclab batch lab02_pid_compare
 python -m mclab batch lab03_2dof_compare
@@ -475,6 +484,15 @@ Each command opens the matching viewer without side panels and saves only the la
 | `.\run_lab04.cmd` | Panda viewer | `position`, `error` |
 
 To compare several conditions at once, use the `Comparison batches` buttons in the menu or run a CLI batch:
+
+```powershell
+.\run_batch_lab01.cmd
+.\run_batch_lab02.cmd
+.\run_batch_lab03.cmd
+.\run_batch_lab04.cmd
+```
+
+To run the same batches directly through the CLI:
 
 ```powershell
 python -m mclab batch lab01_msd_compare
