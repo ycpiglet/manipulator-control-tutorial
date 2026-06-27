@@ -39,6 +39,7 @@ class BatchGuide:
     focus: str
     questions: tuple[str, ...]
     metric_keys: tuple[str, ...]
+    preview_plots: tuple[str, ...]
 
 
 BATCH_SETS: dict[str, tuple[BatchScenario, ...]] = {
@@ -77,6 +78,7 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             "final_velocity",
             "final_total_energy",
         ),
+        preview_plots=("position.png", "force.png"),
     ),
     "lab02_pid_compare": BatchGuide(
         title="Lab02 PID Control Comparison",
@@ -95,6 +97,7 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             "control_delay",
             "max_abs_measurement_error",
         ),
+        preview_plots=("position.png", "control_force.png", "error.png"),
     ),
 }
 
@@ -182,6 +185,7 @@ def write_batch_report(
             focus="Compare the scenario reports and summary metrics.",
             questions=("Open each run report and compare the response plots.",),
             metric_keys=INDEX_METRIC_KEYS,
+            preview_plots=("position.png",),
         ),
     )
     rows = _batch_rows(output, scenarios)
@@ -219,6 +223,7 @@ def _batch_rows(output: Path, scenarios: tuple[BatchScenario, ...]) -> list[dict
                 "run_dir": run_dir.name,
                 "report": f"{run_dir.name}/report.html" if (run_dir / "report.html").exists() else run_dir.name,
                 "summary": summary,
+                "plots": _available_plot_paths(run_dir),
             }
         )
     return rows
@@ -228,6 +233,7 @@ def _render_batch_report(output: Path, guide: BatchGuide, rows: list[dict[str, A
     metric_keys = _display_metric_keys(guide, rows)
     question_items = "\n".join(f"<li>{escape(question)}</li>" for question in guide.questions)
     scenario_cards = "\n".join(_scenario_card(row, metric_keys) for row in rows)
+    plot_previews = _plot_previews(rows, guide.preview_plots)
     metric_headers = "".join(f"<th>{escape(_label(key))}</th>" for key in metric_keys)
     metric_rows = "\n".join(_metric_row(row, metric_keys) for row in rows)
     if not metric_rows:
@@ -301,6 +307,28 @@ def _render_batch_report(output: Path, guide: BatchGuide, rows: list[dict[str, A
       margin-top: 7px;
       font-size: 13px;
     }}
+    .preview-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 12px;
+    }}
+    .preview {{
+      border: 1px solid #e0e4ea;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #ffffff;
+    }}
+    .preview img {{
+      display: block;
+      width: 100%;
+      height: auto;
+    }}
+    .preview figcaption {{
+      border-top: 1px solid #e0e4ea;
+      padding: 8px 10px;
+      color: #596270;
+      font-size: 13px;
+    }}
     .table-wrap {{
       overflow-x: auto;
     }}
@@ -336,6 +364,7 @@ def _render_batch_report(output: Path, guide: BatchGuide, rows: list[dict[str, A
       <h2>Scenario Cards</h2>
       <div class="scenario-grid">{scenario_cards}</div>
     </section>
+    {plot_previews}
     <section>
       <h2>Metric Table</h2>
       <div class="table-wrap">
@@ -374,6 +403,39 @@ def _scenario_card(row: dict[str, Any], metric_keys: list[str]) -> str:
     )
 
 
+def _plot_previews(rows: list[dict[str, Any]], preview_plots: tuple[str, ...]) -> str:
+    figures: list[str] = []
+    for row in rows:
+        plots = row.get("plots", {})
+        if not isinstance(plots, dict):
+            continue
+        for plot_name in preview_plots:
+            plot_path = plots.get(plot_name)
+            if not plot_path:
+                continue
+            figures.append(
+                (
+                    '<figure class="preview">'
+                    f'<a href="{escape(str(row["report"]))}">'
+                    f'<img src="{escape(str(plot_path))}" alt="{escape(str(row["label"]))} {escape(plot_name)}">'
+                    "</a>"
+                    f'<figcaption>{escape(str(row["label"]))} - {escape(plot_name)}</figcaption>'
+                    "</figure>"
+                )
+            )
+            break
+    if not figures:
+        return ""
+    return (
+        "<section>"
+        "<h2>Plot Previews</h2>"
+        '<div class="preview-grid">'
+        + "\n".join(figures)
+        + "</div>"
+        "</section>"
+    )
+
+
 def _metric_row(row: dict[str, Any], metric_keys: list[str]) -> str:
     summary = row.get("summary", {})
     values = "".join(
@@ -398,6 +460,16 @@ def _display_metric_keys(guide: BatchGuide, rows: list[dict[str, Any]]) -> list[
         for key in keys
         if any(_has_value(summary.get(key)) for summary in summaries)
     ]
+
+
+def _available_plot_paths(run_dir: Path) -> dict[str, str]:
+    plots_dir = run_dir / "plots"
+    if not plots_dir.exists():
+        return {}
+    return {
+        path.name: f"{run_dir.name}/plots/{path.name}"
+        for path in sorted(plots_dir.glob("*.png"))
+    }
 
 
 def _read_json(path: Path) -> dict[str, Any]:

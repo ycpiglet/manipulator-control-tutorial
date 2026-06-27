@@ -56,6 +56,8 @@ class BatchTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (output / "report.html").write_text("<html></html>", encoding="utf-8")
+            (output / "plots").mkdir()
+            (output / "plots" / "position.png").write_bytes(b"fake-png")
             calls.append({"config": config, **kwargs})
             return output
 
@@ -86,6 +88,8 @@ class BatchTests(unittest.TestCase):
             self.assertIn("Learning Focus", report_html)
             self.assertIn("demo scenario", report_html)
             self.assertIn("max abs position", report_html)
+            self.assertIn("Plot Previews", report_html)
+            self.assertIn("demo_scenario/plots/position.png", report_html)
             parent_index = output.parent / "index.html"
             self.assertIn("batch_output/report.html", parent_index.read_text(encoding="utf-8"))
 
