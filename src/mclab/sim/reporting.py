@@ -116,6 +116,7 @@ def _render_report(
 ) -> str:
     title = _report_title(output, summary)
     learning_guide = _learning_guide_section(guide_for_run_summary(summary))
+    reproduce_section = _reproduce_section(summary)
     interaction_section = _interaction_section(interaction_events)
     rows = "\n".join(
         f"<tr><th>{escape(str(key))}</th><td>{escape(_format_value(value))}</td></tr>"
@@ -229,6 +230,21 @@ def _render_report(
       display: block;
       line-height: 1.4;
     }}
+    .command-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 12px;
+    }}
+    .command-block {{
+      border: 1px solid #e0e4ea;
+      border-radius: 8px;
+      padding: 12px;
+      background: #fbfcfd;
+    }}
+    .command-block strong {{
+      display: block;
+      margin-bottom: 8px;
+    }}
     .plot {{
       margin: 0;
       border: 1px solid #e0e4ea;
@@ -265,6 +281,7 @@ def _render_report(
   <main>
     <h1>{escape(title)} report</h1>
     {learning_guide}
+    {reproduce_section}
     {interaction_section}
     <section>
       <h2>Summary</h2>
@@ -315,6 +332,47 @@ def _learning_guide_section(guide: RunGuide | None) -> str:
         "</div>"
         "</section>"
     )
+
+
+def _reproduce_section(summary: dict[str, Any]) -> str:
+    config_path = str(summary.get("config_path") or "").strip()
+    lab_name = _cli_lab_name(str(summary.get("lab_name") or ""))
+    if not config_path or not lab_name:
+        return ""
+    viewer_command = (
+        f"python -m mclab run {lab_name} --config {config_path} "
+        "--viewer --realtime --pause-at-end --plot"
+    )
+    headless_command = f"python -m mclab run {lab_name} --config {config_path} --headless --plot"
+    return (
+        "<section>"
+        "<h2>Reproduce This Run</h2>"
+        '<div class="command-grid">'
+        '<div class="command-block">'
+        "<strong>Watch it live</strong>"
+        f"<pre>{escape(viewer_command)}</pre>"
+        "</div>"
+        '<div class="command-block">'
+        "<strong>Regenerate artifacts</strong>"
+        f"<pre>{escape(headless_command)}</pre>"
+        "</div>"
+        "</div>"
+        '<p class="empty">Edit the YAML config, rerun one command, then compare the new report and plots.</p>'
+        "</section>"
+    )
+
+
+def _cli_lab_name(lab_name: str) -> str:
+    normalized = lab_name.lower()
+    if "lab01" in normalized or "msd" in normalized:
+        return "lab01"
+    if "lab02" in normalized or "pid" in normalized:
+        return "lab02"
+    if "lab03" in normalized or "trajectory" in normalized or "2dof" in normalized:
+        return "lab03"
+    if "lab04" in normalized or "panda" in normalized:
+        return "lab04"
+    return ""
 
 
 def _interaction_section(events: list[dict[str, Any]]) -> str:

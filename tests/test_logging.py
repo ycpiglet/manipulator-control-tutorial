@@ -67,6 +67,15 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Try", html)
             self.assertIn("Change", html)
             self.assertIn("mass, damping, stiffness", html)
+            self.assertIn("Reproduce This Run", html)
+            self.assertIn(
+                "python -m mclab run lab01 --config configs/lab01_msd/default.yaml --viewer",
+                html,
+            )
+            self.assertIn(
+                "python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot",
+                html,
+            )
             self.assertIn("max_position", html)
             self.assertIn("n/a", html)
             self.assertIn("Interaction Log", html)
