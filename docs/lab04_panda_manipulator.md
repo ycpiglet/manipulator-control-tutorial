@@ -21,9 +21,12 @@ Read the plots in this order:
 
 For the virtual wall demo, also check `virtual_wall.png` for wall force and penetration.
 
+The MuJoCo viewer side panels are not the main control interface for this lab. The Python simulation loop writes actuator `ctrl` values from the YAML target at every step. If you edit actuator controls in the viewer, the loop overwrites them during the run; after `--pause-at-end`, physics stepping has stopped.
+
 Run:
 
 ```bash
+.\run_lab04.cmd
 python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless --plot
 python -m mclab run lab04 --config configs/lab04_panda/impedance_wall.yaml --headless --plot
 python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --viewer --realtime --pause-at-end --plot --plots essential
