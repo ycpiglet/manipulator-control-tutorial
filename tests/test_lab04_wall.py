@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import sys
+import types
 import unittest
 from pathlib import Path
+from unittest.mock import Mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from mclab.labs.lab04_panda import _virtual_wall_force, _wall_retreat_distance  # noqa: E402
+from mclab.labs.lab04_panda import _update_viewer_guides, _viewer_guides, _virtual_wall_force, _wall_retreat_distance  # noqa: E402
 
 
 class Lab04WallTests(unittest.TestCase):
@@ -38,3 +40,54 @@ class Lab04WallTests(unittest.TestCase):
 
         self.assertGreater(abs(stiff_force[0]), abs(soft_force[0]))
         self.assertGreater(stiff_retreat, soft_retreat)
+
+    def test_lab04_viewer_guides_default_to_cartesian_and_wall_modes(self) -> None:
+        self.assertTrue(_viewer_guides({}, "cartesian_reach")["enabled"])
+        self.assertTrue(_viewer_guides({}, "impedance_wall")["enabled"])
+        self.assertFalse(_viewer_guides({}, "joint_trajectory")["enabled"])
+        self.assertFalse(_viewer_guides({"viewer_guides": {"enabled": False}}, "cartesian_reach")["enabled"])
+
+    def test_lab04_viewer_guides_draw_target_hand_and_wall(self) -> None:
+        def init_geom(geom, geom_type, size, pos, mat, rgba):
+            geom.geom_type = geom_type
+            geom.pos = [float(value) for value in pos]
+            geom.rgba = [float(value) for value in rgba]
+
+        fake_mujoco = types.SimpleNamespace(
+            mjv_initGeom=Mock(side_effect=init_geom),
+            mjtGeom=types.SimpleNamespace(mjGEOM_SPHERE="sphere", mjGEOM_BOX="box"),
+            mjtCatBit=types.SimpleNamespace(mjCAT_DECOR="decor"),
+        )
+        scene = types.SimpleNamespace(ngeom=0, geoms=[types.SimpleNamespace() for _ in range(4)])
+        viewer = types.SimpleNamespace(user_scn=scene)
+
+        _update_viewer_guides(
+            fake_mujoco,
+            viewer,
+            mode="cartesian_reach",
+            guide_config={"enabled": True, "hand": True, "target": True, "wall": True},
+            ee_position=[0.55, 0.02, 0.58],
+            target_x_ee=[0.60, 0.10, 0.59],
+            wall_config={},
+            wall_penetration=0.0,
+        )
+        self.assertEqual(scene.ngeom, 2)
+        self.assertEqual(scene.geoms[0].geom_type, "sphere")
+        self.assertEqual(scene.geoms[0].pos, [0.60, 0.10, 0.59])
+        self.assertEqual(scene.geoms[1].geom_type, "sphere")
+
+        _update_viewer_guides(
+            fake_mujoco,
+            viewer,
+            mode="impedance_wall",
+            guide_config={"enabled": True, "hand": True, "target": True, "wall": True},
+            ee_position=[0.59, 0.02, 0.58],
+            target_x_ee=[0.59, 0.02, 0.58],
+            wall_config={"wall_x": 0.57},
+            wall_penetration=0.02,
+        )
+        self.assertEqual(scene.ngeom, 2)
+        self.assertEqual(scene.geoms[0].geom_type, "box")
+        self.assertEqual(scene.geoms[0].pos, [0.57, 0.0, 0.58])
+        self.assertEqual(scene.geoms[1].geom_type, "sphere")
+        self.assertEqual(scene.geoms[1].rgba, [1.0, 0.48, 0.10, 0.9])

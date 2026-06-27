@@ -268,7 +268,7 @@ RUN_GUIDES: dict[str, RunGuide] = {
     "configs/lab04_panda/cartesian_reach.yaml": RunGuide(
         "Lab04 Cartesian Reach",
         "Move the Panda hand toward an explicit XYZ target.",
-        "Compare target_x_ee and x_ee in the end-effector plot.",
+        "In the viewer, compare the blue hand point with the green target point.",
         "cartesian_target.position, cartesian_target.gain, cartesian_target.max_step",
         "Cartesian error, actuator force, and joint tracking error.",
         "Move the target by a few centimeters and rerun.",
@@ -292,7 +292,7 @@ RUN_GUIDES: dict[str, RunGuide] = {
     "configs/lab04_panda/interactive_cartesian_reach.yaml": RunGuide(
         "Lab04 Cartesian Interactive",
         "Tune hand target and Cartesian gain while the viewer runs.",
-        "Move Target X/Y/Z sliders in the Interaction window.",
+        "Move Target X/Y/Z sliders and watch the green target point move.",
         "live sliders: Target X/Y/Z, Cartesian gain; YAML: cartesian_target.*",
         "Live hand error and end-effector position.",
         "Use the saved report to compare target and actual hand motion.",
@@ -324,9 +324,9 @@ RUN_GUIDES: dict[str, RunGuide] = {
     "configs/lab04_panda/interactive_virtual_wall.yaml": RunGuide(
         "Lab04 Virtual Wall Interactive",
         "Tune virtual wall parameters while the Panda moves toward the wall.",
-        "Move wall X, then raise stiffness, damping, and retreat gain.",
+        "Move wall X and watch the translucent red wall guide move.",
         "live sliders: wall X, stiffness, damping, retreat gain",
-        "Wall penetration, wall force, and hand X position.",
+        "Wall penetration, wall force, hand X, and orange contact hand marker.",
         "Close the viewer and compare virtual_wall.png with the live settings.",
     ),
     "configs/lab04_panda/impedance_wall.yaml": RunGuide(

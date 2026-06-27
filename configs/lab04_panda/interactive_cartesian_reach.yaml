@@ -22,3 +22,5 @@ cartesian_target:
 interaction:
   panel: true
   live_tuning: true
+viewer_guides:
+  enabled: true

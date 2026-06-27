@@ -98,6 +98,7 @@ CONFIG_HIGHLIGHT_KEYS = (
     "interaction.target_step",
     "interaction.target_limit",
     "interaction.live_tuning",
+    "viewer_guides.enabled",
 )
 
 

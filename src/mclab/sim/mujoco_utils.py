@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from time import perf_counter, sleep
+from collections.abc import Sequence
 from typing import Any
 
 from mclab.config import resolve_project_path
@@ -101,3 +102,76 @@ def pause_viewer_at_end(viewer_handle: Any | None, *, enabled: bool) -> None:
             sleep(1.0 / 30.0)
     except KeyboardInterrupt:
         pass
+
+
+def reset_viewer_overlays(viewer_handle: Any | None) -> None:
+    """Clear per-frame learner guide geoms from a passive viewer."""
+
+    scene = getattr(viewer_handle, "user_scn", None)
+    if scene is not None and hasattr(scene, "ngeom"):
+        scene.ngeom = 0
+
+
+def add_viewer_sphere(
+    mujoco: Any,
+    viewer_handle: Any | None,
+    position: Sequence[float],
+    *,
+    radius: float,
+    rgba: Sequence[float],
+) -> bool:
+    """Add a sphere to the passive viewer's user scene."""
+
+    geom_type = mujoco.mjtGeom.mjGEOM_SPHERE
+    return _add_viewer_geom(mujoco, viewer_handle, geom_type, position, [radius, radius, radius], rgba)
+
+
+def add_viewer_box(
+    mujoco: Any,
+    viewer_handle: Any | None,
+    position: Sequence[float],
+    *,
+    half_size: Sequence[float],
+    rgba: Sequence[float],
+) -> bool:
+    """Add an axis-aligned box to the passive viewer's user scene."""
+
+    geom_type = mujoco.mjtGeom.mjGEOM_BOX
+    return _add_viewer_geom(mujoco, viewer_handle, geom_type, position, half_size, rgba)
+
+
+def _add_viewer_geom(
+    mujoco: Any,
+    viewer_handle: Any | None,
+    geom_type: Any,
+    position: Sequence[float],
+    size: Sequence[float],
+    rgba: Sequence[float],
+) -> bool:
+    scene = getattr(viewer_handle, "user_scn", None)
+    geoms = getattr(scene, "geoms", None)
+    if scene is None or geoms is None or not hasattr(scene, "ngeom"):
+        return False
+
+    geom_index = int(scene.ngeom)
+    if geom_index >= len(geoms):
+        return False
+
+    import numpy as np
+
+    geom = geoms[geom_index]
+    mujoco.mjv_initGeom(
+        geom,
+        geom_type,
+        np.asarray(size, dtype=float),
+        np.asarray(position, dtype=float),
+        np.eye(3, dtype=float).reshape(-1),
+        np.asarray(rgba, dtype=float),
+    )
+    category = getattr(getattr(mujoco, "mjtCatBit", None), "mjCAT_DECOR", None)
+    if category is not None and hasattr(geom, "category"):
+        geom.category = category
+    if hasattr(geom, "transparent") and len(rgba) >= 4:
+        geom.transparent = 1 if float(rgba[3]) < 1.0 else 0
+    scene.ngeom = geom_index + 1
+    return True

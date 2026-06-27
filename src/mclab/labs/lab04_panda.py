@@ -18,9 +18,12 @@ from mclab.sim.interaction import (
 )
 from mclab.sim.logging import RunLogger
 from mclab.sim.mujoco_utils import (
+    add_viewer_box,
+    add_viewer_sphere,
     load_model_and_data,
     maybe_launch_viewer,
     pause_viewer_at_end,
+    reset_viewer_overlays,
     sync_viewer,
     viewer_clock,
     viewer_is_running,
@@ -67,6 +70,7 @@ def run(
     finger_q = _float_list(config.get("finger_q", DEFAULT_FINGER_Q), 2)
     kt = float(config.get("torque_constant", 1.0))
     mode = str(config.get("mode", "joint_trajectory")).lower()
+    viewer_guides = _viewer_guides(config, mode)
 
     _set_initial_state(data, home_q, finger_q)
     mujoco.mj_forward(model, data)
@@ -163,13 +167,6 @@ def run(
             target_q = _clip_to_ctrl_range(model, handles["actuator_ids"], target_q)
             _apply_arm_control(data, handles["actuator_ids"], target_q, config)
             mujoco.mj_step(model, data)
-            sync_viewer(
-                viewer_handle,
-                data,
-                realtime=realtime,
-                wall_start=wall_start,
-                sim_start=sim_start,
-            )
 
             q = [float(data.qpos[index]) for index in handles["qpos_indices"]]
             qdot = [float(data.qvel[index]) for index in handles["dof_indices"]]
@@ -228,6 +225,23 @@ def run(
                     float(dict(config.get("cartesian_target", {})).get("gain", 1.0)),
                 ),
             )
+            _update_viewer_guides(
+                mujoco,
+                viewer_handle,
+                mode=mode,
+                guide_config=viewer_guides,
+                ee_position=ee_position,
+                target_x_ee=target_x_ee,
+                wall_config=wall_config,
+                wall_penetration=wall_penetration,
+            )
+            sync_viewer(
+                viewer_handle,
+                data,
+                realtime=realtime,
+                wall_start=wall_start,
+                sim_start=sim_start,
+            )
         completed = True
     finally:
         if interaction_panel is not None:
@@ -247,6 +261,64 @@ def run(
     if plot:
         _save_plots(output_path, logger.rows, plot_selection or config.get("plots"))
     return resolve_project_path(output_path)
+
+
+def _viewer_guides(config: dict[str, Any], mode: str) -> dict[str, bool]:
+    guide_config = dict(config.get("viewer_guides", {}))
+    default_enabled = mode in {"cartesian_reach", "task_space", "ee_reach", "impedance_wall", "virtual_wall", "wall"}
+    return {
+        "enabled": bool(guide_config.get("enabled", default_enabled)),
+        "hand": bool(guide_config.get("hand", True)),
+        "target": bool(guide_config.get("target", True)),
+        "wall": bool(guide_config.get("wall", True)),
+    }
+
+
+def _update_viewer_guides(
+    mujoco: Any,
+    viewer_handle: Any | None,
+    *,
+    mode: str,
+    guide_config: dict[str, bool],
+    ee_position: list[float],
+    target_x_ee: list[float],
+    wall_config: dict[str, Any],
+    wall_penetration: float,
+) -> None:
+    if viewer_handle is None:
+        return
+    reset_viewer_overlays(viewer_handle)
+    if not guide_config.get("enabled", True):
+        return
+
+    is_cartesian = mode in {"cartesian_reach", "task_space", "ee_reach"}
+    is_wall = mode in {"impedance_wall", "virtual_wall", "wall"}
+    if guide_config.get("wall", True) and is_wall:
+        wall_x = float(wall_config.get("wall_x", 0.57))
+        add_viewer_box(
+            mujoco,
+            viewer_handle,
+            [wall_x, 0.0, 0.58],
+            half_size=[0.006, 0.36, 0.30],
+            rgba=[1.0, 0.18, 0.12, 0.24],
+        )
+    if guide_config.get("target", True) and is_cartesian:
+        add_viewer_sphere(
+            mujoco,
+            viewer_handle,
+            target_x_ee,
+            radius=0.024,
+            rgba=[0.10, 0.82, 0.28, 0.85],
+        )
+    if guide_config.get("hand", True) and (is_cartesian or is_wall):
+        hand_color = [1.0, 0.48, 0.10, 0.90] if wall_penetration > 0.0 else [0.10, 0.42, 1.0, 0.78]
+        add_viewer_sphere(
+            mujoco,
+            viewer_handle,
+            ee_position,
+            radius=0.016,
+            rgba=hand_color,
+        )
 
 
 def _configure_timestep(model: Any, config: dict[str, Any]) -> None:

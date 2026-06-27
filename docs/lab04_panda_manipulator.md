@@ -25,6 +25,8 @@ For the virtual wall demos, also check `virtual_wall.png` for wall force, penetr
 
 The MuJoCo viewer side panels are not the main control interface for this lab. The Python simulation loop writes actuator `ctrl` values from the YAML target at every step. If you edit actuator controls in the viewer, the loop overwrites them during the run; after `--pause-at-end`, physics stepping has stopped. Viewer side panels are hidden by default, and learner-facing interaction uses the `MCLab Interaction` window instead.
 
+In Cartesian reach and virtual wall modes, the viewer adds lightweight visual guides: green is the hand target, blue is the current hand position, orange means the hand is penetrating the virtual wall, and the translucent red box is the virtual wall. Set `viewer_guides.enabled: false` in a config only when you need an uncluttered raw model view.
+
 Run:
 
 ```powershell

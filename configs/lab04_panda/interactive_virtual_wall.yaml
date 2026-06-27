@@ -29,3 +29,5 @@ interaction:
   target_step: 0.04
   target_limit: 0.25
   live_tuning: true
+viewer_guides:
+  enabled: true
