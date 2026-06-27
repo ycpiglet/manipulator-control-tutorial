@@ -96,7 +96,8 @@ class LearnerMenuTests(unittest.TestCase):
             with self.subTest(label=action.label):
                 args = build_batch_args(action)
                 self.assertEqual(args[1:4], ["-m", "mclab", "batch"])
-                self.assertEqual(args[-1], action.batch_name)
+                self.assertIn(action.batch_name, args)
+                self.assertIn("--open-report", args)
                 self.assertNotIn("--viewer", args)
                 self.assertNotIn("--show-viewer-ui", args)
                 text = lesson_text_for_batch(action)

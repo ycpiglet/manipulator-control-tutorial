@@ -473,6 +473,7 @@ def build_batch_args(action: BatchMenuAction) -> list[str]:
         "mclab",
         "batch",
         action.batch_name,
+        "--open-report",
     ]
 
 
