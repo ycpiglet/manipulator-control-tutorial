@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from mclab.config import resolve_project_path
+from mclab.sim.interaction import TargetOffsetControl, maybe_start_interaction_panel
 from mclab.sim.logging import RunLogger
 from mclab.sim.mujoco_utils import (
     load_model_and_data,
@@ -66,7 +67,19 @@ def run(
     if not 0 <= controlled_joint_index < 7:
         raise ValueError("controlled_joint_index must be in [0, 6]")
 
-    viewer_handle = maybe_launch_viewer(mujoco, model, data, enabled=viewer and not headless)
+    target_offset = TargetOffsetControl(config)
+    viewer_handle = maybe_launch_viewer(
+        mujoco,
+        model,
+        data,
+        enabled=viewer and not headless,
+        key_callback=target_offset.key_callback if target_offset.enabled else None,
+    )
+    interaction_panel = (
+        maybe_start_interaction_panel(target_offset, title="MCLab Lab04 Interaction")
+        if viewer and not headless
+        else None
+    )
     wall_start = viewer_clock()
     sim_start = float(data.time)
     completed = False
@@ -76,7 +89,7 @@ def run(
                 break
             target_q = home_q.copy()
             target = trajectory.evaluate(float(data.time))
-            target_q[controlled_joint_index] = target.position
+            target_q[controlled_joint_index] = target.position + target_offset.value()
 
             ee_position, ee_velocity, jacobian = _end_effector_state(mujoco, model, data, handles)
             wall_force = [0.0, 0.0, 0.0]
@@ -129,6 +142,8 @@ def run(
             )
         completed = True
     finally:
+        if interaction_panel is not None:
+            interaction_panel.close()
         if viewer_handle is not None:
             if completed:
                 pause_viewer_at_end(viewer_handle, enabled=pause_at_end)

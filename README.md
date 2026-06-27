@@ -155,7 +155,16 @@ Windows PowerShell에서 가장 쉬운 방법:
 .\run_lab04_interactive.cmd
 ```
 
-Lab01-03 interactive viewer에서는 `A` 또는 왼쪽 화살표가 왼쪽 힘 펄스, `D` 또는 오른쪽 화살표가 오른쪽 힘 펄스입니다. Lab01은 mass를 직접 밀고 놓았을 때의 자유 진동/감쇠를, Lab02는 외란 뒤 PID가 목표 위치로 되돌리는 과정을, Lab03은 trajectory tracking 중 외란 반응을 보여줍니다. Lab04는 MuJoCo viewer의 body select/perturb 기능으로 링크에 외란을 주며 관찰합니다.
+Interactive launcher는 MuJoCo viewer와 함께 작은 `MCLab Interaction` 버튼 창을 엽니다. Lab01-03에서는 `Pull Left` / `Push Right` 버튼이 mass에 짧은 힘 펄스를 넣습니다. 키보드는 viewer 창에 포커스가 있을 때 `A` 또는 왼쪽 화살표, `D` 또는 오른쪽 화살표도 지원합니다. Lab04에서는 버튼으로 제어 중인 관절 목표를 조금씩 이동합니다.
+
+무엇을 보면 되는지:
+
+| Command | Interaction | What to observe |
+|---|---|---|
+| `.\run_lab01_interactive.cmd` | mass에 좌/우 힘 펄스 | 자유 진동, 감쇠, 복원력 |
+| `.\run_lab02_interactive.cmd` | PID plant에 좌/우 외란 | PID가 목표 위치로 복원하는 과정 |
+| `.\run_lab03_interactive.cmd` | trajectory tracker에 좌/우 외란 | 계획 경로에서 벗어난 뒤 회복하는 과정 |
+| `.\run_lab04_interactive.cmd` | Panda 관절 목표 nudge | 목표 관절 위치 변화와 tracking error |
 
 전체 검증을 한 번에 돌리려면:
 
@@ -403,7 +412,16 @@ Use the interactive launchers when learners should disturb the system and watch 
 .\run_lab04_interactive.cmd
 ```
 
-In Lab01-03 interactive viewers, `A` or the left arrow applies a short force pulse to the left; `D` or the right arrow applies one to the right. Lab01 shows free oscillation and damping after a disturbance, Lab02 shows PID disturbance rejection, and Lab03 shows trajectory tracking under disturbance. For Lab04, use the MuJoCo viewer's body select/perturb tools to disturb links while observing the controller response.
+Each interactive launcher opens the MuJoCo viewer plus a small `MCLab Interaction` button window. In Lab01-03, `Pull Left` / `Push Right` applies short force pulses to the mass. Keyboard shortcuts also work when the viewer has focus: `A` or left arrow for left, `D` or right arrow for right. In Lab04, the buttons nudge the controlled joint target.
+
+What to observe:
+
+| Command | Interaction | What to observe |
+|---|---|---|
+| `.\run_lab01_interactive.cmd` | left/right force pulse on the mass | free oscillation, damping, restoring force |
+| `.\run_lab02_interactive.cmd` | left/right disturbance on the PID plant | PID disturbance rejection |
+| `.\run_lab03_interactive.cmd` | left/right disturbance during tracking | recovery after leaving the planned trajectory |
+| `.\run_lab04_interactive.cmd` | Panda joint target nudge | target position changes and tracking error |
 
 To run the full verification suite:
 

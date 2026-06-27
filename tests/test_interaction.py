@@ -7,7 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from mclab.sim.interaction import KeyForcePulse  # noqa: E402
+from mclab.sim.interaction import KeyForcePulse, TargetOffsetControl  # noqa: E402
 
 
 class KeyForcePulseTests(unittest.TestCase):
@@ -28,3 +28,13 @@ class KeyForcePulseTests(unittest.TestCase):
         pulse.update_time(1.0)
         pulse.key_callback(ord("D"))
         self.assertEqual(pulse.value(1.1), 0.0)
+
+    def test_target_offset_control_nudges_and_clips(self) -> None:
+        control = TargetOffsetControl(
+            {"interaction": {"target_nudge": True, "target_step": 0.2, "target_limit": 0.3}}
+        )
+        control.trigger_right()
+        control.trigger_right()
+        self.assertEqual(control.value(), 0.3)
+        control.trigger_left()
+        self.assertAlmostEqual(control.value(), 0.1)

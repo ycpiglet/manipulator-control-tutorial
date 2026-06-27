@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from mclab.config import resolve_project_path
-from mclab.sim.interaction import KeyForcePulse
+from mclab.sim.interaction import KeyForcePulse, maybe_start_interaction_panel
 from mclab.sim.logging import RunLogger
 from mclab.sim.mujoco_utils import (
     load_model_and_data,
@@ -64,6 +64,11 @@ def run(
         enabled=viewer and not headless,
         key_callback=key_force.key_callback if key_force.enabled else None,
     )
+    interaction_panel = (
+        maybe_start_interaction_panel(key_force, title="MCLab Lab03 Interaction")
+        if viewer and not headless
+        else None
+    )
     wall_start = viewer_clock()
     sim_start = float(data.time)
     completed = False
@@ -109,6 +114,8 @@ def run(
             )
         completed = True
     finally:
+        if interaction_panel is not None:
+            interaction_panel.close()
         if viewer_handle is not None:
             if completed:
                 pause_viewer_at_end(viewer_handle, enabled=pause_at_end)

@@ -13,5 +13,6 @@ force_input:
   start_time: 0.0
 interaction:
   key_force: true
-  force: 35.0
-  duration: 0.25
+  panel: true
+  force: 80.0
+  duration: 0.35

@@ -24,7 +24,7 @@ Interactive disturbance demo:
 .\run_lab03_interactive.cmd
 ```
 
-Use `A` / left arrow or `D` / right arrow while the viewer is running to disturb the tracker. Watch how the controller recovers to the planned trajectory or final target.
+Use the small `MCLab Interaction` window next to the viewer. Click `Pull Left` or `Push Right` to disturb the tracker. Keyboard shortcuts also work when the viewer has focus: `A` / left arrow or `D` / right arrow. Watch how the controller recovers to the planned trajectory or final target.
 
 Headless run:
 

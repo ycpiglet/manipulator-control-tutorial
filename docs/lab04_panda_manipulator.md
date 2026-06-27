@@ -35,7 +35,7 @@ Interactive perturb demo:
 .\run_lab04_interactive.cmd
 ```
 
-Use the MuJoCo viewer's body select and perturb tools while the viewer is running to disturb links and observe the position-actuated controller response.
+Use the small `MCLab Interaction` window next to the viewer. Click `Joint Target -` or `Joint Target +` to nudge the controlled joint target and observe the position-actuated controller response.
 
 Headless runs:
 
