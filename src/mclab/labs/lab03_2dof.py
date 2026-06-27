@@ -31,6 +31,9 @@ from mclab.sim.two_link import (
     forward_kinematics,
     inverse_kinematics,
     jacobian,
+    jacobian_condition_number,
+    jacobian_determinant,
+    manipulability,
 )
 from mclab.trajectories import build_trajectory
 
@@ -263,6 +266,8 @@ def _run_two_link_arm(
             StatusSpec("ee_y", "Hand Y [m]"),
             StatusSpec("error", "Error norm"),
             StatusSpec("tau", "Max torque [N m]"),
+            StatusSpec("condition", "Jacobian cond."),
+            StatusSpec("manipulability", "Manipulability"),
         ]
     )
     viewer_handle = maybe_launch_viewer(
@@ -348,6 +353,10 @@ def _run_two_link_arm(
             joint_error_norm = _norm(joint_error)
             task_error_norm = _norm(task_error)
             max_tau = max(abs(value) for value in command["tau"])
+            condition = jacobian_condition_number(q, geometry)
+            condition_capped = _cap_infinite(condition)
+            manipulability_value = manipulability(q, geometry)
+            determinant = jacobian_determinant(q, geometry)
             live_status.set_values(
                 q1=q[0],
                 q2=q[1],
@@ -355,6 +364,8 @@ def _run_two_link_arm(
                 ee_y=x_ee[1],
                 error=task_error_norm if mode in {"task_space", "cartesian", "jacobian"} else joint_error_norm,
                 tau=max_tau,
+                condition=condition_capped,
+                manipulability=manipulability_value,
             )
             logger.record(
                 time=float(data.time),
@@ -371,6 +382,9 @@ def _run_two_link_arm(
                 task_error_norm=task_error_norm,
                 tau_cmd=command["tau"],
                 current_proxy=[value / kt for value in command["tau"]],
+                jacobian_determinant=determinant,
+                manipulability=manipulability_value,
+                jacobian_condition=condition_capped,
                 tuned_kp=command["kp"],
                 tuned_kd=command["kd"],
                 tuned_torque_limit=command["torque_limit"],
@@ -557,12 +571,19 @@ def _save_two_link_plots(output_path: Path, rows: list[dict[str, Any]], selectio
         ("torque.png", "2DOF Joint Torques", "torque [N m]", ["tau_cmd_0", "tau_cmd_1"]),
         ("current_proxy.png", "2DOF Current Proxy", "current proxy", ["current_proxy_0", "current_proxy_1"]),
         ("error.png", "2DOF Tracking Error", "error norm", ["joint_error_norm", "task_error_norm"]),
+        (
+            "singularity.png",
+            "2DOF Jacobian Singularity Metrics",
+            "condition / manipulability",
+            ["jacobian_condition", "manipulability", "jacobian_determinant"],
+        ),
     ]
     presets = {
         "essential": ["position", "end_effector", "torque", "error"],
         "joint": ["position", "torque", "error"],
         "task": ["end_effector", "torque", "error"],
-        "control": ["position", "end_effector", "torque", "current_proxy", "error"],
+        "singularity": ["position", "end_effector", "torque", "singularity", "error"],
+        "control": ["position", "end_effector", "torque", "current_proxy", "singularity", "error"],
     }
     save_time_series_plots(output_path, rows, select_plot_specs(specs, selection, presets=presets))
 
@@ -575,6 +596,8 @@ def _two_link_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "final_joint_error_norm": rows[-1]["joint_error_norm"],
         "max_task_error_norm": max(float(row["task_error_norm"]) for row in rows),
         "final_task_error_norm": rows[-1]["task_error_norm"],
+        "min_manipulability": min(float(row["manipulability"]) for row in rows),
+        "max_jacobian_condition": max(float(row["jacobian_condition"]) for row in rows),
         "max_abs_tau_cmd": max(
             abs(float(value))
             for row in rows
@@ -595,6 +618,7 @@ This run uses a planar two-link MuJoCo arm with torque motors at the shoulder an
 
 Joint-space mode tracks desired joint angles with PD torque control.
 Task-space mode uses a Jacobian-transpose PD command on end-effector position.
+Singularity metrics log Jacobian determinant, manipulability, and condition number.
 """
 
 
@@ -630,6 +654,12 @@ def _gain_pair(value: Any, name: str) -> tuple[float, float]:
 
 def _norm(values: list[float]) -> float:
     return sum(value * value for value in values) ** 0.5
+
+
+def _cap_infinite(value: float, cap: float = 1.0e6) -> float:
+    if value == float("inf"):
+        return cap
+    return min(value, cap)
 
 
 def _save_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSelection = None) -> None:

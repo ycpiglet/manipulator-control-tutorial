@@ -142,7 +142,7 @@ Windows PowerShell에서 가장 쉬운 방법:
 |---|---|
 | Lab01 | underdamped, overdamped, high/low stiffness, interactive pull |
 | Lab02 | low/high P gain, PD damping, saturation, windup vs anti-windup, interactive disturbance |
-| Lab03 | 2DOF joint-space, 2DOF task-space, interactive XY target tuning, step/trapezoidal/minimum-jerk/S-curve profiles |
+| Lab03 | 2DOF joint-space, 2DOF task-space, singularity, interactive XY target tuning, step/trapezoidal/minimum-jerk/S-curve profiles |
 | Lab04 | neutral hold, joint trajectories, hand X motion, joint target nudge, virtual wall |
 
 개별 랩을 바로 실행하고 싶으면:
@@ -329,7 +329,7 @@ Plot preset:
 |---|---|
 | Lab01 MSD | `essential`, `energy` |
 | Lab02 PID | `essential`, `pid` |
-| Lab03 2DOF/Trajectory | `essential`, `profile`, `joint`, `task`, `control` |
+| Lab03 2DOF/Trajectory | `essential`, `profile`, `joint`, `task`, `singularity`, `control` |
 | Lab04 Panda | `essential`, `control`, `cartesian`, `wall` |
 
 Lab02 PID 예시:
@@ -425,7 +425,7 @@ Main comparison scenarios in the menu:
 |---|---|
 | Lab01 | underdamped, overdamped, high/low stiffness, interactive pull |
 | Lab02 | low/high P gain, PD damping, saturation, windup vs anti-windup, interactive disturbance |
-| Lab03 | 2DOF joint-space, 2DOF task-space, interactive XY target tuning, step/trapezoidal/minimum-jerk/S-curve profiles |
+| Lab03 | 2DOF joint-space, 2DOF task-space, singularity, interactive XY target tuning, step/trapezoidal/minimum-jerk/S-curve profiles |
 | Lab04 | neutral hold, joint trajectories, hand X motion, joint target nudge, virtual wall |
 
 To launch individual labs directly:
@@ -612,7 +612,7 @@ Plot presets:
 |---|---|
 | Lab01 MSD | `essential`, `energy` |
 | Lab02 PID | `essential`, `pid` |
-| Lab03 2DOF/Trajectory | `essential`, `profile`, `joint`, `task`, `control` |
+| Lab03 2DOF/Trajectory | `essential`, `profile`, `joint`, `task`, `singularity`, `control` |
 | Lab04 Panda | `essential`, `control`, `cartesian`, `wall` |
 
 Lab02 PID example:
@@ -827,6 +827,7 @@ python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --viewer
 - joint-space trajectory tracking
 - task-space Jacobian-transpose PD tracking
 - interactive task target/stiffness/damping/torque tuning
+- singularity demo with Jacobian determinant, manipulability, and condition number plots
 - joint position, end-effector, torque, current proxy, error plots
 - step, trapezoidal, quintic/minimum-jerk, S-curve trajectory generators
 - legacy 1D trajectory profile configs for comparing target position/velocity/acceleration/jerk

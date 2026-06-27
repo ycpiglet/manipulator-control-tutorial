@@ -185,6 +185,16 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
     ),
     MenuAction(
         group="Lab03 2DOF Arm and Trajectories",
+        label="2DOF singularity",
+        lab_name="lab03",
+        config_path="configs/lab03_2dof/singularity_2dof.yaml",
+        plots="singularity",
+        description="The arm approaches a nearly straight singular posture.",
+        try_this="Compare the singularity plot against the normal joint-space demo.",
+        watch="Jacobian condition number rises while manipulability falls.",
+    ),
+    MenuAction(
+        group="Lab03 2DOF Arm and Trajectories",
         label="2DOF interactive",
         lab_name="lab03",
         config_path="configs/lab03_2dof/interactive_2dof.yaml",

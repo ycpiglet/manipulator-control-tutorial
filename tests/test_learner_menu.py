@@ -22,6 +22,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(("Lab02 PID Control", "Interactive"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF joint-space"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF task-space"), labels)
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF singularity"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF interactive"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "Step profile"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "Minimum jerk"), labels)

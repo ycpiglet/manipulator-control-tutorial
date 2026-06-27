@@ -7,7 +7,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from mclab.sim.two_link import TwoLinkGeometry, forward_kinematics, inverse_kinematics, jacobian  # noqa: E402
+from mclab.sim.two_link import (  # noqa: E402
+    TwoLinkGeometry,
+    forward_kinematics,
+    inverse_kinematics,
+    jacobian,
+    jacobian_condition_number,
+    jacobian_determinant,
+    manipulability,
+)
 
 
 class TwoLinkKinematicsTests(unittest.TestCase):
@@ -38,3 +46,19 @@ class TwoLinkKinematicsTests(unittest.TestCase):
 
         self.assertAlmostEqual(reached[0], target[0], places=6)
         self.assertAlmostEqual(reached[1], target[1], places=6)
+
+    def test_singularity_metrics_detect_straight_arm(self) -> None:
+        geometry = TwoLinkGeometry(link1=0.6, link2=0.45)
+
+        determinant = jacobian_determinant([0.0, 0.0], geometry)
+        condition = jacobian_condition_number([0.0, 0.0], geometry)
+
+        self.assertAlmostEqual(determinant, 0.0)
+        self.assertAlmostEqual(manipulability([0.0, 0.0], geometry), 0.0)
+        self.assertEqual(condition, float("inf"))
+
+    def test_bent_arm_has_positive_manipulability(self) -> None:
+        geometry = TwoLinkGeometry(link1=0.6, link2=0.45)
+
+        self.assertAlmostEqual(manipulability([0.0, 1.57079632679], geometry), 0.27, places=6)
+        self.assertLess(jacobian_condition_number([0.0, 1.57079632679], geometry), 3.0)

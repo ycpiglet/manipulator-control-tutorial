@@ -181,11 +181,12 @@ Implemented so far:
 - torque-actuated MuJoCo model in `models/lab03_2dof/two_link.xml`
 - joint-space and task-space configs
 - interactive task-space target/stiffness/damping/torque tuning
+- singularity demo with Jacobian determinant, manipulability, and condition number logging/plotting
 - standard logs and plots for joint position, end-effector position, torque, current proxy, and error
 
 Remaining likely extension:
 
-- singularity demo and explicit Jacobian conditioning visualization
+- richer singularity comparison lessons, such as damped least-squares IK or condition-aware task control
 
 ### Phase 6 - Lab04 Advanced Control
 
@@ -262,4 +263,4 @@ The full project is course-demo ready when:
 
 ## Next Best Task
 
-Add a Lab03 singularity/conditioning demo or continue expanding Lab04 impedance demos. Do not add web, ROS2, or Isaac Sim scope before the local MuJoCo labs are stable.
+Continue expanding Lab04 impedance demos or add a Lab03 damped-least-squares comparison. Do not add web, ROS2, or Isaac Sim scope before the local MuJoCo labs are stable.

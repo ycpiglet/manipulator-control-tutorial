@@ -26,6 +26,7 @@ Read the plots in this order:
 2. `end_effector.png`: check how joint motion changes hand X/Y position.
 3. `torque.png`: check how much shoulder and elbow torque the motion used.
 4. `error.png`: compare joint-space and task-space error norms.
+5. `singularity.png`: check Jacobian condition number and manipulability when available.
 
 Task-space demo:
 
@@ -38,6 +39,14 @@ This uses analytic FK and a Jacobian-transpose PD command:
 ```text
 tau = J(q)^T * (Kp * (x_target - x_ee) + Kd * (xdot_target - xdot_ee))
 ```
+
+Singularity demo:
+
+```bash
+python -m mclab run lab03 --config configs/lab03_2dof/singularity_2dof.yaml --plot --headless --plots singularity
+```
+
+This moves the arm toward a nearly straight posture. In `singularity.png`, the Jacobian condition number should rise while manipulability falls. That is the visual cue that the same end-effector command becomes harder to realize with well-conditioned joint motion.
 
 Interactive 2DOF demo:
 

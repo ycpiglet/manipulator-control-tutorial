@@ -35,6 +35,34 @@ def jacobian(q: list[float] | tuple[float, float], geometry: TwoLinkGeometry) ->
     )
 
 
+def jacobian_determinant(q: list[float] | tuple[float, float], geometry: TwoLinkGeometry) -> float:
+    matrix = jacobian(q, geometry)
+    return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0]
+
+
+def manipulability(q: list[float] | tuple[float, float], geometry: TwoLinkGeometry) -> float:
+    return abs(jacobian_determinant(q, geometry))
+
+
+def jacobian_condition_number(
+    q: list[float] | tuple[float, float],
+    geometry: TwoLinkGeometry,
+    *,
+    singular_value_floor: float = 1e-9,
+) -> float:
+    matrix = jacobian(q, geometry)
+    a, b = matrix[0]
+    c, d = matrix[1]
+    trace = a * a + b * b + c * c + d * d
+    determinant = (a * d - b * c) ** 2
+    discriminant = max(0.0, trace * trace - 4.0 * determinant)
+    lambda_max = 0.5 * (trace + math.sqrt(discriminant))
+    lambda_min = 0.5 * (trace - math.sqrt(discriminant))
+    if lambda_min <= singular_value_floor * singular_value_floor:
+        return float("inf")
+    return math.sqrt(lambda_max / lambda_min)
+
+
 def end_effector_velocity(
     q: list[float] | tuple[float, float],
     qdot: list[float] | tuple[float, float],
