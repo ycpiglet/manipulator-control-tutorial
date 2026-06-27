@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -11,8 +13,11 @@ from mclab.config import load_config  # noqa: E402
 from mclab.learner_menu import (  # noqa: E402
     MENU_ACTIONS,
     _set_status_after_run,
+    action_config_path,
+    action_doc_path,
     build_run_args,
     lesson_text,
+    open_path,
     parse_run_output_path,
 )
 
@@ -82,6 +87,25 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertIn("Watch:", text)
                 config = load_config(action.config_path)
                 self.assertIn("model_path", config)
+
+    def test_menu_actions_link_to_existing_config_and_lesson_files(self) -> None:
+        for action in MENU_ACTIONS:
+            with self.subTest(label=action.label, config=action.config_path):
+                self.assertTrue(action_config_path(action).exists())
+                self.assertTrue(action_doc_path(action).exists())
+
+    def test_open_path_prefers_vscode_for_files_when_available(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "demo.yaml"
+            path.write_text("lab: demo\n", encoding="utf-8")
+
+            with (
+                patch("mclab.learner_menu.shutil.which", return_value="code"),
+                patch("mclab.learner_menu.subprocess.Popen") as popen,
+            ):
+                open_path(path)
+
+            popen.assert_called_once_with(["code", "-r", str(path)])
 
     def test_parse_run_output_path_detects_completed_run(self) -> None:
         parsed = parse_run_output_path(r"Run complete: C:\tmp\outputs\20260627_150117_lab04_panda")

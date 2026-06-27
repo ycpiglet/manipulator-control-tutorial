@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import subprocess
+import shutil
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -12,6 +13,12 @@ from typing import Any
 from mclab.config import PROJECT_ROOT
 
 RUN_COMPLETE_PREFIX = "Run complete:"
+DOC_PATHS = {
+    "lab01": "docs/lab01_mass_spring_damper.md",
+    "lab02": "docs/lab02_pid_control.md",
+    "lab03": "docs/lab03_trajectory_planning.md",
+    "lab04": "docs/lab04_panda_manipulator.md",
+}
 
 
 @dataclass(frozen=True)
@@ -399,6 +406,22 @@ def parse_run_output_path(line: str) -> Path | None:
     return Path(raw_path)
 
 
+def action_config_path(action: MenuAction) -> Path:
+    return PROJECT_ROOT / action.config_path
+
+
+def action_doc_path(action: MenuAction) -> Path:
+    return PROJECT_ROOT / DOC_PATHS[action.lab_name]
+
+
+def launch_action_config(action: MenuAction) -> subprocess.Popen[Any] | None:
+    return open_path(action_config_path(action))
+
+
+def launch_action_doc(action: MenuAction) -> subprocess.Popen[Any] | None:
+    return open_path(action_doc_path(action))
+
+
 def launch_outputs_folder() -> subprocess.Popen[Any] | None:
     outputs = PROJECT_ROOT / "outputs"
     outputs.mkdir(exist_ok=True)
@@ -415,8 +438,14 @@ def launch_latest_output(latest_output: dict[str, Path | None]) -> subprocess.Po
 def open_path(path: Path) -> subprocess.Popen[Any] | None:
     if not path.exists():
         return None
+    code_command = shutil.which("code")
+    if path.is_file() and code_command:
+        return subprocess.Popen([code_command, "-r", str(path)])
     if sys.platform.startswith("win"):
-        return subprocess.Popen(["explorer", str(path)])
+        import os
+
+        os.startfile(str(path))
+        return None
     if sys.platform == "darwin":
         return subprocess.Popen(["open", str(path)])
     return subprocess.Popen(["xdg-open", str(path)])
@@ -470,7 +499,7 @@ def main() -> int:
     for group, actions in grouped.items():
         frame = ttk.LabelFrame(scroll_frame, text=group, padding=12)
         frame.grid(row=row, column=0, sticky="ew", pady=6)
-        frame.columnconfigure(1, weight=1)
+        frame.columnconfigure(3, weight=1)
         row += 1
         for action_index, action in enumerate(actions):
             ttk.Button(
@@ -485,8 +514,20 @@ def main() -> int:
                     latest_button=latest_button,
                 ),
             ).grid(row=action_index, column=0, sticky="w", padx=(0, 12), pady=4)
-            ttk.Label(frame, text=lesson_text(action), wraplength=680, justify="left").grid(
-                row=action_index, column=1, sticky="w", pady=4
+            ttk.Button(
+                frame,
+                text="Config",
+                width=8,
+                command=lambda selected=action: launch_action_config(selected),
+            ).grid(row=action_index, column=1, sticky="w", padx=(0, 6), pady=4)
+            ttk.Button(
+                frame,
+                text="Lesson",
+                width=8,
+                command=lambda selected=action: launch_action_doc(selected),
+            ).grid(row=action_index, column=2, sticky="w", padx=(0, 12), pady=4)
+            ttk.Label(frame, text=lesson_text(action), wraplength=560, justify="left").grid(
+                row=action_index, column=3, sticky="w", pady=4
             )
 
     bottom = ttk.Frame(outer)
