@@ -58,6 +58,7 @@ from mclab.learner_menu import (  # noqa: E402
     open_editable_path,
     parameter_hint,
     parse_run_output_path,
+    reflection_question,
 )
 
 
@@ -280,10 +281,12 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertIn("Try:", text)
                 self.assertIn("Change:", text)
                 self.assertIn("Values:", text)
+                self.assertIn("Question:", text)
                 self.assertIn("Next:", text)
                 self.assertIn("Compare:", text)
                 self.assertIn("Watch:", text)
                 self.assertTrue(parameter_hint(action))
+                self.assertTrue(reflection_question(action).startswith("Question: "))
                 config = load_config(action.config_path)
                 self.assertIn("model_path", config)
 
@@ -495,6 +498,9 @@ class LearnerMenuTests(unittest.TestCase):
             (action.group, action.label) for action in filter_menu_actions("compare lab04 wall")
         }
         self.assertIn(("Lab04 Panda Manipulator", "Virtual wall"), compare_batch_labels)
+
+        question_labels = {(action.group, action.label) for action in filter_menu_actions("question overshoot")}
+        self.assertIn(("Lab02 PID Control", "High P gain"), question_labels)
 
     def test_experience_filters_group_scenarios_by_learning_mode(self) -> None:
         filter_keys = {filter_option.key for filter_option in EXPERIENCE_FILTERS}

@@ -1141,6 +1141,57 @@ def config_value_preview(action: MenuAction, *, max_items: int = 5) -> str:
     return _config_value_preview(action.config_path, parameter_hint(action), max_items)
 
 
+def reflection_question(action: MenuAction) -> str:
+    label = action.label.lower()
+    config_name = Path(action.config_path).name.lower()
+
+    if action.lab_name == "lab01":
+        if label == "interactive":
+            return "Question: Which slider change most clearly changes oscillation, settling, or energy?"
+        if "damped" in label:
+            return "Question: How does damping change overshoot and settling time?"
+        if "stiffness" in label:
+            return "Question: How does stiffness change motion frequency and peak force?"
+        return "Question: What baseline motion should later damping and stiffness cases be compared against?"
+
+    if action.lab_name == "lab02":
+        if label == "interactive":
+            return "Question: Which live gain change improves tracking without making force noisy or excessive?"
+        if "windup" in label:
+            return "Question: What does integral action do after the actuator has saturated?"
+        if "noise" in label:
+            return "Question: How does noisy measurement appear in the force and error plots?"
+        if "delay" in label:
+            return "Question: How does delayed feedback change overshoot and settling?"
+        if "gain" in label or label == "pd damping":
+            return "Question: Which gain change trades speed for overshoot or smoother force?"
+        return "Question: How do error, effort, and settling define a good PID response?"
+
+    if action.lab_name == "lab03":
+        if "singularity" in label:
+            return "Question: What warning signs show that the arm is near a singular configuration?"
+        if "task" in label or "interactive_2dof" in config_name:
+            return "Question: How do hand error, joint motion, and torque change when the target moves?"
+        if any(term in label for term in ("step", "trapezoid", "minimum jerk", "s-curve")):
+            return "Question: Which trajectory profile gives smoother effort while still tracking well?"
+        if "joint-space" in label:
+            return "Question: How does joint-space tracking differ from controlling the hand target directly?"
+        return "Question: Which signal best reveals tracking quality: position error, hand error, or effort?"
+
+    if action.lab_name == "lab04":
+        if "wall" in label or "wall" in config_name:
+            return "Question: How do wall stiffness and damping change penetration, retreat, and actuator effort?"
+        if "cartesian" in label or "reach" in label:
+            return "Question: How does Cartesian target tuning trade hand error against actuator effort?"
+        if label == "joint target":
+            return "Question: How far can the joint target be nudged before tracking error becomes obvious?"
+        if label == "neutral hold":
+            return "Question: What does a stable full-manipulator baseline look like before motion starts?"
+        return "Question: How does changing a single joint target move the Panda hand?"
+
+    return "Question: What changed, and which plot proves it?"
+
+
 @lru_cache(maxsize=256)
 def _config_value_preview(config_path: str, hint: str, max_items: int) -> str:
     try:
@@ -1238,6 +1289,7 @@ def lesson_text(action: MenuAction) -> str:
         f"Try: {action.try_this}\n"
         f"Change: {parameter_hint(action)}\n"
         f"{config_value_preview(action)}\n"
+        f"{reflection_question(action)}\n"
         f"{action_followup_text(action)}\n"
         f"{action_compare_text(action)}\n"
         f"Watch: {action.watch}"
@@ -1363,6 +1415,7 @@ def _action_matches_terms(action: MenuAction, terms: list[str]) -> bool:
         action.try_this,
         action.watch,
         parameter_hint(action),
+        reflection_question(action),
         " ".join(configured_preset_labels(action.config_path)),
         action_readiness(action).label,
         action_readiness(action).detail,
