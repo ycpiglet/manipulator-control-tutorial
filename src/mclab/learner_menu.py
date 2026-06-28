@@ -69,6 +69,14 @@ LearningPathProgressItem = tuple[LearningPathStep, LearningPathProgress]
 
 
 @dataclass(frozen=True)
+class ActionReadiness:
+    status: str
+    label: str
+    detail: str = ""
+    fix: str = ""
+
+
+@dataclass(frozen=True)
 class ExperienceFilter:
     key: str
     label: str
@@ -825,6 +833,50 @@ def action_doc_path(action: MenuAction) -> Path:
     return PROJECT_ROOT / DOC_PATHS[action.lab_name]
 
 
+def action_readiness(action: MenuAction, root: Path | None = None) -> ActionReadiness:
+    project_root = root if root is not None else PROJECT_ROOT
+    return _action_readiness(action.config_path, str(project_root))
+
+
+@lru_cache(maxsize=256)
+def _action_readiness(config_path: str, root: str) -> ActionReadiness:
+    project_root = Path(root)
+    resolved_config = project_root / config_path
+    if not resolved_config.exists():
+        return ActionReadiness(
+            "fail",
+            "Missing config",
+            config_path,
+            "Restore the YAML file or choose another scenario.",
+        )
+    try:
+        config = load_config(resolved_config)
+    except Exception as exc:
+        return ActionReadiness(
+            "fail",
+            "Config error",
+            f"{config_path}: {exc}",
+            "Open Config and fix the YAML before running.",
+        )
+    model_path = config.get("model_path")
+    if not isinstance(model_path, str) or not model_path.strip():
+        return ActionReadiness(
+            "fail",
+            "Missing model_path",
+            config_path,
+            "Add model_path to the YAML config.",
+        )
+    resolved_model = Path(model_path)
+    if not resolved_model.is_absolute():
+        resolved_model = project_root / resolved_model
+    if not resolved_model.exists():
+        fix = "Run Check setup for diagnosis."
+        if "mujoco_menagerie" in model_path.replace("\\", "/"):
+            fix = "Run `python scripts/bootstrap_and_run.py --setup-only` to fetch MuJoCo Menagerie."
+        return ActionReadiness("fail", "Missing model", model_path, fix)
+    return ActionReadiness("ok", "Ready", f"model: {model_path}")
+
+
 def launch_action_config(action: MenuAction) -> subprocess.Popen[Any] | None:
     return open_editable_path(action_config_path(action))
 
@@ -951,8 +1003,12 @@ def parameter_hint(action: MenuAction) -> str:
 def lesson_text(action: MenuAction) -> str:
     preset_labels = configured_preset_labels(action.config_path)
     presets = f"\nPresets: {', '.join(preset_labels)}" if preset_labels else ""
+    readiness = action_readiness(action)
+    setup_detail = f" - {readiness.detail}" if readiness.status != "ok" and readiness.detail else ""
+    setup_fix = f" Fix: {readiness.fix}" if readiness.status != "ok" and readiness.fix else ""
     return (
         f"{action.description}\n"
+        f"Setup: {readiness.label}{setup_detail}{setup_fix}\n"
         f"Try: {action.try_this}\n"
         f"Change: {parameter_hint(action)}\n"
         f"Watch: {action.watch}"
@@ -1080,6 +1136,8 @@ def _action_matches_terms(action: MenuAction, terms: list[str]) -> bool:
             action.watch,
             parameter_hint(action),
             " ".join(configured_preset_labels(action.config_path)),
+            action_readiness(action).label,
+            action_readiness(action).detail,
             " ".join(action_tags(action)),
             " ".join(tag.replace("-", " ") for tag in action_tags(action)),
         )
@@ -1293,7 +1351,8 @@ def main() -> int:
             frame.columnconfigure(3, weight=1)
             row += 1
             for action_index, action in enumerate(actions):
-                ttk.Button(
+                readiness = action_readiness(action)
+                run_button = ttk.Button(
                     frame,
                     text=action.label,
                     width=16,
@@ -1305,7 +1364,10 @@ def main() -> int:
                         latest_button=latest_button,
                         progress_callback=refresh_learning_path_progress,
                     ),
-                ).grid(row=action_index, column=0, sticky="w", padx=(0, 12), pady=4)
+                )
+                if readiness.status != "ok":
+                    run_button.state(["disabled"])
+                run_button.grid(row=action_index, column=0, sticky="w", padx=(0, 12), pady=4)
                 ttk.Button(
                     frame,
                     text="Config",
@@ -1370,6 +1432,12 @@ def _launch_from_menu(
     latest_button: Any | None = None,
     progress_callback: Callable[[], None] | None = None,
 ) -> None:
+    readiness = action_readiness(action)
+    if readiness.status != "ok":
+        detail = f" - {readiness.detail}" if readiness.detail else ""
+        fix = f" {readiness.fix}" if readiness.fix else ""
+        status.set(f"Cannot start {action.group} - {action.label}: {readiness.label}{detail}.{fix}")
+        return
     process = launch_action(action)
     status.set(f"Started {action.group} - {action.label} (pid {process.pid}). Close the viewer to finish.")
     Thread(

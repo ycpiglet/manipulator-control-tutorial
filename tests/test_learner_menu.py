@@ -12,14 +12,18 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from mclab.config import load_config  # noqa: E402
 from mclab.learner_menu import (  # noqa: E402
+    ActionReadiness,
     BATCH_ACTIONS,
     EXPERIENCE_FILTERS,
     LEARNING_PATH,
     LearningPathProgress,
     MENU_ACTIONS,
+    MenuAction,
+    _launch_from_menu,
     _set_status_after_run,
     _set_status_after_doctor,
     action_config_path,
+    action_readiness,
     action_tags,
     action_doc_path,
     build_batch_args,
@@ -223,12 +227,67 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertTrue(action.try_this)
                 self.assertTrue(action.watch)
                 text = lesson_text(action)
+                self.assertIn("Setup:", text)
                 self.assertIn("Try:", text)
                 self.assertIn("Change:", text)
                 self.assertIn("Watch:", text)
                 self.assertTrue(parameter_hint(action))
                 config = load_config(action.config_path)
                 self.assertIn("model_path", config)
+
+    def test_menu_action_readiness_checks_config_and_model_assets(self) -> None:
+        action = MenuAction(
+            group="Demo",
+            label="Ready demo",
+            lab_name="lab01",
+            config_path="configs/demo/default.yaml",
+            plots="essential",
+            description="Demo",
+            try_this="Run it.",
+            watch="Output.",
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "configs" / "demo").mkdir(parents=True)
+            (root / "configs" / "demo" / "default.yaml").write_text(
+                "model_path: models/demo/scene.xml\n",
+                encoding="utf-8",
+            )
+
+            missing = action_readiness(action, root=root)
+
+        self.assertEqual(missing.label, "Missing model")
+        self.assertIn("models/demo/scene.xml", missing.detail)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "configs" / "demo").mkdir(parents=True)
+            (root / "models" / "demo").mkdir(parents=True)
+            (root / "configs" / "demo" / "default.yaml").write_text(
+                "model_path: models/demo/scene.xml\n",
+                encoding="utf-8",
+            )
+            (root / "models" / "demo" / "scene.xml").write_text("<mujoco/>\n", encoding="utf-8")
+            ready = action_readiness(action, root=root)
+
+        self.assertEqual(ready.status, "ok")
+        self.assertEqual(ready.label, "Ready")
+        self.assertIn("models/demo/scene.xml", ready.detail)
+
+    def test_launch_from_menu_blocks_not_ready_actions(self) -> None:
+        status = FakeStatus()
+        with (
+            patch(
+                "mclab.learner_menu.action_readiness",
+                return_value=ActionReadiness("fail", "Missing model", "demo.xml", "Run Check setup."),
+            ),
+            patch("mclab.learner_menu.launch_action") as launcher,
+        ):
+            _launch_from_menu(MENU_ACTIONS[0], status)
+
+        launcher.assert_not_called()
+        self.assertIn("Cannot start", status.value)
+        self.assertIn("Missing model", status.value)
 
     def test_interactive_menu_cards_show_configured_presets(self) -> None:
         by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
