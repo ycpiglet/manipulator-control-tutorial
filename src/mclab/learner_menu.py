@@ -786,6 +786,20 @@ def action_history_text(
     return f"History: Latest {latest.name}"
 
 
+def action_evidence_text(
+    action: MenuAction | BatchMenuAction,
+    outputs_root: Path | None = None,
+) -> str:
+    latest = action_latest_output(action, outputs_root)
+    if latest is None:
+        return "Evidence: No observation markers yet"
+    markers, notes = _observation_evidence_counts(latest)
+    if markers == 0:
+        return "Evidence: No observation markers yet"
+    note_text = f", {notes} note{'s' if notes != 1 else ''}" if notes else ""
+    return f"Evidence: {markers} observation{'s' if markers != 1 else ''}{note_text}"
+
+
 def action_followup(action: MenuAction) -> MenuAction | BatchMenuAction:
     for index, candidate in enumerate(MENU_ACTIONS):
         if candidate == action:
@@ -886,6 +900,35 @@ def _read_json(path: Path) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return payload if isinstance(payload, dict) else {}
+
+
+def _read_json_list(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(payload, list):
+        return []
+    return [item for item in payload if isinstance(item, dict)]
+
+
+def _observation_evidence_counts(output_path: Path) -> tuple[int, int]:
+    markers = 0
+    notes = 0
+    for event in _read_json_list(output_path / "interaction_events.json"):
+        if not _is_observation_marker_event(event):
+            continue
+        markers += 1
+        value = event.get("value")
+        if isinstance(value, dict) and str(value.get("note") or "").strip():
+            notes += 1
+    return markers, notes
+
+
+def _is_observation_marker_event(event: dict[str, Any]) -> bool:
+    return str(event.get("kind", "")).lower() == "marker" and str(event.get("name", "")).lower() == "observation"
 
 
 def parse_run_output_path(line: str) -> Path | None:
@@ -1234,7 +1277,7 @@ def _format_config_value(value: Any) -> str:
     return str(value)
 
 
-def lesson_text(action: MenuAction) -> str:
+def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
     preset_labels = configured_preset_labels(action.config_path)
     presets = f"\nPresets: {', '.join(preset_labels)}" if preset_labels else ""
     readiness = action_readiness(action)
@@ -1243,7 +1286,8 @@ def lesson_text(action: MenuAction) -> str:
     return (
         f"{action.description}\n"
         f"Setup: {readiness.label}{setup_detail}{setup_fix}\n"
-        f"{action_history_text(action)}\n"
+        f"{action_history_text(action, outputs_root)}\n"
+        f"{action_evidence_text(action, outputs_root)}\n"
         f"Try: {action.try_this}\n"
         f"Change: {parameter_hint(action)}\n"
         f"{config_value_preview(action)}\n"

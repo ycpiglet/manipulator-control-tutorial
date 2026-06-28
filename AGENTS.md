@@ -69,6 +69,7 @@ Implemented and verified:
 - Learner menu and CLI setup diagnostics through `python -m mclab doctor`
 - Learner menu scenario readiness checks that disable run buttons when config or model assets are missing
 - Learner menu scenario history labels and per-scenario latest-report buttons
+- Learner menu scenario evidence labels for latest observation markers and learner notes
 - Learner menu scenario value previews for key YAML parameters, searchable from the menu
 - Learner menu, interaction panel, and run report reflection questions, searchable from the menu
 - Learner menu scenario follow-up guidance and `Next` buttons for guided comparison flow

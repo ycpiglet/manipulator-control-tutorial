@@ -25,6 +25,7 @@ from mclab.learner_menu import (  # noqa: E402
     _set_status_after_doctor,
     action_compare_batch,
     action_compare_text,
+    action_evidence_text,
     action_followup,
     action_followup_text,
     action_config_path,
@@ -278,6 +279,7 @@ class LearnerMenuTests(unittest.TestCase):
                 text = lesson_text(action)
                 self.assertIn("Setup:", text)
                 self.assertIn("History:", text)
+                self.assertIn("Evidence:", text)
                 self.assertIn("Try:", text)
                 self.assertIn("Change:", text)
                 self.assertIn("Values:", text)
@@ -610,6 +612,43 @@ class LearnerMenuTests(unittest.TestCase):
 
             opener.assert_called_once_with(report)
             self.assertIsNone(missing)
+
+    def test_action_evidence_summarizes_latest_observation_markers(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            run_path = outputs / "run_lab01"
+            run_path.mkdir()
+            (run_path / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": MENU_ACTIONS[0].lab_name,
+                        "config_path": MENU_ACTIONS[0].config_path,
+                        "config_name": Path(MENU_ACTIONS[0].config_path).stem,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (run_path / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {"question": "Question: demo?", "note": "Saw overshoot."},
+                        },
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {"question": "Question: demo?"},
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            self.assertEqual(action_evidence_text(MENU_ACTIONS[0], outputs), "Evidence: 2 observations, 1 note")
+            self.assertIn("Evidence: 2 observations, 1 note", lesson_text(MENU_ACTIONS[0], outputs))
+            self.assertEqual(action_evidence_text(MENU_ACTIONS[1], outputs), "Evidence: No observation markers yet")
 
     def test_batch_history_tracks_latest_matching_report(self) -> None:
         lab01_batch = next(action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare")
