@@ -44,12 +44,16 @@ Use the small `MCLab Interaction` window next to the viewer. Click `Joint Target
 
 Cartesian reach demo:
 
+```powershell
+.\run_lab04_cartesian_interactive.cmd
+```
+
 ```bash
 python -m mclab run lab04 --config configs/lab04_panda/cartesian_reach.yaml --headless --plot --plots cartesian_reach
 python -m mclab run lab04 --config configs/lab04_panda/interactive_cartesian_reach.yaml --viewer --realtime --pause-at-end --plot --plots cartesian_reach
 ```
 
-The automatic demo moves the hand toward a fixed XYZ target. The interactive demo opens sliders for target X/Y/Z and Cartesian gain. Compare `x_ee_*` and `target_x_ee_*` in `end_effector.png`, then check `cartesian_error.png`.
+The automatic demo moves the hand toward a fixed XYZ target. The interactive launcher opens sliders for target X/Y/Z and Cartesian gain. In the viewer, compare the green target point with the blue hand point. Compare `x_ee_*` and `target_x_ee_*` in `end_effector.png`, then check `cartesian_error.png`.
 
 Soft/stiff Cartesian reach comparison:
 

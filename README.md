@@ -214,6 +214,7 @@ batch는 viewer 없이 여러 config를 순서대로 실행하고, `outputs/<tim
 .\run_lab02_interactive.cmd
 .\run_lab03_interactive.cmd
 .\run_lab04_interactive.cmd
+.\run_lab04_cartesian_interactive.cmd
 .\run_lab04_wall_interactive.cmd
 ```
 
@@ -227,6 +228,7 @@ Interactive launcher는 사이드 패널 없는 MuJoCo viewer와 함께 작은 `
 | `.\run_lab02_interactive.cmd` | PID plant에 좌/우 외란, `target/Kp/Ki/Kd/force limit` 슬라이더 | PID가 목표 위치로 복원하는 과정 |
 | `.\run_lab03_interactive.cmd` | 2DOF arm의 `target X/Y`, `task stiffness/damping`, `torque limit` 슬라이더 | 손끝 목표 위치, Jacobian 제어 오차, 토크 제한 |
 | `.\run_lab04_interactive.cmd` | Panda 관절 목표 nudge | 목표 관절 위치 변화와 tracking error |
+| `.\run_lab04_cartesian_interactive.cmd` | Panda 손끝 `target X/Y/Z`, `Cartesian gain` 슬라이더 | 초록 목표점, 파란 손끝, Cartesian tracking error |
 | `.\run_lab04_wall_interactive.cmd` | Panda 관절 목표 nudge, `wall X/stiffness/damping/retreat gain` 슬라이더 | virtual wall 위치와 강성/감쇠 변화 |
 
 전체 검증을 한 번에 돌리려면:
@@ -553,6 +555,7 @@ Use the interactive launchers when learners should disturb the system and watch 
 .\run_lab02_interactive.cmd
 .\run_lab03_interactive.cmd
 .\run_lab04_interactive.cmd
+.\run_lab04_cartesian_interactive.cmd
 .\run_lab04_wall_interactive.cmd
 ```
 
@@ -566,6 +569,7 @@ What to observe:
 | `.\run_lab02_interactive.cmd` | left/right disturbance, `target/Kp/Ki/Kd/force limit` sliders | PID disturbance rejection |
 | `.\run_lab03_interactive.cmd` | 2DOF arm `target X/Y`, `task stiffness/damping`, `torque limit` sliders | hand target motion, Jacobian control error, torque limits |
 | `.\run_lab04_interactive.cmd` | Panda joint target nudge | target position changes and tracking error |
+| `.\run_lab04_cartesian_interactive.cmd` | Panda hand `target X/Y/Z`, `Cartesian gain` sliders | green target point, blue hand point, Cartesian tracking error |
 | `.\run_lab04_wall_interactive.cmd` | Panda joint target nudge, `wall X/stiffness/damping/retreat gain` sliders | virtual wall position, stiffness, and damping effects |
 
 To run the full verification suite:

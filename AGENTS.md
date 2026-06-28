@@ -56,6 +56,7 @@ Implemented and verified:
 - Lab04 Franka Emika Panda manipulator using MuJoCo Menagerie
 - Lab04 Cartesian reach with damped-least-squares Jacobian target offsets
 - Lab04 soft/stiff Cartesian reach comparison configs and batch report
+- Lab04 Cartesian interactive one-line launcher for live XYZ target tuning
 - Lab04 deterministic virtual wall with soft/stiff stiffness-damping comparison configs
 - Lab04 viewer visual guides for Cartesian target, current hand position, contact state, and virtual wall
 - YAML configs, MuJoCo XML models, docs, and tests for the implemented labs

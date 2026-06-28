@@ -22,6 +22,11 @@ class LaunchScriptTests(unittest.TestCase):
             "run_lab03_interactive.cmd": ("lab03", "configs\\lab03_2dof\\interactive_2dof.yaml", "task"),
             "run_lab04.cmd": ("lab04", "configs\\lab04_panda\\joint_pd.yaml", "essential"),
             "run_lab04_interactive.cmd": ("lab04", "configs\\lab04_panda\\interactive_joint_hold.yaml", "essential"),
+            "run_lab04_cartesian_interactive.cmd": (
+                "lab04",
+                "configs\\lab04_panda\\interactive_cartesian_reach.yaml",
+                "cartesian_reach",
+            ),
             "run_lab04_wall_interactive.cmd": (
                 "lab04",
                 "configs\\lab04_panda\\interactive_virtual_wall.yaml",
