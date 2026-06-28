@@ -1261,10 +1261,12 @@ def _observation_markers_section(events: list[dict[str, Any]]) -> str:
         if len(markers) > len(shown_markers)
         else f"{len(markers)} marked observation{'s' if len(markers) != 1 else ''} saved."
     )
+    review_prompt = _observation_review_prompt(markers)
     return (
         "<section>"
         "<h2>Observation Markers</h2>"
         f'<p class="empty">{escape(count_text)}</p>'
+        f"{review_prompt}"
         '<div class="marker-grid">'
         f"{cards}"
         "</div>"
@@ -1274,6 +1276,38 @@ def _observation_markers_section(events: list[dict[str, Any]]) -> str:
 
 def _is_observation_marker(event: dict[str, Any]) -> bool:
     return str(event.get("kind", "")).lower() == "marker" and str(event.get("name", "")).lower() == "observation"
+
+
+def _observation_review_prompt(markers: list[dict[str, Any]]) -> str:
+    questions: list[str] = []
+    notes: list[str] = []
+    for marker in markers:
+        payload = marker.get("value")
+        value = payload if isinstance(payload, dict) else {}
+        question = str(value.get("question") or "").strip()
+        note = str(value.get("note") or "").strip()
+        if question and question not in questions:
+            questions.append(question)
+        if note:
+            notes.append(note)
+
+    question_count = len(questions)
+    note_count = len(notes)
+    latest_note = notes[-1] if notes else ""
+    latest_note_html = (
+        f'<p class="empty"><strong>Latest note:</strong> {escape(latest_note)}</p>'
+        if latest_note
+        else ""
+    )
+    return (
+        '<div class="marker-group">'
+        "<strong>Review prompt</strong>"
+        f'<p>Use these markers as evidence before running the suggested next experiment. '
+        f"{question_count} learning question{'s' if question_count != 1 else ''} and "
+        f"{note_count} learner note{'s' if note_count != 1 else ''} were saved.</p>"
+        f"{latest_note_html}"
+        "</div>"
+    )
 
 
 def _observation_marker_card(event: dict[str, Any], marker_index: int) -> str:
