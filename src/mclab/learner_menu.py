@@ -783,6 +783,33 @@ def action_followup_text(action: MenuAction) -> str:
     return f"Next: {target.group} - {target.label}"
 
 
+def action_compare_batch(action: MenuAction) -> BatchMenuAction:
+    if action.lab_name == "lab01":
+        return _batch_action_by_name("lab01_msd_compare")
+    if action.lab_name == "lab02":
+        return _batch_action_by_name("lab02_pid_compare")
+    if action.lab_name == "lab03":
+        return _batch_action_by_name("lab03_2dof_compare")
+    if action.lab_name == "lab04":
+        action_text = f"{action.label} {action.config_path}".lower()
+        if "wall" in action_text:
+            return _batch_action_by_name("lab04_wall_compare")
+        return _batch_action_by_name("lab04_cartesian_compare")
+    return _batch_action_by_name(ALL_BATCH_NAME)
+
+
+def action_compare_text(action: MenuAction) -> str:
+    target = action_compare_batch(action)
+    return f"Compare: {target.group} - {target.label}"
+
+
+def _batch_action_by_name(batch_name: str) -> BatchMenuAction:
+    for action in BATCH_ACTIONS:
+        if action.batch_name == batch_name:
+            return action
+    raise ValueError(f"Batch action was not found: {batch_name}")
+
+
 def _latest_matching_output(action: MenuAction | BatchMenuAction, outputs_root: Path) -> Path | None:
     if not outputs_root.exists():
         return None
@@ -1155,6 +1182,7 @@ def lesson_text(action: MenuAction) -> str:
         f"Change: {parameter_hint(action)}\n"
         f"{config_value_preview(action)}\n"
         f"{action_followup_text(action)}\n"
+        f"{action_compare_text(action)}\n"
         f"Watch: {action.watch}"
         f"{presets}"
     )
@@ -1287,6 +1315,8 @@ def _action_matches_terms(action: MenuAction, terms: list[str]) -> bool:
     ]
     if "next" in terms:
         fields.append(action_followup_text(action))
+    if "compare" in terms:
+        fields.append(action_compare_text(action))
     text = " ".join(fields).lower()
     return all(term in text for term in terms)
 
@@ -1499,12 +1529,13 @@ def main() -> int:
         for group, actions in grouped.items():
             frame = ttk.LabelFrame(scroll_frame, text=group, padding=12)
             frame.grid(row=row, column=0, sticky="ew", pady=6)
-            frame.columnconfigure(5, weight=1)
+            frame.columnconfigure(6, weight=1)
             row += 1
             for action_index, action in enumerate(actions):
                 readiness = action_readiness(action)
                 latest = action_latest_output(action)
                 followup = action_followup(action)
+                compare_batch = action_compare_batch(action)
                 run_button = ttk.Button(
                     frame,
                     text=action.label,
@@ -1558,8 +1589,21 @@ def main() -> int:
                 if isinstance(followup, MenuAction) and action_readiness(followup).status != "ok":
                     next_button.state(["disabled"])
                 next_button.grid(row=action_index, column=4, sticky="w", padx=(0, 12), pady=4)
-                ttk.Label(frame, text=lesson_text(action), wraplength=560, justify="left").grid(
-                    row=action_index, column=5, sticky="w", pady=4
+                ttk.Button(
+                    frame,
+                    text="Compare",
+                    width=8,
+                    command=lambda selected=compare_batch: _launch_batch_from_menu(
+                        selected,
+                        status,
+                        root=root,
+                        latest_output=latest_output,
+                        latest_button=latest_button,
+                        progress_callback=refresh_after_run,
+                    ),
+                ).grid(row=action_index, column=5, sticky="w", padx=(0, 12), pady=4)
+                ttk.Label(frame, text=lesson_text(action), wraplength=500, justify="left").grid(
+                    row=action_index, column=6, sticky="w", pady=4
                 )
         canvas.configure(scrollregion=canvas.bbox("all"))
 

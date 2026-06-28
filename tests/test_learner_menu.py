@@ -22,6 +22,8 @@ from mclab.learner_menu import (  # noqa: E402
     _launch_from_menu,
     _set_status_after_run,
     _set_status_after_doctor,
+    action_compare_batch,
+    action_compare_text,
     action_followup,
     action_followup_text,
     action_config_path,
@@ -239,6 +241,7 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertIn("Change:", text)
                 self.assertIn("Values:", text)
                 self.assertIn("Next:", text)
+                self.assertIn("Compare:", text)
                 self.assertIn("Watch:", text)
                 self.assertTrue(parameter_hint(action))
                 config = load_config(action.config_path)
@@ -321,6 +324,27 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(action_followup(MENU_ACTIONS[0]), MENU_ACTIONS[1])
         self.assertEqual(action_followup(MENU_ACTIONS[-1]), BATCH_ACTIONS[0])
 
+    def test_menu_actions_map_to_relevant_comparison_batches(self) -> None:
+        by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
+
+        for action in MENU_ACTIONS:
+            with self.subTest(label=action.label, config=action.config_path):
+                compare_batch = action_compare_batch(action)
+                self.assertIn(compare_batch, BATCH_ACTIONS)
+                self.assertIn(compare_batch.label, action_compare_text(action))
+
+        self.assertEqual(action_compare_batch(by_label[("Lab01 Mass-Spring-Damper", "Interactive")]).batch_name, "lab01_msd_compare")
+        self.assertEqual(action_compare_batch(by_label[("Lab02 PID Control", "Windup")]).batch_name, "lab02_pid_compare")
+        self.assertEqual(
+            action_compare_batch(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF DLS singularity")]).batch_name,
+            "lab03_2dof_compare",
+        )
+        self.assertEqual(action_compare_batch(by_label[("Lab04 Panda Manipulator", "Virtual wall")]).batch_name, "lab04_wall_compare")
+        self.assertEqual(
+            action_compare_batch(by_label[("Lab04 Panda Manipulator", "Cartesian reach")]).batch_name,
+            "lab04_cartesian_compare",
+        )
+
     def test_config_value_preview_summarizes_current_knob_values(self) -> None:
         by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
 
@@ -367,6 +391,11 @@ class LearnerMenuTests(unittest.TestCase):
 
         followup_labels = {(action.group, action.label) for action in filter_menu_actions("next anti-windup")}
         self.assertIn(("Lab02 PID Control", "Windup"), followup_labels)
+
+        compare_batch_labels = {
+            (action.group, action.label) for action in filter_menu_actions("compare lab04 wall")
+        }
+        self.assertIn(("Lab04 Panda Manipulator", "Virtual wall"), compare_batch_labels)
 
     def test_experience_filters_group_scenarios_by_learning_mode(self) -> None:
         filter_keys = {filter_option.key for filter_option in EXPERIENCE_FILTERS}

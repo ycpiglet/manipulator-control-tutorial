@@ -71,6 +71,7 @@ Implemented and verified:
 - Learner menu scenario history labels and per-scenario latest-report buttons
 - Learner menu scenario value previews for key YAML parameters, searchable from the menu
 - Learner menu scenario follow-up guidance and `Next` buttons for guided comparison flow
+- Learner menu scenario-to-batch comparison guidance and `Compare` buttons
 - Run reports include suggested next-run cards with ready-to-run commands for every guided config
 - Observation markers capture changed sliders separately from full slider and live status snapshots
 - Outputs index learning path cards include ready-to-run or repeat commands for each course step
