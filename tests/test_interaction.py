@@ -18,6 +18,7 @@ from mclab.sim.interaction import (  # noqa: E402
     TuningPreset,
     _panel_guide_rows,
     _panel_guide_title,
+    _observation_marker_count,
     tuning_presets_from_config,
 )
 from mclab.config import load_config  # noqa: E402
@@ -208,15 +209,33 @@ class KeyForcePulseTests(unittest.TestCase):
 
         tuning.set_value("kp", 35.0)
         status.set_values(error=0.125)
-        payload = log.mark_observation(sliders=tuning.snapshot(), status=status.snapshot())
+        payload = log.mark_observation(
+            changed_sliders=tuning.changed_values(),
+            sliders=tuning.snapshot(),
+            status=status.snapshot(),
+        )
 
-        self.assertEqual(payload, {"sliders": {"kp": 35.0}, "status": {"error": "0.125"}})
+        self.assertEqual(
+            payload,
+            {
+                "changed_sliders": {"kp": 35.0},
+                "sliders": {"kp": 35.0},
+                "status": {"error": "0.125"},
+            },
+        )
         event = log.events()[-1]
         self.assertEqual(event["kind"], "marker")
         self.assertEqual(event["name"], "observation")
         self.assertEqual(event["label"], "Mark observation")
         self.assertEqual(event["value"], payload)
         self.assertEqual(log.summary()["last_interaction"], "Mark observation")
+        self.assertEqual(_observation_marker_count(log), 1)
+
+        log.record("button", "demo", None, label="Demo")
+        self.assertEqual(_observation_marker_count(log), 1)
+
+        tuning.reset()
+        self.assertEqual(tuning.changed_values(), {})
 
     def test_live_status_formats_dashboard_values(self) -> None:
         status = LiveStatus([StatusSpec("position", "Position [m]"), StatusSpec("mode", "Mode")])

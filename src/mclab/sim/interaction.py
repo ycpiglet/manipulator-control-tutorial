@@ -80,9 +80,12 @@ class InteractionLog:
         self,
         *,
         sliders: dict[str, Any] | None = None,
+        changed_sliders: dict[str, Any] | None = None,
         status: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         value: dict[str, Any] = {}
+        if changed_sliders:
+            value["changed_sliders"] = dict(changed_sliders)
         if sliders:
             value["sliders"] = dict(sliders)
         if status:
@@ -114,6 +117,14 @@ class LiveTuning:
     def snapshot(self) -> dict[str, float]:
         with self._lock:
             return dict(self._values)
+
+    def changed_values(self) -> dict[str, float]:
+        with self._lock:
+            return {
+                name: value
+                for name, value in self._values.items()
+                if abs(value - self._initial_values.get(name, value)) > 1e-12
+            }
 
     def set_value(self, name: str, value: float) -> None:
         should_record = False
@@ -487,10 +498,11 @@ def maybe_start_interaction_panel(
 
                 def mark_observation() -> None:
                     event_log.mark_observation(
+                        changed_sliders=tuning.changed_values() if tuning is not None else None,
                         sliders=tuning.snapshot() if tuning is not None else None,
                         status=status.snapshot() if status is not None else None,
                     )
-                    marker_status.set(f"Marked observation {len(event_log.events())}")
+                    marker_status.set(f"Marked observation {_observation_marker_count(event_log)}")
 
                 tk.Button(marker_frame, text="Mark observation", command=mark_observation).grid(
                     row=0,
@@ -562,6 +574,15 @@ def _panel_guide_rows(guide: Any | None) -> list[tuple[str, str]]:
         ("Watch", str(getattr(guide, "watch", "") or "").strip()),
     ]
     return [(label, text) for label, text in rows if text]
+
+
+def _observation_marker_count(event_log: InteractionLog) -> int:
+    return sum(
+        1
+        for event in event_log.events()
+        if str(event.get("kind", "")).lower() == "marker"
+        and str(event.get("name", "")).lower() == "observation"
+    )
 
 
 def _format_status_value(value: Any) -> str:

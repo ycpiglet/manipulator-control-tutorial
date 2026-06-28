@@ -78,7 +78,11 @@ class LoggingTests(unittest.TestCase):
                         "kind": "marker",
                         "name": "observation",
                         "label": "Mark observation",
-                        "value": {"sliders": {"stiffness": 80.0}, "status": {"energy": "0.125"}},
+                        "value": {
+                            "changed_sliders": {"stiffness": 80.0},
+                            "sliders": {"stiffness": 80.0},
+                            "status": {"energy": "0.125"},
+                        },
                     },
                 ],
             )
@@ -116,6 +120,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("90", html)
             self.assertIn("Observation Markers", html)
             self.assertIn("1 marked observation saved.", html)
+            self.assertIn("Changed sliders", html)
             self.assertIn("Sliders", html)
             self.assertIn("Live status", html)
             self.assertIn("Interaction Log", html)
