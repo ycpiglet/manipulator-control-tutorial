@@ -23,6 +23,8 @@ from mclab.learner_menu import (  # noqa: E402
     _set_status_after_run,
     _set_status_after_doctor,
     action_config_path,
+    action_history_text,
+    action_latest_output,
     action_readiness,
     action_tags,
     action_doc_path,
@@ -40,6 +42,7 @@ from mclab.learner_menu import (  # noqa: E402
     lesson_text_for_batch,
     lesson_text,
     configured_preset_labels,
+    launch_action_latest_output,
     launch_outputs_index,
     launch_latest_output,
     next_learning_path_step,
@@ -228,6 +231,7 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertTrue(action.watch)
                 text = lesson_text(action)
                 self.assertIn("Setup:", text)
+                self.assertIn("History:", text)
                 self.assertIn("Try:", text)
                 self.assertIn("Change:", text)
                 self.assertIn("Watch:", text)
@@ -398,6 +402,35 @@ class LearnerMenuTests(unittest.TestCase):
                 open_editable_path(path)
 
             popen.assert_called_once_with(["code", "-r", str(path)])
+
+    def test_action_history_tracks_latest_matching_report(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            run_path = outputs / "run_lab01"
+            run_path.mkdir()
+            (run_path / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab01_msd",
+                        "config_path": "configs/lab01_msd/default.yaml",
+                        "config_name": "default",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            report = run_path / "report.html"
+            report.write_text("<html></html>", encoding="utf-8")
+
+            self.assertEqual(action_latest_output(MENU_ACTIONS[0], outputs), run_path)
+            self.assertIn("History: Latest run_lab01", action_history_text(MENU_ACTIONS[0], outputs))
+            self.assertEqual(action_history_text(MENU_ACTIONS[1], outputs), "History: Not run yet")
+
+            with patch("mclab.learner_menu.open_path") as opener:
+                launch_action_latest_output(MENU_ACTIONS[0], outputs)
+                missing = launch_action_latest_output(MENU_ACTIONS[1], outputs)
+
+            opener.assert_called_once_with(report)
+            self.assertIsNone(missing)
 
     def test_launch_latest_output_opens_report_when_available(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

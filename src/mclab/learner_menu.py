@@ -706,8 +706,7 @@ def learning_path_progress(
     outputs_root: Path | None = None,
 ) -> LearningPathProgress:
     action = learning_path_target(step)
-    root = outputs_root if outputs_root is not None else PROJECT_ROOT / "outputs"
-    latest = _latest_matching_output(action, root)
+    latest = action_latest_output(action, outputs_root)
     return LearningPathProgress(completed=latest is not None, latest_output=latest)
 
 
@@ -750,6 +749,24 @@ def learning_path_summary_text(
     if next_step is None:
         return f"Progress: {completed}/{total} complete. Course path complete - open All reports to review."
     return f"Progress: {completed}/{total} complete. Next: {next_step.title} - {next_step.description}"
+
+
+def action_latest_output(
+    action: MenuAction | BatchMenuAction,
+    outputs_root: Path | None = None,
+) -> Path | None:
+    root = outputs_root if outputs_root is not None else PROJECT_ROOT / "outputs"
+    return _latest_matching_output(action, root)
+
+
+def action_history_text(
+    action: MenuAction | BatchMenuAction,
+    outputs_root: Path | None = None,
+) -> str:
+    latest = action_latest_output(action, outputs_root)
+    if latest is None:
+        return "History: Not run yet"
+    return f"History: Latest {latest.name}"
 
 
 def _latest_matching_output(action: MenuAction | BatchMenuAction, outputs_root: Path) -> Path | None:
@@ -906,6 +923,16 @@ def launch_latest_output(latest_output: dict[str, Path | None]) -> subprocess.Po
     return open_path(_preferred_output_entry(path))
 
 
+def launch_action_latest_output(
+    action: MenuAction | BatchMenuAction,
+    outputs_root: Path | None = None,
+) -> subprocess.Popen[Any] | None:
+    latest = action_latest_output(action, outputs_root)
+    if latest is None:
+        return None
+    return open_path(_preferred_output_entry(latest))
+
+
 def _preferred_output_entry(path: Path) -> Path:
     report = path / "report.html"
     if report.exists():
@@ -1009,6 +1036,7 @@ def lesson_text(action: MenuAction) -> str:
     return (
         f"{action.description}\n"
         f"Setup: {readiness.label}{setup_detail}{setup_fix}\n"
+        f"{action_history_text(action)}\n"
         f"Try: {action.try_this}\n"
         f"Change: {parameter_hint(action)}\n"
         f"Watch: {action.watch}"
@@ -1178,6 +1206,7 @@ def main() -> int:
     path_summary = tk.StringVar(value=learning_path_summary_text())
     next_step_ref: dict[str, LearningPathStep | None] = {"step": next_learning_path_step()}
     next_button_ref: dict[str, Any | None] = {"button": None}
+    post_run_refresh_ref: dict[str, Callable[[], None]] = {}
 
     def refresh_learning_path_progress() -> None:
         progress_items: list[LearningPathProgressItem] = []
@@ -1193,6 +1222,10 @@ def main() -> int:
         if next_button is not None:
             next_button.state(["disabled"] if next_step is None else ["!disabled"])
 
+    def refresh_after_run() -> None:
+        refresh_callback = post_run_refresh_ref.get("callback", refresh_learning_path_progress)
+        refresh_callback()
+
     def launch_next_learning_path_step() -> None:
         step = next_step_ref["step"]
         if step is None:
@@ -1204,7 +1237,7 @@ def main() -> int:
             root=root,
             latest_output=latest_output,
             latest_button=latest_button,
-            progress_callback=refresh_learning_path_progress,
+            progress_callback=refresh_after_run,
         )
 
     search_bar = ttk.Frame(outer)
@@ -1262,7 +1295,7 @@ def main() -> int:
                 root=root,
                 latest_output=latest_output,
                 latest_button=latest_button,
-                progress_callback=refresh_learning_path_progress,
+                progress_callback=refresh_after_run,
             ),
         ).pack(anchor="w")
         ttk.Label(cell, textvariable=progress_text, wraplength=280, justify="left").pack(
@@ -1288,7 +1321,7 @@ def main() -> int:
                 root=root,
                 latest_output=latest_output,
                 latest_button=latest_button,
-                progress_callback=refresh_learning_path_progress,
+                progress_callback=refresh_after_run,
             ),
         ).pack(anchor="w")
         ttk.Label(cell, text=lesson_text_for_batch(action), wraplength=360, justify="left").pack(
@@ -1348,10 +1381,11 @@ def main() -> int:
         for group, actions in grouped.items():
             frame = ttk.LabelFrame(scroll_frame, text=group, padding=12)
             frame.grid(row=row, column=0, sticky="ew", pady=6)
-            frame.columnconfigure(3, weight=1)
+            frame.columnconfigure(4, weight=1)
             row += 1
             for action_index, action in enumerate(actions):
                 readiness = action_readiness(action)
+                latest = action_latest_output(action)
                 run_button = ttk.Button(
                     frame,
                     text=action.label,
@@ -1362,7 +1396,7 @@ def main() -> int:
                         root=root,
                         latest_output=latest_output,
                         latest_button=latest_button,
-                        progress_callback=refresh_learning_path_progress,
+                        progress_callback=refresh_after_run,
                     ),
                 )
                 if readiness.status != "ok":
@@ -1379,12 +1413,26 @@ def main() -> int:
                     text="Lesson",
                     width=8,
                     command=lambda selected=action: launch_action_doc(selected),
-                ).grid(row=action_index, column=2, sticky="w", padx=(0, 12), pady=4)
+                ).grid(row=action_index, column=2, sticky="w", padx=(0, 6), pady=4)
+                report_button = ttk.Button(
+                    frame,
+                    text="Report",
+                    width=8,
+                    command=lambda selected=action: launch_action_latest_output(selected),
+                )
+                if latest is None:
+                    report_button.state(["disabled"])
+                report_button.grid(row=action_index, column=3, sticky="w", padx=(0, 12), pady=4)
                 ttk.Label(frame, text=lesson_text(action), wraplength=560, justify="left").grid(
-                    row=action_index, column=3, sticky="w", pady=4
+                    row=action_index, column=4, sticky="w", pady=4
                 )
         canvas.configure(scrollregion=canvas.bbox("all"))
 
+    def refresh_progress_and_actions() -> None:
+        refresh_learning_path_progress()
+        render_actions()
+
+    post_run_refresh_ref["callback"] = refresh_progress_and_actions
     search.trace_add("write", render_actions)
     render_actions()
     search_entry.focus_set()

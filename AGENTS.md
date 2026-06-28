@@ -68,6 +68,7 @@ Implemented and verified:
 - Learner menu Explore filters for hands-on, comparison, PID, 2DOF, Panda, wall, and singularity scenario discovery
 - Learner menu and CLI setup diagnostics through `python -m mclab doctor`
 - Learner menu scenario readiness checks that disable run buttons when config or model assets are missing
+- Learner menu scenario history labels and per-scenario latest-report buttons
 - Run reports include suggested next-run cards with ready-to-run commands for every guided config
 - Observation markers capture changed sliders separately from full slider and live status snapshots
 - Outputs index learning path cards include ready-to-run or repeat commands for each course step
