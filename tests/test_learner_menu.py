@@ -41,6 +41,7 @@ from mclab.learner_menu import (  # noqa: E402
     experience_filter_description,
     filter_menu_actions,
     learning_path_progress_items,
+    learning_path_latest_output,
     learning_path_progress,
     learning_path_progress_text,
     learning_path_summary_text,
@@ -50,6 +51,7 @@ from mclab.learner_menu import (  # noqa: E402
     lesson_text,
     configured_preset_labels,
     launch_action_latest_output,
+    launch_learning_path_latest_output,
     launch_outputs_index,
     launch_latest_output,
     next_learning_path_step,
@@ -211,17 +213,50 @@ class LearnerMenuTests(unittest.TestCase):
             last_progress = learning_path_progress(last_step, outputs)
             second_progress = learning_path_progress(LEARNING_PATH[1], outputs)
             progress_items = learning_path_progress_items(outputs)
+            first_latest = learning_path_latest_output(first_step, outputs)
+            last_latest = learning_path_latest_output(last_step, outputs)
 
         self.assertTrue(first_progress.completed)
         self.assertEqual(first_progress.latest_output.name, "run_lab01")
+        assert first_latest is not None
+        self.assertEqual(first_latest.name, "run_lab01")
         self.assertIn("Status: Done - latest run_lab01", learning_path_progress_text(first_step, first_progress))
         self.assertTrue(last_progress.completed)
         self.assertEqual(last_progress.latest_output.name, "all_batches")
+        assert last_latest is not None
+        self.assertEqual(last_latest.name, "all_batches")
         self.assertFalse(second_progress.completed)
         self.assertIn("Status: Not run yet", learning_path_progress_text(LEARNING_PATH[1], second_progress))
         self.assertEqual(next_learning_path_step(progress_items), LEARNING_PATH[1])
         self.assertIn("Progress: 2/10 complete", learning_path_summary_text(progress_items))
         self.assertIn("Next: 2. Disturb and tune", learning_path_summary_text(progress_items))
+
+    def test_recommended_learning_path_report_opens_latest_output(self) -> None:
+        first_step = LEARNING_PATH[0]
+        second_step = LEARNING_PATH[1]
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            run_dir = outputs / "run_lab01"
+            run_dir.mkdir()
+            (run_dir / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab01_msd",
+                        "config_path": "configs/lab01_msd/default.yaml",
+                        "config_name": "default",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            report = run_dir / "report.html"
+            report.write_text("<html></html>", encoding="utf-8")
+
+            with patch("mclab.learner_menu.open_path") as opener:
+                launch_learning_path_latest_output(first_step, outputs)
+                missing = launch_learning_path_latest_output(second_step, outputs)
+
+            opener.assert_called_once_with(report)
+            self.assertIsNone(missing)
 
     def test_recommended_learning_path_summary_detects_completion(self) -> None:
         progress_items = tuple(

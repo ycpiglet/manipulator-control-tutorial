@@ -705,8 +705,7 @@ def learning_path_progress(
     step: LearningPathStep,
     outputs_root: Path | None = None,
 ) -> LearningPathProgress:
-    action = learning_path_target(step)
-    latest = action_latest_output(action, outputs_root)
+    latest = learning_path_latest_output(step, outputs_root)
     return LearningPathProgress(completed=latest is not None, latest_output=latest)
 
 
@@ -749,6 +748,23 @@ def learning_path_summary_text(
     if next_step is None:
         return f"Progress: {completed}/{total} complete. Course path complete - open All reports to review."
     return f"Progress: {completed}/{total} complete. Next: {next_step.title} - {next_step.description}"
+
+
+def learning_path_latest_output(
+    step: LearningPathStep,
+    outputs_root: Path | None = None,
+) -> Path | None:
+    return action_latest_output(learning_path_target(step), outputs_root)
+
+
+def launch_learning_path_latest_output(
+    step: LearningPathStep,
+    outputs_root: Path | None = None,
+) -> subprocess.Popen[Any] | None:
+    latest = learning_path_latest_output(step, outputs_root)
+    if latest is None:
+        return None
+    return open_path(_preferred_output_entry(latest))
 
 
 def action_latest_output(
@@ -1392,6 +1408,7 @@ def main() -> int:
     active_experience_filter = tk.StringVar(value="all")
     filter_description = tk.StringVar(value=experience_filter_description("all"))
     path_status_vars: list[tuple[LearningPathStep, Any]] = []
+    path_report_buttons: list[tuple[LearningPathStep, Any]] = []
     path_summary = tk.StringVar(value=learning_path_summary_text())
     next_step_ref: dict[str, LearningPathStep | None] = {"step": next_learning_path_step()}
     next_button_ref: dict[str, Any | None] = {"button": None}
@@ -1399,10 +1416,15 @@ def main() -> int:
 
     def refresh_learning_path_progress() -> None:
         progress_items: list[LearningPathProgressItem] = []
+        progress_by_step: dict[LearningPathStep, LearningPathProgress] = {}
         for step, variable in path_status_vars:
             progress = learning_path_progress(step)
             progress_items.append((step, progress))
+            progress_by_step[step] = progress
             variable.set(learning_path_progress_text(step, progress))
+        for step, button in path_report_buttons:
+            progress = progress_by_step.get(step) or learning_path_progress(step)
+            button.state(["!disabled"] if progress.latest_output is not None else ["disabled"])
         items = tuple(progress_items) if progress_items else learning_path_progress_items()
         next_step = next_learning_path_step(items)
         next_step_ref["step"] = next_step
@@ -1474,8 +1496,10 @@ def main() -> int:
         cell.grid(row=row_index + 1, column=column_index, sticky="ew", padx=(0, 12), pady=(0, 8))
         progress_text = tk.StringVar(value=learning_path_progress_text(step))
         path_status_vars.append((step, progress_text))
+        step_buttons = ttk.Frame(cell)
+        step_buttons.pack(anchor="w")
         ttk.Button(
-            cell,
+            step_buttons,
             text=step.title,
             width=22,
             command=lambda selected=step: _launch_learning_path_from_menu(
@@ -1486,7 +1510,17 @@ def main() -> int:
                 latest_button=latest_button,
                 progress_callback=refresh_after_run,
             ),
-        ).pack(anchor="w")
+        ).pack(side="left")
+        step_report_button = ttk.Button(
+            step_buttons,
+            text="Report",
+            width=8,
+            command=lambda selected=step: launch_learning_path_latest_output(selected),
+        )
+        if learning_path_latest_output(step) is None:
+            step_report_button.state(["disabled"])
+        step_report_button.pack(side="left", padx=(6, 0))
+        path_report_buttons.append((step, step_report_button))
         ttk.Label(cell, textvariable=progress_text, wraplength=280, justify="left").pack(
             anchor="w", pady=(4, 0)
         )
