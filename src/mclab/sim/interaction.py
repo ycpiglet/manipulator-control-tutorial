@@ -152,6 +152,21 @@ class LiveTuning:
             self._event_log.record("preset", preset.name, applied, label=preset.label)
         return values
 
+    def preset_summary(self, name: str) -> str:
+        preset = next((item for item in self.presets if item.name == name), None)
+        if preset is None:
+            return ""
+        parts: list[str] = []
+        for value_name, value in preset.values.items():
+            spec = self._specs.get(value_name)
+            if spec is None:
+                continue
+            number = _clamp(float(value), spec.minimum, spec.maximum)
+            parts.append(f"{spec.label}={_format_tuning_value(number)}")
+        if not parts:
+            return preset.label
+        return f"{preset.label}: {', '.join(parts)}"
+
     def reset(self) -> dict[str, float]:
         with self._lock:
             changed = any(
@@ -410,6 +425,12 @@ def maybe_start_interaction_panel(
 
                 def apply_preset(preset_name: str) -> None:
                     set_scale_values(tuning.apply_preset(preset_name))
+                    if preset_status is not None:
+                        preset_status.set(f"Applied {tuning.preset_summary(preset_name)}")
+
+                def preview_preset(preset_name: str) -> None:
+                    if preset_status is not None:
+                        preset_status.set(tuning.preset_summary(preset_name))
 
                 tk.Button(tuning_header, text="Reset sliders", command=reset_sliders).grid(
                     row=0,
@@ -418,19 +439,30 @@ def maybe_start_interaction_panel(
                     padx=(12, 0),
                 )
                 row += 1
+                preset_status: Any | None = None
                 if tuning.presets:
                     tk.Label(frame, text="Quick presets").grid(row=row, column=0, columnspan=2, sticky="w", pady=(2, 2))
                     row += 1
                     preset_frame = tk.Frame(frame)
                     preset_frame.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(0, 6))
                     for index, preset in enumerate(tuning.presets):
-                        tk.Button(
+                        button = tk.Button(
                             preset_frame,
                             text=preset.label,
                             width=20,
                             command=lambda preset_name=preset.name: apply_preset(preset_name),
-                        ).grid(row=index // 2, column=index % 2, padx=4, pady=3, sticky="ew")
-                    row += 1
+                        )
+                        button.grid(row=index // 2, column=index % 2, padx=4, pady=3, sticky="ew")
+                        button.bind("<Enter>", lambda _event, preset_name=preset.name: preview_preset(preset_name))
+                    preset_status = tk.StringVar(value="Hover a preset to preview its slider values.")
+                    tk.Label(
+                        frame,
+                        textvariable=preset_status,
+                        justify="left",
+                        anchor="w",
+                        wraplength=430,
+                    ).grid(row=row + 1, column=0, columnspan=2, sticky="w", pady=(0, 6))
+                    row += 2
                 for spec in tuning.specs:
                     scale = tk.Scale(
                         frame,
@@ -542,6 +574,10 @@ def _format_status_value(value: Any) -> str:
     except (TypeError, ValueError):
         return str(value)
     return f"{number:.3f}"
+
+
+def _format_tuning_value(value: float) -> str:
+    return f"{float(value):.6g}"
 
 
 def _preset_name(label: str, index: int) -> str:

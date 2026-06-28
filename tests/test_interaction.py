@@ -121,6 +121,8 @@ class KeyForcePulseTests(unittest.TestCase):
         self.assertEqual(log.events()[-1]["kind"], "preset")
         self.assertEqual(log.events()[-1]["label"], "Aggressive")
         self.assertEqual(log.events()[-1]["value"], {"kp": 100.0, "kd": 2.0})
+        self.assertEqual(tuning.preset_summary("aggressive"), "Aggressive: Kp=100, Kd=2")
+        self.assertEqual(tuning.preset_summary("missing"), "")
 
     def test_tuning_presets_from_config_filters_to_known_numeric_sliders(self) -> None:
         specs = [
