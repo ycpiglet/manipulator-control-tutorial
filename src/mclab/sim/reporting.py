@@ -833,11 +833,16 @@ def _suggested_next_run_card(suggestion: NextRunSuggestion) -> str:
         f"--viewer --realtime --pause-at-end --plot --plots {suggestion.plots} --open-report"
     )
     guide_focus = f'<p class="empty">{escape(guide.focus)}</p>' if guide is not None else ""
+    guide_question = ""
+    if guide is not None:
+        question = question_for_guide(guide).removeprefix("Question:").strip()
+        guide_question = f'<p class="empty"><strong>Question:</strong> {escape(question)}</p>'
     return (
         '<article class="action-card action-wide">'
         f"<strong>{escape(title)}</strong>"
         f'<p class="empty">{escape(suggestion.reason)}</p>'
         f"{guide_focus}"
+        f"{guide_question}"
         '<ul class="action-list">'
         "<li>"
         "<span>Config</span>"

@@ -222,6 +222,8 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Lab02 PD Damping", html)
             self.assertIn("configs/lab02_pid/pd_damped.yaml", html)
             self.assertIn("Use derivative action to calm overshoot.", html)
+            self.assertIn("Question:", html)
+            self.assertIn("Which gain change trades speed for overshoot or smoother force?", html)
             self.assertIn("Lab02 Saturation", html)
             self.assertIn(
                 "python -m mclab run lab02 --config configs/lab02_pid/pd_damped.yaml",
