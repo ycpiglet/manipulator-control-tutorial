@@ -8,12 +8,13 @@ import shutil
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from threading import Thread
 from typing import Any
 
 from mclab.batch import ALL_BATCH_NAME, BATCH_SETS
-from mclab.config import PROJECT_ROOT
+from mclab.config import PROJECT_ROOT, load_config
 from mclab.sim.reporting import write_outputs_index
 
 RUN_COMPLETE_PREFIX = "Run complete:"
@@ -905,7 +906,37 @@ def parameter_hint(action: MenuAction) -> str:
 
 
 def lesson_text(action: MenuAction) -> str:
-    return f"{action.description}\nTry: {action.try_this}\nChange: {parameter_hint(action)}\nWatch: {action.watch}"
+    preset_labels = configured_preset_labels(action.config_path)
+    presets = f"\nPresets: {', '.join(preset_labels)}" if preset_labels else ""
+    return (
+        f"{action.description}\n"
+        f"Try: {action.try_this}\n"
+        f"Change: {parameter_hint(action)}\n"
+        f"Watch: {action.watch}"
+        f"{presets}"
+    )
+
+
+@lru_cache(maxsize=128)
+def configured_preset_labels(config_path: str) -> tuple[str, ...]:
+    try:
+        config = load_config(config_path)
+    except (OSError, ValueError):
+        return ()
+    interaction = config.get("interaction")
+    if not isinstance(interaction, dict):
+        return ()
+    presets = interaction.get("tuning_presets")
+    if not isinstance(presets, list):
+        return ()
+    labels: list[str] = []
+    for index, preset in enumerate(presets, start=1):
+        if not isinstance(preset, dict):
+            continue
+        label = str(preset.get("label") or preset.get("name") or f"Preset {index}").strip()
+        if label:
+            labels.append(label)
+    return tuple(labels)
 
 
 def filter_menu_actions(query: str, actions: tuple[MenuAction, ...] = MENU_ACTIONS) -> tuple[MenuAction, ...]:
@@ -927,6 +958,7 @@ def _action_matches_terms(action: MenuAction, terms: list[str]) -> bool:
             action.try_this,
             action.watch,
             parameter_hint(action),
+            " ".join(configured_preset_labels(action.config_path)),
         )
     ).lower()
     return all(term in text for term in terms)

@@ -30,6 +30,7 @@ from mclab.learner_menu import (  # noqa: E402
     learning_path_text,
     lesson_text_for_batch,
     lesson_text,
+    configured_preset_labels,
     launch_outputs_index,
     launch_latest_output,
     next_learning_path_step,
@@ -211,6 +212,18 @@ class LearnerMenuTests(unittest.TestCase):
                 config = load_config(action.config_path)
                 self.assertIn("model_path", config)
 
+    def test_interactive_menu_cards_show_configured_presets(self) -> None:
+        by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
+        lab02_interactive = by_label[("Lab02 PID Control", "Interactive")]
+        lab04_cartesian = by_label[("Lab04 Panda Manipulator", "Cartesian interactive")]
+
+        self.assertEqual(
+            configured_preset_labels(lab02_interactive.config_path),
+            ("Gentle P", "Damped PD", "Aggressive PID"),
+        )
+        self.assertIn("Presets: Gentle P, Damped PD, Aggressive PID", lesson_text(lab02_interactive))
+        self.assertIn("Presets: Soft reach, Default reach, Far target", lesson_text(lab04_cartesian))
+
     def test_filter_menu_actions_matches_search_terms(self) -> None:
         labels = {action.label for action in filter_menu_actions("pid noise")}
         self.assertIn("Sensor noise", labels)
@@ -225,6 +238,9 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Interactive", interactive_labels)
         self.assertIn("2DOF interactive", interactive_labels)
         self.assertIn("Cartesian interactive", interactive_labels)
+
+        preset_labels = {(action.group, action.label) for action in filter_menu_actions("far target")}
+        self.assertIn(("Lab04 Panda Manipulator", "Cartesian interactive"), preset_labels)
 
     def test_filter_menu_actions_empty_query_returns_all_actions(self) -> None:
         self.assertEqual(filter_menu_actions(""), MENU_ACTIONS)
