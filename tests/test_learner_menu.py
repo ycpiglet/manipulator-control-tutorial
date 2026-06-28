@@ -13,14 +13,17 @@ sys.path.insert(0, str(ROOT / "src"))
 from mclab.config import load_config  # noqa: E402
 from mclab.learner_menu import (  # noqa: E402
     BATCH_ACTIONS,
+    EXPERIENCE_FILTERS,
     LEARNING_PATH,
     LearningPathProgress,
     MENU_ACTIONS,
     _set_status_after_run,
     action_config_path,
+    action_tags,
     action_doc_path,
     build_batch_args,
     build_run_args,
+    experience_filter_description,
     filter_menu_actions,
     learning_path_progress_items,
     learning_path_progress,
@@ -241,6 +244,42 @@ class LearnerMenuTests(unittest.TestCase):
 
         preset_labels = {(action.group, action.label) for action in filter_menu_actions("far target")}
         self.assertIn(("Lab04 Panda Manipulator", "Cartesian interactive"), preset_labels)
+
+    def test_experience_filters_group_scenarios_by_learning_mode(self) -> None:
+        filter_keys = {filter_option.key for filter_option in EXPERIENCE_FILTERS}
+        self.assertIn("hands-on", filter_keys)
+        self.assertIn("compare", filter_keys)
+        self.assertIn("wall", filter_keys)
+        self.assertEqual(experience_filter_description("missing"), EXPERIENCE_FILTERS[0].description)
+
+        by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
+        lab04_wall = by_label[("Lab04 Panda Manipulator", "Virtual wall")]
+        self.assertIn("hands-on", action_tags(lab04_wall))
+        self.assertIn("wall", action_tags(lab04_wall))
+        self.assertIn("panda", action_tags(lab04_wall))
+        self.assertIn("singularity", action_tags(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF DLS singularity")]))
+
+        hands_on = {(action.group, action.label) for action in filter_menu_actions("", experience_filter="hands-on")}
+        self.assertIn(("Lab01 Mass-Spring-Damper", "Interactive"), hands_on)
+        self.assertIn(("Lab04 Panda Manipulator", "Joint target"), hands_on)
+        self.assertNotIn(("Lab04 Panda Manipulator", "Cartesian reach"), hands_on)
+
+        two_dof_labels = {action.label for action in filter_menu_actions("", experience_filter="2dof")}
+        self.assertIn("2DOF joint-space", two_dof_labels)
+        self.assertIn("2DOF task-space", two_dof_labels)
+        self.assertNotIn("Step profile", two_dof_labels)
+
+        wall_labels = {action.label for action in filter_menu_actions("", experience_filter="wall")}
+        self.assertEqual(wall_labels, {"Soft wall", "Stiff wall", "Virtual wall"})
+
+        singularity_labels = {action.label for action in filter_menu_actions("", experience_filter="singularity")}
+        self.assertEqual(singularity_labels, {"2DOF singularity", "2DOF DLS singularity"})
+
+        compare_labels = {action.label for action in filter_menu_actions("windup", experience_filter="compare")}
+        self.assertEqual(compare_labels, {"Windup", "Anti-windup"})
+
+        hands_on_search = {(action.group, action.label) for action in filter_menu_actions("hands on")}
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF interactive"), hands_on_search)
 
     def test_filter_menu_actions_empty_query_returns_all_actions(self) -> None:
         self.assertEqual(filter_menu_actions(""), MENU_ACTIONS)

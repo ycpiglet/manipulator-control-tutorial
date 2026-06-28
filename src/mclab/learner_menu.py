@@ -68,6 +68,34 @@ class LearningPathProgress:
 LearningPathProgressItem = tuple[LearningPathStep, LearningPathProgress]
 
 
+@dataclass(frozen=True)
+class ExperienceFilter:
+    key: str
+    label: str
+    description: str
+
+
+EXPERIENCE_FILTERS: tuple[ExperienceFilter, ...] = (
+    ExperienceFilter("all", "All", "Show every guided scenario."),
+    ExperienceFilter("hands-on", "Hands-on", "Live tuning, presets, and disturbance controls."),
+    ExperienceFilter("compare", "Compare", "Paired scenarios that make one design tradeoff visible."),
+    ExperienceFilter("pid", "PID", "Gain tuning, saturation, windup, noise, and delay."),
+    ExperienceFilter("trajectory", "Trajectory", "Step, trapezoid, minimum-jerk, S-curve, and joint paths."),
+    ExperienceFilter("2dof", "2DOF", "Two-link arm joint-space, task-space, and singularity demos."),
+    ExperienceFilter("panda", "Panda", "Full manipulator joint, Cartesian, and wall demos."),
+    ExperienceFilter("wall", "Wall", "Virtual wall stiffness, damping, penetration, and retreat."),
+    ExperienceFilter("singularity", "Singularity", "Jacobian conditioning and DLS behavior."),
+)
+
+
+def experience_filter_description(key: str) -> str:
+    normalized = key.lower().strip()
+    for filter_option in EXPERIENCE_FILTERS:
+        if filter_option.key == normalized:
+            return filter_option.description
+    return EXPERIENCE_FILTERS[0].description
+
+
 BATCH_ACTIONS: tuple[BatchMenuAction, ...] = (
     BatchMenuAction(
         group="Comparison Batches",
@@ -939,7 +967,85 @@ def configured_preset_labels(config_path: str) -> tuple[str, ...]:
     return tuple(labels)
 
 
-def filter_menu_actions(query: str, actions: tuple[MenuAction, ...] = MENU_ACTIONS) -> tuple[MenuAction, ...]:
+def action_tags(action: MenuAction) -> tuple[str, ...]:
+    label = action.label.lower()
+    config_name = Path(action.config_path).name.lower()
+    tags = {action.lab_name, action.lab_name.replace("lab", "lab "), action.group.lower()}
+
+    if action.lab_name == "lab01":
+        tags.update({"basics", "dynamics", "mass", "spring", "damper"})
+    elif action.lab_name == "lab02":
+        tags.update({"pid", "control", "closed-loop"})
+    elif action.lab_name == "lab03":
+        tags.add("trajectory")
+        if "2dof" in label or "2dof" in config_name:
+            tags.update({"2dof", "jacobian"})
+    elif action.lab_name == "lab04":
+        tags.update({"panda", "manipulator", "7dof"})
+
+    if "interactive" in label or config_name.startswith("interactive_"):
+        tags.add("hands-on")
+    if label == "joint target":
+        tags.add("hands-on")
+    if _is_compare_action(action):
+        tags.add("compare")
+    if "wall" in label or "wall" in config_name:
+        tags.add("wall")
+    if "singularity" in label:
+        tags.update({"singularity", "dls" if "dls" in label else "conditioning"})
+    if "cartesian" in label or "reach" in label:
+        tags.add("cartesian")
+    if any(term in label for term in ("step", "trapezoid", "minimum jerk", "s-curve", "path")):
+        tags.add("trajectory")
+    if "gain" in label or "damping" in label or "windup" in label or "saturation" in label:
+        tags.add("tuning")
+
+    return tuple(sorted(tags))
+
+
+def _is_compare_action(action: MenuAction) -> bool:
+    label = action.label.lower()
+    compare_labels = {
+        "underdamped",
+        "overdamped",
+        "high stiffness",
+        "low stiffness",
+        "low p gain",
+        "high p gain",
+        "pd damping",
+        "saturation",
+        "windup",
+        "anti-windup",
+        "sensor noise",
+        "control delay",
+        "2dof joint-space",
+        "2dof task-space",
+        "2dof singularity",
+        "2dof dls singularity",
+        "step profile",
+        "trapezoid",
+        "minimum jerk",
+        "s-curve",
+        "joint 4 path",
+        "joint 6 s-curve",
+        "reach x",
+        "cartesian reach",
+        "soft cartesian",
+        "stiff cartesian",
+        "soft wall",
+        "stiff wall",
+    }
+    return label in compare_labels
+
+
+def filter_menu_actions(
+    query: str,
+    actions: tuple[MenuAction, ...] = MENU_ACTIONS,
+    experience_filter: str = "all",
+) -> tuple[MenuAction, ...]:
+    filter_key = experience_filter.lower().strip()
+    if filter_key and filter_key != "all":
+        actions = tuple(action for action in actions if filter_key in action_tags(action))
     terms = [term for term in query.lower().split() if term]
     if not terms:
         return actions
@@ -959,6 +1065,8 @@ def _action_matches_terms(action: MenuAction, terms: list[str]) -> bool:
             action.watch,
             parameter_hint(action),
             " ".join(configured_preset_labels(action.config_path)),
+            " ".join(action_tags(action)),
+            " ".join(tag.replace("-", " ") for tag in action_tags(action)),
         )
     ).lower()
     return all(term in text for term in terms)
@@ -991,6 +1099,8 @@ def main() -> int:
     status = tk.StringVar(value="Ready.")
     latest_output: dict[str, Path | None] = {"path": None}
     search = tk.StringVar(value="")
+    active_experience_filter = tk.StringVar(value="all")
+    filter_description = tk.StringVar(value=experience_filter_description("all"))
     path_status_vars: list[tuple[LearningPathStep, Any]] = []
     path_summary = tk.StringVar(value=learning_path_summary_text())
     next_step_ref: dict[str, LearningPathStep | None] = {"step": next_learning_path_step()}
@@ -1032,6 +1142,23 @@ def main() -> int:
     ttk.Button(search_bar, text="Clear", command=lambda: search.set("")).pack(side="left")
     match_count = ttk.Label(search_bar)
     match_count.pack(side="left", padx=(12, 0))
+
+    def update_experience_filter() -> None:
+        filter_description.set(experience_filter_description(active_experience_filter.get()))
+        render_actions()
+
+    experience_bar = ttk.Frame(outer)
+    experience_bar.pack(fill="x", pady=(0, 10))
+    ttk.Label(experience_bar, text="Explore").pack(side="left")
+    for filter_option in EXPERIENCE_FILTERS:
+        ttk.Radiobutton(
+            experience_bar,
+            text=filter_option.label,
+            value=filter_option.key,
+            variable=active_experience_filter,
+            command=update_experience_filter,
+        ).pack(side="left", padx=(8, 0))
+    ttk.Label(experience_bar, textvariable=filter_description).pack(side="left", padx=(14, 0))
 
     path_frame = ttk.LabelFrame(outer, text="Recommended learning path", padding=10)
     path_frame.pack(fill="x", pady=(0, 10))
@@ -1118,12 +1245,22 @@ def main() -> int:
         for child in scroll_frame.winfo_children():
             child.destroy()
 
-        matched = filter_menu_actions(search.get())
-        match_count.configure(text=f"{len(matched)} of {len(MENU_ACTIONS)} scenarios")
+        selected_filter = active_experience_filter.get()
+        matched = filter_menu_actions(search.get(), experience_filter=selected_filter)
+        filter_label = next(
+            (
+                filter_option.label
+                for filter_option in EXPERIENCE_FILTERS
+                if filter_option.key == selected_filter
+            ),
+            "All",
+        )
+        match_count.configure(text=f"{filter_label}: {len(matched)} of {len(MENU_ACTIONS)} scenarios")
         if not matched:
-            ttk.Label(scroll_frame, text="No matching scenarios. Try PID, noise, wall, 2DOF, or interactive.").grid(
-                row=0, column=0, sticky="w", pady=12
-            )
+            ttk.Label(
+                scroll_frame,
+                text="No matching scenarios. Try All, PID, noise, wall, 2DOF, or hands-on.",
+            ).grid(row=0, column=0, sticky="w", pady=12)
             canvas.configure(scrollregion=canvas.bbox("all"))
             return
 

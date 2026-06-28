@@ -65,6 +65,7 @@ Implemented and verified:
 - Batch comparison reports with scenario cards, automatic comparison takeaways, min/max highlights, baseline deltas, parameter differences, and comparison plots
 - Interactive `MCLab Interaction` quick presets with value previews for representative damping, PID, 2DOF reach, Panda reach, and virtual wall parameter sets
 - Learner menu preset labels for interactive cards, including preset-name search
+- Learner menu Explore filters for hands-on, comparison, PID, 2DOF, Panda, wall, and singularity scenario discovery
 - Run reports show configured preset cards and summarize learner actions, latest slider values, preset choices, observation markers, and raw interaction events
 
 Verified commands:
