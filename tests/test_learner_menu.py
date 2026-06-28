@@ -19,6 +19,7 @@ from mclab.learner_menu import (  # noqa: E402
     LearningPathProgress,
     MENU_ACTIONS,
     MenuAction,
+    _launch_batch_from_menu,
     _launch_from_menu,
     _set_status_after_run,
     _set_status_after_doctor,
@@ -32,6 +33,7 @@ from mclab.learner_menu import (  # noqa: E402
     action_readiness,
     action_tags,
     action_doc_path,
+    batch_readiness,
     build_batch_args,
     build_doctor_args,
     build_run_args,
@@ -136,9 +138,11 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertNotIn("--viewer", args)
                 self.assertNotIn("--show-viewer-ui", args)
                 text = lesson_text_for_batch(action)
+                self.assertIn("Setup:", text)
                 self.assertIn("Try:", text)
                 self.assertIn("Watch:", text)
                 self.assertIn("Runs:", text)
+                self.assertEqual(batch_readiness(action).status, "ok")
 
     def test_menu_can_launch_setup_check(self) -> None:
         args = build_doctor_args()
@@ -286,6 +290,50 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(ready.label, "Ready")
         self.assertIn("models/demo/scene.xml", ready.detail)
 
+    def test_batch_readiness_checks_all_scenario_assets(self) -> None:
+        lab01_batch = next(action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare")
+        config_names = (
+            "default.yaml",
+            "underdamped.yaml",
+            "over_damped.yaml",
+            "high_stiffness.yaml",
+            "low_stiffness.yaml",
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config_dir = root / "configs" / "lab01_msd"
+            config_dir.mkdir(parents=True)
+            for config_name in config_names:
+                (config_dir / config_name).write_text(
+                    "model_path: models/lab01_msd/scene.xml\n",
+                    encoding="utf-8",
+                )
+
+            missing = batch_readiness(lab01_batch, root=root)
+
+        self.assertEqual(missing.label, "Batch not ready")
+        self.assertIn("Missing model", missing.detail)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config_dir = root / "configs" / "lab01_msd"
+            model_dir = root / "models" / "lab01_msd"
+            config_dir.mkdir(parents=True)
+            model_dir.mkdir(parents=True)
+            for config_name in config_names:
+                (config_dir / config_name).write_text(
+                    "model_path: models/lab01_msd/scene.xml\n",
+                    encoding="utf-8",
+                )
+            (model_dir / "scene.xml").write_text("<mujoco/>\n", encoding="utf-8")
+
+            ready = batch_readiness(lab01_batch, root=root)
+
+        self.assertEqual(ready.status, "ok")
+        self.assertEqual(ready.label, "Ready")
+        self.assertIn("5 scenarios", ready.detail)
+
     def test_launch_from_menu_blocks_not_ready_actions(self) -> None:
         status = FakeStatus()
         with (
@@ -300,6 +348,21 @@ class LearnerMenuTests(unittest.TestCase):
         launcher.assert_not_called()
         self.assertIn("Cannot start", status.value)
         self.assertIn("Missing model", status.value)
+
+    def test_launch_batch_from_menu_blocks_not_ready_batches(self) -> None:
+        status = FakeStatus()
+        with (
+            patch(
+                "mclab.learner_menu.batch_readiness",
+                return_value=ActionReadiness("fail", "Batch not ready", "missing model", "Run Check setup."),
+            ),
+            patch("mclab.learner_menu.launch_batch_action") as launcher,
+        ):
+            _launch_batch_from_menu(BATCH_ACTIONS[1], status)
+
+        launcher.assert_not_called()
+        self.assertIn("Cannot start", status.value)
+        self.assertIn("Batch not ready", status.value)
 
     def test_interactive_menu_cards_show_configured_presets(self) -> None:
         by_label = {(action.group, action.label): action for action in MENU_ACTIONS}

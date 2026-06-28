@@ -896,6 +896,11 @@ def action_readiness(action: MenuAction, root: Path | None = None) -> ActionRead
     return _action_readiness(action.config_path, str(project_root))
 
 
+def batch_readiness(action: BatchMenuAction, root: Path | None = None) -> ActionReadiness:
+    project_root = root if root is not None else PROJECT_ROOT
+    return _batch_readiness(action.batch_name, str(project_root))
+
+
 @lru_cache(maxsize=256)
 def _action_readiness(config_path: str, root: str) -> ActionReadiness:
     project_root = Path(root)
@@ -933,6 +938,42 @@ def _action_readiness(config_path: str, root: str) -> ActionReadiness:
             fix = "Run `python scripts/bootstrap_and_run.py --setup-only` to fetch MuJoCo Menagerie."
         return ActionReadiness("fail", "Missing model", model_path, fix)
     return ActionReadiness("ok", "Ready", f"model: {model_path}")
+
+
+@lru_cache(maxsize=64)
+def _batch_readiness(batch_name: str, root: str) -> ActionReadiness:
+    if batch_name == ALL_BATCH_NAME:
+        scenarios = tuple(scenario for name in sorted(BATCH_SETS) for scenario in BATCH_SETS[name])
+    else:
+        scenarios = BATCH_SETS.get(batch_name)
+        if scenarios is None:
+            return ActionReadiness(
+                "fail",
+                "Unknown batch",
+                batch_name,
+                "Choose another comparison batch.",
+            )
+
+    failures: list[str] = []
+    first_fix = ""
+    for scenario in scenarios:
+        readiness = _action_readiness(scenario.config_path, root)
+        if readiness.status == "ok":
+            continue
+        detail = readiness.detail or scenario.config_path
+        failures.append(f"{scenario.label}: {readiness.label} - {detail}")
+        if not first_fix and readiness.fix:
+            first_fix = readiness.fix
+    if failures:
+        visible = "; ".join(failures[:2])
+        suffix = f"; +{len(failures) - 2} more" if len(failures) > 2 else ""
+        return ActionReadiness(
+            "fail",
+            "Batch not ready",
+            f"{visible}{suffix}",
+            first_fix or "Run Check setup for diagnosis.",
+        )
+    return ActionReadiness("ok", "Ready", f"{len(scenarios)} scenarios")
 
 
 def launch_action_config(action: MenuAction) -> subprocess.Popen[Any] | None:
@@ -1459,7 +1500,8 @@ def main() -> int:
         row_index, column_index = divmod(action_index, 2)
         cell = ttk.Frame(batch_frame)
         cell.grid(row=row_index, column=column_index, sticky="ew", padx=(0, 12), pady=(0, 8))
-        ttk.Button(
+        readiness = batch_readiness(action)
+        batch_button = ttk.Button(
             cell,
             text=action.label,
             width=18,
@@ -1471,7 +1513,10 @@ def main() -> int:
                 latest_button=latest_button,
                 progress_callback=refresh_after_run,
             ),
-        ).pack(anchor="w")
+        )
+        if readiness.status != "ok":
+            batch_button.state(["disabled"])
+        batch_button.pack(anchor="w")
         ttk.Label(cell, text=lesson_text_for_batch(action), wraplength=360, justify="left").pack(
             anchor="w", pady=(4, 0)
         )
@@ -1588,8 +1633,10 @@ def main() -> int:
                 )
                 if isinstance(followup, MenuAction) and action_readiness(followup).status != "ok":
                     next_button.state(["disabled"])
+                if isinstance(followup, BatchMenuAction) and batch_readiness(followup).status != "ok":
+                    next_button.state(["disabled"])
                 next_button.grid(row=action_index, column=4, sticky="w", padx=(0, 12), pady=4)
-                ttk.Button(
+                compare_button = ttk.Button(
                     frame,
                     text="Compare",
                     width=8,
@@ -1601,7 +1648,10 @@ def main() -> int:
                         latest_button=latest_button,
                         progress_callback=refresh_after_run,
                     ),
-                ).grid(row=action_index, column=5, sticky="w", padx=(0, 12), pady=4)
+                )
+                if batch_readiness(compare_batch).status != "ok":
+                    compare_button.state(["disabled"])
+                compare_button.grid(row=action_index, column=5, sticky="w", padx=(0, 12), pady=4)
                 ttk.Label(frame, text=lesson_text(action), wraplength=500, justify="left").grid(
                     row=action_index, column=6, sticky="w", pady=4
                 )
@@ -1708,6 +1758,12 @@ def _launch_batch_from_menu(
     latest_button: Any | None = None,
     progress_callback: Callable[[], None] | None = None,
 ) -> None:
+    readiness = batch_readiness(action)
+    if readiness.status != "ok":
+        detail = f" - {readiness.detail}" if readiness.detail else ""
+        fix = f" {readiness.fix}" if readiness.fix else ""
+        status.set(f"Cannot start {action.group} - {action.label}: {readiness.label}{detail}.{fix}")
+        return
     process = launch_batch_action(action)
     status.set(f"Started {action.group} - {action.label} (pid {process.pid}).")
     Thread(
@@ -1839,8 +1895,12 @@ def lesson_text_for_batch(action: BatchMenuAction) -> str:
         if action.batch_name == ALL_BATCH_NAME
         else len(BATCH_SETS[action.batch_name])
     )
+    readiness = batch_readiness(action)
+    setup_detail = f" - {readiness.detail}" if readiness.status != "ok" and readiness.detail else ""
+    setup_fix = f" Fix: {readiness.fix}" if readiness.status != "ok" and readiness.fix else ""
     return (
         f"{action.description}\n"
+        f"Setup: {readiness.label}{setup_detail}{setup_fix}\n"
         f"Try: {action.try_this}\n"
         f"Watch: {action.watch}\n"
         f"Runs: {scenario_count} scenarios"
