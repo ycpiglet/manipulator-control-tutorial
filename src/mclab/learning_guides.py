@@ -60,9 +60,9 @@ RUN_GUIDES: dict[str, RunGuide] = {
     "configs/lab01_msd/interactive_pull.yaml": RunGuide(
         "Lab01 Interactive",
         "Push the mass and tune physical parameters while the viewer runs.",
-        "Use Pull/Push, then move mass, damping, and stiffness sliders.",
-        "live sliders: mass, damping, stiffness; YAML: interaction.force",
-        "Live position, velocity, applied force, and total energy.",
+        "Use Pull/Push and watch the orange force bar against the gray equilibrium marker.",
+        "live sliders: mass, damping, stiffness; YAML: interaction.force, viewer_guides.enabled",
+        "Live position, velocity, applied force, total energy, and viewer force direction.",
         "After closing the viewer, compare the saved plots with the slider choices.",
     ),
     "configs/lab02_pid/default.yaml": RunGuide(
@@ -140,9 +140,9 @@ RUN_GUIDES: dict[str, RunGuide] = {
     "configs/lab02_pid/interactive_disturbance.yaml": RunGuide(
         "Lab02 Interactive",
         "Disturb the mass and tune PID gains while the viewer runs.",
-        "Click Pull/Push, then tune target, Kp, Ki, Kd, and force limit.",
-        "live sliders: target, Kp, Ki, Kd, force limit; YAML: controller.*",
-        "Live target, position, error, PID force, and disturbance force.",
+        "Move the target slider and watch the green target marker shift.",
+        "live sliders: target, Kp, Ki, Kd, force limit; YAML: controller.*, viewer_guides.enabled",
+        "Live target, position, error, PID force, disturbance force, and orange force bar.",
         "Close the viewer and use the report to connect slider changes to plots.",
     ),
     "configs/lab03_2dof/default.yaml": RunGuide(

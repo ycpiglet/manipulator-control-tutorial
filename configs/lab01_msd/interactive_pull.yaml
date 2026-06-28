@@ -17,3 +17,5 @@ interaction:
   live_tuning: true
   force: 80.0
   duration: 0.35
+viewer_guides:
+  enabled: true

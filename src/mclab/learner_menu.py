@@ -251,8 +251,8 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
         config_path="configs/lab01_msd/interactive_pull.yaml",
         plots="essential",
         description="Push the mass and tune mass, damping, stiffness.",
-        try_this="Click Pull/Push, then move damping and stiffness sliders.",
-        watch="Live status position, force, and total energy.",
+        try_this="Click Pull/Push and watch the orange force bar.",
+        watch="Gray equilibrium marker, position, force, and total energy.",
     ),
     MenuAction(
         group="Lab02 PID Control",
@@ -351,8 +351,8 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
         config_path="configs/lab02_pid/interactive_disturbance.yaml",
         plots="essential",
         description="Disturb the mass and tune target, Kp, Ki, Kd, force limit.",
-        try_this="Click Pull/Push, then tune Kp, Ki, Kd, and force limit.",
-        watch="Live status error, PID force, and disturbance.",
+        try_this="Move the target slider and watch the green target marker.",
+        watch="Target marker, error, PID force, and disturbance force.",
     ),
     MenuAction(
         group="Lab03 2DOF Arm and Trajectories",
@@ -848,7 +848,7 @@ def parameter_hint(action: MenuAction) -> str:
 
     if action.lab_name == "lab01":
         if label == "interactive":
-            return "live sliders: mass, damping, stiffness; YAML: interaction.force"
+            return "live sliders: mass, damping, stiffness; YAML: interaction.force, viewer_guides.enabled"
         if "damped" in label:
             return "damping, stiffness, initial_position"
         if "stiffness" in label:
@@ -857,7 +857,7 @@ def parameter_hint(action: MenuAction) -> str:
 
     if action.lab_name == "lab02":
         if label == "interactive":
-            return "live sliders: target, Kp, Ki, Kd, force limit; YAML: controller.*"
+            return "live sliders: target, Kp, Ki, Kd, force limit; YAML: controller.*, viewer_guides.enabled"
         if label in {"windup", "anti-windup"}:
             return "controller.ki, controller.anti_windup, controller.output_limit"
         if label == "saturation":

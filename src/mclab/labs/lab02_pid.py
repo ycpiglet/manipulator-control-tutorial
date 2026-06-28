@@ -29,7 +29,7 @@ from mclab.sim.mujoco_utils import (
     viewer_clock,
     viewer_is_running,
 )
-from mclab.sim.one_dof import configure_slider_plant, slider_state
+from mclab.sim.one_dof import configure_slider_plant, slider_state, update_slider_viewer_guides
 from mclab.sim.plotting import PlotSelection, save_time_series_plots, select_plot_specs
 from mclab.trajectories import build_trajectory
 
@@ -77,6 +77,7 @@ def run(
     noise_std = float(config.get("measurement_noise_std", 0.0))
     delay_steps = max(0, int(round(float(config.get("control_delay", 0.0)) / dt)))
     delay_buffer: deque[float] = deque([0.0] * delay_steps, maxlen=delay_steps)
+    viewer_guides_enabled = bool(dict(config.get("viewer_guides", {})).get("enabled", True))
 
     interaction_log = InteractionLog()
     key_force = KeyForcePulse(config, event_log=interaction_log)
@@ -147,13 +148,6 @@ def run(
             total_force = applied_force + manual_force
             data.ctrl[handles.actuator_id] = total_force
             mujoco.mj_step(model, data)
-            sync_viewer(
-                viewer_handle,
-                data,
-                realtime=realtime,
-                wall_start=wall_start,
-                sim_start=sim_start,
-            )
 
             position, velocity, acceleration = slider_state(data, handles)
             live_status.set_values(
@@ -185,6 +179,21 @@ def run(
                 pid_i=command.integral,
                 pid_d=command.derivative,
                 saturated=float(command.saturated),
+            )
+            update_slider_viewer_guides(
+                mujoco,
+                viewer_handle,
+                position=position,
+                force=total_force,
+                target_position=target_position,
+                enabled=viewer_guides_enabled,
+            )
+            sync_viewer(
+                viewer_handle,
+                data,
+                realtime=realtime,
+                wall_start=wall_start,
+                sim_start=sim_start,
             )
         completed = True
     finally:

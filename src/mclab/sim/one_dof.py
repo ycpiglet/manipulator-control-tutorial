@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from math import sin, tau
 from typing import Any
 
+from mclab.sim.mujoco_utils import add_viewer_box, reset_viewer_overlays
+
 
 @dataclass(frozen=True)
 class SliderHandles:
@@ -92,3 +94,45 @@ def mechanical_energy(
     potential = 0.5 * stiffness * (position - spring_reference) ** 2
     return kinetic, potential, kinetic + potential
 
+
+def update_slider_viewer_guides(
+    mujoco: Any,
+    viewer_handle: Any | None,
+    *,
+    position: float,
+    force: float,
+    reference_position: float = 0.0,
+    target_position: float | None = None,
+    enabled: bool = True,
+) -> None:
+    if viewer_handle is None:
+        return
+    reset_viewer_overlays(viewer_handle)
+    if not enabled:
+        return
+
+    add_viewer_box(
+        mujoco,
+        viewer_handle,
+        [reference_position, -0.11, 0.045],
+        half_size=[0.006, 0.025, 0.09],
+        rgba=[0.38, 0.43, 0.50, 0.70],
+    )
+    if target_position is not None:
+        add_viewer_box(
+            mujoco,
+            viewer_handle,
+            [target_position, 0.11, 0.045],
+            half_size=[0.008, 0.028, 0.10],
+            rgba=[0.10, 0.82, 0.28, 0.82],
+        )
+    if abs(force) > 1e-9:
+        length = min(0.22, max(0.035, abs(force) / 450.0))
+        direction = 1.0 if force >= 0.0 else -1.0
+        add_viewer_box(
+            mujoco,
+            viewer_handle,
+            [position + direction * length, 0.0, 0.095],
+            half_size=[length, 0.018, 0.018],
+            rgba=[1.0, 0.48, 0.10, 0.84],
+        )

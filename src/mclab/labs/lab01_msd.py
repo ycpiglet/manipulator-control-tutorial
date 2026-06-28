@@ -25,7 +25,13 @@ from mclab.sim.mujoco_utils import (
     viewer_clock,
     viewer_is_running,
 )
-from mclab.sim.one_dof import configure_slider_plant, force_input_at, mechanical_energy, slider_state
+from mclab.sim.one_dof import (
+    configure_slider_plant,
+    force_input_at,
+    mechanical_energy,
+    slider_state,
+    update_slider_viewer_guides,
+)
 from mclab.sim.plotting import PlotSelection, save_time_series_plots, select_plot_specs
 
 
@@ -56,6 +62,7 @@ def run(
     spring_reference = float(config.get("spring_reference", 0.0))
     force_config = config.get("force_input", config.get("external_force", 0.0))
     damping = float(config.get("damping", 0.0))
+    viewer_guides_enabled = bool(dict(config.get("viewer_guides", {})).get("enabled", True))
 
     interaction_log = InteractionLog()
     key_force = KeyForcePulse(config, event_log=interaction_log)
@@ -114,13 +121,6 @@ def run(
             force = input_force + manual_force
             data.ctrl[handles.actuator_id] = force
             mujoco.mj_step(model, data)
-            sync_viewer(
-                viewer_handle,
-                data,
-                realtime=realtime,
-                wall_start=wall_start,
-                sim_start=sim_start,
-            )
 
             position, velocity, acceleration = slider_state(data, handles)
             kinetic, potential, total = mechanical_energy(
@@ -145,6 +145,21 @@ def run(
                 kinetic_energy=kinetic,
                 potential_energy=potential,
                 total_energy=total,
+            )
+            update_slider_viewer_guides(
+                mujoco,
+                viewer_handle,
+                position=position,
+                force=force,
+                reference_position=spring_reference,
+                enabled=viewer_guides_enabled,
+            )
+            sync_viewer(
+                viewer_handle,
+                data,
+                realtime=realtime,
+                wall_start=wall_start,
+                sim_start=sim_start,
             )
         completed = True
     finally:

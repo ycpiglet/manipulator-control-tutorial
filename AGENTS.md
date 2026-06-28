@@ -50,6 +50,7 @@ Implemented and verified:
 - Phase 0 package skeleton, CLI, config loading, logger, plotting helper
 - Lab01 mass-spring-damper on a MuJoCo slide-joint plant
 - Lab02 PID control on the same MuJoCo plant
+- Lab01/Lab02 viewer visual guides for equilibrium, target, and applied force direction
 - Lab03 trajectory planning plus a torque-actuated 2DOF planar arm
 - Lab03 FK, IK helper, analytic Jacobian, joint-space tracking, and task-space Jacobian-transpose PD
 - Lab03 viewer visual guides for 2DOF hand target, current hand position, and singularity warning state
