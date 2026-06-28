@@ -62,6 +62,7 @@ Implemented and verified:
 - Lab04 viewer visual guides for Cartesian target, current hand position, contact state, and virtual wall
 - YAML configs, MuJoCo XML models, docs, and tests for the implemented labs
 - Run reports with domain-specific checks for singularity, DLS speed, virtual wall response, and actuator effort
+- Batch comparison reports with scenario cards, automatic comparison takeaways, min/max highlights, baseline deltas, parameter differences, and comparison plots
 
 Verified commands:
 

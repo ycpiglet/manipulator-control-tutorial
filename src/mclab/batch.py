@@ -449,6 +449,7 @@ def _render_batch_report(output: Path, guide: BatchGuide, rows: list[dict[str, A
     question_items = "\n".join(f"<li>{escape(question)}</li>" for question in guide.questions)
     next_experiments = _next_experiments(guide)
     scenario_cards = "\n".join(_scenario_card(row, metric_keys) for row in rows)
+    comparison_takeaways = _comparison_takeaways(rows, metric_keys)
     metric_highlights = _metric_highlights(rows, metric_keys)
     baseline_changes = _baseline_metric_changes(rows, metric_keys)
     parameter_differences = _parameter_differences(rows)
@@ -513,6 +514,21 @@ def _render_batch_report(output: Path, guide: BatchGuide, rows: list[dict[str, A
     .scenario h3 {{
       margin: 0 0 8px;
       font-size: 16px;
+    }}
+    .takeaway-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+    }}
+    .takeaway {{
+      border: 1px solid #e0e4ea;
+      border-radius: 8px;
+      padding: 12px;
+      background: #fbfcfe;
+    }}
+    .takeaway h3 {{
+      margin: 0 0 8px;
+      font-size: 15px;
     }}
     .muted {{
       color: #596270;
@@ -590,6 +606,7 @@ def _render_batch_report(output: Path, guide: BatchGuide, rows: list[dict[str, A
       <h2>Scenario Cards</h2>
       <div class="scenario-grid">{scenario_cards}</div>
     </section>
+    {comparison_takeaways}
     {metric_highlights}
     {baseline_changes}
     {parameter_differences}
@@ -781,6 +798,139 @@ def _next_experiments(guide: BatchGuide) -> str:
         "</ul>"
         "</section>"
     )
+
+
+def _comparison_takeaways(rows: list[dict[str, Any]], metric_keys: list[str]) -> str:
+    cards: list[str] = []
+    for key in metric_keys:
+        values = [
+            (str(row["label"]), numeric, _takeaway_rank_value(key, numeric))
+            for row in rows
+            if (numeric := _as_finite_float(row.get("summary", {}).get(key))) is not None
+        ]
+        if len(values) < 2:
+            continue
+        min_label, min_value, min_rank = min(values, key=lambda item: item[2])
+        max_label, max_value, max_rank = max(values, key=lambda item: item[2])
+        if abs(max_rank - min_rank) < 1e-12:
+            continue
+        cards.append(_takeaway_card(key, min_label, min_value, max_label, max_value))
+        if len(cards) >= 4:
+            break
+    if not cards:
+        return ""
+    return (
+        "<section>"
+        "<h2>Comparison Takeaways</h2>"
+        '<p class="muted">Use these as starting hypotheses, then confirm the story in the plots and YAML differences.</p>'
+        '<div class="takeaway-grid">'
+        + "\n".join(cards)
+        + "</div>"
+        "</section>"
+    )
+
+
+def _takeaway_card(
+    key: str,
+    min_label: str,
+    min_value: float,
+    max_label: str,
+    max_value: float,
+) -> str:
+    direction = _metric_direction(key)
+    label = escape(_label(key))
+    if direction == "higher":
+        body = (
+            f"<strong>{escape(max_label)}</strong> has the strongest capability signal "
+            f"({_format_value(max_value)}), while <strong>{escape(min_label)}</strong> is lowest "
+            f"({_format_value(min_value)})."
+        )
+    elif direction == "lower":
+        body = _lower_metric_takeaway_body(key, min_label, min_value, max_label, max_value)
+    else:
+        body = (
+            f"This metric ranges from <strong>{escape(min_label)}</strong> "
+            f"({_format_value(min_value)}) to <strong>{escape(max_label)}</strong> "
+            f"({_format_value(max_value)})."
+        )
+    return (
+        '<article class="takeaway">'
+        f"<h3>{label}</h3>"
+        f"<p>{body}</p>"
+        "</article>"
+    )
+
+
+def _lower_metric_takeaway_body(
+    key: str,
+    min_label: str,
+    min_value: float,
+    max_label: str,
+    max_value: float,
+) -> str:
+    lowered = key.lower()
+    low = f"<strong>{escape(min_label)}</strong>"
+    high = f"<strong>{escape(max_label)}</strong>"
+    low_value = _format_value(min_value)
+    high_value = _format_value(max_value)
+    if "settling" in lowered:
+        return f"{low} settles fastest ({low_value}), while {high} takes longest ({high_value})."
+    if "overshoot" in lowered:
+        return f"{low} has the least overshoot ({low_value}), while {high} overshoots most ({high_value})."
+    if "error" in lowered:
+        return f"{low} has the smallest error magnitude ({low_value}), while {high} has the largest ({high_value})."
+    if "condition" in lowered:
+        return f"{low} is best-conditioned here ({low_value}), while {high} is closest to a singular response ({high_value})."
+    if any(term in lowered for term in ("effort", "force", "tau", "torque", "current", "speed")):
+        return f"{low} uses the least demand ({low_value}), while {high} is the most demanding ({high_value})."
+    if any(term in lowered for term in ("penetration", "retreat")):
+        return f"{low} has the smallest wall response ({low_value}), while {high} has the largest ({high_value})."
+    return f"{low} is lowest for this metric ({low_value}), while {high} is highest ({high_value})."
+
+
+def _metric_direction(key: str) -> str:
+    lowered = key.lower()
+    if "manipulability" in lowered:
+        return "higher"
+    lower_is_calmer = (
+        "error",
+        "overshoot",
+        "settling",
+        "effort",
+        "force",
+        "tau",
+        "torque",
+        "current",
+        "penetration",
+        "retreat",
+        "condition",
+        "speed",
+        "noise",
+        "delay",
+    )
+    if any(term in lowered for term in lower_is_calmer):
+        return "lower"
+    return "neutral"
+
+
+def _takeaway_rank_value(key: str, value: float) -> float:
+    if _metric_direction(key) != "lower":
+        return value
+    magnitude_terms = (
+        "error",
+        "effort",
+        "force",
+        "tau",
+        "torque",
+        "current",
+        "penetration",
+        "retreat",
+        "speed",
+    )
+    lowered = key.lower()
+    if any(term in lowered for term in magnitude_terms):
+        return abs(value)
+    return value
 
 
 def _parameter_differences(rows: list[dict[str, Any]]) -> str:

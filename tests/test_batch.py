@@ -171,6 +171,18 @@ class BatchTests(unittest.TestCase):
         self.assertNotIn("max_wall_retreat_cm", keys)
         self.assertNotIn("max_abs_virtual_wall_force", keys)
 
+    def test_comparison_takeaways_rank_error_metrics_by_magnitude(self) -> None:
+        rows = [
+            {"label": "near_zero", "summary": {"steady_state_error": -0.01}},
+            {"label": "far_negative", "summary": {"steady_state_error": -0.5}},
+            {"label": "positive", "summary": {"steady_state_error": 0.2}},
+        ]
+
+        html = batch._comparison_takeaways(rows, ["steady_state_error"])
+
+        self.assertIn("near_zero</strong> has the smallest error magnitude", html)
+        self.assertIn("far_negative</strong> has the largest", html)
+
     def test_comparison_plots_are_written_from_run_logs(self) -> None:
         scenarios = (
             batch.BatchScenario("baseline", "lab02", "configs/lab02_pid/default.yaml"),
@@ -208,6 +220,9 @@ class BatchTests(unittest.TestCase):
             self.assertTrue((output / "comparison_plots" / "position_compare.png").exists())
             self.assertTrue((output / "comparison_plots" / "error_compare.png").exists())
             report_html = (output / "report.html").read_text(encoding="utf-8")
+            self.assertIn("Comparison Takeaways", report_html)
+            self.assertIn("baseline</strong> has the least overshoot", report_html)
+            self.assertIn("high gain</strong> overshoots most", report_html)
             self.assertIn("Metric Highlights", report_html)
             self.assertIn("overshoot percent", report_html)
             self.assertIn("high gain", report_html)
