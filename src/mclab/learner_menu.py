@@ -1517,6 +1517,16 @@ def main() -> int:
         if readiness.status != "ok":
             batch_button.state(["disabled"])
         batch_button.pack(anchor="w")
+        batch_latest = action_latest_output(action)
+        report_button = ttk.Button(
+            cell,
+            text="Report",
+            width=10,
+            command=lambda selected=action: launch_action_latest_output(selected),
+        )
+        if batch_latest is None:
+            report_button.state(["disabled"])
+        report_button.pack(anchor="w", pady=(4, 0))
         ttk.Label(cell, text=lesson_text_for_batch(action), wraplength=360, justify="left").pack(
             anchor="w", pady=(4, 0)
         )
@@ -1901,6 +1911,7 @@ def lesson_text_for_batch(action: BatchMenuAction) -> str:
     return (
         f"{action.description}\n"
         f"Setup: {readiness.label}{setup_detail}{setup_fix}\n"
+        f"{action_history_text(action)}\n"
         f"Try: {action.try_this}\n"
         f"Watch: {action.watch}\n"
         f"Runs: {scenario_count} scenarios"

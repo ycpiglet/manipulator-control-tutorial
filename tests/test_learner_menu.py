@@ -139,6 +139,7 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertNotIn("--show-viewer-ui", args)
                 text = lesson_text_for_batch(action)
                 self.assertIn("Setup:", text)
+                self.assertIn("History:", text)
                 self.assertIn("Try:", text)
                 self.assertIn("Watch:", text)
                 self.assertIn("Runs:", text)
@@ -565,6 +566,38 @@ class LearnerMenuTests(unittest.TestCase):
             with patch("mclab.learner_menu.open_path") as opener:
                 launch_action_latest_output(MENU_ACTIONS[0], outputs)
                 missing = launch_action_latest_output(MENU_ACTIONS[1], outputs)
+
+            opener.assert_called_once_with(report)
+            self.assertIsNone(missing)
+
+    def test_batch_history_tracks_latest_matching_report(self) -> None:
+        lab01_batch = next(action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare")
+        lab02_batch = next(action for action in BATCH_ACTIONS if action.batch_name == "lab02_pid_compare")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            batch_path = outputs / "batch_lab01"
+            batch_path.mkdir()
+            (batch_path / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "batch",
+                        "config_name": "lab01_msd_compare",
+                        "batch_name": "lab01_msd_compare",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            report = batch_path / "report.html"
+            report.write_text("<html></html>", encoding="utf-8")
+
+            self.assertEqual(action_latest_output(lab01_batch, outputs), batch_path)
+            self.assertIn("History: Latest batch_lab01", action_history_text(lab01_batch, outputs))
+            self.assertEqual(action_history_text(lab02_batch, outputs), "History: Not run yet")
+
+            with patch("mclab.learner_menu.open_path") as opener:
+                launch_action_latest_output(lab01_batch, outputs)
+                missing = launch_action_latest_output(lab02_batch, outputs)
 
             opener.assert_called_once_with(report)
             self.assertIsNone(missing)
