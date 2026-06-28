@@ -24,3 +24,16 @@ interaction:
   live_tuning: true
   force: 80.0
   duration: 0.35
+  tuning_presets:
+    - label: Soft tracking
+      values:
+        target_offset: 0.10
+        kp: 60.0
+        kd: 16.0
+        force_limit: 80.0
+    - label: Fast tracking
+      values:
+        target_offset: 0.30
+        kp: 180.0
+        kd: 20.0
+        force_limit: 150.0

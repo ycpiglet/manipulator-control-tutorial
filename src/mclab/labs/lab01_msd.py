@@ -15,6 +15,7 @@ from mclab.sim.interaction import (
     SliderSpec,
     StatusSpec,
     maybe_start_interaction_panel,
+    tuning_presets_from_config,
 )
 from mclab.sim.logging import RunLogger
 from mclab.sim.mujoco_utils import (
@@ -186,13 +187,15 @@ def _live_tuning(config: dict[str, Any], interaction_log: InteractionLog | None 
     interaction = dict(config.get("interaction", {}))
     if not bool(interaction.get("live_tuning", False)):
         return LiveTuning([])
+    specs = [
+        SliderSpec("mass", "Mass [kg]", 0.2, 5.0, float(config.get("mass", 1.0)), 0.1),
+        SliderSpec("damping", "Damping [N s/m]", 0.0, 12.0, float(config.get("damping", 0.0)), 0.1),
+        SliderSpec("stiffness", "Stiffness [N/m]", 0.0, 120.0, float(config.get("stiffness", 0.0)), 1.0),
+    ]
     return LiveTuning(
-        [
-            SliderSpec("mass", "Mass [kg]", 0.2, 5.0, float(config.get("mass", 1.0)), 0.1),
-            SliderSpec("damping", "Damping [N s/m]", 0.0, 12.0, float(config.get("damping", 0.0)), 0.1),
-            SliderSpec("stiffness", "Stiffness [N/m]", 0.0, 120.0, float(config.get("stiffness", 0.0)), 1.0),
-        ],
+        specs,
         event_log=interaction_log,
+        presets=tuning_presets_from_config(config, specs),
     )
 
 

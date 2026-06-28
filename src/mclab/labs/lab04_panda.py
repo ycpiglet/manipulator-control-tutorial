@@ -15,6 +15,7 @@ from mclab.sim.interaction import (
     StatusSpec,
     TargetOffsetControl,
     maybe_start_interaction_panel,
+    tuning_presets_from_config,
 )
 from mclab.sim.logging import RunLogger
 from mclab.sim.mujoco_utils import (
@@ -381,46 +382,50 @@ def _live_tuning(config: dict[str, Any], interaction_log: InteractionLog | None 
     if mode in {"cartesian_reach", "task_space", "ee_reach"}:
         target_config = dict(config.get("cartesian_target", {}))
         target_position = _float_list(target_config.get("position", [0.60, 0.10, 0.59]), 3)
+        specs = [
+            SliderSpec("target_x", "Target X [m]", 0.35, 0.75, target_position[0], 0.005),
+            SliderSpec("target_y", "Target Y [m]", -0.35, 0.35, target_position[1], 0.005),
+            SliderSpec("target_z", "Target Z [m]", 0.35, 0.80, target_position[2], 0.005),
+            SliderSpec("cartesian_gain", "Cartesian gain", 0.2, 2.0, float(target_config.get("gain", 1.0)), 0.05),
+        ]
         return LiveTuning(
-            [
-                SliderSpec("target_x", "Target X [m]", 0.35, 0.75, target_position[0], 0.005),
-                SliderSpec("target_y", "Target Y [m]", -0.35, 0.35, target_position[1], 0.005),
-                SliderSpec("target_z", "Target Z [m]", 0.35, 0.80, target_position[2], 0.005),
-                SliderSpec("cartesian_gain", "Cartesian gain", 0.2, 2.0, float(target_config.get("gain", 1.0)), 0.05),
-            ],
+            specs,
             event_log=interaction_log,
+            presets=tuning_presets_from_config(config, specs),
         )
     wall_config = dict(config.get("virtual_wall", {}))
+    specs = [
+        SliderSpec("joint_target_offset", "Joint target offset [rad]", -0.35, 0.35, 0.0, 0.01),
+        SliderSpec("wall_x", "Virtual wall X [m]", 0.50, 0.70, float(wall_config.get("wall_x", 0.57)), 0.005),
+        SliderSpec(
+            "wall_stiffness",
+            "Wall stiffness [N/m]",
+            0.0,
+            800.0,
+            float(wall_config.get("stiffness", 260.0)),
+            10.0,
+        ),
+        SliderSpec(
+            "wall_damping",
+            "Wall damping [N s/m]",
+            0.0,
+            40.0,
+            float(wall_config.get("damping", 12.0)),
+            0.5,
+        ),
+        SliderSpec(
+            "wall_retreat_gain",
+            "Retreat gain",
+            0.0,
+            1.5,
+            float(wall_config.get("cartesian_retreat_gain", 0.4)),
+            0.05,
+        ),
+    ]
     return LiveTuning(
-        [
-            SliderSpec("joint_target_offset", "Joint target offset [rad]", -0.35, 0.35, 0.0, 0.01),
-            SliderSpec("wall_x", "Virtual wall X [m]", 0.50, 0.70, float(wall_config.get("wall_x", 0.57)), 0.005),
-            SliderSpec(
-                "wall_stiffness",
-                "Wall stiffness [N/m]",
-                0.0,
-                800.0,
-                float(wall_config.get("stiffness", 260.0)),
-                10.0,
-            ),
-            SliderSpec(
-                "wall_damping",
-                "Wall damping [N s/m]",
-                0.0,
-                40.0,
-                float(wall_config.get("damping", 12.0)),
-                0.5,
-            ),
-            SliderSpec(
-                "wall_retreat_gain",
-                "Retreat gain",
-                0.0,
-                1.5,
-                float(wall_config.get("cartesian_retreat_gain", 0.4)),
-                0.05,
-            ),
-        ],
+        specs,
         event_log=interaction_log,
+        presets=tuning_presets_from_config(config, specs),
     )
 
 

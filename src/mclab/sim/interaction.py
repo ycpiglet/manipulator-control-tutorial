@@ -23,6 +23,13 @@ class SliderSpec:
 
 
 @dataclass(frozen=True)
+class TuningPreset:
+    name: str
+    label: str
+    values: dict[str, float]
+
+
+@dataclass(frozen=True)
 class StatusSpec:
     name: str
     label: str
@@ -85,8 +92,14 @@ class InteractionLog:
 
 
 class LiveTuning:
-    def __init__(self, specs: list[SliderSpec], event_log: InteractionLog | None = None) -> None:
+    def __init__(
+        self,
+        specs: list[SliderSpec],
+        event_log: InteractionLog | None = None,
+        presets: list[TuningPreset] | None = None,
+    ) -> None:
         self.specs = specs
+        self.presets = presets or []
         self.enabled = bool(specs)
         self._values = {spec.name: float(spec.initial) for spec in specs}
         self._initial_values = dict(self._values)
@@ -106,6 +119,8 @@ class LiveTuning:
         should_record = False
         number = float(value)
         spec = self._specs.get(name)
+        if spec is not None:
+            number = _clamp(number, spec.minimum, spec.maximum)
         with self._lock:
             if name in self._values:
                 old_value = self._values[name]
@@ -119,6 +134,24 @@ class LiveTuning:
                 label=spec.label if spec is not None else name,
             )
 
+    def apply_preset(self, name: str) -> dict[str, float]:
+        preset = next((item for item in self.presets if item.name == name), None)
+        if preset is None:
+            return self.snapshot()
+        applied: dict[str, float] = {}
+        with self._lock:
+            for value_name, value in preset.values.items():
+                spec = self._specs.get(value_name)
+                if spec is None:
+                    continue
+                number = _clamp(float(value), spec.minimum, spec.maximum)
+                self._values[value_name] = number
+                applied[value_name] = number
+            values = dict(self._values)
+        if applied and self._event_log is not None:
+            self._event_log.record("preset", preset.name, applied, label=preset.label)
+        return values
+
     def reset(self) -> dict[str, float]:
         with self._lock:
             changed = any(
@@ -130,6 +163,36 @@ class LiveTuning:
         if changed and self._event_log is not None:
             self._event_log.record("button", "reset_sliders", None, label="Reset sliders")
         return values
+
+
+def tuning_presets_from_config(config: dict[str, Any], specs: list[SliderSpec]) -> list[TuningPreset]:
+    interaction = dict(config.get("interaction", {}))
+    raw_presets = interaction.get("tuning_presets", [])
+    if not isinstance(raw_presets, list):
+        return []
+    allowed_names = {spec.name for spec in specs}
+    presets: list[TuningPreset] = []
+    for index, raw_preset in enumerate(raw_presets, start=1):
+        if not isinstance(raw_preset, dict):
+            continue
+        raw_values = raw_preset.get("values", {})
+        if not isinstance(raw_values, dict):
+            continue
+        values: dict[str, float] = {}
+        for raw_name, raw_value in raw_values.items():
+            name = str(raw_name)
+            if name not in allowed_names:
+                continue
+            try:
+                values[name] = float(raw_value)
+            except (TypeError, ValueError):
+                continue
+        if not values:
+            continue
+        label = str(raw_preset.get("label") or raw_preset.get("name") or f"Preset {index}")
+        name = str(raw_preset.get("name") or _preset_name(label, index))
+        presets.append(TuningPreset(name=name, label=label, values=values))
+    return presets
 
 
 class LiveStatus:
@@ -336,12 +399,17 @@ def maybe_start_interaction_panel(
                 tk.Label(tuning_header, text="Live tuning").grid(row=0, column=0, sticky="w")
                 scale_widgets: dict[str, Any] = {}
 
-                def reset_sliders() -> None:
-                    values = tuning.reset()
+                def set_scale_values(values: dict[str, float]) -> None:
                     for name, value in values.items():
                         scale = scale_widgets.get(name)
                         if scale is not None:
                             scale.set(value)
+
+                def reset_sliders() -> None:
+                    set_scale_values(tuning.reset())
+
+                def apply_preset(preset_name: str) -> None:
+                    set_scale_values(tuning.apply_preset(preset_name))
 
                 tk.Button(tuning_header, text="Reset sliders", command=reset_sliders).grid(
                     row=0,
@@ -350,6 +418,19 @@ def maybe_start_interaction_panel(
                     padx=(12, 0),
                 )
                 row += 1
+                if tuning.presets:
+                    tk.Label(frame, text="Quick presets").grid(row=row, column=0, columnspan=2, sticky="w", pady=(2, 2))
+                    row += 1
+                    preset_frame = tk.Frame(frame)
+                    preset_frame.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(0, 6))
+                    for index, preset in enumerate(tuning.presets):
+                        tk.Button(
+                            preset_frame,
+                            text=preset.label,
+                            width=20,
+                            command=lambda preset_name=preset.name: apply_preset(preset_name),
+                        ).grid(row=index // 2, column=index % 2, padx=4, pady=3, sticky="ew")
+                    row += 1
                 for spec in tuning.specs:
                     scale = tk.Scale(
                         frame,
@@ -461,6 +542,15 @@ def _format_status_value(value: Any) -> str:
     except (TypeError, ValueError):
         return str(value)
     return f"{number:.3f}"
+
+
+def _preset_name(label: str, index: int) -> str:
+    name = "_".join(label.lower().split())
+    return name or f"preset_{index}"
+
+
+def _clamp(value: float, minimum: float, maximum: float) -> float:
+    return max(float(minimum), min(float(maximum), float(value)))
 
 
 def _event_value(value: Any) -> Any:

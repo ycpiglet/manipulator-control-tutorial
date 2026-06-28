@@ -21,6 +21,28 @@ tracking_controller:
 interaction:
   panel: true
   live_tuning: true
+  tuning_presets:
+    - label: Soft reach
+      values:
+        target_x: 0.52
+        target_y: 0.34
+        task_kp: 45.0
+        task_kd: 14.0
+        torque_limit: 35.0
+    - label: Default reach
+      values:
+        target_x: 0.62
+        target_y: 0.42
+        task_kp: 95.0
+        task_kd: 18.0
+        torque_limit: 50.0
+    - label: Near edge
+      values:
+        target_x: 0.88
+        target_y: 0.18
+        task_kp: 120.0
+        task_kd: 22.0
+        torque_limit: 60.0
 viewer_guides:
   enabled: true
   condition_threshold: 20.0

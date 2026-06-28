@@ -19,6 +19,7 @@ from mclab.sim.interaction import (
     SliderSpec,
     StatusSpec,
     maybe_start_interaction_panel,
+    tuning_presets_from_config,
 )
 from mclab.sim.logging import RunLogger
 from mclab.sim.mujoco_utils import (
@@ -226,15 +227,17 @@ def _live_tuning(
     if not bool(interaction.get("live_tuning", False)):
         return LiveTuning([])
     target = dict(config.get("target", {}))
+    specs = [
+        SliderSpec("target_position", "Target position [m]", -0.8, 0.8, float(target.get("end", 0.0)), 0.01),
+        SliderSpec("kp", "Kp", 0.0, 180.0, float(pid_config.get("kp", 40.0)), 1.0),
+        SliderSpec("ki", "Ki", 0.0, 20.0, float(pid_config.get("ki", 0.0)), 0.1),
+        SliderSpec("kd", "Kd", 0.0, 40.0, float(pid_config.get("kd", 4.0)), 0.5),
+        SliderSpec("output_limit", "Force limit [N]", 5.0, 200.0, output_limit, 1.0),
+    ]
     return LiveTuning(
-        [
-            SliderSpec("target_position", "Target position [m]", -0.8, 0.8, float(target.get("end", 0.0)), 0.01),
-            SliderSpec("kp", "Kp", 0.0, 180.0, float(pid_config.get("kp", 40.0)), 1.0),
-            SliderSpec("ki", "Ki", 0.0, 20.0, float(pid_config.get("ki", 0.0)), 0.1),
-            SliderSpec("kd", "Kd", 0.0, 40.0, float(pid_config.get("kd", 4.0)), 0.5),
-            SliderSpec("output_limit", "Force limit [N]", 5.0, 200.0, output_limit, 1.0),
-        ],
+        specs,
         event_log=interaction_log,
+        presets=tuning_presets_from_config(config, specs),
     )
 
 

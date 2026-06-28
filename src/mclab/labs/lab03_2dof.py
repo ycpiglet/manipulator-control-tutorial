@@ -15,6 +15,7 @@ from mclab.sim.interaction import (
     SliderSpec,
     StatusSpec,
     maybe_start_interaction_panel,
+    tuning_presets_from_config,
 )
 from mclab.sim.logging import RunLogger
 from mclab.sim.mujoco_utils import (
@@ -529,14 +530,16 @@ def _live_tuning(
     interaction = dict(config.get("interaction", {}))
     if not bool(interaction.get("live_tuning", False)):
         return LiveTuning([])
+    specs = [
+        SliderSpec("target_offset", "Target offset [m]", -0.5, 0.5, 0.0, 0.01),
+        SliderSpec("kp", "Tracking Kp", 0.0, 250.0, float(controller_config.get("kp", 120.0)), 1.0),
+        SliderSpec("kd", "Tracking Kd", 0.0, 60.0, float(controller_config.get("kd", 18.0)), 0.5),
+        SliderSpec("force_limit", "Force limit [N]", 10.0, 250.0, force_limit, 1.0),
+    ]
     return LiveTuning(
-        [
-            SliderSpec("target_offset", "Target offset [m]", -0.5, 0.5, 0.0, 0.01),
-            SliderSpec("kp", "Tracking Kp", 0.0, 250.0, float(controller_config.get("kp", 120.0)), 1.0),
-            SliderSpec("kd", "Tracking Kd", 0.0, 60.0, float(controller_config.get("kd", 18.0)), 0.5),
-            SliderSpec("force_limit", "Force limit [N]", 10.0, 250.0, force_limit, 1.0),
-        ],
+        specs,
         event_log=interaction_log,
+        presets=tuning_presets_from_config(config, specs),
     )
 
 
@@ -552,50 +555,56 @@ def _two_link_live_tuning(
     if not bool(interaction.get("live_tuning", False)):
         return LiveTuning([])
     if mode in DLS_MODES:
+        specs = [
+            SliderSpec("target_x", "Target X [m]", -0.95, 1.05, target_xy[0], 0.01),
+            SliderSpec("target_y", "Target Y [m]", -0.85, 0.85, target_xy[1], 0.01),
+            SliderSpec(
+                "dls_gain",
+                "DLS task gain [1/s]",
+                0.5,
+                12.0,
+                float(controller_config.get("dls_gain", 4.0)),
+                0.1,
+            ),
+            SliderSpec(
+                "dls_damping",
+                "DLS damping",
+                0.0,
+                0.4,
+                float(controller_config.get("dls_damping", 0.08)),
+                0.01,
+            ),
+            SliderSpec("torque_limit", "Torque limit [N m]", 5.0, 80.0, max(torque_limit), 1.0),
+        ]
         return LiveTuning(
-            [
-                SliderSpec("target_x", "Target X [m]", -0.95, 1.05, target_xy[0], 0.01),
-                SliderSpec("target_y", "Target Y [m]", -0.85, 0.85, target_xy[1], 0.01),
-                SliderSpec(
-                    "dls_gain",
-                    "DLS task gain [1/s]",
-                    0.5,
-                    12.0,
-                    float(controller_config.get("dls_gain", 4.0)),
-                    0.1,
-                ),
-                SliderSpec(
-                    "dls_damping",
-                    "DLS damping",
-                    0.0,
-                    0.4,
-                    float(controller_config.get("dls_damping", 0.08)),
-                    0.01,
-                ),
-                SliderSpec("torque_limit", "Torque limit [N m]", 5.0, 80.0, max(torque_limit), 1.0),
-            ],
+            specs,
             event_log=interaction_log,
+            presets=tuning_presets_from_config(config, specs),
         )
     if mode in TASK_SPACE_MODES:
-        return LiveTuning(
-            [
-                SliderSpec("target_x", "Target X [m]", -0.95, 0.95, target_xy[0], 0.01),
-                SliderSpec("target_y", "Target Y [m]", -0.85, 0.85, target_xy[1], 0.01),
-                SliderSpec("task_kp", "Task stiffness", 5.0, 180.0, float(controller_config.get("task_kp", 90.0)), 1.0),
-                SliderSpec("task_kd", "Task damping", 0.0, 45.0, float(controller_config.get("task_kd", 16.0)), 0.5),
-                SliderSpec("torque_limit", "Torque limit [N m]", 5.0, 80.0, max(torque_limit), 1.0),
-            ],
-            event_log=interaction_log,
-        )
-    return LiveTuning(
-        [
-            SliderSpec("q1_offset", "q1 target offset [rad]", -0.8, 0.8, 0.0, 0.01),
-            SliderSpec("q2_offset", "q2 target offset [rad]", -0.8, 0.8, 0.0, 0.01),
-            SliderSpec("joint_kp", "Joint Kp scale", 0.2, 2.0, 1.0, 0.05),
-            SliderSpec("joint_kd", "Joint Kd scale", 0.2, 2.0, 1.0, 0.05),
+        specs = [
+            SliderSpec("target_x", "Target X [m]", -0.95, 0.95, target_xy[0], 0.01),
+            SliderSpec("target_y", "Target Y [m]", -0.85, 0.85, target_xy[1], 0.01),
+            SliderSpec("task_kp", "Task stiffness", 5.0, 180.0, float(controller_config.get("task_kp", 90.0)), 1.0),
+            SliderSpec("task_kd", "Task damping", 0.0, 45.0, float(controller_config.get("task_kd", 16.0)), 0.5),
             SliderSpec("torque_limit", "Torque limit [N m]", 5.0, 80.0, max(torque_limit), 1.0),
-        ],
+        ]
+        return LiveTuning(
+            specs,
+            event_log=interaction_log,
+            presets=tuning_presets_from_config(config, specs),
+        )
+    specs = [
+        SliderSpec("q1_offset", "q1 target offset [rad]", -0.8, 0.8, 0.0, 0.01),
+        SliderSpec("q2_offset", "q2 target offset [rad]", -0.8, 0.8, 0.0, 0.01),
+        SliderSpec("joint_kp", "Joint Kp scale", 0.2, 2.0, 1.0, 0.05),
+        SliderSpec("joint_kd", "Joint Kd scale", 0.2, 2.0, 1.0, 0.05),
+        SliderSpec("torque_limit", "Torque limit [N m]", 5.0, 80.0, max(torque_limit), 1.0),
+    ]
+    return LiveTuning(
+        specs,
         event_log=interaction_log,
+        presets=tuning_presets_from_config(config, specs),
     )
 
 

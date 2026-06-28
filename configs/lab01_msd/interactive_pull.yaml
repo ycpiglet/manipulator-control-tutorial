@@ -17,5 +17,21 @@ interaction:
   live_tuning: true
   force: 80.0
   duration: 0.35
+  tuning_presets:
+    - label: Lightly damped
+      values:
+        mass: 1.0
+        damping: 0.3
+        stiffness: 35.0
+    - label: Heavy damping
+      values:
+        mass: 1.0
+        damping: 6.0
+        stiffness: 35.0
+    - label: Stiff spring
+      values:
+        mass: 1.0
+        damping: 1.0
+        stiffness: 90.0
 viewer_guides:
   enabled: true

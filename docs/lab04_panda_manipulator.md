@@ -53,7 +53,7 @@ python -m mclab run lab04 --config configs/lab04_panda/cartesian_reach.yaml --he
 python -m mclab run lab04 --config configs/lab04_panda/interactive_cartesian_reach.yaml --viewer --realtime --pause-at-end --plot --plots cartesian_reach
 ```
 
-The automatic demo moves the hand toward a fixed XYZ target. The interactive launcher opens sliders for target X/Y/Z and Cartesian gain. In the viewer, compare the green target point with the blue hand point. Compare `x_ee_*` and `target_x_ee_*` in `end_effector.png`, then check `cartesian_error.png`.
+The automatic demo moves the hand toward a fixed XYZ target. The interactive launcher opens sliders for target X/Y/Z and Cartesian gain, plus `Quick presets` for soft, default, and farther reach targets. In the viewer, compare the green target point with the blue hand point. Compare `x_ee_*` and `target_x_ee_*` in `end_effector.png`, then check `cartesian_error.png`.
 
 Soft/stiff Cartesian reach comparison:
 
@@ -71,7 +71,7 @@ Interactive virtual wall demo:
 .\run_lab04_wall_interactive.cmd
 ```
 
-Use the `MCLab Interaction` sliders to move the virtual wall and tune wall stiffness, damping, and retreat gain while the Panda moves toward the wall. Use `Reset sliders` to return to the starting wall settings after exploring. Press `Mark observation` when a response is worth comparing later in the report's `Observation Markers` section. Watch the live wall penetration and wall force in the panel, then compare `end_effector.png` and `virtual_wall.png` after the run.
+Use the `MCLab Interaction` sliders to move the virtual wall and tune wall stiffness, damping, and retreat gain while the Panda moves toward the wall. Use `Quick presets` to compare soft wall, stiff wall, and close-wall cases without hand-entering each value. Use `Reset sliders` to return to the starting wall settings after exploring. Press `Mark observation` when a response is worth comparing later in the report's `Observation Markers` section. Watch the live wall penetration and wall force in the panel, then compare `end_effector.png` and `virtual_wall.png` after the run.
 
 Soft/stiff wall comparison:
 

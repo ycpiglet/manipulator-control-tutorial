@@ -218,18 +218,18 @@ batch는 viewer 없이 여러 config를 순서대로 실행하고, `outputs/<tim
 .\run_lab04_wall_interactive.cmd
 ```
 
-Interactive launcher는 사이드 패널 없는 MuJoCo viewer와 함께 작은 `MCLab Interaction` 창을 엽니다. Lab01-02 viewer에는 회색 평형점, 초록 목표점, 주황 힘 방향 막대가 표시됩니다. Lab01-03에서는 `Pull Left` / `Push Right` 버튼이 mass에 짧은 힘 펄스를 넣고, 슬라이더로 주요 파라미터를 실행 중에 바꿉니다. 키보드는 viewer 창에 포커스가 있을 때 `A` 또는 왼쪽 화살표, `D` 또는 오른쪽 화살표도 지원합니다. Lab03 2DOF viewer에는 초록 목표 손끝, 파란 현재 손끝, 주황 singularity 경고 손끝이 표시됩니다. Lab04에서는 버튼으로 제어 중인 관절 목표를 이동하고, wall 데모에서는 virtual wall 파라미터도 슬라이더로 바꿉니다. Lab04 Cartesian/wall viewer에는 초록 목표점, 파란 현재 손끝, 주황 접촉 손끝, 붉은 반투명 wall 가이드가 자동으로 표시됩니다. 슬라이더를 여러 번 바꾼 뒤에는 `Reset sliders`로 실행 시작값으로 되돌릴 수 있습니다. 중요한 순간에는 `Mark observation`을 눌러 현재 슬라이더와 live status 값을 저장할 수 있으며, 실행 리포트의 `Observation Markers` 카드에서 다시 볼 수 있습니다. 창 아래쪽의 `Live status` 영역은 위치, 오차, 힘, 에너지, wall penetration처럼 지금 관찰해야 할 핵심 숫자만 보여줍니다. 버튼이나 슬라이더를 사용한 경우 실행 리포트의 `Interaction Log`와 `interaction_events.json`에 조작 이력이 저장됩니다.
+Interactive launcher는 사이드 패널 없는 MuJoCo viewer와 함께 작은 `MCLab Interaction` 창을 엽니다. Lab01-02 viewer에는 회색 평형점, 초록 목표점, 주황 힘 방향 막대가 표시됩니다. Lab01-03에서는 `Pull Left` / `Push Right` 버튼이 mass에 짧은 힘 펄스를 넣고, 슬라이더로 주요 파라미터를 실행 중에 바꿉니다. 키보드는 viewer 창에 포커스가 있을 때 `A` 또는 왼쪽 화살표, `D` 또는 오른쪽 화살표도 지원합니다. Lab03 2DOF viewer에는 초록 목표 손끝, 파란 현재 손끝, 주황 singularity 경고 손끝이 표시됩니다. Lab04에서는 버튼으로 제어 중인 관절 목표를 이동하고, wall 데모에서는 virtual wall 파라미터도 슬라이더로 바꿉니다. Lab04 Cartesian/wall viewer에는 초록 목표점, 파란 현재 손끝, 주황 접촉 손끝, 붉은 반투명 wall 가이드가 자동으로 표시됩니다. `Quick presets` 버튼은 `Soft reach`, `Stiff wall`, `Damped PD`처럼 대표 파라미터 조합을 한 번에 적용합니다. 슬라이더를 여러 번 바꾼 뒤에는 `Reset sliders`로 실행 시작값으로 되돌릴 수 있습니다. 중요한 순간에는 `Mark observation`을 눌러 현재 슬라이더와 live status 값을 저장할 수 있으며, 실행 리포트의 `Observation Markers` 카드에서 다시 볼 수 있습니다. 창 아래쪽의 `Live status` 영역은 위치, 오차, 힘, 에너지, wall penetration처럼 지금 관찰해야 할 핵심 숫자만 보여줍니다. 버튼, preset, 슬라이더를 사용한 경우 실행 리포트의 `Interaction Log`와 `interaction_events.json`에 조작 이력이 저장됩니다.
 
 무엇을 보면 되는지:
 
 | Command | Interaction | What to observe |
 |---|---|---|
-| `.\run_lab01_interactive.cmd` | mass에 좌/우 힘 펄스, `mass/damping/stiffness` 슬라이더 | 자유 진동, 감쇠, 복원력 |
-| `.\run_lab02_interactive.cmd` | PID plant에 좌/우 외란, `target/Kp/Ki/Kd/force limit` 슬라이더 | PID가 목표 위치로 복원하는 과정 |
-| `.\run_lab03_interactive.cmd` | 2DOF arm의 `target X/Y`, `task stiffness/damping`, `torque limit` 슬라이더 | 손끝 목표 위치, Jacobian 제어 오차, 토크 제한 |
+| `.\run_lab01_interactive.cmd` | mass에 좌/우 힘 펄스, `mass/damping/stiffness` 슬라이더, 감쇠/강성 preset | 자유 진동, 감쇠, 복원력 |
+| `.\run_lab02_interactive.cmd` | PID plant에 좌/우 외란, `target/Kp/Ki/Kd/force limit` 슬라이더, PID preset | PID가 목표 위치로 복원하는 과정 |
+| `.\run_lab03_interactive.cmd` | 2DOF arm의 `target X/Y`, `task stiffness/damping`, `torque limit` 슬라이더, reach preset | 손끝 목표 위치, Jacobian 제어 오차, 토크 제한 |
 | `.\run_lab04_interactive.cmd` | Panda 관절 목표 nudge | 목표 관절 위치 변화와 tracking error |
-| `.\run_lab04_cartesian_interactive.cmd` | Panda 손끝 `target X/Y/Z`, `Cartesian gain` 슬라이더 | 초록 목표점, 파란 손끝, Cartesian tracking error |
-| `.\run_lab04_wall_interactive.cmd` | Panda 관절 목표 nudge, `wall X/stiffness/damping/retreat gain` 슬라이더 | virtual wall 위치와 강성/감쇠 변화 |
+| `.\run_lab04_cartesian_interactive.cmd` | Panda 손끝 `target X/Y/Z`, `Cartesian gain` 슬라이더, reach preset | 초록 목표점, 파란 손끝, Cartesian tracking error |
+| `.\run_lab04_wall_interactive.cmd` | Panda 관절 목표 nudge, `wall X/stiffness/damping/retreat gain` 슬라이더, wall preset | virtual wall 위치와 강성/감쇠 변화 |
 
 전체 검증을 한 번에 돌리려면:
 
@@ -365,10 +365,10 @@ python -m mclab run lab02 --config configs/lab02_pid/my_pid_test.yaml --headless
 
 | Lab | Config path | Main parameters |
 |---|---|---|
-| Lab01 MSD | `configs/lab01_msd/*.yaml` | `mass`, `damping`, `stiffness`, `initial_position`, `force_input.magnitude` |
-| Lab02 PID | `configs/lab02_pid/*.yaml` | `controller.kp`, `controller.ki`, `controller.kd`, `controller.output_limit`, `measurement_noise_std`, `control_delay` |
-| Lab03 2DOF/Trajectory | `configs/lab03_2dof/*.yaml` | `mode`, `initial_q`, `target_q`, `target_xy`, `trajectory.type`, `tracking_controller.kp`, `tracking_controller.task_kp`, `tracking_controller.task_kd`, `tracking_controller.dls_damping`, `viewer_guides.enabled` |
-| Lab04 Panda | `configs/lab04_panda/*.yaml` | `controlled_joint_index`, `trajectory.end`, `cartesian_target.position`, `cartesian_target.gain`, `cartesian_target.max_step`, `virtual_wall.wall_x`, `virtual_wall.stiffness`, `virtual_wall.damping`, `virtual_wall.force_retreat_gain`, `viewer_guides.enabled` |
+| Lab01 MSD | `configs/lab01_msd/*.yaml` | `mass`, `damping`, `stiffness`, `initial_position`, `force_input.magnitude`, `interaction.tuning_presets` |
+| Lab02 PID | `configs/lab02_pid/*.yaml` | `controller.kp`, `controller.ki`, `controller.kd`, `controller.output_limit`, `measurement_noise_std`, `control_delay`, `interaction.tuning_presets` |
+| Lab03 2DOF/Trajectory | `configs/lab03_2dof/*.yaml` | `mode`, `initial_q`, `target_q`, `target_xy`, `trajectory.type`, `tracking_controller.kp`, `tracking_controller.task_kp`, `tracking_controller.task_kd`, `tracking_controller.dls_damping`, `interaction.tuning_presets`, `viewer_guides.enabled` |
+| Lab04 Panda | `configs/lab04_panda/*.yaml` | `controlled_joint_index`, `trajectory.end`, `cartesian_target.position`, `cartesian_target.gain`, `cartesian_target.max_step`, `virtual_wall.wall_x`, `virtual_wall.stiffness`, `virtual_wall.damping`, `virtual_wall.force_retreat_gain`, `interaction.tuning_presets`, `viewer_guides.enabled` |
 
 Plot preset:
 
@@ -559,18 +559,18 @@ Use the interactive launchers when learners should disturb the system and watch 
 .\run_lab04_wall_interactive.cmd
 ```
 
-Each interactive launcher opens the MuJoCo viewer without side panels plus a small `MCLab Interaction` window. Lab01-02 viewers show a gray equilibrium marker, green target marker, and orange force-direction bar. In Lab01-03, `Pull Left` / `Push Right` applies short force pulses to the mass, and sliders tune key parameters while the simulation is running. Keyboard shortcuts also work when the viewer has focus: `A` or left arrow for left, `D` or right arrow for right. Lab03 2DOF viewers show a green target hand point, blue current hand point, and orange singularity-warning hand point. In Lab04, the buttons nudge the controlled joint target, and the wall demo adds virtual wall sliders. Lab04 Cartesian/wall viewers automatically show a green target point, blue current hand point, orange contact hand point, and translucent red wall guide. After changing sliders, use `Reset sliders` to return to the values from the start of the run. Press `Mark observation` at important moments to save the current slider and live status values, then review them in the run report's `Observation Markers` cards. The `Live status` area shows only the key values learners should watch now, such as position, error, force, energy, and wall penetration. When learners use buttons or sliders, the run report adds an `Interaction Log` and saves the raw events in `interaction_events.json`.
+Each interactive launcher opens the MuJoCo viewer without side panels plus a small `MCLab Interaction` window. Lab01-02 viewers show a gray equilibrium marker, green target marker, and orange force-direction bar. In Lab01-03, `Pull Left` / `Push Right` applies short force pulses to the mass, and sliders tune key parameters while the simulation is running. Keyboard shortcuts also work when the viewer has focus: `A` or left arrow for left, `D` or right arrow for right. Lab03 2DOF viewers show a green target hand point, blue current hand point, and orange singularity-warning hand point. In Lab04, the buttons nudge the controlled joint target, and the wall demo adds virtual wall sliders. Lab04 Cartesian/wall viewers automatically show a green target point, blue current hand point, orange contact hand point, and translucent red wall guide. `Quick presets` apply representative parameter sets such as `Soft reach`, `Stiff wall`, and `Damped PD` with one click. After changing sliders, use `Reset sliders` to return to the values from the start of the run. Press `Mark observation` at important moments to save the current slider and live status values, then review them in the run report's `Observation Markers` cards. The `Live status` area shows only the key values learners should watch now, such as position, error, force, energy, and wall penetration. When learners use buttons, presets, or sliders, the run report adds an `Interaction Log` and saves the raw events in `interaction_events.json`.
 
 What to observe:
 
 | Command | Interaction | What to observe |
 |---|---|---|
-| `.\run_lab01_interactive.cmd` | left/right force pulse, `mass/damping/stiffness` sliders | free oscillation, damping, restoring force |
-| `.\run_lab02_interactive.cmd` | left/right disturbance, `target/Kp/Ki/Kd/force limit` sliders | PID disturbance rejection |
-| `.\run_lab03_interactive.cmd` | 2DOF arm `target X/Y`, `task stiffness/damping`, `torque limit` sliders | hand target motion, Jacobian control error, torque limits |
+| `.\run_lab01_interactive.cmd` | left/right force pulse, `mass/damping/stiffness` sliders, damping/stiffness presets | free oscillation, damping, restoring force |
+| `.\run_lab02_interactive.cmd` | left/right disturbance, `target/Kp/Ki/Kd/force limit` sliders, PID presets | PID disturbance rejection |
+| `.\run_lab03_interactive.cmd` | 2DOF arm `target X/Y`, `task stiffness/damping`, `torque limit` sliders, reach presets | hand target motion, Jacobian control error, torque limits |
 | `.\run_lab04_interactive.cmd` | Panda joint target nudge | target position changes and tracking error |
-| `.\run_lab04_cartesian_interactive.cmd` | Panda hand `target X/Y/Z`, `Cartesian gain` sliders | green target point, blue hand point, Cartesian tracking error |
-| `.\run_lab04_wall_interactive.cmd` | Panda joint target nudge, `wall X/stiffness/damping/retreat gain` sliders | virtual wall position, stiffness, and damping effects |
+| `.\run_lab04_cartesian_interactive.cmd` | Panda hand `target X/Y/Z`, `Cartesian gain` sliders, reach presets | green target point, blue hand point, Cartesian tracking error |
+| `.\run_lab04_wall_interactive.cmd` | Panda joint target nudge, `wall X/stiffness/damping/retreat gain` sliders, wall presets | virtual wall position, stiffness, and damping effects |
 
 To run the full verification suite:
 
@@ -708,10 +708,10 @@ Common parameters:
 
 | Lab | Config path | Main parameters |
 |---|---|---|
-| Lab01 MSD | `configs/lab01_msd/*.yaml` | `mass`, `damping`, `stiffness`, `initial_position`, `force_input.magnitude` |
-| Lab02 PID | `configs/lab02_pid/*.yaml` | `controller.kp`, `controller.ki`, `controller.kd`, `controller.output_limit`, `measurement_noise_std`, `control_delay` |
-| Lab03 2DOF/Trajectory | `configs/lab03_2dof/*.yaml` | `mode`, `initial_q`, `target_q`, `target_xy`, `trajectory.type`, `tracking_controller.kp`, `tracking_controller.task_kp`, `tracking_controller.task_kd`, `tracking_controller.dls_damping`, `viewer_guides.enabled` |
-| Lab04 Panda | `configs/lab04_panda/*.yaml` | `controlled_joint_index`, `trajectory.end`, `cartesian_target.position`, `cartesian_target.gain`, `cartesian_target.max_step`, `virtual_wall.wall_x`, `virtual_wall.stiffness`, `virtual_wall.damping`, `virtual_wall.force_retreat_gain`, `viewer_guides.enabled` |
+| Lab01 MSD | `configs/lab01_msd/*.yaml` | `mass`, `damping`, `stiffness`, `initial_position`, `force_input.magnitude`, `interaction.tuning_presets` |
+| Lab02 PID | `configs/lab02_pid/*.yaml` | `controller.kp`, `controller.ki`, `controller.kd`, `controller.output_limit`, `measurement_noise_std`, `control_delay`, `interaction.tuning_presets` |
+| Lab03 2DOF/Trajectory | `configs/lab03_2dof/*.yaml` | `mode`, `initial_q`, `target_q`, `target_xy`, `trajectory.type`, `tracking_controller.kp`, `tracking_controller.task_kp`, `tracking_controller.task_kd`, `tracking_controller.dls_damping`, `interaction.tuning_presets`, `viewer_guides.enabled` |
+| Lab04 Panda | `configs/lab04_panda/*.yaml` | `controlled_joint_index`, `trajectory.end`, `cartesian_target.position`, `cartesian_target.gain`, `cartesian_target.max_step`, `virtual_wall.wall_x`, `virtual_wall.stiffness`, `virtual_wall.damping`, `virtual_wall.force_retreat_gain`, `interaction.tuning_presets`, `viewer_guides.enabled` |
 
 Plot presets:
 

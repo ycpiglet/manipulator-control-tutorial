@@ -15,9 +15,13 @@ from mclab.sim.interaction import (  # noqa: E402
     SliderSpec,
     StatusSpec,
     TargetOffsetControl,
+    TuningPreset,
     _panel_guide_rows,
     _panel_guide_title,
+    tuning_presets_from_config,
 )
+from mclab.config import load_config  # noqa: E402
+from mclab.labs import lab01_msd, lab02_pid, lab03_2dof, lab04_panda  # noqa: E402
 from mclab.learning_guides import RunGuide  # noqa: E402
 
 
@@ -94,6 +98,105 @@ class KeyForcePulseTests(unittest.TestCase):
         self.assertEqual([event["kind"] for event in log.events()], ["slider", "slider", "button"])
         self.assertEqual(log.events()[-1]["name"], "reset_sliders")
         self.assertEqual(log.events()[-1]["label"], "Reset sliders")
+
+    def test_live_tuning_applies_preset_and_clips_values(self) -> None:
+        log = InteractionLog()
+        log.set_time(3.5)
+        tuning = LiveTuning(
+            [
+                SliderSpec("kp", "Kp", 0.0, 100.0, 20.0, 1.0),
+                SliderSpec("kd", "Kd", 0.0, 50.0, 4.0, 0.5),
+            ],
+            event_log=log,
+            presets=[
+                TuningPreset("aggressive", "Aggressive", {"kp": 180.0, "kd": 2.0, "unknown": 99.0}),
+            ],
+        )
+
+        values = tuning.apply_preset("aggressive")
+
+        self.assertEqual(values, {"kp": 100.0, "kd": 2.0})
+        self.assertEqual(tuning.value("kp", 0.0), 100.0)
+        self.assertEqual(tuning.value("kd", 0.0), 2.0)
+        self.assertEqual(log.events()[-1]["kind"], "preset")
+        self.assertEqual(log.events()[-1]["label"], "Aggressive")
+        self.assertEqual(log.events()[-1]["value"], {"kp": 100.0, "kd": 2.0})
+
+    def test_tuning_presets_from_config_filters_to_known_numeric_sliders(self) -> None:
+        specs = [
+            SliderSpec("kp", "Kp", 0.0, 100.0, 20.0, 1.0),
+            SliderSpec("kd", "Kd", 0.0, 50.0, 4.0, 0.5),
+        ]
+
+        presets = tuning_presets_from_config(
+            {
+                "interaction": {
+                    "tuning_presets": [
+                        {
+                            "label": "Calm",
+                            "values": {"kp": 20, "kd": 10, "missing": 1, "bad": "nope"},
+                        },
+                        {"label": "Empty", "values": {"missing": 2}},
+                    ]
+                }
+            },
+            specs,
+        )
+
+        self.assertEqual(len(presets), 1)
+        self.assertEqual(presets[0].name, "calm")
+        self.assertEqual(presets[0].label, "Calm")
+        self.assertEqual(presets[0].values, {"kp": 20.0, "kd": 10.0})
+
+    def test_interactive_configs_expose_quick_presets(self) -> None:
+        lab01_config = load_config("configs/lab01_msd/interactive_pull.yaml")
+        lab02_config = load_config("configs/lab02_pid/interactive_disturbance.yaml")
+        lab03_config = load_config("configs/lab03_2dof/interactive_2dof.yaml")
+        lab03_tracking_config = load_config("configs/lab03_2dof/interactive_tracking.yaml")
+        lab04_cartesian_config = load_config("configs/lab04_panda/interactive_cartesian_reach.yaml")
+        lab04_wall_config = load_config("configs/lab04_panda/interactive_virtual_wall.yaml")
+
+        cases = [
+            (lab01_msd._live_tuning(lab01_config), ["Lightly damped", "Heavy damping", "Stiff spring"]),
+            (
+                lab02_pid._live_tuning(
+                    lab02_config,
+                    dict(lab02_config["controller"]),
+                    float(lab02_config["controller"]["output_limit"]),
+                ),
+                ["Gentle P", "Damped PD", "Aggressive PID"],
+            ),
+            (
+                lab03_2dof._two_link_live_tuning(
+                    lab03_config,
+                    str(lab03_config["mode"]),
+                    dict(lab03_config["tracking_controller"]),
+                    tuple(lab03_config["tracking_controller"]["torque_limit"]),
+                    tuple(lab03_config["target_xy"]),
+                ),
+                ["Soft reach", "Default reach", "Near edge"],
+            ),
+            (
+                lab03_2dof._live_tuning(
+                    lab03_tracking_config,
+                    dict(lab03_tracking_config["tracking_controller"]),
+                    float(lab03_tracking_config["tracking_controller"]["force_limit"]),
+                ),
+                ["Soft tracking", "Fast tracking"],
+            ),
+            (
+                lab04_panda._live_tuning(lab04_cartesian_config),
+                ["Soft reach", "Default reach", "Far target"],
+            ),
+            (
+                lab04_panda._live_tuning(lab04_wall_config),
+                ["Soft wall", "Stiff wall", "Close wall"],
+            ),
+        ]
+        for tuning, expected_labels in cases:
+            with self.subTest(expected_labels=expected_labels):
+                self.assertEqual([preset.label for preset in tuning.presets], expected_labels)
+                self.assertTrue(all(preset.values for preset in tuning.presets))
 
     def test_mark_observation_records_slider_and_status_snapshot(self) -> None:
         log = InteractionLog()

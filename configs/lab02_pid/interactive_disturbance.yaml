@@ -27,5 +27,27 @@ interaction:
   live_tuning: true
   force: 80.0
   duration: 0.35
+  tuning_presets:
+    - label: Gentle P
+      values:
+        target_position: 0.0
+        kp: 24.0
+        ki: 0.0
+        kd: 3.0
+        output_limit: 60.0
+    - label: Damped PD
+      values:
+        target_position: 0.0
+        kp: 60.0
+        ki: 0.0
+        kd: 16.0
+        output_limit: 80.0
+    - label: Aggressive PID
+      values:
+        target_position: 0.35
+        kp: 120.0
+        ki: 4.0
+        kd: 8.0
+        output_limit: 120.0
 viewer_guides:
   enabled: true

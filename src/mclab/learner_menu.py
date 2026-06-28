@@ -251,7 +251,7 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
         config_path="configs/lab01_msd/interactive_pull.yaml",
         plots="essential",
         description="Push the mass and tune mass, damping, stiffness.",
-        try_this="Click Pull/Push and watch the orange force bar.",
+        try_this="Click Pull/Push, then try damping and stiffness presets.",
         watch="Gray equilibrium marker, position, force, and total energy.",
     ),
     MenuAction(
@@ -351,7 +351,7 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
         config_path="configs/lab02_pid/interactive_disturbance.yaml",
         plots="essential",
         description="Disturb the mass and tune target, Kp, Ki, Kd, force limit.",
-        try_this="Move the target slider and watch the green target marker.",
+        try_this="Move the target slider or click a PID preset.",
         watch="Target marker, error, PID force, and disturbance force.",
     ),
     MenuAction(
@@ -401,7 +401,7 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
         config_path="configs/lab03_2dof/interactive_2dof.yaml",
         plots="task",
         description="Tune the hand target, task stiffness, damping, and torque limit live.",
-        try_this="Move target X/Y sliders and watch the green target point move.",
+        try_this="Move target X/Y sliders or click a reach preset.",
         watch="Live status hand position, target marker, error norm, and max torque.",
     ),
     MenuAction(
@@ -531,7 +531,7 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
         config_path="configs/lab04_panda/interactive_cartesian_reach.yaml",
         plots="cartesian_reach",
         description="Tune hand target X/Y/Z and Cartesian gain live.",
-        try_this="Move Target X/Y/Z sliders in the Interaction window.",
+        try_this="Move Target X/Y/Z sliders or click a reach preset.",
         watch="Live hand error and end-effector plot after the run.",
     ),
     MenuAction(
@@ -571,7 +571,7 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
         config_path="configs/lab04_panda/interactive_virtual_wall.yaml",
         plots="wall",
         description="Tune wall position, stiffness, damping, and retreat gain.",
-        try_this="Move wall X, then raise stiffness and damping.",
+        try_this="Move wall X or click Soft/Stiff/Close wall presets.",
         watch="Wall penetration, wall force, and hand X position.",
     ),
 )
@@ -848,7 +848,7 @@ def parameter_hint(action: MenuAction) -> str:
 
     if action.lab_name == "lab01":
         if label == "interactive":
-            return "live sliders: mass, damping, stiffness; YAML: interaction.force, viewer_guides.enabled"
+            return "live sliders/presets: mass, damping, stiffness; YAML: interaction.force, viewer_guides.enabled"
         if "damped" in label:
             return "damping, stiffness, initial_position"
         if "stiffness" in label:
@@ -857,7 +857,7 @@ def parameter_hint(action: MenuAction) -> str:
 
     if action.lab_name == "lab02":
         if label == "interactive":
-            return "live sliders: target, Kp, Ki, Kd, force limit; YAML: controller.*, viewer_guides.enabled"
+            return "live sliders/presets: target, Kp, Ki, Kd, force limit; YAML: controller.*, viewer_guides.enabled"
         if label in {"windup", "anti-windup"}:
             return "controller.ki, controller.anti_windup, controller.output_limit"
         if label == "saturation":
@@ -872,7 +872,7 @@ def parameter_hint(action: MenuAction) -> str:
 
     if action.lab_name == "lab03":
         if label == "2dof interactive":
-            return "live sliders: Target X/Y, task stiffness, task damping, torque limit; YAML: viewer_guides.*"
+            return "live sliders/presets: Target X/Y, task stiffness, task damping, torque limit; YAML: viewer_guides.*"
         if label == "2dof dls singularity":
             return "target_xy, tracking_controller.dls_gain, tracking_controller.dls_damping, viewer_guides.condition_threshold"
         if label == "2dof task-space":
@@ -880,7 +880,7 @@ def parameter_hint(action: MenuAction) -> str:
         if label in {"2dof joint-space", "2dof singularity"}:
             return "initial_q, target_q, trajectory.duration, tracking_controller.kp, tracking_controller.kd"
         if config_name == "interactive_tracking.yaml":
-            return "live sliders: target offset, Kp, Kd, force limit"
+            return "live sliders/presets: target offset, Kp, Kd, force limit"
         return (
             "trajectory.type, trajectory.duration, tracking_controller.kp, "
             "tracking_controller.kd, tracking_controller.force_limit"
@@ -888,7 +888,9 @@ def parameter_hint(action: MenuAction) -> str:
 
     if action.lab_name == "lab04":
         if label == "cartesian interactive":
-            return "live sliders: Target X/Y/Z, Cartesian gain; YAML: cartesian_target.*"
+            return "live sliders/presets: Target X/Y/Z, Cartesian gain; YAML: cartesian_target.*"
+        if config_name == "interactive_virtual_wall.yaml":
+            return "live sliders/presets: wall X, stiffness, damping, retreat gain; YAML: virtual_wall.stiffness"
         if "cartesian" in label:
             return "cartesian_target.position, cartesian_target.gain, cartesian_target.max_step"
         if "wall" in label:
