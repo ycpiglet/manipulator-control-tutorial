@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from mclab.config import load_config
-from mclab.learning_guides import RunGuide, guide_for_run_summary
+from mclab.learning_guides import RunGuide, guide_for_config, guide_for_run_summary
 
 INDEX_METRIC_KEYS = (
     "max_abs_position",
@@ -112,6 +112,13 @@ class IndexPathStep:
     batch_name: str = ""
 
 
+@dataclass(frozen=True)
+class NextRunSuggestion:
+    config_path: str
+    reason: str
+    plots: str = "essential"
+
+
 INDEX_LEARNING_PATH: tuple[IndexPathStep, ...] = (
     IndexPathStep(
         "1. Feel 1D physics",
@@ -154,6 +161,179 @@ INDEX_LEARNING_PATH: tuple[IndexPathStep, ...] = (
 )
 
 
+NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
+    "configs/lab01_msd/default.yaml": (
+        NextRunSuggestion("configs/lab01_msd/underdamped.yaml", "See what changes when damping is too low."),
+        NextRunSuggestion("configs/lab01_msd/high_stiffness.yaml", "Compare a sharper spring response."),
+        NextRunSuggestion("configs/lab01_msd/interactive_pull.yaml", "Push the mass and tune parameters live."),
+    ),
+    "configs/lab01_msd/underdamped.yaml": (
+        NextRunSuggestion("configs/lab01_msd/over_damped.yaml", "Contrast oscillatory and non-oscillatory settling."),
+        NextRunSuggestion("configs/lab01_msd/high_stiffness.yaml", "Separate damping effects from stiffness effects."),
+    ),
+    "configs/lab01_msd/over_damped.yaml": (
+        NextRunSuggestion("configs/lab01_msd/underdamped.yaml", "Compare slow return against oscillatory return."),
+        NextRunSuggestion("configs/lab01_msd/low_stiffness.yaml", "Check whether softness or damping is slowing motion."),
+    ),
+    "configs/lab01_msd/high_stiffness.yaml": (
+        NextRunSuggestion("configs/lab01_msd/low_stiffness.yaml", "Use the opposite stiffness case as a clean comparison."),
+        NextRunSuggestion("configs/lab01_msd/interactive_pull.yaml", "Tune stiffness live while watching force and energy."),
+    ),
+    "configs/lab01_msd/low_stiffness.yaml": (
+        NextRunSuggestion("configs/lab01_msd/high_stiffness.yaml", "Compare frequency and force against the stiff spring."),
+        NextRunSuggestion("configs/lab01_msd/interactive_pull.yaml", "Raise stiffness live and watch the response change."),
+    ),
+    "configs/lab01_msd/interactive_pull.yaml": (
+        NextRunSuggestion("configs/lab01_msd/underdamped.yaml", "Save a deterministic low-damping comparison."),
+        NextRunSuggestion("configs/lab01_msd/over_damped.yaml", "Save a deterministic high-damping comparison."),
+        NextRunSuggestion("configs/lab01_msd/high_stiffness.yaml", "Compare the stiff-spring response in a report."),
+    ),
+    "configs/lab02_pid/default.yaml": (
+        NextRunSuggestion("configs/lab02_pid/p_low_gain.yaml", "Start the gain tradeoff with a gentle controller."),
+        NextRunSuggestion("configs/lab02_pid/p_high_gain.yaml", "Compare speed against overshoot and control force."),
+        NextRunSuggestion("configs/lab02_pid/interactive_disturbance.yaml", "Disturb the plant and tune PID values live."),
+    ),
+    "configs/lab02_pid/p_low_gain.yaml": (
+        NextRunSuggestion("configs/lab02_pid/p_high_gain.yaml", "Increase proportional gain and compare rise time."),
+        NextRunSuggestion("configs/lab02_pid/pd_damped.yaml", "Add damping after observing a stronger P response."),
+    ),
+    "configs/lab02_pid/p_high_gain.yaml": (
+        NextRunSuggestion("configs/lab02_pid/pd_damped.yaml", "Use derivative action to calm overshoot."),
+        NextRunSuggestion("configs/lab02_pid/saturation_limit.yaml", "Limit the actuator and inspect clipped force."),
+    ),
+    "configs/lab02_pid/pd_damped.yaml": (
+        NextRunSuggestion("configs/lab02_pid/measurement_noise.yaml", "Check how derivative damping reacts to noisy measurements."),
+        NextRunSuggestion("configs/lab02_pid/control_delay.yaml", "See how delayed feedback changes the same loop."),
+    ),
+    "configs/lab02_pid/saturation_limit.yaml": (
+        NextRunSuggestion("configs/lab02_pid/pid_with_windup.yaml", "Add integral action and observe windup under limits."),
+        NextRunSuggestion("configs/lab02_pid/pid_anti_windup.yaml", "Compare the same limit with anti-windup enabled."),
+    ),
+    "configs/lab02_pid/pid_with_windup.yaml": (
+        NextRunSuggestion("configs/lab02_pid/pid_anti_windup.yaml", "Run the direct fix and compare overshoot."),
+        NextRunSuggestion("configs/lab02_pid/saturation_limit.yaml", "Revisit force saturation without integral buildup."),
+    ),
+    "configs/lab02_pid/pid_anti_windup.yaml": (
+        NextRunSuggestion("configs/lab02_pid/pid_with_windup.yaml", "Compare against the windup case side by side."),
+        NextRunSuggestion("configs/lab02_pid/interactive_disturbance.yaml", "Tune gains live and mark useful observations."),
+    ),
+    "configs/lab02_pid/measurement_noise.yaml": (
+        NextRunSuggestion("configs/lab02_pid/pd_damped.yaml", "Remove the noise and compare derivative behavior."),
+        NextRunSuggestion("configs/lab02_pid/control_delay.yaml", "Switch from noisy sensing to delayed actuation."),
+    ),
+    "configs/lab02_pid/control_delay.yaml": (
+        NextRunSuggestion("configs/lab02_pid/default.yaml", "Return to the baseline to isolate delay effects."),
+        NextRunSuggestion("configs/lab02_pid/pd_damped.yaml", "Try damping as a stabilizing change."),
+    ),
+    "configs/lab02_pid/interactive_disturbance.yaml": (
+        NextRunSuggestion("configs/lab02_pid/p_high_gain.yaml", "Save an aggressive gain comparison."),
+        NextRunSuggestion("configs/lab02_pid/pd_damped.yaml", "Save the damped response for comparison."),
+        NextRunSuggestion("configs/lab02_pid/pid_anti_windup.yaml", "Inspect the anti-windup case after live tuning."),
+    ),
+    "configs/lab03_2dof/default.yaml": (
+        NextRunSuggestion("configs/lab03_2dof/step.yaml", "Use the abrupt profile as a baseline."),
+        NextRunSuggestion("configs/lab03_2dof/minimum_jerk.yaml", "Compare against a smooth motion profile."),
+        NextRunSuggestion("configs/lab03_2dof/joint_space_2dof.yaml", "Move from the 1D tracker to the two-link arm."),
+    ),
+    "configs/lab03_2dof/step.yaml": (
+        NextRunSuggestion("configs/lab03_2dof/trapezoidal.yaml", "Replace the abrupt step with limited velocity and acceleration."),
+        NextRunSuggestion("configs/lab03_2dof/minimum_jerk.yaml", "Compare against a smooth start/stop profile."),
+    ),
+    "configs/lab03_2dof/trapezoidal.yaml": (
+        NextRunSuggestion("configs/lab03_2dof/step.yaml", "Use the step profile as the abrupt baseline."),
+        NextRunSuggestion("configs/lab03_2dof/s_curve.yaml", "Smooth jerk transitions and compare effort."),
+    ),
+    "configs/lab03_2dof/minimum_jerk.yaml": (
+        NextRunSuggestion("configs/lab03_2dof/trapezoidal.yaml", "Compare two smooth motion profiles."),
+        NextRunSuggestion("configs/lab03_2dof/s_curve.yaml", "Inspect whether S-curve effort is calmer."),
+    ),
+    "configs/lab03_2dof/s_curve.yaml": (
+        NextRunSuggestion("configs/lab03_2dof/step.yaml", "Return to the abrupt baseline for contrast."),
+        NextRunSuggestion("configs/lab03_2dof/minimum_jerk.yaml", "Compare smoothness and tracking error."),
+    ),
+    "configs/lab03_2dof/joint_space_2dof.yaml": (
+        NextRunSuggestion("configs/lab03_2dof/task_space_2dof.yaml", "Move from joint targets to hand-position control.", "task"),
+        NextRunSuggestion("configs/lab03_2dof/singularity_2dof.yaml", "Approach the workspace edge and inspect conditioning.", "singularity"),
+    ),
+    "configs/lab03_2dof/task_space_2dof.yaml": (
+        NextRunSuggestion("configs/lab03_2dof/singularity_2dof.yaml", "Stress the Jacobian near a difficult posture.", "singularity"),
+        NextRunSuggestion("configs/lab03_2dof/interactive_2dof.yaml", "Move the hand target live with sliders.", "task"),
+    ),
+    "configs/lab03_2dof/singularity_2dof.yaml": (
+        NextRunSuggestion("configs/lab03_2dof/dls_singularity_2dof.yaml", "Add damped least-squares and compare joint speed.", "dls"),
+        NextRunSuggestion("configs/lab03_2dof/task_space_2dof.yaml", "Return to the regular task-space reach.", "task"),
+    ),
+    "configs/lab03_2dof/dls_singularity_2dof.yaml": (
+        NextRunSuggestion("configs/lab03_2dof/singularity_2dof.yaml", "Compare DLS against the undamped singularity case.", "singularity"),
+        NextRunSuggestion("configs/lab03_2dof/interactive_2dof.yaml", "Move the target live and watch conditioning.", "task"),
+    ),
+    "configs/lab03_2dof/interactive_tracking.yaml": (
+        NextRunSuggestion("configs/lab03_2dof/step.yaml", "Save the abrupt tracking response for comparison."),
+        NextRunSuggestion("configs/lab03_2dof/minimum_jerk.yaml", "Save a smooth trajectory comparison."),
+        NextRunSuggestion("configs/lab03_2dof/joint_space_2dof.yaml", "Move next to the two-link arm."),
+    ),
+    "configs/lab03_2dof/interactive_2dof.yaml": (
+        NextRunSuggestion("configs/lab03_2dof/task_space_2dof.yaml", "Save the deterministic task-space reach.", "task"),
+        NextRunSuggestion("configs/lab03_2dof/singularity_2dof.yaml", "Compare against a near-singular reach.", "singularity"),
+        NextRunSuggestion("configs/lab03_2dof/dls_singularity_2dof.yaml", "Compare with damped least-squares enabled.", "dls"),
+    ),
+    "configs/lab04_panda/neutral_hold.yaml": (
+        NextRunSuggestion("configs/lab04_panda/joint_pd.yaml", "Move one joint after confirming stable hold."),
+        NextRunSuggestion("configs/lab04_panda/cartesian_reach.yaml", "Move the Panda hand toward a Cartesian target.", "cartesian_reach"),
+    ),
+    "configs/lab04_panda/joint_pd.yaml": (
+        NextRunSuggestion("configs/lab04_panda/trajectory_tracking.yaml", "Try a different Panda joint and trajectory shape."),
+        NextRunSuggestion("configs/lab04_panda/cartesian_reach.yaml", "Switch from joint motion to hand-position control.", "cartesian_reach"),
+    ),
+    "configs/lab04_panda/trajectory_tracking.yaml": (
+        NextRunSuggestion("configs/lab04_panda/joint_pd.yaml", "Compare against the minimum-jerk joint path."),
+        NextRunSuggestion("configs/lab04_panda/reach_x.yaml", "Watch which joint motion changes hand X.", "cartesian"),
+    ),
+    "configs/lab04_panda/reach_x.yaml": (
+        NextRunSuggestion("configs/lab04_panda/cartesian_reach.yaml", "Target the hand position directly.", "cartesian_reach"),
+        NextRunSuggestion("configs/lab04_panda/interactive_joint_hold.yaml", "Nudge the joint target live."),
+    ),
+    "configs/lab04_panda/cartesian_reach.yaml": (
+        NextRunSuggestion("configs/lab04_panda/cartesian_soft.yaml", "Lower reach aggressiveness and compare error.", "cartesian_reach"),
+        NextRunSuggestion("configs/lab04_panda/cartesian_stiff.yaml", "Raise reach aggressiveness and compare effort.", "cartesian_reach"),
+        NextRunSuggestion("configs/lab04_panda/interactive_cartesian_reach.yaml", "Move the hand target live.", "cartesian_reach"),
+    ),
+    "configs/lab04_panda/cartesian_soft.yaml": (
+        NextRunSuggestion("configs/lab04_panda/cartesian_stiff.yaml", "Run the direct stiff comparison.", "cartesian_reach"),
+        NextRunSuggestion("configs/lab04_panda/interactive_cartesian_reach.yaml", "Tune target and gain live.", "cartesian_reach"),
+    ),
+    "configs/lab04_panda/cartesian_stiff.yaml": (
+        NextRunSuggestion("configs/lab04_panda/cartesian_soft.yaml", "Run the direct soft comparison.", "cartesian_reach"),
+        NextRunSuggestion("configs/lab04_panda/interactive_cartesian_reach.yaml", "Tune target and gain live.", "cartesian_reach"),
+    ),
+    "configs/lab04_panda/interactive_cartesian_reach.yaml": (
+        NextRunSuggestion("configs/lab04_panda/cartesian_soft.yaml", "Save the soft reach as a controlled comparison.", "cartesian_reach"),
+        NextRunSuggestion("configs/lab04_panda/cartesian_stiff.yaml", "Save the stiff reach as a controlled comparison.", "cartesian_reach"),
+        NextRunSuggestion("configs/lab04_panda/impedance_wall.yaml", "Move from free-space reach to wall response.", "wall"),
+    ),
+    "configs/lab04_panda/interactive_joint_hold.yaml": (
+        NextRunSuggestion("configs/lab04_panda/joint_pd.yaml", "Save a deterministic joint-path response."),
+        NextRunSuggestion("configs/lab04_panda/cartesian_reach.yaml", "Switch from joint target to hand target.", "cartesian_reach"),
+    ),
+    "configs/lab04_panda/impedance_wall.yaml": (
+        NextRunSuggestion("configs/lab04_panda/wall_soft.yaml", "Start the wall stiffness comparison.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/wall_stiff.yaml", "Compare higher stiffness and retreat.", "wall_compare"),
+    ),
+    "configs/lab04_panda/wall_soft.yaml": (
+        NextRunSuggestion("configs/lab04_panda/wall_stiff.yaml", "Run the direct stiff wall comparison.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/interactive_virtual_wall.yaml", "Tune wall position and stiffness live.", "wall"),
+    ),
+    "configs/lab04_panda/wall_stiff.yaml": (
+        NextRunSuggestion("configs/lab04_panda/wall_soft.yaml", "Run the direct soft wall comparison.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/interactive_virtual_wall.yaml", "Tune wall position and stiffness live.", "wall"),
+    ),
+    "configs/lab04_panda/interactive_virtual_wall.yaml": (
+        NextRunSuggestion("configs/lab04_panda/wall_soft.yaml", "Save a deterministic soft wall comparison.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/wall_stiff.yaml", "Save a deterministic stiff wall comparison.", "wall_compare"),
+    ),
+}
+
+
 def write_run_report(output_path: str | Path) -> Path:
     output = Path(output_path)
     output.mkdir(parents=True, exist_ok=True)
@@ -190,6 +370,7 @@ def _render_report(
     title = _report_title(output, summary)
     learning_guide = _learning_guide_section(guide_for_run_summary(summary))
     reproduce_section = _reproduce_section(summary)
+    next_runs = _suggested_next_runs_section(summary)
     config_highlights = _config_highlights_section(config)
     configured_presets = _configured_presets_section(config)
     result_check = _result_check_section(summary)
@@ -469,6 +650,17 @@ def _render_report(
       color: #596270;
       overflow-wrap: anywhere;
     }}
+    .action-list strong {{
+      text-align: right;
+      overflow-wrap: anywhere;
+    }}
+    .action-card pre {{
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid #e0e4ea;
+      border-radius: 6px;
+      background: #ffffff;
+    }}
     .action-detail {{
       border-top: 1px solid #edf0f3;
       padding-top: 10px;
@@ -523,6 +715,7 @@ def _render_report(
     <h1>{escape(title)} report</h1>
     {learning_guide}
     {reproduce_section}
+    {next_runs}
     {config_highlights}
     {configured_presets}
     {result_check}
@@ -606,6 +799,52 @@ def _reproduce_section(summary: dict[str, Any]) -> str:
         "</div>"
         '<p class="empty">Edit the YAML config, rerun one command, then compare the new report and plots.</p>'
         "</section>"
+    )
+
+
+def _suggested_next_runs_section(summary: dict[str, Any]) -> str:
+    config_path = _normalize_path(str(summary.get("config_path") or ""))
+    suggestions = NEXT_RUN_SUGGESTIONS.get(config_path, ())
+    if not suggestions:
+        return ""
+    cards = "\n".join(_suggested_next_run_card(suggestion) for suggestion in suggestions[:3])
+    return (
+        "<section>"
+        "<h2>Suggested Next Runs</h2>"
+        '<p class="empty">Run one of these next to turn this result into a comparison.</p>'
+        '<div class="action-grid">'
+        f"{cards}"
+        "</div>"
+        "</section>"
+    )
+
+
+def _suggested_next_run_card(suggestion: NextRunSuggestion) -> str:
+    guide = guide_for_config(config_path=suggestion.config_path)
+    title = guide.title if guide is not None else Path(suggestion.config_path).stem.replace("_", " ").title()
+    lab_name = _cli_lab_name(suggestion.config_path)
+    command = (
+        f"python -m mclab run {lab_name} --config {suggestion.config_path} "
+        f"--viewer --realtime --pause-at-end --plot --plots {suggestion.plots} --open-report"
+    )
+    guide_focus = f'<p class="empty">{escape(guide.focus)}</p>' if guide is not None else ""
+    return (
+        '<article class="action-card action-wide">'
+        f"<strong>{escape(title)}</strong>"
+        f'<p class="empty">{escape(suggestion.reason)}</p>'
+        f"{guide_focus}"
+        '<ul class="action-list">'
+        "<li>"
+        "<span>Config</span>"
+        f"<strong>{escape(suggestion.config_path)}</strong>"
+        "</li>"
+        "<li>"
+        "<span>Plots</span>"
+        f"<strong>{escape(suggestion.plots)}</strong>"
+        "</li>"
+        "</ul>"
+        f"<pre>{escape(command)}</pre>"
+        "</article>"
     )
 
 

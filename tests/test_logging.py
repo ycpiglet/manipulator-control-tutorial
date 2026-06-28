@@ -12,7 +12,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from mclab.sim.logging import RunLogger, create_output_path  # noqa: E402
-from mclab.sim.reporting import write_outputs_index, write_run_report  # noqa: E402
+from mclab.learning_guides import guide_for_config  # noqa: E402
+from mclab.sim.reporting import NEXT_RUN_SUGGESTIONS, _normalize_path, write_outputs_index, write_run_report  # noqa: E402
 
 
 class FixedDatetime:
@@ -22,6 +23,15 @@ class FixedDatetime:
 
 
 class LoggingTests(unittest.TestCase):
+    def test_guided_configs_have_suggested_next_runs(self) -> None:
+        missing: list[str] = []
+        for config_path in sorted((ROOT / "configs").glob("**/*.yaml")):
+            relative = config_path.relative_to(ROOT).as_posix()
+            if guide_for_config(config_path=relative) and _normalize_path(relative) not in NEXT_RUN_SUGGESTIONS:
+                missing.append(relative)
+
+        self.assertEqual(missing, [])
+
     def test_automatic_output_paths_are_unique_within_same_second(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             with (
@@ -174,6 +184,36 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("<span>kp</span>", html)
             self.assertIn("<strong>60</strong>", html)
             self.assertNotIn("interaction.tuning_presets", html)
+
+    def test_run_report_suggests_next_runs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "run"
+            output.mkdir()
+            (output / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab02_pid",
+                        "config_path": "configs/lab02_pid/p_high_gain.yaml",
+                        "config_name": "p_high_gain",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (output / "notes.md").write_text("# Demo\n", encoding="utf-8")
+
+            report = write_run_report(output)
+
+            html = report.read_text(encoding="utf-8")
+            self.assertIn("Suggested Next Runs", html)
+            self.assertIn("Lab02 PD Damping", html)
+            self.assertIn("configs/lab02_pid/pd_damped.yaml", html)
+            self.assertIn("Use derivative action to calm overshoot.", html)
+            self.assertIn("Lab02 Saturation", html)
+            self.assertIn(
+                "python -m mclab run lab02 --config configs/lab02_pid/pd_damped.yaml",
+                html,
+            )
+            self.assertIn("--plots essential --open-report", html)
 
     def test_run_report_includes_domain_specific_result_checks(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
