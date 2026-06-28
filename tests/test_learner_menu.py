@@ -31,6 +31,7 @@ from mclab.learner_menu import (  # noqa: E402
     build_batch_args,
     build_doctor_args,
     build_run_args,
+    config_value_preview,
     experience_filter_description,
     filter_menu_actions,
     learning_path_progress_items,
@@ -234,6 +235,7 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertIn("History:", text)
                 self.assertIn("Try:", text)
                 self.assertIn("Change:", text)
+                self.assertIn("Values:", text)
                 self.assertIn("Watch:", text)
                 self.assertTrue(parameter_hint(action))
                 config = load_config(action.config_path)
@@ -305,6 +307,29 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Presets: Gentle P, Damped PD, Aggressive PID", lesson_text(lab02_interactive))
         self.assertIn("Presets: Soft reach, Default reach, Far target", lesson_text(lab04_cartesian))
 
+    def test_config_value_preview_summarizes_current_knob_values(self) -> None:
+        by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
+
+        underdamped = config_value_preview(by_label[("Lab01 Mass-Spring-Damper", "Underdamped")])
+        self.assertIn("damping=", underdamped)
+        self.assertIn("stiffness=", underdamped)
+
+        windup = config_value_preview(by_label[("Lab02 PID Control", "Windup")])
+        self.assertIn("controller.ki=", windup)
+        self.assertIn("controller.anti_windup=", windup)
+
+        task_space = config_value_preview(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF task-space")])
+        self.assertIn("target_xy=", task_space)
+        self.assertIn("tracking_controller.task_kp=", task_space)
+
+        wall = config_value_preview(by_label[("Lab04 Panda Manipulator", "Virtual wall")])
+        self.assertIn("virtual_wall.stiffness=", wall)
+        self.assertIn("virtual_wall.damping=", wall)
+
+        interactive = config_value_preview(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF interactive")])
+        self.assertIn("target_xy=", interactive)
+        self.assertIn("tracking_controller.torque_limit=", interactive)
+
     def test_filter_menu_actions_matches_search_terms(self) -> None:
         labels = {action.label for action in filter_menu_actions("pid noise")}
         self.assertIn("Sensor noise", labels)
@@ -322,6 +347,9 @@ class LearnerMenuTests(unittest.TestCase):
 
         preset_labels = {(action.group, action.label) for action in filter_menu_actions("far target")}
         self.assertIn(("Lab04 Panda Manipulator", "Cartesian interactive"), preset_labels)
+
+        value_labels = {(action.group, action.label) for action in filter_menu_actions("anti_windup=true")}
+        self.assertIn(("Lab02 PID Control", "Anti-windup"), value_labels)
 
     def test_experience_filters_group_scenarios_by_learning_mode(self) -> None:
         filter_keys = {filter_option.key for filter_option in EXPERIENCE_FILTERS}

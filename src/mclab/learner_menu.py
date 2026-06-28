@@ -980,7 +980,7 @@ def parameter_hint(action: MenuAction) -> str:
 
     if action.lab_name == "lab02":
         if label == "interactive":
-            return "live sliders/presets: target, Kp, Ki, Kd, force limit; YAML: controller.*, viewer_guides.enabled"
+            return "live sliders/presets: target, Kp, Ki, Kd, force limit; YAML: target.end, controller.*"
         if label in {"windup", "anti-windup"}:
             return "controller.ki, controller.anti_windup, controller.output_limit"
         if label == "saturation":
@@ -995,7 +995,11 @@ def parameter_hint(action: MenuAction) -> str:
 
     if action.lab_name == "lab03":
         if label == "2dof interactive":
-            return "live sliders/presets: Target X/Y, task stiffness, task damping, torque limit; YAML: viewer_guides.*"
+            return (
+                "live sliders/presets: Target X/Y, task stiffness, task damping, torque limit; "
+                "YAML: target_xy, tracking_controller.task_kp, tracking_controller.task_kd, "
+                "tracking_controller.torque_limit, viewer_guides.*"
+            )
         if label == "2dof dls singularity":
             return "target_xy, tracking_controller.dls_gain, tracking_controller.dls_damping, viewer_guides.condition_threshold"
         if label == "2dof task-space":
@@ -1003,7 +1007,11 @@ def parameter_hint(action: MenuAction) -> str:
         if label in {"2dof joint-space", "2dof singularity"}:
             return "initial_q, target_q, trajectory.duration, tracking_controller.kp, tracking_controller.kd"
         if config_name == "interactive_tracking.yaml":
-            return "live sliders/presets: target offset, Kp, Kd, force limit"
+            return (
+                "live sliders/presets: target offset, Kp, Kd, force limit; "
+                "YAML: trajectory.end, tracking_controller.kp, tracking_controller.kd, "
+                "tracking_controller.force_limit"
+            )
         return (
             "trajectory.type, trajectory.duration, tracking_controller.kp, "
             "tracking_controller.kd, tracking_controller.force_limit"
@@ -1013,7 +1021,11 @@ def parameter_hint(action: MenuAction) -> str:
         if label == "cartesian interactive":
             return "live sliders/presets: Target X/Y/Z, Cartesian gain; YAML: cartesian_target.*"
         if config_name == "interactive_virtual_wall.yaml":
-            return "live sliders/presets: wall X, stiffness, damping, retreat gain; YAML: virtual_wall.stiffness"
+            return (
+                "live sliders/presets: wall X, stiffness, damping, retreat gain; "
+                "YAML: virtual_wall.wall_x, virtual_wall.stiffness, virtual_wall.damping, "
+                "virtual_wall.force_retreat_gain"
+            )
         if "cartesian" in label:
             return "cartesian_target.position, cartesian_target.gain, cartesian_target.max_step"
         if "wall" in label:
@@ -1025,6 +1037,94 @@ def parameter_hint(action: MenuAction) -> str:
         return "controlled_joint_index, trajectory.start, trajectory.end, trajectory.duration"
 
     return "config YAML values"
+
+
+def config_value_preview(action: MenuAction, *, max_items: int = 5) -> str:
+    return _config_value_preview(action.config_path, parameter_hint(action), max_items)
+
+
+@lru_cache(maxsize=256)
+def _config_value_preview(config_path: str, hint: str, max_items: int) -> str:
+    try:
+        config = load_config(config_path)
+    except (OSError, ValueError):
+        return "Values: Config unavailable"
+
+    entries: list[str] = []
+    for path in _hint_config_paths(hint):
+        for resolved_path, value in _resolve_preview_values(config, path):
+            entries.append(f"{resolved_path}={_format_config_value(value)}")
+            if len(entries) >= max_items:
+                return f"Values: {'; '.join(entries)}"
+    if not entries:
+        return "Values: Open Config to inspect YAML"
+    return f"Values: {'; '.join(entries)}"
+
+
+def _hint_config_paths(hint: str) -> tuple[str, ...]:
+    paths: list[str] = []
+    for raw_part in hint.replace(";", ",").split(","):
+        candidate = raw_part.strip()
+        if ":" in candidate:
+            candidate = candidate.split(":", 1)[1].strip()
+        candidate = candidate.strip("` ")
+        if not candidate or " " in candidate or "/" in candidate:
+            continue
+        if candidate == "config" or candidate.startswith("live"):
+            continue
+        if any(character not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.*" for character in candidate):
+            continue
+        paths.append(candidate)
+    return tuple(dict.fromkeys(paths))
+
+
+def _resolve_preview_values(config: dict[str, Any], path: str) -> tuple[tuple[str, Any], ...]:
+    if path.endswith(".*"):
+        parent_path = path.removesuffix(".*")
+        parent = _get_config_value(config, parent_path)
+        if not isinstance(parent, dict):
+            return ()
+        return tuple(
+            (f"{parent_path}.{key}", value)
+            for key, value in parent.items()
+            if _is_preview_value(value)
+        )
+
+    value = _get_config_value(config, path)
+    if not _is_preview_value(value):
+        return ()
+    return ((path, value),)
+
+
+def _get_config_value(config: dict[str, Any], path: str) -> Any:
+    current: Any = config
+    for part in path.split("."):
+        if not isinstance(current, dict) or part not in current:
+            return None
+        current = current[part]
+    return current
+
+
+def _is_preview_value(value: Any) -> bool:
+    if isinstance(value, bool | int | float | str):
+        return True
+    if isinstance(value, list | tuple):
+        return all(isinstance(item, bool | int | float | str) for item in value)
+    return False
+
+
+def _format_config_value(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, int | float):
+        return f"{value:g}"
+    if isinstance(value, str):
+        return value if len(value) <= 32 else f"{value[:29]}..."
+    if isinstance(value, list | tuple):
+        shown = [_format_config_value(item) for item in value[:4]]
+        suffix = ", ..." if len(value) > 4 else ""
+        return f"[{', '.join(shown)}{suffix}]"
+    return str(value)
 
 
 def lesson_text(action: MenuAction) -> str:
@@ -1039,6 +1139,7 @@ def lesson_text(action: MenuAction) -> str:
         f"{action_history_text(action)}\n"
         f"Try: {action.try_this}\n"
         f"Change: {parameter_hint(action)}\n"
+        f"{config_value_preview(action)}\n"
         f"Watch: {action.watch}"
         f"{presets}"
     )
@@ -1168,6 +1269,7 @@ def _action_matches_terms(action: MenuAction, terms: list[str]) -> bool:
             action_readiness(action).detail,
             " ".join(action_tags(action)),
             " ".join(tag.replace("-", " ") for tag in action_tags(action)),
+            config_value_preview(action),
         )
     ).lower()
     return all(term in text for term in terms)
