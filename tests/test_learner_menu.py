@@ -22,6 +22,8 @@ from mclab.learner_menu import (  # noqa: E402
     _launch_from_menu,
     _set_status_after_run,
     _set_status_after_doctor,
+    action_followup,
+    action_followup_text,
     action_config_path,
     action_history_text,
     action_latest_output,
@@ -236,6 +238,7 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertIn("Try:", text)
                 self.assertIn("Change:", text)
                 self.assertIn("Values:", text)
+                self.assertIn("Next:", text)
                 self.assertIn("Watch:", text)
                 self.assertTrue(parameter_hint(action))
                 config = load_config(action.config_path)
@@ -307,6 +310,17 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Presets: Gentle P, Damped PD, Aggressive PID", lesson_text(lab02_interactive))
         self.assertIn("Presets: Soft reach, Default reach, Far target", lesson_text(lab04_cartesian))
 
+    def test_menu_action_followups_point_to_real_next_experiences(self) -> None:
+        for action in MENU_ACTIONS:
+            with self.subTest(label=action.label, config=action.config_path):
+                followup = action_followup(action)
+                self.assertIn(followup, (*MENU_ACTIONS, *BATCH_ACTIONS))
+                self.assertIn(followup.group, action_followup_text(action))
+                self.assertIn(followup.label, action_followup_text(action))
+
+        self.assertEqual(action_followup(MENU_ACTIONS[0]), MENU_ACTIONS[1])
+        self.assertEqual(action_followup(MENU_ACTIONS[-1]), BATCH_ACTIONS[0])
+
     def test_config_value_preview_summarizes_current_knob_values(self) -> None:
         by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
 
@@ -350,6 +364,9 @@ class LearnerMenuTests(unittest.TestCase):
 
         value_labels = {(action.group, action.label) for action in filter_menu_actions("anti_windup=true")}
         self.assertIn(("Lab02 PID Control", "Anti-windup"), value_labels)
+
+        followup_labels = {(action.group, action.label) for action in filter_menu_actions("next anti-windup")}
+        self.assertIn(("Lab02 PID Control", "Windup"), followup_labels)
 
     def test_experience_filters_group_scenarios_by_learning_mode(self) -> None:
         filter_keys = {filter_option.key for filter_option in EXPERIENCE_FILTERS}

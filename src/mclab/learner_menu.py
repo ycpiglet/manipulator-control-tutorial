@@ -769,6 +769,20 @@ def action_history_text(
     return f"History: Latest {latest.name}"
 
 
+def action_followup(action: MenuAction) -> MenuAction | BatchMenuAction:
+    for index, candidate in enumerate(MENU_ACTIONS):
+        if candidate == action:
+            if index + 1 < len(MENU_ACTIONS):
+                return MENU_ACTIONS[index + 1]
+            return BATCH_ACTIONS[0]
+    raise ValueError(f"Menu action was not found: {action.group} - {action.label}")
+
+
+def action_followup_text(action: MenuAction) -> str:
+    target = action_followup(action)
+    return f"Next: {target.group} - {target.label}"
+
+
 def _latest_matching_output(action: MenuAction | BatchMenuAction, outputs_root: Path) -> Path | None:
     if not outputs_root.exists():
         return None
@@ -1140,6 +1154,7 @@ def lesson_text(action: MenuAction) -> str:
         f"Try: {action.try_this}\n"
         f"Change: {parameter_hint(action)}\n"
         f"{config_value_preview(action)}\n"
+        f"{action_followup_text(action)}\n"
         f"Watch: {action.watch}"
         f"{presets}"
     )
@@ -1253,25 +1268,26 @@ def filter_menu_actions(
 
 
 def _action_matches_terms(action: MenuAction, terms: list[str]) -> bool:
-    text = " ".join(
-        (
-            action.group,
-            action.label,
-            action.lab_name,
-            action.config_path,
-            action.plots,
-            action.description,
-            action.try_this,
-            action.watch,
-            parameter_hint(action),
-            " ".join(configured_preset_labels(action.config_path)),
-            action_readiness(action).label,
-            action_readiness(action).detail,
-            " ".join(action_tags(action)),
-            " ".join(tag.replace("-", " ") for tag in action_tags(action)),
-            config_value_preview(action),
-        )
-    ).lower()
+    fields = [
+        action.group,
+        action.label,
+        action.lab_name,
+        action.config_path,
+        action.plots,
+        action.description,
+        action.try_this,
+        action.watch,
+        parameter_hint(action),
+        " ".join(configured_preset_labels(action.config_path)),
+        action_readiness(action).label,
+        action_readiness(action).detail,
+        " ".join(action_tags(action)),
+        " ".join(tag.replace("-", " ") for tag in action_tags(action)),
+        config_value_preview(action),
+    ]
+    if "next" in terms:
+        fields.append(action_followup_text(action))
+    text = " ".join(fields).lower()
     return all(term in text for term in terms)
 
 
@@ -1483,11 +1499,12 @@ def main() -> int:
         for group, actions in grouped.items():
             frame = ttk.LabelFrame(scroll_frame, text=group, padding=12)
             frame.grid(row=row, column=0, sticky="ew", pady=6)
-            frame.columnconfigure(4, weight=1)
+            frame.columnconfigure(5, weight=1)
             row += 1
             for action_index, action in enumerate(actions):
                 readiness = action_readiness(action)
                 latest = action_latest_output(action)
+                followup = action_followup(action)
                 run_button = ttk.Button(
                     frame,
                     text=action.label,
@@ -1525,8 +1542,24 @@ def main() -> int:
                 if latest is None:
                     report_button.state(["disabled"])
                 report_button.grid(row=action_index, column=3, sticky="w", padx=(0, 12), pady=4)
+                next_button = ttk.Button(
+                    frame,
+                    text="Next",
+                    width=8,
+                    command=lambda selected=followup: _launch_target_from_menu(
+                        selected,
+                        status,
+                        root=root,
+                        latest_output=latest_output,
+                        latest_button=latest_button,
+                        progress_callback=refresh_after_run,
+                    ),
+                )
+                if isinstance(followup, MenuAction) and action_readiness(followup).status != "ok":
+                    next_button.state(["disabled"])
+                next_button.grid(row=action_index, column=4, sticky="w", padx=(0, 12), pady=4)
                 ttk.Label(frame, text=lesson_text(action), wraplength=560, justify="left").grid(
-                    row=action_index, column=4, sticky="w", pady=4
+                    row=action_index, column=5, sticky="w", pady=4
                 )
         canvas.configure(scrollregion=canvas.bbox("all"))
 
@@ -1553,9 +1586,28 @@ def _launch_learning_path_from_menu(
     progress_callback: Callable[[], None] | None = None,
 ) -> None:
     action = learning_path_target(step)
-    if isinstance(action, BatchMenuAction):
+    _launch_target_from_menu(
+        action,
+        status,
+        root=root,
+        latest_output=latest_output,
+        latest_button=latest_button,
+        progress_callback=progress_callback,
+    )
+
+
+def _launch_target_from_menu(
+    target: MenuAction | BatchMenuAction,
+    status: Any,
+    *,
+    root: Any | None = None,
+    latest_output: dict[str, Path | None] | None = None,
+    latest_button: Any | None = None,
+    progress_callback: Callable[[], None] | None = None,
+) -> None:
+    if isinstance(target, BatchMenuAction):
         _launch_batch_from_menu(
-            action,
+            target,
             status,
             root=root,
             latest_output=latest_output,
@@ -1564,7 +1616,7 @@ def _launch_learning_path_from_menu(
         )
         return
     _launch_from_menu(
-        action,
+        target,
         status,
         root=root,
         latest_output=latest_output,
