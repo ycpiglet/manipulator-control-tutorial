@@ -376,9 +376,19 @@ def _render_report(
     }}
     .check-card {{
       border: 1px solid #e0e4ea;
+      border-left: 4px solid #9aa4b2;
       border-radius: 8px;
       padding: 12px;
       background: #fbfcfd;
+    }}
+    .check-ok {{
+      border-left-color: #188038;
+    }}
+    .check-watch, .check-observed, .check-recorded {{
+      border-left-color: #f29900;
+    }}
+    .check-inspect, .check-review {{
+      border-left-color: #d93025;
     }}
     .check-card strong {{
       display: block;
@@ -619,7 +629,7 @@ def _result_check_section(summary: dict[str, Any]) -> str:
         return ""
     cards = "\n".join(
         (
-            '<article class="check-card">'
+            f'<article class="check-card {_check_state_class(state)}">'
             f"<strong>{escape(title)}</strong>"
             f'<span class="check-state">{escape(state)}</span>'
             f'<p class="empty">{escape(detail)}</p>'
@@ -653,6 +663,7 @@ def _result_checks(summary: dict[str, Any]) -> list[tuple[str, str, str]]:
     _add_abs_limit_check(checks, summary, "final_joint_error_norm", "Final joint error", 0.1, "rad norm")
     _add_abs_limit_check(checks, summary, "final_task_error_norm", "Final hand error", 0.05, "m norm")
     _add_abs_limit_check(checks, summary, "final_cartesian_error_cm", "Final Cartesian error", 2.0, "cm")
+    _add_abs_limit_check(checks, summary, "max_abs_tau_cmd", "Actuator effort", 60.0, "force / torque proxy")
 
     overshoot = _number(summary.get("overshoot_percent"))
     if overshoot is not None:
@@ -661,18 +672,72 @@ def _result_checks(summary: dict[str, Any]) -> list[tuple[str, str, str]]:
 
     condition = _number(summary.get("max_jacobian_condition"))
     if condition is not None:
-        state = "OK" if condition <= 100.0 else "Inspect"
-        checks.append(("Jacobian condition", state, f"Maximum condition number {_format_value(condition)}."))
+        if condition <= 20.0:
+            state = "OK"
+        elif condition <= 100.0:
+            state = "Watch"
+        else:
+            state = "Inspect"
+        checks.append(
+            (
+                "Jacobian condition",
+                state,
+                f"Maximum condition number {_format_value(condition)}; high values mark near-singular motion.",
+            )
+        )
+
+    manipulability_value = _number(summary.get("min_manipulability"))
+    if manipulability_value is not None:
+        state = "Inspect" if manipulability_value <= 0.03 else "OK"
+        checks.append(
+            (
+                "Manipulability",
+                state,
+                f"Minimum manipulability {_format_value(manipulability_value)}; lower values are closer to singularity.",
+            )
+        )
+
+    dls_speed = _number(summary.get("max_dls_joint_speed"))
+    if dls_speed is not None:
+        state = "OK" if dls_speed <= 3.5 else "Inspect"
+        checks.append(
+            (
+                "DLS joint speed",
+                state,
+                f"Maximum DLS joint speed {_format_value(dls_speed)} rad/s proxy; raise damping if this is high.",
+            )
+        )
 
     wall_penetration = _number(summary.get("max_wall_penetration_cm"))
     if wall_penetration is not None and wall_penetration > 0.0:
-        checks.append(("Virtual wall", "Inspect", f"Maximum penetration {_format_value(wall_penetration)} cm."))
+        state = "Observed" if wall_penetration <= 5.0 else "Inspect"
+        checks.append(
+            (
+                "Virtual wall contact",
+                state,
+                f"Maximum penetration {_format_value(wall_penetration)} cm; this means the wall lesson was triggered.",
+            )
+        )
+
+    wall_retreat = _number(summary.get("max_wall_retreat_cm"))
+    if wall_retreat is not None and wall_retreat > 0.0:
+        checks.append(("Wall retreat", "Observed", f"Maximum retreat command {_format_value(wall_retreat)} cm."))
+
+    wall_force = _number(summary.get("max_abs_virtual_wall_force"))
+    if wall_force is not None and wall_force > 0.0:
+        state = "Observed" if wall_force <= 80.0 else "Inspect"
+        checks.append(("Wall force", state, f"Maximum virtual wall force {_format_value(wall_force)}."))
 
     interaction_events = _number(summary.get("interaction_events"))
     if interaction_events is not None and interaction_events > 0.0:
         checks.append(("Learner actions", "Recorded", f"{_format_value(interaction_events)} interaction events saved."))
 
     return checks
+
+
+def _check_state_class(state: str) -> str:
+    normalized = "".join(character.lower() if character.isalnum() else "-" for character in state).strip("-")
+    return f"check-{normalized or 'state'}"
 
 
 def _add_abs_limit_check(

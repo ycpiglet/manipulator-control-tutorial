@@ -125,6 +125,44 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Position", html)
             self.assertIn("steady-state error", html)
 
+    def test_run_report_includes_domain_specific_result_checks(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "run"
+            output.mkdir()
+            (output / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab03_2dof",
+                        "config_path": "configs/lab03_2dof/dls_singularity_2dof.yaml",
+                        "config_name": "dls_singularity_2dof",
+                        "samples": 120,
+                        "max_jacobian_condition": 150.0,
+                        "min_manipulability": 0.01,
+                        "max_dls_joint_speed": 4.2,
+                        "max_abs_tau_cmd": 75.0,
+                        "max_wall_penetration_cm": 1.2,
+                        "max_wall_retreat_cm": 0.5,
+                        "max_abs_virtual_wall_force": 22.0,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (output / "notes.md").write_text("# Demo\n", encoding="utf-8")
+
+            report = write_run_report(output)
+
+            html = report.read_text(encoding="utf-8")
+            self.assertIn("Jacobian condition", html)
+            self.assertIn("near-singular motion", html)
+            self.assertIn("Manipulability", html)
+            self.assertIn("DLS joint speed", html)
+            self.assertIn("Actuator effort", html)
+            self.assertIn("Virtual wall contact", html)
+            self.assertIn("Wall retreat", html)
+            self.assertIn("Wall force", html)
+            self.assertIn("check-inspect", html)
+            self.assertIn("check-observed", html)
+
     def test_run_report_updates_parent_outputs_index(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "20260627_150117_lab01_msd"
