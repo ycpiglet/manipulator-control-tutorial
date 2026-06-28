@@ -374,7 +374,7 @@ def _render_report(
     title = _report_title(output, summary)
     learning_guide = _learning_guide_section(guide_for_run_summary(summary))
     reproduce_section = _reproduce_section(summary)
-    next_runs = _suggested_next_runs_section(summary)
+    next_runs = _suggested_next_runs_section(summary, config)
     config_highlights = _config_highlights_section(config)
     configured_presets = _configured_presets_section(config)
     result_check = _result_check_section(summary)
@@ -807,12 +807,12 @@ def _reproduce_section(summary: dict[str, Any]) -> str:
     )
 
 
-def _suggested_next_runs_section(summary: dict[str, Any]) -> str:
+def _suggested_next_runs_section(summary: dict[str, Any], current_config: dict[str, Any]) -> str:
     config_path = _normalize_path(str(summary.get("config_path") or ""))
     suggestions = NEXT_RUN_SUGGESTIONS.get(config_path, ())
     if not suggestions:
         return ""
-    cards = "\n".join(_suggested_next_run_card(suggestion) for suggestion in suggestions[:3])
+    cards = "\n".join(_suggested_next_run_card(suggestion, current_config) for suggestion in suggestions[:3])
     return (
         "<section>"
         "<h2>Suggested Next Runs</h2>"
@@ -824,7 +824,7 @@ def _suggested_next_runs_section(summary: dict[str, Any]) -> str:
     )
 
 
-def _suggested_next_run_card(suggestion: NextRunSuggestion) -> str:
+def _suggested_next_run_card(suggestion: NextRunSuggestion, current_config: dict[str, Any]) -> str:
     guide = guide_for_config(config_path=suggestion.config_path)
     title = guide.title if guide is not None else Path(suggestion.config_path).stem.replace("_", " ").title()
     lab_name = _cli_lab_name(suggestion.config_path)
@@ -837,12 +837,14 @@ def _suggested_next_run_card(suggestion: NextRunSuggestion) -> str:
     if guide is not None:
         question = question_for_guide(guide).removeprefix("Question:").strip()
         guide_question = f'<p class="empty"><strong>Question:</strong> {escape(question)}</p>'
+    key_changes = _suggested_config_changes(current_config, suggestion.config_path)
     return (
         '<article class="action-card action-wide">'
         f"<strong>{escape(title)}</strong>"
         f'<p class="empty">{escape(suggestion.reason)}</p>'
         f"{guide_focus}"
         f"{guide_question}"
+        f"{key_changes}"
         '<ul class="action-list">'
         "<li>"
         "<span>Config</span>"
@@ -856,6 +858,57 @@ def _suggested_next_run_card(suggestion: NextRunSuggestion) -> str:
         f"<pre>{escape(command)}</pre>"
         "</article>"
     )
+
+
+def _suggested_config_changes(current_config: dict[str, Any], suggested_config_path: str) -> str:
+    if not current_config:
+        return ""
+    try:
+        suggested_config = load_config(suggested_config_path)
+    except Exception:
+        return ""
+
+    current_flat = _flatten_config(current_config)
+    suggested_flat = _flatten_config(suggested_config)
+    if not current_flat or not suggested_flat:
+        return ""
+
+    highlight_keys = [key for key in CONFIG_HIGHLIGHT_KEYS if key in current_flat or key in suggested_flat]
+    extra_keys = sorted(
+        key
+        for key in set(current_flat) | set(suggested_flat)
+        if key not in CONFIG_HIGHLIGHT_KEYS and _show_config_change_key(key)
+    )
+    rows: list[tuple[str, str]] = []
+    for key in [*highlight_keys, *extra_keys]:
+        if not _show_config_change_key(key):
+            continue
+        current_value = current_flat.get(key)
+        suggested_value = suggested_flat.get(key)
+        if _config_value_token(current_value) == _config_value_token(suggested_value):
+            continue
+        rows.append((key, f"{_format_value(current_value)} -> {_format_value(suggested_value)}"))
+        if len(rows) >= 5:
+            break
+
+    if not rows:
+        return ""
+    return (
+        '<p class="empty"><strong>Key changes:</strong></p>'
+        f"{_action_value_list(rows)}"
+    )
+
+
+def _show_config_change_key(key: str) -> bool:
+    return key != "model_path" and not key.startswith(("model_path.", "interaction.tuning_presets"))
+
+
+def _config_value_token(value: Any) -> str:
+    if isinstance(value, float):
+        return f"{value:.12g}"
+    if isinstance(value, (list, tuple, dict)):
+        return json.dumps(value, sort_keys=True, ensure_ascii=False)
+    return str(value)
 
 
 def _cli_lab_name(lab_name: str) -> str:

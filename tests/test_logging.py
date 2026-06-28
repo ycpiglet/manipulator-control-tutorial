@@ -216,6 +216,10 @@ class LoggingTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            (output / "config.yaml").write_text(
+                (ROOT / "configs/lab02_pid/p_high_gain.yaml").read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
             (output / "notes.md").write_text("# Demo\n", encoding="utf-8")
 
             report = write_run_report(output)
@@ -227,6 +231,9 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Use derivative action to calm overshoot.", html)
             self.assertIn("Question:", html)
             self.assertIn("Which gain change trades speed for overshoot or smoother force?", html)
+            self.assertIn("Key changes:", html)
+            self.assertIn("controller.kd", html)
+            self.assertIn("0 -&gt; 18", html)
             self.assertIn("Lab02 Saturation", html)
             self.assertIn(
                 "python -m mclab run lab02 --config configs/lab02_pid/pd_damped.yaml",
