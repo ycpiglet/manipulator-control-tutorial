@@ -1275,10 +1275,11 @@ def _observation_marker_card(event: dict[str, Any], marker_index: int) -> str:
     payload = event.get("value")
     value = payload if isinstance(payload, dict) else {}
     question = _marker_text_group("Question", value.get("question"))
+    note = _marker_text_group("Learner note", value.get("note"))
     changed_sliders = _marker_value_group("Changed sliders", value.get("changed_sliders"))
     sliders = _marker_value_group("Sliders", value.get("sliders"))
     status = _marker_value_group("Live status", value.get("status"))
-    body = question + changed_sliders + sliders + status
+    body = question + note + changed_sliders + sliders + status
     if not body:
         body = '<p class="empty">No slider or status snapshot was saved for this marker.</p>'
     return (

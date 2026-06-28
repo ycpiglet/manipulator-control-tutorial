@@ -85,10 +85,13 @@ class InteractionLog:
         changed_sliders: dict[str, Any] | None = None,
         status: dict[str, Any] | None = None,
         question: str = "",
+        note: str = "",
     ) -> dict[str, Any]:
         value: dict[str, Any] = {}
         if question.strip():
             value["question"] = question.strip()
+        if note.strip():
+            value["note"] = note.strip()
         if changed_sliders:
             value["changed_sliders"] = dict(changed_sliders)
         if sliders:
@@ -500,6 +503,7 @@ def maybe_start_interaction_panel(
                 marker_frame.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(12, 4))
                 marker_frame.columnconfigure(1, weight=1)
                 marker_status = tk.StringVar(value="")
+                marker_note = tk.StringVar(value="")
 
                 def mark_observation() -> None:
                     event_log.mark_observation(
@@ -507,19 +511,34 @@ def maybe_start_interaction_panel(
                         sliders=tuning.snapshot() if tuning is not None else None,
                         status=status.snapshot() if status is not None else None,
                         question=question_for_guide(guide),
+                        note=marker_note.get(),
                     )
+                    marker_note.set("")
                     marker_status.set(f"Marked observation {_observation_marker_count(event_log)}")
 
-                tk.Button(marker_frame, text="Mark observation", command=mark_observation).grid(
+                tk.Label(marker_frame, text="Observation note").grid(
                     row=0,
                     column=0,
                     sticky="w",
                 )
-                tk.Label(marker_frame, textvariable=marker_status, anchor="w").grid(
+                tk.Entry(marker_frame, textvariable=marker_note, width=40).grid(
                     row=0,
                     column=1,
                     sticky="ew",
                     padx=(12, 0),
+                )
+                tk.Button(marker_frame, text="Mark observation", command=mark_observation).grid(
+                    row=1,
+                    column=0,
+                    sticky="w",
+                    pady=(6, 0),
+                )
+                tk.Label(marker_frame, textvariable=marker_status, anchor="w").grid(
+                    row=1,
+                    column=1,
+                    sticky="ew",
+                    padx=(12, 0),
+                    pady=(6, 0),
                 )
                 row += 1
 
