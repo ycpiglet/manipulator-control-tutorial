@@ -285,6 +285,13 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("1. Feel 1D physics", html)
             self.assertIn("2. Disturb and tune", html)
             self.assertIn("Not run yet", html)
+            self.assertIn("Run this step", html)
+            self.assertIn(
+                "python -m mclab run lab01 --config configs/lab01_msd/interactive_pull.yaml",
+                html,
+            )
+            self.assertIn("--plots essential --open-report", html)
+            self.assertIn("Repeat this step", html)
             self.assertIn("Lab01", html)
             self.assertIn("1 saved run", html)
             self.assertIn("Lesson", html)
@@ -342,6 +349,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("1/10 steps complete", html)
             self.assertIn("10. Compare the course", html)
             self.assertIn("20260627_151000_all_batches/report.html", html)
+            self.assertIn("python -m mclab batch all --open-report", html)
 
     def test_outputs_index_handles_empty_outputs_folder(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

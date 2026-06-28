@@ -110,6 +110,7 @@ class IndexPathStep:
     description: str
     config_path: str = ""
     batch_name: str = ""
+    plots: str = "essential"
 
 
 @dataclass(frozen=True)
@@ -145,17 +146,20 @@ INDEX_LEARNING_PATH: tuple[IndexPathStep, ...] = (
         "6. Control the hand",
         "Task-space hand control with the Jacobian.",
         "configs/lab03_2dof/task_space_2dof.yaml",
+        plots="task",
     ),
     IndexPathStep("7. Hold Panda", "Stable neutral-hold baseline for Panda.", "configs/lab04_panda/neutral_hold.yaml"),
     IndexPathStep(
         "8. Reach in Cartesian",
         "Panda hand reaches an explicit XYZ target.",
         "configs/lab04_panda/cartesian_reach.yaml",
+        plots="cartesian_reach",
     ),
     IndexPathStep(
         "9. Touch virtual wall",
         "Interactive Panda virtual wall behavior.",
         "configs/lab04_panda/interactive_virtual_wall.yaml",
+        plots="wall",
     ),
     IndexPathStep("10. Compare the course", "Full comparison report set.", batch_name="all"),
 )
@@ -1555,6 +1559,16 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
       display: block;
       margin-bottom: 6px;
     }}
+    .path-command {{
+      margin: 10px 0 0;
+      padding: 10px;
+      border: 1px solid #e0e4ea;
+      border-radius: 6px;
+      background: #fbfcfd;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font-size: 12px;
+    }}
     .status {{
       display: inline-block;
       margin-top: 8px;
@@ -1631,6 +1645,14 @@ def _learning_path_item(step: IndexPathStep, runs: list[dict[str, Any]]) -> dict
 def _learning_path_card(item: dict[str, Any]) -> str:
     step: IndexPathStep = item["step"]
     run = item["run"]
+    command_label = "Run this step" if run is None else "Repeat this step"
+    command = _learning_path_command(step)
+    command_block = (
+        f'<p class="muted">{escape(command_label)}</p>'
+        f'<pre class="path-command">{escape(command)}</pre>'
+        if command
+        else ""
+    )
     if run is None:
         status = '<span class="status">Not run yet</span>'
     else:
@@ -1643,7 +1665,22 @@ def _learning_path_card(item: dict[str, Any]) -> str:
         f"<strong>{escape(step.title)}</strong>"
         f'<p class="muted">{escape(step.description)}</p>'
         f"{status}"
+        f"{command_block}"
         "</article>"
+    )
+
+
+def _learning_path_command(step: IndexPathStep) -> str:
+    if step.batch_name:
+        return f"python -m mclab batch {step.batch_name} --open-report"
+    if not step.config_path:
+        return ""
+    lab_name = _cli_lab_name(step.config_path)
+    if not lab_name:
+        return ""
+    return (
+        f"python -m mclab run {lab_name} --config {step.config_path} "
+        f"--viewer --realtime --pause-at-end --plot --plots {step.plots} --open-report"
     )
 
 

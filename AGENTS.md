@@ -70,6 +70,7 @@ Implemented and verified:
 - Learner menu scenario readiness checks that disable run buttons when config or model assets are missing
 - Run reports include suggested next-run cards with ready-to-run commands for every guided config
 - Observation markers capture changed sliders separately from full slider and live status snapshots
+- Outputs index learning path cards include ready-to-run or repeat commands for each course step
 - Run reports show configured preset cards and summarize learner actions, latest slider values, preset choices, observation markers, and raw interaction events
 
 Verified commands:
