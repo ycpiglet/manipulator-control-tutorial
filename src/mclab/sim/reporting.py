@@ -193,6 +193,7 @@ def _render_report(
     reproduce_section = _reproduce_section(summary)
     config_highlights = _config_highlights_section(config)
     result_check = _result_check_section(summary)
+    learner_action_summary = _learner_action_summary_section(interaction_events)
     observation_markers = _observation_markers_section(interaction_events)
     interaction_section = _interaction_section(interaction_events)
     plot_guide = _plot_guide_section(plots)
@@ -434,6 +435,50 @@ def _render_report(
     .marker-group span {{
       color: #596270;
     }}
+    .action-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+    }}
+    .action-card {{
+      border: 1px solid #e0e4ea;
+      border-radius: 8px;
+      padding: 12px;
+      background: #fbfcfd;
+    }}
+    .action-card > strong {{
+      display: block;
+      margin-bottom: 6px;
+    }}
+    .action-wide {{
+      grid-column: 1 / -1;
+    }}
+    .action-list {{
+      list-style: none;
+      margin: 8px 0 0;
+      padding: 0;
+    }}
+    .action-list li {{
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      border-top: 1px solid #edf0f3;
+      padding: 5px 0;
+    }}
+    .action-list span {{
+      color: #596270;
+      overflow-wrap: anywhere;
+    }}
+    .action-detail {{
+      border-top: 1px solid #edf0f3;
+      padding-top: 10px;
+      margin-top: 10px;
+    }}
+    .action-detail:first-of-type {{
+      border-top: 0;
+      padding-top: 0;
+      margin-top: 0;
+    }}
     .check-state {{
       display: inline-block;
       margin-bottom: 8px;
@@ -480,6 +525,7 @@ def _render_report(
     {reproduce_section}
     {config_highlights}
     {result_check}
+    {learner_action_summary}
     {observation_markers}
     {interaction_section}
     <section>
@@ -754,6 +800,124 @@ def _add_abs_limit_check(
         return
     state = "OK" if abs(value) <= limit else "Inspect"
     checks.append((title, state, f"{_format_value(value)} {unit}; suggested limit {_format_value(limit)}."))
+
+
+def _learner_action_summary_section(events: list[dict[str, Any]]) -> str:
+    if not events:
+        return ""
+    cards = [
+        _action_card(
+            "Actions recorded",
+            f"{len(events)} total learner action{'s' if len(events) != 1 else ''}.",
+            _action_value_list(_kind_count_items(events)),
+        ),
+        _latest_action_card(events[-1]),
+    ]
+    latest_sliders = _latest_named_event_values(events, "slider")
+    if latest_sliders:
+        cards.append(
+            _action_card(
+                "Latest slider values",
+                "Most recent value saved for each changed slider.",
+                _action_value_list(latest_sliders),
+            )
+        )
+    preset_card = _preset_choices_card(events)
+    if preset_card:
+        cards.append(preset_card)
+    return (
+        "<section>"
+        "<h2>Learner Action Summary</h2>"
+        '<p class="empty">Use this summary to connect live controls and presets to the plots below.</p>'
+        '<div class="action-grid">'
+        f"{''.join(cards)}"
+        "</div>"
+        "</section>"
+    )
+
+
+def _latest_action_card(event: dict[str, Any]) -> str:
+    items = [
+        ("Type", str(event.get("kind", ""))),
+        ("Control", _event_label(event)),
+        ("Time [s]", _format_value(event.get("time"))),
+    ]
+    return _action_card("Latest action", "Last recorded learner interaction.", _action_value_list(items))
+
+
+def _preset_choices_card(events: list[dict[str, Any]]) -> str:
+    preset_events = [event for event in events if str(event.get("kind", "")).lower() == "preset"]
+    if not preset_events:
+        return ""
+    details = "".join(_preset_choice_detail(event) for event in preset_events[-4:])
+    count_text = (
+        f"Showing the latest 4 of {len(preset_events)} preset choices."
+        if len(preset_events) > 4
+        else f"{len(preset_events)} preset choice{'s' if len(preset_events) != 1 else ''} recorded."
+    )
+    return (
+        '<article class="action-card action-wide">'
+        "<strong>Preset choices</strong>"
+        f'<p class="empty">{escape(count_text)}</p>'
+        f"{details}"
+        "</article>"
+    )
+
+
+def _preset_choice_detail(event: dict[str, Any]) -> str:
+    value = event.get("value")
+    items = value.items() if isinstance(value, dict) else (("value", value),)
+    return (
+        '<div class="action-detail">'
+        f"<strong>{escape(_event_label(event))}</strong>"
+        f'<span class="marker-time">time {_format_value(event.get("time"))} s</span>'
+        f"{_action_value_list(items)}"
+        "</div>"
+    )
+
+
+def _action_card(title: str, description: str, body: str) -> str:
+    return (
+        '<article class="action-card">'
+        f"<strong>{escape(title)}</strong>"
+        f'<p class="empty">{escape(description)}</p>'
+        f"{body}"
+        "</article>"
+    )
+
+
+def _action_value_list(items: Any) -> str:
+    rows = "\n".join(
+        (
+            "<li>"
+            f"<span>{escape(str(key))}</span>"
+            f"<strong>{escape(_format_value(value))}</strong>"
+            "</li>"
+        )
+        for key, value in items
+    )
+    return f'<ul class="action-list">{rows}</ul>' if rows else ""
+
+
+def _kind_count_items(events: list[dict[str, Any]]) -> list[tuple[str, int]]:
+    counts: dict[str, int] = {}
+    for event in events:
+        kind = str(event.get("kind", "") or "unknown")
+        counts[kind] = counts.get(kind, 0) + 1
+    return sorted(counts.items())
+
+
+def _latest_named_event_values(events: list[dict[str, Any]], kind: str) -> list[tuple[str, Any]]:
+    values: dict[str, Any] = {}
+    for event in events:
+        if str(event.get("kind", "")).lower() != kind:
+            continue
+        values[_event_label(event)] = event.get("value")
+    return list(values.items())
+
+
+def _event_label(event: dict[str, Any]) -> str:
+    return str(event.get("label") or event.get("name") or "").strip()
 
 
 def _interaction_section(events: list[dict[str, Any]]) -> str:
