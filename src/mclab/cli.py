@@ -10,6 +10,7 @@ from pathlib import Path
 
 from .batch import ALL_BATCH_NAME, BATCH_SETS, run_all_batches, run_batch
 from .config import load_config
+from .doctor import doctor_exit_code, format_doctor_report, run_doctor_checks
 from .learner_menu import main as learner_menu_main
 from .labs import lab01_msd, lab02_pid, lab03_2dof, lab04_panda
 
@@ -44,6 +45,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers.add_parser("list", help="List available labs.")
     subparsers.add_parser("menu", help="Open the learner launcher menu.")
+    subparsers.add_parser("doctor", help="Check local setup, packages, configs, assets, and outputs.")
 
     run_parser = subparsers.add_parser("run", help="Run a lab.")
     run_parser.add_argument("lab_name", choices=sorted(LABS), help="Lab to run.")
@@ -100,6 +102,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "menu":
         return learner_menu_main()
+
+    if args.command == "doctor":
+        checks = run_doctor_checks()
+        print(format_doctor_report(checks))
+        return doctor_exit_code(checks)
 
     if args.command == "run":
         config = load_config(args.config)

@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from mclab.batch import BATCH_SETS  # noqa: E402
 from mclab.cli import LABS, main  # noqa: E402
 from mclab.cli import build_parser  # noqa: E402
+from mclab.doctor import DoctorCheck  # noqa: E402
 
 
 class CliImportTests(unittest.TestCase):
@@ -48,6 +49,20 @@ class CliImportTests(unittest.TestCase):
         self.assertEqual(all_args.command, "batch")
         self.assertEqual(all_args.batch_name, "all")
         self.assertTrue(all_args.no_plot)
+
+    def test_cli_runs_doctor_check(self) -> None:
+        args = build_parser().parse_args(["doctor"])
+        self.assertEqual(args.command, "doctor")
+
+        with (
+            patch("mclab.cli.run_doctor_checks", return_value=[DoctorCheck("Python", "OK", "ready")]),
+            patch("builtins.print") as printer,
+        ):
+            self.assertEqual(main(["doctor"]), 0)
+
+        printed = str(printer.call_args.args[0])
+        self.assertIn("MCLab Doctor", printed)
+        self.assertIn("[OK] Python", printed)
 
     def test_cli_opens_batch_report_when_requested(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

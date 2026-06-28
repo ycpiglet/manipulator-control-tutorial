@@ -66,6 +66,7 @@ Implemented and verified:
 - Interactive `MCLab Interaction` quick presets with value previews for representative damping, PID, 2DOF reach, Panda reach, and virtual wall parameter sets
 - Learner menu preset labels for interactive cards, including preset-name search
 - Learner menu Explore filters for hands-on, comparison, PID, 2DOF, Panda, wall, and singularity scenario discovery
+- Learner menu and CLI setup diagnostics through `python -m mclab doctor`
 - Run reports include suggested next-run cards with ready-to-run commands for every guided config
 - Run reports show configured preset cards and summarize learner actions, latest slider values, preset choices, observation markers, and raw interaction events
 

@@ -18,10 +18,12 @@ from mclab.learner_menu import (  # noqa: E402
     LearningPathProgress,
     MENU_ACTIONS,
     _set_status_after_run,
+    _set_status_after_doctor,
     action_config_path,
     action_tags,
     action_doc_path,
     build_batch_args,
+    build_doctor_args,
     build_run_args,
     experience_filter_description,
     filter_menu_actions,
@@ -125,6 +127,19 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertIn("Try:", text)
                 self.assertIn("Watch:", text)
                 self.assertIn("Runs:", text)
+
+    def test_menu_can_launch_setup_check(self) -> None:
+        args = build_doctor_args()
+        self.assertEqual(args[1:], ["-m", "mclab", "doctor"])
+
+        status = FakeStatus()
+        _set_status_after_doctor(status, 0, "Summary: 5 OK, 0 WARN, 0 FAIL")
+        self.assertIn("Setup check passed", status.value)
+        self.assertIn("5 OK", status.value)
+
+        _set_status_after_doctor(status, 1, "Summary: 4 OK, 0 WARN, 1 FAIL")
+        self.assertIn("Setup check found issues", status.value)
+        self.assertIn("python -m mclab doctor", status.value)
 
     def test_recommended_learning_path_targets_real_actions(self) -> None:
         self.assertGreaterEqual(len(LEARNING_PATH), 8)

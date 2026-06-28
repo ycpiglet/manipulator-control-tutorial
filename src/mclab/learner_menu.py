@@ -647,9 +647,24 @@ def build_batch_args(action: BatchMenuAction) -> list[str]:
     ]
 
 
+def build_doctor_args() -> list[str]:
+    return [sys.executable, "-m", "mclab", "doctor"]
+
+
 def launch_batch_action(action: BatchMenuAction) -> subprocess.Popen[str]:
     return subprocess.Popen(
         build_batch_args(action),
+        cwd=PROJECT_ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )
+
+
+def launch_doctor_check() -> subprocess.Popen[str]:
+    return subprocess.Popen(
+        build_doctor_args(),
         cwd=PROJECT_ROOT,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -1234,6 +1249,9 @@ def main() -> int:
     bottom = ttk.Frame(outer)
     bottom.pack(fill="x", pady=(12, 0))
     ttk.Button(bottom, text="Refresh path", command=refresh_learning_path_progress).pack(side="left")
+    ttk.Button(bottom, text="Check setup", command=lambda: _launch_doctor_from_menu(status, root=root)).pack(
+        side="left", padx=(8, 0)
+    )
     ttk.Button(bottom, text="Open all reports", command=launch_outputs_index).pack(side="left", padx=(8, 0))
     ttk.Button(bottom, text="Open outputs folder", command=launch_outputs_folder).pack(side="left", padx=(8, 0))
     latest_button = ttk.Button(bottom, text="Open latest report", command=lambda: launch_latest_output(latest_output))
@@ -1389,6 +1407,54 @@ def _launch_batch_from_menu(
         },
         daemon=True,
     ).start()
+
+
+def _launch_doctor_from_menu(status: Any, *, root: Any | None = None) -> None:
+    process = launch_doctor_check()
+    status.set(f"Started setup check (pid {process.pid}).")
+    Thread(
+        target=_watch_doctor_process,
+        args=(process, status),
+        kwargs={"root": root},
+        daemon=True,
+    ).start()
+
+
+def _watch_doctor_process(
+    process: subprocess.Popen[str],
+    status: Any,
+    *,
+    root: Any | None = None,
+) -> None:
+    lines: list[str] = []
+    if process.stdout is not None:
+        for line in process.stdout:
+            stripped = line.strip()
+            if stripped:
+                lines.append(stripped)
+    return_code = process.wait()
+    summary = next((line for line in reversed(lines) if line.startswith("Summary:")), "")
+    _set_status_after_doctor(status, return_code, summary, root=root)
+
+
+def _set_status_after_doctor(
+    status: Any,
+    return_code: int,
+    summary: str = "",
+    *,
+    root: Any | None = None,
+) -> None:
+    def update_ui() -> None:
+        suffix = f" {summary}" if summary else ""
+        if return_code == 0:
+            status.set(f"Setup check passed.{suffix}")
+            return
+        status.set(f"Setup check found issues.{suffix} Run `python -m mclab doctor` for details.")
+
+    if root is not None:
+        root.after(0, update_ui)
+    else:
+        update_ui()
 
 
 def _watch_process(

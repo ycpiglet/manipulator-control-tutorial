@@ -54,6 +54,7 @@ def _write_output(output: Path, *, with_plot: bool) -> None:
     (output / "states.json").write_text("[]", encoding="utf-8")
     report_sections = [
         "Reproduce This Run",
+        "Suggested Next Runs",
         "Config Highlights",
         "Result Check",
         "Summary",

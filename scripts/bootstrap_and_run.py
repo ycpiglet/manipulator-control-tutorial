@@ -43,6 +43,7 @@ VERIFY_VARIANTS = [
 REQUIRED_ARTIFACTS = ("config.yaml", "summary.json", "notes.md", "log.csv", "report.html")
 REQUIRED_REPORT_SECTIONS = (
     "Reproduce This Run",
+    "Suggested Next Runs",
     "Config Highlights",
     "Result Check",
     "Summary",
