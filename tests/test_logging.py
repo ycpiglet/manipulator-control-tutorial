@@ -138,6 +138,43 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Position", html)
             self.assertIn("steady-state error", html)
 
+    def test_run_report_renders_configured_presets_as_cards(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "run"
+            output.mkdir()
+            (output / "summary.json").write_text(
+                '{"lab_name": "lab02_pid", "config_name": "interactive_disturbance"}',
+                encoding="utf-8",
+            )
+            (output / "notes.md").write_text("# Demo\n", encoding="utf-8")
+            (output / "config.yaml").write_text(
+                (
+                    "model_path: models/lab02_pid/scene.xml\n"
+                    "interaction:\n"
+                    "  live_tuning: true\n"
+                    "  tuning_presets:\n"
+                    "    - label: Damped PD\n"
+                    "      values:\n"
+                    "        kp: 60.0\n"
+                    "        kd: 16.0\n"
+                    "    - label: Aggressive PID\n"
+                    "      values:\n"
+                    "        kp: 120.0\n"
+                    "        output_limit: 120.0\n"
+                ),
+                encoding="utf-8",
+            )
+
+            report = write_run_report(output)
+
+            html = report.read_text(encoding="utf-8")
+            self.assertIn("Configured Presets", html)
+            self.assertIn("Damped PD", html)
+            self.assertIn("Aggressive PID", html)
+            self.assertIn("<span>kp</span>", html)
+            self.assertIn("<strong>60</strong>", html)
+            self.assertNotIn("interaction.tuning_presets", html)
+
     def test_run_report_includes_domain_specific_result_checks(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "run"

@@ -64,7 +64,7 @@ Implemented and verified:
 - Run reports with domain-specific checks for singularity, DLS speed, virtual wall response, and actuator effort
 - Batch comparison reports with scenario cards, automatic comparison takeaways, min/max highlights, baseline deltas, parameter differences, and comparison plots
 - Interactive `MCLab Interaction` quick presets with value previews for representative damping, PID, 2DOF reach, Panda reach, and virtual wall parameter sets
-- Run reports summarize learner actions, latest slider values, preset choices, observation markers, and raw interaction events
+- Run reports show configured preset cards and summarize learner actions, latest slider values, preset choices, observation markers, and raw interaction events
 
 Verified commands:
 

@@ -98,7 +98,6 @@ CONFIG_HIGHLIGHT_KEYS = (
     "interaction.target_step",
     "interaction.target_limit",
     "interaction.live_tuning",
-    "interaction.tuning_presets",
     "viewer_guides.enabled",
     "viewer_guides.condition_warning",
     "viewer_guides.condition_threshold",
@@ -192,6 +191,7 @@ def _render_report(
     learning_guide = _learning_guide_section(guide_for_run_summary(summary))
     reproduce_section = _reproduce_section(summary)
     config_highlights = _config_highlights_section(config)
+    configured_presets = _configured_presets_section(config)
     result_check = _result_check_section(summary)
     learner_action_summary = _learner_action_summary_section(interaction_events)
     observation_markers = _observation_markers_section(interaction_events)
@@ -524,6 +524,7 @@ def _render_report(
     {learning_guide}
     {reproduce_section}
     {config_highlights}
+    {configured_presets}
     {result_check}
     {learner_action_summary}
     {observation_markers}
@@ -654,9 +655,53 @@ def _config_highlight_pairs(config: dict[str, Any]) -> list[tuple[str, Any]]:
         pairs = [
             (key, value)
             for key, value in flattened.items()
-            if key not in {"model_path"} and not key.startswith("model_path.")
+            if key not in {"model_path"} and not key.startswith(("model_path.", "interaction.tuning_presets"))
         ]
     return pairs[:28]
+
+
+def _configured_presets_section(config: dict[str, Any]) -> str:
+    presets = _configured_presets(config)
+    if not presets:
+        return ""
+    cards = "".join(_configured_preset_card(preset) for preset in presets[:6])
+    count_text = (
+        f"Showing the first 6 of {len(presets)} configured presets."
+        if len(presets) > 6
+        else f"{len(presets)} configured preset{'s' if len(presets) != 1 else ''} available."
+    )
+    return (
+        "<section>"
+        "<h2>Configured Presets</h2>"
+        f'<p class="empty">{escape(count_text)} These are the Quick presets shown in the interaction panel.</p>'
+        '<div class="action-grid">'
+        f"{cards}"
+        "</div>"
+        "</section>"
+    )
+
+
+def _configured_preset_card(preset: dict[str, Any]) -> str:
+    label = str(preset.get("label") or preset.get("name") or "Preset")
+    values = preset.get("values")
+    items = values.items() if isinstance(values, dict) else ()
+    body = _action_value_list(items) or '<p class="empty">No slider values were configured.</p>'
+    return (
+        '<article class="action-card">'
+        f"<strong>{escape(label)}</strong>"
+        f"{body}"
+        "</article>"
+    )
+
+
+def _configured_presets(config: dict[str, Any]) -> list[dict[str, Any]]:
+    interaction = config.get("interaction")
+    if not isinstance(interaction, dict):
+        return []
+    presets = interaction.get("tuning_presets")
+    if not isinstance(presets, list):
+        return []
+    return [preset for preset in presets if isinstance(preset, dict)]
 
 
 def _flatten_config(config: dict[str, Any], prefix: str = "") -> dict[str, Any]:
