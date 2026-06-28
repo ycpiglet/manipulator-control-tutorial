@@ -7,7 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from mclab.learning_guides import RUN_GUIDES, guide_for_config, guide_for_run_summary  # noqa: E402
+from mclab.learning_guides import RUN_GUIDES, guide_for_config, guide_for_run_summary, question_for_guide  # noqa: E402
 
 
 class LearningGuideTests(unittest.TestCase):
@@ -26,6 +26,7 @@ class LearningGuideTests(unittest.TestCase):
                 self.assertTrue(guide.change)
                 self.assertTrue(guide.watch)
                 self.assertTrue(guide.next_step)
+                self.assertTrue(question_for_guide(guide).startswith("Question: "))
 
     def test_guides_can_be_resolved_from_summary(self) -> None:
         guide = guide_for_run_summary(
@@ -40,6 +41,7 @@ class LearningGuideTests(unittest.TestCase):
         assert guide is not None
         self.assertIn("Sensor Noise", guide.title)
         self.assertIn("measurement_noise_std", guide.change)
+        self.assertIn("noisy measurement", question_for_guide(guide))
 
     def test_unknown_config_uses_lab_fallback_when_possible(self) -> None:
         guide = guide_for_config(config_path="configs/custom/my_lab04_demo.yaml", lab_name="lab04_panda")
@@ -47,6 +49,7 @@ class LearningGuideTests(unittest.TestCase):
         self.assertIsNotNone(guide)
         assert guide is not None
         self.assertEqual(guide.title, "Lab04 Panda Manipulator")
+        self.assertIn("Panda", question_for_guide(guide))
 
     def test_unknown_config_without_lab_context_has_no_guide(self) -> None:
         self.assertIsNone(guide_for_config(config_path="configs/custom/unknown.yaml"))

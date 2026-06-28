@@ -94,6 +94,11 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Lab01 Baseline", html)
             self.assertIn("Try", html)
             self.assertIn("Change", html)
+            self.assertIn("Question", html)
+            self.assertIn(
+                "What baseline motion should later damping and stiffness cases be compared against?",
+                html,
+            )
             self.assertIn("mass, damping, stiffness", html)
             self.assertIn("Reproduce This Run", html)
             self.assertIn(

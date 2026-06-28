@@ -254,6 +254,7 @@ class KeyForcePulseTests(unittest.TestCase):
             focus="Focus text",
             try_this="Move the slider.",
             change="controller.kp",
+            question="Which gain gives the cleanest response?",
             watch="Tracking error.",
             next_step="Run the comparison.",
         )
@@ -264,6 +265,7 @@ class KeyForcePulseTests(unittest.TestCase):
             [
                 ("Try", "Move the slider."),
                 ("Change", "controller.kp"),
+                ("Question", "Which gain gives the cleanest response?"),
                 ("Watch", "Tracking error."),
             ],
         )

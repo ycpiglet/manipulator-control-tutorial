@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from mclab.config import load_config
-from mclab.learning_guides import RunGuide, guide_for_config, guide_for_run_summary
+from mclab.learning_guides import RunGuide, guide_for_config, guide_for_run_summary, question_for_guide
 
 INDEX_METRIC_KEYS = (
     "max_abs_position",
@@ -756,6 +756,7 @@ def _learning_guide_section(guide: RunGuide | None) -> str:
         ("Focus", guide.focus),
         ("Try", guide.try_this),
         ("Change", guide.change),
+        ("Question", question_for_guide(guide).removeprefix("Question:").strip()),
         ("Watch", guide.watch),
         ("Next", guide.next_step),
     )

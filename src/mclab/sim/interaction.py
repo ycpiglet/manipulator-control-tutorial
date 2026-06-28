@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from threading import Lock
 from typing import Any
 
+from mclab.learning_guides import question_for_guide
+
 
 LEFT_KEYS = {ord("A"), 263}
 RIGHT_KEYS = {ord("D"), 262}
@@ -571,6 +573,7 @@ def _panel_guide_rows(guide: Any | None) -> list[tuple[str, str]]:
     rows = [
         ("Try", str(getattr(guide, "try_this", "") or "").strip()),
         ("Change", str(getattr(guide, "change", "") or "").strip()),
+        ("Question", question_for_guide(guide).removeprefix("Question:").strip()),
         ("Watch", str(getattr(guide, "watch", "") or "").strip()),
     ]
     return [(label, text) for label, text in rows if text]

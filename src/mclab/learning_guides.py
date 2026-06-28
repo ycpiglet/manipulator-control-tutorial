@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 
@@ -14,6 +15,83 @@ class RunGuide:
     change: str
     watch: str
     next_step: str
+    question: str = ""
+
+
+def question_for_guide(guide: RunGuide | None) -> str:
+    if guide is None:
+        return ""
+    if guide.question.strip():
+        return _question_prefix(guide.question)
+    return reflection_question_for_context(title=guide.title)
+
+
+def reflection_question_for_context(
+    *,
+    lab_name: str = "",
+    title: str = "",
+    label: str = "",
+    config_path: str = "",
+    config_name: str = "",
+) -> str:
+    label_text = label.lower()
+    config_text = f"{Path(config_path).name.lower()} {config_name.lower()}"
+    title_text = title.lower()
+    lab_text = lab_name.lower()
+    context = f"{lab_text} {title_text} {label_text} {config_text}"
+
+    if "lab01" in context or "mass-spring" in context:
+        if "interactive" in context:
+            return "Question: Which slider change most clearly changes oscillation, settling, or energy?"
+        if "damped" in context:
+            return "Question: How does damping change overshoot and settling time?"
+        if "stiffness" in context:
+            return "Question: How does stiffness change motion frequency and peak force?"
+        return "Question: What baseline motion should later damping and stiffness cases be compared against?"
+
+    if "lab02" in context or "pid" in context:
+        if "interactive" in context:
+            return "Question: Which live gain change improves tracking without making force noisy or excessive?"
+        if "windup" in context:
+            return "Question: What does integral action do after the actuator has saturated?"
+        if "noise" in context:
+            return "Question: How does noisy measurement appear in the force and error plots?"
+        if "delay" in context:
+            return "Question: How does delayed feedback change overshoot and settling?"
+        if "gain" in context or "pd damping" in context:
+            return "Question: Which gain change trades speed for overshoot or smoother force?"
+        return "Question: How do error, effort, and settling define a good PID response?"
+
+    if "lab03" in context or "2dof" in context or "trajectory" in context:
+        if "singularity" in context:
+            return "Question: What warning signs show that the arm is near a singular configuration?"
+        if "task" in context or "interactive_2dof" in context:
+            return "Question: How do hand error, joint motion, and torque change when the target moves?"
+        if any(term in context for term in ("step", "trapezoid", "minimum jerk", "s-curve")):
+            return "Question: Which trajectory profile gives smoother effort while still tracking well?"
+        if "joint-space" in context or "joint space" in context:
+            return "Question: How does joint-space tracking differ from controlling the hand target directly?"
+        return "Question: Which signal best reveals tracking quality: position error, hand error, or effort?"
+
+    if "lab04" in context or "panda" in context:
+        if "wall" in context:
+            return "Question: How do wall stiffness and damping change penetration, retreat, and actuator effort?"
+        if "cartesian" in context or "reach" in context:
+            return "Question: How does Cartesian target tuning trade hand error against actuator effort?"
+        if "joint target" in context:
+            return "Question: How far can the joint target be nudged before tracking error becomes obvious?"
+        if "neutral hold" in context:
+            return "Question: What does a stable full-manipulator baseline look like before motion starts?"
+        return "Question: How does changing a single joint target move the Panda hand?"
+
+    return "Question: What changed, and which plot proves it?"
+
+
+def _question_prefix(text: str) -> str:
+    stripped = text.strip()
+    if stripped.startswith("Question:"):
+        return stripped
+    return f"Question: {stripped}"
 
 
 RUN_GUIDES: dict[str, RunGuide] = {

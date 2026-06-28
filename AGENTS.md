@@ -70,7 +70,7 @@ Implemented and verified:
 - Learner menu scenario readiness checks that disable run buttons when config or model assets are missing
 - Learner menu scenario history labels and per-scenario latest-report buttons
 - Learner menu scenario value previews for key YAML parameters, searchable from the menu
-- Learner menu scenario reflection questions, searchable from the menu
+- Learner menu, interaction panel, and run report reflection questions, searchable from the menu
 - Learner menu scenario follow-up guidance and `Next` buttons for guided comparison flow
 - Learner menu scenario-to-batch comparison guidance and `Compare` buttons
 - Learner menu batch readiness checks that disable unavailable comparison launches
