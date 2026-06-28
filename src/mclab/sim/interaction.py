@@ -84,8 +84,11 @@ class InteractionLog:
         sliders: dict[str, Any] | None = None,
         changed_sliders: dict[str, Any] | None = None,
         status: dict[str, Any] | None = None,
+        question: str = "",
     ) -> dict[str, Any]:
         value: dict[str, Any] = {}
+        if question.strip():
+            value["question"] = question.strip()
         if changed_sliders:
             value["changed_sliders"] = dict(changed_sliders)
         if sliders:
@@ -503,6 +506,7 @@ def maybe_start_interaction_panel(
                         changed_sliders=tuning.changed_values() if tuning is not None else None,
                         sliders=tuning.snapshot() if tuning is not None else None,
                         status=status.snapshot() if status is not None else None,
+                        question=question_for_guide(guide),
                     )
                     marker_status.set(f"Marked observation {_observation_marker_count(event_log)}")
 

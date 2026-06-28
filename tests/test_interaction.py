@@ -213,11 +213,13 @@ class KeyForcePulseTests(unittest.TestCase):
             changed_sliders=tuning.changed_values(),
             sliders=tuning.snapshot(),
             status=status.snapshot(),
+            question="Question: Which gain gives the cleanest response?",
         )
 
         self.assertEqual(
             payload,
             {
+                "question": "Question: Which gain gives the cleanest response?",
                 "changed_sliders": {"kp": 35.0},
                 "sliders": {"kp": 35.0},
                 "status": {"error": "0.125"},
