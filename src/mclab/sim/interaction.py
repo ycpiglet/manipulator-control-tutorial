@@ -13,6 +13,11 @@ from mclab.learning_guides import observation_prompt_for_guide, prediction_promp
 
 LEFT_KEYS = {ord("A"), 263}
 RIGHT_KEYS = {ord("D"), 262}
+INTERACTION_PANEL_DEFAULT_WIDTH = 520
+INTERACTION_PANEL_MAX_WIDTH = 560
+INTERACTION_PANEL_MAX_HEIGHT = 820
+INTERACTION_PANEL_MIN_HEIGHT = 320
+INTERACTION_PANEL_SCREEN_MARGIN = 120
 
 
 @dataclass(frozen=True)
@@ -599,10 +604,40 @@ def maybe_start_interaction_panel(
             root = tk.Tk()
             holder["root"] = root
             root.title(title)
-            root.resizable(False, False)
+            root.resizable(True, True)
 
-            frame = tk.Frame(root, padx=14, pady=12)
-            frame.pack()
+            canvas = tk.Canvas(root, borderwidth=0, highlightthickness=0)
+            scrollbar = tk.Scrollbar(root, orient="vertical", command=canvas.yview)
+            canvas.configure(yscrollcommand=scrollbar.set)
+            canvas.pack(side="left", fill="both", expand=True)
+            scrollbar.pack(side="right", fill="y")
+
+            frame = tk.Frame(canvas, padx=14, pady=12)
+            frame_window = canvas.create_window((0, 0), window=frame, anchor="nw")
+
+            def refresh_scroll_region(_event: Any | None = None) -> None:
+                canvas.configure(scrollregion=canvas.bbox("all"))
+
+            def resize_frame_to_canvas(event: Any) -> None:
+                canvas.itemconfigure(frame_window, width=event.width)
+
+            def scroll_mouse_wheel(event: Any) -> None:
+                delta = getattr(event, "delta", 0)
+                if delta:
+                    canvas.yview_scroll(int(-1 * (delta / 120)), "units")
+
+            def scroll_button(event: Any) -> None:
+                button = getattr(event, "num", 0)
+                if button == 4:
+                    canvas.yview_scroll(-3, "units")
+                elif button == 5:
+                    canvas.yview_scroll(3, "units")
+
+            frame.bind("<Configure>", refresh_scroll_region)
+            canvas.bind("<Configure>", resize_frame_to_canvas)
+            root.bind_all("<MouseWheel>", scroll_mouse_wheel)
+            root.bind_all("<Button-4>", scroll_button)
+            root.bind_all("<Button-5>", scroll_button)
 
             row = 0
             tk.Label(frame, text="Interactive controls").grid(row=row, column=0, columnspan=2, pady=(0, 8))
@@ -956,6 +991,24 @@ def maybe_start_interaction_panel(
                     root.after(200, refresh_status)
 
                 refresh_status()
+            root.update_idletasks()
+            canvas.configure(
+                width=_bounded_panel_dimension(
+                    frame.winfo_reqwidth(),
+                    root.winfo_screenwidth(),
+                    default=INTERACTION_PANEL_DEFAULT_WIDTH,
+                    maximum=INTERACTION_PANEL_MAX_WIDTH,
+                    minimum=1,
+                ),
+                height=_bounded_panel_dimension(
+                    frame.winfo_reqheight(),
+                    root.winfo_screenheight(),
+                    default=INTERACTION_PANEL_MAX_HEIGHT,
+                    maximum=INTERACTION_PANEL_MAX_HEIGHT,
+                    minimum=INTERACTION_PANEL_MIN_HEIGHT,
+                ),
+            )
+            refresh_scroll_region()
             root.mainloop()
         except Exception as exc:  # pragma: no cover - depends on local GUI support.
             print(f"Interaction panel stopped: {exc}")
@@ -1033,6 +1086,32 @@ def _changed_tuning_summary(tuning: LiveTuning | None) -> str:
     ordered_names.extend(sorted(name for name in changed if name not in labels))
     parts = [f"{labels.get(name, name)}={_format_tuning_value(changed[name])}" for name in ordered_names]
     return f"Changed values: {', '.join(parts)}"
+
+
+def _bounded_panel_dimension(
+    requested: Any,
+    screen_size: Any,
+    *,
+    default: int,
+    maximum: int,
+    minimum: int,
+) -> int:
+    try:
+        requested_value = int(float(requested))
+    except (TypeError, ValueError, OverflowError):
+        requested_value = int(default)
+    requested_value = max(1, requested_value)
+
+    limit = int(maximum)
+    try:
+        screen_value = int(float(screen_size))
+    except (TypeError, ValueError, OverflowError):
+        screen_value = 0
+    if screen_value > INTERACTION_PANEL_SCREEN_MARGIN:
+        screen_limit = max(int(minimum), screen_value - INTERACTION_PANEL_SCREEN_MARGIN)
+        limit = min(limit, screen_limit)
+
+    return max(1, min(requested_value, limit))
 
 
 def _format_status_value(value: Any) -> str:

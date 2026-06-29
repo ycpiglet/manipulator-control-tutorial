@@ -19,6 +19,7 @@ from mclab.sim.interaction import (  # noqa: E402
     StatusSpec,
     TargetOffsetControl,
     TuningPreset,
+    _bounded_panel_dimension,
     _changed_tuning_summary,
     _live_status_observation_note,
     _panel_guide_rows,
@@ -229,6 +230,20 @@ class KeyForcePulseTests(unittest.TestCase):
 
         tuning.reset()
         self.assertEqual(_changed_tuning_summary(tuning), "Changed values: none yet")
+
+    def test_interaction_panel_dimensions_are_bounded_to_screen(self) -> None:
+        self.assertEqual(
+            _bounded_panel_dimension(1200, 720, default=820, maximum=820, minimum=320),
+            600,
+        )
+        self.assertEqual(
+            _bounded_panel_dimension(460, 1440, default=820, maximum=820, minimum=320),
+            460,
+        )
+        self.assertEqual(
+            _bounded_panel_dimension("bad", "bad", default=520, maximum=560, minimum=1),
+            520,
+        )
 
     def test_live_tuning_step_adjusts_and_clips_values(self) -> None:
         log = InteractionLog()
