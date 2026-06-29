@@ -241,6 +241,23 @@ class KeyForcePulseTests(unittest.TestCase):
         tuning.reset()
         self.assertEqual(tuning.changed_values(), {})
 
+    def test_mark_observation_records_evidence_prompt_when_available(self) -> None:
+        log = InteractionLog()
+
+        payload = log.mark_observation(
+            question="Question: What changed?",
+            evidence_prompt="Evidence to capture: position error and force.",
+        )
+
+        self.assertEqual(
+            payload,
+            {
+                "question": "Question: What changed?",
+                "evidence_prompt": "Evidence to capture: position error and force.",
+            },
+        )
+        self.assertEqual(log.events()[-1]["value"]["evidence_prompt"], payload["evidence_prompt"])
+
     def test_live_status_formats_dashboard_values(self) -> None:
         status = LiveStatus([StatusSpec("position", "Position [m]"), StatusSpec("mode", "Mode")])
 

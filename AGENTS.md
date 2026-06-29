@@ -78,7 +78,7 @@ Implemented and verified:
 - Learner menu batch history labels and per-batch latest-report buttons
 - Learner menu learning-path step report buttons for completed course steps
 - Run reports include suggested next-run cards with reflection questions, key parameter changes, and ready-to-run commands for every guided config
-- Observation markers capture the active learning question, learner notes, changed sliders, full slider snapshots, and live status snapshots
+- Observation markers capture the active learning question, evidence prompt, learner notes, changed sliders, full slider snapshots, and live status snapshots
 - Run reports summarize observation marker questions and learner notes with a review prompt
 - Outputs index learning path cards include ready-to-run or repeat commands for each course step
 - Run reports show configured preset cards and summarize learner actions, latest slider values, preset choices, observation markers, and raw interaction events

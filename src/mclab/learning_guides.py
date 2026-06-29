@@ -26,6 +26,15 @@ def question_for_guide(guide: RunGuide | None) -> str:
     return reflection_question_for_context(title=guide.title)
 
 
+def observation_prompt_for_guide(guide: RunGuide | None) -> str:
+    if guide is None:
+        return ""
+    watch = guide.watch.strip()
+    if not watch:
+        return ""
+    return f"Evidence to capture: {watch}"
+
+
 def reflection_question_for_context(
     *,
     lab_name: str = "",

@@ -7,7 +7,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from mclab.learning_guides import RUN_GUIDES, guide_for_config, guide_for_run_summary, question_for_guide  # noqa: E402
+from mclab.learning_guides import (  # noqa: E402
+    RUN_GUIDES,
+    guide_for_config,
+    guide_for_run_summary,
+    observation_prompt_for_guide,
+    question_for_guide,
+)
 
 
 class LearningGuideTests(unittest.TestCase):
@@ -27,6 +33,7 @@ class LearningGuideTests(unittest.TestCase):
                 self.assertTrue(guide.watch)
                 self.assertTrue(guide.next_step)
                 self.assertTrue(question_for_guide(guide).startswith("Question: "))
+                self.assertTrue(observation_prompt_for_guide(guide).startswith("Evidence to capture: "))
 
     def test_guides_can_be_resolved_from_summary(self) -> None:
         guide = guide_for_run_summary(
@@ -50,6 +57,16 @@ class LearningGuideTests(unittest.TestCase):
         assert guide is not None
         self.assertEqual(guide.title, "Lab04 Panda Manipulator")
         self.assertIn("Panda", question_for_guide(guide))
+
+    def test_observation_prompt_uses_watch_guidance(self) -> None:
+        guide = guide_for_config(config_path="configs/lab04_panda/interactive_virtual_wall.yaml")
+
+        self.assertIsNotNone(guide)
+        assert guide is not None
+        prompt = observation_prompt_for_guide(guide)
+        self.assertIn("Evidence to capture:", prompt)
+        self.assertIn("Wall penetration", prompt)
+        self.assertEqual(observation_prompt_for_guide(None), "")
 
     def test_unknown_config_without_lab_context_has_no_guide(self) -> None:
         self.assertIsNone(guide_for_config(config_path="configs/custom/unknown.yaml"))
