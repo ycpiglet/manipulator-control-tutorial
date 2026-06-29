@@ -313,6 +313,7 @@ class SimulationPauseControl:
             )
         )
         self._paused = False
+        self._step_requested = False
         self._event_log = event_log
         self._lock = Lock()
 
@@ -321,12 +322,30 @@ class SimulationPauseControl:
             return False
         with self._lock:
             self._paused = not self._paused
+            if not self._paused:
+                self._step_requested = False
             paused = self._paused
         if self._event_log is not None:
             name = "pause_simulation" if paused else "resume_simulation"
             label = "Pause simulation" if paused else "Resume simulation"
             self._event_log.record("button", name, paused, label=label)
         return paused
+
+    def request_step(self) -> bool:
+        if not self.enabled:
+            return False
+        with self._lock:
+            self._paused = True
+            self._step_requested = True
+        if self._event_log is not None:
+            self._event_log.record("button", "step_simulation", True, label="Step once")
+        return True
+
+    def consume_step(self) -> bool:
+        with self._lock:
+            requested = self._step_requested
+            self._step_requested = False
+        return requested
 
     def paused(self) -> bool:
         with self._lock:
@@ -531,6 +550,10 @@ def maybe_start_interaction_panel(
                     paused = pause_control.toggle()
                     pause_status.set("Paused" if paused else "Running")
 
+                def request_step() -> None:
+                    if pause_control.request_step():
+                        pause_status.set("Paused - stepping once")
+
                 tk.Button(pause_frame, text=pause_control.label, width=22, command=toggle_pause).grid(
                     row=0,
                     column=0,
@@ -541,6 +564,12 @@ def maybe_start_interaction_panel(
                     column=1,
                     sticky="ew",
                     padx=(12, 0),
+                )
+                tk.Button(pause_frame, text="Step once", width=22, command=request_step).grid(
+                    row=1,
+                    column=0,
+                    sticky="w",
+                    pady=(4, 0),
                 )
                 tk.Label(
                     frame,

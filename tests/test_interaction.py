@@ -115,6 +115,25 @@ class KeyForcePulseTests(unittest.TestCase):
             ],
         )
 
+    def test_simulation_pause_control_steps_once_while_staying_paused(self) -> None:
+        log = InteractionLog()
+        log.set_time(2.5)
+        control = SimulationPauseControl({"interaction": {"panel": True}}, event_log=log)
+
+        self.assertTrue(control.request_step())
+
+        self.assertTrue(control.paused())
+        self.assertTrue(control.consume_step())
+        self.assertFalse(control.consume_step())
+        self.assertTrue(control.paused())
+        self.assertEqual(
+            log.events(),
+            [{"time": 2.5, "kind": "button", "name": "step_simulation", "label": "Step once", "value": True}],
+        )
+
+        control.toggle()
+        self.assertFalse(control.paused())
+
     def test_simulation_pause_control_can_be_disabled(self) -> None:
         log = InteractionLog()
         control = SimulationPauseControl({"interaction": {"panel": True, "pause_resume": False}}, event_log=log)

@@ -127,7 +127,7 @@ def run(
             if reset_control.consume():
                 key_force.clear()
                 reset_slider_plant_state(mujoco, model, data, handles, config)
-            if pause_control.paused():
+            if pause_control.paused() and not pause_control.consume_step():
                 sync_paused_viewer(viewer_handle)
                 wall_start = viewer_clock() - max(0.0, float(data.time) - sim_start)
                 continue

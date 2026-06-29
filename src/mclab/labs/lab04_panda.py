@@ -126,7 +126,7 @@ def run(
             if reset_control.consume():
                 _set_initial_state(data, home_q, finger_q)
                 mujoco.mj_forward(model, data)
-            if pause_control.paused():
+            if pause_control.paused() and not pause_control.consume_step():
                 sync_paused_viewer(viewer_handle)
                 wall_start = viewer_clock() - max(0.0, float(data.time) - sim_start)
                 continue
