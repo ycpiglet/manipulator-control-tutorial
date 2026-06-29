@@ -973,6 +973,16 @@ def launch_learning_path_latest_plot(
     return open_path(latest_plot)
 
 
+def learning_path_latest_tuned_config(
+    step: LearningPathStep,
+    outputs_root: Path | None = None,
+) -> Path | None:
+    target = learning_path_target(step)
+    if not isinstance(target, MenuAction):
+        return None
+    return action_latest_tuned_config(target, outputs_root)
+
+
 def action_latest_output(
     action: MenuAction | BatchMenuAction,
     outputs_root: Path | None = None,
@@ -1801,6 +1811,7 @@ def main() -> int:
     path_status_vars: list[tuple[LearningPathStep, Any]] = []
     path_report_buttons: list[tuple[LearningPathStep, Any]] = []
     path_plot_buttons: list[tuple[LearningPathStep, Any]] = []
+    path_replay_buttons: list[tuple[LearningPathStep, Any]] = []
     path_summary = tk.StringVar(value=learning_path_summary_text())
     next_step_ref: dict[str, LearningPathStep | None] = {"step": next_learning_path_step()}
     next_button_ref: dict[str, Any | None] = {"button": None}
@@ -1820,6 +1831,8 @@ def main() -> int:
             button.state(["!disabled"] if progress.latest_output is not None else ["disabled"])
         for step, button in path_plot_buttons:
             button.state(["!disabled"] if learning_path_latest_plot(step) is not None else ["disabled"])
+        for step, button in path_replay_buttons:
+            button.state(["!disabled"] if learning_path_latest_tuned_config(step) is not None else ["disabled"])
         items = tuple(progress_items) if progress_items else learning_path_progress_items()
         next_step = next_learning_path_step(items)
         next_step_ref["step"] = next_step
@@ -1931,6 +1944,24 @@ def main() -> int:
             step_plot_button.state(["disabled"])
         step_plot_button.pack(side="left", padx=(6, 0))
         path_plot_buttons.append((step, step_plot_button))
+        step_replay_button = ttk.Button(
+            step_buttons,
+            text="Replay",
+            width=8,
+            command=lambda selected=step: _launch_learning_path_tuned_replay_from_menu(
+                selected,
+                status,
+                root=root,
+                latest_output=latest_output,
+                latest_button=latest_button,
+                latest_plot_button=latest_plot_button,
+                progress_callback=refresh_after_run,
+            ),
+        )
+        if learning_path_latest_tuned_config(step) is None:
+            step_replay_button.state(["disabled"])
+        step_replay_button.pack(side="left", padx=(6, 0))
+        path_replay_buttons.append((step, step_replay_button))
         ttk.Label(cell, textvariable=progress_text, wraplength=280, justify="left").pack(
             anchor="w", pady=(4, 0)
         )
@@ -2289,6 +2320,31 @@ def _launch_tuned_replay_from_menu(
         },
         daemon=True,
     ).start()
+
+
+def _launch_learning_path_tuned_replay_from_menu(
+    step: LearningPathStep,
+    status: Any,
+    *,
+    root: Any | None = None,
+    latest_output: dict[str, Path | None] | None = None,
+    latest_button: Any | None = None,
+    latest_plot_button: Any | None = None,
+    progress_callback: Callable[[], None] | None = None,
+) -> None:
+    target = learning_path_target(step)
+    if not isinstance(target, MenuAction):
+        status.set(f"Cannot replay {step.title}: comparison batch steps do not have learner_tuned_config.yaml.")
+        return
+    _launch_tuned_replay_from_menu(
+        target,
+        status,
+        root=root,
+        latest_output=latest_output,
+        latest_button=latest_button,
+        latest_plot_button=latest_plot_button,
+        progress_callback=progress_callback,
+    )
 
 
 def _launch_batch_from_menu(

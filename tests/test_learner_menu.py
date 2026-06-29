@@ -21,6 +21,7 @@ from mclab.learner_menu import (  # noqa: E402
     MenuAction,
     _launch_batch_from_menu,
     _launch_from_menu,
+    _launch_learning_path_tuned_replay_from_menu,
     _launch_tuned_replay_from_menu,
     _set_status_after_run,
     _set_status_after_doctor,
@@ -50,6 +51,7 @@ from mclab.learner_menu import (  # noqa: E402
     filter_menu_actions,
     learning_path_progress_items,
     learning_path_latest_output,
+    learning_path_latest_tuned_config,
     learning_path_progress,
     learning_path_requires_evidence,
     learning_path_progress_text,
@@ -247,6 +249,8 @@ class LearnerMenuTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (run_dir / "report.html").write_text("<html></html>", encoding="utf-8")
+            tuned_config = run_dir / "learner_tuned_config.yaml"
+            tuned_config.write_text("interaction:\n  panel: false\n", encoding="utf-8")
 
             batch_dir = outputs / "all_batches"
             batch_dir.mkdir()
@@ -262,16 +266,20 @@ class LearnerMenuTests(unittest.TestCase):
             progress_items = learning_path_progress_items(outputs)
             first_latest = learning_path_latest_output(first_step, outputs)
             last_latest = learning_path_latest_output(last_step, outputs)
+            first_tuned = learning_path_latest_tuned_config(first_step, outputs)
+            last_tuned = learning_path_latest_tuned_config(last_step, outputs)
 
         self.assertTrue(first_progress.completed)
         self.assertEqual(first_progress.latest_output.name, "run_lab01")
         assert first_latest is not None
         self.assertEqual(first_latest.name, "run_lab01")
+        self.assertEqual(first_tuned, tuned_config)
         self.assertIn("Status: Done - latest run_lab01", learning_path_progress_text(first_step, first_progress))
         self.assertTrue(last_progress.completed)
         self.assertEqual(last_progress.latest_output.name, "all_batches")
         assert last_latest is not None
         self.assertEqual(last_latest.name, "all_batches")
+        self.assertIsNone(last_tuned)
         self.assertFalse(second_progress.completed)
         self.assertIn("Status: Not run yet", learning_path_progress_text(LEARNING_PATH[1], second_progress))
         self.assertEqual(next_learning_path_step(progress_items), LEARNING_PATH[1])
@@ -1040,6 +1048,21 @@ class LearnerMenuTests(unittest.TestCase):
         launcher.assert_not_called()
         self.assertIn("Cannot replay", status.value)
         self.assertIn("learner_tuned_config.yaml", status.value)
+
+    def test_launch_learning_path_tuned_replay_delegates_run_steps_only(self) -> None:
+        status = FakeStatus()
+
+        with patch("mclab.learner_menu._launch_tuned_replay_from_menu") as launcher:
+            _launch_learning_path_tuned_replay_from_menu(LEARNING_PATH[0], status)
+
+        launcher.assert_called_once()
+        self.assertEqual(launcher.call_args.args[0], learning_path_target(LEARNING_PATH[0]))
+
+        with patch("mclab.learner_menu._launch_tuned_replay_from_menu") as launcher:
+            _launch_learning_path_tuned_replay_from_menu(LEARNING_PATH[-1], status)
+
+        launcher.assert_not_called()
+        self.assertIn("comparison batch steps", status.value)
 
     def test_launch_latest_output_opens_index_for_batch_when_available(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
