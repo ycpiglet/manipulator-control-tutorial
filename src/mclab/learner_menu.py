@@ -15,7 +15,12 @@ from typing import Any
 
 from mclab.batch import ALL_BATCH_NAME, BATCH_SETS
 from mclab.config import PROJECT_ROOT, load_config
-from mclab.learning_guides import guide_for_config, prediction_prompt_for_guide, reflection_question_for_context
+from mclab.learning_guides import (
+    guide_for_config,
+    prediction_prompt_for_guide,
+    reflection_question_for_context,
+    viewer_legend_for_guide,
+)
 from mclab.sim.reporting import INDEX_PLOT_PRIORITY, write_outputs_index
 
 RUN_COMPLETE_PREFIX = "Run complete:"
@@ -1594,6 +1599,15 @@ def _action_controls_text(config_path: str) -> str:
     return f"Controls: {', '.join(dict.fromkeys(controls))}"
 
 
+def action_viewer_text(action: MenuAction) -> str:
+    guide = guide_for_config(config_path=action.config_path, lab_name=action.lab_name)
+    legend = viewer_legend_for_guide(guide)
+    if not legend:
+        return "Viewer: Standard MuJoCo scene; use plots and live status for exact values"
+    items = [f"{label} = {text}" for label, text in legend]
+    return f"Viewer: {'; '.join(items)}"
+
+
 def reflection_question(action: MenuAction) -> str:
     return reflection_question_for_context(
         lab_name=action.lab_name,
@@ -1706,6 +1720,7 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
         f"{action_plot_text(action, outputs_root)}\n"
         f"{action_replay_text(action, outputs_root)}\n"
         f"{action_controls_text(action)}\n"
+        f"{action_viewer_text(action)}\n"
         f"Try: {action.try_this}\n"
         f"Change: {parameter_hint(action)}\n"
         f"{config_value_preview(action)}\n"
@@ -1850,6 +1865,7 @@ def _action_matches_terms(action: MenuAction, terms: list[str]) -> bool:
         prediction_prompt(action),
         reflection_question(action),
         action_controls_text(action),
+        action_viewer_text(action),
         " ".join(configured_preset_labels(action.config_path)),
         action_readiness(action).label,
         action_readiness(action).detail,

@@ -42,6 +42,7 @@ from mclab.learner_menu import (  # noqa: E402
     action_replay_text,
     action_tags,
     action_doc_path,
+    action_viewer_text,
     batch_readiness,
     build_batch_args,
     build_doctor_args,
@@ -448,6 +449,7 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertIn("History:", text)
                 self.assertIn("Evidence:", text)
                 self.assertIn("Controls:", text)
+                self.assertIn("Viewer:", text)
                 self.assertIn("Try:", text)
                 self.assertIn("Change:", text)
                 self.assertIn("Values:", text)
@@ -490,6 +492,21 @@ class LearnerMenuTests(unittest.TestCase):
         wall_controls = action_controls_text(lab04_wall)
         self.assertIn("Target -/+ buttons and A/D keys", wall_controls)
         self.assertIn("quick presets (Soft wall, Stiff wall, Close wall)", wall_controls)
+
+    def test_menu_cards_show_viewer_marker_legend(self) -> None:
+        by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
+        lab01_interactive = by_label[("Lab01 Mass-Spring-Damper", "Interactive")]
+        lab03_condition_dls = by_label[("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS")]
+        lab04_wall = by_label[("Lab04 Panda Manipulator", "Virtual wall")]
+        lab04_joint = by_label[("Lab04 Panda Manipulator", "Joint target")]
+
+        self.assertIn("Green marker = Target position.", action_viewer_text(lab01_interactive))
+        self.assertIn("Orange sphere = Singularity warning", action_viewer_text(lab03_condition_dls))
+        self.assertIn("Red plane = Virtual wall location.", action_viewer_text(lab04_wall))
+        self.assertIn("Standard MuJoCo scene", action_viewer_text(lab04_joint))
+        lesson = lesson_text(lab01_interactive)
+        self.assertIn("Viewer:", lesson)
+        self.assertIn("Green marker = Target position.", lesson)
 
     def test_menu_action_readiness_checks_config_and_model_assets(self) -> None:
         action = MenuAction(
@@ -750,6 +767,12 @@ class LearnerMenuTests(unittest.TestCase):
 
         pause_labels = {(action.group, action.label) for action in filter_menu_actions("pause step")}
         self.assertIn(("Lab04 Panda Manipulator", "Virtual wall"), pause_labels)
+
+        red_plane_labels = {(action.group, action.label) for action in filter_menu_actions("red plane")}
+        self.assertIn(("Lab04 Panda Manipulator", "Virtual wall"), red_plane_labels)
+
+        orange_sphere_labels = {(action.group, action.label) for action in filter_menu_actions("orange sphere")}
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS"), orange_sphere_labels)
 
     def test_experience_filters_group_scenarios_by_learning_mode(self) -> None:
         filter_keys = {filter_option.key for filter_option in EXPERIENCE_FILTERS}
