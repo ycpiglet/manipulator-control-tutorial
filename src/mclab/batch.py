@@ -490,6 +490,7 @@ def _batch_rows(output: Path, scenarios: tuple[BatchScenario, ...]) -> list[dict
                 "config": _load_config_for_report(run_dir, scenario.config_path),
                 "run_dir": run_dir.name,
                 "report": f"{run_dir.name}/report.html" if (run_dir / "report.html").exists() else run_dir.name,
+                "worksheet": f"{run_dir.name}/worksheet.md" if (run_dir / "worksheet.md").exists() else "",
                 "summary": summary,
                 "plots": _available_plot_paths(run_dir),
             }
@@ -535,6 +536,7 @@ def _batch_worksheet_scenario_lines(rows: list[dict[str, Any]], metric_keys: lis
                 "",
                 f"- Config: {row['config_path']}",
                 f"- Report: {row['report']}",
+                f"- Worksheet: {row.get('worksheet') or 'n/a'}",
             ]
         )
         plot = _priority_plot_link(row.get("plots", {}))
@@ -608,6 +610,11 @@ def _batch_worksheet_artifact_lines(output: Path, rows: list[dict[str, Any]]) ->
         lines.append("- scenario reports:")
         for row in rows:
             lines.append(f"  - {row['report']}")
+        worksheets = [str(row.get("worksheet")) for row in rows if row.get("worksheet")]
+        if worksheets:
+            lines.append("- scenario worksheets:")
+            for worksheet in worksheets:
+                lines.append(f"  - {worksheet}")
     lines.append("")
     return lines
 
@@ -1155,10 +1162,17 @@ def _scenario_quick_links(row: dict[str, Any]) -> str:
         if plot is not None
         else '<span class="muted">No plot link saved</span>'
     )
+    worksheet = str(row.get("worksheet") or "")
+    worksheet_link = (
+        f'<a href="{escape(worksheet)}">Open worksheet</a>'
+        if worksheet
+        else '<span class="muted">No worksheet link saved</span>'
+    )
     return (
         '<div class="quick-links">'
         f'<a href="{escape(str(row["report"]))}">Open report</a>'
         f"{plot_link}"
+        f"{worksheet_link}"
         "</div>"
     )
 

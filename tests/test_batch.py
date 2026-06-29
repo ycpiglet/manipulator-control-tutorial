@@ -83,6 +83,7 @@ class BatchTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (output / "report.html").write_text("<html></html>", encoding="utf-8")
+            (output / "worksheet.md").write_text("# Scenario Worksheet\n", encoding="utf-8")
             (output / "plots").mkdir()
             (output / "plots" / "position.png").write_bytes(b"fake-png")
             calls.append({"config": config, **kwargs})
@@ -112,6 +113,7 @@ class BatchTests(unittest.TestCase):
             self.assertTrue((output / "report.html").exists())
             self.assertTrue((output / "worksheet.md").exists())
             self.assertIn("demo_scenario/report.html", (output / "index.html").read_text(encoding="utf-8"))
+            self.assertTrue((output / "demo_scenario" / "worksheet.md").exists())
             report_html = (output / "report.html").read_text(encoding="utf-8")
             self.assertIn("Learning Focus", report_html)
             self.assertIn("Open the batch worksheet", report_html)
@@ -131,7 +133,9 @@ class BatchTests(unittest.TestCase):
             self.assertIn("What baseline motion", report_html)
             self.assertIn("Open report", report_html)
             self.assertIn("Open position.png", report_html)
+            self.assertIn("Open worksheet", report_html)
             self.assertIn('href="demo_scenario/plots/position.png"', report_html)
+            self.assertIn('href="demo_scenario/worksheet.md"', report_html)
             self.assertIn("Changed from baseline", report_html)
             self.assertIn("Baseline reference", report_html)
             self.assertIn("Metric change from baseline", report_html)
@@ -144,6 +148,7 @@ class BatchTests(unittest.TestCase):
             self.assertIn("# MCLab Batch Worksheet", worksheet)
             self.assertIn("## Scenario Review", worksheet)
             self.assertIn("demo scenario", worksheet)
+            self.assertIn("Worksheet: demo_scenario/worksheet.md", worksheet)
             self.assertIn("Priority plot: demo_scenario/plots/position.png", worksheet)
             self.assertIn("Batch command: python -m mclab batch unit_compare --open-report", worksheet)
             self.assertIn("Scenario command: python -m mclab run lab01 --config configs/lab01_msd/default.yaml", worksheet)
@@ -323,6 +328,7 @@ class BatchTests(unittest.TestCase):
 
         self.assertIn("Open report", html)
         self.assertIn("No plot link saved", html)
+        self.assertIn("No worksheet link saved", html)
         self.assertIn("Control surface", html)
         self.assertIn("Auto run; edit YAML before rerunning.", html)
 
