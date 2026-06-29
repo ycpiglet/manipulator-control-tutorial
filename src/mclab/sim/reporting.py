@@ -384,6 +384,7 @@ def _render_report(
     config_highlights = _config_highlights_section(config)
     configured_presets = _configured_presets_section(config)
     result_check = _result_check_section(summary)
+    hands_on_evidence = _hands_on_evidence_section(summary, interaction_events)
     learner_action_summary = _learner_action_summary_section(interaction_events)
     observation_markers = _observation_markers_section(interaction_events)
     interaction_section = _interaction_section(interaction_events)
@@ -729,6 +730,7 @@ def _render_report(
     {config_highlights}
     {configured_presets}
     {result_check}
+    {hands_on_evidence}
     {learner_action_summary}
     {observation_markers}
     {interaction_section}
@@ -1138,6 +1140,62 @@ def _result_checks(summary: dict[str, Any]) -> list[tuple[str, str, str]]:
         checks.append(("Learner actions", "Recorded", f"{_format_value(interaction_events)} interaction events saved."))
 
     return checks
+
+
+def _hands_on_evidence_section(summary: dict[str, Any], events: list[dict[str, Any]]) -> str:
+    if not _summary_requires_hands_on_evidence(summary):
+        return ""
+    markers, predictions, notes = _observation_evidence_counts_from_events(events)
+    if markers > 0 and predictions > 0:
+        status = "Done for learning path"
+        detail = "This hands-on run has at least one Mark observation entry with a prediction."
+    elif markers > 0:
+        status = "Needs prediction"
+        detail = "Repeat this hands-on step and fill the Prediction field before pressing Mark observation."
+    else:
+        status = "Needs observation"
+        detail = "Repeat this hands-on step, write a prediction and note, then press Mark observation."
+    items: list[tuple[str, Any]] = [
+        ("Status", status),
+        ("Observation markers", markers),
+        ("Predictions", predictions),
+        ("Learner notes", notes),
+    ]
+    return (
+        "<section>"
+        "<h2>Hands-on Evidence</h2>"
+        '<div class="action-grid">'
+        '<article class="action-card action-wide">'
+        "<strong>Learning path completion</strong>"
+        f'<p class="empty">{escape(detail)}</p>'
+        f"{_action_value_list(items)}"
+        "</article>"
+        "</div>"
+        "</section>"
+    )
+
+
+def _summary_requires_hands_on_evidence(summary: dict[str, Any]) -> bool:
+    config_text = " ".join(str(summary.get(name) or "") for name in ("config_path", "config_name")).lower()
+    return "interactive" in config_text
+
+
+def _observation_evidence_counts_from_events(events: list[dict[str, Any]]) -> tuple[int, int, int]:
+    markers = 0
+    predictions = 0
+    notes = 0
+    for event in events:
+        if not _is_observation_marker(event):
+            continue
+        markers += 1
+        value = event.get("value")
+        if not isinstance(value, dict):
+            continue
+        if str(value.get("prediction") or "").strip():
+            predictions += 1
+        if str(value.get("note") or "").strip():
+            notes += 1
+    return markers, predictions, notes
 
 
 def _check_state_class(state: str) -> str:
@@ -2015,21 +2073,7 @@ def _read_json_list(path: Path) -> list[dict[str, Any]]:
 
 
 def _observation_evidence_counts(output_path: Path) -> tuple[int, int, int]:
-    markers = 0
-    predictions = 0
-    notes = 0
-    for event in _read_json_list(output_path / "interaction_events.json"):
-        if not _is_observation_marker(event):
-            continue
-        markers += 1
-        value = event.get("value")
-        if not isinstance(value, dict):
-            continue
-        if str(value.get("prediction") or "").strip():
-            predictions += 1
-        if str(value.get("note") or "").strip():
-            notes += 1
-    return markers, predictions, notes
+    return _observation_evidence_counts_from_events(_read_json_list(output_path / "interaction_events.json"))
 
 
 def _read_config(path: Path) -> dict[str, Any]:

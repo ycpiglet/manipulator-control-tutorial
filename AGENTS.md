@@ -81,6 +81,7 @@ Implemented and verified:
 - Learner menu learning-path step report buttons for completed course steps
 - Run reports include suggested next-run cards with reflection questions, key parameter changes, and ready-to-run commands for every guided config
 - Observation markers capture the active learning question, learner predictions, evidence prompt, learner notes, changed sliders, full slider snapshots, and live status snapshots
+- Run reports show hands-on evidence completion status for interactive runs
 - Run reports summarize observation marker questions, predictions, learner notes, and prediction-review prompts
 - Outputs index learning path cards include evidence status plus ready-to-run or repeat commands for each course step
 - Run reports show configured preset cards and summarize learner actions, latest slider values, preset choices, observation markers, and raw interaction events

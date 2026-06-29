@@ -162,6 +162,67 @@ class LoggingTests(unittest.TestCase):
             self.assertEqual(summary["config_path"], "configs/lab01_msd/default.yaml")
             self.assertEqual(summary["config_name"], "default")
 
+    def test_interactive_run_report_shows_hands_on_evidence_status(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "interactive"
+            output.mkdir()
+            (output / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab01_msd",
+                        "config_path": "configs/lab01_msd/interactive_pull.yaml",
+                        "config_name": "interactive_pull",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (output / "notes.md").write_text("# Interactive\n", encoding="utf-8")
+
+            html = write_run_report(output).read_text(encoding="utf-8")
+            self.assertIn("Hands-on Evidence", html)
+            self.assertIn("Needs observation", html)
+            self.assertIn("write a prediction and note", html)
+
+            (output / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "label": "Mark observation",
+                            "value": {"note": "The mass settled after the pulse."},
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            html = write_run_report(output).read_text(encoding="utf-8")
+            self.assertIn("Needs prediction", html)
+            self.assertIn("fill the Prediction field", html)
+            self.assertIn("Observation markers", html)
+
+            (output / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "label": "Mark observation",
+                            "value": {
+                                "prediction": "More damping should settle faster.",
+                                "note": "The mass settled after the pulse.",
+                            },
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            html = write_run_report(output).read_text(encoding="utf-8")
+            self.assertIn("Done for learning path", html)
+            self.assertIn("at least one Mark observation entry with a prediction", html)
+
     def test_run_report_includes_saved_plot_images(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "run"
