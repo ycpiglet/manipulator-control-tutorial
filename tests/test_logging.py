@@ -745,6 +745,10 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Needs prediction (1 observation, 1 note)", html)
             self.assertIn("Add one Prediction in Mark observation before moving on.", html)
             self.assertIn("1 observation, 0 predictions, 1 note", html)
+            self.assertIn(
+                "Latest evidence: Note: The mass settled faster after damping changed.",
+                html,
+            )
             self.assertIn("Latest: Note: The mass settled faster after damping changed.", html)
 
             (interactive / "interaction_events.json").write_text(
@@ -769,6 +773,12 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("2/11 steps complete. Next: 3. Close the loop", html)
             self.assertIn("Done (1 observation, 1 prediction, 1 outcome, 1 note)", html)
             self.assertIn("1 observation, 1 prediction, 1 outcome, 1 note", html)
+            self.assertIn(
+                "Latest evidence: Prediction: More damping should settle faster.; "
+                "Outcome: Matched; "
+                "Note: The mass settled faster after damping changed.",
+                html,
+            )
             self.assertIn(
                 "Latest: Prediction: More damping should settle faster.; "
                 "Outcome: Matched; "

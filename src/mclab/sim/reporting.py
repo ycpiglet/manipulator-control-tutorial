@@ -2889,6 +2889,7 @@ def _learning_path_card(item: dict[str, Any]) -> str:
     step: IndexPathStep = item["step"]
     run = item["run"]
     quick_links = _learning_path_quick_links(run)
+    latest_evidence = _learning_path_latest_evidence(run)
     command_label = "Run this step" if run is None else "Repeat this step"
     command = _learning_path_command(step)
     command_block = (
@@ -2921,10 +2922,20 @@ def _learning_path_card(item: dict[str, Any]) -> str:
         f"<strong>{escape(step.title)}</strong>"
         f'<p class="muted">{escape(step.description)}</p>'
         f"{status}"
+        f"{latest_evidence}"
         f"{quick_links}"
         f"{command_block}"
         "</article>"
     )
+
+
+def _learning_path_latest_evidence(run: dict[str, Any] | None) -> str:
+    if run is None:
+        return ""
+    latest = str(run.get("latest_evidence") or "").strip()
+    if not latest:
+        return ""
+    return f'<p class="muted">Latest evidence: {escape(latest)}</p>'
 
 
 def _learning_path_quick_links(run: dict[str, Any] | None) -> str:
