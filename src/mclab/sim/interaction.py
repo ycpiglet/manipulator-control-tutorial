@@ -1082,11 +1082,16 @@ def _panel_guide_rows(guide: Any | None) -> list[tuple[str, str]]:
     rows = [
         ("Try", str(getattr(guide, "try_this", "") or "").strip()),
         ("Change", str(getattr(guide, "change", "") or "").strip()),
+        ("Done when", _panel_completion_text()),
         ("Prediction", prediction_prompt_for_guide(guide).removeprefix("Prediction:").strip()),
         ("Question", question_for_guide(guide).removeprefix("Question:").strip()),
         ("Watch", str(getattr(guide, "watch", "") or "").strip()),
     ]
     return [(label, text) for label, text in rows if text]
+
+
+def _panel_completion_text() -> str:
+    return "write a Prediction, choose an outcome if known, then press Mark observation."
 
 
 def _panel_viewer_legend_rows(guide: Any | None) -> list[tuple[str, str]]:

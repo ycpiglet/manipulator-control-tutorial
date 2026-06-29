@@ -89,6 +89,7 @@ Implemented and verified:
 - Interactive `MCLab Interaction` changed-values summary shows slider parameters changed from run start
 - Interactive `MCLab Interaction` panel is scrollable and resizable so dense demos keep observation and live-status controls reachable
 - Interactive `MCLab Interaction` panel and run reports show a `Viewer legend` for visible target/current/force/singularity/wall markers
+- Interactive `MCLab Interaction` panel shows a `Done when` evidence criterion before Prediction and Mark observation controls
 - Learner menu scenario cards include a `Viewer` marker legend and marker-name search support
 - Learner menu scenario cards include a `Controls` summary of actual buttons, sliders, presets, pause/step, reset, and observation controls
 - Learner menu scenario and batch cards include a `Plan` line with level, mode, run length, and saved artifacts
