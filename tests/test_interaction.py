@@ -19,6 +19,7 @@ from mclab.sim.interaction import (  # noqa: E402
     StatusSpec,
     TargetOffsetControl,
     TuningPreset,
+    _changed_tuning_summary,
     _live_status_observation_note,
     _panel_guide_rows,
     _panel_guide_title,
@@ -208,6 +209,26 @@ class KeyForcePulseTests(unittest.TestCase):
         self.assertEqual([event["kind"] for event in log.events()], ["slider", "slider", "button"])
         self.assertEqual(log.events()[-1]["name"], "reset_sliders")
         self.assertEqual(log.events()[-1]["label"], "Reset sliders")
+
+    def test_changed_tuning_summary_tracks_visible_slider_changes(self) -> None:
+        tuning = LiveTuning(
+            [
+                SliderSpec("kp", "Kp", 0.0, 100.0, 20.0, 1.0),
+                SliderSpec("kd", "Kd", 0.0, 50.0, 4.0, 0.5),
+            ]
+        )
+
+        self.assertEqual(_changed_tuning_summary(None), "Changed values: none yet")
+        self.assertEqual(_changed_tuning_summary(tuning), "Changed values: none yet")
+
+        tuning.set_value("kp", 35.0)
+        self.assertEqual(_changed_tuning_summary(tuning), "Changed values: Kp=35")
+
+        tuning.set_value("kd", 9.5)
+        self.assertEqual(_changed_tuning_summary(tuning), "Changed values: Kp=35, Kd=9.5")
+
+        tuning.reset()
+        self.assertEqual(_changed_tuning_summary(tuning), "Changed values: none yet")
 
     def test_live_tuning_step_adjusts_and_clips_values(self) -> None:
         log = InteractionLog()

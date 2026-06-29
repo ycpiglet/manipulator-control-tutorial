@@ -743,12 +743,21 @@ def maybe_start_interaction_panel(
                 tuning_header.columnconfigure(0, weight=1)
                 tk.Label(tuning_header, text="Live tuning").grid(row=0, column=0, sticky="w")
                 scale_widgets: dict[str, Any] = {}
+                changed_status = tk.StringVar(value=_changed_tuning_summary(tuning))
+
+                def update_changed_status() -> None:
+                    changed_status.set(_changed_tuning_summary(tuning))
 
                 def set_scale_values(values: dict[str, float]) -> None:
                     for name, value in values.items():
                         scale = scale_widgets.get(name)
                         if scale is not None:
                             scale.set(value)
+                    update_changed_status()
+
+                def set_slider_value(name: str, raw_value: str) -> None:
+                    tuning.set_value(name, float(raw_value))
+                    update_changed_status()
 
                 def reset_sliders() -> None:
                     set_scale_values(tuning.reset())
@@ -814,7 +823,7 @@ def maybe_start_interaction_panel(
                         orient=tk.HORIZONTAL,
                         length=320,
                         label=spec.label,
-                        command=lambda raw_value, name=spec.name: tuning.set_value(name, float(raw_value)),
+                        command=lambda raw_value, name=spec.name: set_slider_value(name, raw_value),
                     )
                     scale.set(spec.initial)
                     scale_widgets[spec.name] = scale
@@ -826,6 +835,14 @@ def maybe_start_interaction_panel(
                         command=lambda name=spec.name: step_slider(name, 1),
                     ).grid(row=0, column=2, padx=(4, 0), sticky="e")
                     row += 1
+                tk.Label(
+                    frame,
+                    textvariable=changed_status,
+                    justify="left",
+                    anchor="w",
+                    wraplength=430,
+                ).grid(row=row, column=0, columnspan=2, sticky="w", pady=(4, 0))
+                row += 1
 
             if event_log is not None:
                 marker_frame = tk.Frame(frame)
@@ -1003,6 +1020,19 @@ def _live_status_observation_note(status: LiveStatus | None) -> str:
             continue
         parts.append(f"{spec.label}: {value}")
     return "; ".join(parts)
+
+
+def _changed_tuning_summary(tuning: LiveTuning | None) -> str:
+    if tuning is None or not tuning.enabled:
+        return "Changed values: none yet"
+    changed = tuning.changed_values()
+    if not changed:
+        return "Changed values: none yet"
+    labels = {spec.name: spec.label for spec in tuning.specs}
+    ordered_names = [spec.name for spec in tuning.specs if spec.name in changed]
+    ordered_names.extend(sorted(name for name in changed if name not in labels))
+    parts = [f"{labels.get(name, name)}={_format_tuning_value(changed[name])}" for name in ordered_names]
+    return f"Changed values: {', '.join(parts)}"
 
 
 def _format_status_value(value: Any) -> str:
