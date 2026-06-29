@@ -325,6 +325,11 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
             "Delay damping and compare task error.",
             "dls",
         ),
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_low_torque_2dof.yaml",
+            "Keep the same damping schedule but constrain actuator effort.",
+            "dls",
+        ),
         NextRunSuggestion("configs/lab03_2dof/dls_singularity_2dof.yaml", "Compare against fixed damping on the same target.", "dls"),
     ),
     "configs/lab03_2dof/condition_aware_dls_early_2dof.yaml": (
@@ -336,6 +341,11 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
         NextRunSuggestion(
             "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
             "Return to the default condition-aware schedule.",
+            "dls",
+        ),
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_low_torque_2dof.yaml",
+            "Keep the schedule but lower actuator limits.",
             "dls",
         ),
     ),
@@ -351,6 +361,30 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
             "dls",
         ),
         NextRunSuggestion("configs/lab03_2dof/interactive_2dof.yaml", "Move the target live and watch conditioning.", "task"),
+    ),
+    "configs/lab03_2dof/condition_aware_dls_low_torque_2dof.yaml": (
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_high_torque_2dof.yaml",
+            "Use the same target with more actuator effort available.",
+            "dls",
+        ),
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
+            "Return to the default torque limits.",
+            "dls",
+        ),
+    ),
+    "configs/lab03_2dof/condition_aware_dls_high_torque_2dof.yaml": (
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_low_torque_2dof.yaml",
+            "Constrain actuator effort and compare task error.",
+            "dls",
+        ),
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
+            "Return to the default torque limits.",
+            "dls",
+        ),
     ),
     "configs/lab03_2dof/interactive_tracking.yaml": (
         NextRunSuggestion("configs/lab03_2dof/step.yaml", "Save the abrupt tracking response for comparison."),

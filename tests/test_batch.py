@@ -27,12 +27,22 @@ class BatchTests(unittest.TestCase):
         self.assertIn("condition_aware_dls", lab03_labels)
         self.assertIn("condition_aware_early", lab03_labels)
         self.assertIn("condition_aware_late", lab03_labels)
+        self.assertIn("condition_aware_low_torque", lab03_labels)
+        self.assertIn("condition_aware_high_torque", lab03_labels)
         lab04_wall_labels = {scenario.label for scenario in batch.BATCH_SETS["lab04_wall_compare"]}
         self.assertIn("low_damping_wall", lab04_wall_labels)
         self.assertIn("high_damping_wall", lab04_wall_labels)
         self.assertIn("near_wall", lab04_wall_labels)
         self.assertIn("far_wall", lab04_wall_labels)
         self.assertIn("max_dls_condition_scale", batch.BATCH_GUIDES["lab03_2dof_compare"].metric_keys)
+        lab03_guide = batch.BATCH_GUIDES["lab03_2dof_compare"]
+        self.assertTrue(
+            any("lower torque limit increase task error" in question for question in lab03_guide.questions)
+        )
+        self.assertIn(
+            ("shoulder_torque_compare.png", "Shoulder Torque Comparison", "torque [N m]", "tau_cmd_0"),
+            lab03_guide.comparison_specs,
+        )
 
         for batch_name, scenarios in batch.BATCH_SETS.items():
             with self.subTest(batch=batch_name):

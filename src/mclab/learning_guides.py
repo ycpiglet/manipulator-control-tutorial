@@ -360,6 +360,22 @@ RUN_GUIDES: dict[str, RunGuide] = {
         "Later DLS damping, joint speed demand, condition number, and hand tracking error.",
         "Run the Lab03 comparison batch to see early, default, and late schedules together.",
     ),
+    "configs/lab03_2dof/condition_aware_dls_low_torque_2dof.yaml": RunGuide(
+        "Lab03 2DOF Low-Torque Condition-Aware DLS",
+        "The same condition-aware DLS target is constrained by a lower shoulder and elbow torque limit.",
+        "Compare against the high-torque condition-aware DLS run with the same target and damping schedule.",
+        "tracking_controller.torque_limit",
+        "Torque clipping, larger task error, DLS joint speed, and condition number.",
+        "Run the high-torque condition-aware DLS case and compare task error against actuator effort.",
+    ),
+    "configs/lab03_2dof/condition_aware_dls_high_torque_2dof.yaml": RunGuide(
+        "Lab03 2DOF High-Torque Condition-Aware DLS",
+        "The same condition-aware DLS target is allowed more actuator effort.",
+        "Compare directly against the low-torque condition-aware DLS run.",
+        "tracking_controller.torque_limit",
+        "Whether task error shrinks, torque peaks grow, and DLS damping timing stays the same.",
+        "Lower the torque limit gradually and find where the hand can no longer follow the target well.",
+    ),
     "configs/lab03_2dof/interactive_2dof.yaml": RunGuide(
         "Lab03 2DOF Interactive",
         "Tune hand target and task-space gains while the 2DOF arm runs.",

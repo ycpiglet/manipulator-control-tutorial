@@ -82,6 +82,16 @@ python -m mclab batch lab03_2dof_compare --open-report
 
 The early schedule starts increasing DLS damping at a lower condition number and allows a higher damping ceiling. The late schedule waits until conditioning is worse and caps damping lower. Compare `dls_damping_compare.png`, `dls_joint_speed_compare.png`, and `task_error_compare.png` in the batch report to discuss the tradeoff between calmer joint motion and hand tracking error.
 
+Condition-aware torque-limit comparison:
+
+```bash
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_low_torque_2dof.yaml --headless --plot --plots dls
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_high_torque_2dof.yaml --headless --plot --plots dls
+python -m mclab batch lab03_2dof_compare --open-report
+```
+
+These two configs keep the same near-edge hand target and condition-aware damping schedule while changing only `tracking_controller.torque_limit`. The low-torque case should make actuator clipping and larger task error easier to see. The high-torque case should track the same hand command more closely if the damping schedule and joint-speed limits allow it. Compare `torque.png`, `error.png`, `task_error_compare.png`, and `shoulder_torque_compare.png` in the batch report.
+
 Interactive 2DOF demo:
 
 ```powershell

@@ -86,6 +86,18 @@ BATCH_SETS: dict[str, tuple[BatchScenario, ...]] = {
             "configs/lab03_2dof/condition_aware_dls_late_2dof.yaml",
             "dls",
         ),
+        BatchScenario(
+            "condition_aware_low_torque",
+            "lab03",
+            "configs/lab03_2dof/condition_aware_dls_low_torque_2dof.yaml",
+            "dls",
+        ),
+        BatchScenario(
+            "condition_aware_high_torque",
+            "lab03",
+            "configs/lab03_2dof/condition_aware_dls_high_torque_2dof.yaml",
+            "dls",
+        ),
     ),
     "lab04_wall_compare": (
         BatchScenario("soft_wall", "lab04", "configs/lab04_panda/wall_soft.yaml", "wall_compare"),
@@ -169,6 +181,7 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             "How does DLS damping limit joint speed near a poorly conditioned target?",
             "When does condition-aware damping start increasing, and what does it trade for lower joint speed?",
             "How do early and late damping schedules change task error near the same workspace edge?",
+            "How much does a lower torque limit increase task error when the damping schedule is unchanged?",
             "How do the torque plots change when the task is expressed in end-effector space?",
         ),
         followups=(
@@ -176,6 +189,7 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             "Copy `configs/lab03_2dof/singularity_2dof.yaml` and change `target_q` to approach a straighter arm.",
             "Copy `configs/lab03_2dof/dls_singularity_2dof.yaml` and vary `tracking_controller.dls_damping`.",
             "Compare `condition_aware_dls_early_2dof.yaml` and `condition_aware_dls_late_2dof.yaml`.",
+            "Compare `condition_aware_dls_low_torque_2dof.yaml` and `condition_aware_dls_high_torque_2dof.yaml`.",
             "Copy `configs/lab03_2dof/condition_aware_dls_2dof.yaml` and change `condition_damping_threshold`.",
             "Lower `tracking_controller.torque_limit` and compare how joint and task errors grow.",
         ),
@@ -199,6 +213,7 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             ("manipulability_compare.png", "Manipulability Comparison", "manipulability", "manipulability"),
             ("dls_joint_speed_compare.png", "DLS Joint Speed Comparison", "joint speed", "dls_joint_speed"),
             ("dls_damping_compare.png", "DLS Damping Schedule Comparison", "damping / scale", "dls_damping"),
+            ("shoulder_torque_compare.png", "Shoulder Torque Comparison", "torque [N m]", "tau_cmd_0"),
         ),
     ),
     "lab04_wall_compare": BatchGuide(
