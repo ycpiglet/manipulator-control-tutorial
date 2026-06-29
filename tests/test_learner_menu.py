@@ -304,6 +304,9 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(next_learning_path_step(progress_items), LEARNING_PATH[1])
         self.assertIn("Progress: 2/11 complete", learning_path_summary_text(progress_items))
         self.assertIn("Next: 2. Disturb and tune", learning_path_summary_text(progress_items))
+        self.assertIn("Next action: run Lab01 Mass-Spring-Damper - Interactive", learning_path_summary_text(progress_items))
+        self.assertIn("Predict:", learning_path_summary_text(progress_items))
+        self.assertIn("Watch:", learning_path_summary_text(progress_items))
 
     def test_recommended_learning_path_requires_observation_for_hands_on_steps(self) -> None:
         first_step = LEARNING_PATH[0]
@@ -488,6 +491,36 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIsNone(next_learning_path_step(progress_items))
         self.assertIn("Progress: 11/11 complete", learning_path_summary_text(progress_items))
         self.assertIn("Course path complete", learning_path_summary_text(progress_items))
+
+        batch_next_items = tuple(
+            (
+                step,
+                LearningPathProgress(completed=index < len(LEARNING_PATH), latest_output=Path(f"run_{index}")),
+            )
+            for index, step in enumerate(LEARNING_PATH, start=1)
+        )
+        batch_summary = learning_path_summary_text(batch_next_items)
+        self.assertIn("Next: 11. Compare the course", batch_summary)
+        self.assertIn("Next action: run Comparison Batches - All compare", batch_summary)
+        self.assertIn("Compare:", batch_summary)
+
+        outcome_pending_items = tuple(
+            (
+                step,
+                LearningPathProgress(
+                    completed=True,
+                    latest_output=Path(f"run_{index}"),
+                    evidence_required=index == 2,
+                    observation_markers=1 if index == 2 else 0,
+                    learner_predictions=1 if index == 2 else 0,
+                    learner_outcomes=0,
+                ),
+            )
+            for index, step in enumerate(LEARNING_PATH, start=1)
+        )
+        outcome_summary = learning_path_summary_text(outcome_pending_items)
+        self.assertIn("Outcome review pending: 1 hands-on step(s).", outcome_summary)
+        self.assertIn("Next review: add missing Prediction outcome", outcome_summary)
 
     def test_menu_actions_have_valid_guided_lesson_cards(self) -> None:
         for action in MENU_ACTIONS:

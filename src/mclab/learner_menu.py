@@ -988,10 +988,35 @@ def learning_path_summary_text(
     next_step = next_learning_path_step(items)
     if next_step is None:
         outcome_text = f" Outcome review pending: {outcome_pending} hands-on step(s)." if outcome_pending else ""
-        return f"Progress: {completed}/{total} complete.{outcome_text} Course path complete - open All reports to review."
+        review_text = (
+            " Next review: add missing Prediction outcome(s), then open All reports."
+            if outcome_pending
+            else " Course path complete - open All reports to review."
+        )
+        return f"Progress: {completed}/{total} complete.{outcome_text}{review_text}"
     evidence_text = f" Evidence pending: {evidence_pending} hands-on step(s)." if evidence_pending else ""
     outcome_text = f" Outcome review pending: {outcome_pending} hands-on step(s)." if outcome_pending else ""
-    return f"Progress: {completed}/{total} complete.{evidence_text}{outcome_text} Next: {next_step.title} - {next_step.description}"
+    description = next_step.description.rstrip(".")
+    return (
+        f"Progress: {completed}/{total} complete.{evidence_text}{outcome_text} "
+        f"Next: {next_step.title} - {description}. {_learning_path_next_action_text(next_step)}"
+    )
+
+
+def _learning_path_next_action_text(step: LearningPathStep) -> str:
+    action = learning_path_target(step)
+    if isinstance(action, BatchMenuAction):
+        return (
+            f"Next action: run {action.group} - {action.label}. "
+            f"Compare: {_short_text(action.try_this, 88)} Watch: {_short_text(action.watch, 88)}"
+        )
+    prompt = prediction_prompt(action).removeprefix("Prediction:").strip()
+    if not prompt:
+        prompt = f"Before running, predict how {action.watch} will change."
+    return (
+        f"Next action: run {action.group} - {action.label}. "
+        f"Predict: {_short_text(prompt, 112)} Watch: {_short_text(action.watch, 88)}"
+    )
 
 
 def learning_path_latest_output(

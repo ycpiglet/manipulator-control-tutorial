@@ -113,6 +113,7 @@ Implemented and verified:
 - Learner menu scenario evidence labels for latest observation markers, predictions, and learner notes
 - Recommended learning path progress in the menu and outputs index requires prediction-bearing observation markers for hands-on steps
 - Recommended learning path summary flags completed hands-on steps that still need prediction outcome review
+- Recommended learning path summary shows the next action plus prediction/compare and watch cues before launch
 - Recommended learning path includes a Lab03 condition-aware DLS singularity step before moving to Panda
 - Learner menu scenario value previews for key YAML parameters, searchable from the menu
 - Learner menu, interaction panel, and run report reflection questions, searchable from the menu
