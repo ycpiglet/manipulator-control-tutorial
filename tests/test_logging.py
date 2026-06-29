@@ -125,6 +125,8 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Review saved evidence", html)
             self.assertIn("Replay tuned values", html)
             self.assertIn("Try next: Lab01 Underdamped", html)
+            self.assertIn("Controls:", html)
+            self.assertIn("Pull/Push buttons and A/D keys", html)
             self.assertIn("Compare batch: Lab01 mass-spring-damper comparison", html)
             self.assertIn("Reproduce This Run", html)
             self.assertIn(
@@ -137,6 +139,9 @@ class LoggingTests(unittest.TestCase):
             )
             self.assertIn("Comparison Batch", html)
             self.assertIn("python -m mclab batch lab01_msd_compare --open-report", html)
+            self.assertIn("Control Surface", html)
+            self.assertIn("Auto run", html)
+            self.assertIn("Edit YAML or use Config Highlights before rerunning", html)
             self.assertIn("Config Highlights", html)
             self.assertIn("force_input.magnitude", html)
             self.assertIn("stiffness", html)
@@ -335,6 +340,7 @@ class LoggingTests(unittest.TestCase):
                 (
                     "model_path: models/lab02_pid/scene.xml\n"
                     "interaction:\n"
+                    "  panel: true\n"
                     "  live_tuning: true\n"
                     "  tuning_presets:\n"
                     "    - label: Damped PD\n"
@@ -353,6 +359,10 @@ class LoggingTests(unittest.TestCase):
 
             html = report.read_text(encoding="utf-8")
             self.assertIn("Configured Presets", html)
+            self.assertIn("Control Surface", html)
+            self.assertIn("MCLab Interaction window", html)
+            self.assertIn("Sliders with Changed values summary", html)
+            self.assertIn("Prediction, Use live status, Mark observation", html)
             self.assertIn("Damped PD", html)
             self.assertIn("Aggressive PID", html)
             self.assertIn("<span>kp</span>", html)

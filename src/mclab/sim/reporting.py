@@ -529,6 +529,7 @@ def _render_report(
     tuned_replay = _learner_tuned_config_section(output, summary)
     next_runs = _suggested_next_runs_section(summary, config)
     comparison_batch = _comparison_batch_section(summary)
+    control_surface = _control_surface_section(config)
     config_highlights = _config_highlights_section(config)
     configured_presets = _configured_presets_section(config)
     result_check = _result_check_section(summary)
@@ -881,6 +882,7 @@ def _render_report(
     {tuned_replay}
     {next_runs}
     {comparison_batch}
+    {control_surface}
     {config_highlights}
     {configured_presets}
     {result_check}
@@ -1102,8 +1104,10 @@ def _next_action_suggestion_card(summary: dict[str, Any], current_config: dict[s
         f"--viewer --realtime --pause-at-end --plot --plots {suggestion.plots} --open-report"
     )
     key_changes = _suggested_config_changes(current_config, suggestion.config_path)
+    control_summary = _suggested_control_surface_summary(suggestion.config_path)
     body = (
         _action_value_list((("Config", suggestion.config_path), ("Plots", suggestion.plots)))
+        + control_summary
         + key_changes
         + f"<pre>{escape(command)}</pre>"
     )
@@ -1154,6 +1158,7 @@ def _suggested_next_run_card(suggestion: NextRunSuggestion, current_config: dict
         question = question_for_guide(guide).removeprefix("Question:").strip()
         guide_question = f'<p class="empty"><strong>Question:</strong> {escape(question)}</p>'
     key_changes = _suggested_config_changes(current_config, suggestion.config_path)
+    control_summary = _suggested_control_surface_summary(suggestion.config_path)
     return (
         '<article class="action-card action-wide">'
         f"<strong>{escape(title)}</strong>"
@@ -1161,6 +1166,7 @@ def _suggested_next_run_card(suggestion: NextRunSuggestion, current_config: dict
         f"{guide_focus}"
         f"{guide_prediction}"
         f"{guide_question}"
+        f"{control_summary}"
         f"{key_changes}"
         '<ul class="action-list">'
         "<li>"
@@ -1235,6 +1241,80 @@ def _comparison_batch_for_summary(summary: dict[str, Any]) -> tuple[str, str, st
             "Compare baseline, soft, and stiff Cartesian reach error and actuator effort.",
         )
     return None
+
+
+def _control_surface_section(config: dict[str, Any]) -> str:
+    controls = _control_surface_items(config)
+    if not controls:
+        return ""
+    return (
+        "<section>"
+        "<h2>Control Surface</h2>"
+        '<p class="empty">Use this to choose where to change the experiment before rerunning.</p>'
+        '<div class="action-grid">'
+        '<article class="action-card action-wide">'
+        "<strong>Available controls</strong>"
+        f"{_action_value_list(controls)}"
+        "</article>"
+        "</div>"
+        "</section>"
+    )
+
+
+def _suggested_control_surface_summary(config_path: str) -> str:
+    try:
+        config = load_config(config_path)
+    except Exception:
+        return ""
+    summary = _control_surface_sentence(config)
+    if not summary:
+        return ""
+    return f'<p class="empty"><strong>Controls:</strong> {escape(summary)}</p>'
+
+
+def _control_surface_sentence(config: dict[str, Any]) -> str:
+    controls = _control_surface_items(config)
+    if not controls:
+        return ""
+    values = [str(value) for _label, value in controls]
+    return "; ".join(dict.fromkeys(values))
+
+
+def _control_surface_items(config: dict[str, Any]) -> list[tuple[str, str]]:
+    interaction = config.get("interaction")
+    if not isinstance(interaction, dict) or not interaction:
+        return [
+            ("Mode", "Auto run"),
+            ("Change values", "Edit YAML or use Config Highlights before rerunning"),
+        ]
+
+    panel_enabled = bool(interaction.get("panel", False))
+    items: list[tuple[str, str]] = []
+    if panel_enabled:
+        items.append(("Panel", "MCLab Interaction window"))
+    if bool(interaction.get("key_force", False)):
+        items.append(("Manual input", "Pull/Push buttons and A/D keys"))
+    if bool(interaction.get("target_nudge", False)):
+        items.append(("Manual input", "Target -/+ buttons and A/D keys"))
+    if bool(interaction.get("live_tuning", False)):
+        items.append(("Live tuning", "Sliders with Changed values summary"))
+    presets = _configured_preset_labels(config)
+    if presets:
+        items.append(("Quick presets", ", ".join(presets)))
+    if bool(interaction.get("playback_speed", panel_enabled)):
+        items.append(("Playback", "Playback speed slider"))
+    if bool(interaction.get("pause_resume", interaction.get("pause", panel_enabled))):
+        items.append(("Pause/step", "Pause / Resume and Step once"))
+    if bool(interaction.get("reset_plant", interaction.get("reset_experiment", panel_enabled))):
+        items.append(("Reset", "Reset plant"))
+    if panel_enabled:
+        items.append(("Evidence", "Prediction, Use live status, Mark observation"))
+    if not items:
+        return [
+            ("Mode", "Auto run"),
+            ("Change values", "Edit YAML or use Config Highlights before rerunning"),
+        ]
+    return items
 
 
 def _suggested_config_changes(current_config: dict[str, Any], suggested_config_path: str) -> str:
@@ -1381,6 +1461,15 @@ def _configured_presets(config: dict[str, Any]) -> list[dict[str, Any]]:
     if not isinstance(presets, list):
         return []
     return [preset for preset in presets if isinstance(preset, dict)]
+
+
+def _configured_preset_labels(config: dict[str, Any]) -> list[str]:
+    labels: list[str] = []
+    for index, preset in enumerate(_configured_presets(config), start=1):
+        label = str(preset.get("label") or preset.get("name") or f"Preset {index}").strip()
+        if label:
+            labels.append(label)
+    return labels
 
 
 def _flatten_config(config: dict[str, Any], prefix: str = "") -> dict[str, Any]:
