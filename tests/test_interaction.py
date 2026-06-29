@@ -23,6 +23,7 @@ from mclab.sim.interaction import (  # noqa: E402
     _panel_guide_title,
     _observation_marker_count,
     _observation_marker_status_message,
+    learner_snapshot,
     tuning_presets_from_config,
 )
 from mclab.config import load_config  # noqa: E402
@@ -515,6 +516,34 @@ class KeyForcePulseTests(unittest.TestCase):
         self.assertEqual(snapshot["position"], "1.235")
         self.assertEqual(snapshot["mode"], "tracking")
         self.assertNotIn("ignored", snapshot)
+
+    def test_learner_snapshot_collects_final_interactive_state(self) -> None:
+        log = InteractionLog()
+        tuning = LiveTuning([SliderSpec("kp", "Kp", 0.0, 100.0, 20.0, 1.0)], event_log=log)
+        status = LiveStatus([StatusSpec("error", "Error [m]")])
+        playback = SimulationPlaybackControl({"interaction": {"panel": True}}, event_log=log)
+
+        tuning.set_value("kp", 35.0)
+        status.set_values(error=0.125)
+        playback.set_speed(1.5)
+
+        snapshot = learner_snapshot(
+            tuning=tuning,
+            status=status,
+            playback_control=playback,
+            extra_controls={"joint_target_offset": 0.2},
+        )
+
+        self.assertEqual(
+            snapshot,
+            {
+                "slider_values": {"kp": 35.0},
+                "changed_sliders": {"kp": 35.0},
+                "live_status": {"error": "0.125"},
+                "playback_speed": 1.5,
+                "extra_controls": {"joint_target_offset": 0.2},
+            },
+        )
 
     def test_panel_guidance_uses_try_change_watch_fields(self) -> None:
         guide = RunGuide(

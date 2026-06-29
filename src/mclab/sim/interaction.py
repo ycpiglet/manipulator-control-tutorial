@@ -263,6 +263,39 @@ class LiveStatus:
             return dict(self._values)
 
 
+def learner_snapshot(
+    *,
+    tuning: LiveTuning | None = None,
+    status: LiveStatus | None = None,
+    playback_control: "SimulationPlaybackControl | None" = None,
+    extra_controls: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Return the learner-facing final interactive state for reports."""
+
+    payload: dict[str, Any] = {}
+    has_learner_control = bool(
+        (tuning is not None and tuning.enabled)
+        or (playback_control is not None and playback_control.enabled)
+        or extra_controls
+    )
+    if tuning is not None and tuning.enabled:
+        payload["slider_values"] = _event_value(tuning.snapshot())
+        payload["changed_sliders"] = _event_value(tuning.changed_values())
+    if status is not None and status.enabled and has_learner_control:
+        payload["live_status"] = _event_value(status.snapshot())
+    if playback_control is not None and playback_control.enabled:
+        payload["playback_speed"] = _event_value(playback_control.speed())
+    if extra_controls:
+        controls = {
+            str(name): _event_value(value)
+            for name, value in extra_controls.items()
+            if value is not None
+        }
+        if controls:
+            payload["extra_controls"] = controls
+    return payload
+
+
 class ExperimentResetControl:
     """Thread-safe plant reset request for learner-facing viewer demos."""
 

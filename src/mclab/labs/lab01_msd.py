@@ -17,6 +17,7 @@ from mclab.sim.interaction import (
     SimulationPauseControl,
     SliderSpec,
     StatusSpec,
+    learner_snapshot,
     maybe_start_interaction_panel,
     tuning_presets_from_config,
 )
@@ -199,6 +200,11 @@ def run(
         summary=summary,
         notes=_notes(config),
         interaction_events=events if events else None,
+        learner_snapshot=learner_snapshot(
+            tuning=live_tuning,
+            status=live_status,
+            playback_control=playback_control,
+        ),
     )
     if plot:
         _save_plots(output_path, logger.rows, plot_selection or config.get("plots"))

@@ -455,8 +455,9 @@ def write_run_report(output_path: str | Path) -> Path:
     config = _read_config(output / "config.yaml")
     plots = sorted((output / "plots").glob("*.png"))
     interaction_events = _read_json_list(output / "interaction_events.json")
+    learner_snapshot = _read_json(output / "learner_snapshot.json")
 
-    html = _render_report(output, summary, notes, plots, interaction_events, config)
+    html = _render_report(output, summary, notes, plots, interaction_events, config, learner_snapshot)
     report_path = output / "report.html"
     report_path.write_text(html, encoding="utf-8")
     write_outputs_index(output.parent)
@@ -479,6 +480,7 @@ def _render_report(
     plots: list[Path],
     interaction_events: list[dict[str, Any]],
     config: dict[str, Any],
+    learner_snapshot: dict[str, Any],
 ) -> str:
     title = _report_title(output, summary)
     learning_guide = _learning_guide_section(guide_for_run_summary(summary))
@@ -490,6 +492,7 @@ def _render_report(
     result_check = _result_check_section(summary)
     hands_on_evidence = _hands_on_evidence_section(summary, interaction_events)
     learner_action_summary = _learner_action_summary_section(interaction_events)
+    learner_snapshot_section = _learner_snapshot_section(learner_snapshot)
     observation_markers = _observation_markers_section(interaction_events)
     interaction_section = _interaction_section(interaction_events)
     plot_guide = _plot_guide_section(plots)
@@ -521,6 +524,7 @@ def _render_report(
             "log.csv",
             "states.npz",
             "interaction_events.json",
+            "learner_snapshot.json",
         )
         if (output / name).exists()
     )
@@ -837,6 +841,7 @@ def _render_report(
     {result_check}
     {hands_on_evidence}
     {learner_action_summary}
+    {learner_snapshot_section}
     {observation_markers}
     {interaction_section}
     <section>
@@ -1483,6 +1488,67 @@ def _learner_action_summary_section(events: list[dict[str, Any]]) -> str:
         "<section>"
         "<h2>Learner Action Summary</h2>"
         '<p class="empty">Use this summary to connect live controls and presets to the plots below.</p>'
+        '<div class="action-grid">'
+        f"{''.join(cards)}"
+        "</div>"
+        "</section>"
+    )
+
+
+def _learner_snapshot_section(snapshot: dict[str, Any]) -> str:
+    if not snapshot:
+        return ""
+    cards: list[str] = []
+    slider_values = snapshot.get("slider_values")
+    changed_sliders = snapshot.get("changed_sliders")
+    live_status = snapshot.get("live_status")
+
+    if isinstance(changed_sliders, dict) and changed_sliders:
+        cards.append(
+            _action_card(
+                "Changed slider values",
+                "Final values for sliders that moved away from the run's starting values.",
+                _action_value_list(changed_sliders.items()),
+            )
+        )
+    if isinstance(slider_values, dict) and slider_values:
+        cards.append(
+            _action_card(
+                "Final slider values",
+                "Complete slider state at the end of the run.",
+                _action_value_list(slider_values.items()),
+            )
+        )
+    if isinstance(live_status, dict) and live_status:
+        cards.append(
+            _action_card(
+                "Final live status",
+                "Last learner-facing status values computed for the interaction panel.",
+                _action_value_list(live_status.items()),
+            )
+        )
+
+    controls: list[tuple[str, Any]] = []
+    if "playback_speed" in snapshot:
+        controls.append(("Playback speed", snapshot.get("playback_speed")))
+    extra_controls = snapshot.get("extra_controls")
+    if isinstance(extra_controls, dict):
+        controls.extend(extra_controls.items())
+    if controls:
+        cards.append(
+            _action_card(
+                "Final control state",
+                "Non-slider learner controls that affect how the run was viewed or nudged.",
+                _action_value_list(controls),
+            )
+        )
+
+    if not cards:
+        return ""
+    return (
+        "<section>"
+        "<h2>Learner Snapshot</h2>"
+        '<p class="empty">Use this snapshot to reconstruct the final hands-on state without reading the full event log.</p>'
         '<div class="action-grid">'
         f"{''.join(cards)}"
         "</div>"

@@ -89,6 +89,13 @@ class LoggingTests(unittest.TestCase):
                         },
                     },
                 ],
+                learner_snapshot={
+                    "slider_values": {"stiffness": 80.0, "damping": 1.0},
+                    "changed_sliders": {"stiffness": 80.0},
+                    "live_status": {"energy": "0.125"},
+                    "playback_speed": 1.5,
+                    "extra_controls": {"joint_target_offset": 0.1},
+                },
             )
 
             report = output / "report.html"
@@ -131,6 +138,13 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Preset choices", html)
             self.assertIn("Stiff spring", html)
             self.assertIn("90", html)
+            self.assertIn("Learner Snapshot", html)
+            self.assertIn("Changed slider values", html)
+            self.assertIn("Final slider values", html)
+            self.assertIn("Final live status", html)
+            self.assertIn("Final control state", html)
+            self.assertIn("Playback speed", html)
+            self.assertIn("joint_target_offset", html)
             self.assertIn("Observation Markers", html)
             self.assertIn("1 marked observation saved.", html)
             self.assertIn("Review prompt", html)
@@ -156,10 +170,14 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Mark observation", html)
             self.assertIn("0.125", html)
             self.assertIn("interaction_events.json", html)
+            self.assertIn("learner_snapshot.json", html)
             self.assertIn("Check position.", html)
             self.assertIn("config.yaml", html)
             events = json.loads((output / "interaction_events.json").read_text(encoding="utf-8"))
             self.assertEqual(events[0]["name"], "stiffness")
+            snapshot = json.loads((output / "learner_snapshot.json").read_text(encoding="utf-8"))
+            self.assertEqual(snapshot["changed_sliders"], {"stiffness": 80.0})
+            self.assertEqual(snapshot["playback_speed"], 1.5)
             summary = json.loads((output / "summary.json").read_text(encoding="utf-8"))
             self.assertEqual(summary["config_path"], "configs/lab01_msd/default.yaml")
             self.assertEqual(summary["config_name"], "default")
