@@ -2899,7 +2899,11 @@ def _learning_path_section(runs: list[dict[str, Any]]) -> str:
     if next_item is None:
         summary = f"{completed}/{len(items)} steps complete. Course path complete."
     else:
-        summary = f"{completed}/{len(items)} steps complete. Next: {next_item['step'].title}"
+        next_step: IndexPathStep = next_item["step"]
+        summary = (
+            f"{completed}/{len(items)} steps complete. Next: {next_step.title}. "
+            f"Next action: {_learning_path_action_label(next_step)}."
+        )
     cards = "\n".join(_learning_path_card(item) for item in items)
     return (
         "<section>"
@@ -2937,6 +2941,7 @@ def _learning_path_card(item: dict[str, Any]) -> str:
     run = item["run"]
     quick_links = _learning_path_quick_links(run)
     latest_evidence = _learning_path_latest_evidence(run)
+    learning_cue = _learning_path_learning_cue(step)
     command_label = "Run this step" if run is None else "Repeat this step"
     command = _learning_path_command(step)
     command_block = (
@@ -2968,6 +2973,7 @@ def _learning_path_card(item: dict[str, Any]) -> str:
         '<article class="path-card">'
         f"<strong>{escape(step.title)}</strong>"
         f'<p class="muted">{escape(step.description)}</p>'
+        f"{learning_cue}"
         f"{status}"
         f"{latest_evidence}"
         f"{quick_links}"
@@ -3026,6 +3032,57 @@ def _learning_path_evidence_suffix(item: dict[str, Any]) -> str:
     outcome_text = f", {outcomes} outcome{'s' if outcomes != 1 else ''}" if outcomes else ""
     note_text = f", {notes} note{'s' if notes != 1 else ''}" if notes else ""
     return f" ({markers} observation{'s' if markers != 1 else ''}{prediction_text}{outcome_text}{note_text})"
+
+
+def _learning_path_action_label(step: IndexPathStep) -> str:
+    if step.batch_name:
+        return f"run batch {step.batch_name}"
+    lab_name = _cli_lab_name(step.config_path)
+    if lab_name:
+        return f"run {lab_name}"
+    return "open the saved command"
+
+
+def _learning_path_learning_cue(step: IndexPathStep) -> str:
+    if step.batch_name:
+        return (
+            '<p class="muted"><strong>Compare:</strong> Generate the course batch report set. '
+            "<strong>Watch:</strong> How the same control ideas scale from 1D plants to Panda wall behavior.</p>"
+        )
+    if not step.config_path:
+        return ""
+    guide = guide_for_config(config_path=step.config_path)
+    if guide is None:
+        return f'<p class="muted"><strong>Watch:</strong> {escape(step.description)}</p>'
+    prediction = _learning_path_prediction_cue_text(
+        prediction_prompt_for_guide(guide).removeprefix("Prediction:").strip()
+    )
+    prediction_text = (
+        f"<strong>Predict:</strong> {escape(_short_evidence_text(prediction, max_length=136))} "
+        if prediction
+        else ""
+    )
+    watch = str(guide.watch or step.description)
+    return (
+        '<p class="muted">'
+        f"{prediction_text}<strong>Watch:</strong> {escape(_short_evidence_text(watch, max_length=112))}"
+        "</p>"
+    )
+
+
+def _learning_path_prediction_cue_text(prediction: str) -> str:
+    text = " ".join(str(prediction).split())
+    marker = "predict how "
+    marker_index = text.find(marker)
+    if marker_index < 0:
+        return text
+    tail_index = marker_index + len(marker)
+    tail = text[tail_index:]
+    if tail.startswith("How "):
+        return text[:tail_index] + tail.removeprefix("How ")
+    if tail:
+        return text[:tail_index] + tail[0].lower() + tail[1:]
+    return text
 
 
 def _learning_path_requires_evidence(step: IndexPathStep) -> bool:

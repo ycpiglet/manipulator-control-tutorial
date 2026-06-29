@@ -598,10 +598,14 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Progress Snapshot", html)
             self.assertIn("Learning Path", html)
             self.assertIn("1/11 steps complete", html)
+            self.assertIn("Next action: run lab01", html)
             self.assertIn("1. Feel 1D physics", html)
             self.assertIn("2. Disturb and tune", html)
             self.assertIn("7. Handle singularity", html)
             self.assertIn("configs/lab03_2dof/condition_aware_dls_2dof.yaml", html)
+            self.assertIn("<strong>Predict:</strong>", html)
+            self.assertIn("<strong>Watch:</strong>", html)
+            self.assertNotIn("predict how How", html)
             self.assertIn("Not run yet", html)
             self.assertIn("Run this step", html)
             self.assertIn(
@@ -686,6 +690,8 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Learning Path", html)
             self.assertIn("1/11 steps complete", html)
             self.assertIn("11. Compare the course", html)
+            self.assertIn("<strong>Compare:</strong> Generate the course batch report set.", html)
+            self.assertIn("Next action: run lab01", html)
             self.assertIn("20260627_151000_all_batches/report.html", html)
             self.assertIn("python -m mclab batch all --open-report", html)
 
