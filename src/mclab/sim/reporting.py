@@ -498,6 +498,8 @@ def write_run_report(output_path: str | Path) -> Path:
     interaction_events = _read_json_list(output / "interaction_events.json")
     learner_snapshot = _read_json(output / "learner_snapshot.json")
 
+    worksheet = _render_worksheet(output, summary, notes, plots, interaction_events, config)
+    (output / "worksheet.md").write_text(worksheet, encoding="utf-8")
     html = _render_report(output, summary, notes, plots, interaction_events, config, learner_snapshot)
     report_path = output / "report.html"
     report_path.write_text(html, encoding="utf-8")
@@ -514,6 +516,196 @@ def write_outputs_index(outputs_root: str | Path) -> Path:
     return index_path
 
 
+def _render_worksheet(
+    output: Path,
+    summary: dict[str, Any],
+    notes: str,
+    plots: list[Path],
+    interaction_events: list[dict[str, Any]],
+    config: dict[str, Any],
+) -> str:
+    guide = guide_for_run_summary(summary)
+    lines: list[str] = [
+        "# MCLab Learner Worksheet",
+        "",
+        "## Run",
+        "",
+        f"- Run folder: {_markdown_inline(output.name)}",
+        f"- Lab: {_markdown_inline(summary.get('lab_name') or output.name)}",
+        f"- Config: {_markdown_inline(summary.get('config_path') or summary.get('config_name') or 'n/a')}",
+        f"- Duration [s]: {_markdown_inline(summary.get('duration', 'n/a'))}",
+        f"- Samples: {_markdown_inline(summary.get('samples', 'n/a'))}",
+        "- Report: report.html",
+        "",
+    ]
+    lines.extend(_worksheet_learning_guide_lines(guide))
+    lines.extend(_worksheet_pairs_section("Key Parameters", _config_highlight_pairs(config)))
+    lines.extend(_worksheet_pairs_section("Summary Values", list(summary.items())))
+    lines.extend(_worksheet_observation_lines(interaction_events))
+    lines.extend(_worksheet_review_checklist(interaction_events))
+    lines.extend(_worksheet_notes_lines(notes))
+    lines.extend(_worksheet_artifact_lines(output, plots))
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _worksheet_learning_guide_lines(guide: RunGuide | None) -> list[str]:
+    lines = ["## Learning Guide", ""]
+    if guide is None:
+        lines.extend(["- No configured guide was found for this run.", ""])
+        return lines
+    rows: list[tuple[str, Any]] = [
+        ("Title", guide.title),
+        ("Try", guide.try_this),
+        ("Change", guide.change),
+        ("Prediction", prediction_prompt_for_guide(guide).removeprefix("Prediction:").strip()),
+        ("Question", question_for_guide(guide).removeprefix("Question:").strip()),
+        ("Watch", guide.watch),
+        ("Next", guide.next_step),
+    ]
+    lines.extend(_worksheet_mapping_lines(dict(rows)))
+    legend = viewer_legend_for_guide(guide)
+    if legend:
+        lines.append("- Viewer legend:")
+        for label, description in legend:
+            lines.append(f"  - {_markdown_inline(label)}: {_markdown_inline(description)}")
+    lines.append("")
+    return lines
+
+
+def _worksheet_pairs_section(title: str, pairs: list[tuple[str, Any]]) -> list[str]:
+    lines = [f"## {title}", ""]
+    if not pairs:
+        lines.extend(["- No values saved.", ""])
+        return lines
+    lines.extend(_worksheet_mapping_lines(dict(pairs)))
+    lines.append("")
+    return lines
+
+
+def _worksheet_observation_lines(events: list[dict[str, Any]]) -> list[str]:
+    markers = [event for event in events if _is_observation_marker(event)]
+    lines = ["## Observation Markers", ""]
+    if not markers:
+        lines.extend(
+            [
+                "- No observation markers saved yet.",
+                "- Next: run an interactive demo, write a prediction, then press Mark observation.",
+                "",
+            ]
+        )
+        return lines
+
+    for marker_index, marker in enumerate(markers, start=1):
+        payload = marker.get("value")
+        value = payload if isinstance(payload, dict) else {}
+        lines.extend(
+            [
+                f"### Observation {marker_index}",
+                "",
+                f"- Time [s]: {_markdown_inline(marker.get('time', 'n/a'))}",
+            ]
+        )
+        scalar_rows = {
+            "Question": value.get("question"),
+            "Prediction": value.get("prediction"),
+            "Prediction outcome": value.get("outcome"),
+            "Evidence prompt": value.get("evidence_prompt"),
+            "Learner note": value.get("note"),
+        }
+        for label, text in scalar_rows.items():
+            if str(text or "").strip():
+                lines.append(f"- {label}: {_markdown_inline(text)}")
+        for label, key in (
+            ("Changed sliders", "changed_sliders"),
+            ("Current sliders", "sliders"),
+            ("Live status", "status"),
+        ):
+            values = value.get(key)
+            if isinstance(values, dict) and values:
+                lines.append(f"- {label}:")
+                lines.extend(_worksheet_mapping_lines(values, indent=2))
+        lines.append("")
+    return lines
+
+
+def _worksheet_review_checklist(events: list[dict[str, Any]]) -> list[str]:
+    markers, predictions, notes, outcomes = _observation_evidence_counts_from_events(events)
+    lines = [
+        "## Review Checklist",
+        "",
+        f"- Observation markers: {_markdown_inline(markers)}",
+        f"- Predictions: {_markdown_inline(predictions)}",
+        f"- Prediction outcomes: {_markdown_inline(outcomes)}",
+        f"- Learner notes: {_markdown_inline(notes)}",
+    ]
+    if markers <= 0:
+        lines.extend(
+            [
+                "- [ ] Save one observation marker with a prediction.",
+                "- [ ] Capture one live status or note before moving to the next scenario.",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                "- [ ] Compare the latest prediction with the plots in report.html.",
+                "- [ ] Mark one outcome for every prediction: Matched, Partly matched, or Surprised.",
+                "- [ ] Keep at least one note that explains what changed and what evidence proved it.",
+                "- [ ] Decide which suggested next run should be compared against this one.",
+            ]
+        )
+    lines.append("")
+    return lines
+
+
+def _worksheet_notes_lines(notes: str) -> list[str]:
+    text = notes.strip()
+    if not text:
+        return ["## Notes", "", "- No run notes were saved.", ""]
+    return ["## Notes", "", "```markdown", text, "```", ""]
+
+
+def _worksheet_artifact_lines(output: Path, plots: list[Path]) -> list[str]:
+    artifact_names = [
+        "report.html",
+        "config.yaml",
+        "summary.json",
+        "notes.md",
+        "log.csv",
+        "states.npz",
+        "interaction_events.json",
+        "learner_snapshot.json",
+        "learner_tuned_config.yaml",
+    ]
+    lines = ["## Artifacts", ""]
+    for name in artifact_names:
+        if name == "report.html" or (output / name).exists():
+            lines.append(f"- {name}")
+    if plots:
+        lines.append("- plots:")
+        for plot in plots:
+            lines.append(f"  - {_relative(output, plot)}")
+    lines.append("")
+    return lines
+
+
+def _worksheet_mapping_lines(values: dict[str, Any], *, indent: int = 0) -> list[str]:
+    lines: list[str] = []
+    prefix = " " * indent
+    for key, value in values.items():
+        if isinstance(value, dict) and value:
+            lines.append(f"{prefix}- {_markdown_inline(key)}:")
+            lines.extend(_worksheet_mapping_lines(value, indent=indent + 2))
+        else:
+            lines.append(f"{prefix}- {_markdown_inline(key)}: {_markdown_inline(value)}")
+    return lines
+
+
+def _markdown_inline(value: Any) -> str:
+    text = " ".join(_format_value(value).split())
+    return text.replace("|", "\\|")
+
+
 def _render_report(
     output: Path,
     summary: dict[str, Any],
@@ -525,6 +717,7 @@ def _render_report(
 ) -> str:
     title = _report_title(output, summary)
     learning_guide = _learning_guide_section(guide_for_run_summary(summary))
+    worksheet = _worksheet_section(output)
     next_actions = _next_actions_section(output, summary, config, plots, interaction_events)
     reproduce_section = _reproduce_section(summary)
     tuned_replay = _learner_tuned_config_section(output, summary)
@@ -565,6 +758,7 @@ def _render_report(
             "config.yaml",
             "summary.json",
             "notes.md",
+            "worksheet.md",
             "log.csv",
             "states.npz",
             "interaction_events.json",
@@ -881,6 +1075,7 @@ def _render_report(
   <main>
     <h1>{escape(title)} report</h1>
     {learning_guide}
+    {worksheet}
     {next_actions}
     {reproduce_section}
     {tuned_replay}
@@ -916,6 +1111,17 @@ def _render_report(
 </body>
 </html>
 """
+
+
+def _worksheet_section(output: Path) -> str:
+    worksheet = output / "worksheet.md"
+    if not worksheet.exists():
+        return ""
+    return _action_card(
+        "Learner Worksheet",
+        "Open the printable Markdown worksheet to review prediction, outcome, notes, and next-run decisions.",
+        '<p class="empty"><a href="worksheet.md">Open worksheet.md</a></p>',
+    )
 
 
 def _learning_guide_section(guide: RunGuide | None) -> str:
@@ -2369,6 +2575,7 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
                 "samples": summary.get("samples", ""),
                 "duration": summary.get("duration", ""),
                 "report": _run_link(child, report_path, index_path),
+                "worksheet": _discover_worksheet(child),
                 "plots": _discover_run_plots(child),
                 "replay": _discover_replay_config(child),
                 "modified": modified,
@@ -2400,6 +2607,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
             f"<td>{escape(str(run.get('lesson_title', '')))}</td>"
             f"<td>{escape(str(run.get('next_step', '')))}</td>"
             f"<td>{escape(_run_evidence_cell(run))}</td>"
+            f"<td>{_run_worksheet_cell(run)}</td>"
             f"<td>{_run_replay_cell(run)}</td>"
             f"<td>{_run_plots_cell(run)}</td>"
             f"<td>{escape(_format_value(run['duration']))}</td>"
@@ -2413,7 +2621,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
         for run in runs
     )
     if not rows:
-        rows = f'<tr><td colspan="{10 + len(metric_keys)}">No run reports were found yet.</td></tr>'
+        rows = f'<tr><td colspan="{11 + len(metric_keys)}">No run reports were found yet.</td></tr>'
 
     return f"""<!doctype html>
 <html lang="en">
@@ -2551,7 +2759,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
     <section>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Run</th><th>Lab</th><th>Config</th><th>Lesson</th><th>Next</th><th>Evidence</th><th>Replay</th><th>Plots</th><th>Duration [s]</th><th>Samples</th>{metric_headers}</tr></thead>
+          <thead><tr><th>Run</th><th>Lab</th><th>Config</th><th>Lesson</th><th>Next</th><th>Evidence</th><th>Worksheet</th><th>Replay</th><th>Plots</th><th>Duration [s]</th><th>Samples</th>{metric_headers}</tr></thead>
           <tbody>{rows}</tbody>
         </table>
       </div>
@@ -2837,6 +3045,17 @@ def _run_replay_cell(run: dict[str, Any]) -> str:
     return f'<a class="plot-chip" href="{escape(href)}">{escape(label)}</a>'
 
 
+def _run_worksheet_cell(run: dict[str, Any]) -> str:
+    worksheet = run.get("worksheet")
+    if not isinstance(worksheet, dict):
+        return '<span class="muted">No worksheet</span>'
+    href = str(worksheet.get("href") or "")
+    label = str(worksheet.get("label") or "Worksheet")
+    if not href:
+        return '<span class="muted">No worksheet</span>'
+    return f'<a class="plot-chip" href="{escape(href)}">{escape(label)}</a>'
+
+
 def _run_plots_cell(run: dict[str, Any]) -> str:
     plots = run.get("plots", [])
     if not plots:
@@ -2870,6 +3089,16 @@ def _discover_replay_config(child: Path) -> dict[str, str] | None:
     return {
         "href": f"{child.name}/{tuned_config.name}",
         "label": "Tuned config",
+    }
+
+
+def _discover_worksheet(child: Path) -> dict[str, str] | None:
+    worksheet = child / "worksheet.md"
+    if not worksheet.exists():
+        return None
+    return {
+        "href": f"{child.name}/{worksheet.name}",
+        "label": "Worksheet",
     }
 
 
