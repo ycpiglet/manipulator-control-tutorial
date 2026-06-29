@@ -632,6 +632,7 @@ def _worksheet_observation_lines(events: list[dict[str, Any]]) -> list[str]:
 
 def _worksheet_review_checklist(events: list[dict[str, Any]]) -> list[str]:
     markers, predictions, notes, outcomes = _observation_evidence_counts_from_events(events)
+    pending_outcomes = max(0, predictions - outcomes)
     lines = [
         "## Review Checklist",
         "",
@@ -640,6 +641,11 @@ def _worksheet_review_checklist(events: list[dict[str, Any]]) -> list[str]:
         f"- Prediction outcomes: {_markdown_inline(outcomes)}",
         f"- Learner notes: {_markdown_inline(notes)}",
     ]
+    if pending_outcomes:
+        lines.append(
+            f"- Outcome review pending: {_markdown_inline(pending_outcomes)} "
+            "prediction(s) still need Matched, Partly matched, or Surprised."
+        )
     if markers <= 0:
         lines.extend(
             [

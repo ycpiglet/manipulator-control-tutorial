@@ -223,6 +223,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("energy: 0.125", worksheet_text)
             self.assertIn("## Review Checklist", worksheet_text)
             self.assertIn("- [ ] Compare the latest prediction with the plots in report.html.", worksheet_text)
+            self.assertNotIn("Outcome review pending", worksheet_text)
             self.assertIn("## Suggested Next Experiments", worksheet_text)
             self.assertIn("### Lab01 Underdamped", worksheet_text)
             self.assertIn("Reason: See what changes when damping is too low.", worksheet_text)
@@ -244,6 +245,49 @@ class LoggingTests(unittest.TestCase):
             summary = json.loads((output / "summary.json").read_text(encoding="utf-8"))
             self.assertEqual(summary["config_path"], "configs/lab01_msd/default.yaml")
             self.assertEqual(summary["config_name"], "default")
+
+    def test_worksheet_review_checklist_flags_missing_prediction_outcomes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "run"
+            output.mkdir()
+            (output / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab01_msd",
+                        "config_path": "configs/lab01_msd/default.yaml",
+                        "config_name": "default",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (output / "config.yaml").write_text("mass: 1.0\n", encoding="utf-8")
+            (output / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "time": 0.2,
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "prediction": "More damping should settle faster.",
+                                "note": "The trace settled faster.",
+                            },
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            write_run_report(output)
+
+            worksheet_text = (output / "worksheet.md").read_text(encoding="utf-8")
+            self.assertIn("- Predictions: 1", worksheet_text)
+            self.assertIn("- Prediction outcomes: 0", worksheet_text)
+            self.assertIn(
+                "- Outcome review pending: 1 prediction(s) still need Matched, Partly matched, or Surprised.",
+                worksheet_text,
+            )
+            self.assertIn("- [ ] Mark one outcome for every prediction", worksheet_text)
 
     def test_run_report_points_to_relevant_comparison_batch(self) -> None:
         cases = [
