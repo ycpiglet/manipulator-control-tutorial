@@ -115,6 +115,9 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Prediction", html)
             self.assertIn("Question", html)
             self.assertIn("Before changing mass, damping, stiffness", html)
+            self.assertIn("Viewer Legend", html)
+            self.assertIn("Gray marker", html)
+            self.assertIn("Green marker", html)
             self.assertIn(
                 "What baseline motion should later damping and stiffness cases be compared against?",
                 html,

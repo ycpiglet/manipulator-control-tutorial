@@ -24,6 +24,7 @@ from mclab.sim.interaction import (  # noqa: E402
     _live_status_observation_note,
     _panel_guide_rows,
     _panel_guide_title,
+    _panel_viewer_legend_rows,
     _observation_marker_count,
     _observation_marker_status_message,
     learner_snapshot,
@@ -652,3 +653,18 @@ class KeyForcePulseTests(unittest.TestCase):
             ],
         )
         self.assertEqual(_panel_guide_rows(None), [])
+
+    def test_panel_guidance_exposes_viewer_legend(self) -> None:
+        guide = RunGuide(
+            "Lab04 Virtual Wall Interactive",
+            "Tune the hand target and virtual wall parameters.",
+            "Move Target X through the wall.",
+            "live sliders/presets: Target X/Y/Z, wall X, stiffness",
+            "Target-Wall gap, Wall penetration, wall force, hand X, green target marker, and orange contact hand marker.",
+            "Compare virtual_wall.png with the live settings.",
+        )
+
+        rows = _panel_viewer_legend_rows(guide)
+
+        self.assertIn(("Green sphere", "Cartesian hand target."), rows)
+        self.assertIn(("Red plane", "Virtual wall location."), rows)

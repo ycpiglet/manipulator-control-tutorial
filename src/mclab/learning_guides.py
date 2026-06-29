@@ -49,6 +49,54 @@ def prediction_prompt_for_guide(guide: RunGuide | None) -> str:
     return ""
 
 
+def viewer_legend_for_guide(guide: RunGuide | None) -> list[tuple[str, str]]:
+    if guide is None:
+        return []
+    context = " ".join(
+        (
+            guide.title,
+            guide.focus,
+            guide.try_this,
+            guide.change,
+            guide.watch,
+            guide.next_step,
+        )
+    ).lower()
+
+    if "lab04" in context and any(term in context for term in ("cartesian", "wall", "impedance")):
+        items = [
+            ("Green sphere", "Cartesian hand target."),
+            ("Blue sphere", "Current Panda hand position."),
+        ]
+        if "wall" in context or "impedance" in context:
+            items.extend(
+                [
+                    ("Orange sphere", "Hand point used to show wall contact or retreat."),
+                    ("Red plane", "Virtual wall location."),
+                ]
+            )
+        return items
+
+    if "lab04" in context:
+        return []
+
+    if "2dof" in context:
+        return [
+            ("Green sphere", "Target hand point."),
+            ("Blue sphere", "Current hand point."),
+            ("Orange sphere", "Singularity warning when Jacobian conditioning is poor."),
+        ]
+
+    if any(term in context for term in ("lab01", "lab02", "pid", "mass-spring", "1d", "trajectory")):
+        return [
+            ("Gray marker", "Equilibrium or track reference on the slider axis."),
+            ("Green marker", "Target position."),
+            ("Orange bar", "Applied force direction or manual disturbance."),
+        ]
+
+    return []
+
+
 def reflection_question_for_context(
     *,
     lab_name: str = "",

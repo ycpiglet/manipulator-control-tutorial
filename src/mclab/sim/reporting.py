@@ -15,6 +15,7 @@ from mclab.learning_guides import (
     guide_for_run_summary,
     prediction_prompt_for_guide,
     question_for_guide,
+    viewer_legend_for_guide,
 )
 
 INDEX_METRIC_KEYS = (
@@ -680,6 +681,9 @@ def _render_report(
       display: block;
       line-height: 1.4;
     }}
+    .guide-subtitle {{
+      margin-top: 16px;
+    }}
     .command-grid {{
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -935,13 +939,36 @@ def _learning_guide_section(guide: RunGuide | None) -> str:
         )
         for label, text in items
     )
+    viewer_legend = _viewer_legend_block(guide)
     return (
         "<section>"
         f"<h2>{escape(guide.title)}</h2>"
         '<div class="guide-grid">'
         f"{body}"
         "</div>"
+        f"{viewer_legend}"
         "</section>"
+    )
+
+
+def _viewer_legend_block(guide: RunGuide | None) -> str:
+    items = viewer_legend_for_guide(guide)
+    if not items:
+        return ""
+    body = "\n".join(
+        (
+            '<div class="guide-item">'
+            f"<strong>{escape(label)}</strong>"
+            f"<span>{escape(text)}</span>"
+            "</div>"
+        )
+        for label, text in items
+    )
+    return (
+        '<h3 class="guide-subtitle">Viewer Legend</h3>'
+        '<div class="guide-grid">'
+        f"{body}"
+        "</div>"
     )
 
 

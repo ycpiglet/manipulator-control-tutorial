@@ -8,7 +8,12 @@ from dataclasses import dataclass
 from threading import Lock
 from typing import Any
 
-from mclab.learning_guides import observation_prompt_for_guide, prediction_prompt_for_guide, question_for_guide
+from mclab.learning_guides import (
+    observation_prompt_for_guide,
+    prediction_prompt_for_guide,
+    question_for_guide,
+    viewer_legend_for_guide,
+)
 
 
 LEFT_KEYS = {ord("A"), 263}
@@ -644,7 +649,8 @@ def maybe_start_interaction_panel(
             row += 1
             guide_title = _panel_guide_title(guide)
             guide_rows = _panel_guide_rows(guide)
-            if guide_title or guide_rows:
+            viewer_legend_rows = _panel_viewer_legend_rows(guide)
+            if guide_title or guide_rows or viewer_legend_rows:
                 if guide_title:
                     tk.Label(frame, text=guide_title).grid(row=row, column=0, columnspan=2, pady=(0, 4))
                     row += 1
@@ -657,6 +663,18 @@ def maybe_start_interaction_panel(
                         wraplength=430,
                     ).grid(row=row, column=0, columnspan=2, sticky="w", pady=1)
                     row += 1
+                if viewer_legend_rows:
+                    tk.Label(frame, text="Viewer legend").grid(row=row, column=0, columnspan=2, sticky="w", pady=(6, 2))
+                    row += 1
+                    for label, text in viewer_legend_rows:
+                        tk.Label(
+                            frame,
+                            text=f"{label}: {text}",
+                            justify="left",
+                            anchor="w",
+                            wraplength=430,
+                        ).grid(row=row, column=0, columnspan=2, sticky="w", pady=1)
+                        row += 1
                 row += 1
             if control_enabled:
                 tk.Button(frame, text=control.left_label, width=22, command=control.trigger_left).grid(
@@ -1044,6 +1062,10 @@ def _panel_guide_rows(guide: Any | None) -> list[tuple[str, str]]:
         ("Watch", str(getattr(guide, "watch", "") or "").strip()),
     ]
     return [(label, text) for label, text in rows if text]
+
+
+def _panel_viewer_legend_rows(guide: Any | None) -> list[tuple[str, str]]:
+    return viewer_legend_for_guide(guide)
 
 
 def _observation_marker_count(event_log: InteractionLog) -> int:

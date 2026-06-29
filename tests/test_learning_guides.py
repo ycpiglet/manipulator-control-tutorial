@@ -14,6 +14,7 @@ from mclab.learning_guides import (  # noqa: E402
     observation_prompt_for_guide,
     prediction_prompt_for_guide,
     question_for_guide,
+    viewer_legend_for_guide,
 )
 
 
@@ -80,6 +81,20 @@ class LearningGuideTests(unittest.TestCase):
         self.assertIn("live sliders", prompt)
         self.assertIn("Live target", prompt)
         self.assertEqual(prediction_prompt_for_guide(None), "")
+
+    def test_viewer_legend_matches_visible_guides(self) -> None:
+        lab01_guide = guide_for_config(config_path="configs/lab01_msd/interactive_pull.yaml")
+        lab03_guide = guide_for_config(config_path="configs/lab03_2dof/condition_aware_dls_2dof.yaml")
+        lab04_wall_guide = guide_for_config(config_path="configs/lab04_panda/interactive_virtual_wall.yaml")
+        lab04_joint_guide = guide_for_config(config_path="configs/lab04_panda/joint_pd.yaml")
+
+        self.assertIn(("Green marker", "Target position."), viewer_legend_for_guide(lab01_guide))
+        self.assertIn(
+            ("Orange sphere", "Singularity warning when Jacobian conditioning is poor."),
+            viewer_legend_for_guide(lab03_guide),
+        )
+        self.assertIn(("Red plane", "Virtual wall location."), viewer_legend_for_guide(lab04_wall_guide))
+        self.assertEqual(viewer_legend_for_guide(lab04_joint_guide), [])
 
     def test_unknown_config_without_lab_context_has_no_guide(self) -> None:
         self.assertIsNone(guide_for_config(config_path="configs/custom/unknown.yaml"))
