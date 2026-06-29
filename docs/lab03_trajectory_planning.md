@@ -62,7 +62,7 @@ This moves the hand toward the workspace edge using a damped least-squares inver
 qdot_cmd = J(q)^T * (J(q) * J(q)^T + lambda^2 I)^-1 * xdot_cmd
 ```
 
-Use the `MCLab Interaction` sliders to change `DLS task gain` and `DLS damping` while the arm moves. Use the `-` / `+` buttons next to a slider for one-resolution-step adjustments. Lower damping follows the hand command more aggressively but can demand faster joint motion near a singular posture. Higher damping is calmer but may leave more task-space error. Compare `dls.png`, `singularity.png`, `torque.png`, and `error.png` after the run.
+Use the `MCLab Interaction` sliders to change `DLS task gain` and `DLS damping` while the arm moves. Use the `Low DLS damping`, `Balanced DLS`, and `High DLS damping` quick presets to jump between representative settings, then use the `-` / `+` buttons next to a slider for one-resolution-step adjustments. Lower damping follows the hand command more aggressively but can demand faster joint motion near a singular posture. Higher damping is calmer but may leave more task-space error. Compare `dls.png`, `singularity.png`, `torque.png`, and `error.png` after the run.
 
 Condition-aware DLS demo:
 

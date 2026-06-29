@@ -436,8 +436,8 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
         config_path="configs/lab03_2dof/dls_singularity_2dof.yaml",
         plots="dls",
         description="Damped least-squares limits inverse-Jacobian motion near the workspace edge.",
-        try_this="Watch the hand marker near the workspace edge, then compare dls.png.",
-        watch="DLS joint speed, damping, condition number, and torque.",
+        try_this="Open with the viewer, then try Low/Balanced/High DLS damping presets.",
+        watch="DLS joint speed, hand error, damping, condition number, and torque.",
     ),
     MenuAction(
         group="Lab03 2DOF Arm and Trajectories",
@@ -1370,7 +1370,11 @@ def parameter_hint(action: MenuAction) -> str:
                 "tracking_controller.torque_limit, viewer_guides.*"
             )
         if label == "2dof dls singularity":
-            return "target_xy, tracking_controller.dls_gain, tracking_controller.dls_damping, viewer_guides.condition_threshold"
+            return (
+                "live sliders/presets: Target X/Y, DLS task gain, DLS damping, torque limit; "
+                "YAML: target_xy, tracking_controller.dls_gain, tracking_controller.dls_damping, "
+                "viewer_guides.condition_threshold"
+            )
         if label in {"2dof condition-aware dls", "2dof early dls damping", "2dof late dls damping"}:
             return (
                 "target_xy, tracking_controller.dls_damping, tracking_controller.condition_damping_threshold, "
@@ -1579,6 +1583,8 @@ def action_tags(action: MenuAction) -> tuple[str, ...]:
         tags.update({"panda", "manipulator", "7dof"})
 
     if "interactive" in label or config_name.startswith("interactive_"):
+        tags.add("hands-on")
+    if label == "2dof dls singularity":
         tags.add("hands-on")
     if label == "joint target":
         tags.add("hands-on")

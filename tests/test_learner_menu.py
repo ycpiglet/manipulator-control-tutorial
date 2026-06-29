@@ -533,6 +533,7 @@ class LearnerMenuTests(unittest.TestCase):
     def test_interactive_menu_cards_show_configured_presets(self) -> None:
         by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
         lab02_interactive = by_label[("Lab02 PID Control", "Interactive")]
+        lab03_dls = by_label[("Lab03 2DOF Arm and Trajectories", "2DOF DLS singularity")]
         lab04_cartesian = by_label[("Lab04 Panda Manipulator", "Cartesian interactive")]
 
         self.assertEqual(
@@ -540,6 +541,7 @@ class LearnerMenuTests(unittest.TestCase):
             ("Gentle P", "Damped PD", "Aggressive PID"),
         )
         self.assertIn("Presets: Gentle P, Damped PD, Aggressive PID", lesson_text(lab02_interactive))
+        self.assertIn("Presets: Low DLS damping, Balanced DLS, High DLS damping", lesson_text(lab03_dls))
         self.assertIn("Presets: Soft reach, Default reach, Far target", lesson_text(lab04_cartesian))
 
     def test_menu_action_followups_point_to_real_next_experiences(self) -> None:
@@ -648,6 +650,7 @@ class LearnerMenuTests(unittest.TestCase):
 
         hands_on = {(action.group, action.label) for action in filter_menu_actions("", experience_filter="hands-on")}
         self.assertIn(("Lab01 Mass-Spring-Damper", "Interactive"), hands_on)
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF DLS singularity"), hands_on)
         self.assertIn(("Lab04 Panda Manipulator", "Joint target"), hands_on)
         self.assertNotIn(("Lab04 Panda Manipulator", "Cartesian reach"), hands_on)
 
@@ -705,6 +708,10 @@ class LearnerMenuTests(unittest.TestCase):
         )
         self.assertIn(
             "dls_damping",
+            parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF DLS singularity")]),
+        )
+        self.assertIn(
+            "live sliders/presets",
             parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF DLS singularity")]),
         )
         self.assertIn(

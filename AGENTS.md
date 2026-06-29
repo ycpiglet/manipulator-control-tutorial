@@ -54,6 +54,7 @@ Implemented and verified:
 - Lab03 trajectory planning plus a torque-actuated 2DOF planar arm
 - Lab03 FK, IK helper, analytic Jacobian, joint-space tracking, and task-space Jacobian-transpose PD
 - Lab03 viewer visual guides for 2DOF hand target, current hand position, and singularity warning state
+- Lab03 DLS singularity viewer supports live Low/Balanced/High DLS damping presets
 - Lab04 Franka Emika Panda manipulator using MuJoCo Menagerie
 - Lab04 30-second neutral-hold stability check config and report checks
 - Lab04 Cartesian reach with damped-least-squares Jacobian target offsets

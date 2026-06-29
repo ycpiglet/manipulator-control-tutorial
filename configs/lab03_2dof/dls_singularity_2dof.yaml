@@ -26,3 +26,19 @@ tracking_controller:
 interaction:
   panel: true
   live_tuning: true
+  tuning_presets:
+    - label: Low DLS damping
+      values:
+        dls_gain: 4.2
+        dls_damping: 0.02
+        torque_limit: 42.0
+    - label: Balanced DLS
+      values:
+        dls_gain: 4.2
+        dls_damping: 0.08
+        torque_limit: 42.0
+    - label: High DLS damping
+      values:
+        dls_gain: 4.2
+        dls_damping: 0.24
+        torque_limit: 42.0

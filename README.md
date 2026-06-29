@@ -152,7 +152,7 @@ python -m mclab doctor
 |---|---|
 | Lab01 | underdamped, overdamped, high/low stiffness, interactive pull |
 | Lab02 | low/high P gain, PD damping, saturation, windup vs anti-windup, sensor noise, control delay, interactive disturbance |
-| Lab03 | 2DOF joint-space, 2DOF task-space, singularity, DLS singularity, early/default/late condition-aware DLS, interactive XY target tuning, step/trapezoidal/minimum-jerk/S-curve profiles |
+| Lab03 | 2DOF joint-space, 2DOF task-space, singularity, DLS singularity with live damping presets, early/default/late condition-aware DLS, interactive XY target tuning, step/trapezoidal/minimum-jerk/S-curve profiles |
 | Lab04 | neutral hold, 30s stability hold, joint trajectories, hand X motion, Cartesian reach, soft/stiff Cartesian reach, soft/stiff and low/high damping virtual wall, joint target nudge, virtual wall |
 
 처음 학습자는 메뉴 상단의 `Recommended learning path`를 순서대로 따라가면 됩니다.
@@ -499,7 +499,7 @@ Main comparison scenarios in the menu:
 |---|---|
 | Lab01 | underdamped, overdamped, high/low stiffness, interactive pull |
 | Lab02 | low/high P gain, PD damping, saturation, windup vs anti-windup, sensor noise, control delay, interactive disturbance |
-| Lab03 | 2DOF joint-space, 2DOF task-space, singularity, DLS singularity, early/default/late condition-aware DLS, interactive XY target tuning, step/trapezoidal/minimum-jerk/S-curve profiles |
+| Lab03 | 2DOF joint-space, 2DOF task-space, singularity, DLS singularity with live damping presets, early/default/late condition-aware DLS, interactive XY target tuning, step/trapezoidal/minimum-jerk/S-curve profiles |
 | Lab04 | neutral hold, 30s stability hold, joint trajectories, hand X motion, Cartesian reach, soft/stiff Cartesian reach, soft/stiff and low/high damping virtual wall, joint target nudge, virtual wall |
 
 First-time learners can follow the `Recommended learning path` at the top of the menu.

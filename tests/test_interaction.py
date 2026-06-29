@@ -167,6 +167,7 @@ class KeyForcePulseTests(unittest.TestCase):
         lab01_config = load_config("configs/lab01_msd/interactive_pull.yaml")
         lab02_config = load_config("configs/lab02_pid/interactive_disturbance.yaml")
         lab03_config = load_config("configs/lab03_2dof/interactive_2dof.yaml")
+        lab03_dls_config = load_config("configs/lab03_2dof/dls_singularity_2dof.yaml")
         lab03_tracking_config = load_config("configs/lab03_2dof/interactive_tracking.yaml")
         lab04_cartesian_config = load_config("configs/lab04_panda/interactive_cartesian_reach.yaml")
         lab04_wall_config = load_config("configs/lab04_panda/interactive_virtual_wall.yaml")
@@ -190,6 +191,16 @@ class KeyForcePulseTests(unittest.TestCase):
                     tuple(lab03_config["target_xy"]),
                 ),
                 ["Soft reach", "Default reach", "Near edge"],
+            ),
+            (
+                lab03_2dof._two_link_live_tuning(
+                    lab03_dls_config,
+                    str(lab03_dls_config["mode"]),
+                    dict(lab03_dls_config["tracking_controller"]),
+                    tuple(lab03_dls_config["tracking_controller"]["torque_limit"]),
+                    tuple(lab03_dls_config["target_xy"]),
+                ),
+                ["Low DLS damping", "Balanced DLS", "High DLS damping"],
             ),
             (
                 lab03_2dof._live_tuning(

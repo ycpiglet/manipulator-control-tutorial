@@ -321,9 +321,9 @@ RUN_GUIDES: dict[str, RunGuide] = {
     "configs/lab03_2dof/dls_singularity_2dof.yaml": RunGuide(
         "Lab03 2DOF DLS Singularity",
         "Damped least-squares limits the inverse-Jacobian command near a poorly conditioned target.",
-        "Watch the hand marker near the workspace edge, then compare DLS plots.",
-        "target_xy, tracking_controller.dls_gain, tracking_controller.dls_damping",
-        "DLS joint speed, task speed, damping, condition number, and tracking error.",
+        "Open the viewer and try Low DLS damping, Balanced DLS, and High DLS damping presets.",
+        "live sliders/presets: target_xy, tracking_controller.dls_gain, tracking_controller.dls_damping",
+        "DLS joint speed, hand tracking error, damping, condition number, and torque.",
         "Run condition-aware DLS next and compare the damping schedule.",
     ),
     "configs/lab03_2dof/condition_aware_dls_2dof.yaml": RunGuide(
