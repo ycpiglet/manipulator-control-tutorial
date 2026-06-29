@@ -61,6 +61,7 @@ Implemented and verified:
 - Lab04 Cartesian interactive one-line launcher for live XYZ target tuning
 - Lab04 deterministic virtual wall with soft/stiff stiffness-damping comparison configs
 - Lab04 low/high damping virtual wall configs that isolate damping with fixed stiffness and retreat gains
+- Lab04 near/far virtual wall configs that isolate wall position with fixed stiffness, damping, and retreat gains
 - Lab04 viewer visual guides for Cartesian target, current hand position, contact state, and virtual wall
 - YAML configs, MuJoCo XML models, docs, and tests for the implemented labs
 - Run reports with domain-specific checks for singularity, DLS speed, virtual wall response, and actuator effort

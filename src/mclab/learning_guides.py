@@ -479,6 +479,22 @@ RUN_GUIDES: dict[str, RunGuide] = {
         "Wall penetration, virtual force, retreat, and hand X response.",
         "Lower damping gradually and inspect whether penetration or force changes first.",
     ),
+    "configs/lab04_panda/wall_near.yaml": RunGuide(
+        "Lab04 Near Virtual Wall",
+        "Wall stiffness and damping stay fixed while the wall is placed closer to the hand path.",
+        "Run before the far wall and compare virtual_wall.png.",
+        "virtual_wall.wall_x, virtual_wall.stiffness, virtual_wall.damping",
+        "Earlier contact, larger penetration, virtual force, retreat, and hand X response.",
+        "Run far wall and compare how much less contact the same motion produces.",
+    ),
+    "configs/lab04_panda/wall_far.yaml": RunGuide(
+        "Lab04 Far Virtual Wall",
+        "Wall stiffness and damping stay fixed while the wall is placed farther along the hand path.",
+        "Compare directly against the near wall.",
+        "virtual_wall.wall_x, virtual_wall.stiffness, virtual_wall.damping",
+        "Later contact, smaller penetration, virtual force, retreat, and hand X response.",
+        "Move wall_x closer gradually and find when the hand starts producing a visible wall response.",
+    ),
     "configs/lab04_panda/interactive_virtual_wall.yaml": RunGuide(
         "Lab04 Virtual Wall Interactive",
         "Tune virtual wall parameters while the Panda moves toward the wall.",

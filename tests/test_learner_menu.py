@@ -128,6 +128,8 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(("Lab04 Panda Manipulator", "Stiff wall"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Low damping wall"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "High damping wall"), labels)
+        self.assertIn(("Lab04 Panda Manipulator", "Near wall"), labels)
+        self.assertIn(("Lab04 Panda Manipulator", "Far wall"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Virtual wall"), labels)
 
     def test_menu_actions_launch_learner_viewer_commands(self) -> None:
@@ -655,7 +657,18 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertNotIn("Step profile", two_dof_labels)
 
         wall_labels = {action.label for action in filter_menu_actions("", experience_filter="wall")}
-        self.assertEqual(wall_labels, {"Soft wall", "Stiff wall", "Low damping wall", "High damping wall", "Virtual wall"})
+        self.assertEqual(
+            wall_labels,
+            {
+                "Soft wall",
+                "Stiff wall",
+                "Low damping wall",
+                "High damping wall",
+                "Near wall",
+                "Far wall",
+                "Virtual wall",
+            },
+        )
 
         singularity_labels = {action.label for action in filter_menu_actions("", experience_filter="singularity")}
         self.assertEqual(
@@ -709,6 +722,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("sim_time", parameter_hint(by_label[("Lab04 Panda Manipulator", "30s stability hold")]))
         self.assertIn("virtual_wall.stiffness", parameter_hint(by_label[("Lab04 Panda Manipulator", "Virtual wall")]))
         self.assertIn("virtual_wall.damping", parameter_hint(by_label[("Lab04 Panda Manipulator", "Low damping wall")]))
+        self.assertIn("virtual_wall.wall_x", parameter_hint(by_label[("Lab04 Panda Manipulator", "Near wall")]))
 
     def test_menu_actions_link_to_existing_config_and_lesson_files(self) -> None:
         for action in MENU_ACTIONS:

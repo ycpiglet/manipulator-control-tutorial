@@ -101,6 +101,16 @@ python -m mclab batch lab04_wall_compare --open-report
 
 These two configs keep wall stiffness, wall position, retreat gains, and trajectory fixed while changing only `virtual_wall.damping`. Use this after the soft/stiff comparison to isolate the damping term. In the batch report, compare `wall_force_compare.png`, `wall_penetration_compare.png`, and `wall_retreat_compare.png` to discuss whether higher damping mainly changes force, penetration, or retreat.
 
+Wall-position comparison:
+
+```bash
+python -m mclab run lab04 --config configs/lab04_panda/wall_near.yaml --headless --plot --plots wall_compare
+python -m mclab run lab04 --config configs/lab04_panda/wall_far.yaml --headless --plot --plots wall_compare
+python -m mclab batch lab04_wall_compare --open-report
+```
+
+These two configs keep wall stiffness, damping, retreat gains, and trajectory fixed while changing only `virtual_wall.wall_x`. The near wall should be reached earlier and produce larger penetration, force, and retreat. The far wall should barely be touched by the same motion. Use this after the interactive wall demo so learners can connect the wall slider to a deterministic comparison report.
+
 Headless runs:
 
 ```bash
@@ -109,6 +119,7 @@ python -m mclab run lab04 --config configs/lab04_panda/cartesian_reach.yaml --he
 python -m mclab run lab04 --config configs/lab04_panda/impedance_wall.yaml --headless --plot
 python -m mclab run lab04 --config configs/lab04_panda/wall_stiff.yaml --headless --plot --plots wall_compare
 python -m mclab run lab04 --config configs/lab04_panda/wall_high_damping.yaml --headless --plot --plots wall_compare
+python -m mclab run lab04 --config configs/lab04_panda/wall_near.yaml --headless --plot --plots wall_compare
 ```
 
 Full viewer command:

@@ -91,6 +91,8 @@ BATCH_SETS: dict[str, tuple[BatchScenario, ...]] = {
         BatchScenario("stiff_wall", "lab04", "configs/lab04_panda/wall_stiff.yaml", "wall_compare"),
         BatchScenario("low_damping_wall", "lab04", "configs/lab04_panda/wall_low_damping.yaml", "wall_compare"),
         BatchScenario("high_damping_wall", "lab04", "configs/lab04_panda/wall_high_damping.yaml", "wall_compare"),
+        BatchScenario("near_wall", "lab04", "configs/lab04_panda/wall_near.yaml", "wall_compare"),
+        BatchScenario("far_wall", "lab04", "configs/lab04_panda/wall_far.yaml", "wall_compare"),
     ),
     "lab04_cartesian_compare": (
         BatchScenario("baseline_reach", "lab04", "configs/lab04_panda/cartesian_reach.yaml", "cartesian_reach"),
@@ -200,18 +202,19 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
     ),
     "lab04_wall_compare": BatchGuide(
         title="Lab04 Panda Virtual Wall Comparison",
-        focus="Compare wall stiffness and damping settings on the Panda end-effector response.",
+        focus="Compare wall stiffness, damping, and wall position on the Panda end-effector response.",
         questions=(
             "Which wall allows more penetration before retreating?",
             "How much more virtual wall force does the stiff wall produce?",
             "How does the hand X position change as retreat and damping increase?",
             "With stiffness fixed, how does damping change penetration, force, and retreat?",
+            "With stiffness and damping fixed, how does wall position change contact timing and penetration?",
         ),
         followups=(
             "Copy `configs/lab04_panda/wall_soft.yaml` and raise `virtual_wall.stiffness` gradually.",
             "Copy `configs/lab04_panda/wall_stiff.yaml` and lower `virtual_wall.damping` to inspect force spikes.",
             "Compare `wall_low_damping.yaml` and `wall_high_damping.yaml` to isolate damping.",
-            "Move `virtual_wall.wall_x` and compare when the hand first reaches the virtual wall.",
+            "Compare `wall_near.yaml` and `wall_far.yaml` to isolate wall position.",
         ),
         metric_keys=(
             "max_wall_penetration_cm",
