@@ -168,6 +168,7 @@ class KeyForcePulseTests(unittest.TestCase):
         lab02_config = load_config("configs/lab02_pid/interactive_disturbance.yaml")
         lab03_config = load_config("configs/lab03_2dof/interactive_2dof.yaml")
         lab03_dls_config = load_config("configs/lab03_2dof/dls_singularity_2dof.yaml")
+        lab03_condition_dls_config = load_config("configs/lab03_2dof/condition_aware_dls_2dof.yaml")
         lab03_tracking_config = load_config("configs/lab03_2dof/interactive_tracking.yaml")
         lab04_cartesian_config = load_config("configs/lab04_panda/interactive_cartesian_reach.yaml")
         lab04_wall_config = load_config("configs/lab04_panda/interactive_virtual_wall.yaml")
@@ -203,6 +204,16 @@ class KeyForcePulseTests(unittest.TestCase):
                 ["Low DLS damping", "Balanced DLS", "High DLS damping"],
             ),
             (
+                lab03_2dof._two_link_live_tuning(
+                    lab03_condition_dls_config,
+                    str(lab03_condition_dls_config["mode"]),
+                    dict(lab03_condition_dls_config["tracking_controller"]),
+                    tuple(lab03_condition_dls_config["tracking_controller"]["torque_limit"]),
+                    tuple(lab03_condition_dls_config["target_xy"]),
+                ),
+                ["Early damping", "Balanced schedule", "Late damping"],
+            ),
+            (
                 lab03_2dof._live_tuning(
                     lab03_tracking_config,
                     dict(lab03_tracking_config["tracking_controller"]),
@@ -223,6 +234,22 @@ class KeyForcePulseTests(unittest.TestCase):
             with self.subTest(expected_labels=expected_labels):
                 self.assertEqual([preset.label for preset in tuning.presets], expected_labels)
                 self.assertTrue(all(preset.values for preset in tuning.presets))
+
+    def test_condition_aware_dls_live_tuning_exposes_schedule_sliders(self) -> None:
+        config = load_config("configs/lab03_2dof/condition_aware_dls_2dof.yaml")
+
+        tuning = lab03_2dof._two_link_live_tuning(
+            config,
+            str(config["mode"]),
+            dict(config["tracking_controller"]),
+            tuple(config["tracking_controller"]["torque_limit"]),
+            tuple(config["target_xy"]),
+        )
+
+        slider_names = {spec.name for spec in tuning.specs}
+        self.assertIn("condition_damping_threshold", slider_names)
+        self.assertIn("condition_damping_full", slider_names)
+        self.assertIn("max_dls_damping", slider_names)
 
     def test_mark_observation_records_slider_and_status_snapshot(self) -> None:
         log = InteractionLog()

@@ -66,11 +66,11 @@ Use the `MCLab Interaction` sliders to change `DLS task gain` and `DLS damping` 
 
 Condition-aware DLS demo:
 
-```bash
-python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_2dof.yaml --viewer --realtime --pause-at-end --plot --plots dls
+```powershell
+.\run_lab03_condition_dls_interactive.cmd
 ```
 
-This uses the same near-edge target as the DLS singularity demo, but `tracking_controller.condition_aware_damping` raises the effective DLS damping when the Jacobian condition number exceeds `condition_damping_threshold`. In `dls.png`, compare `dls_damping`, `dls_condition_scale`, and `dls_joint_speed`; in `singularity.png`, confirm that the damping rise happens when conditioning gets poor.
+This uses the same near-edge target as the DLS singularity demo, but `tracking_controller.condition_aware_damping` raises the effective DLS damping when the Jacobian condition number exceeds `condition_damping_threshold`. Use the `Early damping`, `Balanced schedule`, and `Late damping` presets to change when the automatic damping starts, when it reaches the maximum, and how large the maximum can be. In `dls.png`, compare `dls_damping`, `dls_condition_scale`, and `dls_joint_speed`; in `singularity.png`, confirm that the damping rise happens when conditioning gets poor.
 
 Condition-aware schedule comparison:
 

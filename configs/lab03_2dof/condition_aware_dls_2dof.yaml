@@ -27,5 +27,33 @@ tracking_controller:
   kp: [85.0, 62.0]
   kd: [9.5, 6.5]
   torque_limit: [42.0, 32.0]
+interaction:
+  panel: true
+  live_tuning: true
+  tuning_presets:
+    - label: Early damping
+      values:
+        dls_gain: 4.2
+        dls_damping: 0.08
+        condition_damping_threshold: 6.0
+        condition_damping_full: 18.0
+        max_dls_damping: 0.36
+        torque_limit: 42.0
+    - label: Balanced schedule
+      values:
+        dls_gain: 4.2
+        dls_damping: 0.08
+        condition_damping_threshold: 10.0
+        condition_damping_full: 40.0
+        max_dls_damping: 0.3
+        torque_limit: 42.0
+    - label: Late damping
+      values:
+        dls_gain: 4.2
+        dls_damping: 0.08
+        condition_damping_threshold: 24.0
+        condition_damping_full: 90.0
+        max_dls_damping: 0.18
+        torque_limit: 42.0
 viewer_guides:
   condition_threshold: 18.0

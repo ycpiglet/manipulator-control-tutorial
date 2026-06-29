@@ -25,6 +25,11 @@ class LaunchScriptTests(unittest.TestCase):
                 "configs\\lab03_2dof\\dls_singularity_2dof.yaml",
                 "dls",
             ),
+            "run_lab03_condition_dls_interactive.cmd": (
+                "lab03",
+                "configs\\lab03_2dof\\condition_aware_dls_2dof.yaml",
+                "dls",
+            ),
             "run_lab04.cmd": ("lab04", "configs\\lab04_panda\\joint_pd.yaml", "essential"),
             "run_lab04_interactive.cmd": ("lab04", "configs\\lab04_panda\\interactive_joint_hold.yaml", "essential"),
             "run_lab04_cartesian_interactive.cmd": (

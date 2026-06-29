@@ -329,9 +329,10 @@ RUN_GUIDES: dict[str, RunGuide] = {
     "configs/lab03_2dof/condition_aware_dls_2dof.yaml": RunGuide(
         "Lab03 2DOF Condition-Aware DLS",
         "DLS damping rises automatically as the arm approaches a poorly conditioned posture.",
-        "Compare the DLS damping trace against condition number and joint speed.",
+        "Open the viewer and try Early damping, Balanced schedule, and Late damping presets.",
         (
-            "target_xy, tracking_controller.dls_damping, tracking_controller.condition_damping_threshold, "
+            "live sliders/presets: target_xy, tracking_controller.dls_damping, "
+            "tracking_controller.condition_damping_threshold, tracking_controller.condition_damping_full, "
             "tracking_controller.max_dls_damping"
         ),
         "DLS damping, condition scale, joint speed, condition number, and task error.",

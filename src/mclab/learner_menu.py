@@ -446,7 +446,7 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
         config_path="configs/lab03_2dof/condition_aware_dls_2dof.yaml",
         plots="dls",
         description="Automatically increases DLS damping as Jacobian conditioning worsens.",
-        try_this="Compare against fixed DLS and watch the damping trace rise near the edge.",
+        try_this="Open with the viewer, then try Early/Balanced/Late damping schedule presets.",
         watch="Condition scale, DLS damping, joint speed, condition number, and task error.",
     ),
     MenuAction(
@@ -1376,6 +1376,12 @@ def parameter_hint(action: MenuAction) -> str:
                 "viewer_guides.condition_threshold"
             )
         if label in {"2dof condition-aware dls", "2dof early dls damping", "2dof late dls damping"}:
+            if label == "2dof condition-aware dls":
+                return (
+                    "live sliders/presets: Target X/Y, DLS task gain, DLS damping, condition threshold/full, "
+                    "max DLS damping, torque limit; YAML: target_xy, tracking_controller.condition_damping_threshold, "
+                    "tracking_controller.condition_damping_full, tracking_controller.max_dls_damping"
+                )
             return (
                 "target_xy, tracking_controller.dls_damping, tracking_controller.condition_damping_threshold, "
                 "tracking_controller.condition_damping_full, tracking_controller.max_dls_damping"
@@ -1584,7 +1590,7 @@ def action_tags(action: MenuAction) -> tuple[str, ...]:
 
     if "interactive" in label or config_name.startswith("interactive_"):
         tags.add("hands-on")
-    if label == "2dof dls singularity":
+    if label in {"2dof dls singularity", "2dof condition-aware dls"}:
         tags.add("hands-on")
     if label == "joint target":
         tags.add("hands-on")

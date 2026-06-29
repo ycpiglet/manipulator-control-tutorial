@@ -579,6 +579,36 @@ def _two_link_live_tuning(
             ),
             SliderSpec("torque_limit", "Torque limit [N m]", 5.0, 80.0, max(torque_limit), 1.0),
         ]
+        condition_aware = mode in CONDITION_AWARE_DLS_MODES or bool(controller_config.get("condition_aware_damping", False))
+        if condition_aware:
+            specs.extend(
+                [
+                    SliderSpec(
+                        "condition_damping_threshold",
+                        "Damping starts at cond.",
+                        1.0,
+                        80.0,
+                        float(controller_config.get("condition_damping_threshold", 10.0)),
+                        1.0,
+                    ),
+                    SliderSpec(
+                        "condition_damping_full",
+                        "Full damping at cond.",
+                        2.0,
+                        140.0,
+                        float(controller_config.get("condition_damping_full", 40.0)),
+                        1.0,
+                    ),
+                    SliderSpec(
+                        "max_dls_damping",
+                        "Max DLS damping",
+                        0.0,
+                        0.5,
+                        float(controller_config.get("max_dls_damping", 0.3)),
+                        0.01,
+                    ),
+                ]
+            )
         return LiveTuning(
             specs,
             event_log=interaction_log,
@@ -749,10 +779,28 @@ def _dls_task_space_command(
     dls_gain = live_tuning.value("dls_gain", float(controller_config.get("dls_gain", 4.0)))
     base_dls_damping = abs(live_tuning.value("dls_damping", float(controller_config.get("dls_damping", 0.08))))
     condition = _cap_infinite(jacobian_condition_number(q, geometry))
+    damping_config = dict(controller_config)
+    if condition_aware:
+        damping_config.update(
+            {
+                "condition_damping_threshold": live_tuning.value(
+                    "condition_damping_threshold",
+                    float(controller_config.get("condition_damping_threshold", 25.0)),
+                ),
+                "condition_damping_full": live_tuning.value(
+                    "condition_damping_full",
+                    float(controller_config.get("condition_damping_full", 120.0)),
+                ),
+                "max_dls_damping": live_tuning.value(
+                    "max_dls_damping",
+                    float(controller_config.get("max_dls_damping", max(base_dls_damping, 0.28))),
+                ),
+            }
+        )
     dls_damping, condition_scale = _condition_aware_dls_damping(
         base_dls_damping,
         condition,
-        controller_config,
+        damping_config,
         enabled=condition_aware,
     )
     max_task_speed = abs(float(controller_config.get("max_task_speed", 0.55)))
@@ -800,6 +848,9 @@ def _dls_task_space_command(
         "dls_gain": dls_gain,
         "dls_task_speed": _norm(task_velocity),
         "dls_joint_speed": _norm(qdot_dls),
+        "dls_condition_threshold": damping_config.get("condition_damping_threshold"),
+        "dls_condition_full": damping_config.get("condition_damping_full"),
+        "dls_max_damping": damping_config.get("max_dls_damping"),
     }
 
 
@@ -941,6 +992,9 @@ def _dls_log_fields(command: dict[str, Any]) -> dict[str, Any]:
         "dls_gain",
         "dls_task_speed",
         "dls_joint_speed",
+        "dls_condition_threshold",
+        "dls_condition_full",
+        "dls_max_damping",
     )
     return {key: command[key] for key in keys if key in command}
 
