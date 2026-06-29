@@ -127,6 +127,7 @@ Implemented and verified:
 - Run reports summarize observation marker questions, predictions, learner notes, and prediction-review prompts
 - Outputs index learning path cards include evidence status plus ready-to-run or repeat commands for each course step
 - Outputs index run table summarizes observation, prediction, and learner note evidence per saved run
+- Outputs index run table shows the latest observation marker prediction, note, and live status summary per saved run
 - Outputs index run table links replayable `learner_tuned_config.yaml` files when available
 - Outputs index run table links directly to each run's prioritized plot images
 - Run reports show configured preset cards and summarize learner actions, latest slider values, preset choices, observation markers, and raw interaction events

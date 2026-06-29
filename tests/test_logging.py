@@ -675,6 +675,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Needs prediction (1 observation, 1 note)", html)
             self.assertIn("Add one Prediction in Mark observation before moving on.", html)
             self.assertIn("1 observation, 0 predictions, 1 note", html)
+            self.assertIn("Latest: Note: The mass settled faster after damping changed.", html)
 
             (interactive / "interaction_events.json").write_text(
                 json.dumps(
@@ -697,6 +698,68 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("2/11 steps complete. Next: 3. Close the loop", html)
             self.assertIn("Done (1 observation, 1 prediction, 1 note)", html)
             self.assertIn("1 observation, 1 prediction, 1 note", html)
+            self.assertIn(
+                "Latest: Prediction: More damping should settle faster.; "
+                "Note: The mass settled faster after damping changed.",
+                html,
+            )
+
+    def test_outputs_index_summarizes_latest_observation_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run = Path(temp_dir) / "20260627_151500_lab02_interactive"
+            run.mkdir()
+            (run / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab02_pid",
+                        "config_path": "configs/lab02_pid/interactive_disturbance.yaml",
+                        "config_name": "interactive_disturbance",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (run / "report.html").write_text("<html>pid</html>", encoding="utf-8")
+            (run / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "prediction": "Old prediction should not be summarized.",
+                                "note": "Old note should not be summarized.",
+                            },
+                        },
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "prediction": "Higher damping should reduce overshoot.",
+                                "note": "The trace settled faster after the preset.",
+                                "status": {
+                                    "Error [m]": 0.0123456,
+                                    "Control [N]": 4.2,
+                                    "Unused": "--",
+                                    "Energy": "n/a",
+                                    "Mode": "observe",
+                                },
+                            },
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
+
+            self.assertIn("2 observations, 2 predictions, 2 notes", html)
+            self.assertIn(
+                "Latest: Prediction: Higher damping should reduce overshoot.; "
+                "Note: The trace settled faster after the preset.; "
+                "Status: Error [m]=0.0123456, Control [N]=4.2, Mode=observe",
+                html,
+            )
+            self.assertNotIn("Old prediction should not be summarized.", html)
 
     def test_outputs_index_requires_evidence_for_live_tuning_learning_path_configs(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

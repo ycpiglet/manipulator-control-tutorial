@@ -2287,6 +2287,7 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
             default=child.stat().st_mtime,
         )
         observation_markers, learner_predictions, learner_notes = _observation_evidence_counts(child)
+        latest_evidence = _latest_observation_evidence(child)
         runs.append(
             {
                 "name": child.name,
@@ -2305,6 +2306,7 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
                 "observation_markers": observation_markers,
                 "learner_predictions": learner_predictions,
                 "learner_notes": learner_notes,
+                "latest_evidence": latest_evidence,
             }
         )
     return sorted(runs, key=lambda run: float(run["modified"]), reverse=True)
@@ -2699,6 +2701,9 @@ def _run_evidence_cell(run: dict[str, Any]) -> str:
     parts.append(f"{predictions} prediction{'s' if predictions != 1 else ''}")
     if notes:
         parts.append(f"{notes} note{'s' if notes != 1 else ''}")
+    latest = str(run.get("latest_evidence") or "").strip()
+    if latest:
+        parts.append(f"Latest: {latest}")
     return ", ".join(parts)
 
 
@@ -2810,6 +2815,54 @@ def _read_json_list(path: Path) -> list[dict[str, Any]]:
 
 def _observation_evidence_counts(output_path: Path) -> tuple[int, int, int]:
     return _observation_evidence_counts_from_events(_read_json_list(output_path / "interaction_events.json"))
+
+
+def _latest_observation_evidence(output_path: Path) -> str:
+    return _latest_observation_evidence_from_events(_read_json_list(output_path / "interaction_events.json"))
+
+
+def _latest_observation_evidence_from_events(events: list[dict[str, Any]]) -> str:
+    for event in reversed(events):
+        if not _is_observation_marker(event):
+            continue
+        value = event.get("value")
+        if not isinstance(value, dict):
+            return "marker saved without details"
+        parts: list[str] = []
+        prediction = str(value.get("prediction") or "").strip()
+        note = str(value.get("note") or "").strip()
+        status = value.get("status")
+        if prediction:
+            parts.append(f"Prediction: {_short_evidence_text(prediction)}")
+        if note:
+            parts.append(f"Note: {_short_evidence_text(note)}")
+        if isinstance(status, dict):
+            status_text = _latest_status_evidence(status)
+            if status_text:
+                parts.append(f"Status: {status_text}")
+        if parts:
+            return "; ".join(parts)
+        return "marker saved without prediction or note"
+    return ""
+
+
+def _latest_status_evidence(status: dict[str, Any], *, limit: int = 3) -> str:
+    pairs: list[str] = []
+    for key, value in status.items():
+        text = _format_value(value).strip()
+        if not text or text in {"--", "n/a"}:
+            continue
+        pairs.append(f"{key}={_short_evidence_text(text, max_length=36)}")
+        if len(pairs) >= limit:
+            break
+    return ", ".join(pairs)
+
+
+def _short_evidence_text(value: str, *, max_length: int = 88) -> str:
+    text = " ".join(str(value).split())
+    if len(text) <= max_length:
+        return text
+    return text[: max_length - 3].rstrip() + "..."
 
 
 def _read_config(path: Path) -> dict[str, Any]:
