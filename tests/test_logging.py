@@ -310,6 +310,28 @@ class LoggingTests(unittest.TestCase):
                             "label": "Mark observation",
                             "value": {
                                 "prediction": "More damping should settle faster.",
+                                "note": "The mass settled after the pulse.",
+                            },
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            html = write_run_report(output).read_text(encoding="utf-8")
+            self.assertIn("Done for learning path", html)
+            self.assertIn("Judge prediction outcome", html)
+            self.assertIn("mark whether the prediction matched", html)
+
+            (output / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "label": "Mark observation",
+                            "value": {
+                                "prediction": "More damping should settle faster.",
                                 "outcome": "Partly matched",
                                 "note": "The mass settled after the pulse.",
                             },

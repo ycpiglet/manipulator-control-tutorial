@@ -352,6 +352,25 @@ class LearnerMenuTests(unittest.TestCase):
                             "value": {
                                 "question": "Question: demo?",
                                 "prediction": "More damping should settle faster.",
+                                "note": "Saw the mass settle.",
+                            },
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            needs_outcome = learning_path_progress(second_step, outputs)
+            needs_outcome_summary = learning_path_summary_text(learning_path_progress_items(outputs))
+
+            (interactive_dir / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "question": "Question: demo?",
+                                "prediction": "More damping should settle faster.",
                                 "outcome": "Matched",
                                 "note": "Saw the mass settle.",
                             },
@@ -361,6 +380,7 @@ class LearnerMenuTests(unittest.TestCase):
                 encoding="utf-8",
             )
             complete_progress = learning_path_progress(second_step, outputs)
+            complete_summary = learning_path_summary_text(learning_path_progress_items(outputs))
 
         self.assertFalse(learning_path_requires_evidence(first_step))
         self.assertTrue(learning_path_requires_evidence(second_step))
@@ -384,6 +404,12 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Progress: 1/11 complete", needs_prediction_summary)
         self.assertIn("Evidence pending: 1 hands-on step(s).", needs_prediction_summary)
 
+        self.assertTrue(needs_outcome.completed)
+        self.assertEqual(needs_outcome.learner_predictions, 1)
+        self.assertEqual(needs_outcome.learner_outcomes, 0)
+        self.assertIn("Outcome review pending: 1 hands-on step(s).", needs_outcome_summary)
+        self.assertIn("Add one Prediction outcome while reviewing.", learning_path_progress_text(second_step, needs_outcome))
+
         self.assertTrue(complete_progress.completed)
         self.assertEqual(complete_progress.observation_markers, 1)
         self.assertEqual(complete_progress.learner_predictions, 1)
@@ -393,6 +419,7 @@ class LearnerMenuTests(unittest.TestCase):
             "Status: Done - latest run_lab01_interactive (1 observation, 1 prediction, 1 outcome, 1 note)",
             learning_path_progress_text(second_step, complete_progress),
         )
+        self.assertNotIn("Outcome review pending", complete_summary)
 
     def test_recommended_learning_path_includes_condition_aware_dls_evidence_step(self) -> None:
         dls_step = LEARNING_PATH[6]

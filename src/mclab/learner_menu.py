@@ -910,6 +910,8 @@ def learning_path_progress_text(
         status = "Status: Not run yet"
     elif current.completed:
         status = f"Status: Done - latest {current.latest_output.name}{_learning_path_evidence_suffix(current)}"
+        if current.evidence_required and current.learner_predictions > current.learner_outcomes:
+            status += ". Add one Prediction outcome while reviewing."
     elif current.observation_markers > 0 and current.learner_predictions == 0:
         status = (
             f"Status: Needs prediction - latest {current.latest_output.name}"
@@ -975,11 +977,20 @@ def learning_path_summary_text(
         for _step, progress in items
         if progress.latest_output is not None and progress.evidence_required and not progress.completed
     )
+    outcome_pending = sum(
+        1
+        for _step, progress in items
+        if progress.latest_output is not None
+        and progress.evidence_required
+        and progress.learner_predictions > progress.learner_outcomes
+    )
     next_step = next_learning_path_step(items)
     if next_step is None:
-        return f"Progress: {completed}/{total} complete. Course path complete - open All reports to review."
+        outcome_text = f" Outcome review pending: {outcome_pending} hands-on step(s)." if outcome_pending else ""
+        return f"Progress: {completed}/{total} complete.{outcome_text} Course path complete - open All reports to review."
     evidence_text = f" Evidence pending: {evidence_pending} hands-on step(s)." if evidence_pending else ""
-    return f"Progress: {completed}/{total} complete.{evidence_text} Next: {next_step.title} - {next_step.description}"
+    outcome_text = f" Outcome review pending: {outcome_pending} hands-on step(s)." if outcome_pending else ""
+    return f"Progress: {completed}/{total} complete.{evidence_text}{outcome_text} Next: {next_step.title} - {next_step.description}"
 
 
 def learning_path_latest_output(

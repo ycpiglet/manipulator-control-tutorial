@@ -1069,7 +1069,10 @@ def _next_action_evidence_card(summary: dict[str, Any], events: list[dict[str, A
     markers, predictions, notes, outcomes = _observation_evidence_counts_from_events(events)
     if markers <= 0 and not _summary_requires_hands_on_evidence(summary):
         return ""
-    if markers > 0 and predictions > 0:
+    if markers > 0 and predictions > outcomes:
+        title = "Judge prediction outcome"
+        description = "Repeat or review this hands-on run and mark whether the prediction matched, partly matched, or surprised you."
+    elif markers > 0 and predictions > 0:
         title = "Review saved evidence"
         description = "Compare the saved prediction and note against the plots below."
     elif markers > 0:
