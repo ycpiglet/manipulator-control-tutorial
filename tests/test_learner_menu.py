@@ -892,17 +892,43 @@ class LearnerMenuTests(unittest.TestCase):
 
     def test_experience_filters_group_scenarios_by_learning_mode(self) -> None:
         filter_keys = {filter_option.key for filter_option in EXPERIENCE_FILTERS}
+        self.assertIn("intro", filter_keys)
+        self.assertIn("build", filter_keys)
+        self.assertIn("deep-dive", filter_keys)
         self.assertIn("hands-on", filter_keys)
         self.assertIn("compare", filter_keys)
         self.assertIn("wall", filter_keys)
+        self.assertEqual(experience_filter_description("deep dive"), "Advanced singularity, wall, and manipulator behavior.")
         self.assertEqual(experience_filter_description("missing"), EXPERIENCE_FILTERS[0].description)
 
         by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
+        lab01_auto = by_label[("Lab01 Mass-Spring-Damper", "Auto demo")]
+        lab03_task_space = by_label[("Lab03 2DOF Arm and Trajectories", "2DOF task-space")]
+        lab03_condition_dls = by_label[("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS")]
         lab04_wall = by_label[("Lab04 Panda Manipulator", "Virtual wall")]
+        self.assertIn("intro", action_tags(lab01_auto))
+        self.assertIn("build", action_tags(lab03_task_space))
+        self.assertIn("deep-dive", action_tags(lab03_condition_dls))
         self.assertIn("hands-on", action_tags(lab04_wall))
+        self.assertIn("deep-dive", action_tags(lab04_wall))
         self.assertIn("wall", action_tags(lab04_wall))
         self.assertIn("panda", action_tags(lab04_wall))
         self.assertIn("singularity", action_tags(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF DLS singularity")]))
+
+        intro = {(action.group, action.label) for action in filter_menu_actions("", experience_filter="intro")}
+        self.assertIn(("Lab01 Mass-Spring-Damper", "Auto demo"), intro)
+        self.assertIn(("Lab02 PID Control", "Interactive"), intro)
+        self.assertNotIn(("Lab03 2DOF Arm and Trajectories", "2DOF task-space"), intro)
+
+        build = {(action.group, action.label) for action in filter_menu_actions("", experience_filter="build")}
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF task-space"), build)
+        self.assertIn(("Lab04 Panda Manipulator", "Cartesian interactive"), build)
+        self.assertNotIn(("Lab04 Panda Manipulator", "Virtual wall"), build)
+
+        deep_dive = {(action.group, action.label) for action in filter_menu_actions("", experience_filter="deep dive")}
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS"), deep_dive)
+        self.assertIn(("Lab04 Panda Manipulator", "Virtual wall"), deep_dive)
+        self.assertNotIn(("Lab01 Mass-Spring-Damper", "Auto demo"), deep_dive)
 
         hands_on = {(action.group, action.label) for action in filter_menu_actions("", experience_filter="hands-on")}
         self.assertIn(("Lab01 Mass-Spring-Damper", "Interactive"), hands_on)

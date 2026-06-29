@@ -100,6 +100,9 @@ BatchMenuStateItemWithWorksheet = tuple[BatchMenuAction, Any, Any, Any, Any]
 
 EXPERIENCE_FILTERS: tuple[ExperienceFilter, ...] = (
     ExperienceFilter("all", "All", "Show every guided scenario."),
+    ExperienceFilter("intro", "Intro", "First-pass demos for 1D dynamics and basic closed-loop control."),
+    ExperienceFilter("build", "Build", "Bridge demos that extend the same ideas to arms and Panda motion."),
+    ExperienceFilter("deep-dive", "Deep dive", "Advanced singularity, wall, and manipulator behavior."),
     ExperienceFilter("hands-on", "Hands-on", "Live tuning, presets, and disturbance controls."),
     ExperienceFilter("compare", "Compare", "Paired scenarios that make one design tradeoff visible."),
     ExperienceFilter("pid", "PID", "Gain tuning, saturation, windup, noise, and delay."),
@@ -140,11 +143,15 @@ ACTION_BADGE_LABELS = {
 
 
 def experience_filter_description(key: str) -> str:
-    normalized = key.lower().strip()
+    normalized = _normalize_filter_key(key)
     for filter_option in EXPERIENCE_FILTERS:
         if filter_option.key == normalized:
             return filter_option.description
     return EXPERIENCE_FILTERS[0].description
+
+
+def _normalize_filter_key(key: str) -> str:
+    return key.lower().strip().replace(" ", "-")
 
 
 BATCH_ACTIONS: tuple[BatchMenuAction, ...] = (
@@ -1848,19 +1855,27 @@ def _action_controls_text(config_path: str) -> str:
 
 
 def _action_level(action: MenuAction) -> str:
+    return {
+        "intro": "Intro",
+        "build": "Build",
+        "deep-dive": "Deep dive",
+        "compare": "Compare",
+    }.get(_action_level_key(action), "Build")
+
+
+def _action_level_key(action: MenuAction) -> str:
     label = action.label.lower()
-    tags = set(action_tags(action))
     if action.lab_name in {"lab01", "lab02"} and label in {"auto demo", "interactive"}:
-        return "Intro"
+        return "intro"
     if action.lab_name == "lab03" and label in {"2dof joint-space", "2dof task-space", "2dof interactive"}:
-        return "Build"
+        return "build"
     if action.lab_name == "lab04" and label in {"neutral hold", "joint target", "cartesian reach", "cartesian interactive"}:
-        return "Build"
-    if {"singularity", "wall", "panda"} & tags or "dls" in label:
-        return "Deep dive"
+        return "build"
+    if action.lab_name == "lab04" or "wall" in label or "singularity" in label or "condition" in label or "dls" in label:
+        return "deep-dive"
     if _is_compare_action(action):
-        return "Compare"
-    return "Build"
+        return "compare"
+    return "build"
 
 
 def _action_experience_kind(action: MenuAction) -> str:
@@ -2047,7 +2062,7 @@ def configured_preset_labels(config_path: str) -> tuple[str, ...]:
 def action_tags(action: MenuAction) -> tuple[str, ...]:
     label = action.label.lower()
     config_name = Path(action.config_path).name.lower()
-    tags = {action.lab_name, action.lab_name.replace("lab", "lab "), action.group.lower()}
+    tags = {action.lab_name, action.lab_name.replace("lab", "lab "), action.group.lower(), _action_level_key(action)}
 
     if action.lab_name == "lab01":
         tags.update({"basics", "dynamics", "mass", "spring", "damper"})
@@ -2146,7 +2161,7 @@ def filter_menu_actions(
     actions: tuple[MenuAction, ...] = MENU_ACTIONS,
     experience_filter: str = "all",
 ) -> tuple[MenuAction, ...]:
-    filter_key = experience_filter.lower().strip()
+    filter_key = _normalize_filter_key(experience_filter)
     if filter_key and filter_key != "all":
         actions = tuple(action for action in actions if filter_key in action_tags(action))
     terms = [term for term in query.lower().split() if term]
@@ -2289,16 +2304,25 @@ def main() -> int:
 
     experience_bar = ttk.Frame(outer)
     experience_bar.pack(fill="x", pady=(0, 10))
-    ttk.Label(experience_bar, text="Explore").pack(side="left")
-    for filter_option in EXPERIENCE_FILTERS:
+    ttk.Label(experience_bar, text="Explore").grid(row=0, column=0, rowspan=2, sticky="nw")
+    filter_buttons = ttk.Frame(experience_bar)
+    filter_buttons.grid(row=0, column=1, sticky="w")
+    for filter_index, filter_option in enumerate(EXPERIENCE_FILTERS):
+        filter_row, filter_column = divmod(filter_index, 7)
         ttk.Radiobutton(
-            experience_bar,
+            filter_buttons,
             text=filter_option.label,
             value=filter_option.key,
             variable=active_experience_filter,
             command=update_experience_filter,
-        ).pack(side="left", padx=(8, 0))
-    ttk.Label(experience_bar, textvariable=filter_description).pack(side="left", padx=(14, 0))
+        ).grid(row=filter_row, column=filter_column, sticky="w", padx=(8, 0), pady=(0, 3))
+    ttk.Label(experience_bar, textvariable=filter_description, wraplength=760, justify="left").grid(
+        row=1,
+        column=1,
+        sticky="w",
+        padx=(8, 0),
+        pady=(2, 0),
+    )
 
     path_frame = ttk.LabelFrame(outer, text="Recommended learning path", padding=10)
     path_frame.pack(fill="x", pady=(0, 10))
@@ -2503,7 +2527,7 @@ def main() -> int:
         if not matched:
             ttk.Label(
                 scroll_frame,
-                text="No matching scenarios. Try All, PID, noise, wall, 2DOF, or hands-on.",
+                text="No matching scenarios. Try All, Intro, Deep dive, PID, noise, wall, 2DOF, or hands-on.",
             ).grid(row=0, column=0, sticky="w", pady=12)
             canvas.configure(scrollregion=canvas.bbox("all"))
             return
