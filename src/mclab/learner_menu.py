@@ -88,6 +88,9 @@ class ExperienceFilter:
     description: str
 
 
+BatchMenuStateItem = tuple[BatchMenuAction, Any, Any, Any]
+
+
 EXPERIENCE_FILTERS: tuple[ExperienceFilter, ...] = (
     ExperienceFilter("all", "All", "Show every guided scenario."),
     ExperienceFilter("hands-on", "Hands-on", "Live tuning, presets, and disturbance controls."),
@@ -909,6 +912,18 @@ def action_plot_text(
     return f"Plots: Latest {latest_plot.name}"
 
 
+def refresh_batch_menu_state(
+    items: tuple[BatchMenuStateItem, ...],
+    outputs_root: Path | None = None,
+) -> None:
+    for action, text_variable, report_button, plot_button in items:
+        text_variable.set(lesson_text_for_batch(action, outputs_root))
+        report_button.state(
+            ["!disabled"] if action_latest_output(action, outputs_root) is not None else ["disabled"]
+        )
+        plot_button.state(["!disabled"] if action_latest_plot(action, outputs_root) is not None else ["disabled"])
+
+
 def action_followup(action: MenuAction) -> MenuAction | BatchMenuAction:
     for index, candidate in enumerate(MENU_ACTIONS):
         if candidate == action:
@@ -1635,6 +1650,7 @@ def main() -> int:
     path_summary = tk.StringVar(value=learning_path_summary_text())
     next_step_ref: dict[str, LearningPathStep | None] = {"step": next_learning_path_step()}
     next_button_ref: dict[str, Any | None] = {"button": None}
+    batch_state_items: list[BatchMenuStateItem] = []
     post_run_refresh_ref: dict[str, Callable[[], None]] = {}
 
     def refresh_learning_path_progress() -> None:
@@ -1661,6 +1677,9 @@ def main() -> int:
     def refresh_after_run() -> None:
         refresh_callback = post_run_refresh_ref.get("callback", refresh_learning_path_progress)
         refresh_callback()
+
+    def refresh_batch_cards() -> None:
+        refresh_batch_menu_state(tuple(batch_state_items))
 
     def launch_next_learning_path_step() -> None:
         step = next_step_ref["step"]
@@ -1809,9 +1828,11 @@ def main() -> int:
         if batch_plot is None:
             plot_button.state(["disabled"])
         plot_button.pack(anchor="w", pady=(4, 0))
-        ttk.Label(cell, text=lesson_text_for_batch(action), wraplength=360, justify="left").pack(
+        batch_text = tk.StringVar(value=lesson_text_for_batch(action))
+        ttk.Label(cell, textvariable=batch_text, wraplength=360, justify="left").pack(
             anchor="w", pady=(4, 0)
         )
+        batch_state_items.append((action, batch_text, report_button, plot_button))
 
     canvas = tk.Canvas(outer, highlightthickness=0)
     scrollbar = ttk.Scrollbar(outer, orient="vertical", command=canvas.yview)
@@ -1824,7 +1845,7 @@ def main() -> int:
 
     bottom = ttk.Frame(outer)
     bottom.pack(fill="x", pady=(12, 0))
-    ttk.Button(bottom, text="Refresh path", command=refresh_learning_path_progress).pack(side="left")
+    ttk.Button(bottom, text="Refresh path", command=refresh_after_run).pack(side="left")
     ttk.Button(bottom, text="Check setup", command=lambda: _launch_doctor_from_menu(status, root=root)).pack(
         side="left", padx=(8, 0)
     )
@@ -1967,6 +1988,7 @@ def main() -> int:
 
     def refresh_progress_and_actions() -> None:
         refresh_learning_path_progress()
+        refresh_batch_cards()
         render_actions()
 
     post_run_refresh_ref["callback"] = refresh_progress_and_actions
@@ -2213,7 +2235,7 @@ def _set_status_after_run(
         update_ui()
 
 
-def lesson_text_for_batch(action: BatchMenuAction) -> str:
+def lesson_text_for_batch(action: BatchMenuAction, outputs_root: Path | None = None) -> str:
     scenario_count = (
         sum(len(scenarios) for scenarios in BATCH_SETS.values())
         if action.batch_name == ALL_BATCH_NAME
@@ -2225,8 +2247,8 @@ def lesson_text_for_batch(action: BatchMenuAction) -> str:
     return (
         f"{action.description}\n"
         f"Setup: {readiness.label}{setup_detail}{setup_fix}\n"
-        f"{action_history_text(action)}\n"
-        f"{action_plot_text(action)}\n"
+        f"{action_history_text(action, outputs_root)}\n"
+        f"{action_plot_text(action, outputs_root)}\n"
         f"Try: {action.try_this}\n"
         f"Watch: {action.watch}\n"
         f"Runs: {scenario_count} scenarios"

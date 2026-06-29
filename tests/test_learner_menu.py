@@ -66,6 +66,7 @@ from mclab.learner_menu import (  # noqa: E402
     parse_run_output_path,
     prediction_prompt,
     reflection_question,
+    refresh_batch_menu_state,
 )
 
 
@@ -83,6 +84,14 @@ class FakeButton:
 
     def state(self, states: list[str]) -> None:
         self.state_calls.append(states)
+
+
+class FakeTextVariable:
+    def __init__(self) -> None:
+        self.value = ""
+
+    def set(self, value: str) -> None:
+        self.value = value
 
 
 class LearnerMenuTests(unittest.TestCase):
@@ -834,6 +843,44 @@ class LearnerMenuTests(unittest.TestCase):
 
             opener.assert_called_once_with(batch_plot)
             self.assertIsNone(missing_plot)
+
+    def test_refresh_batch_menu_state_updates_text_and_buttons(self) -> None:
+        lab01_batch = next(action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare")
+        text_variable = FakeTextVariable()
+        report_button = FakeButton()
+        plot_button = FakeButton()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            refresh_batch_menu_state(((lab01_batch, text_variable, report_button, plot_button),), outputs)
+
+            self.assertIn("History: Not run yet", text_variable.value)
+            self.assertIn("Plots: Not saved yet", text_variable.value)
+            self.assertEqual(report_button.state_calls[-1], ["disabled"])
+            self.assertEqual(plot_button.state_calls[-1], ["disabled"])
+
+            batch_path = outputs / "batch_lab01"
+            batch_path.mkdir()
+            (batch_path / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "batch",
+                        "config_name": "lab01_msd_compare",
+                        "batch_name": "lab01_msd_compare",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (batch_path / "report.html").write_text("<html></html>", encoding="utf-8")
+            (batch_path / "comparison_plots").mkdir()
+            (batch_path / "comparison_plots" / "position_compare.png").write_bytes(b"fake-png")
+
+            refresh_batch_menu_state(((lab01_batch, text_variable, report_button, plot_button),), outputs)
+
+        self.assertIn("History: Latest batch_lab01", text_variable.value)
+        self.assertIn("Plots: Latest position_compare.png", text_variable.value)
+        self.assertEqual(report_button.state_calls[-1], ["!disabled"])
+        self.assertEqual(plot_button.state_calls[-1], ["!disabled"])
 
     def test_launch_latest_output_opens_report_when_available(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

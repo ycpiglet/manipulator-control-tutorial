@@ -71,6 +71,7 @@ Implemented and verified:
 - Learner menu scenario readiness checks that disable run buttons when config or model assets are missing
 - Learner menu scenario history labels and per-scenario latest-report buttons
 - Learner menu scenario, batch, and learning-path plot buttons that open the latest prioritized plot when one exists
+- Learner menu refreshes batch history, report, and plot state after comparison runs complete
 - Learner menu scenario evidence labels for latest observation markers, predictions, and learner notes
 - Recommended learning path progress in the menu and outputs index requires prediction-bearing observation markers for hands-on steps
 - Learner menu scenario value previews for key YAML parameters, searchable from the menu
