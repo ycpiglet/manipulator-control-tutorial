@@ -12,6 +12,7 @@ from mclab.learning_guides import (  # noqa: E402
     guide_for_config,
     guide_for_run_summary,
     observation_prompt_for_guide,
+    prediction_prompt_for_guide,
     question_for_guide,
 )
 
@@ -34,6 +35,7 @@ class LearningGuideTests(unittest.TestCase):
                 self.assertTrue(guide.next_step)
                 self.assertTrue(question_for_guide(guide).startswith("Question: "))
                 self.assertTrue(observation_prompt_for_guide(guide).startswith("Evidence to capture: "))
+                self.assertTrue(prediction_prompt_for_guide(guide).startswith("Prediction: "))
 
     def test_guides_can_be_resolved_from_summary(self) -> None:
         guide = guide_for_run_summary(
@@ -67,6 +69,17 @@ class LearningGuideTests(unittest.TestCase):
         self.assertIn("Evidence to capture:", prompt)
         self.assertIn("Wall penetration", prompt)
         self.assertEqual(observation_prompt_for_guide(None), "")
+
+    def test_prediction_prompt_connects_change_to_watch_guidance(self) -> None:
+        guide = guide_for_config(config_path="configs/lab02_pid/interactive_disturbance.yaml")
+
+        self.assertIsNotNone(guide)
+        assert guide is not None
+        prompt = prediction_prompt_for_guide(guide)
+        self.assertIn("Prediction:", prompt)
+        self.assertIn("live sliders", prompt)
+        self.assertIn("Live target", prompt)
+        self.assertEqual(prediction_prompt_for_guide(None), "")
 
     def test_unknown_config_without_lab_context_has_no_guide(self) -> None:
         self.assertIsNone(guide_for_config(config_path="configs/custom/unknown.yaml"))

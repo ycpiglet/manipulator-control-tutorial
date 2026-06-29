@@ -15,7 +15,7 @@ from typing import Any
 
 from mclab.batch import ALL_BATCH_NAME, BATCH_SETS
 from mclab.config import PROJECT_ROOT, load_config
-from mclab.learning_guides import reflection_question_for_context
+from mclab.learning_guides import guide_for_config, prediction_prompt_for_guide, reflection_question_for_context
 from mclab.sim.reporting import write_outputs_index
 
 RUN_COMPLETE_PREFIX = "Run complete:"
@@ -1247,6 +1247,11 @@ def reflection_question(action: MenuAction) -> str:
     )
 
 
+def prediction_prompt(action: MenuAction) -> str:
+    guide = guide_for_config(config_path=action.config_path, lab_name=action.lab_name)
+    return prediction_prompt_for_guide(guide)
+
+
 @lru_cache(maxsize=256)
 def _config_value_preview(config_path: str, hint: str, max_items: int) -> str:
     try:
@@ -1345,6 +1350,7 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
         f"Try: {action.try_this}\n"
         f"Change: {parameter_hint(action)}\n"
         f"{config_value_preview(action)}\n"
+        f"{prediction_prompt(action)}\n"
         f"{reflection_question(action)}\n"
         f"{action_followup_text(action)}\n"
         f"{action_compare_text(action)}\n"
@@ -1471,6 +1477,7 @@ def _action_matches_terms(action: MenuAction, terms: list[str]) -> bool:
         action.try_this,
         action.watch,
         parameter_hint(action),
+        prediction_prompt(action),
         reflection_question(action),
         " ".join(configured_preset_labels(action.config_path)),
         action_readiness(action).label,

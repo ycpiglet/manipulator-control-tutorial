@@ -73,6 +73,7 @@ Implemented and verified:
 - Recommended learning path progress requires observation markers for hands-on steps
 - Learner menu scenario value previews for key YAML parameters, searchable from the menu
 - Learner menu, interaction panel, and run report reflection questions, searchable from the menu
+- Learner menu, interaction panel, and run report prediction prompts, searchable from the menu
 - Learner menu scenario follow-up guidance and `Next` buttons for guided comparison flow
 - Learner menu scenario-to-batch comparison guidance and `Compare` buttons
 - Learner menu batch readiness checks that disable unavailable comparison launches

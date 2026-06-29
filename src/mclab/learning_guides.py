@@ -35,6 +35,20 @@ def observation_prompt_for_guide(guide: RunGuide | None) -> str:
     return f"Evidence to capture: {watch}"
 
 
+def prediction_prompt_for_guide(guide: RunGuide | None) -> str:
+    if guide is None:
+        return ""
+    change = guide.change.strip()
+    watch = guide.watch.strip().rstrip(".")
+    if change and watch:
+        return f"Prediction: Before changing {change}, predict how {watch} will change."
+    if watch:
+        return f"Prediction: Before the run, predict what you expect to see in {watch}."
+    if change:
+        return f"Prediction: Before the run, predict what will change when you adjust {change}."
+    return ""
+
+
 def reflection_question_for_context(
     *,
     lab_name: str = "",

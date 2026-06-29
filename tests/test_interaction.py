@@ -291,6 +291,7 @@ class KeyForcePulseTests(unittest.TestCase):
             [
                 ("Try", "Move the slider."),
                 ("Change", "controller.kp"),
+                ("Prediction", "Before changing controller.kp, predict how Tracking error will change."),
                 ("Question", "Which gain gives the cleanest response?"),
                 ("Watch", "Tracking error."),
             ],
