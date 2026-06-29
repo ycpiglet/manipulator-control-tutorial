@@ -95,6 +95,7 @@ class ExperienceFilter:
 
 
 BatchMenuStateItem = tuple[BatchMenuAction, Any, Any, Any]
+BatchMenuStateItemWithWorksheet = tuple[BatchMenuAction, Any, Any, Any, Any]
 
 
 EXPERIENCE_FILTERS: tuple[ExperienceFilter, ...] = (
@@ -1000,6 +1001,13 @@ def learning_path_latest_output(
     return action_latest_output(learning_path_target(step), outputs_root)
 
 
+def learning_path_latest_worksheet(
+    step: LearningPathStep,
+    outputs_root: Path | None = None,
+) -> Path | None:
+    return action_latest_worksheet(learning_path_target(step), outputs_root)
+
+
 def learning_path_requires_evidence(step: LearningPathStep) -> bool:
     action = learning_path_target(step)
     return isinstance(action, MenuAction) and "hands-on" in action_tags(action)
@@ -1025,6 +1033,16 @@ def launch_learning_path_latest_plot(
     return open_path(latest_plot)
 
 
+def launch_learning_path_latest_worksheet(
+    step: LearningPathStep,
+    outputs_root: Path | None = None,
+) -> subprocess.Popen[Any] | None:
+    worksheet = learning_path_latest_worksheet(step, outputs_root)
+    if worksheet is None:
+        return None
+    return open_path(worksheet)
+
+
 def learning_path_latest_tuned_config(
     step: LearningPathStep,
     outputs_root: Path | None = None,
@@ -1048,6 +1066,13 @@ def action_latest_plot(
     outputs_root: Path | None = None,
 ) -> Path | None:
     return latest_output_plot(action_latest_output(action, outputs_root))
+
+
+def action_latest_worksheet(
+    action: MenuAction | BatchMenuAction,
+    outputs_root: Path | None = None,
+) -> Path | None:
+    return latest_output_worksheet(action_latest_output(action, outputs_root))
 
 
 def action_latest_tuned_config(action: MenuAction, outputs_root: Path | None = None) -> Path | None:
@@ -1138,6 +1163,16 @@ def action_plot_text(
     return f"Plots: Latest {latest_plot.name}"
 
 
+def action_worksheet_text(
+    action: MenuAction | BatchMenuAction,
+    outputs_root: Path | None = None,
+) -> str:
+    worksheet = action_latest_worksheet(action, outputs_root)
+    if worksheet is None:
+        return "Worksheet: Not saved yet"
+    return f"Worksheet: Latest {worksheet.name}"
+
+
 def action_replay_text(action: MenuAction, outputs_root: Path | None = None) -> str:
     tuned_config = action_latest_tuned_config(action, outputs_root)
     if tuned_config is None:
@@ -1146,15 +1181,21 @@ def action_replay_text(action: MenuAction, outputs_root: Path | None = None) -> 
 
 
 def refresh_batch_menu_state(
-    items: tuple[BatchMenuStateItem, ...],
+    items: tuple[BatchMenuStateItem | BatchMenuStateItemWithWorksheet, ...],
     outputs_root: Path | None = None,
 ) -> None:
-    for action, text_variable, report_button, plot_button in items:
+    for item in items:
+        action, text_variable, report_button, plot_button = item[:4]
+        worksheet_button = item[4] if len(item) > 4 else None
         text_variable.set(lesson_text_for_batch(action, outputs_root))
         report_button.state(
             ["!disabled"] if action_latest_output(action, outputs_root) is not None else ["disabled"]
         )
         plot_button.state(["!disabled"] if action_latest_plot(action, outputs_root) is not None else ["disabled"])
+        if worksheet_button is not None:
+            worksheet_button.state(
+                ["!disabled"] if action_latest_worksheet(action, outputs_root) is not None else ["disabled"]
+            )
 
 
 def action_followup(action: MenuAction) -> MenuAction | BatchMenuAction:
@@ -1451,6 +1492,13 @@ def launch_latest_plot(latest_output: dict[str, Path | None]) -> subprocess.Pope
     return open_path(path)
 
 
+def launch_latest_worksheet(latest_output: dict[str, Path | None]) -> subprocess.Popen[Any] | None:
+    path = latest_output_worksheet(latest_output.get("path"))
+    if path is None:
+        return None
+    return open_path(path)
+
+
 def launch_action_latest_output(
     action: MenuAction | BatchMenuAction,
     outputs_root: Path | None = None,
@@ -1469,6 +1517,16 @@ def launch_action_latest_plot(
     if latest_plot is None:
         return None
     return open_path(latest_plot)
+
+
+def launch_action_latest_worksheet(
+    action: MenuAction | BatchMenuAction,
+    outputs_root: Path | None = None,
+) -> subprocess.Popen[Any] | None:
+    worksheet = action_latest_worksheet(action, outputs_root)
+    if worksheet is None:
+        return None
+    return open_path(worksheet)
 
 
 def _preferred_output_entry(path: Path) -> Path:
@@ -1492,6 +1550,13 @@ def latest_output_plot(path: Path | None) -> Path | None:
     if not candidates:
         return None
     return sorted(candidates, key=_plot_sort_key)[0]
+
+
+def latest_output_worksheet(path: Path | None) -> Path | None:
+    if path is None:
+        return None
+    worksheet = path / "worksheet.md"
+    return worksheet if worksheet.exists() else None
 
 
 def _plot_sort_key(plot: Path) -> tuple[int, str]:
@@ -1794,6 +1859,7 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
         f"{action_evidence_text(action, outputs_root)}\n"
         f"{action_latest_evidence_text(action, outputs_root)}\n"
         f"{action_plot_text(action, outputs_root)}\n"
+        f"{action_worksheet_text(action, outputs_root)}\n"
         f"{action_replay_text(action, outputs_root)}\n"
         f"{action_controls_text(action)}\n"
         f"{action_viewer_text(action)}\n"
@@ -1989,11 +2055,12 @@ def main() -> int:
     path_status_vars: list[tuple[LearningPathStep, Any]] = []
     path_report_buttons: list[tuple[LearningPathStep, Any]] = []
     path_plot_buttons: list[tuple[LearningPathStep, Any]] = []
+    path_worksheet_buttons: list[tuple[LearningPathStep, Any]] = []
     path_replay_buttons: list[tuple[LearningPathStep, Any]] = []
     path_summary = tk.StringVar(value=learning_path_summary_text())
     next_step_ref: dict[str, LearningPathStep | None] = {"step": next_learning_path_step()}
     next_button_ref: dict[str, Any | None] = {"button": None}
-    batch_state_items: list[BatchMenuStateItem] = []
+    batch_state_items: list[BatchMenuStateItem | BatchMenuStateItemWithWorksheet] = []
     post_run_refresh_ref: dict[str, Callable[[], None]] = {}
 
     def refresh_learning_path_progress() -> None:
@@ -2009,6 +2076,8 @@ def main() -> int:
             button.state(["!disabled"] if progress.latest_output is not None else ["disabled"])
         for step, button in path_plot_buttons:
             button.state(["!disabled"] if learning_path_latest_plot(step) is not None else ["disabled"])
+        for step, button in path_worksheet_buttons:
+            button.state(["!disabled"] if learning_path_latest_worksheet(step) is not None else ["disabled"])
         for step, button in path_replay_buttons:
             button.state(["!disabled"] if learning_path_latest_tuned_config(step) is not None else ["disabled"])
         items = tuple(progress_items) if progress_items else learning_path_progress_items()
@@ -2122,6 +2191,16 @@ def main() -> int:
             step_plot_button.state(["disabled"])
         step_plot_button.pack(side="left", padx=(6, 0))
         path_plot_buttons.append((step, step_plot_button))
+        step_worksheet_button = ttk.Button(
+            step_buttons,
+            text="Worksheet",
+            width=10,
+            command=lambda selected=step: launch_learning_path_latest_worksheet(selected),
+        )
+        if learning_path_latest_worksheet(step) is None:
+            step_worksheet_button.state(["disabled"])
+        step_worksheet_button.pack(side="left", padx=(6, 0))
+        path_worksheet_buttons.append((step, step_worksheet_button))
         step_replay_button = ttk.Button(
             step_buttons,
             text="Replay",
@@ -2191,11 +2270,21 @@ def main() -> int:
         if batch_plot is None:
             plot_button.state(["disabled"])
         plot_button.pack(anchor="w", pady=(4, 0))
+        batch_worksheet = action_latest_worksheet(action)
+        worksheet_button = ttk.Button(
+            cell,
+            text="Worksheet",
+            width=10,
+            command=lambda selected=action: launch_action_latest_worksheet(selected),
+        )
+        if batch_worksheet is None:
+            worksheet_button.state(["disabled"])
+        worksheet_button.pack(anchor="w", pady=(4, 0))
         batch_text = tk.StringVar(value=lesson_text_for_batch(action))
         ttk.Label(cell, textvariable=batch_text, wraplength=360, justify="left").pack(
             anchor="w", pady=(4, 0)
         )
-        batch_state_items.append((action, batch_text, report_button, plot_button))
+        batch_state_items.append((action, batch_text, report_button, plot_button, worksheet_button))
 
     canvas = tk.Canvas(outer, highlightthickness=0)
     scrollbar = ttk.Scrollbar(outer, orient="vertical", command=canvas.yview)
@@ -2253,12 +2342,13 @@ def main() -> int:
         for group, actions in grouped.items():
             frame = ttk.LabelFrame(scroll_frame, text=group, padding=12)
             frame.grid(row=row, column=0, sticky="ew", pady=6)
-            frame.columnconfigure(8, weight=1)
+            frame.columnconfigure(9, weight=1)
             row += 1
             for action_index, action in enumerate(actions):
                 readiness = action_readiness(action)
                 latest = action_latest_output(action)
                 latest_plot = action_latest_plot(action)
+                latest_worksheet = action_latest_worksheet(action)
                 latest_tuned_config = action_latest_tuned_config(action)
                 followup = action_followup(action)
                 compare_batch = action_compare_batch(action)
@@ -2309,6 +2399,15 @@ def main() -> int:
                 if latest_plot is None:
                     plot_button.state(["disabled"])
                 plot_button.grid(row=action_index, column=4, sticky="w", padx=(0, 12), pady=4)
+                worksheet_button = ttk.Button(
+                    frame,
+                    text="Worksheet",
+                    width=10,
+                    command=lambda selected=action: launch_action_latest_worksheet(selected),
+                )
+                if latest_worksheet is None:
+                    worksheet_button.state(["disabled"])
+                worksheet_button.grid(row=action_index, column=5, sticky="w", padx=(0, 12), pady=4)
                 replay_button = ttk.Button(
                     frame,
                     text="Replay",
@@ -2325,7 +2424,7 @@ def main() -> int:
                 )
                 if latest_tuned_config is None:
                     replay_button.state(["disabled"])
-                replay_button.grid(row=action_index, column=5, sticky="w", padx=(0, 12), pady=4)
+                replay_button.grid(row=action_index, column=6, sticky="w", padx=(0, 12), pady=4)
                 next_button = ttk.Button(
                     frame,
                     text="Next",
@@ -2344,7 +2443,7 @@ def main() -> int:
                     next_button.state(["disabled"])
                 if isinstance(followup, BatchMenuAction) and batch_readiness(followup).status != "ok":
                     next_button.state(["disabled"])
-                next_button.grid(row=action_index, column=6, sticky="w", padx=(0, 12), pady=4)
+                next_button.grid(row=action_index, column=7, sticky="w", padx=(0, 12), pady=4)
                 compare_button = ttk.Button(
                     frame,
                     text="Compare",
@@ -2361,9 +2460,9 @@ def main() -> int:
                 )
                 if batch_readiness(compare_batch).status != "ok":
                     compare_button.state(["disabled"])
-                compare_button.grid(row=action_index, column=7, sticky="w", padx=(0, 12), pady=4)
+                compare_button.grid(row=action_index, column=8, sticky="w", padx=(0, 12), pady=4)
                 ttk.Label(frame, text=lesson_text(action), wraplength=500, justify="left").grid(
-                    row=action_index, column=8, sticky="w", pady=4
+                    row=action_index, column=9, sticky="w", pady=4
                 )
         canvas.configure(scrollregion=canvas.bbox("all"))
 
@@ -2688,6 +2787,7 @@ def lesson_text_for_batch(action: BatchMenuAction, outputs_root: Path | None = N
         f"Setup: {readiness.label}{setup_detail}{setup_fix}\n"
         f"{action_history_text(action, outputs_root)}\n"
         f"{action_plot_text(action, outputs_root)}\n"
+        f"{action_worksheet_text(action, outputs_root)}\n"
         f"Try: {action.try_this}\n"
         f"Watch: {action.watch}\n"
         f"Runs: {scenario_count} scenarios"

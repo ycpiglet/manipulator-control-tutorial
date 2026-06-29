@@ -38,10 +38,12 @@ from mclab.learner_menu import (  # noqa: E402
     action_latest_output,
     action_latest_plot,
     action_latest_tuned_config,
+    action_latest_worksheet,
     action_plot_text,
     action_readiness,
     action_replay_text,
     action_tags,
+    action_worksheet_text,
     action_doc_path,
     action_viewer_text,
     batch_readiness,
@@ -55,6 +57,7 @@ from mclab.learner_menu import (  # noqa: E402
     learning_path_progress_items,
     learning_path_latest_output,
     learning_path_latest_tuned_config,
+    learning_path_latest_worksheet,
     learning_path_progress,
     learning_path_requires_evidence,
     learning_path_progress_text,
@@ -66,8 +69,11 @@ from mclab.learner_menu import (  # noqa: E402
     configured_preset_labels,
     launch_action_latest_output,
     launch_action_latest_plot,
+    launch_action_latest_worksheet,
     launch_learning_path_latest_output,
+    launch_learning_path_latest_worksheet,
     launch_latest_plot,
+    launch_latest_worksheet,
     launch_outputs_index,
     launch_latest_output,
     next_learning_path_step,
@@ -255,6 +261,8 @@ class LearnerMenuTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (run_dir / "report.html").write_text("<html></html>", encoding="utf-8")
+            worksheet = run_dir / "worksheet.md"
+            worksheet.write_text("# Worksheet\n", encoding="utf-8")
             tuned_config = run_dir / "learner_tuned_config.yaml"
             tuned_config.write_text("interaction:\n  panel: false\n", encoding="utf-8")
 
@@ -272,6 +280,8 @@ class LearnerMenuTests(unittest.TestCase):
             progress_items = learning_path_progress_items(outputs)
             first_latest = learning_path_latest_output(first_step, outputs)
             last_latest = learning_path_latest_output(last_step, outputs)
+            first_worksheet = learning_path_latest_worksheet(first_step, outputs)
+            last_worksheet = learning_path_latest_worksheet(last_step, outputs)
             first_tuned = learning_path_latest_tuned_config(first_step, outputs)
             last_tuned = learning_path_latest_tuned_config(last_step, outputs)
 
@@ -279,12 +289,14 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(first_progress.latest_output.name, "run_lab01")
         assert first_latest is not None
         self.assertEqual(first_latest.name, "run_lab01")
+        self.assertEqual(first_worksheet, worksheet)
         self.assertEqual(first_tuned, tuned_config)
         self.assertIn("Status: Done - latest run_lab01", learning_path_progress_text(first_step, first_progress))
         self.assertTrue(last_progress.completed)
         self.assertEqual(last_progress.latest_output.name, "all_batches")
         assert last_latest is not None
         self.assertEqual(last_latest.name, "all_batches")
+        self.assertIsNone(last_worksheet)
         self.assertIsNone(last_tuned)
         self.assertFalse(second_progress.completed)
         self.assertIn("Status: Not run yet", learning_path_progress_text(LEARNING_PATH[1], second_progress))
@@ -449,6 +461,8 @@ class LearnerMenuTests(unittest.TestCase):
             )
             report = run_dir / "report.html"
             report.write_text("<html></html>", encoding="utf-8")
+            worksheet = run_dir / "worksheet.md"
+            worksheet.write_text("# Worksheet\n", encoding="utf-8")
 
             with patch("mclab.learner_menu.open_path") as opener:
                 launch_learning_path_latest_output(first_step, outputs)
@@ -456,6 +470,13 @@ class LearnerMenuTests(unittest.TestCase):
 
             opener.assert_called_once_with(report)
             self.assertIsNone(missing)
+
+            with patch("mclab.learner_menu.open_path") as opener:
+                launch_learning_path_latest_worksheet(first_step, outputs)
+                missing_worksheet = launch_learning_path_latest_worksheet(second_step, outputs)
+
+            opener.assert_called_once_with(worksheet)
+            self.assertIsNone(missing_worksheet)
 
     def test_recommended_learning_path_summary_detects_completion(self) -> None:
         progress_items = tuple(
@@ -951,13 +972,18 @@ class LearnerMenuTests(unittest.TestCase):
             priority_plot.write_bytes(b"fake-png")
             tuned_config = run_path / "learner_tuned_config.yaml"
             tuned_config.write_text("interaction:\n  panel: false\n", encoding="utf-8")
+            worksheet = run_path / "worksheet.md"
+            worksheet.write_text("# Worksheet\n", encoding="utf-8")
 
             self.assertEqual(action_latest_output(MENU_ACTIONS[0], outputs), run_path)
             self.assertEqual(action_latest_plot(MENU_ACTIONS[0], outputs), priority_plot)
+            self.assertEqual(action_latest_worksheet(MENU_ACTIONS[0], outputs), worksheet)
             self.assertEqual(action_latest_tuned_config(MENU_ACTIONS[0], outputs), tuned_config)
             self.assertIn("History: Latest run_lab01", action_history_text(MENU_ACTIONS[0], outputs))
             self.assertEqual(action_latest_evidence_text(MENU_ACTIONS[0], outputs), "Latest evidence: None yet")
             self.assertEqual(action_plot_text(MENU_ACTIONS[0], outputs), "Plots: Latest position.png")
+            self.assertEqual(action_worksheet_text(MENU_ACTIONS[0], outputs), "Worksheet: Latest worksheet.md")
+            self.assertIn("Worksheet: Latest worksheet.md", lesson_text(MENU_ACTIONS[0], outputs))
             self.assertEqual(
                 action_replay_text(MENU_ACTIONS[0], outputs),
                 "Replay: Latest learner_tuned_config.yaml",
@@ -965,6 +991,8 @@ class LearnerMenuTests(unittest.TestCase):
             self.assertIn("Replay: Latest learner_tuned_config.yaml", lesson_text(MENU_ACTIONS[0], outputs))
             self.assertEqual(action_history_text(MENU_ACTIONS[1], outputs), "History: Not run yet")
             self.assertEqual(action_plot_text(MENU_ACTIONS[1], outputs), "Plots: Not saved yet")
+            self.assertIsNone(action_latest_worksheet(MENU_ACTIONS[1], outputs))
+            self.assertEqual(action_worksheet_text(MENU_ACTIONS[1], outputs), "Worksheet: Not saved yet")
             self.assertIsNone(action_latest_tuned_config(MENU_ACTIONS[1], outputs))
             self.assertEqual(action_replay_text(MENU_ACTIONS[1], outputs), "Replay: No tuned config yet")
 
@@ -981,6 +1009,13 @@ class LearnerMenuTests(unittest.TestCase):
 
             opener.assert_called_once_with(priority_plot)
             self.assertIsNone(missing_plot)
+
+            with patch("mclab.learner_menu.open_path") as opener:
+                launch_action_latest_worksheet(MENU_ACTIONS[0], outputs)
+                missing_worksheet = launch_action_latest_worksheet(MENU_ACTIONS[1], outputs)
+
+            opener.assert_called_once_with(worksheet)
+            self.assertIsNone(missing_worksheet)
 
     def test_action_evidence_summarizes_latest_observation_markers(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1090,14 +1125,19 @@ class LearnerMenuTests(unittest.TestCase):
             )
             report = batch_path / "report.html"
             report.write_text("<html></html>", encoding="utf-8")
+            worksheet = batch_path / "worksheet.md"
+            worksheet.write_text("# Worksheet\n", encoding="utf-8")
             (batch_path / "comparison_plots").mkdir()
             batch_plot = batch_path / "comparison_plots" / "error_compare.png"
             batch_plot.write_bytes(b"fake-png")
 
             self.assertEqual(action_latest_output(lab01_batch, outputs), batch_path)
             self.assertEqual(action_latest_plot(lab01_batch, outputs), batch_plot)
+            self.assertEqual(action_latest_worksheet(lab01_batch, outputs), worksheet)
             self.assertIn("History: Latest batch_lab01", action_history_text(lab01_batch, outputs))
             self.assertEqual(action_plot_text(lab01_batch, outputs), "Plots: Latest error_compare.png")
+            self.assertEqual(action_worksheet_text(lab01_batch, outputs), "Worksheet: Latest worksheet.md")
+            self.assertIn("Worksheet: Latest worksheet.md", lesson_text_for_batch(lab01_batch, outputs))
             self.assertEqual(action_history_text(lab02_batch, outputs), "History: Not run yet")
 
             with patch("mclab.learner_menu.open_path") as opener:
@@ -1114,20 +1154,30 @@ class LearnerMenuTests(unittest.TestCase):
             opener.assert_called_once_with(batch_plot)
             self.assertIsNone(missing_plot)
 
+            with patch("mclab.learner_menu.open_path") as opener:
+                launch_action_latest_worksheet(lab01_batch, outputs)
+                missing_worksheet = launch_action_latest_worksheet(lab02_batch, outputs)
+
+            opener.assert_called_once_with(worksheet)
+            self.assertIsNone(missing_worksheet)
+
     def test_refresh_batch_menu_state_updates_text_and_buttons(self) -> None:
         lab01_batch = next(action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare")
         text_variable = FakeTextVariable()
         report_button = FakeButton()
         plot_button = FakeButton()
+        worksheet_button = FakeButton()
 
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)
-            refresh_batch_menu_state(((lab01_batch, text_variable, report_button, plot_button),), outputs)
+            refresh_batch_menu_state(((lab01_batch, text_variable, report_button, plot_button, worksheet_button),), outputs)
 
             self.assertIn("History: Not run yet", text_variable.value)
             self.assertIn("Plots: Not saved yet", text_variable.value)
+            self.assertIn("Worksheet: Not saved yet", text_variable.value)
             self.assertEqual(report_button.state_calls[-1], ["disabled"])
             self.assertEqual(plot_button.state_calls[-1], ["disabled"])
+            self.assertEqual(worksheet_button.state_calls[-1], ["disabled"])
 
             batch_path = outputs / "batch_lab01"
             batch_path.mkdir()
@@ -1142,15 +1192,18 @@ class LearnerMenuTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (batch_path / "report.html").write_text("<html></html>", encoding="utf-8")
+            (batch_path / "worksheet.md").write_text("# Worksheet\n", encoding="utf-8")
             (batch_path / "comparison_plots").mkdir()
             (batch_path / "comparison_plots" / "position_compare.png").write_bytes(b"fake-png")
 
-            refresh_batch_menu_state(((lab01_batch, text_variable, report_button, plot_button),), outputs)
+            refresh_batch_menu_state(((lab01_batch, text_variable, report_button, plot_button, worksheet_button),), outputs)
 
         self.assertIn("History: Latest batch_lab01", text_variable.value)
         self.assertIn("Plots: Latest position_compare.png", text_variable.value)
+        self.assertIn("Worksheet: Latest worksheet.md", text_variable.value)
         self.assertEqual(report_button.state_calls[-1], ["!disabled"])
         self.assertEqual(plot_button.state_calls[-1], ["!disabled"])
+        self.assertEqual(worksheet_button.state_calls[-1], ["!disabled"])
 
     def test_launch_latest_output_opens_report_when_available(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1177,6 +1230,18 @@ class LearnerMenuTests(unittest.TestCase):
                 launch_latest_plot({"path": run_path})
 
             opener.assert_called_once_with(priority_plot)
+
+    def test_launch_latest_worksheet_opens_worksheet_when_available(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_path = Path(tmp) / "run"
+            run_path.mkdir()
+            worksheet = run_path / "worksheet.md"
+            worksheet.write_text("# Worksheet\n", encoding="utf-8")
+
+            with patch("mclab.learner_menu.open_path") as opener:
+                launch_latest_worksheet({"path": run_path})
+
+            opener.assert_called_once_with(worksheet)
 
     def test_launch_latest_plot_returns_none_when_no_plot_exists(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

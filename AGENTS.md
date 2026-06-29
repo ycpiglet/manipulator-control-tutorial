@@ -104,6 +104,7 @@ Implemented and verified:
 - Learner menu scenario readiness checks that disable run buttons when config or model assets are missing
 - Learner menu scenario history labels and per-scenario latest-report buttons
 - Learner menu scenario, batch, and learning-path plot buttons that open the latest prioritized plot when one exists
+- Learner menu scenario, batch, and learning-path `Worksheet` buttons that open the latest `worksheet.md` when one exists
 - Learner menu refreshes batch history, report, and plot state after comparison runs complete
 - Learner menu scenario evidence labels for latest observation markers, predictions, and learner notes
 - Recommended learning path progress in the menu and outputs index requires prediction-bearing observation markers for hands-on steps
@@ -118,6 +119,7 @@ Implemented and verified:
 - Learner menu batch readiness checks that disable unavailable comparison launches
 - Learner menu batch history labels and per-batch latest-report buttons
 - Learner menu learning-path step report buttons for completed course steps
+- Learner menu learning-path step `Worksheet` buttons for completed course steps with saved review artifacts
 - Learner menu learning-path step `Replay` buttons for latest replayable `learner_tuned_config.yaml` runs
 - `python -m mclab doctor` checks learner menu scenario and comparison-batch readiness
 - Run reports include suggested next-run cards with reflection questions, key parameter changes, and ready-to-run commands for every guided config
