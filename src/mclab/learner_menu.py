@@ -923,9 +923,23 @@ def learning_path_target(step: LearningPathStep) -> MenuAction | BatchMenuAction
     raise ValueError(f"Learning path target was not found: {step.group} - {step.label}")
 
 
+def learning_path_completion_text(step: LearningPathStep) -> str:
+    action = learning_path_target(step)
+    if isinstance(action, BatchMenuAction):
+        return "Done when: the comparison report, plots, and worksheet are saved."
+    if "hands-on" in action_tags(action):
+        return "Done when: save one Mark observation with a Prediction; add the outcome during review."
+    return "Done when: the run report, priority plot, and worksheet are saved."
+
+
 def learning_path_text(step: LearningPathStep) -> str:
     action = learning_path_target(step)
-    return f"{step.description}\nRun: {action.group} - {action.label}\nWatch: {action.watch}"
+    return (
+        f"{step.description}\n"
+        f"Run: {action.group} - {action.label}\n"
+        f"{learning_path_completion_text(step)}\n"
+        f"Watch: {action.watch}"
+    )
 
 
 def learning_path_progress(
@@ -1055,6 +1069,7 @@ def _learning_path_next_action_text(step: LearningPathStep) -> str:
     if isinstance(action, BatchMenuAction):
         return (
             f"Next action: run {action.group} - {action.label}. "
+            f"{_short_text(learning_path_completion_text(step), 92)} "
             f"Compare: {_short_text(action.try_this, 88)} Watch: {_short_text(action.watch, 88)}"
         )
     prompt = prediction_prompt(action).removeprefix("Prediction:").strip()
@@ -1062,6 +1077,7 @@ def _learning_path_next_action_text(step: LearningPathStep) -> str:
         prompt = f"Before running, predict how {action.watch} will change."
     return (
         f"Next action: run {action.group} - {action.label}. "
+        f"{_short_text(learning_path_completion_text(step), 92)} "
         f"Predict: {_short_text(prompt, 112)} Watch: {_short_text(action.watch, 88)}"
     )
 

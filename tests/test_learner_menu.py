@@ -57,6 +57,7 @@ from mclab.learner_menu import (  # noqa: E402
     config_value_preview,
     experience_filter_description,
     filter_menu_actions,
+    learning_path_completion_text,
     learning_path_progress_items,
     learning_path_latest_output,
     learning_path_latest_tuned_config,
@@ -238,6 +239,8 @@ class LearnerMenuTests(unittest.TestCase):
                 action = learning_path_target(step)
                 text = learning_path_text(step)
                 self.assertIn("Run:", text)
+                self.assertIn("Done when:", text)
+                self.assertIn(learning_path_completion_text(step), text)
                 self.assertIn("Watch:", text)
                 if step.action_kind == "run":
                     self.assertIn(action, MENU_ACTIONS)
@@ -249,6 +252,19 @@ class LearnerMenuTests(unittest.TestCase):
                     args = build_batch_args(action)
                     self.assertIn("--open-report", args)
                     self.assertNotIn("--viewer", args)
+
+        self.assertEqual(
+            learning_path_completion_text(LEARNING_PATH[0]),
+            "Done when: the run report, priority plot, and worksheet are saved.",
+        )
+        self.assertEqual(
+            learning_path_completion_text(LEARNING_PATH[1]),
+            "Done when: save one Mark observation with a Prediction; add the outcome during review.",
+        )
+        self.assertEqual(
+            learning_path_completion_text(LEARNING_PATH[-1]),
+            "Done when: the comparison report, plots, and worksheet are saved.",
+        )
 
     def test_recommended_learning_path_reads_saved_progress(self) -> None:
         first_step = LEARNING_PATH[0]
@@ -311,6 +327,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Progress: 2/11 complete", learning_path_summary_text(progress_items))
         self.assertIn("Next: 2. Disturb and tune", learning_path_summary_text(progress_items))
         self.assertIn("Next action: run Lab01 Mass-Spring-Damper - Interactive", learning_path_summary_text(progress_items))
+        self.assertIn("Done when: save one Mark observation with a Prediction", learning_path_summary_text(progress_items))
         self.assertIn("Predict:", learning_path_summary_text(progress_items))
         self.assertIn("Watch:", learning_path_summary_text(progress_items))
 

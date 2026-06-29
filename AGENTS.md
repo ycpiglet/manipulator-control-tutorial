@@ -116,6 +116,7 @@ Implemented and verified:
 - Learner menu scenario evidence labels for latest observation markers, predictions, learner notes, and pending outcome review
 - Learner menu and outputs index latest-evidence summaries flag missing prediction outcome review
 - Recommended learning path progress in the menu and outputs index requires prediction-bearing observation markers for hands-on steps
+- Recommended learning path cards show a `Done when` completion criterion for auto, hands-on, and batch steps
 - Recommended learning path summary flags completed hands-on steps that still need prediction outcome review
 - Recommended learning path summary shows the next action plus prediction/compare and watch cues before launch
 - Recommended learning path includes a Lab03 condition-aware DLS singularity step before moving to Panda
