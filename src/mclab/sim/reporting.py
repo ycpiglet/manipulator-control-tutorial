@@ -50,6 +50,24 @@ INDEX_METRIC_KEYS = (
     "interaction_events",
 )
 
+INDEX_PLOT_PRIORITY = (
+    "position",
+    "error",
+    "cartesian_error",
+    "end_effector",
+    "virtual_wall",
+    "singularity",
+    "dls",
+    "torque",
+    "control_force",
+    "force",
+    "pid_terms",
+    "velocity",
+    "energy",
+)
+
+INDEX_MAX_PLOT_LINKS = 4
+
 CONFIG_HIGHLIGHT_KEYS = (
     "sim_time",
     "dt",
@@ -1804,6 +1822,7 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
                 "samples": summary.get("samples", ""),
                 "duration": summary.get("duration", ""),
                 "report": _run_link(child, report_path, index_path),
+                "plots": _discover_run_plots(child),
                 "modified": modified,
                 "summary": summary,
                 "lesson_title": guide.title if guide is not None else "",
@@ -1830,6 +1849,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
             f"<td>{escape(str(run.get('lesson_title', '')))}</td>"
             f"<td>{escape(str(run.get('next_step', '')))}</td>"
             f"<td>{escape(_run_evidence_cell(run))}</td>"
+            f"<td>{_run_plots_cell(run)}</td>"
             f"<td>{escape(_format_value(run['duration']))}</td>"
             f"<td>{escape(str(run['samples']))}</td>"
             + "".join(
@@ -1841,7 +1861,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
         for run in runs
     )
     if not rows:
-        rows = f'<tr><td colspan="{8 + len(metric_keys)}">No run reports were found yet.</td></tr>'
+        rows = f'<tr><td colspan="{9 + len(metric_keys)}">No run reports were found yet.</td></tr>'
 
     return f"""<!doctype html>
 <html lang="en">
@@ -1935,6 +1955,23 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
       color: #596270;
       font-size: 13px;
     }}
+    .plot-links {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      min-width: 180px;
+      white-space: normal;
+    }}
+    .plot-chip {{
+      display: inline-block;
+      border: 1px solid #c8d7f4;
+      border-radius: 999px;
+      padding: 3px 8px;
+      background: #f3f7ff;
+      color: #0b57d0;
+      font-size: 12px;
+      text-decoration: none;
+    }}
     th, td {{
       border-bottom: 1px solid #edf0f3;
       padding: 9px 10px;
@@ -1962,7 +1999,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
     <section>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Run</th><th>Lab</th><th>Config</th><th>Lesson</th><th>Next</th><th>Evidence</th><th>Duration [s]</th><th>Samples</th>{metric_headers}</tr></thead>
+          <thead><tr><th>Run</th><th>Lab</th><th>Config</th><th>Lesson</th><th>Next</th><th>Evidence</th><th>Plots</th><th>Duration [s]</th><th>Samples</th>{metric_headers}</tr></thead>
           <tbody>{rows}</tbody>
         </table>
       </div>
@@ -2178,12 +2215,67 @@ def _run_evidence_cell(run: dict[str, Any]) -> str:
     return ", ".join(parts)
 
 
+def _run_plots_cell(run: dict[str, Any]) -> str:
+    plots = run.get("plots", [])
+    if not plots:
+        return '<span class="muted">No plots</span>'
+    links = []
+    for plot in plots:
+        if not isinstance(plot, dict):
+            continue
+        href = str(plot.get("href") or "")
+        label = str(plot.get("label") or "")
+        if not href or not label:
+            continue
+        links.append(f'<a class="plot-chip" href="{escape(href)}">{escape(label)}</a>')
+    if not links:
+        return '<span class="muted">No plots</span>'
+    return '<div class="plot-links">' + "".join(links) + "</div>"
+
+
 def _run_link(child: Path, report_path: Path, index_path: Path) -> str:
     if report_path.exists():
         return f"{child.name}/report.html"
     if index_path.exists():
         return f"{child.name}/index.html"
     return child.name
+
+
+def _discover_run_plots(child: Path) -> list[dict[str, str]]:
+    candidates: list[tuple[Path, str]] = []
+    for directory_name in ("plots", "comparison_plots"):
+        plot_dir = child / directory_name
+        if not plot_dir.exists():
+            continue
+        candidates.extend((plot, directory_name) for plot in plot_dir.glob("*.png"))
+
+    plots = sorted(candidates, key=lambda item: _index_plot_sort_key(item[0]))
+    return [
+        {
+            "href": f"{child.name}/{directory_name}/{plot.name}",
+            "label": _index_plot_label(plot),
+        }
+        for plot, directory_name in plots[:INDEX_MAX_PLOT_LINKS]
+    ]
+
+
+def _index_plot_sort_key(plot: Path) -> tuple[int, str]:
+    name = _index_plot_name(plot)
+    for index, priority in enumerate(INDEX_PLOT_PRIORITY):
+        if name == priority or name.startswith(f"{priority}_") or name.endswith(f"_{priority}"):
+            return index, name
+    return len(INDEX_PLOT_PRIORITY), name
+
+
+def _index_plot_label(plot: Path) -> str:
+    guidance = _plot_guidance(plot.name)
+    if guidance is not None:
+        return guidance[0]
+    return _index_plot_name(plot).replace("_", " ").title()
+
+
+def _index_plot_name(plot: Path) -> str:
+    return plot.stem.lower().replace("-", "_").removesuffix("_compare")
 
 
 def _read_json(path: Path) -> dict[str, Any]:

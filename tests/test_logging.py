@@ -412,6 +412,8 @@ class LoggingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "20260627_150117_lab01_msd"
             (output / "plots").mkdir(parents=True)
+            (output / "plots" / "position.png").write_bytes(b"fake-png")
+            (output / "plots" / "energy.png").write_bytes(b"fake-png")
             (output / "summary.json").write_text(
                 (
                     '{"lab_name": "lab01_msd", "config_path": "configs/lab01_msd/default.yaml", '
@@ -447,6 +449,11 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Lesson", html)
             self.assertIn("Next", html)
             self.assertIn("Evidence", html)
+            self.assertIn("Plots", html)
+            self.assertIn("20260627_150117_lab01_msd/plots/position.png", html)
+            self.assertIn("20260627_150117_lab01_msd/plots/energy.png", html)
+            self.assertIn("Position", html)
+            self.assertIn("Energy", html)
             self.assertIn("Lab01 Baseline", html)
             self.assertIn("Run underdamped", html)
             self.assertIn("configs/lab01_msd/default.yaml", html)
@@ -458,6 +465,8 @@ class LoggingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "20260627_151000_lab02_pid_compare"
             output.mkdir()
+            (output / "comparison_plots").mkdir()
+            (output / "comparison_plots" / "error_compare.png").write_bytes(b"fake-png")
             (output / "summary.json").write_text(
                 (
                     '{"lab_name": "batch", "config_name": "lab02_pid_compare", '
@@ -475,6 +484,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Progress Snapshot", html)
             self.assertIn("Batches", html)
             self.assertIn("1 saved run", html)
+            self.assertIn("20260627_151000_lab02_pid_compare/comparison_plots/error_compare.png", html)
 
     def test_outputs_index_marks_all_batch_learning_path_step(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
