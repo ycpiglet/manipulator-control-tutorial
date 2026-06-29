@@ -156,7 +156,7 @@ python -m mclab doctor
 | Lab04 | neutral hold, joint trajectories, hand X motion, Cartesian reach, soft/stiff Cartesian reach, soft/stiff virtual wall, joint target nudge, virtual wall |
 
 처음 학습자는 메뉴 상단의 `Recommended learning path`를 순서대로 따라가면 됩니다.
-각 단계는 `outputs/`의 실행 기록을 읽어 `Done`, `Needs observation`, `Not run yet` 상태를 보여줍니다. Hands-on 단계는 실행만으로 완료되지 않고 `Mark observation`을 최소 한 번 남겨야 `Done`으로 계산되며, 완료된 hands-on 상태에는 가능한 경우 observation, prediction, note 개수도 함께 표시됩니다. 완료된 단계는 옆의 `Report` 버튼으로 최신 리포트를 바로 다시 열 수 있습니다. 메뉴 상단에는 전체 진행률, 관찰 증거가 빠진 hands-on 단계 수, 다음 권장 단계가 표시되며, `Run next`를 누르면 아직 완료하지 않은 첫 단계를 바로 실행합니다. 실행 후 상태가 바로 바뀌지 않으면 `Refresh path`를 누릅니다.
+각 단계는 `outputs/`의 실행 기록을 읽어 `Done`, `Needs observation`, `Needs prediction`, `Not run yet` 상태를 보여줍니다. Hands-on 단계는 실행만으로 완료되지 않고 prediction이 포함된 `Mark observation`을 최소 한 번 남겨야 `Done`으로 계산되며, 완료된 hands-on 상태에는 가능한 경우 observation, prediction, note 개수도 함께 표시됩니다. 완료된 단계는 옆의 `Report` 버튼으로 최신 리포트를 바로 다시 열 수 있습니다. 메뉴 상단에는 관찰 또는 예측 증거가 빠진 hands-on 단계 수, 다음 권장 단계가 표시되며, `Run next`를 누르면 아직 완료하지 않은 첫 단계를 바로 실행합니다. 실행 후 상태가 바로 바뀌지 않으면 `Refresh path`를 누릅니다.
 
 | Step | Menu button | What it builds |
 |---|---|---|
@@ -503,7 +503,7 @@ Main comparison scenarios in the menu:
 | Lab04 | neutral hold, joint trajectories, hand X motion, Cartesian reach, soft/stiff Cartesian reach, soft/stiff virtual wall, joint target nudge, virtual wall |
 
 First-time learners can follow the `Recommended learning path` at the top of the menu.
-Each step reads the saved runs under `outputs/` and shows `Done`, `Needs observation`, or `Not run yet`. Hands-on steps are not counted as done until the learner saves at least one `Mark observation` entry, and completed hands-on statuses include observation, prediction, and note counts when available. Completed steps can reopen their latest report with the adjacent `Report` button. The top of the path shows overall progress, how many hands-on steps still need evidence, and the next recommended step, and `Run next` launches the first unfinished step. Use `Refresh path` if the status does not update immediately after a run.
+Each step reads the saved runs under `outputs/` and shows `Done`, `Needs observation`, `Needs prediction`, or `Not run yet`. Hands-on steps are not counted as done until the learner saves at least one `Mark observation` entry with a prediction, and completed hands-on statuses include observation, prediction, and note counts when available. Completed steps can reopen their latest report with the adjacent `Report` button. The top of the path shows overall progress, how many hands-on steps still need evidence, and the next recommended step, and `Run next` launches the first unfinished step. Use `Refresh path` if the status does not update immediately after a run.
 
 | Step | Menu button | What it builds |
 |---|---|---|

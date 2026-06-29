@@ -277,6 +277,21 @@ class LearnerMenuTests(unittest.TestCase):
                         {
                             "kind": "marker",
                             "name": "observation",
+                            "value": {"question": "Question: demo?", "note": "Saw the mass settle."},
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            needs_prediction = learning_path_progress(second_step, outputs)
+            needs_prediction_summary = learning_path_summary_text(learning_path_progress_items(outputs))
+
+            (interactive_dir / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
                             "value": {
                                 "question": "Question: demo?",
                                 "prediction": "More damping should settle faster.",
@@ -298,6 +313,18 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Progress: 1/10 complete", needs_summary)
         self.assertIn("Evidence pending: 1 hands-on step(s).", needs_summary)
         self.assertIn("Next: 2. Disturb and tune", needs_summary)
+
+        self.assertFalse(needs_prediction.completed)
+        self.assertEqual(needs_prediction.observation_markers, 1)
+        self.assertEqual(needs_prediction.learner_predictions, 0)
+        self.assertEqual(needs_prediction.learner_notes, 1)
+        self.assertIn(
+            "Status: Needs prediction - latest run_lab01_interactive (1 observation, 1 note)",
+            learning_path_progress_text(second_step, needs_prediction),
+        )
+        self.assertIn("Add one Prediction in Mark observation", learning_path_progress_text(second_step, needs_prediction))
+        self.assertIn("Progress: 1/10 complete", needs_prediction_summary)
+        self.assertIn("Evidence pending: 1 hands-on step(s).", needs_prediction_summary)
 
         self.assertTrue(complete_progress.completed)
         self.assertEqual(complete_progress.observation_markers, 1)

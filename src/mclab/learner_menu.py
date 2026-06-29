@@ -713,7 +713,7 @@ def learning_path_progress(
     latest = learning_path_latest_output(step, outputs_root)
     evidence_required = learning_path_requires_evidence(step)
     markers, predictions, notes = _observation_evidence_counts(latest) if latest is not None else (0, 0, 0)
-    completed = latest is not None and (not evidence_required or markers > 0)
+    completed = latest is not None and (not evidence_required or (markers > 0 and predictions > 0))
     return LearningPathProgress(
         completed=completed,
         latest_output=latest,
@@ -733,6 +733,12 @@ def learning_path_progress_text(
         status = "Status: Not run yet"
     elif current.completed:
         status = f"Status: Done - latest {current.latest_output.name}{_learning_path_evidence_suffix(current)}"
+    elif current.observation_markers > 0 and current.learner_predictions == 0:
+        status = (
+            f"Status: Needs prediction - latest {current.latest_output.name}"
+            f"{_learning_path_evidence_suffix(current)}. "
+            "Add one Prediction in Mark observation before moving on."
+        )
     else:
         status = (
             f"Status: Needs observation - latest {current.latest_output.name}. "
@@ -785,7 +791,7 @@ def learning_path_summary_text(
     evidence_pending = sum(
         1
         for _step, progress in items
-        if progress.latest_output is not None and progress.evidence_required and progress.observation_markers == 0
+        if progress.latest_output is not None and progress.evidence_required and not progress.completed
     )
     next_step = next_learning_path_step(items)
     if next_step is None:

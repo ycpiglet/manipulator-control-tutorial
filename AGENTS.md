@@ -70,7 +70,7 @@ Implemented and verified:
 - Learner menu scenario readiness checks that disable run buttons when config or model assets are missing
 - Learner menu scenario history labels and per-scenario latest-report buttons
 - Learner menu scenario evidence labels for latest observation markers, predictions, and learner notes
-- Recommended learning path progress requires observation markers for hands-on steps
+- Recommended learning path progress requires prediction-bearing observation markers for hands-on steps
 - Learner menu scenario value previews for key YAML parameters, searchable from the menu
 - Learner menu, interaction panel, and run report reflection questions, searchable from the menu
 - Learner menu, interaction panel, and run report prediction prompts, searchable from the menu
