@@ -543,6 +543,7 @@ def _render_worksheet(
     lines.extend(_worksheet_pairs_section("Summary Values", list(summary.items())))
     lines.extend(_worksheet_observation_lines(interaction_events))
     lines.extend(_worksheet_review_checklist(interaction_events))
+    lines.extend(_worksheet_next_experiment_lines(summary, config))
     lines.extend(_worksheet_notes_lines(notes))
     lines.extend(_worksheet_artifact_lines(output, plots))
     return "\n".join(lines).rstrip() + "\n"
@@ -655,6 +656,64 @@ def _worksheet_review_checklist(events: list[dict[str, Any]]) -> list[str]:
             ]
         )
     lines.append("")
+    return lines
+
+
+def _worksheet_next_experiment_lines(summary: dict[str, Any], current_config: dict[str, Any]) -> list[str]:
+    config_path = _normalize_path(str(summary.get("config_path") or ""))
+    suggestions = NEXT_RUN_SUGGESTIONS.get(config_path, ())
+    comparison = _comparison_batch_for_summary(summary)
+    if not suggestions and comparison is None:
+        return []
+
+    lines = ["## Suggested Next Experiments", ""]
+    for suggestion in suggestions[:3]:
+        guide = guide_for_config(config_path=suggestion.config_path)
+        title = guide.title if guide is not None else Path(suggestion.config_path).stem.replace("_", " ").title()
+        lab_name = _cli_lab_name(suggestion.config_path)
+        command = (
+            f"python -m mclab run {lab_name} --config {suggestion.config_path} "
+            f"--viewer --realtime --pause-at-end --plot --plots {suggestion.plots} --open-report"
+        )
+        lines.extend(
+            [
+                f"### {title}",
+                "",
+                f"- Reason: {_markdown_inline(suggestion.reason)}",
+                f"- Config: {_markdown_inline(suggestion.config_path)}",
+                f"- Plots: {_markdown_inline(suggestion.plots)}",
+            ]
+        )
+        if guide is not None:
+            prediction = prediction_prompt_for_guide(guide).removeprefix("Prediction:").strip()
+            question = question_for_guide(guide).removeprefix("Question:").strip()
+            lines.append(f"- Prediction: {_markdown_inline(prediction)}")
+            lines.append(f"- Question: {_markdown_inline(question)}")
+        controls = _suggested_control_surface_sentence(suggestion.config_path)
+        if controls:
+            lines.append(f"- Controls: {_markdown_inline(controls)}")
+        changes = _suggested_config_change_rows(current_config, suggestion.config_path)
+        if changes:
+            lines.append("- Key changes:")
+            for key, value in changes:
+                lines.append(f"  - {_markdown_inline(key)}: {_markdown_inline(value)}")
+        lines.append(f"- Command: {command}")
+        lines.append("")
+
+    if comparison is not None:
+        batch_name, title, reason = comparison
+        command = f"python -m mclab batch {batch_name} --open-report"
+        lines.extend(
+            [
+                "## Comparison Batch",
+                "",
+                f"- Title: {_markdown_inline(title)}",
+                f"- Reason: {_markdown_inline(reason)}",
+                f"- Batch: {_markdown_inline(batch_name)}",
+                f"- Command: {command}",
+                "",
+            ]
+        )
     return lines
 
 
@@ -1509,6 +1568,14 @@ def _suggested_control_surface_summary(config_path: str) -> str:
     return f'<p class="empty"><strong>Controls:</strong> {escape(summary)}</p>'
 
 
+def _suggested_control_surface_sentence(config_path: str) -> str:
+    try:
+        config = load_config(config_path)
+    except Exception:
+        return ""
+    return _control_surface_sentence(config)
+
+
 def _control_surface_sentence(config: dict[str, Any]) -> str:
     controls = _control_surface_items(config)
     if not controls:
@@ -1555,17 +1622,28 @@ def _control_surface_items(config: dict[str, Any]) -> list[tuple[str, str]]:
 
 
 def _suggested_config_changes(current_config: dict[str, Any], suggested_config_path: str) -> str:
-    if not current_config:
+    rows = _suggested_config_change_rows(current_config, suggested_config_path)
+
+    if not rows:
         return ""
+    return (
+        '<p class="empty"><strong>Key changes:</strong></p>'
+        f"{_action_value_list(rows)}"
+    )
+
+
+def _suggested_config_change_rows(current_config: dict[str, Any], suggested_config_path: str) -> list[tuple[str, str]]:
+    if not current_config:
+        return []
     try:
         suggested_config = load_config(suggested_config_path)
     except Exception:
-        return ""
+        return []
 
     current_flat = _flatten_config(current_config)
     suggested_flat = _flatten_config(suggested_config)
     if not current_flat or not suggested_flat:
-        return ""
+        return []
 
     highlight_keys = [key for key in CONFIG_HIGHLIGHT_KEYS if key in current_flat or key in suggested_flat]
     extra_keys = sorted(
@@ -1584,13 +1662,7 @@ def _suggested_config_changes(current_config: dict[str, Any], suggested_config_p
         rows.append((key, f"{_format_value(current_value)} -> {_format_value(suggested_value)}"))
         if len(rows) >= 5:
             break
-
-    if not rows:
-        return ""
-    return (
-        '<p class="empty"><strong>Key changes:</strong></p>'
-        f"{_action_value_list(rows)}"
-    )
+    return rows
 
 
 def _show_config_change_key(key: str) -> bool:

@@ -223,6 +223,15 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("energy: 0.125", worksheet_text)
             self.assertIn("## Review Checklist", worksheet_text)
             self.assertIn("- [ ] Compare the latest prediction with the plots in report.html.", worksheet_text)
+            self.assertIn("## Suggested Next Experiments", worksheet_text)
+            self.assertIn("### Lab01 Underdamped", worksheet_text)
+            self.assertIn("Reason: See what changes when damping is too low.", worksheet_text)
+            self.assertIn(
+                "Command: python -m mclab run lab01 --config configs/lab01_msd/underdamped.yaml",
+                worksheet_text,
+            )
+            self.assertIn("## Comparison Batch", worksheet_text)
+            self.assertIn("Command: python -m mclab batch lab01_msd_compare --open-report", worksheet_text)
             self.assertIn("- report.html", worksheet_text)
             events = json.loads((output / "interaction_events.json").read_text(encoding="utf-8"))
             self.assertEqual(events[0]["name"], "stiffness")
