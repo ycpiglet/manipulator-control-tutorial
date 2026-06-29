@@ -159,6 +159,16 @@ class LiveTuning:
                 label=spec.label if spec is not None else name,
             )
 
+    def adjust_value(self, name: str, steps: int = 1) -> dict[str, float]:
+        spec = self._specs.get(name)
+        if spec is None:
+            return self.snapshot()
+        resolution = abs(float(spec.resolution))
+        step = resolution if resolution > 0.0 else 1.0
+        current = self.value(name, spec.initial)
+        self.set_value(name, current + step * float(steps))
+        return self.snapshot()
+
     def apply_preset(self, name: str) -> dict[str, float]:
         preset = next((item for item in self.presets if item.name == name), None)
         if preset is None:
@@ -448,6 +458,9 @@ def maybe_start_interaction_panel(
                 def reset_sliders() -> None:
                     set_scale_values(tuning.reset())
 
+                def step_slider(name: str, steps: int) -> None:
+                    set_scale_values(tuning.adjust_value(name, steps))
+
                 def apply_preset(preset_name: str) -> None:
                     set_scale_values(tuning.apply_preset(preset_name))
                     if preset_status is not None:
@@ -489,19 +502,34 @@ def maybe_start_interaction_panel(
                     ).grid(row=row + 1, column=0, columnspan=2, sticky="w", pady=(0, 6))
                     row += 2
                 for spec in tuning.specs:
+                    slider_frame = tk.Frame(frame)
+                    slider_frame.grid(row=row, column=0, columnspan=2, sticky="ew", pady=2)
+                    slider_frame.columnconfigure(1, weight=1)
+                    tk.Button(
+                        slider_frame,
+                        text="-",
+                        width=3,
+                        command=lambda name=spec.name: step_slider(name, -1),
+                    ).grid(row=0, column=0, padx=(0, 4), sticky="w")
                     scale = tk.Scale(
-                        frame,
+                        slider_frame,
                         from_=spec.minimum,
                         to=spec.maximum,
                         resolution=spec.resolution,
                         orient=tk.HORIZONTAL,
-                        length=360,
+                        length=320,
                         label=spec.label,
                         command=lambda raw_value, name=spec.name: tuning.set_value(name, float(raw_value)),
                     )
                     scale.set(spec.initial)
                     scale_widgets[spec.name] = scale
-                    scale.grid(row=row, column=0, columnspan=2, sticky="ew", pady=2)
+                    scale.grid(row=0, column=1, sticky="ew")
+                    tk.Button(
+                        slider_frame,
+                        text="+",
+                        width=3,
+                        command=lambda name=spec.name: step_slider(name, 1),
+                    ).grid(row=0, column=2, padx=(4, 0), sticky="e")
                     row += 1
 
             if event_log is not None:

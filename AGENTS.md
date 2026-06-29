@@ -63,7 +63,7 @@ Implemented and verified:
 - YAML configs, MuJoCo XML models, docs, and tests for the implemented labs
 - Run reports with domain-specific checks for singularity, DLS speed, virtual wall response, and actuator effort
 - Batch comparison reports with scenario cards, automatic comparison takeaways, min/max highlights, baseline deltas, parameter differences, and comparison plots
-- Interactive `MCLab Interaction` quick presets with value previews for representative damping, PID, 2DOF reach, Panda reach, and virtual wall parameter sets
+- Interactive `MCLab Interaction` quick presets, value previews, and per-slider step buttons for representative damping, PID, 2DOF reach, Panda reach, and virtual wall parameter sets
 - Learner menu preset labels for interactive cards, including preset-name search
 - Learner menu Explore filters for hands-on, comparison, PID, 2DOF, Panda, wall, and singularity scenario discovery
 - Learner menu and CLI setup diagnostics through `python -m mclab doctor`

@@ -100,6 +100,17 @@ class KeyForcePulseTests(unittest.TestCase):
         self.assertEqual(log.events()[-1]["name"], "reset_sliders")
         self.assertEqual(log.events()[-1]["label"], "Reset sliders")
 
+    def test_live_tuning_step_adjusts_and_clips_values(self) -> None:
+        log = InteractionLog()
+        log.set_time(1.0)
+        tuning = LiveTuning([SliderSpec("kp", "Kp", 0.0, 10.0, 9.5, 0.5)], event_log=log)
+
+        self.assertEqual(tuning.adjust_value("kp", 1), {"kp": 10.0})
+        self.assertEqual(tuning.adjust_value("kp", 1), {"kp": 10.0})
+        self.assertEqual(tuning.adjust_value("kp", -3), {"kp": 8.5})
+        self.assertEqual(tuning.adjust_value("missing", 1), {"kp": 8.5})
+        self.assertEqual([event["value"] for event in log.events()], [10.0, 8.5])
+
     def test_live_tuning_applies_preset_and_clips_values(self) -> None:
         log = InteractionLog()
         log.set_time(3.5)
