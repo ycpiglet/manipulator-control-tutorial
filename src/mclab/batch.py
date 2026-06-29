@@ -1009,7 +1009,7 @@ def _render_all_batches_report(completed_batches: list[dict[str, Any]]) -> str:
       <h2>Summary Table</h2>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Batch</th><th>Scenarios</th><th>Report</th></tr></thead>
+          <thead><tr><th>Batch</th><th>Scenarios</th><th>Report</th><th>Worksheet</th></tr></thead>
           <tbody>{rows}</tbody>
         </table>
       </div>
@@ -1021,23 +1021,44 @@ def _render_all_batches_report(completed_batches: list[dict[str, Any]]) -> str:
 
 
 def _all_batch_card(row: dict[str, Any]) -> str:
+    worksheet = _all_batch_worksheet(row)
+    worksheet_link = (
+        f'<a href="{escape(worksheet)}">Open worksheet</a>'
+        if worksheet
+        else '<span class="muted">No worksheet</span>'
+    )
     return (
         '<article class="batch-card">'
         f'<h3><a href="{escape(str(row["report"]))}">{escape(str(row["title"]))}</a></h3>'
         f'<p class="muted">{escape(str(row["batch_name"]))}</p>'
         f'<p>{escape(str(row["scenario_count"]))} scenarios</p>'
+        f'<p class="muted"><a href="{escape(str(row["report"]))}">Open report</a> | {worksheet_link}</p>'
         "</article>"
     )
 
 
 def _all_batch_row(row: dict[str, Any]) -> str:
+    worksheet = _all_batch_worksheet(row)
+    worksheet_cell = (
+        f'<a href="{escape(worksheet)}">{escape(worksheet)}</a>'
+        if worksheet
+        else '<span class="muted">No worksheet</span>'
+    )
     return (
         "<tr>"
         f"<td>{escape(str(row['title']))}</td>"
         f"<td>{escape(str(row['scenario_count']))}</td>"
         f'<td><a href="{escape(str(row["report"]))}">{escape(str(row["report"]))}</a></td>'
+        f"<td>{worksheet_cell}</td>"
         "</tr>"
     )
+
+
+def _all_batch_worksheet(row: dict[str, Any]) -> str:
+    report = str(row.get("report") or "")
+    if "/" in report:
+        return f"{report.rsplit('/', 1)[0]}/worksheet.md"
+    return "worksheet.md" if report else ""
 
 
 def _scenario_card(

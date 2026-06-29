@@ -172,6 +172,7 @@ class BatchTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (output / "report.html").write_text("<html></html>", encoding="utf-8")
+            (output / "worksheet.md").write_text("# Batch Worksheet\n", encoding="utf-8")
             return output
 
         expected_batches = list(batch.list_batch_sets())
@@ -201,6 +202,9 @@ class BatchTests(unittest.TestCase):
             self.assertIn("lab01_msd_compare/report.html", report_html)
             self.assertIn("lab04_cartesian_compare/report.html", report_html)
             self.assertIn("lab04_wall_compare/report.html", report_html)
+            self.assertIn("<th>Worksheet</th>", report_html)
+            self.assertIn("Open worksheet", report_html)
+            self.assertIn("lab01_msd_compare/worksheet.md", report_html)
             self.assertIn("Open the course worksheet", report_html)
             worksheet = (output / "worksheet.md").read_text(encoding="utf-8")
             self.assertIn("# MCLab Course Batch Worksheet", worksheet)
