@@ -9,7 +9,11 @@ from unittest.mock import Mock
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from mclab.labs.lab03_2dof import _two_link_viewer_guides, _update_two_link_viewer_guides  # noqa: E402
+from mclab.labs.lab03_2dof import (  # noqa: E402
+    _condition_aware_dls_damping,
+    _two_link_viewer_guides,
+    _update_two_link_viewer_guides,
+)
 from mclab.sim.two_link import (  # noqa: E402
     TwoLinkGeometry,
     damped_least_squares_joint_velocity,
@@ -89,6 +93,24 @@ class TwoLinkKinematicsTests(unittest.TestCase):
 
         self.assertAlmostEqual(qdot[0], 0.0)
         self.assertAlmostEqual(qdot[1], 0.0)
+
+    def test_condition_aware_dls_damping_scales_with_condition_number(self) -> None:
+        config = {
+            "condition_damping_threshold": 10.0,
+            "condition_damping_full": 20.0,
+            "max_dls_damping": 0.24,
+        }
+
+        disabled_damping, disabled_scale = _condition_aware_dls_damping(0.04, 100.0, config, enabled=False)
+        low_damping, low_scale = _condition_aware_dls_damping(0.04, 8.0, config, enabled=True)
+        mid_damping, mid_scale = _condition_aware_dls_damping(0.04, 15.0, config, enabled=True)
+        high_damping, high_scale = _condition_aware_dls_damping(0.04, 40.0, config, enabled=True)
+
+        self.assertEqual((disabled_damping, disabled_scale), (0.04, 0.0))
+        self.assertEqual((low_damping, low_scale), (0.04, 0.0))
+        self.assertAlmostEqual(mid_scale, 0.5)
+        self.assertAlmostEqual(mid_damping, 0.14)
+        self.assertEqual((high_damping, high_scale), (0.24, 1.0))
 
     def test_two_link_viewer_guides_default_to_enabled(self) -> None:
         guides = _two_link_viewer_guides({})

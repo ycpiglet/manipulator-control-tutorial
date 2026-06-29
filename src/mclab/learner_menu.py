@@ -438,6 +438,16 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
     ),
     MenuAction(
         group="Lab03 2DOF Arm and Trajectories",
+        label="2DOF condition-aware DLS",
+        lab_name="lab03",
+        config_path="configs/lab03_2dof/condition_aware_dls_2dof.yaml",
+        plots="dls",
+        description="Automatically increases DLS damping as Jacobian conditioning worsens.",
+        try_this="Compare against fixed DLS and watch the damping trace rise near the edge.",
+        watch="Condition scale, DLS damping, joint speed, condition number, and task error.",
+    ),
+    MenuAction(
+        group="Lab03 2DOF Arm and Trajectories",
         label="2DOF interactive",
         lab_name="lab03",
         config_path="configs/lab03_2dof/interactive_2dof.yaml",
@@ -1204,6 +1214,11 @@ def parameter_hint(action: MenuAction) -> str:
             )
         if label == "2dof dls singularity":
             return "target_xy, tracking_controller.dls_gain, tracking_controller.dls_damping, viewer_guides.condition_threshold"
+        if label == "2dof condition-aware dls":
+            return (
+                "target_xy, tracking_controller.dls_damping, tracking_controller.condition_damping_threshold, "
+                "tracking_controller.max_dls_damping"
+            )
         if label == "2dof task-space":
             return "target_xy, tracking_controller.task_kp, tracking_controller.task_kd, viewer_guides.enabled"
         if label in {"2dof joint-space", "2dof singularity"}:
@@ -1411,7 +1426,7 @@ def action_tags(action: MenuAction) -> tuple[str, ...]:
         tags.add("compare")
     if "wall" in label or "wall" in config_name:
         tags.add("wall")
-    if "singularity" in label:
+    if "singularity" in label or "condition" in label or "condition" in config_name:
         tags.update({"singularity", "dls" if "dls" in label else "conditioning"})
     if "cartesian" in label or "reach" in label:
         tags.add("cartesian")

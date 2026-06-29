@@ -64,6 +64,14 @@ qdot_cmd = J(q)^T * (J(q) * J(q)^T + lambda^2 I)^-1 * xdot_cmd
 
 Use the `MCLab Interaction` sliders to change `DLS task gain` and `DLS damping` while the arm moves. Use the `-` / `+` buttons next to a slider for one-resolution-step adjustments. Lower damping follows the hand command more aggressively but can demand faster joint motion near a singular posture. Higher damping is calmer but may leave more task-space error. Compare `dls.png`, `singularity.png`, `torque.png`, and `error.png` after the run.
 
+Condition-aware DLS demo:
+
+```bash
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_2dof.yaml --viewer --realtime --pause-at-end --plot --plots dls
+```
+
+This uses the same near-edge target as the DLS singularity demo, but `tracking_controller.condition_aware_damping` raises the effective DLS damping when the Jacobian condition number exceeds `condition_damping_threshold`. In `dls.png`, compare `dls_damping`, `dls_condition_scale`, and `dls_joint_speed`; in `singularity.png`, confirm that the damping rise happens when conditioning gets poor.
+
 Interactive 2DOF demo:
 
 ```powershell

@@ -373,7 +373,7 @@ python -m mclab run lab02 --config configs/lab02_pid/my_pid_test.yaml --headless
 |---|---|---|
 | Lab01 MSD | `configs/lab01_msd/*.yaml` | `mass`, `damping`, `stiffness`, `initial_position`, `force_input.magnitude`, `interaction.tuning_presets` |
 | Lab02 PID | `configs/lab02_pid/*.yaml` | `controller.kp`, `controller.ki`, `controller.kd`, `controller.output_limit`, `measurement_noise_std`, `control_delay`, `interaction.tuning_presets` |
-| Lab03 2DOF/Trajectory | `configs/lab03_2dof/*.yaml` | `mode`, `initial_q`, `target_q`, `target_xy`, `trajectory.type`, `tracking_controller.kp`, `tracking_controller.task_kp`, `tracking_controller.task_kd`, `tracking_controller.dls_damping`, `interaction.tuning_presets`, `viewer_guides.enabled` |
+| Lab03 2DOF/Trajectory | `configs/lab03_2dof/*.yaml` | `mode`, `initial_q`, `target_q`, `target_xy`, `trajectory.type`, `tracking_controller.kp`, `tracking_controller.task_kp`, `tracking_controller.task_kd`, `tracking_controller.dls_damping`, `tracking_controller.condition_damping_threshold`, `tracking_controller.max_dls_damping`, `interaction.tuning_presets`, `viewer_guides.enabled` |
 | Lab04 Panda | `configs/lab04_panda/*.yaml` | `controlled_joint_index`, `trajectory.end`, `cartesian_target.position`, `cartesian_target.gain`, `cartesian_target.max_step`, `virtual_wall.wall_x`, `virtual_wall.stiffness`, `virtual_wall.damping`, `virtual_wall.force_retreat_gain`, `interaction.tuning_presets`, `viewer_guides.enabled` |
 
 Plot preset:
@@ -722,7 +722,7 @@ Common parameters:
 |---|---|---|
 | Lab01 MSD | `configs/lab01_msd/*.yaml` | `mass`, `damping`, `stiffness`, `initial_position`, `force_input.magnitude`, `interaction.tuning_presets` |
 | Lab02 PID | `configs/lab02_pid/*.yaml` | `controller.kp`, `controller.ki`, `controller.kd`, `controller.output_limit`, `measurement_noise_std`, `control_delay`, `interaction.tuning_presets` |
-| Lab03 2DOF/Trajectory | `configs/lab03_2dof/*.yaml` | `mode`, `initial_q`, `target_q`, `target_xy`, `trajectory.type`, `tracking_controller.kp`, `tracking_controller.task_kp`, `tracking_controller.task_kd`, `tracking_controller.dls_damping`, `interaction.tuning_presets`, `viewer_guides.enabled` |
+| Lab03 2DOF/Trajectory | `configs/lab03_2dof/*.yaml` | `mode`, `initial_q`, `target_q`, `target_xy`, `trajectory.type`, `tracking_controller.kp`, `tracking_controller.task_kp`, `tracking_controller.task_kd`, `tracking_controller.dls_damping`, `tracking_controller.condition_damping_threshold`, `tracking_controller.max_dls_damping`, `interaction.tuning_presets`, `viewer_guides.enabled` |
 | Lab04 Panda | `configs/lab04_panda/*.yaml` | `controlled_joint_index`, `trajectory.end`, `cartesian_target.position`, `cartesian_target.gain`, `cartesian_target.max_step`, `virtual_wall.wall_x`, `virtual_wall.stiffness`, `virtual_wall.damping`, `virtual_wall.force_retreat_gain`, `interaction.tuning_presets`, `viewer_guides.enabled` |
 
 Plot presets:
@@ -961,7 +961,7 @@ python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --viewer
 - joint-space trajectory tracking
 - task-space Jacobian-transpose PD tracking
 - interactive task target/stiffness/damping/torque tuning
-- singularity demo with Jacobian determinant, manipulability, and condition number plots
+- singularity demo with Jacobian determinant, manipulability, condition number plots, and condition-aware DLS damping comparison
 - joint position, end-effector, torque, current proxy, error plots
 - step, trapezoidal, quintic/minimum-jerk, S-curve trajectory generators
 - legacy 1D trajectory profile configs for comparing target position/velocity/acceleration/jerk

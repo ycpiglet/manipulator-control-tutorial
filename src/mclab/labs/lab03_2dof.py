@@ -45,7 +45,8 @@ from mclab.trajectories import build_trajectory
 
 
 TASK_SPACE_MODES = {"task_space", "cartesian", "jacobian"}
-DLS_MODES = {"task_space_dls", "dls", "damped_least_squares"}
+CONDITION_AWARE_DLS_MODES = {"condition_aware_dls", "condition_dls", "task_space_condition_dls"}
+DLS_MODES = {"task_space_dls", "dls", "damped_least_squares", *CONDITION_AWARE_DLS_MODES}
 TWO_LINK_MODES = {"joint_space", *TASK_SPACE_MODES, *DLS_MODES}
 
 
@@ -349,6 +350,8 @@ def _run_two_link_arm(
                     controller_config=controller_config,
                     live_tuning=live_tuning,
                     torque_limit=torque_limit,
+                    condition_aware=mode in CONDITION_AWARE_DLS_MODES
+                    or bool(controller_config.get("condition_aware_damping", False)),
                 )
                 dls_target_q = list(command["target_q"])
             elif mode in TASK_SPACE_MODES:
@@ -736,6 +739,7 @@ def _dls_task_space_command(
     controller_config: dict[str, Any],
     live_tuning: LiveTuning,
     torque_limit: tuple[float, float],
+    condition_aware: bool = False,
 ) -> dict[str, Any]:
     x_ee = forward_kinematics(q, geometry)
     target_xy = [start_xy[index] + alpha * (goal_xy[index] - start_xy[index]) for index in range(2)]
@@ -743,7 +747,14 @@ def _dls_task_space_command(
     error = [target_xy[index] - x_ee[index] for index in range(2)]
 
     dls_gain = live_tuning.value("dls_gain", float(controller_config.get("dls_gain", 4.0)))
-    dls_damping = abs(live_tuning.value("dls_damping", float(controller_config.get("dls_damping", 0.08))))
+    base_dls_damping = abs(live_tuning.value("dls_damping", float(controller_config.get("dls_damping", 0.08))))
+    condition = _cap_infinite(jacobian_condition_number(q, geometry))
+    dls_damping, condition_scale = _condition_aware_dls_damping(
+        base_dls_damping,
+        condition,
+        controller_config,
+        enabled=condition_aware,
+    )
     max_task_speed = abs(float(controller_config.get("max_task_speed", 0.55)))
     max_joint_speed = abs(float(controller_config.get("max_joint_speed", 2.8)))
     max_joint_error = abs(float(controller_config.get("max_joint_error", 0.35)))
@@ -783,6 +794,9 @@ def _dls_task_space_command(
         "kd": sum(kd_base) * 0.5,
         "torque_limit": max(limit),
         "dls_damping": dls_damping,
+        "dls_base_damping": base_dls_damping,
+        "dls_condition_scale": condition_scale,
+        "dls_condition_number": condition,
         "dls_gain": dls_gain,
         "dls_task_speed": _norm(task_velocity),
         "dls_joint_speed": _norm(qdot_dls),
@@ -806,7 +820,7 @@ def _save_two_link_plots(output_path: Path, rows: list[dict[str, Any]], selectio
             "dls.png",
             "2DOF Damped Least-Squares Command",
             "speed / damping",
-            ["dls_task_speed", "dls_joint_speed", "dls_damping"],
+            ["dls_task_speed", "dls_joint_speed", "dls_damping", "dls_condition_scale"],
         ),
     ]
     presets = {
@@ -846,6 +860,10 @@ def _two_link_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
                 "dls_damping": rows[-1].get("dls_damping"),
             }
         )
+        condition_scales = _finite_row_values(rows, "dls_condition_scale")
+        if condition_scales:
+            summary["max_dls_condition_scale"] = max(condition_scales)
+            summary["max_dls_damping"] = max(_finite_row_values(rows, "dls_damping"))
     return summary
 
 
@@ -915,8 +933,35 @@ def _finite_row_values(rows: list[dict[str, Any]], key: str) -> list[float]:
 
 
 def _dls_log_fields(command: dict[str, Any]) -> dict[str, Any]:
-    keys = ("dls_damping", "dls_gain", "dls_task_speed", "dls_joint_speed")
+    keys = (
+        "dls_damping",
+        "dls_base_damping",
+        "dls_condition_scale",
+        "dls_condition_number",
+        "dls_gain",
+        "dls_task_speed",
+        "dls_joint_speed",
+    )
     return {key: command[key] for key in keys if key in command}
+
+
+def _condition_aware_dls_damping(
+    base_damping: float,
+    condition: float,
+    controller_config: dict[str, Any],
+    *,
+    enabled: bool,
+) -> tuple[float, float]:
+    base = max(0.0, float(base_damping))
+    if not enabled:
+        return base, 0.0
+
+    threshold = max(1.0, float(controller_config.get("condition_damping_threshold", 25.0)))
+    full_condition = max(threshold + 1.0, float(controller_config.get("condition_damping_full", 120.0)))
+    max_damping = max(base, float(controller_config.get("max_dls_damping", max(base, 0.28))))
+    condition_value = max(0.0, float(condition))
+    scale = _clip((condition_value - threshold) / (full_condition - threshold), 0.0, 1.0)
+    return base + scale * (max_damping - base), scale
 
 
 def _cap_infinite(value: float, cap: float = 1.0e6) -> float:

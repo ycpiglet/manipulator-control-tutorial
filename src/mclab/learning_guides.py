@@ -324,7 +324,18 @@ RUN_GUIDES: dict[str, RunGuide] = {
         "Watch the hand marker near the workspace edge, then compare DLS plots.",
         "target_xy, tracking_controller.dls_gain, tracking_controller.dls_damping",
         "DLS joint speed, task speed, damping, condition number, and tracking error.",
-        "Lower dls_damping carefully and watch whether joint speed and torque rise.",
+        "Run condition-aware DLS next and compare the damping schedule.",
+    ),
+    "configs/lab03_2dof/condition_aware_dls_2dof.yaml": RunGuide(
+        "Lab03 2DOF Condition-Aware DLS",
+        "DLS damping rises automatically as the arm approaches a poorly conditioned posture.",
+        "Compare the DLS damping trace against condition number and joint speed.",
+        (
+            "target_xy, tracking_controller.dls_damping, tracking_controller.condition_damping_threshold, "
+            "tracking_controller.max_dls_damping"
+        ),
+        "DLS damping, condition scale, joint speed, condition number, and task error.",
+        "Lower max_dls_damping or raise the threshold to see when joint speed grows.",
     ),
     "configs/lab03_2dof/interactive_2dof.yaml": RunGuide(
         "Lab03 2DOF Interactive",

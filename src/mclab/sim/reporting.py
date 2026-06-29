@@ -37,6 +37,8 @@ INDEX_METRIC_KEYS = (
     "max_jacobian_condition",
     "max_abs_tau_cmd",
     "max_dls_joint_speed",
+    "max_dls_damping",
+    "max_dls_condition_scale",
     "max_cartesian_error_cm",
     "final_cartesian_error_cm",
     "max_wall_penetration_cm",
@@ -80,6 +82,10 @@ CONFIG_HIGHLIGHT_KEYS = (
     "tracking_controller.task_kd",
     "tracking_controller.dls_gain",
     "tracking_controller.dls_damping",
+    "tracking_controller.condition_aware_damping",
+    "tracking_controller.condition_damping_threshold",
+    "tracking_controller.condition_damping_full",
+    "tracking_controller.max_dls_damping",
     "tracking_controller.max_task_speed",
     "tracking_controller.max_joint_speed",
     "tracking_controller.force_limit",
@@ -274,7 +280,15 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
         NextRunSuggestion("configs/lab03_2dof/task_space_2dof.yaml", "Return to the regular task-space reach.", "task"),
     ),
     "configs/lab03_2dof/dls_singularity_2dof.yaml": (
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
+            "Let damping rise automatically near poor conditioning.",
+            "dls",
+        ),
         NextRunSuggestion("configs/lab03_2dof/singularity_2dof.yaml", "Compare DLS against the undamped singularity case.", "singularity"),
+    ),
+    "configs/lab03_2dof/condition_aware_dls_2dof.yaml": (
+        NextRunSuggestion("configs/lab03_2dof/dls_singularity_2dof.yaml", "Compare against fixed damping on the same target.", "dls"),
         NextRunSuggestion("configs/lab03_2dof/interactive_2dof.yaml", "Move the target live and watch conditioning.", "task"),
     ),
     "configs/lab03_2dof/interactive_tracking.yaml": (
@@ -1174,6 +1188,20 @@ def _result_checks(summary: dict[str, Any]) -> list[tuple[str, str, str]]:
                 "DLS joint speed",
                 state,
                 f"Maximum DLS joint speed {_format_value(dls_speed)} rad/s proxy; raise damping if this is high.",
+            )
+        )
+
+    dls_scale = _number(summary.get("max_dls_condition_scale"))
+    dls_damping = _number(summary.get("max_dls_damping"))
+    if dls_scale is not None and dls_scale > 0.0:
+        checks.append(
+            (
+                "Condition-aware DLS",
+                "Observed",
+                (
+                    f"Damping schedule reached {_format_value(dls_scale)} of its range"
+                    + (f" with max damping {_format_value(dls_damping)}." if dls_damping is not None else ".")
+                ),
             )
         )
 

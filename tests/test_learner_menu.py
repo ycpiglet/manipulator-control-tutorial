@@ -639,7 +639,10 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(wall_labels, {"Soft wall", "Stiff wall", "Virtual wall"})
 
         singularity_labels = {action.label for action in filter_menu_actions("", experience_filter="singularity")}
-        self.assertEqual(singularity_labels, {"2DOF singularity", "2DOF DLS singularity"})
+        self.assertEqual(
+            singularity_labels,
+            {"2DOF singularity", "2DOF DLS singularity", "2DOF condition-aware DLS"},
+        )
 
         compare_labels = {action.label for action in filter_menu_actions("windup", experience_filter="compare")}
         self.assertEqual(compare_labels, {"Windup", "Anti-windup"})
@@ -665,6 +668,10 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(
             "dls_damping",
             parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF DLS singularity")]),
+        )
+        self.assertIn(
+            "condition_damping_threshold",
+            parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS")]),
         )
         self.assertIn(
             "cartesian_target.gain",

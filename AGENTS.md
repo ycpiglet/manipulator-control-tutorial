@@ -217,11 +217,12 @@ Implemented so far:
 - interactive task-space target/stiffness/damping/torque tuning
 - singularity demo with Jacobian determinant, manipulability, and condition number logging/plotting
 - damped least-squares singularity demo with DLS gain/damping and joint-speed logging/plotting
+- condition-aware DLS singularity comparison with automatic damping schedule logging/plotting
 - standard logs and plots for joint position, end-effector position, torque, current proxy, and error
 
 Remaining likely extension:
 
-- richer singularity comparison lessons, such as condition-aware task control
+- richer singularity comparison lessons, such as condition-aware task control with alternate thresholds and damping limits
 
 ### Phase 6 - Lab04 Advanced Control
 

@@ -374,6 +374,8 @@ class LoggingTests(unittest.TestCase):
                         "min_manipulability": 0.01,
                         "max_dls_joint_speed": 4.2,
                         "max_abs_tau_cmd": 75.0,
+                        "max_dls_condition_scale": 0.82,
+                        "max_dls_damping": 0.21,
                         "max_wall_penetration_cm": 1.2,
                         "max_wall_retreat_cm": 0.5,
                         "max_abs_virtual_wall_force": 22.0,
@@ -390,6 +392,8 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("near-singular motion", html)
             self.assertIn("Manipulability", html)
             self.assertIn("DLS joint speed", html)
+            self.assertIn("Condition-aware DLS", html)
+            self.assertIn("Damping schedule reached", html)
             self.assertIn("Actuator effort", html)
             self.assertIn("Virtual wall contact", html)
             self.assertIn("Wall retreat", html)

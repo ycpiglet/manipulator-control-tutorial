@@ -23,6 +23,8 @@ class BatchTests(unittest.TestCase):
         self.assertIn("lab03_2dof_compare", batch.list_batch_sets())
         self.assertIn("lab04_wall_compare", batch.list_batch_sets())
         self.assertIn("lab04_cartesian_compare", batch.list_batch_sets())
+        self.assertIn("condition_aware_dls", {scenario.label for scenario in batch.BATCH_SETS["lab03_2dof_compare"]})
+        self.assertIn("max_dls_condition_scale", batch.BATCH_GUIDES["lab03_2dof_compare"].metric_keys)
 
         for batch_name, scenarios in batch.BATCH_SETS.items():
             with self.subTest(batch=batch_name):
