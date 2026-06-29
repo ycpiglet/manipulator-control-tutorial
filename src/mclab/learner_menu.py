@@ -1070,6 +1070,40 @@ def action_evidence_text(
     return f"Evidence: {markers} observation{'s' if markers != 1 else ''}{prediction_text}{note_text}"
 
 
+def action_latest_evidence_text(
+    action: MenuAction | BatchMenuAction,
+    outputs_root: Path | None = None,
+) -> str:
+    latest = action_latest_output(action, outputs_root)
+    if latest is None:
+        return "Latest evidence: None yet"
+    marker = _latest_observation_marker(latest)
+    if marker is None:
+        return "Latest evidence: None yet"
+    value = marker.get("value")
+    if not isinstance(value, dict):
+        return "Latest evidence: Observation marker saved without details"
+    parts: list[str] = []
+    prediction = str(value.get("prediction") or "").strip()
+    note = str(value.get("note") or "").strip()
+    status = value.get("status")
+    if prediction:
+        parts.append(f"Prediction: {_short_text(prediction)}")
+    if note:
+        parts.append(f"Note: {_short_text(note)}")
+    if isinstance(status, dict) and status:
+        shown = [
+            f"{name}={value}"
+            for name, value in list(status.items())[:3]
+            if str(value).strip() and str(value).strip() != "--"
+        ]
+        if shown:
+            parts.append(f"Status: {', '.join(shown)}")
+    if not parts:
+        return "Latest evidence: Observation marker saved without prediction or note"
+    return f"Latest evidence: {'; '.join(parts)}"
+
+
 def action_plot_text(
     action: MenuAction | BatchMenuAction,
     outputs_root: Path | None = None,
@@ -1231,8 +1265,22 @@ def _observation_evidence_counts(output_path: Path) -> tuple[int, int, int]:
     return markers, predictions, notes
 
 
+def _latest_observation_marker(output_path: Path) -> dict[str, Any] | None:
+    for event in reversed(_read_json_list(output_path / "interaction_events.json")):
+        if _is_observation_marker_event(event):
+            return event
+    return None
+
+
 def _is_observation_marker_event(event: dict[str, Any]) -> bool:
     return str(event.get("kind", "")).lower() == "marker" and str(event.get("name", "")).lower() == "observation"
+
+
+def _short_text(value: str, limit: int = 96) -> str:
+    text = " ".join(str(value).split())
+    if len(text) <= limit:
+        return text
+    return f"{text[: max(0, limit - 3)].rstrip()}..."
 
 
 def parse_run_output_path(line: str) -> Path | None:
@@ -1717,6 +1765,7 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
         f"Badges: {', '.join(action_badges(action))}\n"
         f"{action_history_text(action, outputs_root)}\n"
         f"{action_evidence_text(action, outputs_root)}\n"
+        f"{action_latest_evidence_text(action, outputs_root)}\n"
         f"{action_plot_text(action, outputs_root)}\n"
         f"{action_replay_text(action, outputs_root)}\n"
         f"{action_controls_text(action)}\n"

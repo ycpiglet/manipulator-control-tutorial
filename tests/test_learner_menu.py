@@ -34,6 +34,7 @@ from mclab.learner_menu import (  # noqa: E402
     action_followup_text,
     action_config_path,
     action_history_text,
+    action_latest_evidence_text,
     action_latest_output,
     action_latest_plot,
     action_latest_tuned_config,
@@ -448,6 +449,7 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertIn("Badges:", text)
                 self.assertIn("History:", text)
                 self.assertIn("Evidence:", text)
+                self.assertIn("Latest evidence:", text)
                 self.assertIn("Controls:", text)
                 self.assertIn("Viewer:", text)
                 self.assertIn("Try:", text)
@@ -925,6 +927,7 @@ class LearnerMenuTests(unittest.TestCase):
             self.assertEqual(action_latest_plot(MENU_ACTIONS[0], outputs), priority_plot)
             self.assertEqual(action_latest_tuned_config(MENU_ACTIONS[0], outputs), tuned_config)
             self.assertIn("History: Latest run_lab01", action_history_text(MENU_ACTIONS[0], outputs))
+            self.assertEqual(action_latest_evidence_text(MENU_ACTIONS[0], outputs), "Latest evidence: None yet")
             self.assertEqual(action_plot_text(MENU_ACTIONS[0], outputs), "Plots: Latest position.png")
             self.assertEqual(
                 action_replay_text(MENU_ACTIONS[0], outputs),
@@ -993,6 +996,47 @@ class LearnerMenuTests(unittest.TestCase):
             )
             self.assertIn("Evidence: 2 observations, 1 prediction, 1 note", lesson_text(MENU_ACTIONS[0], outputs))
             self.assertEqual(action_evidence_text(MENU_ACTIONS[1], outputs), "Evidence: No observation markers yet")
+
+    def test_action_latest_evidence_summarizes_prediction_note_and_status(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            run_path = outputs / "run_lab01"
+            run_path.mkdir()
+            (run_path / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": MENU_ACTIONS[0].lab_name,
+                        "config_path": MENU_ACTIONS[0].config_path,
+                        "config_name": Path(MENU_ACTIONS[0].config_path).stem,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (run_path / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "prediction": "The response should overshoot.",
+                                "note": "Saw overshoot in the position plot.",
+                                "status": {"Position [m]": "0.125", "Energy [J]": "0.040"},
+                            },
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            text = action_latest_evidence_text(MENU_ACTIONS[0], outputs)
+            lesson = lesson_text(MENU_ACTIONS[0], outputs)
+
+            self.assertIn("Latest evidence:", text)
+            self.assertIn("Prediction: The response should overshoot.", text)
+            self.assertIn("Note: Saw overshoot in the position plot.", text)
+            self.assertIn("Status: Position [m]=0.125", text)
+            self.assertIn(text, lesson)
 
     def test_batch_history_tracks_latest_matching_report(self) -> None:
         lab01_batch = next(action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare")
