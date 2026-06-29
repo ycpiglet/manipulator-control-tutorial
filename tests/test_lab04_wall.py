@@ -15,6 +15,7 @@ from mclab.labs.lab04_panda import (  # noqa: E402
     _viewer_guides,
     _virtual_wall_force,
     _virtual_wall_force_components,
+    _wall_contact_metrics,
     _wall_retreat_distance,
 )
 
@@ -94,6 +95,25 @@ class Lab04WallTests(unittest.TestCase):
         self.assertAlmostEqual(summary["max_joint_error_norm"], 0.002)
         self.assertAlmostEqual(summary["max_abs_virtual_wall_spring_force"], 0.0)
         self.assertAlmostEqual(summary["max_abs_virtual_wall_damping_force"], 0.0)
+        self.assertIsNone(summary["first_wall_contact_time"])
+        self.assertIsNone(summary["last_wall_contact_time"])
+        self.assertAlmostEqual(summary["wall_contact_duration"], 0.0)
+        self.assertAlmostEqual(summary["wall_contact_fraction"], 0.0)
+
+    def test_wall_contact_metrics_report_timing_and_duration(self) -> None:
+        rows = [
+            {"time": 0.0, "wall_penetration_cm": 0.0},
+            {"time": 0.1, "wall_penetration_cm": 0.2},
+            {"time": 0.2, "wall_penetration_cm": 0.3},
+            {"time": 0.3, "wall_penetration_cm": 0.0},
+        ]
+
+        metrics = _wall_contact_metrics(rows)
+
+        self.assertAlmostEqual(metrics["first_wall_contact_time"], 0.1)
+        self.assertAlmostEqual(metrics["last_wall_contact_time"], 0.2)
+        self.assertAlmostEqual(metrics["wall_contact_duration"], 0.2)
+        self.assertAlmostEqual(metrics["wall_contact_fraction"], 2.0 / 3.0)
 
     def test_lab04_viewer_guides_default_to_cartesian_and_wall_modes(self) -> None:
         self.assertTrue(_viewer_guides({}, "cartesian_reach")["enabled"])

@@ -382,6 +382,9 @@ class LoggingTests(unittest.TestCase):
                         "duration": 30.0,
                         "max_wall_penetration_cm": 1.2,
                         "max_wall_retreat_cm": 0.5,
+                        "first_wall_contact_time": 1.4,
+                        "wall_contact_duration": 2.2,
+                        "wall_contact_fraction": 0.44,
                         "max_abs_virtual_wall_force": 22.0,
                         "max_abs_virtual_wall_spring_force": 18.0,
                         "max_abs_virtual_wall_damping_force": 4.0,
@@ -406,6 +409,8 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Actuator effort", html)
             self.assertIn("Virtual wall contact", html)
             self.assertIn("Wall retreat", html)
+            self.assertIn("Wall contact timing", html)
+            self.assertIn("First contact at", html)
             self.assertIn("Wall force", html)
             self.assertIn("Wall force components", html)
             self.assertIn("check-inspect", html)

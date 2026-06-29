@@ -89,7 +89,7 @@ python -m mclab run lab04 --config configs/lab04_panda/wall_stiff.yaml --headles
 python -m mclab batch lab04_wall_compare --open-report
 ```
 
-Use the same trajectory and compare `virtual_wall.png`. The soft wall should allow more penetration with lower virtual force and smaller target retreat. The stiff wall should show higher virtual force and stronger retreat. The summary file also reports `max_wall_penetration_cm`, `max_wall_retreat_cm`, and `max_abs_virtual_wall_force`.
+Use the same trajectory and compare `virtual_wall.png`. The soft wall should allow more penetration with lower virtual force and smaller target retreat. The stiff wall should show higher virtual force and stronger retreat. The summary file also reports `max_wall_penetration_cm`, `max_wall_retreat_cm`, `first_wall_contact_time`, `wall_contact_duration`, and `max_abs_virtual_wall_force`.
 
 Damping-only wall comparison:
 
@@ -109,7 +109,7 @@ python -m mclab run lab04 --config configs/lab04_panda/wall_far.yaml --headless 
 python -m mclab batch lab04_wall_compare --open-report
 ```
 
-These two configs keep wall stiffness, damping, retreat gains, and trajectory fixed while changing only `virtual_wall.wall_x`. The near wall should be reached earlier and produce larger penetration, force, and retreat. The far wall should barely be touched by the same motion. Use this after the interactive wall demo so learners can connect the wall slider to a deterministic comparison report.
+These two configs keep wall stiffness, damping, retreat gains, and trajectory fixed while changing only `virtual_wall.wall_x`. The near wall should be reached earlier and produce larger penetration, force, and retreat. The far wall should barely be touched by the same motion. Compare `first_wall_contact_time`, `wall_contact_duration`, `wall_contact_fraction`, `wall_penetration_compare.png`, and `wall_force_compare.png`. Use this after the interactive wall demo so learners can connect the wall slider to a deterministic comparison report.
 
 Headless runs:
 

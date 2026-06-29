@@ -46,6 +46,10 @@ INDEX_METRIC_KEYS = (
     "final_cartesian_error_cm",
     "max_wall_penetration_cm",
     "max_wall_retreat_cm",
+    "first_wall_contact_time",
+    "last_wall_contact_time",
+    "wall_contact_duration",
+    "wall_contact_fraction",
     "max_abs_virtual_wall_force",
     "max_abs_virtual_wall_spring_force",
     "max_abs_virtual_wall_damping_force",
@@ -1329,6 +1333,26 @@ def _result_checks(summary: dict[str, Any]) -> list[tuple[str, str, str]]:
     wall_retreat = _number(summary.get("max_wall_retreat_cm"))
     if wall_retreat is not None and wall_retreat > 0.0:
         checks.append(("Wall retreat", "Observed", f"Maximum retreat command {_format_value(wall_retreat)} cm."))
+
+    wall_contact_start = _number(summary.get("first_wall_contact_time"))
+    wall_contact_duration = _number(summary.get("wall_contact_duration"))
+    wall_contact_fraction = _number(summary.get("wall_contact_fraction"))
+    if wall_contact_start is not None and wall_contact_duration is not None:
+        fraction_text = (
+            f"; {_format_value(100.0 * wall_contact_fraction)}% of the run"
+            if wall_contact_fraction is not None
+            else ""
+        )
+        checks.append(
+            (
+                "Wall contact timing",
+                "Observed",
+                (
+                    f"First contact at {_format_value(wall_contact_start)} s; "
+                    f"contact duration {_format_value(wall_contact_duration)} s{fraction_text}."
+                ),
+            )
+        )
 
     wall_force = _number(summary.get("max_abs_virtual_wall_force"))
     if wall_force is not None and wall_force > 0.0:

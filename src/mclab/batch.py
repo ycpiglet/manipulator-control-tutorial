@@ -219,6 +219,9 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
         metric_keys=(
             "max_wall_penetration_cm",
             "max_wall_retreat_cm",
+            "first_wall_contact_time",
+            "wall_contact_duration",
+            "wall_contact_fraction",
             "max_abs_virtual_wall_force",
             "max_abs_virtual_wall_spring_force",
             "max_abs_virtual_wall_damping_force",

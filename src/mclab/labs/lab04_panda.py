@@ -604,6 +604,7 @@ def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
         for row in rows:
             q = [float(row.get(f"q_{index}", 0.0)) for index in range(len(first_q))]
             joint_drift_norms.append(_norm([q[index] - first_q[index] for index in range(len(first_q))]))
+    wall_contact = _wall_contact_metrics(rows)
     return {
         "max_joint_error_norm": max(float(row["error_norm"]) for row in rows),
         "final_joint_error_norm": rows[-1]["error_norm"],
@@ -621,6 +622,10 @@ def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "max_wall_penetration": max(float(row.get("wall_penetration", 0.0)) for row in rows),
         "max_wall_penetration_cm": max(float(row.get("wall_penetration_cm", 0.0)) for row in rows),
         "max_wall_retreat_cm": max(float(row.get("wall_retreat_cm", 0.0)) for row in rows),
+        "first_wall_contact_time": wall_contact["first_wall_contact_time"],
+        "last_wall_contact_time": wall_contact["last_wall_contact_time"],
+        "wall_contact_duration": wall_contact["wall_contact_duration"],
+        "wall_contact_fraction": wall_contact["wall_contact_fraction"],
         "max_abs_virtual_wall_force": max(abs(float(row.get("force_virtual_0", 0.0))) for row in rows),
         "max_abs_virtual_wall_spring_force": max(
             abs(float(row.get("force_virtual_spring_0", 0.0))) for row in rows
@@ -633,6 +638,32 @@ def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "final_x_ee_0": rows[-1].get("x_ee_0"),
         "final_x_ee_1": rows[-1].get("x_ee_1"),
         "final_x_ee_2": rows[-1].get("x_ee_2"),
+    }
+
+
+def _wall_contact_metrics(rows: list[dict[str, Any]], threshold_cm: float = 1e-9) -> dict[str, float | None]:
+    times = [float(row.get("time", 0.0)) for row in rows]
+    contact = [float(row.get("wall_penetration_cm", 0.0)) > threshold_cm for row in rows]
+    contact_indices = [index for index, is_contact in enumerate(contact) if is_contact]
+    if not contact_indices:
+        return {
+            "first_wall_contact_time": None,
+            "last_wall_contact_time": None,
+            "wall_contact_duration": 0.0,
+            "wall_contact_fraction": 0.0,
+        }
+
+    duration = 0.0
+    for index, is_contact in enumerate(contact[:-1]):
+        if is_contact:
+            duration += max(0.0, times[index + 1] - times[index])
+    total_duration = max(0.0, times[-1] - times[0])
+    fraction = duration / total_duration if total_duration > 0.0 else 0.0
+    return {
+        "first_wall_contact_time": times[contact_indices[0]],
+        "last_wall_contact_time": times[contact_indices[-1]],
+        "wall_contact_duration": duration,
+        "wall_contact_fraction": fraction,
     }
 
 
