@@ -31,6 +31,8 @@ from mclab.learner_menu import (  # noqa: E402
     action_config_path,
     action_history_text,
     action_latest_output,
+    action_latest_plot,
+    action_plot_text,
     action_readiness,
     action_tags,
     action_doc_path,
@@ -53,7 +55,9 @@ from mclab.learner_menu import (  # noqa: E402
     lesson_text,
     configured_preset_labels,
     launch_action_latest_output,
+    launch_action_latest_plot,
     launch_learning_path_latest_output,
+    launch_latest_plot,
     launch_outputs_index,
     launch_latest_output,
     next_learning_path_step,
@@ -717,10 +721,17 @@ class LearnerMenuTests(unittest.TestCase):
             )
             report = run_path / "report.html"
             report.write_text("<html></html>", encoding="utf-8")
+            (run_path / "plots").mkdir()
+            (run_path / "plots" / "energy.png").write_bytes(b"fake-png")
+            priority_plot = run_path / "plots" / "position.png"
+            priority_plot.write_bytes(b"fake-png")
 
             self.assertEqual(action_latest_output(MENU_ACTIONS[0], outputs), run_path)
+            self.assertEqual(action_latest_plot(MENU_ACTIONS[0], outputs), priority_plot)
             self.assertIn("History: Latest run_lab01", action_history_text(MENU_ACTIONS[0], outputs))
+            self.assertEqual(action_plot_text(MENU_ACTIONS[0], outputs), "Plots: Latest position.png")
             self.assertEqual(action_history_text(MENU_ACTIONS[1], outputs), "History: Not run yet")
+            self.assertEqual(action_plot_text(MENU_ACTIONS[1], outputs), "Plots: Not saved yet")
 
             with patch("mclab.learner_menu.open_path") as opener:
                 launch_action_latest_output(MENU_ACTIONS[0], outputs)
@@ -728,6 +739,13 @@ class LearnerMenuTests(unittest.TestCase):
 
             opener.assert_called_once_with(report)
             self.assertIsNone(missing)
+
+            with patch("mclab.learner_menu.open_path") as opener:
+                launch_action_latest_plot(MENU_ACTIONS[0], outputs)
+                missing_plot = launch_action_latest_plot(MENU_ACTIONS[1], outputs)
+
+            opener.assert_called_once_with(priority_plot)
+            self.assertIsNone(missing_plot)
 
     def test_action_evidence_summarizes_latest_observation_markers(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -793,9 +811,14 @@ class LearnerMenuTests(unittest.TestCase):
             )
             report = batch_path / "report.html"
             report.write_text("<html></html>", encoding="utf-8")
+            (batch_path / "comparison_plots").mkdir()
+            batch_plot = batch_path / "comparison_plots" / "error_compare.png"
+            batch_plot.write_bytes(b"fake-png")
 
             self.assertEqual(action_latest_output(lab01_batch, outputs), batch_path)
+            self.assertEqual(action_latest_plot(lab01_batch, outputs), batch_plot)
             self.assertIn("History: Latest batch_lab01", action_history_text(lab01_batch, outputs))
+            self.assertEqual(action_plot_text(lab01_batch, outputs), "Plots: Latest error_compare.png")
             self.assertEqual(action_history_text(lab02_batch, outputs), "History: Not run yet")
 
             with patch("mclab.learner_menu.open_path") as opener:
@@ -804,6 +827,13 @@ class LearnerMenuTests(unittest.TestCase):
 
             opener.assert_called_once_with(report)
             self.assertIsNone(missing)
+
+            with patch("mclab.learner_menu.open_path") as opener:
+                launch_action_latest_plot(lab01_batch, outputs)
+                missing_plot = launch_action_latest_plot(lab02_batch, outputs)
+
+            opener.assert_called_once_with(batch_plot)
+            self.assertIsNone(missing_plot)
 
     def test_launch_latest_output_opens_report_when_available(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -816,6 +846,31 @@ class LearnerMenuTests(unittest.TestCase):
                 launch_latest_output({"path": run_path})
 
             opener.assert_called_once_with(report)
+
+    def test_launch_latest_plot_opens_priority_plot_when_available(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_path = Path(tmp) / "run"
+            plot_dir = run_path / "plots"
+            plot_dir.mkdir(parents=True)
+            (plot_dir / "energy.png").write_bytes(b"fake-png")
+            priority_plot = plot_dir / "position.png"
+            priority_plot.write_bytes(b"fake-png")
+
+            with patch("mclab.learner_menu.open_path") as opener:
+                launch_latest_plot({"path": run_path})
+
+            opener.assert_called_once_with(priority_plot)
+
+    def test_launch_latest_plot_returns_none_when_no_plot_exists(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_path = Path(tmp) / "run"
+            run_path.mkdir()
+
+            with patch("mclab.learner_menu.open_path") as opener:
+                result = launch_latest_plot({"path": run_path})
+
+            opener.assert_not_called()
+            self.assertIsNone(result)
 
     def test_launch_latest_output_opens_index_for_batch_when_available(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -894,6 +949,35 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(button.state_calls, [["!disabled"]])
         self.assertIn("Completed", status.value)
         self.assertIn(str(output_path), status.value)
+
+    def test_completed_run_status_enables_latest_plot_button_when_plot_exists(self) -> None:
+        status = FakeStatus()
+        report_button = FakeButton()
+        plot_button = FakeButton()
+        latest_output: dict[str, Path | None] = {"path": None}
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output_path = Path(tmp) / "run_lab01"
+            plot_dir = output_path / "plots"
+            plot_dir.mkdir(parents=True)
+            priority_plot = plot_dir / "position.png"
+            priority_plot.write_bytes(b"fake-png")
+
+            _set_status_after_run(
+                MENU_ACTIONS[0],
+                status,
+                0,
+                output_path,
+                latest_output=latest_output,
+                latest_button=report_button,
+                latest_plot_button=plot_button,
+            )
+
+        self.assertEqual(latest_output["path"], output_path)
+        self.assertEqual(report_button.state_calls, [["!disabled"]])
+        self.assertEqual(plot_button.state_calls, [["!disabled"]])
+        self.assertIn("Latest plot:", status.value)
+        self.assertIn("position.png", status.value)
 
     def test_failed_run_status_reports_exit_code(self) -> None:
         status = FakeStatus()

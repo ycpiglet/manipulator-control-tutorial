@@ -16,7 +16,7 @@ from typing import Any
 from mclab.batch import ALL_BATCH_NAME, BATCH_SETS
 from mclab.config import PROJECT_ROOT, load_config
 from mclab.learning_guides import guide_for_config, prediction_prompt_for_guide, reflection_question_for_context
-from mclab.sim.reporting import write_outputs_index
+from mclab.sim.reporting import INDEX_PLOT_PRIORITY, write_outputs_index
 
 RUN_COMPLETE_PREFIX = "Run complete:"
 BATCH_COMPLETE_PREFIX = "Batch complete:"
@@ -842,12 +842,36 @@ def launch_learning_path_latest_output(
     return open_path(_preferred_output_entry(latest))
 
 
+def launch_learning_path_latest_plot(
+    step: LearningPathStep,
+    outputs_root: Path | None = None,
+) -> subprocess.Popen[Any] | None:
+    latest_plot = learning_path_latest_plot(step, outputs_root)
+    if latest_plot is None:
+        return None
+    return open_path(latest_plot)
+
+
 def action_latest_output(
     action: MenuAction | BatchMenuAction,
     outputs_root: Path | None = None,
 ) -> Path | None:
     root = outputs_root if outputs_root is not None else PROJECT_ROOT / "outputs"
     return _latest_matching_output(action, root)
+
+
+def action_latest_plot(
+    action: MenuAction | BatchMenuAction,
+    outputs_root: Path | None = None,
+) -> Path | None:
+    return latest_output_plot(action_latest_output(action, outputs_root))
+
+
+def learning_path_latest_plot(
+    step: LearningPathStep,
+    outputs_root: Path | None = None,
+) -> Path | None:
+    return action_latest_plot(learning_path_target(step), outputs_root)
 
 
 def action_history_text(
@@ -873,6 +897,16 @@ def action_evidence_text(
     prediction_text = f", {predictions} prediction{'s' if predictions != 1 else ''}"
     note_text = f", {notes} note{'s' if notes != 1 else ''}" if notes else ""
     return f"Evidence: {markers} observation{'s' if markers != 1 else ''}{prediction_text}{note_text}"
+
+
+def action_plot_text(
+    action: MenuAction | BatchMenuAction,
+    outputs_root: Path | None = None,
+) -> str:
+    latest_plot = action_latest_plot(action, outputs_root)
+    if latest_plot is None:
+        return "Plots: Not saved yet"
+    return f"Plots: Latest {latest_plot.name}"
 
 
 def action_followup(action: MenuAction) -> MenuAction | BatchMenuAction:
@@ -1145,6 +1179,13 @@ def launch_latest_output(latest_output: dict[str, Path | None]) -> subprocess.Po
     return open_path(_preferred_output_entry(path))
 
 
+def launch_latest_plot(latest_output: dict[str, Path | None]) -> subprocess.Popen[Any] | None:
+    path = latest_output_plot(latest_output.get("path"))
+    if path is None:
+        return None
+    return open_path(path)
+
+
 def launch_action_latest_output(
     action: MenuAction | BatchMenuAction,
     outputs_root: Path | None = None,
@@ -1155,6 +1196,16 @@ def launch_action_latest_output(
     return open_path(_preferred_output_entry(latest))
 
 
+def launch_action_latest_plot(
+    action: MenuAction | BatchMenuAction,
+    outputs_root: Path | None = None,
+) -> subprocess.Popen[Any] | None:
+    latest_plot = action_latest_plot(action, outputs_root)
+    if latest_plot is None:
+        return None
+    return open_path(latest_plot)
+
+
 def _preferred_output_entry(path: Path) -> Path:
     report = path / "report.html"
     if report.exists():
@@ -1163,6 +1214,27 @@ def _preferred_output_entry(path: Path) -> Path:
     if index.exists():
         return index
     return path
+
+
+def latest_output_plot(path: Path | None) -> Path | None:
+    if path is None:
+        return None
+    candidates: list[Path] = []
+    for directory_name in ("plots", "comparison_plots"):
+        plot_dir = path / directory_name
+        if plot_dir.exists():
+            candidates.extend(plot_dir.glob("*.png"))
+    if not candidates:
+        return None
+    return sorted(candidates, key=_plot_sort_key)[0]
+
+
+def _plot_sort_key(plot: Path) -> tuple[int, str]:
+    name = plot.stem.lower().replace("-", "_").removesuffix("_compare")
+    for index, priority in enumerate(INDEX_PLOT_PRIORITY):
+        if name == priority or name.startswith(f"{priority}_") or name.endswith(f"_{priority}"):
+            return index, name
+    return len(INDEX_PLOT_PRIORITY), name
 
 
 def open_path(path: Path) -> subprocess.Popen[Any] | None:
@@ -1380,6 +1452,7 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
         f"Setup: {readiness.label}{setup_detail}{setup_fix}\n"
         f"{action_history_text(action, outputs_root)}\n"
         f"{action_evidence_text(action, outputs_root)}\n"
+        f"{action_plot_text(action, outputs_root)}\n"
         f"Try: {action.try_this}\n"
         f"Change: {parameter_hint(action)}\n"
         f"{config_value_preview(action)}\n"
@@ -1558,6 +1631,7 @@ def main() -> int:
     filter_description = tk.StringVar(value=experience_filter_description("all"))
     path_status_vars: list[tuple[LearningPathStep, Any]] = []
     path_report_buttons: list[tuple[LearningPathStep, Any]] = []
+    path_plot_buttons: list[tuple[LearningPathStep, Any]] = []
     path_summary = tk.StringVar(value=learning_path_summary_text())
     next_step_ref: dict[str, LearningPathStep | None] = {"step": next_learning_path_step()}
     next_button_ref: dict[str, Any | None] = {"button": None}
@@ -1574,6 +1648,8 @@ def main() -> int:
         for step, button in path_report_buttons:
             progress = progress_by_step.get(step) or learning_path_progress(step)
             button.state(["!disabled"] if progress.latest_output is not None else ["disabled"])
+        for step, button in path_plot_buttons:
+            button.state(["!disabled"] if learning_path_latest_plot(step) is not None else ["disabled"])
         items = tuple(progress_items) if progress_items else learning_path_progress_items()
         next_step = next_learning_path_step(items)
         next_step_ref["step"] = next_step
@@ -1597,6 +1673,7 @@ def main() -> int:
             root=root,
             latest_output=latest_output,
             latest_button=latest_button,
+            latest_plot_button=latest_plot_button,
             progress_callback=refresh_after_run,
         )
 
@@ -1657,6 +1734,7 @@ def main() -> int:
                 root=root,
                 latest_output=latest_output,
                 latest_button=latest_button,
+                latest_plot_button=latest_plot_button,
                 progress_callback=refresh_after_run,
             ),
         ).pack(side="left")
@@ -1670,6 +1748,16 @@ def main() -> int:
             step_report_button.state(["disabled"])
         step_report_button.pack(side="left", padx=(6, 0))
         path_report_buttons.append((step, step_report_button))
+        step_plot_button = ttk.Button(
+            step_buttons,
+            text="Plot",
+            width=8,
+            command=lambda selected=step: launch_learning_path_latest_plot(selected),
+        )
+        if learning_path_latest_plot(step) is None:
+            step_plot_button.state(["disabled"])
+        step_plot_button.pack(side="left", padx=(6, 0))
+        path_plot_buttons.append((step, step_plot_button))
         ttk.Label(cell, textvariable=progress_text, wraplength=280, justify="left").pack(
             anchor="w", pady=(4, 0)
         )
@@ -1694,6 +1782,7 @@ def main() -> int:
                 root=root,
                 latest_output=latest_output,
                 latest_button=latest_button,
+                latest_plot_button=latest_plot_button,
                 progress_callback=refresh_after_run,
             ),
         )
@@ -1710,6 +1799,16 @@ def main() -> int:
         if batch_latest is None:
             report_button.state(["disabled"])
         report_button.pack(anchor="w", pady=(4, 0))
+        batch_plot = action_latest_plot(action)
+        plot_button = ttk.Button(
+            cell,
+            text="Plot",
+            width=10,
+            command=lambda selected=action: launch_action_latest_plot(selected),
+        )
+        if batch_plot is None:
+            plot_button.state(["disabled"])
+        plot_button.pack(anchor="w", pady=(4, 0))
         ttk.Label(cell, text=lesson_text_for_batch(action), wraplength=360, justify="left").pack(
             anchor="w", pady=(4, 0)
         )
@@ -1734,6 +1833,9 @@ def main() -> int:
     latest_button = ttk.Button(bottom, text="Open latest report", command=lambda: launch_latest_output(latest_output))
     latest_button.pack(side="left", padx=(8, 0))
     latest_button.state(["disabled"])
+    latest_plot_button = ttk.Button(bottom, text="Open latest plot", command=lambda: launch_latest_plot(latest_output))
+    latest_plot_button.pack(side="left", padx=(8, 0))
+    latest_plot_button.state(["disabled"])
     ttk.Label(bottom, textvariable=status).pack(side="left", padx=12)
 
     def render_actions(*_args: Any) -> None:
@@ -1767,11 +1869,12 @@ def main() -> int:
         for group, actions in grouped.items():
             frame = ttk.LabelFrame(scroll_frame, text=group, padding=12)
             frame.grid(row=row, column=0, sticky="ew", pady=6)
-            frame.columnconfigure(6, weight=1)
+            frame.columnconfigure(7, weight=1)
             row += 1
             for action_index, action in enumerate(actions):
                 readiness = action_readiness(action)
                 latest = action_latest_output(action)
+                latest_plot = action_latest_plot(action)
                 followup = action_followup(action)
                 compare_batch = action_compare_batch(action)
                 run_button = ttk.Button(
@@ -1784,6 +1887,7 @@ def main() -> int:
                         root=root,
                         latest_output=latest_output,
                         latest_button=latest_button,
+                        latest_plot_button=latest_plot_button,
                         progress_callback=refresh_after_run,
                     ),
                 )
@@ -1811,6 +1915,15 @@ def main() -> int:
                 if latest is None:
                     report_button.state(["disabled"])
                 report_button.grid(row=action_index, column=3, sticky="w", padx=(0, 12), pady=4)
+                plot_button = ttk.Button(
+                    frame,
+                    text="Plot",
+                    width=8,
+                    command=lambda selected=action: launch_action_latest_plot(selected),
+                )
+                if latest_plot is None:
+                    plot_button.state(["disabled"])
+                plot_button.grid(row=action_index, column=4, sticky="w", padx=(0, 12), pady=4)
                 next_button = ttk.Button(
                     frame,
                     text="Next",
@@ -1821,6 +1934,7 @@ def main() -> int:
                         root=root,
                         latest_output=latest_output,
                         latest_button=latest_button,
+                        latest_plot_button=latest_plot_button,
                         progress_callback=refresh_after_run,
                     ),
                 )
@@ -1828,7 +1942,7 @@ def main() -> int:
                     next_button.state(["disabled"])
                 if isinstance(followup, BatchMenuAction) and batch_readiness(followup).status != "ok":
                     next_button.state(["disabled"])
-                next_button.grid(row=action_index, column=4, sticky="w", padx=(0, 12), pady=4)
+                next_button.grid(row=action_index, column=5, sticky="w", padx=(0, 12), pady=4)
                 compare_button = ttk.Button(
                     frame,
                     text="Compare",
@@ -1839,14 +1953,15 @@ def main() -> int:
                         root=root,
                         latest_output=latest_output,
                         latest_button=latest_button,
+                        latest_plot_button=latest_plot_button,
                         progress_callback=refresh_after_run,
                     ),
                 )
                 if batch_readiness(compare_batch).status != "ok":
                     compare_button.state(["disabled"])
-                compare_button.grid(row=action_index, column=5, sticky="w", padx=(0, 12), pady=4)
+                compare_button.grid(row=action_index, column=6, sticky="w", padx=(0, 12), pady=4)
                 ttk.Label(frame, text=lesson_text(action), wraplength=500, justify="left").grid(
-                    row=action_index, column=6, sticky="w", pady=4
+                    row=action_index, column=7, sticky="w", pady=4
                 )
         canvas.configure(scrollregion=canvas.bbox("all"))
 
@@ -1870,6 +1985,7 @@ def _launch_learning_path_from_menu(
     root: Any | None = None,
     latest_output: dict[str, Path | None] | None = None,
     latest_button: Any | None = None,
+    latest_plot_button: Any | None = None,
     progress_callback: Callable[[], None] | None = None,
 ) -> None:
     action = learning_path_target(step)
@@ -1879,6 +1995,7 @@ def _launch_learning_path_from_menu(
         root=root,
         latest_output=latest_output,
         latest_button=latest_button,
+        latest_plot_button=latest_plot_button,
         progress_callback=progress_callback,
     )
 
@@ -1890,6 +2007,7 @@ def _launch_target_from_menu(
     root: Any | None = None,
     latest_output: dict[str, Path | None] | None = None,
     latest_button: Any | None = None,
+    latest_plot_button: Any | None = None,
     progress_callback: Callable[[], None] | None = None,
 ) -> None:
     if isinstance(target, BatchMenuAction):
@@ -1899,6 +2017,7 @@ def _launch_target_from_menu(
             root=root,
             latest_output=latest_output,
             latest_button=latest_button,
+            latest_plot_button=latest_plot_button,
             progress_callback=progress_callback,
         )
         return
@@ -1908,6 +2027,7 @@ def _launch_target_from_menu(
         root=root,
         latest_output=latest_output,
         latest_button=latest_button,
+        latest_plot_button=latest_plot_button,
         progress_callback=progress_callback,
     )
 
@@ -1919,6 +2039,7 @@ def _launch_from_menu(
     root: Any | None = None,
     latest_output: dict[str, Path | None] | None = None,
     latest_button: Any | None = None,
+    latest_plot_button: Any | None = None,
     progress_callback: Callable[[], None] | None = None,
 ) -> None:
     readiness = action_readiness(action)
@@ -1936,6 +2057,7 @@ def _launch_from_menu(
             "root": root,
             "latest_output": latest_output,
             "latest_button": latest_button,
+            "latest_plot_button": latest_plot_button,
             "progress_callback": progress_callback,
         },
         daemon=True,
@@ -1949,6 +2071,7 @@ def _launch_batch_from_menu(
     root: Any | None = None,
     latest_output: dict[str, Path | None] | None = None,
     latest_button: Any | None = None,
+    latest_plot_button: Any | None = None,
     progress_callback: Callable[[], None] | None = None,
 ) -> None:
     readiness = batch_readiness(action)
@@ -1966,6 +2089,7 @@ def _launch_batch_from_menu(
             "root": root,
             "latest_output": latest_output,
             "latest_button": latest_button,
+            "latest_plot_button": latest_plot_button,
             "progress_callback": progress_callback,
         },
         daemon=True,
@@ -2028,6 +2152,7 @@ def _watch_process(
     root: Any | None = None,
     latest_output: dict[str, Path | None] | None = None,
     latest_button: Any | None = None,
+    latest_plot_button: Any | None = None,
     progress_callback: Callable[[], None] | None = None,
 ) -> None:
     output_path: Path | None = None
@@ -2045,6 +2170,7 @@ def _watch_process(
         root=root,
         latest_output=latest_output,
         latest_button=latest_button,
+        latest_plot_button=latest_plot_button,
         progress_callback=progress_callback,
     )
 
@@ -2058,6 +2184,7 @@ def _set_status_after_run(
     root: Any | None = None,
     latest_output: dict[str, Path | None] | None = None,
     latest_button: Any | None = None,
+    latest_plot_button: Any | None = None,
     progress_callback: Callable[[], None] | None = None,
 ) -> None:
     def update_ui() -> None:
@@ -2067,8 +2194,12 @@ def _set_status_after_run(
                     latest_output["path"] = output_path
                 if latest_button is not None:
                     latest_button.state(["!disabled"])
+                latest_plot = latest_output_plot(output_path)
+                if latest_plot_button is not None:
+                    latest_plot_button.state(["!disabled"] if latest_plot is not None else ["disabled"])
                 latest = _preferred_output_entry(output_path)
-                status.set(f"Completed {action.group} - {action.label}. Latest report: {latest}")
+                plot_suffix = f" Latest plot: {latest_plot}" if latest_plot is not None else " No plot saved yet."
+                status.set(f"Completed {action.group} - {action.label}. Latest report: {latest}.{plot_suffix}")
             else:
                 status.set(f"Completed {action.group} - {action.label}. Open the outputs folder for results.")
             if progress_callback is not None:
@@ -2095,6 +2226,7 @@ def lesson_text_for_batch(action: BatchMenuAction) -> str:
         f"{action.description}\n"
         f"Setup: {readiness.label}{setup_detail}{setup_fix}\n"
         f"{action_history_text(action)}\n"
+        f"{action_plot_text(action)}\n"
         f"Try: {action.try_this}\n"
         f"Watch: {action.watch}\n"
         f"Runs: {scenario_count} scenarios"
