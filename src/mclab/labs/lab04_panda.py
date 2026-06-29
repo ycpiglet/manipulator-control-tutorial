@@ -8,6 +8,7 @@ from typing import Any
 from mclab.config import resolve_project_path
 from mclab.learning_guides import guide_for_config
 from mclab.sim.interaction import (
+    ExperimentResetControl,
     InteractionLog,
     LiveStatus,
     LiveTuning,
@@ -85,6 +86,7 @@ def run(
 
     interaction_log = InteractionLog()
     target_offset = TargetOffsetControl(config, event_log=interaction_log)
+    reset_control = ExperimentResetControl(config, event_log=interaction_log)
     run_guide = guide_for_config(config_path=str(config_path or ""), lab_name=lab_name)
     live_tuning = _live_tuning(config, interaction_log)
     live_status = LiveStatus(_live_status_specs(mode))
@@ -104,6 +106,7 @@ def run(
             status=live_status,
             guide=run_guide,
             event_log=interaction_log,
+            reset_control=reset_control,
         )
         if viewer and not headless
         else None
@@ -116,6 +119,9 @@ def run(
             if not viewer_is_running(viewer_handle):
                 break
             interaction_log.set_time(float(data.time))
+            if reset_control.consume():
+                _set_initial_state(data, home_q, finger_q)
+                mujoco.mj_forward(model, data)
             target_q = home_q.copy()
             target = trajectory.evaluate(float(data.time))
             button_joint_offset = target_offset.value()
@@ -405,6 +411,8 @@ def _set_initial_state(data: Any, home_q: list[float], finger_q: list[float]) ->
         data.qpos[index] = value
     data.qpos[7] = finger_q[0]
     data.qpos[8] = finger_q[1]
+    for index in range(len(data.qvel)):
+        data.qvel[index] = 0.0
     for index, value in enumerate(home_q):
         data.ctrl[index] = value
     data.ctrl[7] = DEFAULT_GRIPPER_CTRL

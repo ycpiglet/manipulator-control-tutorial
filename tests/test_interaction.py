@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from mclab.sim.interaction import (  # noqa: E402
+    ExperimentResetControl,
     InteractionLog,
     KeyForcePulse,
     LiveStatus,
@@ -64,6 +65,34 @@ class KeyForcePulseTests(unittest.TestCase):
         self.assertAlmostEqual(control.value(), 0.1)
         self.assertEqual([event["name"] for event in log.events()], ["joint_target_offset"] * 3)
         self.assertAlmostEqual(log.events()[-1]["value"], 0.1)
+
+    def test_experiment_reset_control_records_and_consumes_one_request(self) -> None:
+        log = InteractionLog()
+        log.set_time(1.25)
+        control = ExperimentResetControl({"interaction": {"panel": True}}, event_log=log)
+
+        self.assertTrue(control.enabled)
+        self.assertTrue(control.panel_enabled)
+        self.assertFalse(control.consume())
+
+        control.request()
+
+        self.assertTrue(control.consume())
+        self.assertFalse(control.consume())
+        self.assertEqual(
+            log.events(),
+            [{"time": 1.25, "kind": "button", "name": "reset_plant", "label": "Reset plant", "value": None}],
+        )
+
+    def test_experiment_reset_control_can_be_disabled(self) -> None:
+        log = InteractionLog()
+        control = ExperimentResetControl({"interaction": {"panel": True, "reset_plant": False}}, event_log=log)
+
+        control.request()
+
+        self.assertFalse(control.enabled)
+        self.assertFalse(control.consume())
+        self.assertEqual(log.events(), [])
 
     def test_live_tuning_updates_slider_values(self) -> None:
         log = InteractionLog()
@@ -234,6 +263,25 @@ class KeyForcePulseTests(unittest.TestCase):
             with self.subTest(expected_labels=expected_labels):
                 self.assertEqual([preset.label for preset in tuning.presets], expected_labels)
                 self.assertTrue(all(preset.values for preset in tuning.presets))
+
+    def test_interactive_configs_enable_plant_reset_by_default(self) -> None:
+        paths = [
+            "configs/lab01_msd/interactive_pull.yaml",
+            "configs/lab02_pid/interactive_disturbance.yaml",
+            "configs/lab03_2dof/interactive_tracking.yaml",
+            "configs/lab03_2dof/interactive_2dof.yaml",
+            "configs/lab03_2dof/dls_singularity_2dof.yaml",
+            "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
+            "configs/lab04_panda/interactive_joint_hold.yaml",
+            "configs/lab04_panda/interactive_cartesian_reach.yaml",
+            "configs/lab04_panda/interactive_virtual_wall.yaml",
+        ]
+
+        for path in paths:
+            with self.subTest(path=path):
+                control = ExperimentResetControl(load_config(path))
+                self.assertTrue(control.panel_enabled)
+                self.assertTrue(control.enabled)
 
     def test_condition_aware_dls_live_tuning_exposes_schedule_sliders(self) -> None:
         config = load_config("configs/lab03_2dof/condition_aware_dls_2dof.yaml")

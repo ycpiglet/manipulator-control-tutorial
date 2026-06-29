@@ -49,6 +49,21 @@ def configure_slider_plant(mujoco: Any, model: Any, data: Any, config: dict[str,
     )
 
 
+def reset_slider_plant_state(
+    mujoco: Any,
+    model: Any,
+    data: Any,
+    handles: SliderHandles,
+    config: dict[str, Any],
+    *,
+    control_force: float = 0.0,
+) -> None:
+    data.qpos[handles.qpos_adr] = float(config.get("initial_position", 0.0))
+    data.qvel[handles.dof_adr] = float(config.get("initial_velocity", 0.0))
+    data.ctrl[handles.actuator_id] = float(control_force)
+    mujoco.mj_forward(model, data)
+
+
 def force_input_at(t: float, config: dict[str, Any] | float | int | None) -> float:
     if config is None:
         return 0.0

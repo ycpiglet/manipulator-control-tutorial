@@ -8,6 +8,7 @@ from typing import Any
 from mclab.config import resolve_project_path
 from mclab.learning_guides import guide_for_config
 from mclab.sim.interaction import (
+    ExperimentResetControl,
     InteractionLog,
     KeyForcePulse,
     LiveStatus,
@@ -30,6 +31,7 @@ from mclab.sim.one_dof import (
     configure_slider_plant,
     force_input_at,
     mechanical_energy,
+    reset_slider_plant_state,
     slider_state,
     update_slider_viewer_guides,
 )
@@ -67,6 +69,7 @@ def run(
 
     interaction_log = InteractionLog()
     key_force = KeyForcePulse(config, event_log=interaction_log)
+    reset_control = ExperimentResetControl(config, event_log=interaction_log)
     run_guide = guide_for_config(config_path=str(config_path or ""), lab_name=lab_name)
     live_tuning = _live_tuning(config, interaction_log)
     live_status = LiveStatus(
@@ -93,6 +96,7 @@ def run(
             status=live_status,
             guide=run_guide,
             event_log=interaction_log,
+            reset_control=reset_control,
         )
         if viewer and not headless
         else None
@@ -116,6 +120,9 @@ def run(
                 current_mass = mass
             model.dof_damping[handles.dof_adr] = damping
             model.jnt_stiffness[handles.joint_id] = stiffness
+            if reset_control.consume():
+                key_force.clear()
+                reset_slider_plant_state(mujoco, model, data, handles, config)
             key_force.update_time(float(data.time))
             input_force = force_input_at(float(data.time), force_config)
             manual_force = key_force.value(float(data.time))

@@ -12,6 +12,7 @@ from mclab.config import resolve_project_path
 from mclab.controllers.pid import PIDController
 from mclab.learning_guides import guide_for_config
 from mclab.sim.interaction import (
+    ExperimentResetControl,
     InteractionLog,
     KeyForcePulse,
     LiveStatus,
@@ -30,7 +31,7 @@ from mclab.sim.mujoco_utils import (
     viewer_clock,
     viewer_is_running,
 )
-from mclab.sim.one_dof import configure_slider_plant, slider_state, update_slider_viewer_guides
+from mclab.sim.one_dof import configure_slider_plant, reset_slider_plant_state, slider_state, update_slider_viewer_guides
 from mclab.sim.plotting import PlotSelection, save_time_series_plots, select_plot_specs
 from mclab.trajectories import build_trajectory
 
@@ -82,6 +83,7 @@ def run(
 
     interaction_log = InteractionLog()
     key_force = KeyForcePulse(config, event_log=interaction_log)
+    reset_control = ExperimentResetControl(config, event_log=interaction_log)
     run_guide = guide_for_config(config_path=str(config_path or ""), lab_name=lab_name)
     live_tuning = _live_tuning(config, pid_config, output_limit_value, interaction_log)
     live_status = LiveStatus(
@@ -109,6 +111,7 @@ def run(
             status=live_status,
             guide=run_guide,
             event_log=interaction_log,
+            reset_control=reset_control,
         )
         if viewer and not headless
         else None
@@ -121,6 +124,12 @@ def run(
             if not viewer_is_running(viewer_handle):
                 break
             interaction_log.set_time(float(data.time))
+            if reset_control.consume():
+                key_force.clear()
+                controller.reset()
+                delay_buffer.clear()
+                delay_buffer.extend([0.0] * delay_steps)
+                reset_slider_plant_state(mujoco, model, data, handles, config)
             key_force.update_time(float(data.time))
             position, velocity, _ = slider_state(data, handles)
             measured_position = position + (random.gauss(0.0, noise_std) if noise_std > 0.0 else 0.0)

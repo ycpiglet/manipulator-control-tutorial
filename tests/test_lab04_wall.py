@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from mclab.labs.lab04_panda import (  # noqa: E402
     _live_status_specs,
     _save_plots,
+    _set_initial_state,
     _summary,
     _update_viewer_guides,
     _viewer_guides,
@@ -24,6 +25,20 @@ from mclab.labs.lab04_panda import (  # noqa: E402
 
 
 class Lab04WallTests(unittest.TestCase):
+    def test_lab04_initial_state_reset_clears_joint_velocity(self) -> None:
+        data = types.SimpleNamespace(
+            qpos=[9.0] * 9,
+            qvel=[1.5] * 9,
+            ctrl=[0.0] * 8,
+        )
+
+        _set_initial_state(data, [0.1, 0.2, 0.3, -1.0, 0.4, 1.1, -0.5], [0.03, 0.04])
+
+        self.assertEqual(data.qpos[:9], [0.1, 0.2, 0.3, -1.0, 0.4, 1.1, -0.5, 0.03, 0.04])
+        self.assertEqual(data.qvel, [0.0] * 9)
+        self.assertEqual(data.ctrl[:7], [0.1, 0.2, 0.3, -1.0, 0.4, 1.1, -0.5])
+        self.assertEqual(data.ctrl[7], 255.0)
+
     def test_stiffer_wall_creates_larger_force_and_retreat(self) -> None:
         ee_position = [0.60, 0.0, 0.0]
         ee_velocity = [0.05, 0.0, 0.0]

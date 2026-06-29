@@ -62,7 +62,7 @@ This moves the hand toward the workspace edge using a damped least-squares inver
 qdot_cmd = J(q)^T * (J(q) * J(q)^T + lambda^2 I)^-1 * xdot_cmd
 ```
 
-Use the `MCLab Interaction` sliders to change `DLS task gain` and `DLS damping` while the arm moves. Use the `Low DLS damping`, `Balanced DLS`, and `High DLS damping` quick presets to jump between representative settings, then use the `-` / `+` buttons next to a slider for one-resolution-step adjustments. Lower damping follows the hand command more aggressively but can demand faster joint motion near a singular posture. Higher damping is calmer but may leave more task-space error. Compare `dls.png`, `singularity.png`, `torque.png`, and `error.png` after the run.
+Use the `MCLab Interaction` sliders to change `DLS task gain` and `DLS damping` while the arm moves. Use the `Low DLS damping`, `Balanced DLS`, and `High DLS damping` quick presets to jump between representative settings, then use the `-` / `+` buttons next to a slider for one-resolution-step adjustments. Use `Reset plant` to send the arm back to the starting posture while keeping the current DLS slider values. Lower damping follows the hand command more aggressively but can demand faster joint motion near a singular posture. Higher damping is calmer but may leave more task-space error. Compare `dls.png`, `singularity.png`, `torque.png`, and `error.png` after the run.
 
 Condition-aware DLS demo:
 
@@ -88,7 +88,7 @@ Interactive 2DOF demo:
 .\run_lab03_interactive.cmd
 ```
 
-Use the small `MCLab Interaction` window next to the viewer. Move `Target X`, `Target Y`, `Task stiffness`, `Task damping`, and `Torque limit` while the simulation is running, or use `Quick presets` to jump between soft reach, default reach, and near-edge targets. Use the `-` / `+` buttons next to a slider for one-resolution-step adjustments. Use `Reset sliders` to return to the starting values. Watch the green target marker and blue hand marker move in the viewer; an orange hand marker means the arm is near a poorly conditioned posture. Press `Mark observation` when a response is worth comparing later; the report's `Observation Markers` section saves the learning question, prediction, evidence prompt, note, sliders, and live status snapshot together. Use `Live status` to read `q1`, `q2`, hand X/Y, error norm, and max torque.
+Use the small `MCLab Interaction` window next to the viewer. Move `Target X`, `Target Y`, `Task stiffness`, `Task damping`, and `Torque limit` while the simulation is running, or use `Quick presets` to jump between soft reach, default reach, and near-edge targets. Use the `-` / `+` buttons next to a slider for one-resolution-step adjustments. Use `Reset sliders` to return to the starting values, or `Reset plant` to send the arm back to the starting posture while keeping the current target and gain sliders. Watch the green target marker and blue hand marker move in the viewer; an orange hand marker means the arm is near a poorly conditioned posture. Press `Mark observation` when a response is worth comparing later; the report's `Observation Markers` section saves the learning question, prediction, evidence prompt, note, sliders, and live status snapshot together. Use `Live status` to read `q1`, `q2`, hand X/Y, error norm, and max torque.
 
 The older 1D trajectory profile demos are still available for comparing motion profiles before applying the idea to the arm:
 

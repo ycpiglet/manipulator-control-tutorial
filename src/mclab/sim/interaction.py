@@ -263,6 +263,40 @@ class LiveStatus:
             return dict(self._values)
 
 
+class ExperimentResetControl:
+    """Thread-safe plant reset request for learner-facing viewer demos."""
+
+    def __init__(self, config: dict[str, Any], event_log: InteractionLog | None = None) -> None:
+        interaction = dict(config.get("interaction", {}))
+        panel_enabled = bool(interaction.get("panel", False))
+        self.enabled = bool(interaction.get("reset_plant", interaction.get("reset_experiment", panel_enabled)))
+        self.panel_enabled = panel_enabled
+        self.label = str(interaction.get("reset_label", "Reset plant"))
+        self.panel_description = str(
+            interaction.get(
+                "reset_description",
+                "Return the simulated plant to its initial state while keeping the current slider values.",
+            )
+        )
+        self._requested = False
+        self._event_log = event_log
+        self._lock = Lock()
+
+    def request(self) -> None:
+        if not self.enabled:
+            return
+        with self._lock:
+            self._requested = True
+        if self._event_log is not None:
+            self._event_log.record("button", "reset_plant", None, label=self.label)
+
+    def consume(self) -> bool:
+        with self._lock:
+            requested = self._requested
+            self._requested = False
+        return requested
+
+
 class KeyForcePulse:
     """Keyboard-triggered force pulse for 1D plants.
 
@@ -312,6 +346,11 @@ class KeyForcePulse:
             if time <= self._until:
                 return self._value
             return 0.0
+
+    def clear(self) -> None:
+        with self._lock:
+            self._value = 0.0
+            self._until = -1.0
 
     def _start_pulse(self, value: float, label: str) -> None:
         with self._lock:
@@ -382,12 +421,14 @@ def maybe_start_interaction_panel(
     status: LiveStatus | None = None,
     guide: Any | None = None,
     event_log: InteractionLog | None = None,
+    reset_control: ExperimentResetControl | None = None,
 ) -> InteractionPanel | None:
     control_enabled = bool(getattr(control, "enabled", False))
-    panel_enabled = bool(getattr(control, "panel_enabled", False))
+    reset_enabled = bool(reset_control is not None and reset_control.enabled and reset_control.panel_enabled)
+    panel_enabled = bool(getattr(control, "panel_enabled", False)) or reset_enabled
     tuning_enabled = bool(tuning is not None and tuning.enabled)
     status_enabled = bool(status is not None and status.enabled)
-    if not panel_enabled or not (control_enabled or tuning_enabled or status_enabled):
+    if not panel_enabled or not (control_enabled or reset_enabled or tuning_enabled or status_enabled):
         return None
 
     try:
@@ -441,6 +482,36 @@ def maybe_start_interaction_panel(
                     text=control.panel_description,
                 ).grid(row=row, column=0, columnspan=2, pady=(8, 0))
                 row += 1
+
+            if reset_enabled and reset_control is not None:
+                reset_frame = tk.Frame(frame)
+                reset_frame.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(10, 4))
+                reset_frame.columnconfigure(1, weight=1)
+                reset_status = tk.StringVar(value="")
+
+                def request_reset() -> None:
+                    reset_control.request()
+                    reset_status.set("Reset requested; sliders stay unchanged.")
+
+                tk.Button(reset_frame, text=reset_control.label, width=22, command=request_reset).grid(
+                    row=0,
+                    column=0,
+                    sticky="w",
+                )
+                tk.Label(reset_frame, textvariable=reset_status, anchor="w", width=32).grid(
+                    row=0,
+                    column=1,
+                    sticky="ew",
+                    padx=(12, 0),
+                )
+                tk.Label(
+                    frame,
+                    text=reset_control.panel_description,
+                    justify="left",
+                    anchor="w",
+                    wraplength=430,
+                ).grid(row=row + 1, column=0, columnspan=2, sticky="w", pady=(0, 4))
+                row += 2
 
             if tuning_enabled and tuning is not None:
                 tuning_header = tk.Frame(frame)

@@ -9,10 +9,29 @@ from unittest.mock import Mock
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from mclab.sim.one_dof import update_slider_viewer_guides  # noqa: E402
+from mclab.sim.one_dof import SliderHandles, reset_slider_plant_state, update_slider_viewer_guides  # noqa: E402
 
 
 class OneDofViewerGuideTests(unittest.TestCase):
+    def test_reset_slider_plant_state_restores_initial_position_velocity_and_control(self) -> None:
+        fake_mujoco = types.SimpleNamespace(mj_forward=Mock())
+        model = types.SimpleNamespace()
+        data = types.SimpleNamespace(qpos=[0.9], qvel=[-2.0], ctrl=[18.0])
+        handles = SliderHandles(joint_id=0, body_id=0, actuator_id=0, qpos_adr=0, dof_adr=0)
+
+        reset_slider_plant_state(
+            fake_mujoco,
+            model,
+            data,
+            handles,
+            {"initial_position": -0.2, "initial_velocity": 0.35},
+        )
+
+        self.assertEqual(data.qpos[0], -0.2)
+        self.assertEqual(data.qvel[0], 0.35)
+        self.assertEqual(data.ctrl[0], 0.0)
+        fake_mujoco.mj_forward.assert_called_once_with(model, data)
+
     def test_slider_viewer_guides_draw_reference_target_and_force(self) -> None:
         def init_geom(geom, geom_type, size, pos, mat, rgba):
             geom.geom_type = geom_type
