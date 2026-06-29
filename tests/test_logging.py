@@ -383,6 +383,8 @@ class LoggingTests(unittest.TestCase):
                         "max_wall_penetration_cm": 1.2,
                         "max_wall_retreat_cm": 0.5,
                         "max_abs_virtual_wall_force": 22.0,
+                        "max_abs_virtual_wall_spring_force": 18.0,
+                        "max_abs_virtual_wall_damping_force": 4.0,
                     }
                 ),
                 encoding="utf-8",
@@ -405,6 +407,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Virtual wall contact", html)
             self.assertIn("Wall retreat", html)
             self.assertIn("Wall force", html)
+            self.assertIn("Wall force components", html)
             self.assertIn("check-inspect", html)
             self.assertIn("check-observed", html)
 

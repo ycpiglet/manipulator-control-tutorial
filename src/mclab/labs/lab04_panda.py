@@ -133,6 +133,8 @@ def run(
 
             ee_position, ee_velocity, jacobian = _end_effector_state(mujoco, model, data, handles)
             wall_force = [0.0, 0.0, 0.0]
+            wall_spring_force = [0.0, 0.0, 0.0]
+            wall_damping_force = [0.0, 0.0, 0.0]
             wall_retreat = 0.0
             target_x_ee = ee_position
             cartesian_error = [0.0, 0.0, 0.0]
@@ -154,7 +156,11 @@ def run(
                     live_tuning,
                 )
             if mode in {"impedance_wall", "virtual_wall", "wall"}:
-                wall_force = _virtual_wall_force(ee_position, ee_velocity, wall_config)
+                wall_force, wall_spring_force, wall_damping_force = _virtual_wall_force_components(
+                    ee_position,
+                    ee_velocity,
+                    wall_config,
+                )
                 wall_retreat = _wall_retreat_distance(ee_position, wall_force, wall_config)
                 target_q = _apply_wall_target_offset(
                     target_q,
@@ -211,6 +217,8 @@ def run(
                 position_error=position_errors,
                 error_norm=error_norm,
                 force_virtual=wall_force,
+                force_virtual_spring=wall_spring_force,
+                force_virtual_damping=wall_damping_force,
                 wall_penetration=wall_penetration,
                 wall_penetration_cm=100.0 * wall_penetration,
                 wall_retreat=wall_retreat,
@@ -506,14 +514,24 @@ def _virtual_wall_force(
     ee_velocity: list[float],
     wall_config: dict[str, Any],
 ) -> list[float]:
+    return _virtual_wall_force_components(ee_position, ee_velocity, wall_config)[0]
+
+
+def _virtual_wall_force_components(
+    ee_position: list[float],
+    ee_velocity: list[float],
+    wall_config: dict[str, Any],
+) -> tuple[list[float], list[float], list[float]]:
     wall_x = float(wall_config.get("wall_x", 0.52))
     stiffness = float(wall_config.get("stiffness", 250.0))
     damping = float(wall_config.get("damping", 12.0))
     penetration = ee_position[0] - wall_x
     if penetration <= 0.0:
-        return [0.0, 0.0, 0.0]
-    force_x = -stiffness * penetration - damping * max(0.0, ee_velocity[0])
-    return [force_x, 0.0, 0.0]
+        zeros = [0.0, 0.0, 0.0]
+        return zeros, zeros.copy(), zeros.copy()
+    spring_x = -stiffness * penetration
+    damping_x = -damping * max(0.0, ee_velocity[0])
+    return [spring_x + damping_x, 0.0, 0.0], [spring_x, 0.0, 0.0], [damping_x, 0.0, 0.0]
 
 
 def _apply_wall_target_offset(
@@ -604,6 +622,12 @@ def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "max_wall_penetration_cm": max(float(row.get("wall_penetration_cm", 0.0)) for row in rows),
         "max_wall_retreat_cm": max(float(row.get("wall_retreat_cm", 0.0)) for row in rows),
         "max_abs_virtual_wall_force": max(abs(float(row.get("force_virtual_0", 0.0))) for row in rows),
+        "max_abs_virtual_wall_spring_force": max(
+            abs(float(row.get("force_virtual_spring_0", 0.0))) for row in rows
+        ),
+        "max_abs_virtual_wall_damping_force": max(
+            abs(float(row.get("force_virtual_damping_0", 0.0))) for row in rows
+        ),
         "max_cartesian_error_cm": max(float(row.get("cartesian_error_cm", 0.0)) for row in rows),
         "final_cartesian_error_cm": rows[-1].get("cartesian_error_cm", 0.0),
         "final_x_ee_0": rows[-1].get("x_ee_0"),
@@ -634,7 +658,13 @@ def _save_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSe
             "virtual_wall.png",
             "Virtual Wall Response",
             "force / penetration",
-            ["force_virtual_0", "wall_penetration_cm", "wall_retreat_cm"],
+            [
+                "force_virtual_0",
+                "force_virtual_spring_0",
+                "force_virtual_damping_0",
+                "wall_penetration_cm",
+                "wall_retreat_cm",
+            ],
         ),
         (
             "wall_parameters.png",

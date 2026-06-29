@@ -60,6 +60,7 @@ Implemented and verified:
 - Lab04 soft/stiff Cartesian reach comparison configs and batch report
 - Lab04 Cartesian interactive one-line launcher for live XYZ target tuning
 - Lab04 deterministic virtual wall with soft/stiff stiffness-damping comparison configs
+- Lab04 low/high damping virtual wall configs that isolate damping with fixed stiffness and retreat gains
 - Lab04 viewer visual guides for Cartesian target, current hand position, contact state, and virtual wall
 - YAML configs, MuJoCo XML models, docs, and tests for the implemented labs
 - Run reports with domain-specific checks for singularity, DLS speed, virtual wall response, and actuator effort
@@ -251,6 +252,7 @@ Implemented so far:
 - soft/stiff Cartesian reach comparison using Cartesian error and actuator effort metrics
 - deterministic virtual wall with Jacobian-based target retreat
 - soft/stiff wall comparison using wall force, penetration, and retreat metrics
+- low/high damping wall comparison using fixed stiffness to isolate damping effects
 - interactive wall position/stiffness/damping/retreat tuning
 - viewer visual guides for target point, current hand point, contact hand point, and wall plane
 - torque/current proxy visualization from MuJoCo actuator force output

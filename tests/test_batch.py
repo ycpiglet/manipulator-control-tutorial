@@ -27,6 +27,9 @@ class BatchTests(unittest.TestCase):
         self.assertIn("condition_aware_dls", lab03_labels)
         self.assertIn("condition_aware_early", lab03_labels)
         self.assertIn("condition_aware_late", lab03_labels)
+        lab04_wall_labels = {scenario.label for scenario in batch.BATCH_SETS["lab04_wall_compare"]}
+        self.assertIn("low_damping_wall", lab04_wall_labels)
+        self.assertIn("high_damping_wall", lab04_wall_labels)
         self.assertIn("max_dls_condition_scale", batch.BATCH_GUIDES["lab03_2dof_compare"].metric_keys)
 
         for batch_name, scenarios in batch.BATCH_SETS.items():

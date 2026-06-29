@@ -463,6 +463,22 @@ RUN_GUIDES: dict[str, RunGuide] = {
         "Lower penetration, higher force, and larger retreat.",
         "Lower damping and inspect whether force spikes increase.",
     ),
+    "configs/lab04_panda/wall_low_damping.yaml": RunGuide(
+        "Lab04 Low-Damping Virtual Wall",
+        "Wall stiffness and retreat gain stay fixed while damping is low.",
+        "Run before the high-damping wall and compare virtual_wall.png.",
+        "virtual_wall.damping, virtual_wall.stiffness, virtual_wall.force_retreat_gain",
+        "Wall penetration, virtual force, retreat, and hand X response.",
+        "Run high-damping wall and compare how the same stiffness feels calmer or stronger.",
+    ),
+    "configs/lab04_panda/wall_high_damping.yaml": RunGuide(
+        "Lab04 High-Damping Virtual Wall",
+        "Wall stiffness and retreat gain stay fixed while damping is high.",
+        "Compare directly against the low-damping wall.",
+        "virtual_wall.damping, virtual_wall.stiffness, virtual_wall.force_retreat_gain",
+        "Wall penetration, virtual force, retreat, and hand X response.",
+        "Lower damping gradually and inspect whether penetration or force changes first.",
+    ),
     "configs/lab04_panda/interactive_virtual_wall.yaml": RunGuide(
         "Lab04 Virtual Wall Interactive",
         "Tune virtual wall parameters while the Panda moves toward the wall.",

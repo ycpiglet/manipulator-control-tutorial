@@ -47,6 +47,8 @@ INDEX_METRIC_KEYS = (
     "max_wall_penetration_cm",
     "max_wall_retreat_cm",
     "max_abs_virtual_wall_force",
+    "max_abs_virtual_wall_spring_force",
+    "max_abs_virtual_wall_damping_force",
     "interaction_events",
 )
 
@@ -401,18 +403,30 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
     "configs/lab04_panda/impedance_wall.yaml": (
         NextRunSuggestion("configs/lab04_panda/wall_soft.yaml", "Start the wall stiffness comparison.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_stiff.yaml", "Compare higher stiffness and retreat.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/wall_low_damping.yaml", "Isolate damping with fixed stiffness.", "wall_compare"),
     ),
     "configs/lab04_panda/wall_soft.yaml": (
         NextRunSuggestion("configs/lab04_panda/wall_stiff.yaml", "Run the direct stiff wall comparison.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/wall_low_damping.yaml", "Keep stiffness fixed and reduce damping.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/interactive_virtual_wall.yaml", "Tune wall position and stiffness live.", "wall"),
     ),
     "configs/lab04_panda/wall_stiff.yaml": (
         NextRunSuggestion("configs/lab04_panda/wall_soft.yaml", "Run the direct soft wall comparison.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/wall_high_damping.yaml", "Keep stiffness fixed and raise damping.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/interactive_virtual_wall.yaml", "Tune wall position and stiffness live.", "wall"),
+    ),
+    "configs/lab04_panda/wall_low_damping.yaml": (
+        NextRunSuggestion("configs/lab04_panda/wall_high_damping.yaml", "Compare the same wall with stronger damping.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/wall_soft.yaml", "Return to the lower-stiffness wall comparison.", "wall_compare"),
+    ),
+    "configs/lab04_panda/wall_high_damping.yaml": (
+        NextRunSuggestion("configs/lab04_panda/wall_low_damping.yaml", "Compare the same wall with less damping.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/wall_stiff.yaml", "Compare against the higher-stiffness wall.", "wall_compare"),
     ),
     "configs/lab04_panda/interactive_virtual_wall.yaml": (
         NextRunSuggestion("configs/lab04_panda/wall_soft.yaml", "Save a deterministic soft wall comparison.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_stiff.yaml", "Save a deterministic stiff wall comparison.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/wall_high_damping.yaml", "Save a deterministic damping comparison.", "wall_compare"),
     ),
 }
 
@@ -1308,6 +1322,20 @@ def _result_checks(summary: dict[str, Any]) -> list[tuple[str, str, str]]:
     if wall_force is not None and wall_force > 0.0:
         state = "Observed" if wall_force <= 80.0 else "Inspect"
         checks.append(("Wall force", state, f"Maximum virtual wall force {_format_value(wall_force)}."))
+
+    wall_spring_force = _number(summary.get("max_abs_virtual_wall_spring_force"))
+    wall_damping_force = _number(summary.get("max_abs_virtual_wall_damping_force"))
+    if wall_spring_force is not None and wall_damping_force is not None and wall_spring_force > 0.0:
+        checks.append(
+            (
+                "Wall force components",
+                "Observed" if wall_damping_force > 0.0 else "Inspect",
+                (
+                    f"Spring force {_format_value(wall_spring_force)}; "
+                    f"damping force {_format_value(wall_damping_force)}."
+                ),
+            )
+        )
 
     interaction_events = _number(summary.get("interaction_events"))
     if interaction_events is not None and interaction_events > 0.0:

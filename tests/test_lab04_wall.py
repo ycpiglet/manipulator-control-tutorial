@@ -14,6 +14,7 @@ from mclab.labs.lab04_panda import (  # noqa: E402
     _update_viewer_guides,
     _viewer_guides,
     _virtual_wall_force,
+    _virtual_wall_force_components,
     _wall_retreat_distance,
 )
 
@@ -47,6 +48,18 @@ class Lab04WallTests(unittest.TestCase):
         self.assertGreater(abs(stiff_force[0]), abs(soft_force[0]))
         self.assertGreater(stiff_retreat, soft_retreat)
 
+    def test_wall_force_components_separate_spring_and_damping(self) -> None:
+        ee_position = [0.60, 0.0, 0.0]
+        ee_velocity = [0.05, 0.0, 0.0]
+        wall = {"wall_x": 0.57, "stiffness": 300.0, "damping": 40.0}
+
+        total, spring, damping = _virtual_wall_force_components(ee_position, ee_velocity, wall)
+
+        self.assertAlmostEqual(spring[0], -9.0)
+        self.assertAlmostEqual(damping[0], -2.0)
+        self.assertAlmostEqual(total[0], -11.0)
+        self.assertEqual(_virtual_wall_force(ee_position, ee_velocity, wall), total)
+
     def test_lab04_summary_reports_hold_stability_metrics(self) -> None:
         rows = [
             {
@@ -79,6 +92,8 @@ class Lab04WallTests(unittest.TestCase):
         self.assertAlmostEqual(summary["max_settled_abs_qdot"], 0.008)
         self.assertAlmostEqual(summary["max_joint_drift_norm"], 0.005)
         self.assertAlmostEqual(summary["max_joint_error_norm"], 0.002)
+        self.assertAlmostEqual(summary["max_abs_virtual_wall_spring_force"], 0.0)
+        self.assertAlmostEqual(summary["max_abs_virtual_wall_damping_force"], 0.0)
 
     def test_lab04_viewer_guides_default_to_cartesian_and_wall_modes(self) -> None:
         self.assertTrue(_viewer_guides({}, "cartesian_reach")["enabled"])

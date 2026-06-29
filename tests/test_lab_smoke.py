@@ -93,16 +93,22 @@ class LabSmokeTests(unittest.TestCase):
                     self.assertTrue((output / "log.csv").exists())
                     self.assertTrue((output / "summary.json").exists())
 
-    def test_lab04_stiff_wall_runs_headless_when_assets_are_available(self) -> None:
+    def test_lab04_wall_configs_run_headless_when_assets_are_available(self) -> None:
         if not (ROOT / "third_party/mujoco_menagerie/franka_emika_panda/scene.xml").exists():
             self.skipTest("MuJoCo Menagerie has not been fetched")
 
-        config = load_config("configs/lab04_panda/wall_stiff.yaml")
-        config["sim_time"] = 0.02
-        with tempfile.TemporaryDirectory() as tmp:
-            output = lab04_panda.run(config, output_dir=Path(tmp) / "lab04_wall", headless=True)
-            self.assertTrue((output / "log.csv").exists())
-            self.assertTrue((output / "summary.json").exists())
+        for config_path in (
+            "configs/lab04_panda/wall_stiff.yaml",
+            "configs/lab04_panda/wall_low_damping.yaml",
+            "configs/lab04_panda/wall_high_damping.yaml",
+        ):
+            with self.subTest(config_path=config_path):
+                config = load_config(config_path)
+                config["sim_time"] = 0.02
+                with tempfile.TemporaryDirectory() as tmp:
+                    output = lab04_panda.run(config, output_dir=Path(tmp) / "lab04_wall", headless=True)
+                    self.assertTrue((output / "log.csv").exists())
+                    self.assertTrue((output / "summary.json").exists())
 
     def test_lab04_cartesian_reach_runs_headless_when_assets_are_available(self) -> None:
         if not (ROOT / "third_party/mujoco_menagerie/franka_emika_panda/scene.xml").exists():

@@ -89,6 +89,8 @@ BATCH_SETS: dict[str, tuple[BatchScenario, ...]] = {
     "lab04_wall_compare": (
         BatchScenario("soft_wall", "lab04", "configs/lab04_panda/wall_soft.yaml", "wall_compare"),
         BatchScenario("stiff_wall", "lab04", "configs/lab04_panda/wall_stiff.yaml", "wall_compare"),
+        BatchScenario("low_damping_wall", "lab04", "configs/lab04_panda/wall_low_damping.yaml", "wall_compare"),
+        BatchScenario("high_damping_wall", "lab04", "configs/lab04_panda/wall_high_damping.yaml", "wall_compare"),
     ),
     "lab04_cartesian_compare": (
         BatchScenario("baseline_reach", "lab04", "configs/lab04_panda/cartesian_reach.yaml", "cartesian_reach"),
@@ -198,21 +200,25 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
     ),
     "lab04_wall_compare": BatchGuide(
         title="Lab04 Panda Virtual Wall Comparison",
-        focus="Compare soft and stiff virtual wall settings on the Panda end-effector response.",
+        focus="Compare wall stiffness and damping settings on the Panda end-effector response.",
         questions=(
             "Which wall allows more penetration before retreating?",
             "How much more virtual wall force does the stiff wall produce?",
             "How does the hand X position change as retreat and damping increase?",
+            "With stiffness fixed, how does damping change penetration, force, and retreat?",
         ),
         followups=(
             "Copy `configs/lab04_panda/wall_soft.yaml` and raise `virtual_wall.stiffness` gradually.",
             "Copy `configs/lab04_panda/wall_stiff.yaml` and lower `virtual_wall.damping` to inspect force spikes.",
+            "Compare `wall_low_damping.yaml` and `wall_high_damping.yaml` to isolate damping.",
             "Move `virtual_wall.wall_x` and compare when the hand first reaches the virtual wall.",
         ),
         metric_keys=(
             "max_wall_penetration_cm",
             "max_wall_retreat_cm",
             "max_abs_virtual_wall_force",
+            "max_abs_virtual_wall_spring_force",
+            "max_abs_virtual_wall_damping_force",
             "max_joint_error_norm",
             "max_abs_tau_cmd",
             "final_x_ee_0",
@@ -222,6 +228,8 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             ("hand_x_compare.png", "Panda Hand X Comparison", "x [m]", "x_ee_0"),
             ("wall_penetration_compare.png", "Wall Penetration Comparison", "penetration [cm]", "wall_penetration_cm"),
             ("wall_force_compare.png", "Virtual Wall Force Comparison", "force", "force_virtual_0"),
+            ("wall_spring_force_compare.png", "Virtual Wall Spring Force Comparison", "force", "force_virtual_spring_0"),
+            ("wall_damping_force_compare.png", "Virtual Wall Damping Force Comparison", "force", "force_virtual_damping_0"),
             ("wall_retreat_compare.png", "Wall Retreat Comparison", "retreat [cm]", "wall_retreat_cm"),
         ),
     ),

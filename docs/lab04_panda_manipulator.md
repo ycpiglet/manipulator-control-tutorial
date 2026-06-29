@@ -86,9 +86,20 @@ Soft/stiff wall comparison:
 ```bash
 python -m mclab run lab04 --config configs/lab04_panda/wall_soft.yaml --headless --plot --plots wall_compare
 python -m mclab run lab04 --config configs/lab04_panda/wall_stiff.yaml --headless --plot --plots wall_compare
+python -m mclab batch lab04_wall_compare --open-report
 ```
 
 Use the same trajectory and compare `virtual_wall.png`. The soft wall should allow more penetration with lower virtual force and smaller target retreat. The stiff wall should show higher virtual force and stronger retreat. The summary file also reports `max_wall_penetration_cm`, `max_wall_retreat_cm`, and `max_abs_virtual_wall_force`.
+
+Damping-only wall comparison:
+
+```bash
+python -m mclab run lab04 --config configs/lab04_panda/wall_low_damping.yaml --headless --plot --plots wall_compare
+python -m mclab run lab04 --config configs/lab04_panda/wall_high_damping.yaml --headless --plot --plots wall_compare
+python -m mclab batch lab04_wall_compare --open-report
+```
+
+These two configs keep wall stiffness, wall position, retreat gains, and trajectory fixed while changing only `virtual_wall.damping`. Use this after the soft/stiff comparison to isolate the damping term. In the batch report, compare `wall_force_compare.png`, `wall_penetration_compare.png`, and `wall_retreat_compare.png` to discuss whether higher damping mainly changes force, penetration, or retreat.
 
 Headless runs:
 
@@ -97,6 +108,7 @@ python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless 
 python -m mclab run lab04 --config configs/lab04_panda/cartesian_reach.yaml --headless --plot --plots cartesian_reach
 python -m mclab run lab04 --config configs/lab04_panda/impedance_wall.yaml --headless --plot
 python -m mclab run lab04 --config configs/lab04_panda/wall_stiff.yaml --headless --plot --plots wall_compare
+python -m mclab run lab04 --config configs/lab04_panda/wall_high_damping.yaml --headless --plot --plots wall_compare
 ```
 
 Full viewer command:
