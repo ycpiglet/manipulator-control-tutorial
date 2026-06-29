@@ -52,8 +52,8 @@ This moves the arm toward a nearly straight posture. In `singularity.png`, the J
 
 Damped least-squares singularity demo:
 
-```bash
-python -m mclab run lab03 --config configs/lab03_2dof/dls_singularity_2dof.yaml --viewer --realtime --pause-at-end --plot --plots dls
+```powershell
+.\run_lab03_dls_interactive.cmd
 ```
 
 This moves the hand toward the workspace edge using a damped least-squares inverse Jacobian:

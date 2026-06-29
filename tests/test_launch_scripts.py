@@ -20,6 +20,11 @@ class LaunchScriptTests(unittest.TestCase):
             "run_lab02_interactive.cmd": ("lab02", "configs\\lab02_pid\\interactive_disturbance.yaml", "essential"),
             "run_lab03.cmd": ("lab03", "configs\\lab03_2dof\\joint_space_2dof.yaml", "essential"),
             "run_lab03_interactive.cmd": ("lab03", "configs\\lab03_2dof\\interactive_2dof.yaml", "task"),
+            "run_lab03_dls_interactive.cmd": (
+                "lab03",
+                "configs\\lab03_2dof\\dls_singularity_2dof.yaml",
+                "dls",
+            ),
             "run_lab04.cmd": ("lab04", "configs\\lab04_panda\\joint_pd.yaml", "essential"),
             "run_lab04_interactive.cmd": ("lab04", "configs\\lab04_panda\\interactive_joint_hold.yaml", "essential"),
             "run_lab04_cartesian_interactive.cmd": (
