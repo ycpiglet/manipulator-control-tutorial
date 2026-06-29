@@ -28,6 +28,7 @@ from mclab.learner_menu import (  # noqa: E402
     action_badges,
     action_compare_batch,
     action_compare_text,
+    action_controls_text,
     action_evidence_text,
     action_followup,
     action_followup_text,
@@ -446,6 +447,7 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertIn("Badges:", text)
                 self.assertIn("History:", text)
                 self.assertIn("Evidence:", text)
+                self.assertIn("Controls:", text)
                 self.assertIn("Try:", text)
                 self.assertIn("Change:", text)
                 self.assertIn("Values:", text)
@@ -459,6 +461,35 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertTrue(reflection_question(action).startswith("Question: "))
                 config = load_config(action.config_path)
                 self.assertIn("model_path", config)
+
+    def test_menu_cards_show_actual_control_affordances(self) -> None:
+        by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
+        auto_demo = by_label[("Lab01 Mass-Spring-Damper", "Auto demo")]
+        lab01_interactive = by_label[("Lab01 Mass-Spring-Damper", "Interactive")]
+        lab03_condition_dls = by_label[("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS")]
+        lab04_wall = by_label[("Lab04 Panda Manipulator", "Virtual wall")]
+
+        self.assertEqual(
+            action_controls_text(auto_demo),
+            "Controls: Auto run; edit YAML before running",
+        )
+
+        lab01_controls = action_controls_text(lab01_interactive)
+        self.assertIn("MCLab Interaction panel", lab01_controls)
+        self.assertIn("Pull/Push buttons and A/D keys", lab01_controls)
+        self.assertIn("live sliders with Changed values", lab01_controls)
+        self.assertIn("Pause/Step", lab01_controls)
+        self.assertIn("Reset plant", lab01_controls)
+        self.assertIn("Mark observation", lab01_controls)
+        self.assertIn(lab01_controls, lesson_text(lab01_interactive))
+
+        dls_controls = action_controls_text(lab03_condition_dls)
+        self.assertIn("quick presets (Early damping, Balanced schedule, Late damping)", dls_controls)
+        self.assertIn("live sliders with Changed values", dls_controls)
+
+        wall_controls = action_controls_text(lab04_wall)
+        self.assertIn("Target -/+ buttons and A/D keys", wall_controls)
+        self.assertIn("quick presets (Soft wall, Stiff wall, Close wall)", wall_controls)
 
     def test_menu_action_readiness_checks_config_and_model_assets(self) -> None:
         action = MenuAction(
@@ -713,6 +744,12 @@ class LearnerMenuTests(unittest.TestCase):
         torque_labels = {(action.group, action.label) for action in filter_menu_actions("torque limit")}
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF low-torque DLS"), torque_labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF high-torque DLS"), torque_labels)
+
+        controls_labels = {(action.group, action.label) for action in filter_menu_actions("pull push")}
+        self.assertIn(("Lab01 Mass-Spring-Damper", "Interactive"), controls_labels)
+
+        pause_labels = {(action.group, action.label) for action in filter_menu_actions("pause step")}
+        self.assertIn(("Lab04 Panda Manipulator", "Virtual wall"), pause_labels)
 
     def test_experience_filters_group_scenarios_by_learning_mode(self) -> None:
         filter_keys = {filter_option.key for filter_option in EXPERIENCE_FILTERS}

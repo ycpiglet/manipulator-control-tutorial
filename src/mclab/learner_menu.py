@@ -1550,6 +1550,50 @@ def config_value_preview(action: MenuAction, *, max_items: int = 5) -> str:
     return _config_value_preview(action.config_path, parameter_hint(action), max_items)
 
 
+def action_controls_text(action: MenuAction) -> str:
+    return _action_controls_text(action.config_path)
+
+
+@lru_cache(maxsize=256)
+def _action_controls_text(config_path: str) -> str:
+    try:
+        config = load_config(config_path)
+    except (OSError, ValueError):
+        return "Controls: Config unavailable"
+
+    interaction = config.get("interaction")
+    if not isinstance(interaction, dict) or not interaction:
+        return "Controls: Auto run; edit YAML before running"
+
+    panel_enabled = bool(interaction.get("panel", False))
+    controls: list[str] = []
+    if panel_enabled:
+        controls.append("MCLab Interaction panel")
+    if bool(interaction.get("key_force", False)):
+        controls.append("Pull/Push buttons and A/D keys")
+    if bool(interaction.get("target_nudge", False)):
+        controls.append("Target -/+ buttons and A/D keys")
+    if bool(interaction.get("live_tuning", False)):
+        controls.append("live sliders with Changed values")
+
+    preset_labels = configured_preset_labels(config_path)
+    if preset_labels:
+        controls.append(f"quick presets ({', '.join(preset_labels)})")
+
+    if bool(interaction.get("playback_speed", panel_enabled)):
+        controls.append("playback speed")
+    if bool(interaction.get("pause_resume", interaction.get("pause", panel_enabled))):
+        controls.append("Pause/Step")
+    if bool(interaction.get("reset_plant", interaction.get("reset_experiment", panel_enabled))):
+        controls.append("Reset plant")
+    if panel_enabled:
+        controls.append("Mark observation")
+
+    if not controls:
+        return "Controls: Auto run; edit YAML before running"
+    return f"Controls: {', '.join(dict.fromkeys(controls))}"
+
+
 def reflection_question(action: MenuAction) -> str:
     return reflection_question_for_context(
         lab_name=action.lab_name,
@@ -1661,6 +1705,7 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
         f"{action_evidence_text(action, outputs_root)}\n"
         f"{action_plot_text(action, outputs_root)}\n"
         f"{action_replay_text(action, outputs_root)}\n"
+        f"{action_controls_text(action)}\n"
         f"Try: {action.try_this}\n"
         f"Change: {parameter_hint(action)}\n"
         f"{config_value_preview(action)}\n"
@@ -1804,6 +1849,7 @@ def _action_matches_terms(action: MenuAction, terms: list[str]) -> bool:
         parameter_hint(action),
         prediction_prompt(action),
         reflection_question(action),
+        action_controls_text(action),
         " ".join(configured_preset_labels(action.config_path)),
         action_readiness(action).label,
         action_readiness(action).detail,

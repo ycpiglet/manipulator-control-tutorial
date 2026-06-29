@@ -81,6 +81,7 @@ Implemented and verified:
 - Batch scenario cards summarize the largest metric changes from the baseline scenario
 - Interactive `MCLab Interaction` quick presets, value previews, and per-slider step buttons for representative damping, PID, 2DOF reach, Panda reach, and virtual wall parameter sets
 - Interactive `MCLab Interaction` changed-values summary shows slider parameters changed from run start
+- Learner menu scenario cards include a `Controls` summary of actual buttons, sliders, presets, pause/step, reset, and observation controls
 - Interactive `Playback speed` slider controls realtime viewer pacing from slow-motion to faster skim
 - Interactive `Pause / Resume` button pauses physics stepping and logging while keeping viewer and sliders responsive
 - Interactive `Step once` button advances exactly one physics step while staying paused for frame-by-frame observation
