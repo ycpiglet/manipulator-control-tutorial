@@ -134,6 +134,8 @@ class BatchTests(unittest.TestCase):
             self.assertIn("Open report", report_html)
             self.assertIn("Open position.png", report_html)
             self.assertIn("Open worksheet", report_html)
+            self.assertIn("Plot review", report_html)
+            self.assertIn("Position: Compare actual motion against target", report_html)
             self.assertIn('href="demo_scenario/plots/position.png"', report_html)
             self.assertIn('href="demo_scenario/worksheet.md"', report_html)
             self.assertIn("Changed from baseline", report_html)

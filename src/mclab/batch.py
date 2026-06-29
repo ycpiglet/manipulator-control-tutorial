@@ -1105,6 +1105,7 @@ def _scenario_card(
     control_surface = _scenario_control_surface(row)
     command = _scenario_run_command(row)
     quick_links = _scenario_quick_links(row)
+    plot_review = _scenario_plot_review(row)
     changes = _scenario_change_summary(row, baseline_config)
     metric_changes = _scenario_metric_change_summary(row, metric_keys, baseline_summary)
     return (
@@ -1112,6 +1113,7 @@ def _scenario_card(
         f'<h3><a href="{escape(str(row["report"]))}">{escape(str(row["label"]))}</a></h3>'
         f'<p class="muted">{escape(str(row["config_path"]))}</p>'
         f"{quick_links}"
+        f"{plot_review}"
         f"{changes}"
         f"{metric_changes}"
         f"{learning_cues}"
@@ -1215,6 +1217,21 @@ def _scenario_quick_links(row: dict[str, Any]) -> str:
         f'<a href="{escape(str(row["report"]))}">Open report</a>'
         f"{plot_link}"
         f"{worksheet_link}"
+        "</div>"
+    )
+
+
+def _scenario_plot_review(row: dict[str, Any]) -> str:
+    plot = _priority_plot_link(row.get("plots", {}))
+    if plot is None:
+        return ""
+    guidance = plot_guidance(plot[0])
+    if guidance is None:
+        return ""
+    title, detail = guidance
+    return (
+        '<div class="cue"><strong>Plot review</strong>'
+        f'<span class="change-item">{escape(title)}: {escape(detail)}</span>'
         "</div>"
     )
 
