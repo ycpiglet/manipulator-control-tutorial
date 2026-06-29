@@ -64,6 +64,9 @@ class LearningPathStep:
 class LearningPathProgress:
     completed: bool
     latest_output: Path | None = None
+    evidence_required: bool = False
+    observation_markers: int = 0
+    learner_notes: int = 0
 
 
 LearningPathProgressItem = tuple[LearningPathStep, LearningPathProgress]
@@ -707,7 +710,16 @@ def learning_path_progress(
     outputs_root: Path | None = None,
 ) -> LearningPathProgress:
     latest = learning_path_latest_output(step, outputs_root)
-    return LearningPathProgress(completed=latest is not None, latest_output=latest)
+    evidence_required = learning_path_requires_evidence(step)
+    markers, notes = _observation_evidence_counts(latest) if latest is not None else (0, 0)
+    completed = latest is not None and (not evidence_required or markers > 0)
+    return LearningPathProgress(
+        completed=completed,
+        latest_output=latest,
+        evidence_required=evidence_required,
+        observation_markers=markers,
+        learner_notes=notes,
+    )
 
 
 def learning_path_progress_text(
@@ -715,12 +727,30 @@ def learning_path_progress_text(
     progress: LearningPathProgress | None = None,
 ) -> str:
     current = progress if progress is not None else learning_path_progress(step)
-    status = (
-        f"Status: Done - latest {current.latest_output.name}"
-        if current.latest_output is not None
-        else "Status: Not run yet"
-    )
+    if current.latest_output is None:
+        status = "Status: Not run yet"
+    elif current.completed:
+        status = f"Status: Done - latest {current.latest_output.name}{_learning_path_evidence_suffix(current)}"
+    else:
+        status = (
+            f"Status: Needs observation - latest {current.latest_output.name}. "
+            "Add one Mark observation entry before moving on."
+        )
     return f"{learning_path_text(step)}\n{status}"
+
+
+def _learning_path_evidence_suffix(progress: LearningPathProgress) -> str:
+    if progress.observation_markers <= 0:
+        return ""
+    note_text = (
+        f", {progress.learner_notes} note{'s' if progress.learner_notes != 1 else ''}"
+        if progress.learner_notes
+        else ""
+    )
+    return (
+        f" ({progress.observation_markers} observation"
+        f"{'s' if progress.observation_markers != 1 else ''}{note_text})"
+    )
 
 
 def learning_path_progress_items(
@@ -745,10 +775,16 @@ def learning_path_summary_text(
     items = progress_items if progress_items is not None else learning_path_progress_items()
     total = len(items)
     completed = sum(1 for _step, progress in items if progress.completed)
+    evidence_pending = sum(
+        1
+        for _step, progress in items
+        if progress.latest_output is not None and progress.evidence_required and progress.observation_markers == 0
+    )
     next_step = next_learning_path_step(items)
     if next_step is None:
         return f"Progress: {completed}/{total} complete. Course path complete - open All reports to review."
-    return f"Progress: {completed}/{total} complete. Next: {next_step.title} - {next_step.description}"
+    evidence_text = f" Evidence pending: {evidence_pending} hands-on step(s)." if evidence_pending else ""
+    return f"Progress: {completed}/{total} complete.{evidence_text} Next: {next_step.title} - {next_step.description}"
 
 
 def learning_path_latest_output(
@@ -756,6 +792,11 @@ def learning_path_latest_output(
     outputs_root: Path | None = None,
 ) -> Path | None:
     return action_latest_output(learning_path_target(step), outputs_root)
+
+
+def learning_path_requires_evidence(step: LearningPathStep) -> bool:
+    action = learning_path_target(step)
+    return isinstance(action, MenuAction) and "hands-on" in action_tags(action)
 
 
 def launch_learning_path_latest_output(

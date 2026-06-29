@@ -44,6 +44,7 @@ from mclab.learner_menu import (  # noqa: E402
     learning_path_progress_items,
     learning_path_latest_output,
     learning_path_progress,
+    learning_path_requires_evidence,
     learning_path_progress_text,
     learning_path_summary_text,
     learning_path_target,
@@ -232,6 +233,74 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(next_learning_path_step(progress_items), LEARNING_PATH[1])
         self.assertIn("Progress: 2/10 complete", learning_path_summary_text(progress_items))
         self.assertIn("Next: 2. Disturb and tune", learning_path_summary_text(progress_items))
+
+    def test_recommended_learning_path_requires_observation_for_hands_on_steps(self) -> None:
+        first_step = LEARNING_PATH[0]
+        second_step = LEARNING_PATH[1]
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            run_dir = outputs / "run_lab01"
+            run_dir.mkdir()
+            (run_dir / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab01_msd",
+                        "config_path": "configs/lab01_msd/default.yaml",
+                        "config_name": "default",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (run_dir / "report.html").write_text("<html></html>", encoding="utf-8")
+
+            interactive_dir = outputs / "run_lab01_interactive"
+            interactive_dir.mkdir()
+            (interactive_dir / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab01_msd",
+                        "config_path": "configs/lab01_msd/interactive_pull.yaml",
+                        "config_name": "interactive_pull",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (interactive_dir / "report.html").write_text("<html></html>", encoding="utf-8")
+
+            needs_evidence = learning_path_progress(second_step, outputs)
+            needs_summary = learning_path_summary_text(learning_path_progress_items(outputs))
+
+            (interactive_dir / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {"question": "Question: demo?", "note": "Saw the mass settle."},
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            complete_progress = learning_path_progress(second_step, outputs)
+
+        self.assertFalse(learning_path_requires_evidence(first_step))
+        self.assertTrue(learning_path_requires_evidence(second_step))
+        self.assertFalse(needs_evidence.completed)
+        self.assertEqual(needs_evidence.observation_markers, 0)
+        self.assertIn("Status: Needs observation - latest run_lab01_interactive", learning_path_progress_text(second_step, needs_evidence))
+        self.assertIn("Add one Mark observation entry", learning_path_progress_text(second_step, needs_evidence))
+        self.assertIn("Progress: 1/10 complete", needs_summary)
+        self.assertIn("Evidence pending: 1 hands-on step(s).", needs_summary)
+        self.assertIn("Next: 2. Disturb and tune", needs_summary)
+
+        self.assertTrue(complete_progress.completed)
+        self.assertEqual(complete_progress.observation_markers, 1)
+        self.assertEqual(complete_progress.learner_notes, 1)
+        self.assertIn(
+            "Status: Done - latest run_lab01_interactive (1 observation, 1 note)",
+            learning_path_progress_text(second_step, complete_progress),
+        )
 
     def test_recommended_learning_path_report_opens_latest_output(self) -> None:
         first_step = LEARNING_PATH[0]
