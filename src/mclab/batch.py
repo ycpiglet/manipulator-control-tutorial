@@ -16,7 +16,7 @@ from typing import Any
 from mclab.config import PROJECT_ROOT, load_config, resolve_project_path
 from mclab.labs import lab01_msd, lab02_pid, lab03_2dof, lab04_panda
 from mclab.learning_guides import guide_for_config, prediction_prompt_for_guide, question_for_guide
-from mclab.sim.reporting import INDEX_METRIC_KEYS, write_outputs_index
+from mclab.sim.reporting import INDEX_METRIC_KEYS, INDEX_PLOT_PRIORITY, write_outputs_index
 
 LabRunner = Callable[..., Path]
 
@@ -592,6 +592,20 @@ def _render_batch_report(output: Path, batch_name: str, guide: BatchGuide, rows:
       color: #3f4752;
       margin-bottom: 2px;
     }}
+    .quick-links {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 8px 0;
+      font-size: 13px;
+    }}
+    .quick-links a, .quick-links span {{
+      border: 1px solid #d9dde3;
+      border-radius: 6px;
+      padding: 4px 8px;
+      background: #f8fafc;
+      text-decoration: none;
+    }}
     .command {{
       display: block;
       white-space: pre-wrap;
@@ -843,15 +857,50 @@ def _scenario_card(row: dict[str, Any], metric_keys: list[str]) -> str:
         metrics = '<p class="muted">No summary metrics were saved.</p>'
     learning_cues = _scenario_learning_cues(row)
     command = _scenario_run_command(row)
+    quick_links = _scenario_quick_links(row)
     return (
         '<article class="scenario">'
         f'<h3><a href="{escape(str(row["report"]))}">{escape(str(row["label"]))}</a></h3>'
         f'<p class="muted">{escape(str(row["config_path"]))}</p>'
+        f"{quick_links}"
         f"{learning_cues}"
         f'<code class="command">{escape(command)}</code>'
         f"{metrics}"
         "</article>"
     )
+
+
+def _scenario_quick_links(row: dict[str, Any]) -> str:
+    plot = _priority_plot_link(row.get("plots", {}))
+    plot_link = (
+        f'<a href="{escape(plot[1])}">Open {escape(plot[0])}</a>'
+        if plot is not None
+        else '<span class="muted">No plot link saved</span>'
+    )
+    return (
+        '<div class="quick-links">'
+        f'<a href="{escape(str(row["report"]))}">Open report</a>'
+        f"{plot_link}"
+        "</div>"
+    )
+
+
+def _priority_plot_link(plots: Any) -> tuple[str, str] | None:
+    if not isinstance(plots, dict) or not plots:
+        return None
+    plot_names = sorted(str(name) for name in plots if str(name).endswith(".png"))
+    if not plot_names:
+        return None
+    selected = min(plot_names, key=_plot_priority_key)
+    return selected, str(plots[selected])
+
+
+def _plot_priority_key(name: str) -> tuple[int, str]:
+    stem = Path(name).stem
+    for index, priority in enumerate(INDEX_PLOT_PRIORITY):
+        if stem == priority or stem.startswith(f"{priority}_") or stem.endswith(f"_{priority}"):
+            return index, name
+    return len(INDEX_PLOT_PRIORITY), name
 
 
 def _reproduce_commands(batch_name: str, rows: list[dict[str, Any]]) -> str:

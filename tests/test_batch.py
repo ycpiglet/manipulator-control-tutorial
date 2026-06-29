@@ -115,6 +115,9 @@ class BatchTests(unittest.TestCase):
             self.assertIn("Question", report_html)
             self.assertIn("Watch", report_html)
             self.assertIn("What baseline motion", report_html)
+            self.assertIn("Open report", report_html)
+            self.assertIn("Open position.png", report_html)
+            self.assertIn('href="demo_scenario/plots/position.png"', report_html)
             self.assertIn("max abs position", report_html)
             self.assertIn("Parameter Differences", report_html)
             self.assertIn("Plot Previews", report_html)
@@ -260,6 +263,32 @@ class BatchTests(unittest.TestCase):
             self.assertIn("controller.kp", report_html)
             self.assertIn("Comparison Plots", report_html)
             self.assertIn("comparison_plots/position_compare.png", report_html)
+
+    def test_scenario_card_reports_missing_plot_links_without_failing(self) -> None:
+        html = batch._scenario_card(
+            {
+                "label": "no plot",
+                "lab_name": "lab01",
+                "config_path": "configs/lab01_msd/default.yaml",
+                "report": "no_plot/report.html",
+                "plots": {},
+                "summary": {"max_abs_position": 0.2},
+            },
+            ["max_abs_position"],
+        )
+
+        self.assertIn("Open report", html)
+        self.assertIn("No plot link saved", html)
+
+    def test_priority_plot_link_uses_index_plot_priority(self) -> None:
+        selected = batch._priority_plot_link(
+            {
+                "torque.png": "run/plots/torque.png",
+                "position.png": "run/plots/position.png",
+            }
+        )
+
+        self.assertEqual(selected, ("position.png", "run/plots/position.png"))
 
 
 if __name__ == "__main__":
