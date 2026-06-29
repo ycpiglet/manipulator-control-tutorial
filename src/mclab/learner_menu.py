@@ -721,9 +721,39 @@ def build_run_args(action: MenuAction) -> list[str]:
     ]
 
 
+def build_tuned_replay_args(action: MenuAction, tuned_config_path: Path) -> list[str]:
+    return [
+        sys.executable,
+        "-m",
+        "mclab",
+        "run",
+        action.lab_name,
+        "--config",
+        str(tuned_config_path),
+        "--viewer",
+        "--realtime",
+        "--pause-at-end",
+        "--plot",
+        "--plots",
+        action.plots,
+        "--open-report",
+    ]
+
+
 def launch_action(action: MenuAction) -> subprocess.Popen[str]:
     return subprocess.Popen(
         build_run_args(action),
+        cwd=PROJECT_ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )
+
+
+def launch_tuned_replay(action: MenuAction, tuned_config_path: Path) -> subprocess.Popen[str]:
+    return subprocess.Popen(
+        build_tuned_replay_args(action, tuned_config_path),
         cwd=PROJECT_ROOT,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -930,6 +960,14 @@ def action_latest_plot(
     return latest_output_plot(action_latest_output(action, outputs_root))
 
 
+def action_latest_tuned_config(action: MenuAction, outputs_root: Path | None = None) -> Path | None:
+    latest = action_latest_output(action, outputs_root)
+    if latest is None:
+        return None
+    tuned = latest / "learner_tuned_config.yaml"
+    return tuned if tuned.exists() else None
+
+
 def learning_path_latest_plot(
     step: LearningPathStep,
     outputs_root: Path | None = None,
@@ -970,6 +1008,13 @@ def action_plot_text(
     if latest_plot is None:
         return "Plots: Not saved yet"
     return f"Plots: Latest {latest_plot.name}"
+
+
+def action_replay_text(action: MenuAction, outputs_root: Path | None = None) -> str:
+    tuned_config = action_latest_tuned_config(action, outputs_root)
+    if tuned_config is None:
+        return "Replay: No tuned config yet"
+    return f"Replay: Latest {tuned_config.name}"
 
 
 def refresh_batch_menu_state(
@@ -1538,6 +1583,7 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
         f"{action_history_text(action, outputs_root)}\n"
         f"{action_evidence_text(action, outputs_root)}\n"
         f"{action_plot_text(action, outputs_root)}\n"
+        f"{action_replay_text(action, outputs_root)}\n"
         f"Try: {action.try_this}\n"
         f"Change: {parameter_hint(action)}\n"
         f"{config_value_preview(action)}\n"
@@ -1964,12 +2010,13 @@ def main() -> int:
         for group, actions in grouped.items():
             frame = ttk.LabelFrame(scroll_frame, text=group, padding=12)
             frame.grid(row=row, column=0, sticky="ew", pady=6)
-            frame.columnconfigure(7, weight=1)
+            frame.columnconfigure(8, weight=1)
             row += 1
             for action_index, action in enumerate(actions):
                 readiness = action_readiness(action)
                 latest = action_latest_output(action)
                 latest_plot = action_latest_plot(action)
+                latest_tuned_config = action_latest_tuned_config(action)
                 followup = action_followup(action)
                 compare_batch = action_compare_batch(action)
                 run_button = ttk.Button(
@@ -2019,6 +2066,23 @@ def main() -> int:
                 if latest_plot is None:
                     plot_button.state(["disabled"])
                 plot_button.grid(row=action_index, column=4, sticky="w", padx=(0, 12), pady=4)
+                replay_button = ttk.Button(
+                    frame,
+                    text="Replay",
+                    width=8,
+                    command=lambda selected=action: _launch_tuned_replay_from_menu(
+                        selected,
+                        status,
+                        root=root,
+                        latest_output=latest_output,
+                        latest_button=latest_button,
+                        latest_plot_button=latest_plot_button,
+                        progress_callback=refresh_after_run,
+                    ),
+                )
+                if latest_tuned_config is None:
+                    replay_button.state(["disabled"])
+                replay_button.grid(row=action_index, column=5, sticky="w", padx=(0, 12), pady=4)
                 next_button = ttk.Button(
                     frame,
                     text="Next",
@@ -2037,7 +2101,7 @@ def main() -> int:
                     next_button.state(["disabled"])
                 if isinstance(followup, BatchMenuAction) and batch_readiness(followup).status != "ok":
                     next_button.state(["disabled"])
-                next_button.grid(row=action_index, column=5, sticky="w", padx=(0, 12), pady=4)
+                next_button.grid(row=action_index, column=6, sticky="w", padx=(0, 12), pady=4)
                 compare_button = ttk.Button(
                     frame,
                     text="Compare",
@@ -2054,9 +2118,9 @@ def main() -> int:
                 )
                 if batch_readiness(compare_batch).status != "ok":
                     compare_button.state(["disabled"])
-                compare_button.grid(row=action_index, column=6, sticky="w", padx=(0, 12), pady=4)
+                compare_button.grid(row=action_index, column=7, sticky="w", padx=(0, 12), pady=4)
                 ttk.Label(frame, text=lesson_text(action), wraplength=500, justify="left").grid(
-                    row=action_index, column=7, sticky="w", pady=4
+                    row=action_index, column=8, sticky="w", pady=4
                 )
         canvas.configure(scrollregion=canvas.bbox("all"))
 
@@ -2146,6 +2210,39 @@ def _launch_from_menu(
         return
     process = launch_action(action)
     status.set(f"Started {action.group} - {action.label} (pid {process.pid}). Close the viewer to finish.")
+    Thread(
+        target=_watch_process,
+        args=(process, action, status),
+        kwargs={
+            "root": root,
+            "latest_output": latest_output,
+            "latest_button": latest_button,
+            "latest_plot_button": latest_plot_button,
+            "progress_callback": progress_callback,
+        },
+        daemon=True,
+    ).start()
+
+
+def _launch_tuned_replay_from_menu(
+    action: MenuAction,
+    status: Any,
+    *,
+    root: Any | None = None,
+    latest_output: dict[str, Path | None] | None = None,
+    latest_button: Any | None = None,
+    latest_plot_button: Any | None = None,
+    progress_callback: Callable[[], None] | None = None,
+) -> None:
+    tuned_config = action_latest_tuned_config(action)
+    if tuned_config is None:
+        status.set(f"Cannot replay {action.group} - {action.label}: no learner_tuned_config.yaml yet.")
+        return
+    process = launch_tuned_replay(action, tuned_config)
+    status.set(
+        f"Started tuned replay for {action.group} - {action.label} "
+        f"(pid {process.pid}). Close the viewer to finish."
+    )
     Thread(
         target=_watch_process,
         args=(process, action, status),

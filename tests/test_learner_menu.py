@@ -5,7 +5,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -21,6 +21,7 @@ from mclab.learner_menu import (  # noqa: E402
     MenuAction,
     _launch_batch_from_menu,
     _launch_from_menu,
+    _launch_tuned_replay_from_menu,
     _set_status_after_run,
     _set_status_after_doctor,
     action_compare_batch,
@@ -32,14 +33,17 @@ from mclab.learner_menu import (  # noqa: E402
     action_history_text,
     action_latest_output,
     action_latest_plot,
+    action_latest_tuned_config,
     action_plot_text,
     action_readiness,
+    action_replay_text,
     action_tags,
     action_doc_path,
     batch_readiness,
     build_batch_args,
     build_doctor_args,
     build_run_args,
+    build_tuned_replay_args,
     config_value_preview,
     experience_filter_description,
     filter_menu_actions,
@@ -144,6 +148,23 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertIn("--plot", args)
                 self.assertIn("--open-report", args)
                 self.assertIn(action.config_path, args)
+                plot_index = args.index("--plots")
+                self.assertEqual(args[plot_index + 1], action.plots)
+
+    def test_tuned_replay_commands_use_saved_config_without_debug_side_panels(self) -> None:
+        for action in MENU_ACTIONS:
+            tuned_config = ROOT / "outputs" / "run" / "learner_tuned_config.yaml"
+            with self.subTest(label=action.label, config=action.config_path):
+                args = build_tuned_replay_args(action, tuned_config)
+                self.assertEqual(args[1:4], ["-m", "mclab", "run"])
+                self.assertIn(action.lab_name, args)
+                self.assertIn(str(tuned_config), args)
+                self.assertIn("--viewer", args)
+                self.assertIn("--realtime", args)
+                self.assertIn("--pause-at-end", args)
+                self.assertIn("--plot", args)
+                self.assertIn("--open-report", args)
+                self.assertNotIn("--show-viewer-ui", args)
                 plot_index = args.index("--plots")
                 self.assertEqual(args[plot_index + 1], action.plots)
 
@@ -774,13 +795,23 @@ class LearnerMenuTests(unittest.TestCase):
             (run_path / "plots" / "energy.png").write_bytes(b"fake-png")
             priority_plot = run_path / "plots" / "position.png"
             priority_plot.write_bytes(b"fake-png")
+            tuned_config = run_path / "learner_tuned_config.yaml"
+            tuned_config.write_text("interaction:\n  panel: false\n", encoding="utf-8")
 
             self.assertEqual(action_latest_output(MENU_ACTIONS[0], outputs), run_path)
             self.assertEqual(action_latest_plot(MENU_ACTIONS[0], outputs), priority_plot)
+            self.assertEqual(action_latest_tuned_config(MENU_ACTIONS[0], outputs), tuned_config)
             self.assertIn("History: Latest run_lab01", action_history_text(MENU_ACTIONS[0], outputs))
             self.assertEqual(action_plot_text(MENU_ACTIONS[0], outputs), "Plots: Latest position.png")
+            self.assertEqual(
+                action_replay_text(MENU_ACTIONS[0], outputs),
+                "Replay: Latest learner_tuned_config.yaml",
+            )
+            self.assertIn("Replay: Latest learner_tuned_config.yaml", lesson_text(MENU_ACTIONS[0], outputs))
             self.assertEqual(action_history_text(MENU_ACTIONS[1], outputs), "History: Not run yet")
             self.assertEqual(action_plot_text(MENU_ACTIONS[1], outputs), "Plots: Not saved yet")
+            self.assertIsNone(action_latest_tuned_config(MENU_ACTIONS[1], outputs))
+            self.assertEqual(action_replay_text(MENU_ACTIONS[1], outputs), "Replay: No tuned config yet")
 
             with patch("mclab.learner_menu.open_path") as opener:
                 launch_action_latest_output(MENU_ACTIONS[0], outputs)
@@ -958,6 +989,37 @@ class LearnerMenuTests(unittest.TestCase):
 
             opener.assert_not_called()
             self.assertIsNone(result)
+
+    def test_launch_tuned_replay_starts_from_latest_tuned_config(self) -> None:
+        action = MENU_ACTIONS[0]
+        tuned_config = ROOT / "outputs" / "run" / "learner_tuned_config.yaml"
+        status = FakeStatus()
+        process = Mock(pid=345)
+
+        with (
+            patch("mclab.learner_menu.action_latest_tuned_config", return_value=tuned_config),
+            patch("mclab.learner_menu.launch_tuned_replay", return_value=process) as launcher,
+            patch("mclab.learner_menu.Thread") as thread,
+        ):
+            _launch_tuned_replay_from_menu(action, status)
+
+        launcher.assert_called_once_with(action, tuned_config)
+        thread.assert_called_once()
+        self.assertIn("Started tuned replay", status.value)
+        self.assertIn("pid 345", status.value)
+
+    def test_launch_tuned_replay_reports_missing_config(self) -> None:
+        status = FakeStatus()
+
+        with (
+            patch("mclab.learner_menu.action_latest_tuned_config", return_value=None),
+            patch("mclab.learner_menu.launch_tuned_replay") as launcher,
+        ):
+            _launch_tuned_replay_from_menu(MENU_ACTIONS[0], status)
+
+        launcher.assert_not_called()
+        self.assertIn("Cannot replay", status.value)
+        self.assertIn("learner_tuned_config.yaml", status.value)
 
     def test_launch_latest_output_opens_index_for_batch_when_available(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
