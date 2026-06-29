@@ -15,6 +15,7 @@ from typing import Any
 
 from mclab.config import PROJECT_ROOT, load_config, resolve_project_path
 from mclab.labs import lab01_msd, lab02_pid, lab03_2dof, lab04_panda
+from mclab.learning_guides import guide_for_config, prediction_prompt_for_guide, question_for_guide
 from mclab.sim.reporting import INDEX_METRIC_KEYS, write_outputs_index
 
 LabRunner = Callable[..., Path]
@@ -577,6 +578,18 @@ def _render_batch_report(output: Path, guide: BatchGuide, rows: list[dict[str, A
       margin-top: 7px;
       font-size: 13px;
     }}
+    .cue {{
+      border-top: 1px solid #edf0f3;
+      padding-top: 7px;
+      margin-top: 7px;
+      font-size: 13px;
+      line-height: 1.35;
+    }}
+    .cue strong {{
+      display: block;
+      color: #3f4752;
+      margin-bottom: 2px;
+    }}
     .preview-grid {{
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -811,12 +824,35 @@ def _scenario_card(row: dict[str, Any], metric_keys: list[str]) -> str:
     )
     if not metrics:
         metrics = '<p class="muted">No summary metrics were saved.</p>'
+    learning_cues = _scenario_learning_cues(row)
     return (
         '<article class="scenario">'
         f'<h3><a href="{escape(str(row["report"]))}">{escape(str(row["label"]))}</a></h3>'
         f'<p class="muted">{escape(str(row["config_path"]))}</p>'
+        f"{learning_cues}"
         f"{metrics}"
         "</article>"
+    )
+
+
+def _scenario_learning_cues(row: dict[str, Any]) -> str:
+    guide = guide_for_config(config_path=str(row.get("config_path", "")), lab_name=str(row.get("lab_name", "")))
+    if guide is None:
+        return ""
+    cues = [
+        ("Predict", prediction_prompt_for_guide(guide).removeprefix("Prediction:").strip()),
+        ("Question", question_for_guide(guide).removeprefix("Question:").strip()),
+        ("Watch", str(getattr(guide, "watch", "") or "").strip()),
+    ]
+    return "".join(
+        (
+            '<div class="cue">'
+            f"<strong>{escape(label)}</strong>"
+            f"{escape(text)}"
+            "</div>"
+        )
+        for label, text in cues
+        if text
     )
 
 
