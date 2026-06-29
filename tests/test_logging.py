@@ -80,6 +80,7 @@ class LoggingTests(unittest.TestCase):
                         "label": "Mark observation",
                         "value": {
                             "question": "Question: Which slider change made the response easiest to explain?",
+                            "prediction": "Higher stiffness should create a sharper force peak.",
                             "evidence_prompt": "Evidence to capture: position, force, and total energy.",
                             "note": "Higher stiffness made the force spike easier to see.",
                             "changed_sliders": {"stiffness": 80.0},
@@ -129,9 +130,12 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Observation Markers", html)
             self.assertIn("1 marked observation saved.", html)
             self.assertIn("Review prompt", html)
-            self.assertIn("1 learning question and 1 learner note were saved.", html)
+            self.assertIn("1 learning question, 1 prediction, and 1 learner note were saved.", html)
+            self.assertIn("Latest prediction:", html)
             self.assertIn("Latest note:", html)
             self.assertIn("Which slider change made the response easiest to explain?", html)
+            self.assertIn("Prediction", html)
+            self.assertIn("Higher stiffness should create a sharper force peak.", html)
             self.assertIn("Evidence prompt", html)
             self.assertIn("position, force, and total energy", html)
             self.assertIn("Higher stiffness made the force spike easier to see.", html)

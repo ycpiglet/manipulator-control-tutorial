@@ -1333,20 +1333,31 @@ def _is_observation_marker(event: dict[str, Any]) -> bool:
 
 def _observation_review_prompt(markers: list[dict[str, Any]]) -> str:
     questions: list[str] = []
+    predictions: list[str] = []
     notes: list[str] = []
     for marker in markers:
         payload = marker.get("value")
         value = payload if isinstance(payload, dict) else {}
         question = str(value.get("question") or "").strip()
+        prediction = str(value.get("prediction") or "").strip()
         note = str(value.get("note") or "").strip()
         if question and question not in questions:
             questions.append(question)
+        if prediction:
+            predictions.append(prediction)
         if note:
             notes.append(note)
 
     question_count = len(questions)
+    prediction_count = len(predictions)
     note_count = len(notes)
+    latest_prediction = predictions[-1] if predictions else ""
     latest_note = notes[-1] if notes else ""
+    latest_prediction_html = (
+        f'<p class="empty"><strong>Latest prediction:</strong> {escape(latest_prediction)}</p>'
+        if latest_prediction
+        else ""
+    )
     latest_note_html = (
         f'<p class="empty"><strong>Latest note:</strong> {escape(latest_note)}</p>'
         if latest_note
@@ -1356,8 +1367,10 @@ def _observation_review_prompt(markers: list[dict[str, Any]]) -> str:
         '<div class="marker-group">'
         "<strong>Review prompt</strong>"
         f'<p>Use these markers as evidence before running the suggested next experiment. '
-        f"{question_count} learning question{'s' if question_count != 1 else ''} and "
+        f"{question_count} learning question{'s' if question_count != 1 else ''}, "
+        f"{prediction_count} prediction{'s' if prediction_count != 1 else ''}, and "
         f"{note_count} learner note{'s' if note_count != 1 else ''} were saved.</p>"
+        f"{latest_prediction_html}"
         f"{latest_note_html}"
         "</div>"
     )
@@ -1367,12 +1380,13 @@ def _observation_marker_card(event: dict[str, Any], marker_index: int) -> str:
     payload = event.get("value")
     value = payload if isinstance(payload, dict) else {}
     question = _marker_text_group("Question", value.get("question"))
+    prediction = _marker_text_group("Prediction", value.get("prediction"))
     evidence_prompt = _marker_text_group("Evidence prompt", value.get("evidence_prompt"))
     note = _marker_text_group("Learner note", value.get("note"))
     changed_sliders = _marker_value_group("Changed sliders", value.get("changed_sliders"))
     sliders = _marker_value_group("Sliders", value.get("sliders"))
     status = _marker_value_group("Live status", value.get("status"))
-    body = question + evidence_prompt + note + changed_sliders + sliders + status
+    body = question + prediction + evidence_prompt + note + changed_sliders + sliders + status
     if not body:
         body = '<p class="empty">No slider or status snapshot was saved for this marker.</p>'
     return (

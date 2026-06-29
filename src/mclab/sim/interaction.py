@@ -85,12 +85,15 @@ class InteractionLog:
         changed_sliders: dict[str, Any] | None = None,
         status: dict[str, Any] | None = None,
         question: str = "",
+        prediction: str = "",
         note: str = "",
         evidence_prompt: str = "",
     ) -> dict[str, Any]:
         value: dict[str, Any] = {}
         if question.strip():
             value["question"] = question.strip()
+        if prediction.strip():
+            value["prediction"] = prediction.strip()
         if evidence_prompt.strip():
             value["evidence_prompt"] = evidence_prompt.strip()
         if note.strip():
@@ -506,6 +509,7 @@ def maybe_start_interaction_panel(
                 marker_frame.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(12, 4))
                 marker_frame.columnconfigure(1, weight=1)
                 marker_status = tk.StringVar(value="")
+                marker_prediction = tk.StringVar(value="")
                 marker_note = tk.StringVar(value="")
                 marker_prompt = observation_prompt_for_guide(guide)
 
@@ -515,9 +519,11 @@ def maybe_start_interaction_panel(
                         sliders=tuning.snapshot() if tuning is not None else None,
                         status=status.snapshot() if status is not None else None,
                         question=question_for_guide(guide),
+                        prediction=marker_prediction.get(),
                         note=marker_note.get(),
                         evidence_prompt=marker_prompt,
                     )
+                    marker_prediction.set("")
                     marker_note.set("")
                     marker_status.set(f"Marked observation {_observation_marker_count(event_log)}")
 
@@ -531,6 +537,18 @@ def maybe_start_interaction_panel(
                         wraplength=430,
                     ).grid(row=marker_row, column=0, columnspan=2, sticky="w", pady=(0, 6))
                     marker_row += 1
+                tk.Label(marker_frame, text="Prediction").grid(
+                    row=marker_row,
+                    column=0,
+                    sticky="w",
+                )
+                tk.Entry(marker_frame, textvariable=marker_prediction, width=40).grid(
+                    row=marker_row,
+                    column=1,
+                    sticky="ew",
+                    padx=(12, 0),
+                )
+                marker_row += 1
                 tk.Label(marker_frame, text="Observation note").grid(
                     row=marker_row,
                     column=0,

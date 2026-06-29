@@ -214,6 +214,7 @@ class KeyForcePulseTests(unittest.TestCase):
             sliders=tuning.snapshot(),
             status=status.snapshot(),
             question="Question: Which gain gives the cleanest response?",
+            prediction="Kp 35 should reduce error without making force noisy.",
             note="Kp 35 reduced error without visible jitter.",
         )
 
@@ -221,6 +222,7 @@ class KeyForcePulseTests(unittest.TestCase):
             payload,
             {
                 "question": "Question: Which gain gives the cleanest response?",
+                "prediction": "Kp 35 should reduce error without making force noisy.",
                 "note": "Kp 35 reduced error without visible jitter.",
                 "changed_sliders": {"kp": 35.0},
                 "sliders": {"kp": 35.0},
@@ -246,6 +248,7 @@ class KeyForcePulseTests(unittest.TestCase):
 
         payload = log.mark_observation(
             question="Question: What changed?",
+            prediction="Force should increase.",
             evidence_prompt="Evidence to capture: position error and force.",
         )
 
@@ -253,9 +256,11 @@ class KeyForcePulseTests(unittest.TestCase):
             payload,
             {
                 "question": "Question: What changed?",
+                "prediction": "Force should increase.",
                 "evidence_prompt": "Evidence to capture: position error and force.",
             },
         )
+        self.assertEqual(log.events()[-1]["value"]["prediction"], payload["prediction"])
         self.assertEqual(log.events()[-1]["value"]["evidence_prompt"], payload["evidence_prompt"])
 
     def test_live_status_formats_dashboard_values(self) -> None:
