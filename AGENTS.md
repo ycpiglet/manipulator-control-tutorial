@@ -111,6 +111,7 @@ Implemented and verified:
 - Learner menu bottom bar includes `Open latest worksheet` for the most recently completed run or batch
 - Learner menu refreshes batch history, report, and plot state after comparison runs complete
 - Learner menu scenario evidence labels for latest observation markers, predictions, learner notes, and pending outcome review
+- Learner menu and outputs index latest-evidence summaries flag missing prediction outcome review
 - Recommended learning path progress in the menu and outputs index requires prediction-bearing observation markers for hands-on steps
 - Recommended learning path summary flags completed hands-on steps that still need prediction outcome review
 - Recommended learning path summary shows the next action plus prediction/compare and watch cues before launch

@@ -786,6 +786,12 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Next: 3. Close the loop", html)
             self.assertIn("Done (1 observation, 1 prediction, 1 note)", html)
             self.assertIn("Add one Prediction outcome while reviewing.", html)
+            self.assertIn(
+                "Latest evidence: Prediction: More damping should settle faster.; "
+                "Outcome: missing review; "
+                "Note: The mass settled faster after damping changed.",
+                html,
+            )
 
             (interactive / "interaction_events.json").write_text(
                 json.dumps(

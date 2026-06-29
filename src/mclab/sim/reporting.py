@@ -3450,6 +3450,8 @@ def _latest_observation_evidence_from_events(events: list[dict[str, Any]]) -> st
             parts.append(f"Prediction: {_short_evidence_text(prediction)}")
         if outcome:
             parts.append(f"Outcome: {_short_evidence_text(outcome, max_length=40)}")
+        elif prediction:
+            parts.append("Outcome: missing review")
         if note:
             parts.append(f"Note: {_short_evidence_text(note)}")
         if isinstance(status, dict):

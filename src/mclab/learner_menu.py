@@ -1167,6 +1167,8 @@ def action_latest_evidence_text(
         parts.append(f"Prediction: {_short_text(prediction)}")
     if outcome:
         parts.append(f"Outcome: {_short_text(outcome, 40)}")
+    elif prediction:
+        parts.append("Outcome: missing review")
     if note:
         parts.append(f"Note: {_short_text(note)}")
     if isinstance(status, dict) and status:

@@ -1168,6 +1168,26 @@ class LearnerMenuTests(unittest.TestCase):
             self.assertIn("Status: Position [m]=0.125", text)
             self.assertIn(text, lesson)
 
+            (run_path / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "prediction": "The response should overshoot.",
+                                "note": "Saw overshoot in the position plot.",
+                            },
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            missing_outcome_text = action_latest_evidence_text(MENU_ACTIONS[0], outputs)
+            self.assertIn("Outcome: missing review", missing_outcome_text)
+            self.assertIn("Outcome: missing review", lesson_text(MENU_ACTIONS[0], outputs))
+
     def test_batch_history_tracks_latest_matching_report(self) -> None:
         lab01_batch = next(action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare")
         lab02_batch = next(action for action in BATCH_ACTIONS if action.batch_name == "lab02_pid_compare")
