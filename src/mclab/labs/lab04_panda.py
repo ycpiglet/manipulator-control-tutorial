@@ -87,16 +87,7 @@ def run(
     target_offset = TargetOffsetControl(config, event_log=interaction_log)
     run_guide = guide_for_config(config_path=str(config_path or ""), lab_name=lab_name)
     live_tuning = _live_tuning(config, interaction_log)
-    live_status = LiveStatus(
-        [
-            StatusSpec("joint_offset", "Target offset [rad]"),
-            StatusSpec("error_norm", "Joint error norm"),
-            StatusSpec("ee_x", "Hand X [m]"),
-            StatusSpec("cartesian_error_cm", "Hand error [cm]"),
-            StatusSpec("wall_penetration_cm", "Wall penetration [cm]"),
-            StatusSpec("wall_force_x", "Wall force X [N]"),
-        ]
-    )
+    live_status = LiveStatus(_live_status_specs(mode))
     viewer_handle = maybe_launch_viewer(
         mujoco,
         model,
@@ -213,7 +204,10 @@ def run(
                 joint_offset=button_joint_offset + tuned_joint_offset,
                 error_norm=error_norm,
                 ee_x=ee_position[0],
+                target_x=target_x_ee[0],
                 cartesian_error_cm=100.0 * cartesian_error_norm,
+                wall_x=wall_config.get("wall_x"),
+                target_wall_gap_cm=100.0 * (target_x_ee[0] - float(wall_config.get("wall_x", target_x_ee[0]))),
                 wall_penetration_cm=100.0 * wall_penetration,
                 wall_force_x=wall_force[0],
             )
@@ -243,6 +237,7 @@ def run(
                 tuned_target_x=live_tuning.value("target_x", target_x_ee[0]),
                 tuned_target_y=live_tuning.value("target_y", target_x_ee[1]),
                 tuned_target_z=live_tuning.value("target_z", target_x_ee[2]),
+                target_wall_gap_cm=100.0 * (target_x_ee[0] - float(wall_config.get("wall_x", target_x_ee[0]))),
                 tuned_joint_target_offset=tuned_joint_offset,
                 tuned_wall_x=float(wall_config.get("wall_x", 10.0)),
                 tuned_wall_stiffness=float(wall_config.get("stiffness", 0.0)),
@@ -301,6 +296,31 @@ def _viewer_guides(config: dict[str, Any], mode: str) -> dict[str, bool]:
         "target": bool(guide_config.get("target", True)),
         "wall": bool(guide_config.get("wall", True)),
     }
+
+
+def _live_status_specs(mode: str) -> list[StatusSpec]:
+    specs = [
+        StatusSpec("joint_offset", "Joint target [rad]"),
+        StatusSpec("error_norm", "Joint error norm"),
+        StatusSpec("ee_x", "Hand X [m]"),
+    ]
+    if mode in {"cartesian_reach", "task_space", "ee_reach", "impedance_wall", "virtual_wall", "wall"}:
+        specs.extend(
+            [
+                StatusSpec("target_x", "Target X [m]"),
+                StatusSpec("cartesian_error_cm", "Hand error [cm]"),
+            ]
+        )
+    if mode in {"impedance_wall", "virtual_wall", "wall"}:
+        specs.extend(
+            [
+                StatusSpec("wall_x", "Wall X [m]"),
+                StatusSpec("target_wall_gap_cm", "Target-Wall [cm]"),
+                StatusSpec("wall_penetration_cm", "Wall penetration [cm]"),
+                StatusSpec("wall_force_x", "Wall force X [N]"),
+            ]
+        )
+    return specs
 
 
 def _update_viewer_guides(
@@ -739,6 +759,7 @@ def _save_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSe
             [
                 "tuned_target_x",
                 "tuned_wall_x",
+                "target_wall_gap_cm",
                 "tuned_wall_stiffness",
                 "tuned_wall_damping",
                 "tuned_wall_retreat_gain",

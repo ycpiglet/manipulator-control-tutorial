@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from mclab.labs.lab04_panda import (  # noqa: E402
+    _live_status_specs,
     _summary,
     _update_viewer_guides,
     _viewer_guides,
@@ -120,6 +121,17 @@ class Lab04WallTests(unittest.TestCase):
         self.assertTrue(_viewer_guides({}, "impedance_wall")["enabled"])
         self.assertFalse(_viewer_guides({}, "joint_trajectory")["enabled"])
         self.assertFalse(_viewer_guides({"viewer_guides": {"enabled": False}}, "cartesian_reach")["enabled"])
+
+    def test_lab04_wall_live_status_shows_target_wall_relationship(self) -> None:
+        names = [spec.name for spec in _live_status_specs("impedance_wall")]
+
+        self.assertIn("target_x", names)
+        self.assertIn("wall_x", names)
+        self.assertIn("target_wall_gap_cm", names)
+        self.assertIn("wall_penetration_cm", names)
+
+        joint_names = [spec.name for spec in _live_status_specs("joint_trajectory")]
+        self.assertNotIn("wall_x", joint_names)
 
     def test_lab04_viewer_guides_draw_target_hand_and_wall(self) -> None:
         def init_geom(geom, geom_type, size, pos, mat, rgba):

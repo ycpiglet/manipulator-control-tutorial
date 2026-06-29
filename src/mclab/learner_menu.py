@@ -697,7 +697,7 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
         plots="wall",
         description="Tune hand target and virtual wall response live.",
         try_this="Move Target X through the wall, then try Soft/Stiff/Close wall presets.",
-        watch="Green target, blue/orange hand marker, wall penetration, wall force, and hand X.",
+        watch="Target-Wall gap, green target, blue/orange hand marker, wall penetration, wall force, and hand X.",
     ),
 )
 

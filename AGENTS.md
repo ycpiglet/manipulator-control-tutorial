@@ -64,6 +64,7 @@ Implemented and verified:
 - Lab04 Cartesian interactive one-line launcher for live XYZ target tuning
 - Lab04 deterministic virtual wall with soft/stiff stiffness-damping comparison configs
 - Lab04 virtual wall interactive demo supports live hand target X/Y/Z tuning plus wall parameter tuning
+- Lab04 virtual wall live status and logs include Target-Wall gap for clearer wall-contact lessons
 - Lab04 low/high damping virtual wall configs that isolate damping with fixed stiffness and retreat gains
 - Lab04 near/far virtual wall configs that isolate wall position with fixed stiffness, damping, and retreat gains
 - Lab04 viewer visual guides for Cartesian target, current hand position, contact state, and virtual wall

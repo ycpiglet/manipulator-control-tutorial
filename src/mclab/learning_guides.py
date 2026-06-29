@@ -501,7 +501,7 @@ RUN_GUIDES: dict[str, RunGuide] = {
         "Tune the hand target and virtual wall parameters while the Panda moves toward the wall.",
         "Move Target X through the wall, then use Quick presets for soft wall, stiff wall, and close wall cases.",
         "live sliders/presets: Target X/Y/Z, Cartesian gain, wall X, stiffness, damping, retreat gain",
-        "Wall penetration, wall force, hand X, green target marker, and orange contact hand marker.",
+        "Target-Wall gap, Wall penetration, wall force, hand X, green target marker, and orange contact hand marker.",
         "Close the viewer and compare virtual_wall.png with the live settings.",
     ),
     "configs/lab04_panda/impedance_wall.yaml": RunGuide(
