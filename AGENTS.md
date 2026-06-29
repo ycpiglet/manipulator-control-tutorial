@@ -106,6 +106,7 @@ Implemented and verified:
 - Learner menu batch history labels and per-batch latest-report buttons
 - Learner menu learning-path step report buttons for completed course steps
 - Run reports include suggested next-run cards with reflection questions, key parameter changes, and ready-to-run commands for every guided config
+- Run reports include a top-level `Next Actions` shortcut section for evidence review, priority plot opening, tuned replay, suggested next run, and comparison batch
 - Run reports include a relevant comparison batch command for the current lab or Panda wall/reach mode
 - Observation markers capture the active learning question, learner predictions, evidence prompt, learner notes, changed sliders, full slider snapshots, and live status snapshots
 - Run reports show hands-on evidence completion status for interactive runs

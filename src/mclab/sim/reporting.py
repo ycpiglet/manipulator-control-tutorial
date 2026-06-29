@@ -484,6 +484,7 @@ def _render_report(
 ) -> str:
     title = _report_title(output, summary)
     learning_guide = _learning_guide_section(guide_for_run_summary(summary))
+    next_actions = _next_actions_section(output, summary, config, plots, interaction_events)
     reproduce_section = _reproduce_section(summary)
     tuned_replay = _learner_tuned_config_section(output, summary)
     next_runs = _suggested_next_runs_section(summary, config)
@@ -835,6 +836,7 @@ def _render_report(
   <main>
     <h1>{escape(title)} report</h1>
     {learning_guide}
+    {next_actions}
     {reproduce_section}
     {tuned_replay}
     {next_runs}
@@ -956,6 +958,126 @@ def _learner_tuned_config_section(output: Path, summary: dict[str, Any]) -> str:
         f'<p class="empty"><a href="{escape(tuned_config.name)}">Open learner_tuned_config.yaml</a></p>'
         "</section>"
     )
+
+
+def _next_actions_section(
+    output: Path,
+    summary: dict[str, Any],
+    current_config: dict[str, Any],
+    plots: list[Path],
+    events: list[dict[str, Any]],
+) -> str:
+    cards: list[str] = []
+    evidence_card = _next_action_evidence_card(summary, events)
+    if evidence_card:
+        cards.append(evidence_card)
+    plot_card = _next_action_plot_card(output, plots)
+    if plot_card:
+        cards.append(plot_card)
+    replay_card = _next_action_replay_card(output, summary)
+    if replay_card:
+        cards.append(replay_card)
+    suggested_card = _next_action_suggestion_card(summary, current_config)
+    if suggested_card:
+        cards.append(suggested_card)
+    comparison_card = _next_action_comparison_card(summary)
+    if comparison_card:
+        cards.append(comparison_card)
+    if not cards:
+        return ""
+    return (
+        "<section>"
+        "<h2>Next Actions</h2>"
+        '<p class="empty">Use these shortcuts right after reading this report.</p>'
+        '<div class="action-grid">'
+        f"{''.join(cards[:5])}"
+        "</div>"
+        "</section>"
+    )
+
+
+def _next_action_evidence_card(summary: dict[str, Any], events: list[dict[str, Any]]) -> str:
+    markers, predictions, notes = _observation_evidence_counts_from_events(events)
+    if markers <= 0 and not _summary_requires_hands_on_evidence(summary):
+        return ""
+    if markers > 0 and predictions > 0:
+        title = "Review saved evidence"
+        description = "Compare the saved prediction and note against the plots below."
+    elif markers > 0:
+        title = "Add prediction evidence"
+        description = "Repeat this hands-on run and fill Prediction before Mark observation."
+    else:
+        title = "Mark one observation"
+        description = "Run the interactive demo, write a prediction, then save one observation."
+    return _action_card(
+        title,
+        description,
+        _action_value_list(
+            (
+                ("Observation markers", markers),
+                ("Predictions", predictions),
+                ("Learner notes", notes),
+            )
+        ),
+    )
+
+
+def _next_action_plot_card(output: Path, plots: list[Path]) -> str:
+    if not plots:
+        return ""
+    plot = sorted(plots, key=_index_plot_sort_key)[0]
+    label = _index_plot_label(plot)
+    href = _relative(output, plot)
+    body = (
+        _action_value_list((("Priority plot", label), ("File", plot.name)))
+        + f'<p class="empty"><a href="{escape(href)}">Open {escape(plot.name)}</a></p>'
+    )
+    return _action_card("Open the key plot", "Start with the highest-priority plot for this run.", body)
+
+
+def _next_action_replay_card(output: Path, summary: dict[str, Any]) -> str:
+    tuned_config = output / "learner_tuned_config.yaml"
+    lab_name = _cli_lab_name(str(summary.get("lab_name") or ""))
+    if not tuned_config.exists() or not lab_name:
+        return ""
+    command = (
+        f"python -m mclab run {lab_name} --config {tuned_config} "
+        "--viewer --realtime --pause-at-end --plot --open-report"
+    )
+    body = _action_value_list((("Config", tuned_config.name),)) + f"<pre>{escape(command)}</pre>"
+    return _action_card("Replay tuned values", "Watch the final slider values again without live controls.", body)
+
+
+def _next_action_suggestion_card(summary: dict[str, Any], current_config: dict[str, Any]) -> str:
+    config_path = _normalize_path(str(summary.get("config_path") or ""))
+    suggestions = NEXT_RUN_SUGGESTIONS.get(config_path, ())
+    if not suggestions:
+        return ""
+    suggestion = suggestions[0]
+    guide = guide_for_config(config_path=suggestion.config_path)
+    title = guide.title if guide is not None else Path(suggestion.config_path).stem.replace("_", " ").title()
+    lab_name = _cli_lab_name(suggestion.config_path)
+    command = (
+        f"python -m mclab run {lab_name} --config {suggestion.config_path} "
+        f"--viewer --realtime --pause-at-end --plot --plots {suggestion.plots} --open-report"
+    )
+    key_changes = _suggested_config_changes(current_config, suggestion.config_path)
+    body = (
+        _action_value_list((("Config", suggestion.config_path), ("Plots", suggestion.plots)))
+        + key_changes
+        + f"<pre>{escape(command)}</pre>"
+    )
+    return _action_card(f"Try next: {title}", suggestion.reason, body)
+
+
+def _next_action_comparison_card(summary: dict[str, Any]) -> str:
+    comparison = _comparison_batch_for_summary(summary)
+    if comparison is None:
+        return ""
+    batch_name, title, reason = comparison
+    command = f"python -m mclab batch {batch_name} --open-report"
+    body = _action_value_list((("Batch", batch_name),)) + f"<pre>{escape(command)}</pre>"
+    return _action_card(f"Compare batch: {title}", reason, body)
 
 
 def _suggested_next_runs_section(summary: dict[str, Any], current_config: dict[str, Any]) -> str:
@@ -1132,10 +1254,10 @@ def _cli_lab_name(lab_name: str) -> str:
         return "lab01"
     if "lab02" in normalized or "pid" in normalized:
         return "lab02"
-    if "lab03" in normalized or "trajectory" in normalized or "2dof" in normalized:
-        return "lab03"
     if "lab04" in normalized or "panda" in normalized:
         return "lab04"
+    if "lab03" in normalized or "trajectory" in normalized or "2dof" in normalized:
+        return "lab03"
     return ""
 
 

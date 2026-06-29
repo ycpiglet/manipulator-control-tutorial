@@ -120,6 +120,12 @@ class LoggingTests(unittest.TestCase):
                 html,
             )
             self.assertIn("mass, damping, stiffness", html)
+            self.assertIn("Next Actions", html)
+            self.assertIn("Use these shortcuts right after reading this report.", html)
+            self.assertIn("Review saved evidence", html)
+            self.assertIn("Replay tuned values", html)
+            self.assertIn("Try next: Lab01 Underdamped", html)
+            self.assertIn("Compare batch: Lab01 mass-spring-damper comparison", html)
             self.assertIn("Reproduce This Run", html)
             self.assertIn(
                 "python -m mclab run lab01 --config configs/lab01_msd/default.yaml --viewer",
@@ -309,6 +315,9 @@ class LoggingTests(unittest.TestCase):
             html = report.read_text(encoding="utf-8")
             self.assertIn("plots/position.png", html)
             self.assertIn("position.png", html)
+            self.assertIn("Next Actions", html)
+            self.assertIn("Open the key plot", html)
+            self.assertIn("Priority plot", html)
             self.assertIn("Plot Guide", html)
             self.assertIn("Position", html)
             self.assertIn("steady-state error", html)
@@ -390,6 +399,39 @@ class LoggingTests(unittest.TestCase):
                 html,
             )
             self.assertIn("--plots essential --open-report", html)
+
+    def test_run_report_next_actions_use_correct_lab_for_panda_trajectory_configs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "run"
+            output.mkdir()
+            (output / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab04_panda",
+                        "config_path": "configs/lab04_panda/joint_pd.yaml",
+                        "config_name": "joint_pd",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (output / "config.yaml").write_text(
+                (ROOT / "configs/lab04_panda/joint_pd.yaml").read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+            (output / "notes.md").write_text("# Demo\n", encoding="utf-8")
+
+            report = write_run_report(output)
+
+            html = report.read_text(encoding="utf-8")
+            self.assertIn("Try next: Lab04 Panda S-Curve Joint Path", html)
+            self.assertIn(
+                "python -m mclab run lab04 --config configs/lab04_panda/trajectory_tracking.yaml",
+                html,
+            )
+            self.assertNotIn(
+                "python -m mclab run lab03 --config configs/lab04_panda/trajectory_tracking.yaml",
+                html,
+            )
 
     def test_run_report_includes_domain_specific_result_checks(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
