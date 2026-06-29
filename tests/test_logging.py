@@ -496,6 +496,7 @@ class LoggingTests(unittest.TestCase):
             (output / "plots").mkdir(parents=True)
             (output / "plots" / "position.png").write_bytes(b"fake-png")
             (output / "plots" / "energy.png").write_bytes(b"fake-png")
+            (output / "learner_tuned_config.yaml").write_text("interaction:\n  panel: false\n", encoding="utf-8")
             (output / "summary.json").write_text(
                 (
                     '{"lab_name": "lab01_msd", "config_path": "configs/lab01_msd/default.yaml", '
@@ -531,6 +532,9 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Lesson", html)
             self.assertIn("Next", html)
             self.assertIn("Evidence", html)
+            self.assertIn("<th>Replay</th>", html)
+            self.assertIn("20260627_150117_lab01_msd/learner_tuned_config.yaml", html)
+            self.assertIn("Tuned config", html)
             self.assertIn("Plots", html)
             self.assertIn("20260627_150117_lab01_msd/plots/position.png", html)
             self.assertIn("20260627_150117_lab01_msd/plots/energy.png", html)

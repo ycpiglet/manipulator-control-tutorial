@@ -2141,6 +2141,7 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
                 "duration": summary.get("duration", ""),
                 "report": _run_link(child, report_path, index_path),
                 "plots": _discover_run_plots(child),
+                "replay": _discover_replay_config(child),
                 "modified": modified,
                 "summary": summary,
                 "lesson_title": guide.title if guide is not None else "",
@@ -2167,6 +2168,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
             f"<td>{escape(str(run.get('lesson_title', '')))}</td>"
             f"<td>{escape(str(run.get('next_step', '')))}</td>"
             f"<td>{escape(_run_evidence_cell(run))}</td>"
+            f"<td>{_run_replay_cell(run)}</td>"
             f"<td>{_run_plots_cell(run)}</td>"
             f"<td>{escape(_format_value(run['duration']))}</td>"
             f"<td>{escape(str(run['samples']))}</td>"
@@ -2179,7 +2181,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
         for run in runs
     )
     if not rows:
-        rows = f'<tr><td colspan="{9 + len(metric_keys)}">No run reports were found yet.</td></tr>'
+        rows = f'<tr><td colspan="{10 + len(metric_keys)}">No run reports were found yet.</td></tr>'
 
     return f"""<!doctype html>
 <html lang="en">
@@ -2317,7 +2319,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
     <section>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Run</th><th>Lab</th><th>Config</th><th>Lesson</th><th>Next</th><th>Evidence</th><th>Plots</th><th>Duration [s]</th><th>Samples</th>{metric_headers}</tr></thead>
+          <thead><tr><th>Run</th><th>Lab</th><th>Config</th><th>Lesson</th><th>Next</th><th>Evidence</th><th>Replay</th><th>Plots</th><th>Duration [s]</th><th>Samples</th>{metric_headers}</tr></thead>
           <tbody>{rows}</tbody>
         </table>
       </div>
@@ -2533,6 +2535,17 @@ def _run_evidence_cell(run: dict[str, Any]) -> str:
     return ", ".join(parts)
 
 
+def _run_replay_cell(run: dict[str, Any]) -> str:
+    replay = run.get("replay")
+    if not isinstance(replay, dict):
+        return '<span class="muted">No replay</span>'
+    href = str(replay.get("href") or "")
+    label = str(replay.get("label") or "Tuned config")
+    if not href:
+        return '<span class="muted">No replay</span>'
+    return f'<a class="plot-chip" href="{escape(href)}">{escape(label)}</a>'
+
+
 def _run_plots_cell(run: dict[str, Any]) -> str:
     plots = run.get("plots", [])
     if not plots:
@@ -2557,6 +2570,16 @@ def _run_link(child: Path, report_path: Path, index_path: Path) -> str:
     if index_path.exists():
         return f"{child.name}/index.html"
     return child.name
+
+
+def _discover_replay_config(child: Path) -> dict[str, str] | None:
+    tuned_config = child / "learner_tuned_config.yaml"
+    if not tuned_config.exists():
+        return None
+    return {
+        "href": f"{child.name}/{tuned_config.name}",
+        "label": "Tuned config",
+    }
 
 
 def _discover_run_plots(child: Path) -> list[dict[str, str]]:
