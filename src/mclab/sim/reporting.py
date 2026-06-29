@@ -581,7 +581,7 @@ def _render_worksheet(
         "- Report: report.html",
         "",
     ]
-    lines.extend(_worksheet_learning_guide_lines(guide))
+    lines.extend(_worksheet_learning_guide_lines(guide, summary))
     lines.extend(_worksheet_pairs_section("Key Parameters", _config_highlight_pairs(config)))
     lines.extend(_worksheet_pairs_section("Summary Values", list(summary.items())))
     lines.extend(_worksheet_plot_review_lines(output, plots))
@@ -593,13 +593,15 @@ def _render_worksheet(
     return "\n".join(lines).rstrip() + "\n"
 
 
-def _worksheet_learning_guide_lines(guide: RunGuide | None) -> list[str]:
+def _worksheet_learning_guide_lines(guide: RunGuide | None, summary: dict[str, Any]) -> list[str]:
     lines = ["## Learning Guide", ""]
+    completion_text = _run_completion_text(summary)
     if guide is None:
-        lines.extend(["- No configured guide was found for this run.", ""])
+        lines.extend(["- No configured guide was found for this run.", f"- {completion_text}", ""])
         return lines
     rows: list[tuple[str, Any]] = [
         ("Title", guide.title),
+        ("Done when", completion_text.removeprefix("Done when:").strip()),
         ("Try", guide.try_this),
         ("Change", guide.change),
         ("Prediction", prediction_prompt_for_guide(guide).removeprefix("Prediction:").strip()),
@@ -867,7 +869,7 @@ def _render_report(
     learner_snapshot: dict[str, Any],
 ) -> str:
     title = _report_title(output, summary)
-    learning_guide = _learning_guide_section(guide_for_run_summary(summary))
+    learning_guide = _learning_guide_section(guide_for_run_summary(summary), summary)
     worksheet = _worksheet_section(output)
     next_actions = _next_actions_section(output, summary, config, plots, interaction_events)
     reproduce_section = _reproduce_section(summary)
@@ -1275,11 +1277,12 @@ def _worksheet_section(output: Path) -> str:
     )
 
 
-def _learning_guide_section(guide: RunGuide | None) -> str:
+def _learning_guide_section(guide: RunGuide | None, summary: dict[str, Any]) -> str:
     if guide is None:
         return ""
     items = (
         ("Focus", guide.focus),
+        ("Done when", _run_completion_text(summary).removeprefix("Done when:").strip()),
         ("Try", guide.try_this),
         ("Change", guide.change),
         ("Prediction", prediction_prompt_for_guide(guide).removeprefix("Prediction:").strip()),
@@ -2101,6 +2104,12 @@ def _hands_on_evidence_section(summary: dict[str, Any], events: list[dict[str, A
         "</div>"
         "</section>"
     )
+
+
+def _run_completion_text(summary: dict[str, Any]) -> str:
+    if _summary_requires_hands_on_evidence(summary):
+        return "Done when: save one Mark observation with a Prediction; add the outcome during review."
+    return "Done when: report.html, priority plot, and worksheet.md are saved."
 
 
 def _summary_requires_hands_on_evidence(summary: dict[str, Any]) -> bool:

@@ -129,6 +129,8 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Review saved evidence", html)
             self.assertIn("Replay tuned values", html)
             self.assertIn("Try next: Lab01 Underdamped", html)
+            self.assertIn("Done when", html)
+            self.assertIn("report.html, priority plot, and worksheet.md are saved.", html)
             self.assertIn("Controls:", html)
             self.assertIn("Pull/Push buttons and A/D keys", html)
             self.assertIn("Compare batch: Lab01 mass-spring-damper comparison", html)
@@ -215,6 +217,7 @@ class LoggingTests(unittest.TestCase):
             worksheet_text = worksheet.read_text(encoding="utf-8")
             self.assertIn("# MCLab Learner Worksheet", worksheet_text)
             self.assertIn("## Learning Guide", worksheet_text)
+            self.assertIn("- Done when: report.html, priority plot, and worksheet.md are saved.", worksheet_text)
             self.assertIn("## Key Parameters", worksheet_text)
             self.assertIn("## Observation Markers", worksheet_text)
             self.assertIn("Higher stiffness should create a sharper force peak.", worksheet_text)
@@ -346,6 +349,7 @@ class LoggingTests(unittest.TestCase):
 
             html = write_run_report(output).read_text(encoding="utf-8")
             self.assertIn("Hands-on Evidence", html)
+            self.assertIn("save one Mark observation with a Prediction; add the outcome during review.", html)
             self.assertIn("Needs observation", html)
             self.assertIn("write a prediction and note", html)
 
