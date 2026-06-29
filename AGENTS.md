@@ -88,6 +88,7 @@ Implemented and verified:
 - Learner menu scenario cards enable `Replay` only when the latest run has `learner_tuned_config.yaml`
 - Learner menu preset labels for interactive cards, including preset-name search
 - Learner menu Explore filters for hands-on, comparison, PID, 2DOF, Panda, wall, and singularity scenario discovery
+- Learner menu scenario cards show readable `Badges` for hands-on, compare, PID, 2DOF, Panda, wall, singularity, trajectory, Cartesian, tuning, and dynamics modes
 - Learner menu and CLI setup diagnostics through `python -m mclab doctor`
 - Learner menu scenario readiness checks that disable run buttons when config or model assets are missing
 - Learner menu scenario history labels and per-scenario latest-report buttons

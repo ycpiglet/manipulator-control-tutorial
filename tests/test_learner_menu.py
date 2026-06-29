@@ -24,6 +24,7 @@ from mclab.learner_menu import (  # noqa: E402
     _launch_tuned_replay_from_menu,
     _set_status_after_run,
     _set_status_after_doctor,
+    action_badges,
     action_compare_batch,
     action_compare_text,
     action_evidence_text,
@@ -422,6 +423,7 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertTrue(action.watch)
                 text = lesson_text(action)
                 self.assertIn("Setup:", text)
+                self.assertIn("Badges:", text)
                 self.assertIn("History:", text)
                 self.assertIn("Evidence:", text)
                 self.assertIn("Try:", text)
@@ -566,6 +568,24 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Presets: Low DLS damping, Balanced DLS, High DLS damping", lesson_text(lab03_dls))
         self.assertIn("Presets: Early damping, Balanced schedule, Late damping", lesson_text(lab03_condition_dls))
         self.assertIn("Presets: Soft reach, Default reach, Far target", lesson_text(lab04_cartesian))
+
+    def test_menu_cards_show_readable_experience_badges(self) -> None:
+        by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
+        lab01_interactive = by_label[("Lab01 Mass-Spring-Damper", "Interactive")]
+        lab03_dls = by_label[("Lab03 2DOF Arm and Trajectories", "2DOF DLS singularity")]
+        lab04_wall = by_label[("Lab04 Panda Manipulator", "Virtual wall")]
+
+        self.assertIn("Hands-on", action_badges(lab01_interactive))
+        self.assertIn("Dynamics", action_badges(lab01_interactive))
+        self.assertIn("Badges: Hands-on", lesson_text(lab01_interactive))
+
+        self.assertIn("2DOF", action_badges(lab03_dls))
+        self.assertIn("Singularity", action_badges(lab03_dls))
+        self.assertIn("Badges: Hands-on, Compare, 2DOF", lesson_text(lab03_dls))
+
+        self.assertIn("Panda", action_badges(lab04_wall))
+        self.assertIn("Wall", action_badges(lab04_wall))
+        self.assertIn("Badges: Hands-on, Panda, Wall", lesson_text(lab04_wall))
 
     def test_menu_action_followups_point_to_real_next_experiences(self) -> None:
         for action in MENU_ACTIONS:

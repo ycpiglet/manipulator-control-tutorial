@@ -103,6 +103,34 @@ EXPERIENCE_FILTERS: tuple[ExperienceFilter, ...] = (
     ExperienceFilter("singularity", "Singularity", "Jacobian conditioning and DLS behavior."),
 )
 
+ACTION_BADGE_PRIORITY = (
+    "hands-on",
+    "compare",
+    "pid",
+    "2dof",
+    "panda",
+    "wall",
+    "singularity",
+    "trajectory",
+    "cartesian",
+    "tuning",
+    "dynamics",
+)
+
+ACTION_BADGE_LABELS = {
+    "hands-on": "Hands-on",
+    "compare": "Compare",
+    "pid": "PID",
+    "2dof": "2DOF",
+    "panda": "Panda",
+    "wall": "Wall",
+    "singularity": "Singularity",
+    "trajectory": "Trajectory",
+    "cartesian": "Cartesian",
+    "tuning": "Tuning",
+    "dynamics": "Dynamics",
+}
+
 
 def experience_filter_description(key: str) -> str:
     normalized = key.lower().strip()
@@ -1580,6 +1608,7 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
     return (
         f"{action.description}\n"
         f"Setup: {readiness.label}{setup_detail}{setup_fix}\n"
+        f"Badges: {', '.join(action_badges(action))}\n"
         f"{action_history_text(action, outputs_root)}\n"
         f"{action_evidence_text(action, outputs_root)}\n"
         f"{action_plot_text(action, outputs_root)}\n"
@@ -1654,6 +1683,11 @@ def action_tags(action: MenuAction) -> tuple[str, ...]:
         tags.add("tuning")
 
     return tuple(sorted(tags))
+
+
+def action_badges(action: MenuAction) -> tuple[str, ...]:
+    tags = set(action_tags(action))
+    return tuple(ACTION_BADGE_LABELS[tag] for tag in ACTION_BADGE_PRIORITY if tag in tags)
 
 
 def _is_compare_action(action: MenuAction) -> bool:
