@@ -297,6 +297,42 @@ class ExperimentResetControl:
         return requested
 
 
+class SimulationPauseControl:
+    """Thread-safe pause/resume state for learner-facing viewer demos."""
+
+    def __init__(self, config: dict[str, Any], event_log: InteractionLog | None = None) -> None:
+        interaction = dict(config.get("interaction", {}))
+        panel_enabled = bool(interaction.get("panel", False))
+        self.enabled = bool(interaction.get("pause_resume", interaction.get("pause", panel_enabled)))
+        self.panel_enabled = panel_enabled
+        self.label = str(interaction.get("pause_label", "Pause / Resume"))
+        self.panel_description = str(
+            interaction.get(
+                "pause_description",
+                "Pause physics to inspect the viewer, adjust sliders, or write a prediction before resuming.",
+            )
+        )
+        self._paused = False
+        self._event_log = event_log
+        self._lock = Lock()
+
+    def toggle(self) -> bool:
+        if not self.enabled:
+            return False
+        with self._lock:
+            self._paused = not self._paused
+            paused = self._paused
+        if self._event_log is not None:
+            name = "pause_simulation" if paused else "resume_simulation"
+            label = "Pause simulation" if paused else "Resume simulation"
+            self._event_log.record("button", name, paused, label=label)
+        return paused
+
+    def paused(self) -> bool:
+        with self._lock:
+            return self._paused
+
+
 class KeyForcePulse:
     """Keyboard-triggered force pulse for 1D plants.
 
@@ -422,13 +458,15 @@ def maybe_start_interaction_panel(
     guide: Any | None = None,
     event_log: InteractionLog | None = None,
     reset_control: ExperimentResetControl | None = None,
+    pause_control: SimulationPauseControl | None = None,
 ) -> InteractionPanel | None:
     control_enabled = bool(getattr(control, "enabled", False))
     reset_enabled = bool(reset_control is not None and reset_control.enabled and reset_control.panel_enabled)
-    panel_enabled = bool(getattr(control, "panel_enabled", False)) or reset_enabled
+    pause_enabled = bool(pause_control is not None and pause_control.enabled and pause_control.panel_enabled)
+    panel_enabled = bool(getattr(control, "panel_enabled", False)) or reset_enabled or pause_enabled
     tuning_enabled = bool(tuning is not None and tuning.enabled)
     status_enabled = bool(status is not None and status.enabled)
-    if not panel_enabled or not (control_enabled or reset_enabled or tuning_enabled or status_enabled):
+    if not panel_enabled or not (control_enabled or reset_enabled or pause_enabled or tuning_enabled or status_enabled):
         return None
 
     try:
@@ -482,6 +520,36 @@ def maybe_start_interaction_panel(
                     text=control.panel_description,
                 ).grid(row=row, column=0, columnspan=2, pady=(8, 0))
                 row += 1
+
+            if pause_enabled and pause_control is not None:
+                pause_frame = tk.Frame(frame)
+                pause_frame.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(10, 4))
+                pause_frame.columnconfigure(1, weight=1)
+                pause_status = tk.StringVar(value="Running")
+
+                def toggle_pause() -> None:
+                    paused = pause_control.toggle()
+                    pause_status.set("Paused" if paused else "Running")
+
+                tk.Button(pause_frame, text=pause_control.label, width=22, command=toggle_pause).grid(
+                    row=0,
+                    column=0,
+                    sticky="w",
+                )
+                tk.Label(pause_frame, textvariable=pause_status, anchor="w", width=32).grid(
+                    row=0,
+                    column=1,
+                    sticky="ew",
+                    padx=(12, 0),
+                )
+                tk.Label(
+                    frame,
+                    text=pause_control.panel_description,
+                    justify="left",
+                    anchor="w",
+                    wraplength=430,
+                ).grid(row=row + 1, column=0, columnspan=2, sticky="w", pady=(0, 4))
+                row += 2
 
             if reset_enabled and reset_control is not None:
                 reset_frame = tk.Frame(frame)

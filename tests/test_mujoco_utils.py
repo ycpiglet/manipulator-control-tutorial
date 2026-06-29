@@ -9,7 +9,13 @@ from unittest.mock import Mock, patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from mclab.sim.mujoco_utils import add_viewer_box, add_viewer_sphere, maybe_launch_viewer, reset_viewer_overlays  # noqa: E402
+from mclab.sim.mujoco_utils import (  # noqa: E402
+    add_viewer_box,
+    add_viewer_sphere,
+    maybe_launch_viewer,
+    reset_viewer_overlays,
+    sync_paused_viewer,
+)
 
 
 class ViewerUtilityTests(unittest.TestCase):
@@ -40,6 +46,13 @@ class ViewerUtilityTests(unittest.TestCase):
 
         self.assertTrue(launch_passive.call_args.kwargs["show_left_ui"])
         self.assertTrue(launch_passive.call_args.kwargs["show_right_ui"])
+
+    def test_sync_paused_viewer_keeps_viewer_responsive(self) -> None:
+        viewer = types.SimpleNamespace(sync=Mock())
+
+        sync_paused_viewer(viewer, interval=0.0)
+
+        viewer.sync.assert_called_once_with()
 
     def test_viewer_overlay_helpers_add_and_reset_user_geoms(self) -> None:
         def init_geom(geom, geom_type, size, pos, mat, rgba):

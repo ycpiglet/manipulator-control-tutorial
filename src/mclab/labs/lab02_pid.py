@@ -17,6 +17,7 @@ from mclab.sim.interaction import (
     KeyForcePulse,
     LiveStatus,
     LiveTuning,
+    SimulationPauseControl,
     SliderSpec,
     StatusSpec,
     maybe_start_interaction_panel,
@@ -27,6 +28,7 @@ from mclab.sim.mujoco_utils import (
     load_model_and_data,
     maybe_launch_viewer,
     pause_viewer_at_end,
+    sync_paused_viewer,
     sync_viewer,
     viewer_clock,
     viewer_is_running,
@@ -84,6 +86,7 @@ def run(
     interaction_log = InteractionLog()
     key_force = KeyForcePulse(config, event_log=interaction_log)
     reset_control = ExperimentResetControl(config, event_log=interaction_log)
+    pause_control = SimulationPauseControl(config, event_log=interaction_log)
     run_guide = guide_for_config(config_path=str(config_path or ""), lab_name=lab_name)
     live_tuning = _live_tuning(config, pid_config, output_limit_value, interaction_log)
     live_status = LiveStatus(
@@ -112,6 +115,7 @@ def run(
             guide=run_guide,
             event_log=interaction_log,
             reset_control=reset_control,
+            pause_control=pause_control,
         )
         if viewer and not headless
         else None
@@ -130,6 +134,10 @@ def run(
                 delay_buffer.clear()
                 delay_buffer.extend([0.0] * delay_steps)
                 reset_slider_plant_state(mujoco, model, data, handles, config)
+            if pause_control.paused():
+                sync_paused_viewer(viewer_handle)
+                wall_start = viewer_clock() - max(0.0, float(data.time) - sim_start)
+                continue
             key_force.update_time(float(data.time))
             position, velocity, _ = slider_state(data, handles)
             measured_position = position + (random.gauss(0.0, noise_std) if noise_std > 0.0 else 0.0)

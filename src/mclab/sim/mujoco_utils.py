@@ -75,6 +75,12 @@ def sync_viewer(
             sleep(min(delay, 0.05))
 
 
+def sync_paused_viewer(viewer_handle: Any | None, *, interval: float = 1.0 / 30.0) -> None:
+    if viewer_handle is not None:
+        viewer_handle.sync()
+    sleep(max(0.0, float(interval)))
+
+
 def viewer_is_running(viewer_handle: Any | None) -> bool:
     if viewer_handle is None:
         return True

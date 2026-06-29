@@ -13,6 +13,7 @@ from mclab.sim.interaction import (  # noqa: E402
     KeyForcePulse,
     LiveStatus,
     LiveTuning,
+    SimulationPauseControl,
     SliderSpec,
     StatusSpec,
     TargetOffsetControl,
@@ -92,6 +93,36 @@ class KeyForcePulseTests(unittest.TestCase):
 
         self.assertFalse(control.enabled)
         self.assertFalse(control.consume())
+        self.assertEqual(log.events(), [])
+
+    def test_simulation_pause_control_toggles_and_records_state(self) -> None:
+        log = InteractionLog()
+        log.set_time(2.0)
+        control = SimulationPauseControl({"interaction": {"panel": True}}, event_log=log)
+
+        self.assertTrue(control.enabled)
+        self.assertFalse(control.paused())
+
+        self.assertTrue(control.toggle())
+        self.assertTrue(control.paused())
+        self.assertFalse(control.toggle())
+        self.assertFalse(control.paused())
+        self.assertEqual(
+            [(event["name"], event["label"], event["value"]) for event in log.events()],
+            [
+                ("pause_simulation", "Pause simulation", True),
+                ("resume_simulation", "Resume simulation", False),
+            ],
+        )
+
+    def test_simulation_pause_control_can_be_disabled(self) -> None:
+        log = InteractionLog()
+        control = SimulationPauseControl({"interaction": {"panel": True, "pause_resume": False}}, event_log=log)
+
+        self.assertFalse(control.toggle())
+
+        self.assertFalse(control.enabled)
+        self.assertFalse(control.paused())
         self.assertEqual(log.events(), [])
 
     def test_live_tuning_updates_slider_values(self) -> None:
@@ -280,6 +311,25 @@ class KeyForcePulseTests(unittest.TestCase):
         for path in paths:
             with self.subTest(path=path):
                 control = ExperimentResetControl(load_config(path))
+                self.assertTrue(control.panel_enabled)
+                self.assertTrue(control.enabled)
+
+    def test_interactive_configs_enable_pause_resume_by_default(self) -> None:
+        paths = [
+            "configs/lab01_msd/interactive_pull.yaml",
+            "configs/lab02_pid/interactive_disturbance.yaml",
+            "configs/lab03_2dof/interactive_tracking.yaml",
+            "configs/lab03_2dof/interactive_2dof.yaml",
+            "configs/lab03_2dof/dls_singularity_2dof.yaml",
+            "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
+            "configs/lab04_panda/interactive_joint_hold.yaml",
+            "configs/lab04_panda/interactive_cartesian_reach.yaml",
+            "configs/lab04_panda/interactive_virtual_wall.yaml",
+        ]
+
+        for path in paths:
+            with self.subTest(path=path):
+                control = SimulationPauseControl(load_config(path))
                 self.assertTrue(control.panel_enabled)
                 self.assertTrue(control.enabled)
 

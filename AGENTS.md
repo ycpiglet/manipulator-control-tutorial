@@ -78,6 +78,7 @@ Implemented and verified:
 - Batch scenario cards summarize the first few YAML changes from the baseline scenario
 - Batch scenario cards summarize the largest metric changes from the baseline scenario
 - Interactive `MCLab Interaction` quick presets, value previews, and per-slider step buttons for representative damping, PID, 2DOF reach, Panda reach, and virtual wall parameter sets
+- Interactive `Pause / Resume` button pauses physics stepping and logging while keeping viewer and sliders responsive
 - Interactive `Reset plant` button restores mass/arm/robot state while preserving current slider and preset values for repeated observations
 - Learner menu preset labels for interactive cards, including preset-name search
 - Learner menu Explore filters for hands-on, comparison, PID, 2DOF, Panda, wall, and singularity scenario discovery

@@ -12,6 +12,7 @@ from mclab.sim.interaction import (
     InteractionLog,
     LiveStatus,
     LiveTuning,
+    SimulationPauseControl,
     SliderSpec,
     StatusSpec,
     TargetOffsetControl,
@@ -26,6 +27,7 @@ from mclab.sim.mujoco_utils import (
     maybe_launch_viewer,
     pause_viewer_at_end,
     reset_viewer_overlays,
+    sync_paused_viewer,
     sync_viewer,
     viewer_clock,
     viewer_is_running,
@@ -87,6 +89,7 @@ def run(
     interaction_log = InteractionLog()
     target_offset = TargetOffsetControl(config, event_log=interaction_log)
     reset_control = ExperimentResetControl(config, event_log=interaction_log)
+    pause_control = SimulationPauseControl(config, event_log=interaction_log)
     run_guide = guide_for_config(config_path=str(config_path or ""), lab_name=lab_name)
     live_tuning = _live_tuning(config, interaction_log)
     live_status = LiveStatus(_live_status_specs(mode))
@@ -107,6 +110,7 @@ def run(
             guide=run_guide,
             event_log=interaction_log,
             reset_control=reset_control,
+            pause_control=pause_control,
         )
         if viewer and not headless
         else None
@@ -122,6 +126,10 @@ def run(
             if reset_control.consume():
                 _set_initial_state(data, home_q, finger_q)
                 mujoco.mj_forward(model, data)
+            if pause_control.paused():
+                sync_paused_viewer(viewer_handle)
+                wall_start = viewer_clock() - max(0.0, float(data.time) - sim_start)
+                continue
             target_q = home_q.copy()
             target = trajectory.evaluate(float(data.time))
             button_joint_offset = target_offset.value()

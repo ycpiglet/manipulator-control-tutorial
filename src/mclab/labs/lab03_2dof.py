@@ -13,6 +13,7 @@ from mclab.sim.interaction import (
     KeyForcePulse,
     LiveStatus,
     LiveTuning,
+    SimulationPauseControl,
     SliderSpec,
     StatusSpec,
     maybe_start_interaction_panel,
@@ -25,6 +26,7 @@ from mclab.sim.mujoco_utils import (
     maybe_launch_viewer,
     pause_viewer_at_end,
     reset_viewer_overlays,
+    sync_paused_viewer,
     sync_viewer,
     viewer_clock,
     viewer_is_running,
@@ -130,6 +132,7 @@ def _run_slider_trajectory(
     interaction_log = InteractionLog()
     key_force = KeyForcePulse(config, event_log=interaction_log)
     reset_control = ExperimentResetControl(config, event_log=interaction_log)
+    pause_control = SimulationPauseControl(config, event_log=interaction_log)
     run_guide = guide_for_config(config_path=str(config_path or ""), lab_name=lab_name)
     live_tuning = _live_tuning(config, controller_config, force_limit_value, interaction_log)
     live_status = LiveStatus(
@@ -158,6 +161,7 @@ def _run_slider_trajectory(
             guide=run_guide,
             event_log=interaction_log,
             reset_control=reset_control,
+            pause_control=pause_control,
         )
         if viewer and not headless
         else None
@@ -173,6 +177,10 @@ def _run_slider_trajectory(
             if reset_control.consume():
                 key_force.clear()
                 reset_slider_plant_state(mujoco, model, data, handles, config)
+            if pause_control.paused():
+                sync_paused_viewer(viewer_handle)
+                wall_start = viewer_clock() - max(0.0, float(data.time) - sim_start)
+                continue
             key_force.update_time(float(data.time))
             position, velocity, _ = slider_state(data, handles)
             target = trajectory.evaluate(float(data.time))
@@ -290,6 +298,7 @@ def _run_two_link_arm(
     interaction_log = InteractionLog()
     panel_control = KeyForcePulse(config, event_log=interaction_log)
     reset_control = ExperimentResetControl(config, event_log=interaction_log)
+    pause_control = SimulationPauseControl(config, event_log=interaction_log)
     run_guide = guide_for_config(config_path=str(config_path or ""), lab_name=lab_name)
     live_tuning = _two_link_live_tuning(config, mode, controller_config, torque_limit, target_xy_goal, interaction_log)
     live_status = LiveStatus(
@@ -321,6 +330,7 @@ def _run_two_link_arm(
             guide=run_guide,
             event_log=interaction_log,
             reset_control=reset_control,
+            pause_control=pause_control,
         )
         if viewer and not headless
         else None
@@ -340,6 +350,10 @@ def _run_two_link_arm(
                     data.ctrl[actuator_id] = 0.0
                 dls_target_q = list(initial_q)
                 mujoco.mj_forward(model, data)
+            if pause_control.paused():
+                sync_paused_viewer(viewer_handle)
+                wall_start = viewer_clock() - max(0.0, float(data.time) - sim_start)
+                continue
 
             q, qdot = _two_link_state(data, handles)
             target = trajectory.evaluate(float(data.time))
