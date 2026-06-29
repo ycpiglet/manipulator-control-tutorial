@@ -101,6 +101,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "Minimum jerk"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "1D interactive"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Neutral hold"), labels)
+        self.assertIn(("Lab04 Panda Manipulator", "30s stability hold"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Reach X"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Cartesian reach"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Soft Cartesian"), labels)
@@ -677,6 +678,7 @@ class LearnerMenuTests(unittest.TestCase):
             "cartesian_target.gain",
             parameter_hint(by_label[("Lab04 Panda Manipulator", "Soft Cartesian")]),
         )
+        self.assertIn("sim_time", parameter_hint(by_label[("Lab04 Panda Manipulator", "30s stability hold")]))
         self.assertIn("virtual_wall.stiffness", parameter_hint(by_label[("Lab04 Panda Manipulator", "Virtual wall")]))
 
     def test_menu_actions_link_to_existing_config_and_lesson_files(self) -> None:

@@ -376,6 +376,10 @@ class LoggingTests(unittest.TestCase):
                         "max_abs_tau_cmd": 75.0,
                         "max_dls_condition_scale": 0.82,
                         "max_dls_damping": 0.21,
+                        "max_abs_qdot": 0.01,
+                        "max_settled_abs_qdot": 0.0001,
+                        "max_joint_drift_norm": 0.004,
+                        "duration": 30.0,
                         "max_wall_penetration_cm": 1.2,
                         "max_wall_retreat_cm": 0.5,
                         "max_abs_virtual_wall_force": 22.0,
@@ -394,6 +398,9 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("DLS joint speed", html)
             self.assertIn("Condition-aware DLS", html)
             self.assertIn("Damping schedule reached", html)
+            self.assertIn("30s stability hold", html)
+            self.assertIn("Settled joint speed", html)
+            self.assertIn("Joint drift stability", html)
             self.assertIn("Actuator effort", html)
             self.assertIn("Virtual wall contact", html)
             self.assertIn("Wall retreat", html)

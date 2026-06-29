@@ -9,7 +9,13 @@ from unittest.mock import Mock
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from mclab.labs.lab04_panda import _update_viewer_guides, _viewer_guides, _virtual_wall_force, _wall_retreat_distance  # noqa: E402
+from mclab.labs.lab04_panda import (  # noqa: E402
+    _summary,
+    _update_viewer_guides,
+    _viewer_guides,
+    _virtual_wall_force,
+    _wall_retreat_distance,
+)
 
 
 class Lab04WallTests(unittest.TestCase):
@@ -40,6 +46,39 @@ class Lab04WallTests(unittest.TestCase):
 
         self.assertGreater(abs(stiff_force[0]), abs(soft_force[0]))
         self.assertGreater(stiff_retreat, soft_retreat)
+
+    def test_lab04_summary_reports_hold_stability_metrics(self) -> None:
+        rows = [
+            {
+                "time": 0.0,
+                "error_norm": 0.001,
+                "q_0": 0.0,
+                "q_1": 0.0,
+                "qdot_0": 0.0,
+                "qdot_1": 0.0,
+                "tau_cmd_0": 0.0,
+                "tau_cmd_1": 0.0,
+                "cartesian_error_cm": 0.0,
+            },
+            {
+                "time": 1.2,
+                "error_norm": 0.002,
+                "q_0": 0.003,
+                "q_1": -0.004,
+                "qdot_0": 0.006,
+                "qdot_1": -0.008,
+                "tau_cmd_0": 0.01,
+                "tau_cmd_1": -0.02,
+                "cartesian_error_cm": 0.0,
+            },
+        ]
+
+        summary = _summary(rows)
+
+        self.assertAlmostEqual(summary["max_abs_qdot"], 0.008)
+        self.assertAlmostEqual(summary["max_settled_abs_qdot"], 0.008)
+        self.assertAlmostEqual(summary["max_joint_drift_norm"], 0.005)
+        self.assertAlmostEqual(summary["max_joint_error_norm"], 0.002)
 
     def test_lab04_viewer_guides_default_to_cartesian_and_wall_modes(self) -> None:
         self.assertTrue(_viewer_guides({}, "cartesian_reach")["enabled"])

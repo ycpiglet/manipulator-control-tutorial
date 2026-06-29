@@ -34,6 +34,14 @@ Run:
 .\run_lab04.cmd
 ```
 
+For a headless readiness check before a live class demo, run the 30-second neutral hold:
+
+```bash
+python -m mclab run lab04 --config configs/lab04_panda/neutral_hold_30s.yaml --headless --plot --plots stability
+```
+
+The report should show `30s stability hold` as OK when maximum joint speed and joint drift stay small. Inspect `velocity.png`, `error.png`, and `torque.png` before using the Panda viewer in front of learners.
+
 Interactive perturb demo:
 
 ```powershell

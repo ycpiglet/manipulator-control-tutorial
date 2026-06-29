@@ -575,9 +575,25 @@ def _apply_arm_control(data: Any, actuator_ids: list[int], target_q: list[float]
 def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
     if not rows:
         return {}
+    qdot_keys = [key for key in rows[0] if key.startswith("qdot_")]
+    start_time = float(rows[0].get("time", 0.0))
+    settled_rows = [row for row in rows if float(row.get("time", start_time)) >= start_time + 1.0]
+    if not settled_rows:
+        settled_rows = rows
+    first_q = [float(value) for key, value in rows[0].items() if key.startswith("q_")]
+    joint_drift_norms = []
+    if first_q:
+        for row in rows:
+            q = [float(row.get(f"q_{index}", 0.0)) for index in range(len(first_q))]
+            joint_drift_norms.append(_norm([q[index] - first_q[index] for index in range(len(first_q))]))
     return {
         "max_joint_error_norm": max(float(row["error_norm"]) for row in rows),
         "final_joint_error_norm": rows[-1]["error_norm"],
+        "max_abs_qdot": max(abs(float(row.get(key, 0.0))) for row in rows for key in qdot_keys) if qdot_keys else 0.0,
+        "max_settled_abs_qdot": (
+            max(abs(float(row.get(key, 0.0))) for row in settled_rows for key in qdot_keys) if qdot_keys else 0.0
+        ),
+        "max_joint_drift_norm": max(joint_drift_norms) if joint_drift_norms else 0.0,
         "max_abs_tau_cmd": max(
             abs(float(value))
             for row in rows
@@ -629,6 +645,7 @@ def _save_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSe
     ]
     presets = {
         "essential": ["position", "error"],
+        "stability": ["position", "velocity", "error", "torque"],
         "control": ["position", "error", "torque", "current_proxy"],
         "cartesian": ["end_effector", "cartesian_error", "torque", "error"],
         "cartesian_reach": ["end_effector", "cartesian_error", "torque", "current_proxy", "error"],

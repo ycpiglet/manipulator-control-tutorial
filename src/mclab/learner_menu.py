@@ -518,6 +518,16 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
     ),
     MenuAction(
         group="Lab04 Panda Manipulator",
+        label="30s stability hold",
+        lab_name="lab04",
+        config_path="configs/lab04_panda/neutral_hold_30s.yaml",
+        plots="stability",
+        description="Hold the Panda neutral pose for a 30-second live-demo stability check.",
+        try_this="Run headless first, then inspect velocity, error, and torque plots.",
+        watch="Max joint speed, joint drift, final joint error, and actuator effort.",
+    ),
+    MenuAction(
+        group="Lab04 Panda Manipulator",
         label="Joint 4 path",
         lab_name="lab04",
         config_path="configs/lab04_panda/joint_pd.yaml",
@@ -1235,6 +1245,8 @@ def parameter_hint(action: MenuAction) -> str:
         )
 
     if action.lab_name == "lab04":
+        if config_name == "neutral_hold_30s.yaml":
+            return "sim_time, dt, home_q"
         if label == "cartesian interactive":
             return "live sliders/presets: Target X/Y/Z, Cartesian gain; YAML: cartesian_target.*"
         if config_name == "interactive_virtual_wall.yaml":

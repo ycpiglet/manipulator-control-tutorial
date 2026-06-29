@@ -153,7 +153,7 @@ python -m mclab doctor
 | Lab01 | underdamped, overdamped, high/low stiffness, interactive pull |
 | Lab02 | low/high P gain, PD damping, saturation, windup vs anti-windup, sensor noise, control delay, interactive disturbance |
 | Lab03 | 2DOF joint-space, 2DOF task-space, singularity, DLS singularity, interactive XY target tuning, step/trapezoidal/minimum-jerk/S-curve profiles |
-| Lab04 | neutral hold, joint trajectories, hand X motion, Cartesian reach, soft/stiff Cartesian reach, soft/stiff virtual wall, joint target nudge, virtual wall |
+| Lab04 | neutral hold, 30s stability hold, joint trajectories, hand X motion, Cartesian reach, soft/stiff Cartesian reach, soft/stiff virtual wall, joint target nudge, virtual wall |
 
 처음 학습자는 메뉴 상단의 `Recommended learning path`를 순서대로 따라가면 됩니다.
 각 단계는 `outputs/`의 실행 기록을 읽어 `Done`, `Needs observation`, `Needs prediction`, `Not run yet` 상태를 보여줍니다. Hands-on 단계는 실행만으로 완료되지 않고 prediction이 포함된 `Mark observation`을 최소 한 번 남겨야 `Done`으로 계산되며, 완료된 hands-on 상태에는 가능한 경우 observation, prediction, note 개수도 함께 표시됩니다. 같은 기준은 `outputs/index.html`의 Learning Path 카드에도 적용됩니다. 완료된 단계는 옆의 `Report` 버튼으로 최신 리포트를 바로 다시 열 수 있습니다. 메뉴 상단에는 관찰 또는 예측 증거가 빠진 hands-on 단계 수, 다음 권장 단계가 표시되며, `Run next`를 누르면 아직 완료하지 않은 첫 단계를 바로 실행합니다. 실행 후 상태가 바로 바뀌지 않으면 `Refresh path`를 누릅니다.
@@ -329,7 +329,7 @@ python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --viewer --
 python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless --plot --plots position,error,torque
 ```
 
-Lab04 `joint_pd.yaml`에서 가장 먼저 확인할 것은 `position.png`의 `q_3`와 `target_q_3`, 그리고 `error.png`의 tracking error입니다. 현재 데모는 Panda의 4번째 관절, 즉 `controlled_joint_index: 3`을 minimum-jerk 목표 위치로 움직이는 조인트 위치 제어 예제입니다.
+Lab04 `joint_pd.yaml`에서 가장 먼저 확인할 것은 `position.png`의 `q_3`와 `target_q_3`, 그리고 `error.png`의 tracking error입니다. 현재 데모는 Panda의 4번째 관절, 즉 `controlled_joint_index: 3`을 minimum-jerk 목표 위치로 움직이는 조인트 위치 제어 예제입니다. 라이브 강의 전에 `configs/lab04_panda/neutral_hold_30s.yaml`을 `--headless --plots stability`로 실행하면, 리포트가 30초 동안의 최대 관절 속도와 관절 drift를 안정성 체크로 보여줍니다.
 
 MuJoCo viewer 양옆 패널은 이 프로젝트의 주 제어 UI가 아닙니다. 현재 랩들은 Python loop가 매 step마다 actuator `ctrl` 값을 YAML 기반 target이나 controller output으로 다시 넣습니다. 따라서 viewer side panel에서 actuator 값을 바꿔도 실행 중에는 곧바로 덮어써지고, `--pause-at-end`로 멈춘 뒤에는 물리 step이 진행되지 않아 움직임이 보이지 않습니다. 그래서 viewer 사이드 패널은 기본으로 숨겨집니다. 실험 값은 `configs/`의 YAML이나 `MCLab Interaction` 창으로 제어하고, 실행 중 핵심 상태도 그 창에서 확인합니다.
 
@@ -500,7 +500,7 @@ Main comparison scenarios in the menu:
 | Lab01 | underdamped, overdamped, high/low stiffness, interactive pull |
 | Lab02 | low/high P gain, PD damping, saturation, windup vs anti-windup, sensor noise, control delay, interactive disturbance |
 | Lab03 | 2DOF joint-space, 2DOF task-space, singularity, DLS singularity, interactive XY target tuning, step/trapezoidal/minimum-jerk/S-curve profiles |
-| Lab04 | neutral hold, joint trajectories, hand X motion, Cartesian reach, soft/stiff Cartesian reach, soft/stiff virtual wall, joint target nudge, virtual wall |
+| Lab04 | neutral hold, 30s stability hold, joint trajectories, hand X motion, Cartesian reach, soft/stiff Cartesian reach, soft/stiff virtual wall, joint target nudge, virtual wall |
 
 First-time learners can follow the `Recommended learning path` at the top of the menu.
 Each step reads the saved runs under `outputs/` and shows `Done`, `Needs observation`, `Needs prediction`, or `Not run yet`. Hands-on steps are not counted as done until the learner saves at least one `Mark observation` entry with a prediction, and completed hands-on statuses include observation, prediction, and note counts when available. The same evidence rule is used by the Learning Path cards in `outputs/index.html`. Completed steps can reopen their latest report with the adjacent `Report` button. The top of the path shows overall progress, how many hands-on steps still need evidence, and the next recommended step, and `Run next` launches the first unfinished step. Use `Refresh path` if the status does not update immediately after a run.
@@ -678,7 +678,7 @@ python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --viewer --
 python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless --plot --plots position,error,torque
 ```
 
-For Lab04 `joint_pd.yaml`, check `q_3` versus `target_q_3` in `position.png` first, then the tracking error in `error.png`. This demo controls Panda joint 4, represented by `controlled_joint_index: 3`, with a minimum-jerk target position.
+For Lab04 `joint_pd.yaml`, check `q_3` versus `target_q_3` in `position.png` first, then the tracking error in `error.png`. This demo controls Panda joint 4, represented by `controlled_joint_index: 3`, with a minimum-jerk target position. Before a live class demo, run `configs/lab04_panda/neutral_hold_30s.yaml` headless with `--plots stability`; the report checks maximum joint speed and joint drift for the 30-second hold.
 
 The MuJoCo viewer side panels are not the main control UI for this project. The Python loops write actuator `ctrl` values from YAML-based targets or controller outputs at every simulation step. If you change actuator values in the viewer side panel, they are overwritten during the run; after `--pause-at-end`, physics stepping has stopped, so slider edits do not move the robot. Viewer side panels are therefore hidden by default. Change experiment parameters in YAML under `configs/` or use the `MCLab Interaction` window, which also shows the live status values learners need during the demo.
 

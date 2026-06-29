@@ -31,6 +31,9 @@ INDEX_METRIC_KEYS = (
     "max_abs_control_force",
     "max_joint_error_norm",
     "final_joint_error_norm",
+    "max_abs_qdot",
+    "max_settled_abs_qdot",
+    "max_joint_drift_norm",
     "max_task_error_norm",
     "final_task_error_norm",
     "min_manipulability",
@@ -304,6 +307,10 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
     "configs/lab04_panda/neutral_hold.yaml": (
         NextRunSuggestion("configs/lab04_panda/joint_pd.yaml", "Move one joint after confirming stable hold."),
         NextRunSuggestion("configs/lab04_panda/cartesian_reach.yaml", "Move the Panda hand toward a Cartesian target.", "cartesian_reach"),
+    ),
+    "configs/lab04_panda/neutral_hold_30s.yaml": (
+        NextRunSuggestion("configs/lab04_panda/joint_pd.yaml", "Move one joint after the 30-second hold is stable."),
+        NextRunSuggestion("configs/lab04_panda/cartesian_reach.yaml", "Move from stability hold to Cartesian hand targeting.", "cartesian_reach"),
     ),
     "configs/lab04_panda/joint_pd.yaml": (
         NextRunSuggestion("configs/lab04_panda/trajectory_tracking.yaml", "Try a different Panda joint and trajectory shape."),
@@ -1147,6 +1154,31 @@ def _result_checks(summary: dict[str, Any]) -> list[tuple[str, str, str]]:
     _add_abs_limit_check(checks, summary, "final_task_error_norm", "Final hand error", 0.05, "m norm")
     _add_abs_limit_check(checks, summary, "final_cartesian_error_cm", "Final Cartesian error", 2.0, "cm")
     _add_abs_limit_check(checks, summary, "max_abs_tau_cmd", "Actuator effort", 60.0, "force / torque proxy")
+
+    qdot = _number(summary.get("max_settled_abs_qdot"))
+    drift = _number(summary.get("max_joint_drift_norm"))
+    if duration is not None and duration >= 30.0 and qdot is not None and drift is not None:
+        speed_ok = qdot <= 0.02
+        drift_ok = drift <= 0.02
+        stable = speed_ok and drift_ok
+        checks.append(
+            (
+                "Settled joint speed",
+                "OK" if speed_ok else "Inspect",
+                f"Maximum joint speed after the first second {_format_value(qdot)} rad/s.",
+            )
+        )
+        checks.append(("Joint drift stability", "OK" if drift_ok else "Inspect", f"Maximum joint drift {_format_value(drift)} rad norm."))
+        checks.append(
+            (
+                "30s stability hold",
+                "OK" if stable else "Inspect",
+                (
+                    f"{_format_value(duration)} second hold with settled max joint speed {_format_value(qdot)} rad/s "
+                    f"and drift {_format_value(drift)} rad norm."
+                ),
+            )
+        )
 
     overshoot = _number(summary.get("overshoot_percent"))
     if overshoot is not None:

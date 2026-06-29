@@ -55,6 +55,7 @@ Implemented and verified:
 - Lab03 FK, IK helper, analytic Jacobian, joint-space tracking, and task-space Jacobian-transpose PD
 - Lab03 viewer visual guides for 2DOF hand target, current hand position, and singularity warning state
 - Lab04 Franka Emika Panda manipulator using MuJoCo Menagerie
+- Lab04 30-second neutral-hold stability check config and report checks
 - Lab04 Cartesian reach with damped-least-squares Jacobian target offsets
 - Lab04 soft/stiff Cartesian reach comparison configs and batch report
 - Lab04 Cartesian interactive one-line launcher for live XYZ target tuning

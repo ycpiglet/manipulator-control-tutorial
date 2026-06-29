@@ -353,6 +353,14 @@ RUN_GUIDES: dict[str, RunGuide] = {
         "Joint error norm should stay small.",
         "Run joint trajectory or Cartesian reach next.",
     ),
+    "configs/lab04_panda/neutral_hold_30s.yaml": RunGuide(
+        "Lab04 Panda 30s Stability Hold",
+        "Hold the Panda at the neutral pose long enough to check live-demo stability.",
+        "Run headless first, then inspect velocity and error plots before using the viewer in class.",
+        "home_q, sim_time, dt",
+        "Max joint speed, joint drift, final joint error, and actuator effort.",
+        "Use this as the readiness check before Lab04 live demos.",
+    ),
     "configs/lab04_panda/joint_pd.yaml": RunGuide(
         "Lab04 Panda Joint Path",
         "Move one Panda joint with a smooth target.",

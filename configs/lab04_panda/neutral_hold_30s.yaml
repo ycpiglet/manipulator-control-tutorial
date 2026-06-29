@@ -1,0 +1,16 @@
+model_path: third_party/mujoco_menagerie/franka_emika_panda/scene.xml
+mode: neutral_hold
+sim_time: 30.0
+dt: 0.002
+home_q: [0.0, 0.0, 0.0, -1.57079, 0.0, 1.57079, -0.7853]
+finger_q: [0.04, 0.04]
+gripper_ctrl: 255.0
+torque_constant: 1.0
+controlled_joint_index: 3
+plots: stability
+trajectory:
+  type: minimum_jerk
+  start: -1.57079
+  end: -1.57079
+  duration: 1.0
+  start_time: 0.5
