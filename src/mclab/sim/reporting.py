@@ -381,6 +381,7 @@ def _render_report(
     learning_guide = _learning_guide_section(guide_for_run_summary(summary))
     reproduce_section = _reproduce_section(summary)
     next_runs = _suggested_next_runs_section(summary, config)
+    comparison_batch = _comparison_batch_section(summary)
     config_highlights = _config_highlights_section(config)
     configured_presets = _configured_presets_section(config)
     result_check = _result_check_section(summary)
@@ -727,6 +728,7 @@ def _render_report(
     {learning_guide}
     {reproduce_section}
     {next_runs}
+    {comparison_batch}
     {config_highlights}
     {configured_presets}
     {result_check}
@@ -871,6 +873,66 @@ def _suggested_next_run_card(suggestion: NextRunSuggestion, current_config: dict
         f"<pre>{escape(command)}</pre>"
         "</article>"
     )
+
+
+def _comparison_batch_section(summary: dict[str, Any]) -> str:
+    comparison = _comparison_batch_for_summary(summary)
+    if comparison is None:
+        return ""
+    batch_name, title, reason = comparison
+    command = f"python -m mclab batch {batch_name} --open-report"
+    return (
+        "<section>"
+        "<h2>Comparison Batch</h2>"
+        '<p class="empty">Use this after one run to compare the same concept across controlled scenarios.</p>'
+        '<div class="action-grid">'
+        '<article class="action-card action-wide">'
+        f"<strong>{escape(title)}</strong>"
+        f'<p class="empty">{escape(reason)}</p>'
+        f"{_action_value_list([('Batch', batch_name), ('Command', command)])}"
+        f"<pre>{escape(command)}</pre>"
+        "</article>"
+        "</div>"
+        "</section>"
+    )
+
+
+def _comparison_batch_for_summary(summary: dict[str, Any]) -> tuple[str, str, str] | None:
+    lab_name = _cli_lab_name(str(summary.get("lab_name") or ""))
+    config_text = _normalize_path(
+        " ".join(str(summary.get(key) or "") for key in ("config_path", "config_name"))
+    )
+    if lab_name == "lab01":
+        return (
+            "lab01_msd_compare",
+            "Lab01 mass-spring-damper comparison",
+            "Compare baseline, damping, and stiffness cases in one report.",
+        )
+    if lab_name == "lab02":
+        return (
+            "lab02_pid_compare",
+            "Lab02 PID comparison",
+            "Compare gains, saturation, windup, anti-windup, sensor noise, and delay.",
+        )
+    if lab_name == "lab03":
+        return (
+            "lab03_2dof_compare",
+            "Lab03 2DOF comparison",
+            "Compare joint-space, task-space, singularity, and damped least-squares behavior.",
+        )
+    if lab_name == "lab04":
+        if "wall" in config_text or "impedance" in config_text:
+            return (
+                "lab04_wall_compare",
+                "Lab04 Panda virtual wall comparison",
+                "Compare soft and stiff virtual wall penetration, force, retreat, and hand motion.",
+            )
+        return (
+            "lab04_cartesian_compare",
+            "Lab04 Panda Cartesian reach comparison",
+            "Compare baseline, soft, and stiff Cartesian reach error and actuator effort.",
+        )
+    return None
 
 
 def _suggested_config_changes(current_config: dict[str, Any], suggested_config_path: str) -> str:

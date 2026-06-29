@@ -115,6 +115,8 @@ class LoggingTests(unittest.TestCase):
                 "python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot",
                 html,
             )
+            self.assertIn("Comparison Batch", html)
+            self.assertIn("python -m mclab batch lab01_msd_compare --open-report", html)
             self.assertIn("Config Highlights", html)
             self.assertIn("force_input.magnitude", html)
             self.assertIn("stiffness", html)
@@ -161,6 +163,45 @@ class LoggingTests(unittest.TestCase):
             summary = json.loads((output / "summary.json").read_text(encoding="utf-8"))
             self.assertEqual(summary["config_path"], "configs/lab01_msd/default.yaml")
             self.assertEqual(summary["config_name"], "default")
+
+    def test_run_report_points_to_relevant_comparison_batch(self) -> None:
+        cases = [
+            (
+                {
+                    "lab_name": "lab04_panda",
+                    "config_path": "configs/lab04_panda/interactive_virtual_wall.yaml",
+                    "config_name": "interactive_virtual_wall",
+                },
+                "python -m mclab batch lab04_wall_compare --open-report",
+            ),
+            (
+                {
+                    "lab_name": "lab04_panda",
+                    "config_path": "configs/lab04_panda/cartesian_reach.yaml",
+                    "config_name": "cartesian_reach",
+                },
+                "python -m mclab batch lab04_cartesian_compare --open-report",
+            ),
+            (
+                {
+                    "lab_name": "lab03_2dof",
+                    "config_path": "configs/lab03_2dof/task_space_2dof.yaml",
+                    "config_name": "task_space_2dof",
+                },
+                "python -m mclab batch lab03_2dof_compare --open-report",
+            ),
+        ]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            for index, (summary, command) in enumerate(cases):
+                output = Path(temp_dir) / f"run_{index}"
+                output.mkdir()
+                (output / "summary.json").write_text(json.dumps(summary), encoding="utf-8")
+                (output / "notes.md").write_text("# Demo\n", encoding="utf-8")
+
+                html = write_run_report(output).read_text(encoding="utf-8")
+
+                self.assertIn("Comparison Batch", html)
+                self.assertIn(command, html)
 
     def test_interactive_run_report_shows_hands_on_evidence_status(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
