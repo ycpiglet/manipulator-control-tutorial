@@ -352,6 +352,7 @@ class LearnerMenuTests(unittest.TestCase):
                             "value": {
                                 "question": "Question: demo?",
                                 "prediction": "More damping should settle faster.",
+                                "outcome": "Matched",
                                 "note": "Saw the mass settle.",
                             },
                         }
@@ -386,9 +387,10 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertTrue(complete_progress.completed)
         self.assertEqual(complete_progress.observation_markers, 1)
         self.assertEqual(complete_progress.learner_predictions, 1)
+        self.assertEqual(complete_progress.learner_outcomes, 1)
         self.assertEqual(complete_progress.learner_notes, 1)
         self.assertIn(
-            "Status: Done - latest run_lab01_interactive (1 observation, 1 prediction, 1 note)",
+            "Status: Done - latest run_lab01_interactive (1 observation, 1 prediction, 1 outcome, 1 note)",
             learning_path_progress_text(second_step, complete_progress),
         )
 
@@ -977,6 +979,7 @@ class LearnerMenuTests(unittest.TestCase):
                             "value": {
                                 "question": "Question: demo?",
                                 "prediction": "The response should overshoot.",
+                                "outcome": "Matched",
                                 "note": "Saw overshoot.",
                             },
                         },
@@ -992,9 +995,9 @@ class LearnerMenuTests(unittest.TestCase):
 
             self.assertEqual(
                 action_evidence_text(MENU_ACTIONS[0], outputs),
-                "Evidence: 2 observations, 1 prediction, 1 note",
+                "Evidence: 2 observations, 1 prediction, 1 outcome, 1 note",
             )
-            self.assertIn("Evidence: 2 observations, 1 prediction, 1 note", lesson_text(MENU_ACTIONS[0], outputs))
+            self.assertIn("Evidence: 2 observations, 1 prediction, 1 outcome, 1 note", lesson_text(MENU_ACTIONS[0], outputs))
             self.assertEqual(action_evidence_text(MENU_ACTIONS[1], outputs), "Evidence: No observation markers yet")
 
     def test_action_latest_evidence_summarizes_prediction_note_and_status(self) -> None:

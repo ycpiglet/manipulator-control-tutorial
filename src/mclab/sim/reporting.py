@@ -1066,7 +1066,7 @@ def _next_actions_section(
 
 
 def _next_action_evidence_card(summary: dict[str, Any], events: list[dict[str, Any]]) -> str:
-    markers, predictions, notes = _observation_evidence_counts_from_events(events)
+    markers, predictions, notes, outcomes = _observation_evidence_counts_from_events(events)
     if markers <= 0 and not _summary_requires_hands_on_evidence(summary):
         return ""
     if markers > 0 and predictions > 0:
@@ -1085,6 +1085,7 @@ def _next_action_evidence_card(summary: dict[str, Any], events: list[dict[str, A
             (
                 ("Observation markers", markers),
                 ("Predictions", predictions),
+                ("Prediction outcomes", outcomes),
                 ("Learner notes", notes),
             )
         ),
@@ -1698,7 +1699,7 @@ def _result_checks(summary: dict[str, Any]) -> list[tuple[str, str, str]]:
 def _hands_on_evidence_section(summary: dict[str, Any], events: list[dict[str, Any]]) -> str:
     if not _summary_requires_hands_on_evidence(summary):
         return ""
-    markers, predictions, notes = _observation_evidence_counts_from_events(events)
+    markers, predictions, notes, outcomes = _observation_evidence_counts_from_events(events)
     if markers > 0 and predictions > 0:
         status = "Done for learning path"
         detail = "This hands-on run has at least one Mark observation entry with a prediction."
@@ -1712,6 +1713,7 @@ def _hands_on_evidence_section(summary: dict[str, Any], events: list[dict[str, A
         ("Status", status),
         ("Observation markers", markers),
         ("Predictions", predictions),
+        ("Prediction outcomes", outcomes),
         ("Learner notes", notes),
     ]
     return (
@@ -1733,10 +1735,11 @@ def _summary_requires_hands_on_evidence(summary: dict[str, Any]) -> bool:
     return "interactive" in config_text
 
 
-def _observation_evidence_counts_from_events(events: list[dict[str, Any]]) -> tuple[int, int, int]:
+def _observation_evidence_counts_from_events(events: list[dict[str, Any]]) -> tuple[int, int, int, int]:
     markers = 0
     predictions = 0
     notes = 0
+    outcomes = 0
     for event in events:
         if not _is_observation_marker(event):
             continue
@@ -1746,9 +1749,11 @@ def _observation_evidence_counts_from_events(events: list[dict[str, Any]]) -> tu
             continue
         if str(value.get("prediction") or "").strip():
             predictions += 1
+        if str(value.get("outcome") or "").strip():
+            outcomes += 1
         if str(value.get("note") or "").strip():
             notes += 1
-    return markers, predictions, notes
+    return markers, predictions, notes, outcomes
 
 
 def _check_state_class(state: str) -> str:
@@ -2021,22 +2026,27 @@ def _is_observation_marker(event: dict[str, Any]) -> bool:
 def _observation_review_prompt(markers: list[dict[str, Any]]) -> str:
     questions: list[str] = []
     predictions: list[str] = []
+    outcomes: list[str] = []
     notes: list[str] = []
     for marker in markers:
         payload = marker.get("value")
         value = payload if isinstance(payload, dict) else {}
         question = str(value.get("question") or "").strip()
         prediction = str(value.get("prediction") or "").strip()
+        outcome = str(value.get("outcome") or "").strip()
         note = str(value.get("note") or "").strip()
         if question and question not in questions:
             questions.append(question)
         if prediction:
             predictions.append(prediction)
+        if outcome:
+            outcomes.append(outcome)
         if note:
             notes.append(note)
 
     question_count = len(questions)
     prediction_count = len(predictions)
+    outcome_count = len(outcomes)
     note_count = len(notes)
     latest_prediction = predictions[-1] if predictions else ""
     latest_note = notes[-1] if notes else ""
@@ -2055,7 +2065,8 @@ def _observation_review_prompt(markers: list[dict[str, Any]]) -> str:
         "<strong>Review prompt</strong>"
         f'<p>Use these markers as evidence before running the suggested next experiment. '
         f"{question_count} learning question{'s' if question_count != 1 else ''}, "
-        f"{prediction_count} prediction{'s' if prediction_count != 1 else ''}, and "
+        f"{prediction_count} prediction{'s' if prediction_count != 1 else ''}, "
+        f"{outcome_count} outcome{'s' if outcome_count != 1 else ''}, and "
         f"{note_count} learner note{'s' if note_count != 1 else ''} were saved.</p>"
         f"{latest_prediction_html}"
         f"{latest_note_html}"
@@ -2343,7 +2354,7 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
             ),
             default=child.stat().st_mtime,
         )
-        observation_markers, learner_predictions, learner_notes = _observation_evidence_counts(child)
+        observation_markers, learner_predictions, learner_notes, learner_outcomes = _observation_evidence_counts(child)
         latest_evidence = _latest_observation_evidence(child)
         runs.append(
             {
@@ -2363,6 +2374,7 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
                 "observation_markers": observation_markers,
                 "learner_predictions": learner_predictions,
                 "learner_notes": learner_notes,
+                "learner_outcomes": learner_outcomes,
                 "latest_evidence": latest_evidence,
             }
         )
@@ -2571,6 +2583,7 @@ def _learning_path_item(step: IndexPathStep, runs: list[dict[str, Any]]) -> dict
     markers = int(run.get("observation_markers", 0)) if run is not None else 0
     predictions = int(run.get("learner_predictions", 0)) if run is not None else 0
     notes = int(run.get("learner_notes", 0)) if run is not None else 0
+    outcomes = int(run.get("learner_outcomes", 0)) if run is not None else 0
     completed = run is not None and (not evidence_required or (markers > 0 and predictions > 0))
     return {
         "step": step,
@@ -2580,6 +2593,7 @@ def _learning_path_item(step: IndexPathStep, runs: list[dict[str, Any]]) -> dict
         "observation_markers": markers,
         "learner_predictions": predictions,
         "learner_notes": notes,
+        "learner_outcomes": outcomes,
     }
 
 
@@ -2629,9 +2643,11 @@ def _learning_path_evidence_suffix(item: dict[str, Any]) -> str:
         return ""
     predictions = int(item.get("learner_predictions", 0))
     notes = int(item.get("learner_notes", 0))
+    outcomes = int(item.get("learner_outcomes", 0))
     prediction_text = f", {predictions} prediction{'s' if predictions != 1 else ''}" if predictions else ""
+    outcome_text = f", {outcomes} outcome{'s' if outcomes != 1 else ''}" if outcomes else ""
     note_text = f", {notes} note{'s' if notes != 1 else ''}" if notes else ""
-    return f" ({markers} observation{'s' if markers != 1 else ''}{prediction_text}{note_text})"
+    return f" ({markers} observation{'s' if markers != 1 else ''}{prediction_text}{outcome_text}{note_text})"
 
 
 def _learning_path_requires_evidence(step: IndexPathStep) -> bool:
@@ -2752,10 +2768,13 @@ def _run_evidence_cell(run: dict[str, Any]) -> str:
     markers = int(run.get("observation_markers", 0))
     predictions = int(run.get("learner_predictions", 0))
     notes = int(run.get("learner_notes", 0))
+    outcomes = int(run.get("learner_outcomes", 0))
     if markers <= 0:
         return "No markers"
     parts = [f"{markers} observation{'s' if markers != 1 else ''}"]
     parts.append(f"{predictions} prediction{'s' if predictions != 1 else ''}")
+    if outcomes:
+        parts.append(f"{outcomes} outcome{'s' if outcomes != 1 else ''}")
     if notes:
         parts.append(f"{notes} note{'s' if notes != 1 else ''}")
     latest = str(run.get("latest_evidence") or "").strip()
@@ -2870,7 +2889,7 @@ def _read_json_list(path: Path) -> list[dict[str, Any]]:
     return [item for item in payload if isinstance(item, dict)]
 
 
-def _observation_evidence_counts(output_path: Path) -> tuple[int, int, int]:
+def _observation_evidence_counts(output_path: Path) -> tuple[int, int, int, int]:
     return _observation_evidence_counts_from_events(_read_json_list(output_path / "interaction_events.json"))
 
 

@@ -173,7 +173,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Observation Markers", html)
             self.assertIn("1 marked observation saved.", html)
             self.assertIn("Review prompt", html)
-            self.assertIn("1 learning question, 1 prediction, and 1 learner note were saved.", html)
+            self.assertIn("1 learning question, 1 prediction, 1 outcome, and 1 learner note were saved.", html)
             self.assertIn("Prediction Review", html)
             self.assertIn("Predictions saved", html)
             self.assertIn("Observation notes", html)
@@ -701,6 +701,7 @@ class LoggingTests(unittest.TestCase):
                             "value": {
                                 "question": "Question: demo?",
                                 "prediction": "More damping should settle faster.",
+                                "outcome": "Matched",
                                 "note": "The mass settled faster after damping changed.",
                             },
                         }
@@ -711,10 +712,11 @@ class LoggingTests(unittest.TestCase):
 
             html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
             self.assertIn("2/11 steps complete. Next: 3. Close the loop", html)
-            self.assertIn("Done (1 observation, 1 prediction, 1 note)", html)
-            self.assertIn("1 observation, 1 prediction, 1 note", html)
+            self.assertIn("Done (1 observation, 1 prediction, 1 outcome, 1 note)", html)
+            self.assertIn("1 observation, 1 prediction, 1 outcome, 1 note", html)
             self.assertIn(
                 "Latest: Prediction: More damping should settle faster.; "
+                "Outcome: Matched; "
                 "Note: The mass settled faster after damping changed.",
                 html,
             )
@@ -768,7 +770,7 @@ class LoggingTests(unittest.TestCase):
 
             html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
 
-            self.assertIn("2 observations, 2 predictions, 2 notes", html)
+            self.assertIn("2 observations, 2 predictions, 1 outcome, 2 notes", html)
             self.assertIn(
                 "Latest: Prediction: Higher damping should reduce overshoot.; "
                 "Outcome: Surprised; "
