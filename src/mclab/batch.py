@@ -432,7 +432,7 @@ def write_batch_report(
     )
     rows = _batch_rows(output, scenarios)
     report = output / "report.html"
-    report.write_text(_render_batch_report(output, guide, rows), encoding="utf-8")
+    report.write_text(_render_batch_report(output, batch_name, guide, rows), encoding="utf-8")
     return report
 
 
@@ -469,6 +469,7 @@ def _batch_rows(output: Path, scenarios: tuple[BatchScenario, ...]) -> list[dict
                 "label": scenario.label,
                 "lab_name": scenario.lab_name,
                 "config_path": scenario.config_path,
+                "plot_selection": scenario.plots,
                 "config": _load_config_for_report(run_dir, scenario.config_path),
                 "run_dir": run_dir.name,
                 "report": f"{run_dir.name}/report.html" if (run_dir / "report.html").exists() else run_dir.name,
@@ -479,10 +480,11 @@ def _batch_rows(output: Path, scenarios: tuple[BatchScenario, ...]) -> list[dict
     return rows
 
 
-def _render_batch_report(output: Path, guide: BatchGuide, rows: list[dict[str, Any]]) -> str:
+def _render_batch_report(output: Path, batch_name: str, guide: BatchGuide, rows: list[dict[str, Any]]) -> str:
     metric_keys = _display_metric_keys(guide, rows)
     question_items = "\n".join(f"<li>{escape(question)}</li>" for question in guide.questions)
     next_experiments = _next_experiments(guide)
+    reproduce_commands = _reproduce_commands(batch_name, rows)
     scenario_cards = "\n".join(_scenario_card(row, metric_keys) for row in rows)
     comparison_takeaways = _comparison_takeaways(rows, metric_keys)
     metric_highlights = _metric_highlights(rows, metric_keys)
@@ -590,6 +592,20 @@ def _render_batch_report(output: Path, guide: BatchGuide, rows: list[dict[str, A
       color: #3f4752;
       margin-bottom: 2px;
     }}
+    .command {{
+      display: block;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      border: 1px solid #d9dde3;
+      border-radius: 6px;
+      background: #f8fafc;
+      color: #202124;
+      padding: 8px 10px;
+      margin-top: 8px;
+      font-family: Consolas, "Cascadia Mono", monospace;
+      font-size: 12px;
+      line-height: 1.4;
+    }}
     .preview-grid {{
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -649,6 +665,7 @@ def _render_batch_report(output: Path, guide: BatchGuide, rows: list[dict[str, A
       <p class="muted"><a href="index.html">Open the detailed run index</a> for every saved artifact.</p>
     </section>
     {next_experiments}
+    {reproduce_commands}
     <section>
       <h2>Scenario Cards</h2>
       <div class="scenario-grid">{scenario_cards}</div>
@@ -825,14 +842,55 @@ def _scenario_card(row: dict[str, Any], metric_keys: list[str]) -> str:
     if not metrics:
         metrics = '<p class="muted">No summary metrics were saved.</p>'
     learning_cues = _scenario_learning_cues(row)
+    command = _scenario_run_command(row)
     return (
         '<article class="scenario">'
         f'<h3><a href="{escape(str(row["report"]))}">{escape(str(row["label"]))}</a></h3>'
         f'<p class="muted">{escape(str(row["config_path"]))}</p>'
         f"{learning_cues}"
+        f'<code class="command">{escape(command)}</code>'
         f"{metrics}"
         "</article>"
     )
+
+
+def _reproduce_commands(batch_name: str, rows: list[dict[str, Any]]) -> str:
+    batch_command = f"python -m mclab batch {batch_name} --open-report"
+    scenario_commands = "\n".join(
+        (
+            "<tr>"
+            f"<td>{escape(str(row['label']))}</td>"
+            f'<td><code class="command">{escape(_scenario_run_command(row))}</code></td>'
+            "</tr>"
+        )
+        for row in rows
+    )
+    if not scenario_commands:
+        scenario_commands = '<tr><td colspan="2">No scenario commands are available.</td></tr>'
+    return (
+        "<section>"
+        "<h2>Reproduce Commands</h2>"
+        '<p class="muted">Run the whole comparison again, or rerun one scenario before editing its YAML.</p>'
+        f'<code class="command">{escape(batch_command)}</code>'
+        '<div class="table-wrap">'
+        "<table>"
+        "<thead><tr><th>Scenario</th><th>Headless run command</th></tr></thead>"
+        f"<tbody>{scenario_commands}</tbody>"
+        "</table>"
+        "</div>"
+        "</section>"
+    )
+
+
+def _scenario_run_command(row: dict[str, Any]) -> str:
+    command = (
+        f"python -m mclab run {row.get('lab_name', '')} "
+        f"--config {row.get('config_path', '')} --headless --plot"
+    )
+    plot_selection = str(row.get("plot_selection") or "").strip()
+    if plot_selection:
+        command += f" --plots {plot_selection}"
+    return command
 
 
 def _scenario_learning_cues(row: dict[str, Any]) -> str:

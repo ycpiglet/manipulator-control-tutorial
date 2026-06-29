@@ -104,6 +104,12 @@ class BatchTests(unittest.TestCase):
             report_html = (output / "report.html").read_text(encoding="utf-8")
             self.assertIn("Learning Focus", report_html)
             self.assertIn("Next Experiments", report_html)
+            self.assertIn("Reproduce Commands", report_html)
+            self.assertIn("python -m mclab batch unit_compare --open-report", report_html)
+            self.assertIn(
+                "python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot --plots essential",
+                report_html,
+            )
             self.assertIn("demo scenario", report_html)
             self.assertIn("Predict", report_html)
             self.assertIn("Question", report_html)
@@ -237,6 +243,11 @@ class BatchTests(unittest.TestCase):
             self.assertIn("Comparison Takeaways", report_html)
             self.assertIn("Predict", report_html)
             self.assertIn("Which controller reaches the target fastest", report_html)
+            self.assertIn("python -m mclab batch lab02_pid_compare --open-report", report_html)
+            self.assertIn(
+                "python -m mclab run lab02 --config configs/lab02_pid/default.yaml --headless --plot --plots essential",
+                report_html,
+            )
             self.assertIn("baseline</strong> has the least overshoot", report_html)
             self.assertIn("high gain</strong> overshoots most", report_html)
             self.assertIn("Metric Highlights", report_html)
