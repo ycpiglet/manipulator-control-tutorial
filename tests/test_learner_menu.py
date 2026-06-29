@@ -39,6 +39,7 @@ from mclab.learner_menu import (  # noqa: E402
     action_latest_plot,
     action_latest_tuned_config,
     action_latest_worksheet,
+    action_plan_text,
     action_plot_review_text,
     action_plot_text,
     action_readiness,
@@ -48,6 +49,7 @@ from mclab.learner_menu import (  # noqa: E402
     action_doc_path,
     action_viewer_text,
     batch_readiness,
+    batch_plan_text,
     build_batch_args,
     build_doctor_args,
     build_run_args,
@@ -535,6 +537,8 @@ class LearnerMenuTests(unittest.TestCase):
                 text = lesson_text(action)
                 self.assertIn("Setup:", text)
                 self.assertIn("Badges:", text)
+                self.assertIn("Plan:", text)
+                self.assertIn(action_plan_text(action), text)
                 self.assertIn("History:", text)
                 self.assertIn("Evidence:", text)
                 self.assertIn("Latest evidence:", text)
@@ -553,6 +557,13 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertTrue(reflection_question(action).startswith("Question: "))
                 config = load_config(action.config_path)
                 self.assertIn("model_path", config)
+
+        by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
+        auto_demo = by_label[("Lab01 Mass-Spring-Damper", "Auto demo")]
+        lab03_dls = by_label[("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS")]
+        self.assertIn("Plan: Intro; baseline demo", action_plan_text(auto_demo))
+        self.assertIn("saves report/plots/worksheet", action_plan_text(auto_demo))
+        self.assertIn("Plan: Deep dive; hands-on viewer", action_plan_text(lab03_dls))
 
     def test_menu_cards_show_actual_control_affordances(self) -> None:
         by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
@@ -828,6 +839,10 @@ class LearnerMenuTests(unittest.TestCase):
         retreat_labels = {action.label for action in filter_menu_actions("retreat gain")}
         self.assertIn("Low retreat wall", retreat_labels)
         self.assertIn("High retreat wall", retreat_labels)
+        intro_labels = {(action.group, action.label) for action in filter_menu_actions("intro")}
+        self.assertIn(("Lab01 Mass-Spring-Damper", "Auto demo"), intro_labels)
+        deep_dive_labels = {(action.group, action.label) for action in filter_menu_actions("deep dive")}
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS"), deep_dive_labels)
 
         interactive_labels = {action.label for action in filter_menu_actions("interactive")}
         self.assertIn("Interactive", interactive_labels)
@@ -1248,6 +1263,8 @@ class LearnerMenuTests(unittest.TestCase):
             self.assertEqual(action_plot_text(lab01_batch, outputs), "Plots: Latest error_compare.png")
             self.assertIn("Plot review: Error - Check how quickly error shrinks", action_plot_review_text(lab01_batch, outputs))
             self.assertEqual(action_worksheet_text(lab01_batch, outputs), "Worksheet: Latest worksheet.md")
+            self.assertIn("Plan: Batch compare", lesson_text_for_batch(lab01_batch, outputs))
+            self.assertIn(batch_plan_text(lab01_batch), lesson_text_for_batch(lab01_batch, outputs))
             self.assertIn("Plot review: Error - Check how quickly error shrinks", lesson_text_for_batch(lab01_batch, outputs))
             self.assertIn("Worksheet: Latest worksheet.md", lesson_text_for_batch(lab01_batch, outputs))
             self.assertEqual(action_history_text(lab02_batch, outputs), "History: Not run yet")

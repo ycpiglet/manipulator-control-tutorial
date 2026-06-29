@@ -1791,6 +1791,22 @@ def action_controls_text(action: MenuAction) -> str:
     return _action_controls_text(action.config_path)
 
 
+def action_plan_text(action: MenuAction) -> str:
+    return (
+        f"Plan: {_action_level(action)}; {_action_experience_kind(action)}; "
+        f"{_action_duration_text(action.config_path)}; saves report/plots/worksheet"
+    )
+
+
+def batch_plan_text(action: BatchMenuAction) -> str:
+    scenario_count = (
+        sum(len(scenarios) for scenarios in BATCH_SETS.values())
+        if action.batch_name == ALL_BATCH_NAME
+        else len(BATCH_SETS[action.batch_name])
+    )
+    return f"Plan: Batch compare; {scenario_count} headless scenarios; saves combined report/worksheet"
+
+
 @lru_cache(maxsize=256)
 def _action_controls_text(config_path: str) -> str:
     try:
@@ -1829,6 +1845,43 @@ def _action_controls_text(config_path: str) -> str:
     if not controls:
         return "Controls: Auto run; edit YAML before running"
     return f"Controls: {', '.join(dict.fromkeys(controls))}"
+
+
+def _action_level(action: MenuAction) -> str:
+    label = action.label.lower()
+    tags = set(action_tags(action))
+    if action.lab_name in {"lab01", "lab02"} and label in {"auto demo", "interactive"}:
+        return "Intro"
+    if action.lab_name == "lab03" and label in {"2dof joint-space", "2dof task-space", "2dof interactive"}:
+        return "Build"
+    if action.lab_name == "lab04" and label in {"neutral hold", "joint target", "cartesian reach", "cartesian interactive"}:
+        return "Build"
+    if {"singularity", "wall", "panda"} & tags or "dls" in label:
+        return "Deep dive"
+    if _is_compare_action(action):
+        return "Compare"
+    return "Build"
+
+
+def _action_experience_kind(action: MenuAction) -> str:
+    tags = set(action_tags(action))
+    if "hands-on" in tags:
+        return "hands-on viewer"
+    if _is_compare_action(action):
+        return "comparison scenario"
+    return "baseline demo"
+
+
+@lru_cache(maxsize=256)
+def _action_duration_text(config_path: str) -> str:
+    try:
+        config = load_config(config_path)
+    except (OSError, ValueError):
+        return "configured sim time"
+    sim_time = config.get("sim_time")
+    if isinstance(sim_time, int | float):
+        return f"{float(sim_time):g}s simulated"
+    return "configured sim time"
 
 
 def action_viewer_text(action: MenuAction) -> str:
@@ -1947,6 +2000,7 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
         f"{action.description}\n"
         f"Setup: {readiness.label}{setup_detail}{setup_fix}\n"
         f"Badges: {', '.join(action_badges(action))}\n"
+        f"{action_plan_text(action)}\n"
         f"{action_history_text(action, outputs_root)}\n"
         f"{action_evidence_text(action, outputs_root)}\n"
         f"{action_latest_evidence_text(action, outputs_root)}\n"
@@ -2116,6 +2170,7 @@ def _action_matches_terms(action: MenuAction, terms: list[str]) -> bool:
         reflection_question(action),
         action_controls_text(action),
         action_viewer_text(action),
+        action_plan_text(action),
         " ".join(configured_preset_labels(action.config_path)),
         action_readiness(action).label,
         action_readiness(action).detail,
@@ -2935,6 +2990,7 @@ def lesson_text_for_batch(action: BatchMenuAction, outputs_root: Path | None = N
     return (
         f"{action.description}\n"
         f"Setup: {readiness.label}{setup_detail}{setup_fix}\n"
+        f"{batch_plan_text(action)}\n"
         f"{action_history_text(action, outputs_root)}\n"
         f"{action_plot_text(action, outputs_root)}\n"
         f"{action_plot_review_text(action, outputs_root)}\n"
