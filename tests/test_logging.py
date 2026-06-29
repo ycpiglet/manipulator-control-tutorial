@@ -178,6 +178,11 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Observation notes", html)
             self.assertIn("Latest observation", html)
             self.assertIn("Evidence to compare", html)
+            self.assertIn("Evidence Review Cue", html)
+            self.assertIn("Review-ready pairs", html)
+            self.assertIn("Prediction-only markers", html)
+            self.assertIn("Observation-only markers", html)
+            self.assertIn("Decide whether each prediction matched, partially matched, or surprised you.", html)
             self.assertIn("Latest prediction:", html)
             self.assertIn("Latest note:", html)
             self.assertIn("Which slider change made the response easiest to explain?", html)
@@ -288,6 +293,9 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Needs prediction", html)
             self.assertIn("fill the Prediction field", html)
             self.assertIn("Observation markers", html)
+            self.assertIn("Evidence Review Cue", html)
+            self.assertIn("Observation-only markers", html)
+            self.assertIn("Repeat the run and write a prediction before observing", html)
 
             (output / "interaction_events.json").write_text(
                 json.dumps(

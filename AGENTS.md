@@ -125,6 +125,7 @@ Implemented and verified:
 - Observation markers capture the active learning question, learner predictions, evidence prompt, learner notes, changed sliders, full slider snapshots, and live status snapshots
 - Run reports show hands-on evidence completion status for interactive runs
 - Run reports summarize observation marker questions, predictions, learner notes, and prediction-review prompts
+- Run reports show an evidence review cue that counts review-ready prediction-observation pairs and incomplete markers
 - Outputs index learning path cards include evidence status plus ready-to-run or repeat commands for each course step
 - Outputs index run table summarizes observation, prediction, and learner note evidence per saved run
 - Outputs index run table shows the latest observation marker prediction, note, and live status summary per saved run

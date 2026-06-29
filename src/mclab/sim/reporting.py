@@ -1999,12 +1999,14 @@ def _observation_markers_section(events: list[dict[str, Any]]) -> str:
     )
     review_prompt = _observation_review_prompt(markers)
     prediction_review = _prediction_review_prompt(markers)
+    evidence_review = _evidence_review_cue(markers)
     return (
         "<section>"
         "<h2>Observation Markers</h2>"
         f'<p class="empty">{escape(count_text)}</p>'
         f"{review_prompt}"
         f"{prediction_review}"
+        f"{evidence_review}"
         '<div class="marker-grid">'
         f"{cards}"
         "</div>"
@@ -2093,6 +2095,49 @@ def _prediction_review_prompt(markers: list[dict[str, Any]]) -> str:
         "Prediction Review",
         "Compare each saved prediction against the plots, evidence prompt, and live status snapshot.",
         _action_value_list(items),
+    )
+
+
+def _evidence_review_cue(markers: list[dict[str, Any]]) -> str:
+    ready_pairs = 0
+    prediction_only = 0
+    note_only = 0
+    missing_both = 0
+    for marker in markers:
+        payload = marker.get("value")
+        value = payload if isinstance(payload, dict) else {}
+        has_prediction = bool(str(value.get("prediction") or "").strip())
+        has_note = bool(str(value.get("note") or "").strip())
+        if has_prediction and has_note:
+            ready_pairs += 1
+        elif has_prediction:
+            prediction_only += 1
+        elif has_note:
+            note_only += 1
+        else:
+            missing_both += 1
+
+    if ready_pairs:
+        next_step = "Decide whether each prediction matched, partially matched, or surprised you."
+    elif prediction_only:
+        next_step = "Add an observation note or live status snapshot before using this as evidence."
+    elif note_only:
+        next_step = "Repeat the run and write a prediction before observing, then mark the observation again."
+    else:
+        next_step = "Repeat the run, fill Prediction and Note, then mark the observation."
+
+    return _action_card(
+        "Evidence Review Cue",
+        "Use this as a quick worksheet checklist before moving to the next experiment.",
+        _action_value_list(
+            (
+                ("Review-ready pairs", ready_pairs),
+                ("Prediction-only markers", prediction_only),
+                ("Observation-only markers", note_only),
+                ("Empty markers", missing_both),
+                ("Next review step", next_step),
+            )
+        ),
     )
 
 
