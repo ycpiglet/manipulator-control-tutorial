@@ -1315,11 +1315,13 @@ def _observation_markers_section(events: list[dict[str, Any]]) -> str:
         else f"{len(markers)} marked observation{'s' if len(markers) != 1 else ''} saved."
     )
     review_prompt = _observation_review_prompt(markers)
+    prediction_review = _prediction_review_prompt(markers)
     return (
         "<section>"
         "<h2>Observation Markers</h2>"
         f'<p class="empty">{escape(count_text)}</p>'
         f"{review_prompt}"
+        f"{prediction_review}"
         '<div class="marker-grid">'
         f"{cards}"
         "</div>"
@@ -1373,6 +1375,41 @@ def _observation_review_prompt(markers: list[dict[str, Any]]) -> str:
         f"{latest_prediction_html}"
         f"{latest_note_html}"
         "</div>"
+    )
+
+
+def _prediction_review_prompt(markers: list[dict[str, Any]]) -> str:
+    predictions: list[str] = []
+    notes: list[str] = []
+    evidence_prompts: list[str] = []
+    for marker in markers:
+        payload = marker.get("value")
+        value = payload if isinstance(payload, dict) else {}
+        prediction = str(value.get("prediction") or "").strip()
+        note = str(value.get("note") or "").strip()
+        evidence_prompt = str(value.get("evidence_prompt") or "").strip()
+        if prediction:
+            predictions.append(prediction)
+        if note:
+            notes.append(note)
+        if evidence_prompt and evidence_prompt not in evidence_prompts:
+            evidence_prompts.append(evidence_prompt)
+    if not predictions:
+        return ""
+
+    items: list[tuple[str, Any]] = [
+        ("Predictions saved", len(predictions)),
+        ("Observation notes", len(notes)),
+        ("Latest prediction", predictions[-1]),
+    ]
+    if notes:
+        items.append(("Latest observation", notes[-1]))
+    if evidence_prompts:
+        items.append(("Evidence to compare", evidence_prompts[-1]))
+    return _action_card(
+        "Prediction Review",
+        "Compare each saved prediction against the plots, evidence prompt, and live status snapshot.",
+        _action_value_list(items),
     )
 
 
