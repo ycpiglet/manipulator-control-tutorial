@@ -149,6 +149,8 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(("Lab04 Panda Manipulator", "High damping wall"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Near wall"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Far wall"), labels)
+        self.assertIn(("Lab04 Panda Manipulator", "Low retreat wall"), labels)
+        self.assertIn(("Lab04 Panda Manipulator", "High retreat wall"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Virtual wall"), labels)
 
     def test_menu_actions_launch_learner_viewer_commands(self) -> None:
@@ -818,6 +820,9 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Soft wall", wall_labels)
         self.assertIn("Stiff wall", wall_labels)
         self.assertIn("Virtual wall", wall_labels)
+        retreat_labels = {action.label for action in filter_menu_actions("retreat gain")}
+        self.assertIn("Low retreat wall", retreat_labels)
+        self.assertIn("High retreat wall", retreat_labels)
 
         interactive_labels = {action.label for action in filter_menu_actions("interactive")}
         self.assertIn("Interactive", interactive_labels)
@@ -896,6 +901,8 @@ class LearnerMenuTests(unittest.TestCase):
                 "High damping wall",
                 "Near wall",
                 "Far wall",
+                "Low retreat wall",
+                "High retreat wall",
                 "Virtual wall",
             },
         )
@@ -963,6 +970,10 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("virtual_wall.stiffness", parameter_hint(by_label[("Lab04 Panda Manipulator", "Virtual wall")]))
         self.assertIn("virtual_wall.damping", parameter_hint(by_label[("Lab04 Panda Manipulator", "Low damping wall")]))
         self.assertIn("virtual_wall.wall_x", parameter_hint(by_label[("Lab04 Panda Manipulator", "Near wall")]))
+        self.assertIn(
+            "virtual_wall.force_retreat_gain",
+            parameter_hint(by_label[("Lab04 Panda Manipulator", "High retreat wall")]),
+        )
 
     def test_menu_actions_link_to_existing_config_and_lesson_files(self) -> None:
         for action in MENU_ACTIONS:

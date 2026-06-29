@@ -105,6 +105,8 @@ class LabSmokeTests(unittest.TestCase):
             "configs/lab04_panda/wall_high_damping.yaml",
             "configs/lab04_panda/wall_near.yaml",
             "configs/lab04_panda/wall_far.yaml",
+            "configs/lab04_panda/wall_low_retreat.yaml",
+            "configs/lab04_panda/wall_high_retreat.yaml",
         ):
             with self.subTest(config_path=config_path):
                 config = load_config(config_path)

@@ -560,6 +560,22 @@ RUN_GUIDES: dict[str, RunGuide] = {
         "Later contact, smaller penetration, virtual force, retreat, and hand X response.",
         "Move wall_x closer gradually and find when the hand starts producing a visible wall response.",
     ),
+    "configs/lab04_panda/wall_low_retreat.yaml": RunGuide(
+        "Lab04 Low-Retreat Virtual Wall",
+        "Wall force settings stay fixed while force-to-retreat gain is low.",
+        "Run before the high-retreat wall and compare wall_retreat_compare.png.",
+        "virtual_wall.force_retreat_gain, virtual_wall.cartesian_retreat_gain",
+        "Wall retreat, penetration, hand X response, and virtual force.",
+        "Run high-retreat wall and compare whether stronger retreat lowers penetration.",
+    ),
+    "configs/lab04_panda/wall_high_retreat.yaml": RunGuide(
+        "Lab04 High-Retreat Virtual Wall",
+        "The same wall force maps into a stronger Cartesian target retreat.",
+        "Compare directly against the low-retreat wall.",
+        "virtual_wall.force_retreat_gain, virtual_wall.cartesian_retreat_gain",
+        "Larger retreat, reduced penetration, hand X response, and actuator effort.",
+        "Lower force_retreat_gain gradually and find where penetration becomes visible again.",
+    ),
     "configs/lab04_panda/interactive_virtual_wall.yaml": RunGuide(
         "Lab04 Virtual Wall Interactive",
         "Tune the hand target and virtual wall parameters while the Panda moves toward the wall.",

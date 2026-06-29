@@ -34,6 +34,12 @@ class BatchTests(unittest.TestCase):
         self.assertIn("high_damping_wall", lab04_wall_labels)
         self.assertIn("near_wall", lab04_wall_labels)
         self.assertIn("far_wall", lab04_wall_labels)
+        self.assertIn("low_retreat_wall", lab04_wall_labels)
+        self.assertIn("high_retreat_wall", lab04_wall_labels)
+        lab04_guide = batch.BATCH_GUIDES["lab04_wall_compare"]
+        self.assertTrue(
+            any("force-to-retreat gain" in question for question in lab04_guide.questions)
+        )
         self.assertIn("max_dls_condition_scale", batch.BATCH_GUIDES["lab03_2dof_compare"].metric_keys)
         lab03_guide = batch.BATCH_GUIDES["lab03_2dof_compare"]
         self.assertTrue(

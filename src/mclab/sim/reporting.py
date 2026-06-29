@@ -450,6 +450,7 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
         NextRunSuggestion("configs/lab04_panda/wall_stiff.yaml", "Compare higher stiffness and retreat.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_low_damping.yaml", "Isolate damping with fixed stiffness.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_near.yaml", "Move the wall closer to isolate contact timing.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/wall_low_retreat.yaml", "Isolate force-to-retreat gain.", "wall_compare"),
     ),
     "configs/lab04_panda/wall_soft.yaml": (
         NextRunSuggestion("configs/lab04_panda/wall_stiff.yaml", "Run the direct stiff wall comparison.", "wall_compare"),
@@ -465,11 +466,13 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
         NextRunSuggestion("configs/lab04_panda/wall_high_damping.yaml", "Compare the same wall with stronger damping.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_soft.yaml", "Return to the lower-stiffness wall comparison.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_near.yaml", "Keep gains moderate and move the wall closer.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/wall_low_retreat.yaml", "Lower force-to-retreat gain with the same wall force.", "wall_compare"),
     ),
     "configs/lab04_panda/wall_high_damping.yaml": (
         NextRunSuggestion("configs/lab04_panda/wall_low_damping.yaml", "Compare the same wall with less damping.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_stiff.yaml", "Compare against the higher-stiffness wall.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_far.yaml", "Keep gains moderate and move the wall farther.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/wall_high_retreat.yaml", "Raise force-to-retreat gain with the same wall force.", "wall_compare"),
     ),
     "configs/lab04_panda/wall_near.yaml": (
         NextRunSuggestion("configs/lab04_panda/wall_far.yaml", "Compare the same wall placed farther away.", "wall_compare"),
@@ -479,11 +482,22 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
         NextRunSuggestion("configs/lab04_panda/wall_near.yaml", "Compare the same wall placed closer.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/interactive_virtual_wall.yaml", "Tune wall position live.", "wall"),
     ),
+    "configs/lab04_panda/wall_low_retreat.yaml": (
+        NextRunSuggestion("configs/lab04_panda/wall_high_retreat.yaml", "Compare the same wall with stronger force-to-retreat gain.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/wall_low_damping.yaml", "Return to the damping-only comparison.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/interactive_virtual_wall.yaml", "Tune retreat gain live.", "wall"),
+    ),
+    "configs/lab04_panda/wall_high_retreat.yaml": (
+        NextRunSuggestion("configs/lab04_panda/wall_low_retreat.yaml", "Compare the same wall with weaker force-to-retreat gain.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/wall_near.yaml", "Move the same wall closer to change contact timing.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/interactive_virtual_wall.yaml", "Tune retreat gain live.", "wall"),
+    ),
     "configs/lab04_panda/interactive_virtual_wall.yaml": (
         NextRunSuggestion("configs/lab04_panda/wall_soft.yaml", "Save a deterministic soft wall comparison.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_stiff.yaml", "Save a deterministic stiff wall comparison.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_high_damping.yaml", "Save a deterministic damping comparison.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_near.yaml", "Save a deterministic wall-position comparison.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/wall_high_retreat.yaml", "Save a deterministic retreat-gain comparison.", "wall_compare"),
     ),
 }
 

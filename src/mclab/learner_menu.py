@@ -184,9 +184,9 @@ BATCH_ACTIONS: tuple[BatchMenuAction, ...] = (
         group="Comparison Batches",
         label="Lab04 wall compare",
         batch_name="lab04_wall_compare",
-        description="Run Panda virtual wall stiffness, damping, and wall-position cases.",
+        description="Run Panda virtual wall stiffness, damping, wall-position, and retreat-gain cases.",
         try_this="Compare wall penetration, virtual force, retreat, and hand X motion.",
-        watch="How wall stiffness, damping, and wall position change the contact-like response.",
+        watch="How wall stiffness, damping, wall position, and retreat gain change the contact-like response.",
     ),
     BatchMenuAction(
         group="Comparison Batches",
@@ -750,6 +750,26 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
         description="Moves the same virtual wall farther along the hand path.",
         try_this="Compare against Near wall with stiffness and damping fixed.",
         watch="Later contact, smaller penetration, weaker retreat, and hand X response.",
+    ),
+    MenuAction(
+        group="Lab04 Panda Manipulator",
+        label="Low retreat wall",
+        lab_name="lab04",
+        config_path="configs/lab04_panda/wall_low_retreat.yaml",
+        plots="wall_compare",
+        description="Keeps wall force settings fixed but maps force into a small retreat.",
+        try_this="Compare against High retreat wall with stiffness, damping, and wall position fixed.",
+        watch="Smaller target retreat, deeper penetration, and hand X response.",
+    ),
+    MenuAction(
+        group="Lab04 Panda Manipulator",
+        label="High retreat wall",
+        lab_name="lab04",
+        config_path="configs/lab04_panda/wall_high_retreat.yaml",
+        plots="wall_compare",
+        description="Keeps wall force settings fixed but maps force into a stronger retreat.",
+        try_this="Compare against Low retreat wall to isolate force-to-retreat gain.",
+        watch="Larger target retreat, reduced penetration, and hand X response.",
     ),
     MenuAction(
         group="Lab04 Panda Manipulator",
@@ -1975,7 +1995,14 @@ def action_tags(action: MenuAction) -> tuple[str, ...]:
         tags.add("cartesian")
     if any(term in label for term in ("step", "trapezoid", "minimum jerk", "s-curve", "path")):
         tags.add("trajectory")
-    if "gain" in label or "damping" in label or "torque" in label or "windup" in label or "saturation" in label:
+    if (
+        "gain" in label
+        or "damping" in label
+        or "retreat" in label
+        or "torque" in label
+        or "windup" in label
+        or "saturation" in label
+    ):
         tags.add("tuning")
 
     return tuple(sorted(tags))
@@ -2021,6 +2048,12 @@ def _is_compare_action(action: MenuAction) -> bool:
         "stiff cartesian",
         "soft wall",
         "stiff wall",
+        "low damping wall",
+        "high damping wall",
+        "near wall",
+        "far wall",
+        "low retreat wall",
+        "high retreat wall",
     }
     return label in compare_labels
 

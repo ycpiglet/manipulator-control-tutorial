@@ -79,6 +79,25 @@ class Lab04WallTests(unittest.TestCase):
         self.assertAlmostEqual(total[0], -11.0)
         self.assertEqual(_virtual_wall_force(ee_position, ee_velocity, wall), total)
 
+    def test_force_retreat_gain_changes_retreat_with_same_wall_force(self) -> None:
+        ee_position = [0.60, 0.0, 0.0]
+        wall_force = [-12.0, 0.0, 0.0]
+        low_gain = {
+            "wall_x": 0.57,
+            "cartesian_retreat_gain": 0.20,
+            "force_retreat_gain": 0.00002,
+            "max_cartesian_retreat": 0.05,
+        }
+        high_gain = {
+            **low_gain,
+            "force_retreat_gain": 0.00035,
+        }
+
+        low_retreat = _wall_retreat_distance(ee_position, wall_force, low_gain)
+        high_retreat = _wall_retreat_distance(ee_position, wall_force, high_gain)
+
+        self.assertGreater(high_retreat, low_retreat)
+
     def test_lab04_summary_reports_hold_stability_metrics(self) -> None:
         rows = [
             {
