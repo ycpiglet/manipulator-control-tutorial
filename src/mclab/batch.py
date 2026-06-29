@@ -486,7 +486,16 @@ def _render_batch_report(output: Path, batch_name: str, guide: BatchGuide, rows:
     next_experiments = _next_experiments(guide)
     reproduce_commands = _reproduce_commands(batch_name, rows)
     baseline_config = rows[0].get("config", {}) if rows else {}
-    scenario_cards = "\n".join(_scenario_card(row, metric_keys, baseline_config=baseline_config) for row in rows)
+    baseline_summary = rows[0].get("summary", {}) if rows else {}
+    scenario_cards = "\n".join(
+        _scenario_card(
+            row,
+            metric_keys,
+            baseline_config=baseline_config,
+            baseline_summary=baseline_summary,
+        )
+        for row in rows
+    )
     comparison_takeaways = _comparison_takeaways(rows, metric_keys)
     metric_highlights = _metric_highlights(rows, metric_keys)
     baseline_changes = _baseline_metric_changes(rows, metric_keys)
@@ -846,7 +855,12 @@ def _all_batch_row(row: dict[str, Any]) -> str:
     )
 
 
-def _scenario_card(row: dict[str, Any], metric_keys: list[str], baseline_config: dict[str, Any] | None = None) -> str:
+def _scenario_card(
+    row: dict[str, Any],
+    metric_keys: list[str],
+    baseline_config: dict[str, Any] | None = None,
+    baseline_summary: dict[str, Any] | None = None,
+) -> str:
     summary = row.get("summary", {})
     metrics = "\n".join(
         (
@@ -864,12 +878,14 @@ def _scenario_card(row: dict[str, Any], metric_keys: list[str], baseline_config:
     command = _scenario_run_command(row)
     quick_links = _scenario_quick_links(row)
     changes = _scenario_change_summary(row, baseline_config)
+    metric_changes = _scenario_metric_change_summary(row, metric_keys, baseline_summary)
     return (
         '<article class="scenario">'
         f'<h3><a href="{escape(str(row["report"]))}">{escape(str(row["label"]))}</a></h3>'
         f'<p class="muted">{escape(str(row["config_path"]))}</p>'
         f"{quick_links}"
         f"{changes}"
+        f"{metric_changes}"
         f"{learning_cues}"
         f'<code class="command">{escape(command)}</code>'
         f"{metrics}"
@@ -912,6 +928,44 @@ def _scenario_change_summary(
         if hidden_count > 0:
             body += f'<span class="muted change-item">+ {hidden_count} more in Parameter Differences</span>'
     return '<div class="cue"><strong>Changed from baseline</strong>' + body + "</div>"
+
+
+def _scenario_metric_change_summary(
+    row: dict[str, Any],
+    metric_keys: list[str],
+    baseline_summary: dict[str, Any] | None,
+    *,
+    max_items: int = 3,
+) -> str:
+    if baseline_summary is None:
+        return ""
+    summary = row.get("summary", {})
+    numeric_changes: list[tuple[float, str, float, float]] = []
+    for key in metric_keys:
+        baseline_value = _as_finite_float(baseline_summary.get(key))
+        value = _as_finite_float(summary.get(key))
+        if baseline_value is None or value is None:
+            continue
+        delta = value - baseline_value
+        if abs(delta) < 1e-12:
+            continue
+        rank = abs(delta) if abs(baseline_value) < 1e-12 else abs(delta / baseline_value)
+        numeric_changes.append((rank, key, baseline_value, value))
+
+    if not numeric_changes:
+        body = '<span class="muted">Baseline metric reference</span>'
+    else:
+        visible = sorted(numeric_changes, key=lambda item: item[0], reverse=True)[:max_items]
+        body = "".join(
+            (
+                '<span class="change-item">'
+                f"{escape(_label(key))}: {escape(_signed_value(value - baseline_value))}"
+                f" ({escape(_percent_change(value - baseline_value, baseline_value))})"
+                "</span>"
+            )
+            for _rank, key, baseline_value, value in visible
+        )
+    return '<div class="cue"><strong>Metric change from baseline</strong>' + body + "</div>"
 
 
 def _scenario_quick_links(row: dict[str, Any]) -> str:

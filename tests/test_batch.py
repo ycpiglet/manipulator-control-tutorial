@@ -120,6 +120,8 @@ class BatchTests(unittest.TestCase):
             self.assertIn('href="demo_scenario/plots/position.png"', report_html)
             self.assertIn("Changed from baseline", report_html)
             self.assertIn("Baseline reference", report_html)
+            self.assertIn("Metric change from baseline", report_html)
+            self.assertIn("Baseline metric reference", report_html)
             self.assertIn("max abs position", report_html)
             self.assertIn("Parameter Differences", report_html)
             self.assertIn("Plot Previews", report_html)
@@ -255,6 +257,8 @@ class BatchTests(unittest.TestCase):
             )
             self.assertIn("Changed from baseline", report_html)
             self.assertIn("controller.kp", report_html)
+            self.assertIn("Metric change from baseline", report_html)
+            self.assertIn("overshoot percent", report_html)
             self.assertIn("baseline</strong> has the least overshoot", report_html)
             self.assertIn("high gain</strong> overshoots most", report_html)
             self.assertIn("Metric Highlights", report_html)
@@ -304,6 +308,18 @@ class BatchTests(unittest.TestCase):
         self.assertIn("controller.kp", html)
         self.assertIn("60", html)
         self.assertIn("120", html)
+
+    def test_scenario_metric_change_summary_compares_against_baseline(self) -> None:
+        html = batch._scenario_metric_change_summary(
+            {"summary": {"overshoot_percent": 12.5, "settling_time": 1.8}},
+            ["overshoot_percent", "settling_time"],
+            {"overshoot_percent": 0.0, "settling_time": 2.0},
+        )
+
+        self.assertIn("Metric change from baseline", html)
+        self.assertIn("overshoot percent", html)
+        self.assertIn("+12.5", html)
+        self.assertIn("n/a", html)
 
 
 if __name__ == "__main__":
