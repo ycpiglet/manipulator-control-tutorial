@@ -840,8 +840,11 @@ def _suggested_next_run_card(suggestion: NextRunSuggestion, current_config: dict
         f"--viewer --realtime --pause-at-end --plot --plots {suggestion.plots} --open-report"
     )
     guide_focus = f'<p class="empty">{escape(guide.focus)}</p>' if guide is not None else ""
+    guide_prediction = ""
     guide_question = ""
     if guide is not None:
+        prediction = prediction_prompt_for_guide(guide).removeprefix("Prediction:").strip()
+        guide_prediction = f'<p class="empty"><strong>Prediction:</strong> {escape(prediction)}</p>'
         question = question_for_guide(guide).removeprefix("Question:").strip()
         guide_question = f'<p class="empty"><strong>Question:</strong> {escape(question)}</p>'
     key_changes = _suggested_config_changes(current_config, suggestion.config_path)
@@ -850,6 +853,7 @@ def _suggested_next_run_card(suggestion: NextRunSuggestion, current_config: dict
         f"<strong>{escape(title)}</strong>"
         f'<p class="empty">{escape(suggestion.reason)}</p>'
         f"{guide_focus}"
+        f"{guide_prediction}"
         f"{guide_question}"
         f"{key_changes}"
         '<ul class="action-list">'
