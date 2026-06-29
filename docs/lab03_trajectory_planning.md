@@ -82,6 +82,16 @@ python -m mclab batch lab03_2dof_compare --open-report
 
 The early schedule starts increasing DLS damping at a lower condition number and allows a higher damping ceiling. The late schedule waits until conditioning is worse and caps damping lower. Compare `dls_damping_compare.png`, `dls_joint_speed_compare.png`, and `task_error_compare.png` in the batch report to discuss the tradeoff between calmer joint motion and hand tracking error.
 
+Condition-aware target-position comparison:
+
+```bash
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_inner_target_2dof.yaml --headless --plot --plots dls
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_edge_target_2dof.yaml --headless --plot --plots dls
+python -m mclab batch lab03_2dof_compare --open-report
+```
+
+These two configs keep the same condition-aware damping schedule, torque limits, gains, and trajectory timing while changing only `target_xy`. The inner target stays away from the workspace edge, so `dls_condition_scale` should remain low and the effective damping should stay near the base value. The edge target should raise condition number, increase `dls_damping`, and expose the task-error tradeoff. Compare `dls_damping_compare.png`, `dls_joint_speed_compare.png`, `task_error_compare.png`, and `manipulability_compare.png`.
+
 Condition-aware torque-limit comparison:
 
 ```bash

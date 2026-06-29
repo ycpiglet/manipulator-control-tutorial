@@ -408,6 +408,22 @@ RUN_GUIDES: dict[str, RunGuide] = {
         "Later DLS damping, joint speed demand, condition number, and hand tracking error.",
         "Run the Lab03 comparison batch to see early, default, and late schedules together.",
     ),
+    "configs/lab03_2dof/condition_aware_dls_inner_target_2dof.yaml": RunGuide(
+        "Lab03 2DOF Inner-Target Condition-Aware DLS",
+        "The target stays inside the comfortable workspace, away from the near-singular edge.",
+        "Run before the edge-target case and compare dls_condition_scale.",
+        "target_xy with the same condition-aware damping schedule",
+        "Low condition scale, small task error, and modest DLS damping.",
+        "Run the edge-target condition-aware DLS case to see when damping becomes necessary.",
+    ),
+    "configs/lab03_2dof/condition_aware_dls_edge_target_2dof.yaml": RunGuide(
+        "Lab03 2DOF Edge-Target Condition-Aware DLS",
+        "The target is near the arm's workspace edge, where Jacobian conditioning becomes poor.",
+        "Compare directly against the inner-target case with the same controller schedule.",
+        "target_xy with the same condition-aware damping schedule",
+        "Higher condition scale, increased DLS damping, task error, and joint-speed limiting.",
+        "Move target_xy slightly inward and compare how quickly DLS damping disappears.",
+    ),
     "configs/lab03_2dof/condition_aware_dls_low_torque_2dof.yaml": RunGuide(
         "Lab03 2DOF Low-Torque Condition-Aware DLS",
         "The same condition-aware DLS target is constrained by a lower shoulder and elbow torque limit.",

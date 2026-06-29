@@ -129,6 +129,8 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF early DLS damping"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF late DLS damping"), labels)
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF inner-target DLS"), labels)
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF edge-target DLS"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF low-torque DLS"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF high-torque DLS"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF interactive"), labels)
@@ -810,6 +812,9 @@ class LearnerMenuTests(unittest.TestCase):
 
         low_torque = config_value_preview(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF low-torque DLS")])
         self.assertIn("tracking_controller.torque_limit=", low_torque)
+        edge_target = config_value_preview(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF edge-target DLS")])
+        self.assertIn("target_xy=", edge_target)
+        self.assertIn("tracking_controller.condition_damping_threshold=", edge_target)
 
     def test_filter_menu_actions_matches_search_terms(self) -> None:
         labels = {action.label for action in filter_menu_actions("pid noise")}
@@ -852,6 +857,11 @@ class LearnerMenuTests(unittest.TestCase):
         torque_labels = {(action.group, action.label) for action in filter_menu_actions("torque limit")}
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF low-torque DLS"), torque_labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF high-torque DLS"), torque_labels)
+        target_labels = {(action.group, action.label) for action in filter_menu_actions("target dls")}
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF edge-target DLS"), target_labels)
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF inner-target DLS"), target_labels)
+        edge_target_labels = {(action.group, action.label) for action in filter_menu_actions("edge target dls")}
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF edge-target DLS"), edge_target_labels)
 
         controls_labels = {(action.group, action.label) for action in filter_menu_actions("pull push")}
         self.assertIn(("Lab01 Mass-Spring-Damper", "Interactive"), controls_labels)
@@ -916,6 +926,8 @@ class LearnerMenuTests(unittest.TestCase):
                 "2DOF condition-aware DLS",
                 "2DOF early DLS damping",
                 "2DOF late DLS damping",
+                "2DOF inner-target DLS",
+                "2DOF edge-target DLS",
                 "2DOF low-torque DLS",
                 "2DOF high-torque DLS",
             },
@@ -957,6 +969,10 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(
             "condition_damping_full",
             parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF early DLS damping")]),
+        )
+        self.assertIn(
+            "target_xy",
+            parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF edge-target DLS")]),
         )
         self.assertIn(
             "tracking_controller.torque_limit",

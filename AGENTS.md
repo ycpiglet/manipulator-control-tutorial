@@ -57,6 +57,7 @@ Implemented and verified:
 - Lab03 DLS singularity viewer supports live Low/Balanced/High DLS damping presets
 - Lab03 DLS singularity has a one-line `run_lab03_dls_interactive.cmd` launcher
 - Lab03 condition-aware DLS supports live schedule presets and a one-line `run_lab03_condition_dls_interactive.cmd` launcher
+- Lab03 condition-aware DLS inner/edge target comparison configs for target-position conditioning lessons
 - Lab03 condition-aware DLS low/high torque-limit comparison configs for actuator-limit lessons
 - Learner menu exposes Lab03 low/high torque-limit DLS scenario cards with compare/search/filter support
 - Lab04 Franka Emika Panda manipulator using MuJoCo Menagerie
@@ -279,12 +280,13 @@ Implemented so far:
 - damped least-squares singularity demo with DLS gain/damping and joint-speed logging/plotting
 - condition-aware DLS singularity comparison with automatic damping schedule logging/plotting
 - early/default/late condition-aware DLS schedule comparison configs for Lab03
+- inner/edge target-position condition-aware DLS comparison configs for Lab03
 - low/high torque-limit condition-aware DLS comparison configs for Lab03
 - standard logs and plots for joint position, end-effector position, torque, current proxy, and error
 
 Remaining likely extension:
 
-- richer singularity comparison lessons, such as condition-aware task control with additional task targets
+- richer singularity comparison lessons, such as condition-aware task control with alternate paths or disturbance cases
 
 ### Phase 6 - Lab04 Advanced Control
 

@@ -513,6 +513,26 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
     ),
     MenuAction(
         group="Lab03 2DOF Arm and Trajectories",
+        label="2DOF inner-target DLS",
+        lab_name="lab03",
+        config_path="configs/lab03_2dof/condition_aware_dls_inner_target_2dof.yaml",
+        plots="dls",
+        description="Uses the same condition-aware DLS schedule on a comfortable inner-workspace target.",
+        try_this="Run before edge-target DLS and compare condition scale.",
+        watch="Lower condition scale, small task error, and modest DLS damping.",
+    ),
+    MenuAction(
+        group="Lab03 2DOF Arm and Trajectories",
+        label="2DOF edge-target DLS",
+        lab_name="lab03",
+        config_path="configs/lab03_2dof/condition_aware_dls_edge_target_2dof.yaml",
+        plots="dls",
+        description="Uses the same condition-aware DLS schedule near the workspace edge.",
+        try_this="Compare against inner-target DLS with the same controller settings.",
+        watch="Higher condition scale, larger DLS damping, and hand-error tradeoff.",
+    ),
+    MenuAction(
+        group="Lab03 2DOF Arm and Trajectories",
         label="2DOF low-torque DLS",
         lab_name="lab03",
         config_path="configs/lab03_2dof/condition_aware_dls_low_torque_2dof.yaml",
@@ -1699,6 +1719,8 @@ def parameter_hint(action: MenuAction) -> str:
             "2dof condition-aware dls",
             "2dof early dls damping",
             "2dof late dls damping",
+            "2dof inner-target dls",
+            "2dof edge-target dls",
             "2dof low-torque dls",
             "2dof high-torque dls",
         }:
@@ -1711,6 +1733,11 @@ def parameter_hint(action: MenuAction) -> str:
             if label in {"2dof low-torque dls", "2dof high-torque dls"}:
                 return (
                     "target_xy, tracking_controller.torque_limit, tracking_controller.condition_damping_threshold, "
+                    "tracking_controller.condition_damping_full, tracking_controller.max_dls_damping"
+                )
+            if label in {"2dof inner-target dls", "2dof edge-target dls"}:
+                return (
+                    "target_xy, tracking_controller.condition_damping_threshold, "
                     "tracking_controller.condition_damping_full, tracking_controller.max_dls_damping"
                 )
             return (
@@ -2034,6 +2061,8 @@ def _is_compare_action(action: MenuAction) -> bool:
         "2dof dls singularity",
         "2dof early dls damping",
         "2dof late dls damping",
+        "2dof inner-target dls",
+        "2dof edge-target dls",
         "2dof low-torque dls",
         "2dof high-torque dls",
         "step profile",
