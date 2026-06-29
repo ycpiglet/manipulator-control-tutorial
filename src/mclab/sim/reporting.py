@@ -2355,6 +2355,7 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
             default=child.stat().st_mtime,
         )
         observation_markers, learner_predictions, learner_notes, learner_outcomes = _observation_evidence_counts(child)
+        outcome_counts = _observation_outcome_counts(child)
         latest_evidence = _latest_observation_evidence(child)
         runs.append(
             {
@@ -2375,6 +2376,7 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
                 "learner_predictions": learner_predictions,
                 "learner_notes": learner_notes,
                 "learner_outcomes": learner_outcomes,
+                "outcome_counts": outcome_counts,
                 "latest_evidence": latest_evidence,
             }
         )
@@ -2704,7 +2706,7 @@ def _progress_cards(runs: list[dict[str, Any]]) -> str:
         ("Lab04", "lab04"),
         ("Batches", "batch"),
     )
-    cards = []
+    cards = [_evidence_quality_card(runs)]
     for label, key in categories:
         matches = [_run for _run in runs if _run_matches_category(_run, key)]
         latest = matches[0] if matches else None
@@ -2721,6 +2723,44 @@ def _progress_cards(runs: list[dict[str, Any]]) -> str:
             "</div>"
         )
     return '<div class="progress-grid">' + "\n".join(cards) + "</div>"
+
+
+def _evidence_quality_card(runs: list[dict[str, Any]]) -> str:
+    markers = sum(int(run.get("observation_markers", 0)) for run in runs)
+    predictions = sum(int(run.get("learner_predictions", 0)) for run in runs)
+    outcomes = sum(int(run.get("learner_outcomes", 0)) for run in runs)
+    notes = sum(int(run.get("learner_notes", 0)) for run in runs)
+    outcome_counts = _merge_outcome_counts(runs)
+    coverage = f"{(100.0 * outcomes / predictions):.0f}%" if predictions else "0%"
+    mix = _format_outcome_mix(outcome_counts)
+    return (
+        '<div class="progress-card">'
+        "<strong>Evidence Quality</strong>"
+        f'<span class="muted">{markers} observation{"s" if markers != 1 else ""}</span>'
+        f'<p class="muted">{predictions} prediction{"s" if predictions != 1 else ""}, '
+        f'{outcomes} outcome{"s" if outcomes != 1 else ""}, '
+        f'{notes} note{"s" if notes != 1 else ""}</p>'
+        f'<p class="muted">Outcome coverage: {escape(coverage)} of predictions</p>'
+        f'<p class="muted">Outcome mix: {escape(mix)}</p>'
+        "</div>"
+    )
+
+
+def _merge_outcome_counts(runs: list[dict[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for run in runs:
+        outcome_counts = run.get("outcome_counts", {})
+        if not isinstance(outcome_counts, dict):
+            continue
+        for label, count in outcome_counts.items():
+            counts[str(label)] = counts.get(str(label), 0) + int(count)
+    return counts
+
+
+def _format_outcome_mix(outcome_counts: dict[str, int]) -> str:
+    if not outcome_counts:
+        return "No outcomes yet"
+    return ", ".join(f"{label} {count}" for label, count in sorted(outcome_counts.items()))
 
 
 def _run_matches_category(run: dict[str, Any], key: str) -> bool:
@@ -2891,6 +2931,20 @@ def _read_json_list(path: Path) -> list[dict[str, Any]]:
 
 def _observation_evidence_counts(output_path: Path) -> tuple[int, int, int, int]:
     return _observation_evidence_counts_from_events(_read_json_list(output_path / "interaction_events.json"))
+
+
+def _observation_outcome_counts(output_path: Path) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for event in _read_json_list(output_path / "interaction_events.json"):
+        if not _is_observation_marker(event):
+            continue
+        value = event.get("value")
+        if not isinstance(value, dict):
+            continue
+        outcome = str(value.get("outcome") or "").strip()
+        if outcome:
+            counts[outcome] = counts.get(outcome, 0) + 1
+    return counts
 
 
 def _latest_observation_evidence(output_path: Path) -> str:

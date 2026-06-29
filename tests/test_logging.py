@@ -770,6 +770,9 @@ class LoggingTests(unittest.TestCase):
 
             html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
 
+            self.assertIn("Evidence Quality", html)
+            self.assertIn("Outcome coverage: 50% of predictions", html)
+            self.assertIn("Outcome mix: Surprised 1", html)
             self.assertIn("2 observations, 2 predictions, 1 outcome, 2 notes", html)
             self.assertIn(
                 "Latest: Prediction: Higher damping should reduce overshoot.; "
