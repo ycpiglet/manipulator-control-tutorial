@@ -156,12 +156,14 @@ class Lab04WallTests(unittest.TestCase):
             mode="impedance_wall",
             guide_config={"enabled": True, "hand": True, "target": True, "wall": True},
             ee_position=[0.59, 0.02, 0.58],
-            target_x_ee=[0.59, 0.02, 0.58],
+            target_x_ee=[0.62, 0.01, 0.57],
             wall_config={"wall_x": 0.57},
             wall_penetration=0.02,
         )
-        self.assertEqual(scene.ngeom, 2)
+        self.assertEqual(scene.ngeom, 3)
         self.assertEqual(scene.geoms[0].geom_type, "box")
         self.assertEqual(scene.geoms[0].pos, [0.57, 0.0, 0.58])
         self.assertEqual(scene.geoms[1].geom_type, "sphere")
-        self.assertEqual(scene.geoms[1].rgba, [1.0, 0.48, 0.10, 0.9])
+        self.assertEqual(scene.geoms[1].pos, [0.62, 0.01, 0.57])
+        self.assertEqual(scene.geoms[2].geom_type, "sphere")
+        self.assertEqual(scene.geoms[2].rgba, [1.0, 0.48, 0.10, 0.9])

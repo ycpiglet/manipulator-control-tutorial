@@ -13,6 +13,12 @@ trajectory:
   end: 0.3
   duration: 2.0
   start_time: 0.5
+cartesian_target:
+  position: [0.61, 0.0, 0.58]
+  gain: 0.85
+  max_step: 0.05
+  max_joint_offset: 0.10
+  damped_least_squares: 0.08
 wall_target_offset_scale: 1.0
 wall_target_max_offset: 0.12
 virtual_wall:
@@ -32,6 +38,10 @@ interaction:
   tuning_presets:
     - label: Soft wall
       values:
+        target_x: 0.59
+        target_y: 0.00
+        target_z: 0.59
+        cartesian_gain: 0.65
         joint_target_offset: 0.00
         wall_x: 0.58
         wall_stiffness: 150.0
@@ -39,6 +49,10 @@ interaction:
         wall_retreat_gain: 0.25
     - label: Stiff wall
       values:
+        target_x: 0.62
+        target_y: 0.00
+        target_z: 0.58
+        cartesian_gain: 0.90
         joint_target_offset: 0.00
         wall_x: 0.56
         wall_stiffness: 520.0
@@ -46,6 +60,10 @@ interaction:
         wall_retreat_gain: 0.70
     - label: Close wall
       values:
+        target_x: 0.64
+        target_y: 0.00
+        target_z: 0.57
+        cartesian_gain: 1.05
         joint_target_offset: 0.08
         wall_x: 0.53
         wall_stiffness: 320.0

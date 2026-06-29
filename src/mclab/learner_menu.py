@@ -695,9 +695,9 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
         lab_name="lab04",
         config_path="configs/lab04_panda/interactive_virtual_wall.yaml",
         plots="wall",
-        description="Tune wall position, stiffness, damping, and retreat gain.",
-        try_this="Move wall X or click Soft/Stiff/Close wall presets.",
-        watch="Wall penetration, wall force, and hand X position.",
+        description="Tune hand target and virtual wall response live.",
+        try_this="Move Target X through the wall, then try Soft/Stiff/Close wall presets.",
+        watch="Green target, blue/orange hand marker, wall penetration, wall force, and hand X.",
     ),
 )
 
@@ -1408,9 +1408,9 @@ def parameter_hint(action: MenuAction) -> str:
             return "live sliders/presets: Target X/Y/Z, Cartesian gain; YAML: cartesian_target.*"
         if config_name == "interactive_virtual_wall.yaml":
             return (
-                "live sliders/presets: wall X, stiffness, damping, retreat gain; "
-                "YAML: virtual_wall.wall_x, virtual_wall.stiffness, virtual_wall.damping, "
-                "virtual_wall.force_retreat_gain"
+                "live sliders/presets: Target X/Y/Z, Cartesian gain, wall X, stiffness, damping, retreat gain; "
+                "YAML: cartesian_target.position, cartesian_target.gain, virtual_wall.wall_x, "
+                "virtual_wall.stiffness, virtual_wall.damping, virtual_wall.force_retreat_gain"
             )
         if "cartesian" in label:
             return "cartesian_target.position, cartesian_target.gain, cartesian_target.max_step"

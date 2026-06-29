@@ -139,6 +139,7 @@ def run(
             target_x_ee = ee_position
             cartesian_error = [0.0, 0.0, 0.0]
             wall_config = _wall_config(config, live_tuning)
+            tracks_cartesian_target = mode in {"cartesian_reach", "task_space", "ee_reach"}
             if mode in {"cartesian_reach", "task_space", "ee_reach"}:
                 q_before = [float(data.qpos[index]) for index in handles["qpos_indices"]]
                 target_x_ee = _cartesian_target_position(
@@ -156,6 +157,22 @@ def run(
                     live_tuning,
                 )
             if mode in {"impedance_wall", "virtual_wall", "wall"}:
+                if _wall_cartesian_target_enabled(config):
+                    tracks_cartesian_target = True
+                    target_x_ee = _cartesian_target_position(
+                        config,
+                        live_tuning,
+                        initial_ee_position,
+                        1.0,
+                    )
+                    cartesian_error = [target_x_ee[index] - ee_position[index] for index in range(3)]
+                    target_q = _apply_cartesian_target_offset(
+                        target_q,
+                        jacobian,
+                        cartesian_error,
+                        config,
+                        live_tuning,
+                    )
                 wall_force, wall_spring_force, wall_damping_force = _virtual_wall_force_components(
                     ee_position,
                     ee_velocity,
@@ -186,7 +203,7 @@ def run(
                 ee_position[0] - float(wall_config.get("wall_x", 10.0)),
             )
             error_norm = _norm(position_errors)
-            if mode in {"cartesian_reach", "task_space", "ee_reach"}:
+            if tracks_cartesian_target:
                 cartesian_error = [target_x_ee[index] - ee_position[index] for index in range(3)]
             else:
                 target_x_ee = ee_position
@@ -223,6 +240,9 @@ def run(
                 wall_penetration_cm=100.0 * wall_penetration,
                 wall_retreat=wall_retreat,
                 wall_retreat_cm=100.0 * wall_retreat,
+                tuned_target_x=live_tuning.value("target_x", target_x_ee[0]),
+                tuned_target_y=live_tuning.value("target_y", target_x_ee[1]),
+                tuned_target_z=live_tuning.value("target_z", target_x_ee[2]),
                 tuned_joint_target_offset=tuned_joint_offset,
                 tuned_wall_x=float(wall_config.get("wall_x", 10.0)),
                 tuned_wall_stiffness=float(wall_config.get("stiffness", 0.0)),
@@ -311,7 +331,7 @@ def _update_viewer_guides(
             half_size=[0.006, 0.36, 0.30],
             rgba=[1.0, 0.18, 0.12, 0.24],
         )
-    if guide_config.get("target", True) and is_cartesian:
+    if guide_config.get("target", True) and (is_cartesian or is_wall):
         add_viewer_sphere(
             mujoco,
             viewer_handle,
@@ -401,8 +421,19 @@ def _live_tuning(config: dict[str, Any], interaction_log: InteractionLog | None 
             event_log=interaction_log,
             presets=tuning_presets_from_config(config, specs),
         )
+    target_specs: list[SliderSpec] = []
+    target_config = dict(config.get("cartesian_target", {}))
+    if target_config:
+        target_position = _float_list(target_config.get("position", [0.61, 0.0, 0.58]), 3)
+        target_specs = [
+            SliderSpec("target_x", "Target X [m]", 0.35, 0.75, target_position[0], 0.005),
+            SliderSpec("target_y", "Target Y [m]", -0.35, 0.35, target_position[1], 0.005),
+            SliderSpec("target_z", "Target Z [m]", 0.35, 0.80, target_position[2], 0.005),
+            SliderSpec("cartesian_gain", "Cartesian gain", 0.2, 2.0, float(target_config.get("gain", 1.0)), 0.05),
+        ]
     wall_config = dict(config.get("virtual_wall", {}))
     specs = [
+        *target_specs,
         SliderSpec("joint_target_offset", "Joint target offset [rad]", -0.35, 0.35, 0.0, 0.01),
         SliderSpec("wall_x", "Virtual wall X [m]", 0.50, 0.70, float(wall_config.get("wall_x", 0.57)), 0.005),
         SliderSpec(
@@ -435,6 +466,10 @@ def _live_tuning(config: dict[str, Any], interaction_log: InteractionLog | None 
         event_log=interaction_log,
         presets=tuning_presets_from_config(config, specs),
     )
+
+
+def _wall_cartesian_target_enabled(config: dict[str, Any]) -> bool:
+    return bool(dict(config.get("cartesian_target", {})))
 
 
 def _cartesian_target_position(
@@ -701,7 +736,13 @@ def _save_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSe
             "wall_parameters.png",
             "Virtual Wall Parameters",
             "parameter value",
-            ["tuned_wall_stiffness", "tuned_wall_damping", "tuned_wall_retreat_gain"],
+            [
+                "tuned_target_x",
+                "tuned_wall_x",
+                "tuned_wall_stiffness",
+                "tuned_wall_damping",
+                "tuned_wall_retreat_gain",
+            ],
         ),
     ]
     presets = {

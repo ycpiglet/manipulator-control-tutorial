@@ -251,6 +251,20 @@ class KeyForcePulseTests(unittest.TestCase):
         self.assertIn("condition_damping_full", slider_names)
         self.assertIn("max_dls_damping", slider_names)
 
+    def test_lab04_wall_live_tuning_exposes_hand_target_sliders(self) -> None:
+        config = load_config("configs/lab04_panda/interactive_virtual_wall.yaml")
+
+        tuning = lab04_panda._live_tuning(config)
+
+        slider_names = {spec.name for spec in tuning.specs}
+        self.assertIn("target_x", slider_names)
+        self.assertIn("target_y", slider_names)
+        self.assertIn("target_z", slider_names)
+        self.assertIn("cartesian_gain", slider_names)
+        self.assertIn("wall_x", slider_names)
+        self.assertIn("wall_stiffness", slider_names)
+        self.assertTrue(all("target_x" in preset.values for preset in tuning.presets))
+
     def test_mark_observation_records_slider_and_status_snapshot(self) -> None:
         log = InteractionLog()
         log.set_time(3.0)
