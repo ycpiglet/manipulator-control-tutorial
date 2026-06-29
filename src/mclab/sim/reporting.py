@@ -187,20 +187,26 @@ INDEX_LEARNING_PATH: tuple[IndexPathStep, ...] = (
         "configs/lab03_2dof/task_space_2dof.yaml",
         plots="task",
     ),
-    IndexPathStep("7. Hold Panda", "Stable neutral-hold baseline for Panda.", "configs/lab04_panda/neutral_hold.yaml"),
     IndexPathStep(
-        "8. Reach in Cartesian",
+        "7. Handle singularity",
+        "Condition-aware DLS near poor Jacobian conditioning.",
+        "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
+        plots="dls",
+    ),
+    IndexPathStep("8. Hold Panda", "Stable neutral-hold baseline for Panda.", "configs/lab04_panda/neutral_hold.yaml"),
+    IndexPathStep(
+        "9. Reach in Cartesian",
         "Panda hand reaches an explicit XYZ target.",
         "configs/lab04_panda/cartesian_reach.yaml",
         plots="cartesian_reach",
     ),
     IndexPathStep(
-        "9. Touch virtual wall",
+        "10. Touch virtual wall",
         "Interactive Panda virtual wall behavior.",
         "configs/lab04_panda/interactive_virtual_wall.yaml",
         plots="wall",
     ),
-    IndexPathStep("10. Compare the course", "Full comparison report set.", batch_name="all"),
+    IndexPathStep("11. Compare the course", "Full comparison report set.", batch_name="all"),
 )
 
 
@@ -2454,7 +2460,18 @@ def _learning_path_evidence_suffix(item: dict[str, Any]) -> str:
 
 
 def _learning_path_requires_evidence(step: IndexPathStep) -> bool:
-    return "interactive" in Path(step.config_path).stem.lower()
+    if step.batch_name or not step.config_path:
+        return False
+    if "interactive" in Path(step.config_path).stem.lower():
+        return True
+    try:
+        config = load_config(step.config_path)
+    except Exception:
+        return False
+    interaction = config.get("interaction")
+    if not isinstance(interaction, dict):
+        return False
+    return bool(interaction.get("panel") or interaction.get("live_tuning"))
 
 
 def _learning_path_command(step: IndexPathStep) -> str:

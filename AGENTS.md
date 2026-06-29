@@ -98,6 +98,7 @@ Implemented and verified:
 - Learner menu refreshes batch history, report, and plot state after comparison runs complete
 - Learner menu scenario evidence labels for latest observation markers, predictions, and learner notes
 - Recommended learning path progress in the menu and outputs index requires prediction-bearing observation markers for hands-on steps
+- Recommended learning path includes a Lab03 condition-aware DLS singularity step before moving to Panda
 - Learner menu scenario value previews for key YAML parameters, searchable from the menu
 - Learner menu, interaction panel, and run report reflection questions, searchable from the menu
 - Learner menu, interaction panel, and run report prediction prompts, searchable from the menu

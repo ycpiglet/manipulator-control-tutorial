@@ -516,9 +516,11 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Config", html)
             self.assertIn("Progress Snapshot", html)
             self.assertIn("Learning Path", html)
-            self.assertIn("1/10 steps complete", html)
+            self.assertIn("1/11 steps complete", html)
             self.assertIn("1. Feel 1D physics", html)
             self.assertIn("2. Disturb and tune", html)
+            self.assertIn("7. Handle singularity", html)
+            self.assertIn("configs/lab03_2dof/condition_aware_dls_2dof.yaml", html)
             self.assertIn("Not run yet", html)
             self.assertIn("Run this step", html)
             self.assertIn(
@@ -594,8 +596,8 @@ class LoggingTests(unittest.TestCase):
 
             html = index.read_text(encoding="utf-8")
             self.assertIn("Learning Path", html)
-            self.assertIn("1/10 steps complete", html)
-            self.assertIn("10. Compare the course", html)
+            self.assertIn("1/11 steps complete", html)
+            self.assertIn("11. Compare the course", html)
             self.assertIn("20260627_151000_all_batches/report.html", html)
             self.assertIn("python -m mclab batch all --open-report", html)
 
@@ -632,7 +634,7 @@ class LoggingTests(unittest.TestCase):
             index = write_outputs_index(temp_dir)
             html = index.read_text(encoding="utf-8")
 
-            self.assertIn("1/10 steps complete. Next: 2. Disturb and tune", html)
+            self.assertIn("1/11 steps complete. Next: 2. Disturb and tune", html)
             self.assertIn("Needs observation", html)
             self.assertIn("Add one Mark observation entry before moving on.", html)
             self.assertIn("20260627_150100_lab01_interactive/report.html", html)
@@ -656,7 +658,7 @@ class LoggingTests(unittest.TestCase):
             )
 
             html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
-            self.assertIn("1/10 steps complete. Next: 2. Disturb and tune", html)
+            self.assertIn("1/11 steps complete. Next: 2. Disturb and tune", html)
             self.assertIn("Needs prediction (1 observation, 1 note)", html)
             self.assertIn("Add one Prediction in Mark observation before moving on.", html)
             self.assertIn("1 observation, 0 predictions, 1 note", html)
@@ -679,7 +681,51 @@ class LoggingTests(unittest.TestCase):
             )
 
             html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
-            self.assertIn("2/10 steps complete. Next: 3. Close the loop", html)
+            self.assertIn("2/11 steps complete. Next: 3. Close the loop", html)
+            self.assertIn("Done (1 observation, 1 prediction, 1 note)", html)
+            self.assertIn("1 observation, 1 prediction, 1 note", html)
+
+    def test_outputs_index_requires_evidence_for_live_tuning_learning_path_configs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            dls_run = Path(temp_dir) / "20260627_150200_lab03_dls"
+            dls_run.mkdir()
+            (dls_run / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab03_2dof",
+                        "config_path": "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
+                        "config_name": "condition_aware_dls_2dof",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (dls_run / "report.html").write_text("<html>dls</html>", encoding="utf-8")
+
+            html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
+
+            self.assertIn("7. Handle singularity", html)
+            self.assertIn("Needs observation", html)
+            self.assertIn("20260627_150200_lab03_dls/report.html", html)
+
+            (dls_run / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "question": "Question: What changed near the singularity?",
+                                "prediction": "More damping should reduce joint speed.",
+                                "note": "DLS damping rose as condition number increased.",
+                            },
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
+
             self.assertIn("Done (1 observation, 1 prediction, 1 note)", html)
             self.assertIn("1 observation, 1 prediction, 1 note", html)
 

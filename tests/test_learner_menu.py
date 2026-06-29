@@ -212,8 +212,9 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("python -m mclab doctor", status.value)
 
     def test_recommended_learning_path_targets_real_actions(self) -> None:
-        self.assertGreaterEqual(len(LEARNING_PATH), 8)
+        self.assertGreaterEqual(len(LEARNING_PATH), 11)
         self.assertEqual(LEARNING_PATH[0].title, "1. Feel 1D physics")
+        self.assertEqual(LEARNING_PATH[6].title, "7. Handle singularity")
         self.assertEqual(LEARNING_PATH[-1].label, "All compare")
 
         for step in LEARNING_PATH:
@@ -285,7 +286,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertFalse(second_progress.completed)
         self.assertIn("Status: Not run yet", learning_path_progress_text(LEARNING_PATH[1], second_progress))
         self.assertEqual(next_learning_path_step(progress_items), LEARNING_PATH[1])
-        self.assertIn("Progress: 2/10 complete", learning_path_summary_text(progress_items))
+        self.assertIn("Progress: 2/11 complete", learning_path_summary_text(progress_items))
         self.assertIn("Next: 2. Disturb and tune", learning_path_summary_text(progress_items))
 
     def test_recommended_learning_path_requires_observation_for_hands_on_steps(self) -> None:
@@ -363,7 +364,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(needs_evidence.observation_markers, 0)
         self.assertIn("Status: Needs observation - latest run_lab01_interactive", learning_path_progress_text(second_step, needs_evidence))
         self.assertIn("Add one Mark observation entry", learning_path_progress_text(second_step, needs_evidence))
-        self.assertIn("Progress: 1/10 complete", needs_summary)
+        self.assertIn("Progress: 1/11 complete", needs_summary)
         self.assertIn("Evidence pending: 1 hands-on step(s).", needs_summary)
         self.assertIn("Next: 2. Disturb and tune", needs_summary)
 
@@ -376,7 +377,7 @@ class LearnerMenuTests(unittest.TestCase):
             learning_path_progress_text(second_step, needs_prediction),
         )
         self.assertIn("Add one Prediction in Mark observation", learning_path_progress_text(second_step, needs_prediction))
-        self.assertIn("Progress: 1/10 complete", needs_prediction_summary)
+        self.assertIn("Progress: 1/11 complete", needs_prediction_summary)
         self.assertIn("Evidence pending: 1 hands-on step(s).", needs_prediction_summary)
 
         self.assertTrue(complete_progress.completed)
@@ -387,6 +388,15 @@ class LearnerMenuTests(unittest.TestCase):
             "Status: Done - latest run_lab01_interactive (1 observation, 1 prediction, 1 note)",
             learning_path_progress_text(second_step, complete_progress),
         )
+
+    def test_recommended_learning_path_includes_condition_aware_dls_evidence_step(self) -> None:
+        dls_step = LEARNING_PATH[6]
+        action = learning_path_target(dls_step)
+
+        self.assertEqual(dls_step.title, "7. Handle singularity")
+        self.assertEqual(action.label, "2DOF condition-aware DLS")
+        self.assertTrue(learning_path_requires_evidence(dls_step))
+        self.assertIn("condition-aware DLS", learning_path_text(dls_step))
 
     def test_recommended_learning_path_report_opens_latest_output(self) -> None:
         first_step = LEARNING_PATH[0]
@@ -422,7 +432,7 @@ class LearnerMenuTests(unittest.TestCase):
         )
 
         self.assertIsNone(next_learning_path_step(progress_items))
-        self.assertIn("Progress: 10/10 complete", learning_path_summary_text(progress_items))
+        self.assertIn("Progress: 11/11 complete", learning_path_summary_text(progress_items))
         self.assertIn("Course path complete", learning_path_summary_text(progress_items))
 
     def test_menu_actions_have_valid_guided_lesson_cards(self) -> None:

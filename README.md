@@ -166,10 +166,11 @@ python -m mclab doctor
 | 4 | `Tune PID live` | target/Kp/Ki/Kd/force limit 조정 |
 | 5 | `Move 2DOF joints` | 2DOF joint-space tracking |
 | 6 | `Control the hand` | Jacobian 기반 task-space hand control |
-| 7 | `Hold Panda` | 7DOF Panda neutral hold baseline |
-| 8 | `Reach in Cartesian` | Panda 손끝 XYZ 목표 추종 |
-| 9 | `Touch virtual wall` | virtual wall stiffness/damping 체험 |
-| 10 | `Compare the course` | 모든 batch 비교 리포트 생성 |
+| 7 | `Handle singularity` | condition-aware DLS와 Jacobian conditioning |
+| 8 | `Hold Panda` | 7DOF Panda neutral hold baseline |
+| 9 | `Reach in Cartesian` | Panda 손끝 XYZ 목표 추종 |
+| 10 | `Touch virtual wall` | virtual wall stiffness/damping 체험 |
+| 11 | `Compare the course` | 모든 batch 비교 리포트 생성 |
 
 개별 랩을 바로 실행하고 싶으면:
 
@@ -525,10 +526,11 @@ Each step reads the saved runs under `outputs/` and shows `Done`, `Needs observa
 | 4 | `Tune PID live` | target/Kp/Ki/Kd/force limit tuning |
 | 5 | `Move 2DOF joints` | 2DOF joint-space tracking |
 | 6 | `Control the hand` | Jacobian-based task-space hand control |
-| 7 | `Hold Panda` | 7DOF Panda neutral-hold baseline |
-| 8 | `Reach in Cartesian` | Panda hand XYZ target tracking |
-| 9 | `Touch virtual wall` | virtual wall stiffness/damping behavior |
-| 10 | `Compare the course` | full batch comparison report set |
+| 7 | `Handle singularity` | condition-aware DLS and Jacobian conditioning |
+| 8 | `Hold Panda` | 7DOF Panda neutral-hold baseline |
+| 9 | `Reach in Cartesian` | Panda hand XYZ target tracking |
+| 10 | `Touch virtual wall` | virtual wall stiffness/damping behavior |
+| 11 | `Compare the course` | full batch comparison report set |
 
 To launch individual labs directly:
 
