@@ -388,6 +388,86 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("20260627_151000_all_batches/report.html", html)
             self.assertIn("python -m mclab batch all --open-report", html)
 
+    def test_outputs_index_requires_hands_on_prediction_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            baseline = Path(temp_dir) / "20260627_150000_lab01_msd"
+            baseline.mkdir()
+            (baseline / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab01_msd",
+                        "config_path": "configs/lab01_msd/default.yaml",
+                        "config_name": "default",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (baseline / "report.html").write_text("<html>baseline</html>", encoding="utf-8")
+
+            interactive = Path(temp_dir) / "20260627_150100_lab01_interactive"
+            interactive.mkdir()
+            (interactive / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab01_msd",
+                        "config_path": "configs/lab01_msd/interactive_pull.yaml",
+                        "config_name": "interactive_pull",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (interactive / "report.html").write_text("<html>interactive</html>", encoding="utf-8")
+
+            index = write_outputs_index(temp_dir)
+            html = index.read_text(encoding="utf-8")
+
+            self.assertIn("1/10 steps complete. Next: 2. Disturb and tune", html)
+            self.assertIn("Needs observation", html)
+            self.assertIn("Add one Mark observation entry before moving on.", html)
+            self.assertIn("20260627_150100_lab01_interactive/report.html", html)
+
+            (interactive / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "question": "Question: demo?",
+                                "note": "The mass settled faster after damping changed.",
+                            },
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
+            self.assertIn("1/10 steps complete. Next: 2. Disturb and tune", html)
+            self.assertIn("Needs prediction (1 observation, 1 note)", html)
+            self.assertIn("Add one Prediction in Mark observation before moving on.", html)
+
+            (interactive / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "question": "Question: demo?",
+                                "prediction": "More damping should settle faster.",
+                                "note": "The mass settled faster after damping changed.",
+                            },
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
+            self.assertIn("2/10 steps complete. Next: 3. Close the loop", html)
+            self.assertIn("Done (1 observation, 1 prediction, 1 note)", html)
+
     def test_outputs_index_handles_empty_outputs_folder(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             index = write_outputs_index(temp_dir)

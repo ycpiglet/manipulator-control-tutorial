@@ -156,7 +156,7 @@ python -m mclab doctor
 | Lab04 | neutral hold, joint trajectories, hand X motion, Cartesian reach, soft/stiff Cartesian reach, soft/stiff virtual wall, joint target nudge, virtual wall |
 
 처음 학습자는 메뉴 상단의 `Recommended learning path`를 순서대로 따라가면 됩니다.
-각 단계는 `outputs/`의 실행 기록을 읽어 `Done`, `Needs observation`, `Needs prediction`, `Not run yet` 상태를 보여줍니다. Hands-on 단계는 실행만으로 완료되지 않고 prediction이 포함된 `Mark observation`을 최소 한 번 남겨야 `Done`으로 계산되며, 완료된 hands-on 상태에는 가능한 경우 observation, prediction, note 개수도 함께 표시됩니다. 완료된 단계는 옆의 `Report` 버튼으로 최신 리포트를 바로 다시 열 수 있습니다. 메뉴 상단에는 관찰 또는 예측 증거가 빠진 hands-on 단계 수, 다음 권장 단계가 표시되며, `Run next`를 누르면 아직 완료하지 않은 첫 단계를 바로 실행합니다. 실행 후 상태가 바로 바뀌지 않으면 `Refresh path`를 누릅니다.
+각 단계는 `outputs/`의 실행 기록을 읽어 `Done`, `Needs observation`, `Needs prediction`, `Not run yet` 상태를 보여줍니다. Hands-on 단계는 실행만으로 완료되지 않고 prediction이 포함된 `Mark observation`을 최소 한 번 남겨야 `Done`으로 계산되며, 완료된 hands-on 상태에는 가능한 경우 observation, prediction, note 개수도 함께 표시됩니다. 같은 기준은 `outputs/index.html`의 Learning Path 카드에도 적용됩니다. 완료된 단계는 옆의 `Report` 버튼으로 최신 리포트를 바로 다시 열 수 있습니다. 메뉴 상단에는 관찰 또는 예측 증거가 빠진 hands-on 단계 수, 다음 권장 단계가 표시되며, `Run next`를 누르면 아직 완료하지 않은 첫 단계를 바로 실행합니다. 실행 후 상태가 바로 바뀌지 않으면 `Refresh path`를 누릅니다.
 
 | Step | Menu button | What it builds |
 |---|---|---|
@@ -455,7 +455,7 @@ outputs/
 - `states.npz`: NumPy로 읽기 좋은 배열 데이터
 - `summary.json`: config 이름, overshoot, settling time, tracking error 같은 요약 지표
 - `report.html`: `Try` / `Change` / `Prediction` / `Question` / `Watch` 학습 가이드, 재현 실행 명령, 다음 실험 prediction/question과 key parameter 변화가 포함된 suggested next runs, config highlights, configured preset cards, singularity/DLS/wall/effort를 포함한 자동 결과 점검, learner action summary, preset choices, prediction review, prediction/evidence/note가 포함된 observation marker review prompt, 요약값, notes, plot 이미지와 plot 해석 가이드를 한 화면에서 보는 실행 리포트
-- `outputs/index.html`: 추천 학습 경로 진행표, 단계별 실행/반복 명령, Lab별 진행 요약, 실행 리포트, `Lesson` / `Next` 안내, 핵심 summary metric을 최신순으로 비교하는 목록 페이지
+- `outputs/index.html`: 추천 학습 경로 진행표, hands-on evidence 상태, 단계별 실행/반복 명령, Lab별 진행 요약, 실행 리포트, `Lesson` / `Next` 안내, 핵심 summary metric을 최신순으로 비교하는 목록 페이지
 - `plots/`: 강의 자료에 바로 쓰기 좋은 PNG plot
 
 ### 검증 명령
@@ -503,7 +503,7 @@ Main comparison scenarios in the menu:
 | Lab04 | neutral hold, joint trajectories, hand X motion, Cartesian reach, soft/stiff Cartesian reach, soft/stiff virtual wall, joint target nudge, virtual wall |
 
 First-time learners can follow the `Recommended learning path` at the top of the menu.
-Each step reads the saved runs under `outputs/` and shows `Done`, `Needs observation`, `Needs prediction`, or `Not run yet`. Hands-on steps are not counted as done until the learner saves at least one `Mark observation` entry with a prediction, and completed hands-on statuses include observation, prediction, and note counts when available. Completed steps can reopen their latest report with the adjacent `Report` button. The top of the path shows overall progress, how many hands-on steps still need evidence, and the next recommended step, and `Run next` launches the first unfinished step. Use `Refresh path` if the status does not update immediately after a run.
+Each step reads the saved runs under `outputs/` and shows `Done`, `Needs observation`, `Needs prediction`, or `Not run yet`. Hands-on steps are not counted as done until the learner saves at least one `Mark observation` entry with a prediction, and completed hands-on statuses include observation, prediction, and note counts when available. The same evidence rule is used by the Learning Path cards in `outputs/index.html`. Completed steps can reopen their latest report with the adjacent `Report` button. The top of the path shows overall progress, how many hands-on steps still need evidence, and the next recommended step, and `Run next` launches the first unfinished step. Use `Refresh path` if the status does not update immediately after a run.
 
 | Step | Menu button | What it builds |
 |---|---|---|
@@ -804,7 +804,7 @@ outputs/
 - `states.npz`: NumPy-friendly arrays
 - `summary.json`: config name and metrics such as overshoot, settling time, tracking error
 - `report.html`: a one-page run report with `Try` / `Change` / `Prediction` / `Question` / `Watch` learning guidance, reproduce commands, suggested next runs with their own prediction prompts, questions, and key parameter changes, config highlights, configured preset cards, automatic result checks for signals such as singularity, DLS speed, wall response, and actuator effort, learner action summary, preset choices, prediction review, observation marker review prompts with predictions/evidence/notes, summary values, notes, plot images, and plot interpretation guides
-- `outputs/index.html`: a newest-first index with the recommended learning path, per-step run/repeat commands, lab progress cards, run reports, `Lesson` / `Next` guidance, and key summary metrics
+- `outputs/index.html`: a newest-first index with the recommended learning path, hands-on evidence status, per-step run/repeat commands, lab progress cards, run reports, `Lesson` / `Next` guidance, and key summary metrics
 - `plots/`: PNG plots suitable for quick inspection or lecture slides
 
 ### Verification

@@ -70,7 +70,7 @@ Implemented and verified:
 - Learner menu scenario readiness checks that disable run buttons when config or model assets are missing
 - Learner menu scenario history labels and per-scenario latest-report buttons
 - Learner menu scenario evidence labels for latest observation markers, predictions, and learner notes
-- Recommended learning path progress requires prediction-bearing observation markers for hands-on steps
+- Recommended learning path progress in the menu and outputs index requires prediction-bearing observation markers for hands-on steps
 - Learner menu scenario value previews for key YAML parameters, searchable from the menu
 - Learner menu, interaction panel, and run report reflection questions, searchable from the menu
 - Learner menu, interaction panel, and run report prediction prompts, searchable from the menu
@@ -82,7 +82,7 @@ Implemented and verified:
 - Run reports include suggested next-run cards with reflection questions, key parameter changes, and ready-to-run commands for every guided config
 - Observation markers capture the active learning question, learner predictions, evidence prompt, learner notes, changed sliders, full slider snapshots, and live status snapshots
 - Run reports summarize observation marker questions, predictions, learner notes, and prediction-review prompts
-- Outputs index learning path cards include ready-to-run or repeat commands for each course step
+- Outputs index learning path cards include evidence status plus ready-to-run or repeat commands for each course step
 - Run reports show configured preset cards and summarize learner actions, latest slider values, preset choices, observation markers, and raw interaction events
 
 Verified commands:

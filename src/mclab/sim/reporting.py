@@ -1614,6 +1614,7 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
             ),
             default=child.stat().st_mtime,
         )
+        observation_markers, learner_predictions, learner_notes = _observation_evidence_counts(child)
         runs.append(
             {
                 "name": child.name,
@@ -1627,6 +1628,9 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
                 "summary": summary,
                 "lesson_title": guide.title if guide is not None else "",
                 "next_step": guide.next_step if guide is not None else "",
+                "observation_markers": observation_markers,
+                "learner_predictions": learner_predictions,
+                "learner_notes": learner_notes,
             }
         )
     return sorted(runs, key=lambda run: float(run["modified"]), reverse=True)
@@ -1790,8 +1794,8 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
 
 def _learning_path_section(runs: list[dict[str, Any]]) -> str:
     items = [_learning_path_item(step, runs) for step in INDEX_LEARNING_PATH]
-    completed = sum(1 for item in items if item["run"] is not None)
-    next_item = next((item for item in items if item["run"] is None), None)
+    completed = sum(1 for item in items if item["completed"])
+    next_item = next((item for item in items if not item["completed"]), None)
     if next_item is None:
         summary = f"{completed}/{len(items)} steps complete. Course path complete."
     else:
@@ -1809,7 +1813,21 @@ def _learning_path_section(runs: list[dict[str, Any]]) -> str:
 
 
 def _learning_path_item(step: IndexPathStep, runs: list[dict[str, Any]]) -> dict[str, Any]:
-    return {"step": step, "run": _latest_learning_path_run(step, runs)}
+    run = _latest_learning_path_run(step, runs)
+    evidence_required = _learning_path_requires_evidence(step)
+    markers = int(run.get("observation_markers", 0)) if run is not None else 0
+    predictions = int(run.get("learner_predictions", 0)) if run is not None else 0
+    notes = int(run.get("learner_notes", 0)) if run is not None else 0
+    completed = run is not None and (not evidence_required or (markers > 0 and predictions > 0))
+    return {
+        "step": step,
+        "run": run,
+        "completed": completed,
+        "evidence_required": evidence_required,
+        "observation_markers": markers,
+        "learner_predictions": predictions,
+        "learner_notes": notes,
+    }
 
 
 def _learning_path_card(item: dict[str, Any]) -> str:
@@ -1825,10 +1843,22 @@ def _learning_path_card(item: dict[str, Any]) -> str:
     )
     if run is None:
         status = '<span class="status">Not run yet</span>'
+    elif item["completed"]:
+        status = (
+            f'<span class="status">Done{escape(_learning_path_evidence_suffix(item))}</span>'
+            f'<p class="muted">Latest: <a href="{escape(str(run["report"]))}">{escape(str(run["name"]))}</a></p>'
+        )
+    elif int(item["observation_markers"]) > 0 and int(item["learner_predictions"]) == 0:
+        status = (
+            f'<span class="status">Needs prediction{escape(_learning_path_evidence_suffix(item))}</span>'
+            f'<p class="muted">Latest: <a href="{escape(str(run["report"]))}">{escape(str(run["name"]))}</a></p>'
+            '<p class="muted">Add one Prediction in Mark observation before moving on.</p>'
+        )
     else:
         status = (
-            '<span class="status">Done</span>'
+            '<span class="status">Needs observation</span>'
             f'<p class="muted">Latest: <a href="{escape(str(run["report"]))}">{escape(str(run["name"]))}</a></p>'
+            '<p class="muted">Add one Mark observation entry before moving on.</p>'
         )
     return (
         '<article class="path-card">'
@@ -1838,6 +1868,21 @@ def _learning_path_card(item: dict[str, Any]) -> str:
         f"{command_block}"
         "</article>"
     )
+
+
+def _learning_path_evidence_suffix(item: dict[str, Any]) -> str:
+    markers = int(item.get("observation_markers", 0))
+    if markers <= 0:
+        return ""
+    predictions = int(item.get("learner_predictions", 0))
+    notes = int(item.get("learner_notes", 0))
+    prediction_text = f", {predictions} prediction{'s' if predictions != 1 else ''}" if predictions else ""
+    note_text = f", {notes} note{'s' if notes != 1 else ''}" if notes else ""
+    return f" ({markers} observation{'s' if markers != 1 else ''}{prediction_text}{note_text})"
+
+
+def _learning_path_requires_evidence(step: IndexPathStep) -> bool:
+    return "interactive" in Path(step.config_path).stem.lower()
 
 
 def _learning_path_command(step: IndexPathStep) -> str:
@@ -1967,6 +2012,24 @@ def _read_json_list(path: Path) -> list[dict[str, Any]]:
     if not isinstance(payload, list):
         return []
     return [item for item in payload if isinstance(item, dict)]
+
+
+def _observation_evidence_counts(output_path: Path) -> tuple[int, int, int]:
+    markers = 0
+    predictions = 0
+    notes = 0
+    for event in _read_json_list(output_path / "interaction_events.json"):
+        if not _is_observation_marker(event):
+            continue
+        markers += 1
+        value = event.get("value")
+        if not isinstance(value, dict):
+            continue
+        if str(value.get("prediction") or "").strip():
+            predictions += 1
+        if str(value.get("note") or "").strip():
+            notes += 1
+    return markers, predictions, notes
 
 
 def _read_config(path: Path) -> dict[str, Any]:
