@@ -638,6 +638,7 @@ def _render_all_batches_worksheet(completed_batches: list[dict[str, Any]]) -> st
         lines.append("- No completed batch reports were saved.")
     for row in completed_batches:
         batch_name = str(row.get("batch_name", ""))
+        guide = _all_batch_guide(row)
         report = str(row.get("report", ""))
         worksheet = f"{report.rsplit('/', 1)[0]}/worksheet.md" if "/" in report else "worksheet.md" if report else ""
         lines.extend(
@@ -645,6 +646,8 @@ def _render_all_batches_worksheet(completed_batches: list[dict[str, Any]]) -> st
                 f"- {row.get('title', batch_name)}",
                 f"  - Batch: {batch_name}",
                 f"  - Scenarios: {row.get('scenario_count', 'n/a')}",
+                f"  - Focus: {guide.focus if guide is not None else 'n/a'}",
+                f"  - First question: {guide.questions[0] if guide is not None and guide.questions else 'n/a'}",
                 f"  - Report: {report or 'n/a'}",
                 f"  - Worksheet: {worksheet or 'n/a'}",
             ]
@@ -908,7 +911,7 @@ def _render_all_batches_report(completed_batches: list[dict[str, Any]]) -> str:
     cards = "\n".join(_all_batch_card(row) for row in completed_batches)
     rows = "\n".join(_all_batch_row(row) for row in completed_batches)
     if not rows:
-        rows = '<tr><td colspan="3">No batch runs were found.</td></tr>'
+        rows = '<tr><td colspan="4">No batch runs were found.</td></tr>'
 
     return f"""<!doctype html>
 <html lang="en">
@@ -1021,17 +1024,26 @@ def _render_all_batches_report(completed_batches: list[dict[str, Any]]) -> str:
 
 
 def _all_batch_card(row: dict[str, Any]) -> str:
+    guide = _all_batch_guide(row)
     worksheet = _all_batch_worksheet(row)
     worksheet_link = (
         f'<a href="{escape(worksheet)}">Open worksheet</a>'
         if worksheet
         else '<span class="muted">No worksheet</span>'
     )
+    focus = f'<p>{escape(guide.focus)}</p>' if guide is not None else ""
+    question = (
+        f'<p class="muted"><strong>Question:</strong> {escape(guide.questions[0])}</p>'
+        if guide is not None and guide.questions
+        else ""
+    )
     return (
         '<article class="batch-card">'
         f'<h3><a href="{escape(str(row["report"]))}">{escape(str(row["title"]))}</a></h3>'
         f'<p class="muted">{escape(str(row["batch_name"]))}</p>'
         f'<p>{escape(str(row["scenario_count"]))} scenarios</p>'
+        f"{focus}"
+        f"{question}"
         f'<p class="muted"><a href="{escape(str(row["report"]))}">Open report</a> | {worksheet_link}</p>'
         "</article>"
     )
@@ -1059,6 +1071,10 @@ def _all_batch_worksheet(row: dict[str, Any]) -> str:
     if "/" in report:
         return f"{report.rsplit('/', 1)[0]}/worksheet.md"
     return "worksheet.md" if report else ""
+
+
+def _all_batch_guide(row: dict[str, Any]) -> BatchGuide | None:
+    return BATCH_GUIDES.get(str(row.get("batch_name") or ""))
 
 
 def _scenario_card(
