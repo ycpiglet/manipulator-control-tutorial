@@ -1769,6 +1769,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
             f"<td>{escape(_config_cell(run))}</td>"
             f"<td>{escape(str(run.get('lesson_title', '')))}</td>"
             f"<td>{escape(str(run.get('next_step', '')))}</td>"
+            f"<td>{escape(_run_evidence_cell(run))}</td>"
             f"<td>{escape(_format_value(run['duration']))}</td>"
             f"<td>{escape(str(run['samples']))}</td>"
             + "".join(
@@ -1780,7 +1781,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
         for run in runs
     )
     if not rows:
-        rows = f'<tr><td colspan="{7 + len(metric_keys)}">No run reports were found yet.</td></tr>'
+        rows = f'<tr><td colspan="{8 + len(metric_keys)}">No run reports were found yet.</td></tr>'
 
     return f"""<!doctype html>
 <html lang="en">
@@ -1901,7 +1902,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
     <section>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Run</th><th>Lab</th><th>Config</th><th>Lesson</th><th>Next</th><th>Duration [s]</th><th>Samples</th>{metric_headers}</tr></thead>
+          <thead><tr><th>Run</th><th>Lab</th><th>Config</th><th>Lesson</th><th>Next</th><th>Evidence</th><th>Duration [s]</th><th>Samples</th>{metric_headers}</tr></thead>
           <tbody>{rows}</tbody>
         </table>
       </div>
@@ -2102,6 +2103,19 @@ def _config_cell(run: dict[str, Any]) -> str:
     config_name = str(run.get("config_name") or "")
     config_path = str(run.get("config_path") or "")
     return config_path or config_name
+
+
+def _run_evidence_cell(run: dict[str, Any]) -> str:
+    markers = int(run.get("observation_markers", 0))
+    predictions = int(run.get("learner_predictions", 0))
+    notes = int(run.get("learner_notes", 0))
+    if markers <= 0:
+        return "No markers"
+    parts = [f"{markers} observation{'s' if markers != 1 else ''}"]
+    parts.append(f"{predictions} prediction{'s' if predictions != 1 else ''}")
+    if notes:
+        parts.append(f"{notes} note{'s' if notes != 1 else ''}")
+    return ", ".join(parts)
 
 
 def _run_link(child: Path, report_path: Path, index_path: Path) -> str:

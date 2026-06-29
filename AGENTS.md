@@ -86,6 +86,7 @@ Implemented and verified:
 - Run reports show hands-on evidence completion status for interactive runs
 - Run reports summarize observation marker questions, predictions, learner notes, and prediction-review prompts
 - Outputs index learning path cards include evidence status plus ready-to-run or repeat commands for each course step
+- Outputs index run table summarizes observation, prediction, and learner note evidence per saved run
 - Run reports show configured preset cards and summarize learner actions, latest slider values, preset choices, observation markers, and raw interaction events
 
 Verified commands:

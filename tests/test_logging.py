@@ -435,9 +435,11 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("1 saved run", html)
             self.assertIn("Lesson", html)
             self.assertIn("Next", html)
+            self.assertIn("Evidence", html)
             self.assertIn("Lab01 Baseline", html)
             self.assertIn("Run underdamped", html)
             self.assertIn("configs/lab01_msd/default.yaml", html)
+            self.assertIn("No markers", html)
             self.assertIn("max abs position", html)
             self.assertIn("0.24", html)
 
@@ -527,6 +529,8 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Needs observation", html)
             self.assertIn("Add one Mark observation entry before moving on.", html)
             self.assertIn("20260627_150100_lab01_interactive/report.html", html)
+            self.assertIn("<th>Evidence</th>", html)
+            self.assertIn("No markers", html)
 
             (interactive / "interaction_events.json").write_text(
                 json.dumps(
@@ -548,6 +552,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("1/10 steps complete. Next: 2. Disturb and tune", html)
             self.assertIn("Needs prediction (1 observation, 1 note)", html)
             self.assertIn("Add one Prediction in Mark observation before moving on.", html)
+            self.assertIn("1 observation, 0 predictions, 1 note", html)
 
             (interactive / "interaction_events.json").write_text(
                 json.dumps(
@@ -569,6 +574,7 @@ class LoggingTests(unittest.TestCase):
             html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
             self.assertIn("2/10 steps complete. Next: 3. Close the loop", html)
             self.assertIn("Done (1 observation, 1 prediction, 1 note)", html)
+            self.assertIn("1 observation, 1 prediction, 1 note", html)
 
     def test_outputs_index_handles_empty_outputs_folder(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
