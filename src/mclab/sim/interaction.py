@@ -352,6 +352,48 @@ class SimulationPauseControl:
             return self._paused
 
 
+class SimulationPlaybackControl:
+    """Thread-safe realtime playback speed control for viewer demos."""
+
+    def __init__(self, config: dict[str, Any], event_log: InteractionLog | None = None) -> None:
+        interaction = dict(config.get("interaction", {}))
+        panel_enabled = bool(interaction.get("panel", False))
+        self.enabled = bool(interaction.get("playback_speed", panel_enabled))
+        self.panel_enabled = panel_enabled
+        self.label = str(interaction.get("playback_label", "Playback speed"))
+        self.minimum = max(0.05, float(interaction.get("playback_min", 0.25)))
+        self.maximum = max(self.minimum, float(interaction.get("playback_max", 2.0)))
+        self.resolution = max(0.05, float(interaction.get("playback_resolution", 0.25)))
+        initial = float(interaction.get("playback_initial", 1.0))
+        self._speed = _clamp(initial, self.minimum, self.maximum)
+        self._changed = False
+        self._event_log = event_log
+        self._lock = Lock()
+
+    def speed(self) -> float:
+        with self._lock:
+            return self._speed
+
+    def set_speed(self, value: float) -> float:
+        number = _clamp(float(value), self.minimum, self.maximum)
+        should_record = False
+        with self._lock:
+            old_speed = self._speed
+            self._speed = number
+            should_record = abs(old_speed - number) > 1e-12
+            if should_record:
+                self._changed = True
+        if should_record and self._event_log is not None:
+            self._event_log.record("slider", "playback_speed", number, label=self.label)
+        return number
+
+    def consume_change(self) -> bool:
+        with self._lock:
+            changed = self._changed
+            self._changed = False
+        return changed
+
+
 class KeyForcePulse:
     """Keyboard-triggered force pulse for 1D plants.
 
@@ -478,14 +520,20 @@ def maybe_start_interaction_panel(
     event_log: InteractionLog | None = None,
     reset_control: ExperimentResetControl | None = None,
     pause_control: SimulationPauseControl | None = None,
+    playback_control: SimulationPlaybackControl | None = None,
 ) -> InteractionPanel | None:
     control_enabled = bool(getattr(control, "enabled", False))
     reset_enabled = bool(reset_control is not None and reset_control.enabled and reset_control.panel_enabled)
     pause_enabled = bool(pause_control is not None and pause_control.enabled and pause_control.panel_enabled)
-    panel_enabled = bool(getattr(control, "panel_enabled", False)) or reset_enabled or pause_enabled
+    playback_enabled = bool(
+        playback_control is not None and playback_control.enabled and playback_control.panel_enabled
+    )
+    panel_enabled = bool(getattr(control, "panel_enabled", False)) or reset_enabled or pause_enabled or playback_enabled
     tuning_enabled = bool(tuning is not None and tuning.enabled)
     status_enabled = bool(status is not None and status.enabled)
-    if not panel_enabled or not (control_enabled or reset_enabled or pause_enabled or tuning_enabled or status_enabled):
+    if not panel_enabled or not (
+        control_enabled or reset_enabled or pause_enabled or playback_enabled or tuning_enabled or status_enabled
+    ):
         return None
 
     try:
@@ -579,6 +627,36 @@ def maybe_start_interaction_panel(
                     wraplength=430,
                 ).grid(row=row + 1, column=0, columnspan=2, sticky="w", pady=(0, 4))
                 row += 2
+
+            if playback_enabled and playback_control is not None:
+                playback_frame = tk.Frame(frame)
+                playback_frame.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(10, 4))
+                playback_frame.columnconfigure(0, weight=1)
+                playback_value = tk.StringVar(value=f"{playback_control.speed():.2f}x")
+
+                def set_playback_speed(raw_value: str) -> None:
+                    speed = playback_control.set_speed(float(raw_value))
+                    playback_value.set(f"{speed:.2f}x")
+
+                playback_scale = tk.Scale(
+                    playback_frame,
+                    from_=playback_control.minimum,
+                    to=playback_control.maximum,
+                    resolution=playback_control.resolution,
+                    orient=tk.HORIZONTAL,
+                    length=320,
+                    label=playback_control.label,
+                    command=set_playback_speed,
+                )
+                playback_scale.set(playback_control.speed())
+                playback_scale.grid(row=0, column=0, sticky="ew")
+                tk.Label(playback_frame, textvariable=playback_value, width=8, anchor="e").grid(
+                    row=0,
+                    column=1,
+                    sticky="e",
+                    padx=(12, 0),
+                )
+                row += 1
 
             if reset_enabled and reset_control is not None:
                 reset_frame = tk.Frame(frame)

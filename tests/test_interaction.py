@@ -13,6 +13,7 @@ from mclab.sim.interaction import (  # noqa: E402
     KeyForcePulse,
     LiveStatus,
     LiveTuning,
+    SimulationPlaybackControl,
     SimulationPauseControl,
     SliderSpec,
     StatusSpec,
@@ -143,6 +144,31 @@ class KeyForcePulseTests(unittest.TestCase):
         self.assertFalse(control.enabled)
         self.assertFalse(control.paused())
         self.assertEqual(log.events(), [])
+
+    def test_simulation_playback_control_clips_speed_and_records_changes(self) -> None:
+        log = InteractionLog()
+        log.set_time(1.75)
+        control = SimulationPlaybackControl(
+            {"interaction": {"panel": True, "playback_min": 0.25, "playback_max": 2.0}},
+            event_log=log,
+        )
+
+        self.assertEqual(control.speed(), 1.0)
+        self.assertFalse(control.consume_change())
+
+        self.assertEqual(control.set_speed(0.1), 0.25)
+        self.assertTrue(control.consume_change())
+        self.assertFalse(control.consume_change())
+        self.assertEqual(control.set_speed(3.0), 2.0)
+
+        self.assertEqual(control.speed(), 2.0)
+        self.assertEqual(
+            [(event["kind"], event["name"], event["label"], event["value"]) for event in log.events()],
+            [
+                ("slider", "playback_speed", "Playback speed", 0.25),
+                ("slider", "playback_speed", "Playback speed", 2.0),
+            ],
+        )
 
     def test_live_tuning_updates_slider_values(self) -> None:
         log = InteractionLog()
@@ -351,6 +377,26 @@ class KeyForcePulseTests(unittest.TestCase):
                 control = SimulationPauseControl(load_config(path))
                 self.assertTrue(control.panel_enabled)
                 self.assertTrue(control.enabled)
+
+    def test_interactive_configs_enable_playback_speed_by_default(self) -> None:
+        paths = [
+            "configs/lab01_msd/interactive_pull.yaml",
+            "configs/lab02_pid/interactive_disturbance.yaml",
+            "configs/lab03_2dof/interactive_tracking.yaml",
+            "configs/lab03_2dof/interactive_2dof.yaml",
+            "configs/lab03_2dof/dls_singularity_2dof.yaml",
+            "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
+            "configs/lab04_panda/interactive_joint_hold.yaml",
+            "configs/lab04_panda/interactive_cartesian_reach.yaml",
+            "configs/lab04_panda/interactive_virtual_wall.yaml",
+        ]
+
+        for path in paths:
+            with self.subTest(path=path):
+                control = SimulationPlaybackControl(load_config(path))
+                self.assertTrue(control.panel_enabled)
+                self.assertTrue(control.enabled)
+                self.assertEqual(control.speed(), 1.0)
 
     def test_condition_aware_dls_live_tuning_exposes_schedule_sliders(self) -> None:
         config = load_config("configs/lab03_2dof/condition_aware_dls_2dof.yaml")

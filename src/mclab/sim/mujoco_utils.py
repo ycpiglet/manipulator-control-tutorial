@@ -64,15 +64,22 @@ def sync_viewer(
     realtime: bool = False,
     wall_start: float | None = None,
     sim_start: float = 0.0,
+    speed_scale: float = 1.0,
 ) -> None:
     if viewer_handle is None:
         return
     viewer_handle.sync()
     if realtime and wall_start is not None:
-        target_wall_time = wall_start + max(0.0, float(data.time) - sim_start)
+        speed = max(0.05, float(speed_scale))
+        target_wall_time = wall_start + max(0.0, float(data.time) - sim_start) / speed
         delay = target_wall_time - perf_counter()
         if delay > 0.0:
             sleep(min(delay, 0.05))
+
+
+def realtime_wall_start(data_time: float, sim_start: float, speed_scale: float = 1.0) -> float:
+    speed = max(0.05, float(speed_scale))
+    return perf_counter() - max(0.0, float(data_time) - float(sim_start)) / speed
 
 
 def sync_paused_viewer(viewer_handle: Any | None, *, interval: float = 1.0 / 30.0) -> None:

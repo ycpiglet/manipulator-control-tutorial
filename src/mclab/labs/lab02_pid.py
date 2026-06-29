@@ -17,6 +17,7 @@ from mclab.sim.interaction import (
     KeyForcePulse,
     LiveStatus,
     LiveTuning,
+    SimulationPlaybackControl,
     SimulationPauseControl,
     SliderSpec,
     StatusSpec,
@@ -28,6 +29,7 @@ from mclab.sim.mujoco_utils import (
     load_model_and_data,
     maybe_launch_viewer,
     pause_viewer_at_end,
+    realtime_wall_start,
     sync_paused_viewer,
     sync_viewer,
     viewer_clock,
@@ -87,6 +89,7 @@ def run(
     key_force = KeyForcePulse(config, event_log=interaction_log)
     reset_control = ExperimentResetControl(config, event_log=interaction_log)
     pause_control = SimulationPauseControl(config, event_log=interaction_log)
+    playback_control = SimulationPlaybackControl(config, event_log=interaction_log)
     run_guide = guide_for_config(config_path=str(config_path or ""), lab_name=lab_name)
     live_tuning = _live_tuning(config, pid_config, output_limit_value, interaction_log)
     live_status = LiveStatus(
@@ -116,6 +119,7 @@ def run(
             event_log=interaction_log,
             reset_control=reset_control,
             pause_control=pause_control,
+            playback_control=playback_control,
         )
         if viewer and not headless
         else None
@@ -136,8 +140,10 @@ def run(
                 reset_slider_plant_state(mujoco, model, data, handles, config)
             if pause_control.paused() and not pause_control.consume_step():
                 sync_paused_viewer(viewer_handle)
-                wall_start = viewer_clock() - max(0.0, float(data.time) - sim_start)
+                wall_start = realtime_wall_start(float(data.time), sim_start, playback_control.speed())
                 continue
+            if playback_control.consume_change():
+                wall_start = realtime_wall_start(float(data.time), sim_start, playback_control.speed())
             key_force.update_time(float(data.time))
             position, velocity, _ = slider_state(data, handles)
             measured_position = position + (random.gauss(0.0, noise_std) if noise_std > 0.0 else 0.0)
@@ -212,6 +218,7 @@ def run(
                 realtime=realtime,
                 wall_start=wall_start,
                 sim_start=sim_start,
+                speed_scale=playback_control.speed(),
             )
         completed = True
     finally:

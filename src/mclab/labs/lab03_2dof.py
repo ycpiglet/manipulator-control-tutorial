@@ -13,6 +13,7 @@ from mclab.sim.interaction import (
     KeyForcePulse,
     LiveStatus,
     LiveTuning,
+    SimulationPlaybackControl,
     SimulationPauseControl,
     SliderSpec,
     StatusSpec,
@@ -25,6 +26,7 @@ from mclab.sim.mujoco_utils import (
     load_model_and_data,
     maybe_launch_viewer,
     pause_viewer_at_end,
+    realtime_wall_start,
     reset_viewer_overlays,
     sync_paused_viewer,
     sync_viewer,
@@ -133,6 +135,7 @@ def _run_slider_trajectory(
     key_force = KeyForcePulse(config, event_log=interaction_log)
     reset_control = ExperimentResetControl(config, event_log=interaction_log)
     pause_control = SimulationPauseControl(config, event_log=interaction_log)
+    playback_control = SimulationPlaybackControl(config, event_log=interaction_log)
     run_guide = guide_for_config(config_path=str(config_path or ""), lab_name=lab_name)
     live_tuning = _live_tuning(config, controller_config, force_limit_value, interaction_log)
     live_status = LiveStatus(
@@ -162,6 +165,7 @@ def _run_slider_trajectory(
             event_log=interaction_log,
             reset_control=reset_control,
             pause_control=pause_control,
+            playback_control=playback_control,
         )
         if viewer and not headless
         else None
@@ -179,8 +183,10 @@ def _run_slider_trajectory(
                 reset_slider_plant_state(mujoco, model, data, handles, config)
             if pause_control.paused() and not pause_control.consume_step():
                 sync_paused_viewer(viewer_handle)
-                wall_start = viewer_clock() - max(0.0, float(data.time) - sim_start)
+                wall_start = realtime_wall_start(float(data.time), sim_start, playback_control.speed())
                 continue
+            if playback_control.consume_change():
+                wall_start = realtime_wall_start(float(data.time), sim_start, playback_control.speed())
             key_force.update_time(float(data.time))
             position, velocity, _ = slider_state(data, handles)
             target = trajectory.evaluate(float(data.time))
@@ -202,6 +208,7 @@ def _run_slider_trajectory(
                 realtime=realtime,
                 wall_start=wall_start,
                 sim_start=sim_start,
+                speed_scale=playback_control.speed(),
             )
 
             position, velocity, acceleration = slider_state(data, handles)
@@ -299,6 +306,7 @@ def _run_two_link_arm(
     panel_control = KeyForcePulse(config, event_log=interaction_log)
     reset_control = ExperimentResetControl(config, event_log=interaction_log)
     pause_control = SimulationPauseControl(config, event_log=interaction_log)
+    playback_control = SimulationPlaybackControl(config, event_log=interaction_log)
     run_guide = guide_for_config(config_path=str(config_path or ""), lab_name=lab_name)
     live_tuning = _two_link_live_tuning(config, mode, controller_config, torque_limit, target_xy_goal, interaction_log)
     live_status = LiveStatus(
@@ -331,6 +339,7 @@ def _run_two_link_arm(
             event_log=interaction_log,
             reset_control=reset_control,
             pause_control=pause_control,
+            playback_control=playback_control,
         )
         if viewer and not headless
         else None
@@ -352,8 +361,10 @@ def _run_two_link_arm(
                 mujoco.mj_forward(model, data)
             if pause_control.paused() and not pause_control.consume_step():
                 sync_paused_viewer(viewer_handle)
-                wall_start = viewer_clock() - max(0.0, float(data.time) - sim_start)
+                wall_start = realtime_wall_start(float(data.time), sim_start, playback_control.speed())
                 continue
+            if playback_control.consume_change():
+                wall_start = realtime_wall_start(float(data.time), sim_start, playback_control.speed())
 
             q, qdot = _two_link_state(data, handles)
             target = trajectory.evaluate(float(data.time))
@@ -454,6 +465,7 @@ def _run_two_link_arm(
                 realtime=realtime,
                 wall_start=wall_start,
                 sim_start=sim_start,
+                speed_scale=playback_control.speed(),
             )
             dls_fields = _dls_log_fields(command)
             logger.record(

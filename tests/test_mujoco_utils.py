@@ -13,8 +13,10 @@ from mclab.sim.mujoco_utils import (  # noqa: E402
     add_viewer_box,
     add_viewer_sphere,
     maybe_launch_viewer,
+    realtime_wall_start,
     reset_viewer_overlays,
     sync_paused_viewer,
+    sync_viewer,
 )
 
 
@@ -53,6 +55,37 @@ class ViewerUtilityTests(unittest.TestCase):
         sync_paused_viewer(viewer, interval=0.0)
 
         viewer.sync.assert_called_once_with()
+
+    def test_sync_viewer_uses_playback_speed_for_realtime_pacing(self) -> None:
+        viewer = types.SimpleNamespace(sync=Mock())
+        data = types.SimpleNamespace(time=3.0)
+
+        with (
+            patch("mclab.sim.mujoco_utils.perf_counter", return_value=12.0),
+            patch("mclab.sim.mujoco_utils.sleep") as sleeper,
+        ):
+            sync_viewer(viewer, data, realtime=True, wall_start=10.0, sim_start=1.0, speed_scale=0.5)
+
+        viewer.sync.assert_called_once_with()
+        sleeper.assert_called_once_with(0.05)
+
+        viewer.sync.reset_mock()
+        sleeper.reset_mock()
+
+        with (
+            patch("mclab.sim.mujoco_utils.perf_counter", return_value=12.0),
+            patch("mclab.sim.mujoco_utils.sleep") as sleeper,
+        ):
+            sync_viewer(viewer, data, realtime=True, wall_start=10.0, sim_start=1.0, speed_scale=4.0)
+
+        viewer.sync.assert_called_once_with()
+        sleeper.assert_not_called()
+
+    def test_realtime_wall_start_accounts_for_playback_speed(self) -> None:
+        with patch("mclab.sim.mujoco_utils.perf_counter", return_value=20.0):
+            wall_start = realtime_wall_start(data_time=5.0, sim_start=1.0, speed_scale=0.5)
+
+        self.assertEqual(wall_start, 12.0)
 
     def test_viewer_overlay_helpers_add_and_reset_user_geoms(self) -> None:
         def init_geom(geom, geom_type, size, pos, mat, rgba):
