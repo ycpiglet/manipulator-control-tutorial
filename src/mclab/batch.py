@@ -446,6 +446,7 @@ def write_batch_report(
         ),
     )
     rows = _batch_rows(output, scenarios)
+    (output / "worksheet.md").write_text(_render_batch_worksheet(output, batch_name, guide, rows), encoding="utf-8")
     report = output / "report.html"
     report.write_text(_render_batch_report(output, batch_name, guide, rows), encoding="utf-8")
     return report
@@ -453,6 +454,7 @@ def write_batch_report(
 
 def write_all_batches_report(batch_output: str | Path, completed_batches: list[dict[str, Any]]) -> Path:
     output = Path(batch_output)
+    (output / "worksheet.md").write_text(_render_all_batches_worksheet(completed_batches), encoding="utf-8")
     report = output / "report.html"
     report.write_text(_render_all_batches_report(completed_batches), encoding="utf-8")
     return report
@@ -493,6 +495,165 @@ def _batch_rows(output: Path, scenarios: tuple[BatchScenario, ...]) -> list[dict
             }
         )
     return rows
+
+
+def _render_batch_worksheet(output: Path, batch_name: str, guide: BatchGuide, rows: list[dict[str, Any]]) -> str:
+    metric_keys = _display_metric_keys(guide, rows)
+    lines: list[str] = [
+        "# MCLab Batch Worksheet",
+        "",
+        "## Batch",
+        "",
+        f"- Batch: {batch_name}",
+        f"- Title: {guide.title}",
+        f"- Scenario count: {len(rows)}",
+        "- Report: report.html",
+        "- Detailed index: index.html",
+        "",
+        "## Learning Focus",
+        "",
+        f"- Focus: {guide.focus}",
+    ]
+    for question in guide.questions:
+        lines.append(f"- Question: {question}")
+    lines.append("")
+    lines.extend(_batch_worksheet_scenario_lines(rows, metric_keys))
+    lines.extend(_batch_worksheet_comparison_lines(rows, metric_keys))
+    lines.extend(_batch_worksheet_followup_lines(batch_name, guide, rows))
+    lines.extend(_batch_worksheet_artifact_lines(output, rows))
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _batch_worksheet_scenario_lines(rows: list[dict[str, Any]], metric_keys: list[str]) -> list[str]:
+    lines = ["## Scenario Review", ""]
+    if not rows:
+        return [*lines, "- No scenario runs were saved.", ""]
+    for row in rows:
+        lines.extend(
+            [
+                f"### {row['label']}",
+                "",
+                f"- Config: {row['config_path']}",
+                f"- Report: {row['report']}",
+            ]
+        )
+        plot = _priority_plot_link(row.get("plots", {}))
+        lines.append(f"- Priority plot: {plot[1] if plot else 'n/a'}")
+        for key in metric_keys[:8]:
+            lines.append(f"- {_label(key)}: {_format_value(row.get('summary', {}).get(key))}")
+        lines.append("- Review prompt: compare this scenario against the baseline before changing another parameter.")
+        lines.append("")
+    return lines
+
+
+def _batch_worksheet_comparison_lines(rows: list[dict[str, Any]], metric_keys: list[str]) -> list[str]:
+    lines = ["## Comparison Notes", ""]
+    if len(rows) < 2 or not metric_keys:
+        lines.append("- Add at least two scenario summaries to compare metrics.")
+        lines.extend(_batch_worksheet_checklist_lines())
+        return lines
+    baseline = rows[0]
+    lines.append(f"- Baseline scenario: {baseline['label']}")
+    for key in metric_keys[:6]:
+        values = [
+            (str(row["label"]), _as_finite_float(row.get("summary", {}).get(key)))
+            for row in rows
+        ]
+        values = [(label, value) for label, value in values if value is not None]
+        if len(values) < 2:
+            continue
+        min_label, min_value = min(values, key=lambda item: item[1])
+        max_label, max_value = max(values, key=lambda item: item[1])
+        lines.append(
+            f"- {_label(key)}: min {min_label} ({_format_value(min_value)}), "
+            f"max {max_label} ({_format_value(max_value)})"
+        )
+    lines.extend(_batch_worksheet_checklist_lines())
+    return lines
+
+
+def _batch_worksheet_checklist_lines() -> list[str]:
+    return [
+        "- [ ] Write which scenario best supports your prediction.",
+        "- [ ] Mark which metric changed most clearly from the baseline.",
+        "- [ ] Open one scenario report and one comparison plot before choosing the next experiment.",
+        "",
+    ]
+
+
+def _batch_worksheet_followup_lines(batch_name: str, guide: BatchGuide, rows: list[dict[str, Any]]) -> list[str]:
+    lines = ["## Reproduce And Extend", "", f"- Batch command: python -m mclab batch {batch_name} --open-report"]
+    for row in rows:
+        lines.append(
+            f"- Scenario command: python -m mclab run {row['lab_name']} "
+            f"--config {row['config_path']} --headless --plot --plots {row.get('plot_selection', 'essential')}"
+        )
+    if guide.followups:
+        lines.append("")
+        lines.append("## Suggested Next Experiments")
+        lines.append("")
+        for followup in guide.followups:
+            lines.append(f"- {followup}")
+    lines.append("")
+    return lines
+
+
+def _batch_worksheet_artifact_lines(output: Path, rows: list[dict[str, Any]]) -> list[str]:
+    lines = ["## Artifacts", "", "- report.html", "- index.html", "- batch_summary.json", "- summary.json"]
+    if (output / "comparison_plots").exists():
+        lines.append("- comparison_plots:")
+        for plot in sorted((output / "comparison_plots").glob("*.png")):
+            lines.append(f"  - comparison_plots/{plot.name}")
+    if rows:
+        lines.append("- scenario reports:")
+        for row in rows:
+            lines.append(f"  - {row['report']}")
+    lines.append("")
+    return lines
+
+
+def _render_all_batches_worksheet(completed_batches: list[dict[str, Any]]) -> str:
+    scenario_total = sum(int(row.get("scenario_count", 0)) for row in completed_batches)
+    lines = [
+        "# MCLab Course Batch Worksheet",
+        "",
+        "## Course Comparison Set",
+        "",
+        f"- Batch groups: {len(completed_batches)}",
+        f"- Scenario runs: {scenario_total}",
+        "- Report: report.html",
+        "- Detailed index: index.html",
+        "",
+        "## Batch Review",
+        "",
+    ]
+    if not completed_batches:
+        lines.append("- No completed batch reports were saved.")
+    for row in completed_batches:
+        batch_name = str(row.get("batch_name", ""))
+        report = str(row.get("report", ""))
+        worksheet = f"{report.rsplit('/', 1)[0]}/worksheet.md" if "/" in report else "worksheet.md" if report else ""
+        lines.extend(
+            [
+                f"- {row.get('title', batch_name)}",
+                f"  - Batch: {batch_name}",
+                f"  - Scenarios: {row.get('scenario_count', 'n/a')}",
+                f"  - Report: {report or 'n/a'}",
+                f"  - Worksheet: {worksheet or 'n/a'}",
+            ]
+        )
+    lines.extend(
+        [
+            "",
+            "## Course Reflection",
+            "",
+            "- [ ] Identify one idea that stayed the same from Lab01 to Lab04.",
+            "- [ ] Identify one plot where actuator effort made the tradeoff visible.",
+            "- [ ] Pick one batch worksheet and write the next parameter change you would try.",
+            "",
+        ]
+    )
+    return "\n".join(lines).rstrip() + "\n"
 
 
 def _render_batch_report(output: Path, batch_name: str, guide: BatchGuide, rows: list[dict[str, Any]]) -> str:
@@ -705,6 +866,7 @@ def _render_batch_report(output: Path, batch_name: str, guide: BatchGuide, rows:
       <h2>Learning Focus</h2>
       <p>{escape(guide.focus)}</p>
       <ul>{question_items}</ul>
+      <p class="muted"><a href="worksheet.md">Open the batch worksheet</a> for scenario notes, metric checks, and next experiments.</p>
       <p class="muted"><a href="index.html">Open the detailed run index</a> for every saved artifact.</p>
     </section>
     {next_experiments}
@@ -829,6 +991,7 @@ def _render_all_batches_report(completed_batches: list[dict[str, Any]]) -> str:
       <h2>Learning Flow</h2>
       <p>This run creates the complete comparison report set for Lab01 through Lab04.</p>
       <p class="muted">{len(completed_batches)} batch reports, {total_scenarios} scenario runs. Open each batch report to compare plots, metrics, parameter differences, and follow-up experiments.</p>
+      <p class="muted"><a href="worksheet.md">Open the course worksheet</a> for the full batch review checklist.</p>
       <p class="muted"><a href="index.html">Open the detailed output index</a> for every saved artifact.</p>
     </section>
     <section>

@@ -110,9 +110,11 @@ class BatchTests(unittest.TestCase):
             self.assertTrue((output / "batch_summary.json").exists())
             self.assertTrue((output / "summary.json").exists())
             self.assertTrue((output / "report.html").exists())
+            self.assertTrue((output / "worksheet.md").exists())
             self.assertIn("demo_scenario/report.html", (output / "index.html").read_text(encoding="utf-8"))
             report_html = (output / "report.html").read_text(encoding="utf-8")
             self.assertIn("Learning Focus", report_html)
+            self.assertIn("Open the batch worksheet", report_html)
             self.assertIn("Next Experiments", report_html)
             self.assertIn("Reproduce Commands", report_html)
             self.assertIn("python -m mclab batch unit_compare --open-report", report_html)
@@ -138,8 +140,17 @@ class BatchTests(unittest.TestCase):
             self.assertIn("Parameter Differences", report_html)
             self.assertIn("Plot Previews", report_html)
             self.assertIn("demo_scenario/plots/position.png", report_html)
+            worksheet = (output / "worksheet.md").read_text(encoding="utf-8")
+            self.assertIn("# MCLab Batch Worksheet", worksheet)
+            self.assertIn("## Scenario Review", worksheet)
+            self.assertIn("demo scenario", worksheet)
+            self.assertIn("Priority plot: demo_scenario/plots/position.png", worksheet)
+            self.assertIn("Batch command: python -m mclab batch unit_compare --open-report", worksheet)
+            self.assertIn("Scenario command: python -m mclab run lab01 --config configs/lab01_msd/default.yaml", worksheet)
+            self.assertIn("- [ ] Write which scenario best supports your prediction.", worksheet)
             parent_index = output.parent / "index.html"
             self.assertIn("batch_output/report.html", parent_index.read_text(encoding="utf-8"))
+            self.assertIn("batch_output/worksheet.md", parent_index.read_text(encoding="utf-8"))
 
     def test_run_all_batches_creates_group_report(self) -> None:
         def fake_run_batch(batch_name: str, **kwargs: object) -> Path:
@@ -173,6 +184,7 @@ class BatchTests(unittest.TestCase):
                 self.assertFalse(call.kwargs["plot"])
                 self.assertEqual(call.kwargs["seed"], 23)
             self.assertTrue((output / "report.html").exists())
+            self.assertTrue((output / "worksheet.md").exists())
             self.assertTrue((output / "index.html").exists())
             summary = json.loads((output / "summary.json").read_text(encoding="utf-8"))
             self.assertEqual(summary["batch_name"], batch.ALL_BATCH_NAME)
@@ -184,6 +196,12 @@ class BatchTests(unittest.TestCase):
             self.assertIn("lab01_msd_compare/report.html", report_html)
             self.assertIn("lab04_cartesian_compare/report.html", report_html)
             self.assertIn("lab04_wall_compare/report.html", report_html)
+            self.assertIn("Open the course worksheet", report_html)
+            worksheet = (output / "worksheet.md").read_text(encoding="utf-8")
+            self.assertIn("# MCLab Course Batch Worksheet", worksheet)
+            self.assertIn("lab01_msd_compare", worksheet)
+            self.assertIn("Worksheet: lab01_msd_compare/worksheet.md", worksheet)
+            self.assertIn("- [ ] Identify one idea that stayed the same from Lab01 to Lab04.", worksheet)
             self.assertIn("lab01_msd_compare/report.html", (output / "index.html").read_text(encoding="utf-8"))
 
     def test_run_batch_rejects_unknown_batch_name(self) -> None:
@@ -283,6 +301,11 @@ class BatchTests(unittest.TestCase):
             self.assertIn("controller.kp", report_html)
             self.assertIn("Comparison Plots", report_html)
             self.assertIn("comparison_plots/position_compare.png", report_html)
+            worksheet = (output / "worksheet.md").read_text(encoding="utf-8")
+            self.assertIn("# MCLab Batch Worksheet", worksheet)
+            self.assertIn("Comparison Notes", worksheet)
+            self.assertIn("overshoot percent", worksheet)
+            self.assertIn("comparison_plots/position_compare.png", worksheet)
 
     def test_scenario_card_reports_missing_plot_links_without_failing(self) -> None:
         html = batch._scenario_card(

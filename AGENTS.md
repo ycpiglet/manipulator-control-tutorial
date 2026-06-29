@@ -74,6 +74,8 @@ Implemented and verified:
 - YAML configs, MuJoCo XML models, docs, and tests for the implemented labs
 - Run reports with domain-specific checks for singularity, DLS speed, virtual wall response, and actuator effort
 - Batch comparison reports with scenario cards, automatic comparison takeaways, min/max highlights, baseline deltas, parameter differences, and comparison plots
+- Batch comparison runs generate `worksheet.md` review artifacts with scenario metrics, priority plots, reproduce commands, and comparison checklists
+- The full `all` batch run generates a course-level `worksheet.md` that links batch reports and batch worksheets
 - Batch scenario cards include per-config prediction, reflection question, and watch cues from the run guides
 - Batch reports include whole-batch and per-scenario reproduce commands for learner handoff
 - Batch scenario cards include run-report and priority-plot quick links when plots are available
