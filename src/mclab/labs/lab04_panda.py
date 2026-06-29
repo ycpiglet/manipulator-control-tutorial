@@ -237,6 +237,7 @@ def run(
                 tuned_target_x=live_tuning.value("target_x", target_x_ee[0]),
                 tuned_target_y=live_tuning.value("target_y", target_x_ee[1]),
                 tuned_target_z=live_tuning.value("target_z", target_x_ee[2]),
+                target_wall_gap_m=target_x_ee[0] - float(wall_config.get("wall_x", target_x_ee[0])),
                 target_wall_gap_cm=100.0 * (target_x_ee[0] - float(wall_config.get("wall_x", target_x_ee[0]))),
                 tuned_joint_target_offset=tuned_joint_offset,
                 tuned_wall_x=float(wall_config.get("wall_x", 10.0)),
@@ -753,13 +754,16 @@ def _save_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSe
             ],
         ),
         (
+            "wall_target.png",
+            "Virtual Wall Target Relationship",
+            "x position / gap [m]",
+            ["target_x_ee_0", "tuned_wall_x", "target_wall_gap_m"],
+        ),
+        (
             "wall_parameters.png",
             "Virtual Wall Parameters",
             "parameter value",
             [
-                "tuned_target_x",
-                "tuned_wall_x",
-                "target_wall_gap_cm",
                 "tuned_wall_stiffness",
                 "tuned_wall_damping",
                 "tuned_wall_retreat_gain",
@@ -772,8 +776,8 @@ def _save_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSe
         "control": ["position", "error", "torque", "current_proxy"],
         "cartesian": ["end_effector", "cartesian_error", "torque", "error"],
         "cartesian_reach": ["end_effector", "cartesian_error", "torque", "current_proxy", "error"],
-        "wall": ["end_effector", "virtual_wall", "torque", "error"],
-        "wall_compare": ["end_effector", "virtual_wall", "wall_parameters", "torque", "error"],
+        "wall": ["end_effector", "wall_target", "virtual_wall", "torque", "error"],
+        "wall_compare": ["end_effector", "wall_target", "virtual_wall", "wall_parameters", "torque", "error"],
     }
     save_time_series_plots(output_path, rows, select_plot_specs(specs, selection, presets=presets))
 

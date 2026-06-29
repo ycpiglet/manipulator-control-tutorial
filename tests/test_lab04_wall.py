@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import tempfile
 import types
 import unittest
 from pathlib import Path
@@ -11,6 +12,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from mclab.labs.lab04_panda import (  # noqa: E402
     _live_status_specs,
+    _save_plots,
     _summary,
     _update_viewer_guides,
     _viewer_guides,
@@ -132,6 +134,34 @@ class Lab04WallTests(unittest.TestCase):
 
         joint_names = [spec.name for spec in _live_status_specs("joint_trajectory")]
         self.assertNotIn("wall_x", joint_names)
+
+    def test_wall_plot_preset_includes_target_wall_relationship(self) -> None:
+        rows = [
+            {
+                "time": 0.0,
+                "x_ee_0": 0.55,
+                "x_ee_1": 0.0,
+                "x_ee_2": 0.62,
+                "target_x_ee_0": 0.61,
+                "target_x_ee_1": 0.0,
+                "target_x_ee_2": 0.58,
+                "tuned_wall_x": 0.57,
+                "target_wall_gap_m": 0.04,
+                "force_virtual_0": 0.0,
+                "force_virtual_spring_0": 0.0,
+                "force_virtual_damping_0": 0.0,
+                "wall_penetration_cm": 0.0,
+                "wall_retreat_cm": 0.0,
+                "tau_cmd_0": 0.0,
+                "error_norm": 0.0,
+            }
+        ]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp)
+            _save_plots(output, rows, "wall")
+
+            self.assertTrue((output / "plots" / "wall_target.png").exists())
 
     def test_lab04_viewer_guides_draw_target_hand_and_wall(self) -> None:
         def init_geom(geom, geom_type, size, pos, mat, rgba):

@@ -391,7 +391,7 @@ Plot preset:
 | Lab01 MSD | `essential`, `energy` |
 | Lab02 PID | `essential`, `pid` |
 | Lab03 2DOF/Trajectory | `essential`, `profile`, `joint`, `task`, `singularity`, `dls`, `control` |
-| Lab04 Panda | `essential`, `control`, `cartesian`, `cartesian_reach`, `wall`, `wall_compare` |
+| Lab04 Panda | `essential`, `control`, `cartesian`, `cartesian_reach`, `wall`, `wall_target`, `wall_compare` |
 
 Lab02 PID 예시:
 
@@ -748,7 +748,7 @@ Plot presets:
 | Lab01 MSD | `essential`, `energy` |
 | Lab02 PID | `essential`, `pid` |
 | Lab03 2DOF/Trajectory | `essential`, `profile`, `joint`, `task`, `singularity`, `dls`, `control` |
-| Lab04 Panda | `essential`, `control`, `cartesian`, `cartesian_reach`, `wall`, `wall_compare` |
+| Lab04 Panda | `essential`, `control`, `cartesian`, `cartesian_reach`, `wall`, `wall_target`, `wall_compare` |
 
 Lab02 PID example:
 
