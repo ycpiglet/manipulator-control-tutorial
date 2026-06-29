@@ -69,6 +69,8 @@ class LabSmokeTests(unittest.TestCase):
         for config_path in (
             "configs/lab03_2dof/dls_singularity_2dof.yaml",
             "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
+            "configs/lab03_2dof/condition_aware_dls_early_2dof.yaml",
+            "configs/lab03_2dof/condition_aware_dls_late_2dof.yaml",
         ):
             with self.subTest(config_path=config_path):
                 config = load_config(config_path)

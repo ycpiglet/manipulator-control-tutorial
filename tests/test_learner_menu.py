@@ -109,6 +109,9 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF task-space"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF singularity"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF DLS singularity"), labels)
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS"), labels)
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF early DLS damping"), labels)
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF late DLS damping"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF interactive"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "Step profile"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "Minimum jerk"), labels)
@@ -655,7 +658,13 @@ class LearnerMenuTests(unittest.TestCase):
         singularity_labels = {action.label for action in filter_menu_actions("", experience_filter="singularity")}
         self.assertEqual(
             singularity_labels,
-            {"2DOF singularity", "2DOF DLS singularity", "2DOF condition-aware DLS"},
+            {
+                "2DOF singularity",
+                "2DOF DLS singularity",
+                "2DOF condition-aware DLS",
+                "2DOF early DLS damping",
+                "2DOF late DLS damping",
+            },
         )
 
         compare_labels = {action.label for action in filter_menu_actions("windup", experience_filter="compare")}
@@ -686,6 +695,10 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(
             "condition_damping_threshold",
             parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS")]),
+        )
+        self.assertIn(
+            "condition_damping_full",
+            parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF early DLS damping")]),
         )
         self.assertIn(
             "cartesian_target.gain",

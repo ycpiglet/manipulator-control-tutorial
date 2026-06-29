@@ -451,6 +451,26 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
     ),
     MenuAction(
         group="Lab03 2DOF Arm and Trajectories",
+        label="2DOF early DLS damping",
+        lab_name="lab03",
+        config_path="configs/lab03_2dof/condition_aware_dls_early_2dof.yaml",
+        plots="dls",
+        description="Starts condition-aware damping earlier and allows a higher damping ceiling.",
+        try_this="Run before late DLS damping and compare how soon dls_damping rises.",
+        watch="Earlier condition scale, lower joint speed demand, and possible task-error tradeoff.",
+    ),
+    MenuAction(
+        group="Lab03 2DOF Arm and Trajectories",
+        label="2DOF late DLS damping",
+        lab_name="lab03",
+        config_path="configs/lab03_2dof/condition_aware_dls_late_2dof.yaml",
+        plots="dls",
+        description="Delays condition-aware damping and caps the maximum damping lower.",
+        try_this="Compare against early DLS damping on the same near-edge target.",
+        watch="Later condition scale, faster joint motion, and hand tracking near the singularity.",
+    ),
+    MenuAction(
+        group="Lab03 2DOF Arm and Trajectories",
         label="2DOF interactive",
         lab_name="lab03",
         config_path="configs/lab03_2dof/interactive_2dof.yaml",
@@ -1311,10 +1331,10 @@ def parameter_hint(action: MenuAction) -> str:
             )
         if label == "2dof dls singularity":
             return "target_xy, tracking_controller.dls_gain, tracking_controller.dls_damping, viewer_guides.condition_threshold"
-        if label == "2dof condition-aware dls":
+        if label in {"2dof condition-aware dls", "2dof early dls damping", "2dof late dls damping"}:
             return (
                 "target_xy, tracking_controller.dls_damping, tracking_controller.condition_damping_threshold, "
-                "tracking_controller.max_dls_damping"
+                "tracking_controller.condition_damping_full, tracking_controller.max_dls_damping"
             )
         if label == "2dof task-space":
             return "target_xy, tracking_controller.task_kp, tracking_controller.task_kd, viewer_guides.enabled"
@@ -1557,6 +1577,8 @@ def _is_compare_action(action: MenuAction) -> bool:
         "2dof task-space",
         "2dof singularity",
         "2dof dls singularity",
+        "2dof early dls damping",
+        "2dof late dls damping",
         "step profile",
         "trapezoid",
         "minimum jerk",

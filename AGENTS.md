@@ -222,11 +222,12 @@ Implemented so far:
 - singularity demo with Jacobian determinant, manipulability, and condition number logging/plotting
 - damped least-squares singularity demo with DLS gain/damping and joint-speed logging/plotting
 - condition-aware DLS singularity comparison with automatic damping schedule logging/plotting
+- early/default/late condition-aware DLS schedule comparison configs for Lab03
 - standard logs and plots for joint position, end-effector position, torque, current proxy, and error
 
 Remaining likely extension:
 
-- richer singularity comparison lessons, such as condition-aware task control with alternate thresholds and damping limits
+- richer singularity comparison lessons, such as condition-aware task control with additional task targets or torque limits
 
 ### Phase 6 - Lab04 Advanced Control
 

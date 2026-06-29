@@ -73,6 +73,18 @@ BATCH_SETS: dict[str, tuple[BatchScenario, ...]] = {
         BatchScenario("singularity", "lab03", "configs/lab03_2dof/singularity_2dof.yaml", "singularity"),
         BatchScenario("dls_singularity", "lab03", "configs/lab03_2dof/dls_singularity_2dof.yaml", "dls"),
         BatchScenario("condition_aware_dls", "lab03", "configs/lab03_2dof/condition_aware_dls_2dof.yaml", "dls"),
+        BatchScenario(
+            "condition_aware_early",
+            "lab03",
+            "configs/lab03_2dof/condition_aware_dls_early_2dof.yaml",
+            "dls",
+        ),
+        BatchScenario(
+            "condition_aware_late",
+            "lab03",
+            "configs/lab03_2dof/condition_aware_dls_late_2dof.yaml",
+            "dls",
+        ),
     ),
     "lab04_wall_compare": (
         BatchScenario("soft_wall", "lab04", "configs/lab04_panda/wall_soft.yaml", "wall_compare"),
@@ -151,12 +163,14 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             "What happens to manipulability and Jacobian condition near the singular posture?",
             "How does DLS damping limit joint speed near a poorly conditioned target?",
             "When does condition-aware damping start increasing, and what does it trade for lower joint speed?",
+            "How do early and late damping schedules change task error near the same workspace edge?",
             "How do the torque plots change when the task is expressed in end-effector space?",
         ),
         followups=(
             "Copy `configs/lab03_2dof/task_space_2dof.yaml` and move `target_xy` closer to the workspace edge.",
             "Copy `configs/lab03_2dof/singularity_2dof.yaml` and change `target_q` to approach a straighter arm.",
             "Copy `configs/lab03_2dof/dls_singularity_2dof.yaml` and vary `tracking_controller.dls_damping`.",
+            "Compare `condition_aware_dls_early_2dof.yaml` and `condition_aware_dls_late_2dof.yaml`.",
             "Copy `configs/lab03_2dof/condition_aware_dls_2dof.yaml` and change `condition_damping_threshold`.",
             "Lower `tracking_controller.torque_limit` and compare how joint and task errors grow.",
         ),

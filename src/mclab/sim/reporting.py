@@ -309,7 +309,41 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
         NextRunSuggestion("configs/lab03_2dof/singularity_2dof.yaml", "Compare DLS against the undamped singularity case.", "singularity"),
     ),
     "configs/lab03_2dof/condition_aware_dls_2dof.yaml": (
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_early_2dof.yaml",
+            "Start damping earlier and compare joint speed.",
+            "dls",
+        ),
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_late_2dof.yaml",
+            "Delay damping and compare task error.",
+            "dls",
+        ),
         NextRunSuggestion("configs/lab03_2dof/dls_singularity_2dof.yaml", "Compare against fixed damping on the same target.", "dls"),
+    ),
+    "configs/lab03_2dof/condition_aware_dls_early_2dof.yaml": (
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_late_2dof.yaml",
+            "Use the same target with a later damping schedule.",
+            "dls",
+        ),
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
+            "Return to the default condition-aware schedule.",
+            "dls",
+        ),
+    ),
+    "configs/lab03_2dof/condition_aware_dls_late_2dof.yaml": (
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_early_2dof.yaml",
+            "Compare against earlier, stronger damping.",
+            "dls",
+        ),
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
+            "Return to the default condition-aware schedule.",
+            "dls",
+        ),
         NextRunSuggestion("configs/lab03_2dof/interactive_2dof.yaml", "Move the target live and watch conditioning.", "task"),
     ),
     "configs/lab03_2dof/interactive_tracking.yaml": (

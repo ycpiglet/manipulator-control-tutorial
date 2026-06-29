@@ -72,6 +72,16 @@ python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_2dof.y
 
 This uses the same near-edge target as the DLS singularity demo, but `tracking_controller.condition_aware_damping` raises the effective DLS damping when the Jacobian condition number exceeds `condition_damping_threshold`. In `dls.png`, compare `dls_damping`, `dls_condition_scale`, and `dls_joint_speed`; in `singularity.png`, confirm that the damping rise happens when conditioning gets poor.
 
+Condition-aware schedule comparison:
+
+```bash
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_early_2dof.yaml --headless --plot --plots dls
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_late_2dof.yaml --headless --plot --plots dls
+python -m mclab batch lab03_2dof_compare --open-report
+```
+
+The early schedule starts increasing DLS damping at a lower condition number and allows a higher damping ceiling. The late schedule waits until conditioning is worse and caps damping lower. Compare `dls_damping_compare.png`, `dls_joint_speed_compare.png`, and `task_error_compare.png` in the batch report to discuss the tradeoff between calmer joint motion and hand tracking error.
+
 Interactive 2DOF demo:
 
 ```powershell

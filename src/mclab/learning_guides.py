@@ -337,6 +337,28 @@ RUN_GUIDES: dict[str, RunGuide] = {
         "DLS damping, condition scale, joint speed, condition number, and task error.",
         "Lower max_dls_damping or raise the threshold to see when joint speed grows.",
     ),
+    "configs/lab03_2dof/condition_aware_dls_early_2dof.yaml": RunGuide(
+        "Lab03 2DOF Early Condition-Aware DLS",
+        "Condition-aware damping starts earlier and can rise higher before the arm reaches the edge.",
+        "Compare against late condition-aware DLS with the same target.",
+        (
+            "tracking_controller.condition_damping_threshold, "
+            "tracking_controller.condition_damping_full, tracking_controller.max_dls_damping"
+        ),
+        "Earlier DLS damping, condition scale, joint speed, condition number, and task error.",
+        "Run late condition-aware DLS and compare how much task error changes.",
+    ),
+    "configs/lab03_2dof/condition_aware_dls_late_2dof.yaml": RunGuide(
+        "Lab03 2DOF Late Condition-Aware DLS",
+        "Condition-aware damping waits until conditioning is worse and uses a lower damping ceiling.",
+        "Compare against early condition-aware DLS with the same target.",
+        (
+            "tracking_controller.condition_damping_threshold, "
+            "tracking_controller.condition_damping_full, tracking_controller.max_dls_damping"
+        ),
+        "Later DLS damping, joint speed demand, condition number, and hand tracking error.",
+        "Run the Lab03 comparison batch to see early, default, and late schedules together.",
+    ),
     "configs/lab03_2dof/interactive_2dof.yaml": RunGuide(
         "Lab03 2DOF Interactive",
         "Tune hand target and task-space gains while the 2DOF arm runs.",
