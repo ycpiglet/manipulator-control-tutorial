@@ -1138,7 +1138,11 @@ def action_evidence_text(
     prediction_text = f", {predictions} prediction{'s' if predictions != 1 else ''}"
     outcome_text = f", {outcomes} outcome{'s' if outcomes != 1 else ''}" if outcomes else ""
     note_text = f", {notes} note{'s' if notes != 1 else ''}" if notes else ""
-    return f"Evidence: {markers} observation{'s' if markers != 1 else ''}{prediction_text}{outcome_text}{note_text}"
+    review_text = "; outcome review pending" if predictions > outcomes else ""
+    return (
+        f"Evidence: {markers} observation{'s' if markers != 1 else ''}"
+        f"{prediction_text}{outcome_text}{note_text}{review_text}"
+    )
 
 
 def action_latest_evidence_text(

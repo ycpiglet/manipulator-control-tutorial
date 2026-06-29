@@ -1102,6 +1102,29 @@ class LearnerMenuTests(unittest.TestCase):
             self.assertIn("Evidence: 2 observations, 1 prediction, 1 outcome, 1 note", lesson_text(MENU_ACTIONS[0], outputs))
             self.assertEqual(action_evidence_text(MENU_ACTIONS[1], outputs), "Evidence: No observation markers yet")
 
+            (run_path / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "question": "Question: demo?",
+                                "prediction": "The response should overshoot.",
+                                "note": "Saw overshoot.",
+                            },
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            self.assertEqual(
+                action_evidence_text(MENU_ACTIONS[0], outputs),
+                "Evidence: 1 observation, 1 prediction, 1 note; outcome review pending",
+            )
+            self.assertIn("outcome review pending", lesson_text(MENU_ACTIONS[0], outputs))
+
     def test_action_latest_evidence_summarizes_prediction_note_and_status(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)
