@@ -66,6 +66,7 @@ class LearningPathProgress:
     latest_output: Path | None = None
     evidence_required: bool = False
     observation_markers: int = 0
+    learner_predictions: int = 0
     learner_notes: int = 0
 
 
@@ -711,13 +712,14 @@ def learning_path_progress(
 ) -> LearningPathProgress:
     latest = learning_path_latest_output(step, outputs_root)
     evidence_required = learning_path_requires_evidence(step)
-    markers, notes = _observation_evidence_counts(latest) if latest is not None else (0, 0)
+    markers, predictions, notes = _observation_evidence_counts(latest) if latest is not None else (0, 0, 0)
     completed = latest is not None and (not evidence_required or markers > 0)
     return LearningPathProgress(
         completed=completed,
         latest_output=latest,
         evidence_required=evidence_required,
         observation_markers=markers,
+        learner_predictions=predictions,
         learner_notes=notes,
     )
 
@@ -742,6 +744,11 @@ def learning_path_progress_text(
 def _learning_path_evidence_suffix(progress: LearningPathProgress) -> str:
     if progress.observation_markers <= 0:
         return ""
+    prediction_text = (
+        f", {progress.learner_predictions} prediction{'s' if progress.learner_predictions != 1 else ''}"
+        if progress.learner_predictions
+        else ""
+    )
     note_text = (
         f", {progress.learner_notes} note{'s' if progress.learner_notes != 1 else ''}"
         if progress.learner_notes
@@ -749,7 +756,7 @@ def _learning_path_evidence_suffix(progress: LearningPathProgress) -> str:
     )
     return (
         f" ({progress.observation_markers} observation"
-        f"{'s' if progress.observation_markers != 1 else ''}{note_text})"
+        f"{'s' if progress.observation_markers != 1 else ''}{prediction_text}{note_text})"
     )
 
 
@@ -834,11 +841,12 @@ def action_evidence_text(
     latest = action_latest_output(action, outputs_root)
     if latest is None:
         return "Evidence: No observation markers yet"
-    markers, notes = _observation_evidence_counts(latest)
+    markers, predictions, notes = _observation_evidence_counts(latest)
     if markers == 0:
         return "Evidence: No observation markers yet"
+    prediction_text = f", {predictions} prediction{'s' if predictions != 1 else ''}"
     note_text = f", {notes} note{'s' if notes != 1 else ''}" if notes else ""
-    return f"Evidence: {markers} observation{'s' if markers != 1 else ''}{note_text}"
+    return f"Evidence: {markers} observation{'s' if markers != 1 else ''}{prediction_text}{note_text}"
 
 
 def action_followup(action: MenuAction) -> MenuAction | BatchMenuAction:
@@ -955,17 +963,22 @@ def _read_json_list(path: Path) -> list[dict[str, Any]]:
     return [item for item in payload if isinstance(item, dict)]
 
 
-def _observation_evidence_counts(output_path: Path) -> tuple[int, int]:
+def _observation_evidence_counts(output_path: Path) -> tuple[int, int, int]:
     markers = 0
+    predictions = 0
     notes = 0
     for event in _read_json_list(output_path / "interaction_events.json"):
         if not _is_observation_marker_event(event):
             continue
         markers += 1
         value = event.get("value")
-        if isinstance(value, dict) and str(value.get("note") or "").strip():
+        if not isinstance(value, dict):
+            continue
+        if str(value.get("prediction") or "").strip():
+            predictions += 1
+        if str(value.get("note") or "").strip():
             notes += 1
-    return markers, notes
+    return markers, predictions, notes
 
 
 def _is_observation_marker_event(event: dict[str, Any]) -> bool:

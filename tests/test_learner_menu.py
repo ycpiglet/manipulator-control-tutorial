@@ -276,7 +276,11 @@ class LearnerMenuTests(unittest.TestCase):
                         {
                             "kind": "marker",
                             "name": "observation",
-                            "value": {"question": "Question: demo?", "note": "Saw the mass settle."},
+                            "value": {
+                                "question": "Question: demo?",
+                                "prediction": "More damping should settle faster.",
+                                "note": "Saw the mass settle.",
+                            },
                         }
                     ]
                 ),
@@ -296,9 +300,10 @@ class LearnerMenuTests(unittest.TestCase):
 
         self.assertTrue(complete_progress.completed)
         self.assertEqual(complete_progress.observation_markers, 1)
+        self.assertEqual(complete_progress.learner_predictions, 1)
         self.assertEqual(complete_progress.learner_notes, 1)
         self.assertIn(
-            "Status: Done - latest run_lab01_interactive (1 observation, 1 note)",
+            "Status: Done - latest run_lab01_interactive (1 observation, 1 prediction, 1 note)",
             learning_path_progress_text(second_step, complete_progress),
         )
 
@@ -703,7 +708,11 @@ class LearnerMenuTests(unittest.TestCase):
                         {
                             "kind": "marker",
                             "name": "observation",
-                            "value": {"question": "Question: demo?", "note": "Saw overshoot."},
+                            "value": {
+                                "question": "Question: demo?",
+                                "prediction": "The response should overshoot.",
+                                "note": "Saw overshoot.",
+                            },
                         },
                         {
                             "kind": "marker",
@@ -715,8 +724,11 @@ class LearnerMenuTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            self.assertEqual(action_evidence_text(MENU_ACTIONS[0], outputs), "Evidence: 2 observations, 1 note")
-            self.assertIn("Evidence: 2 observations, 1 note", lesson_text(MENU_ACTIONS[0], outputs))
+            self.assertEqual(
+                action_evidence_text(MENU_ACTIONS[0], outputs),
+                "Evidence: 2 observations, 1 prediction, 1 note",
+            )
+            self.assertIn("Evidence: 2 observations, 1 prediction, 1 note", lesson_text(MENU_ACTIONS[0], outputs))
             self.assertEqual(action_evidence_text(MENU_ACTIONS[1], outputs), "Evidence: No observation markers yet")
 
     def test_batch_history_tracks_latest_matching_report(self) -> None:
