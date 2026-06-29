@@ -150,6 +150,7 @@ class BatchTests(unittest.TestCase):
             self.assertIn("demo scenario", worksheet)
             self.assertIn("Worksheet: demo_scenario/worksheet.md", worksheet)
             self.assertIn("Priority plot: demo_scenario/plots/position.png", worksheet)
+            self.assertIn("Plot review: Position - Compare actual motion against target", worksheet)
             self.assertIn("Batch command: python -m mclab batch unit_compare --open-report", worksheet)
             self.assertIn("Scenario command: python -m mclab run lab01 --config configs/lab01_msd/default.yaml", worksheet)
             self.assertIn("- [ ] Write which scenario best supports your prediction.", worksheet)

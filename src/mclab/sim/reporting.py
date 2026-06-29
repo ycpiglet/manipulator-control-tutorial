@@ -2561,7 +2561,7 @@ def _plot_guide_section(plots: list[Path]) -> str:
 
 
 def _plot_guide_card(plot: Path) -> str:
-    guidance = _plot_guidance(plot.name)
+    guidance = plot_guidance(plot.name)
     if guidance is None:
         return ""
     title, detail = guidance
@@ -2572,6 +2572,10 @@ def _plot_guide_card(plot: Path) -> str:
         f'<p class="empty">{escape(detail)}</p>'
         "</article>"
     )
+
+
+def plot_guidance(filename: str) -> tuple[str, str] | None:
+    return _plot_guidance(filename)
 
 
 def _plot_guidance(filename: str) -> tuple[str, str] | None:

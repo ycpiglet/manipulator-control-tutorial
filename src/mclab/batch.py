@@ -16,7 +16,7 @@ from typing import Any
 from mclab.config import PROJECT_ROOT, load_config, resolve_project_path
 from mclab.labs import lab01_msd, lab02_pid, lab03_2dof, lab04_panda
 from mclab.learning_guides import guide_for_config, prediction_prompt_for_guide, question_for_guide
-from mclab.sim.reporting import INDEX_METRIC_KEYS, INDEX_PLOT_PRIORITY, write_outputs_index
+from mclab.sim.reporting import INDEX_METRIC_KEYS, INDEX_PLOT_PRIORITY, plot_guidance, write_outputs_index
 
 LabRunner = Callable[..., Path]
 
@@ -541,6 +541,11 @@ def _batch_worksheet_scenario_lines(rows: list[dict[str, Any]], metric_keys: lis
         )
         plot = _priority_plot_link(row.get("plots", {}))
         lines.append(f"- Priority plot: {plot[1] if plot else 'n/a'}")
+        if plot is not None:
+            guidance = plot_guidance(plot[0])
+            if guidance is not None:
+                title, detail = guidance
+                lines.append(f"- Plot review: {title} - {detail}")
         for key in metric_keys[:8]:
             lines.append(f"- {_label(key)}: {_format_value(row.get('summary', {}).get(key))}")
         lines.append("- Review prompt: compare this scenario against the baseline before changing another parameter.")
