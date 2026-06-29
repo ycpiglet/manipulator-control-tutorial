@@ -32,6 +32,7 @@ def run_doctor_checks(
         _required_modules_check(required_modules),
         _project_layout_check(project_root),
         _config_and_model_check(project_root),
+        _learner_menu_readiness_check(project_root),
         _outputs_writable_check(project_root),
     ]
     return checks
@@ -150,6 +151,59 @@ def _config_and_model_check(root: Path) -> DoctorCheck:
         "Configs and models",
         "OK",
         f"{len(config_paths)} configs load and {len(model_paths)} unique model assets exist.",
+    )
+
+
+def _learner_menu_readiness_check(root: Path) -> DoctorCheck:
+    if not (root / "src" / "mclab" / "learner_menu.py").exists():
+        return DoctorCheck("Learner menu readiness", "OK", "No learner menu source was found in this project layout.")
+
+    try:
+        from mclab.learner_menu import BATCH_ACTIONS, MENU_ACTIONS, action_readiness, batch_readiness
+    except Exception as exc:
+        return DoctorCheck(
+            "Learner menu readiness",
+            "FAIL",
+            f"Could not import learner menu definitions: {exc.__class__.__name__}: {exc}",
+            "Fix learner menu imports, then rerun `python -m mclab doctor`.",
+        )
+
+    scenario_failures: list[str] = []
+    batch_failures: list[str] = []
+    first_fix = ""
+    for action in MENU_ACTIONS:
+        readiness = action_readiness(action, root=root)
+        if readiness.status == "ok":
+            continue
+        scenario_failures.append(f"{action.group} / {action.label}: {readiness.label} - {readiness.detail}")
+        if not first_fix and readiness.fix:
+            first_fix = readiness.fix
+
+    for action in BATCH_ACTIONS:
+        readiness = batch_readiness(action, root=root)
+        if readiness.status == "ok":
+            continue
+        batch_failures.append(f"{action.label}: {readiness.label} - {readiness.detail}")
+        if not first_fix and readiness.fix:
+            first_fix = readiness.fix
+
+    if scenario_failures or batch_failures:
+        parts: list[str] = []
+        if scenario_failures:
+            parts.append(_limited_list(f"{len(scenario_failures)} scenario issue(s)", scenario_failures, limit=3))
+        if batch_failures:
+            parts.append(_limited_list(f"{len(batch_failures)} batch issue(s)", batch_failures, limit=2))
+        return DoctorCheck(
+            "Learner menu readiness",
+            "FAIL",
+            " | ".join(parts),
+            first_fix or "Open the learner menu and use Check setup for the blocked scenario.",
+        )
+
+    return DoctorCheck(
+        "Learner menu readiness",
+        "OK",
+        f"{len(MENU_ACTIONS)} guided scenarios and {len(BATCH_ACTIONS)} comparison batches are ready.",
     )
 
 

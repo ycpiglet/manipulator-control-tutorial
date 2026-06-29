@@ -30,6 +30,7 @@ class DoctorTests(unittest.TestCase):
         self.assertIn("MCLab Doctor", report)
         self.assertIn("Summary:", report)
         self.assertIn("[OK] Configs and models", report)
+        self.assertIn("[OK] Learner menu readiness", report)
 
     def test_doctor_reports_missing_model_assets(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -43,6 +44,20 @@ class DoctorTests(unittest.TestCase):
         self.assertIn("[FAIL] Configs and models", report)
         self.assertIn("Missing model assets", report)
         self.assertIn("configs/demo/default.yaml -> models/demo/scene.xml", report)
+
+    def test_doctor_reports_learner_menu_readiness_failures(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_minimal_project(root, model_exists=True)
+            (root / "src" / "mclab" / "learner_menu.py").write_text("# marker\n", encoding="utf-8")
+
+            checks = run_doctor_checks(root, required_modules=())
+
+        self.assertEqual(doctor_exit_code(checks), 1)
+        report = format_doctor_report(checks)
+        self.assertIn("[FAIL] Learner menu readiness", report)
+        self.assertIn("scenario issue", report)
+        self.assertIn("Missing config", report)
 
     def test_doctor_exit_code_only_fails_on_failures(self) -> None:
         checks = [
