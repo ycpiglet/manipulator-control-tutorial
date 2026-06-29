@@ -2894,16 +2894,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
 
 def _learning_path_section(runs: list[dict[str, Any]]) -> str:
     items = [_learning_path_item(step, runs) for step in INDEX_LEARNING_PATH]
-    completed = sum(1 for item in items if item["completed"])
-    next_item = next((item for item in items if not item["completed"]), None)
-    if next_item is None:
-        summary = f"{completed}/{len(items)} steps complete. Course path complete."
-    else:
-        next_step: IndexPathStep = next_item["step"]
-        summary = (
-            f"{completed}/{len(items)} steps complete. Next: {next_step.title}. "
-            f"Next action: {_learning_path_action_label(next_step)}."
-        )
+    summary = _learning_path_summary(items)
     cards = "\n".join(_learning_path_card(item) for item in items)
     return (
         "<section>"
@@ -2936,6 +2927,38 @@ def _learning_path_item(step: IndexPathStep, runs: list[dict[str, Any]]) -> dict
     }
 
 
+def _learning_path_summary(items: list[dict[str, Any]]) -> str:
+    total = len(items)
+    completed = sum(1 for item in items if item["completed"])
+    evidence_pending = sum(
+        1
+        for item in items
+        if item["run"] is not None and item["evidence_required"] and not item["completed"]
+    )
+    outcome_pending = sum(
+        1
+        for item in items
+        if item["run"] is not None
+        and item["evidence_required"]
+        and int(item["learner_predictions"]) > int(item["learner_outcomes"])
+    )
+    next_item = next((item for item in items if not item["completed"]), None)
+    evidence_text = f" Evidence pending: {evidence_pending} hands-on step(s)." if evidence_pending else ""
+    outcome_text = f" Outcome review pending: {outcome_pending} hands-on step(s)." if outcome_pending else ""
+    if next_item is None:
+        review_text = (
+            " Next review: add missing Prediction outcome(s), then open All reports."
+            if outcome_pending
+            else " Course path complete."
+        )
+        return f"{completed}/{total} steps complete.{outcome_text}{review_text}"
+    next_step: IndexPathStep = next_item["step"]
+    return (
+        f"{completed}/{total} steps complete.{evidence_text}{outcome_text} "
+        f"Next: {next_step.title}. Next action: {_learning_path_action_label(next_step)}."
+    )
+
+
 def _learning_path_card(item: dict[str, Any]) -> str:
     step: IndexPathStep = item["step"]
     run = item["run"]
@@ -2953,9 +2976,15 @@ def _learning_path_card(item: dict[str, Any]) -> str:
     if run is None:
         status = '<span class="status">Not run yet</span>'
     elif item["completed"]:
+        outcome_review = (
+            '<p class="muted">Add one Prediction outcome while reviewing.</p>'
+            if item["evidence_required"] and int(item["learner_predictions"]) > int(item["learner_outcomes"])
+            else ""
+        )
         status = (
             f'<span class="status">Done{escape(_learning_path_evidence_suffix(item))}</span>'
             f'<p class="muted">Latest: <a href="{escape(str(run["report"]))}">{escape(str(run["name"]))}</a></p>'
+            f"{outcome_review}"
         )
     elif int(item["observation_markers"]) > 0 and int(item["learner_predictions"]) == 0:
         status = (

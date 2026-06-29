@@ -728,7 +728,8 @@ class LoggingTests(unittest.TestCase):
             index = write_outputs_index(temp_dir)
             html = index.read_text(encoding="utf-8")
 
-            self.assertIn("1/11 steps complete. Next: 2. Disturb and tune", html)
+            self.assertIn("1/11 steps complete. Evidence pending: 1 hands-on step(s).", html)
+            self.assertIn("Next: 2. Disturb and tune", html)
             self.assertIn("Needs observation", html)
             self.assertIn("Add one Mark observation entry before moving on.", html)
             self.assertIn("20260627_150100_lab01_interactive/report.html", html)
@@ -752,7 +753,8 @@ class LoggingTests(unittest.TestCase):
             )
 
             html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
-            self.assertIn("1/11 steps complete. Next: 2. Disturb and tune", html)
+            self.assertIn("1/11 steps complete. Evidence pending: 1 hands-on step(s).", html)
+            self.assertIn("Next: 2. Disturb and tune", html)
             self.assertIn("Needs prediction (1 observation, 1 note)", html)
             self.assertIn("Add one Prediction in Mark observation before moving on.", html)
             self.assertIn("1 observation, 0 predictions, 1 note", html)
@@ -761,6 +763,29 @@ class LoggingTests(unittest.TestCase):
                 html,
             )
             self.assertIn("Latest: Note: The mass settled faster after damping changed.", html)
+
+            (interactive / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "question": "Question: demo?",
+                                "prediction": "More damping should settle faster.",
+                                "note": "The mass settled faster after damping changed.",
+                            },
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
+            self.assertIn("2/11 steps complete. Outcome review pending: 1 hands-on step(s).", html)
+            self.assertIn("Next: 3. Close the loop", html)
+            self.assertIn("Done (1 observation, 1 prediction, 1 note)", html)
+            self.assertIn("Add one Prediction outcome while reviewing.", html)
 
             (interactive / "interaction_events.json").write_text(
                 json.dumps(

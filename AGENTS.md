@@ -137,6 +137,7 @@ Implemented and verified:
 - Run reports show an evidence review cue that counts review-ready prediction-observation pairs and incomplete markers
 - Run reports generate `worksheet.md` review artifacts with prediction outcomes, notes, live status, key parameters, priority plot review prompts, checklist prompts, suggested next experiments, and comparison batch commands
 - Outputs index learning path cards include evidence status, latest evidence summaries, latest report/worksheet/priority-plot/replay links, and ready-to-run or repeat commands for each course step
+- Outputs index learning path summary flags evidence-pending and outcome-review-pending hands-on steps
 - Outputs index learning path cards show prediction/compare and watch cues before each ready-to-run or repeat command
 - Outputs index progress snapshot includes an evidence quality card with prediction outcome coverage and outcome mix
 - Outputs index run table summarizes observation, prediction, outcome, and learner note evidence per saved run
