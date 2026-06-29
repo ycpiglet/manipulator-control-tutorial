@@ -118,6 +118,8 @@ class BatchTests(unittest.TestCase):
             self.assertIn("Open report", report_html)
             self.assertIn("Open position.png", report_html)
             self.assertIn('href="demo_scenario/plots/position.png"', report_html)
+            self.assertIn("Changed from baseline", report_html)
+            self.assertIn("Baseline reference", report_html)
             self.assertIn("max abs position", report_html)
             self.assertIn("Parameter Differences", report_html)
             self.assertIn("Plot Previews", report_html)
@@ -251,6 +253,8 @@ class BatchTests(unittest.TestCase):
                 "python -m mclab run lab02 --config configs/lab02_pid/default.yaml --headless --plot --plots essential",
                 report_html,
             )
+            self.assertIn("Changed from baseline", report_html)
+            self.assertIn("controller.kp", report_html)
             self.assertIn("baseline</strong> has the least overshoot", report_html)
             self.assertIn("high gain</strong> overshoots most", report_html)
             self.assertIn("Metric Highlights", report_html)
@@ -289,6 +293,17 @@ class BatchTests(unittest.TestCase):
         )
 
         self.assertEqual(selected, ("position.png", "run/plots/position.png"))
+
+    def test_scenario_change_summary_compares_against_baseline(self) -> None:
+        html = batch._scenario_change_summary(
+            {"config": {"controller": {"kp": 120.0, "kd": 0.0}}},
+            {"controller": {"kp": 60.0, "kd": 12.0}},
+        )
+
+        self.assertIn("Changed from baseline", html)
+        self.assertIn("controller.kp", html)
+        self.assertIn("60", html)
+        self.assertIn("120", html)
 
 
 if __name__ == "__main__":

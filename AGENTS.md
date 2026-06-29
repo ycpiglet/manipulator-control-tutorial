@@ -69,6 +69,7 @@ Implemented and verified:
 - Batch scenario cards include per-config prediction, reflection question, and watch cues from the run guides
 - Batch reports include whole-batch and per-scenario reproduce commands for learner handoff
 - Batch scenario cards include run-report and priority-plot quick links when plots are available
+- Batch scenario cards summarize the first few YAML changes from the baseline scenario
 - Interactive `MCLab Interaction` quick presets, value previews, and per-slider step buttons for representative damping, PID, 2DOF reach, Panda reach, and virtual wall parameter sets
 - Learner menu preset labels for interactive cards, including preset-name search
 - Learner menu Explore filters for hands-on, comparison, PID, 2DOF, Panda, wall, and singularity scenario discovery

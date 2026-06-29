@@ -485,7 +485,8 @@ def _render_batch_report(output: Path, batch_name: str, guide: BatchGuide, rows:
     question_items = "\n".join(f"<li>{escape(question)}</li>" for question in guide.questions)
     next_experiments = _next_experiments(guide)
     reproduce_commands = _reproduce_commands(batch_name, rows)
-    scenario_cards = "\n".join(_scenario_card(row, metric_keys) for row in rows)
+    baseline_config = rows[0].get("config", {}) if rows else {}
+    scenario_cards = "\n".join(_scenario_card(row, metric_keys, baseline_config=baseline_config) for row in rows)
     comparison_takeaways = _comparison_takeaways(rows, metric_keys)
     metric_highlights = _metric_highlights(rows, metric_keys)
     baseline_changes = _baseline_metric_changes(rows, metric_keys)
@@ -605,6 +606,10 @@ def _render_batch_report(output: Path, batch_name: str, guide: BatchGuide, rows:
       padding: 4px 8px;
       background: #f8fafc;
       text-decoration: none;
+    }}
+    .change-item {{
+      display: block;
+      margin-top: 3px;
     }}
     .command {{
       display: block;
@@ -841,7 +846,7 @@ def _all_batch_row(row: dict[str, Any]) -> str:
     )
 
 
-def _scenario_card(row: dict[str, Any], metric_keys: list[str]) -> str:
+def _scenario_card(row: dict[str, Any], metric_keys: list[str], baseline_config: dict[str, Any] | None = None) -> str:
     summary = row.get("summary", {})
     metrics = "\n".join(
         (
@@ -858,16 +863,55 @@ def _scenario_card(row: dict[str, Any], metric_keys: list[str]) -> str:
     learning_cues = _scenario_learning_cues(row)
     command = _scenario_run_command(row)
     quick_links = _scenario_quick_links(row)
+    changes = _scenario_change_summary(row, baseline_config)
     return (
         '<article class="scenario">'
         f'<h3><a href="{escape(str(row["report"]))}">{escape(str(row["label"]))}</a></h3>'
         f'<p class="muted">{escape(str(row["config_path"]))}</p>'
         f"{quick_links}"
+        f"{changes}"
         f"{learning_cues}"
         f'<code class="command">{escape(command)}</code>'
         f"{metrics}"
         "</article>"
     )
+
+
+def _scenario_change_summary(
+    row: dict[str, Any],
+    baseline_config: dict[str, Any] | None,
+    *,
+    max_items: int = 4,
+) -> str:
+    if baseline_config is None:
+        return ""
+    baseline = _flatten_config(baseline_config)
+    current = _flatten_config(row.get("config", {}))
+    if not baseline and not current:
+        return ""
+
+    diffs = [
+        key
+        for key in sorted(set(baseline) | set(current))
+        if _normalized_config_value(baseline.get(key)) != _normalized_config_value(current.get(key))
+    ]
+    if not diffs:
+        body = '<span class="muted">Baseline reference</span>'
+    else:
+        visible = diffs[:max_items]
+        body = "".join(
+            (
+                '<span class="change-item">'
+                f"{escape(key)}: {escape(_format_value(baseline.get(key)))} -&gt; "
+                f"{escape(_format_value(current.get(key)))}"
+                "</span>"
+            )
+            for key in visible
+        )
+        hidden_count = len(diffs) - len(visible)
+        if hidden_count > 0:
+            body += f'<span class="muted change-item">+ {hidden_count} more in Parameter Differences</span>'
+    return '<div class="cue"><strong>Changed from baseline</strong>' + body + "</div>"
 
 
 def _scenario_quick_links(row: dict[str, Any]) -> str:
