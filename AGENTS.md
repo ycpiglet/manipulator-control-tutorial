@@ -87,12 +87,13 @@ Implemented and verified:
 - Interactive `MCLab Interaction` panel and run reports show a `Viewer legend` for visible target/current/force/singularity/wall markers
 - Learner menu scenario cards include a `Viewer` marker legend and marker-name search support
 - Learner menu scenario cards include a `Controls` summary of actual buttons, sliders, presets, pause/step, reset, and observation controls
-- Learner menu scenario cards include a `Latest evidence` summary from the latest observation marker prediction, note, and live status
+- Learner menu scenario cards include a `Latest evidence` summary from the latest observation marker prediction, outcome, note, and live status
 - Interactive `Playback speed` slider controls realtime viewer pacing from slow-motion to faster skim
 - Interactive `Pause / Resume` button pauses physics stepping and logging while keeping viewer and sliders responsive
 - Interactive `Step once` button advances exactly one physics step while staying paused for frame-by-frame observation
 - Interactive `Reset plant` button restores mass/arm/robot state while preserving current slider and preset values for repeated observations
 - Interactive `Use live status` button copies current live dashboard values into the observation note before `Mark observation`
+- Interactive `Mark observation` saves an optional prediction outcome such as Matched, Partly matched, or Surprised
 - Interactive runs save `learner_snapshot.json` and a report `Learner Snapshot` section with final slider, live status, playback, and nudge state
 - Interactive runs save replayable `learner_tuned_config.yaml` files and a report `Replay Tuned Config` section
 - Learner menu scenario cards enable `Replay` only when the latest run has `learner_tuned_config.yaml`
@@ -124,11 +125,11 @@ Implemented and verified:
 - Run reports include a relevant comparison batch command for the current lab or Panda wall/reach mode
 - Observation markers capture the active learning question, learner predictions, evidence prompt, learner notes, changed sliders, full slider snapshots, and live status snapshots
 - Run reports show hands-on evidence completion status for interactive runs
-- Run reports summarize observation marker questions, predictions, learner notes, and prediction-review prompts
+- Run reports summarize observation marker questions, predictions, prediction outcomes, learner notes, and prediction-review prompts
 - Run reports show an evidence review cue that counts review-ready prediction-observation pairs and incomplete markers
 - Outputs index learning path cards include evidence status plus ready-to-run or repeat commands for each course step
 - Outputs index run table summarizes observation, prediction, and learner note evidence per saved run
-- Outputs index run table shows the latest observation marker prediction, note, and live status summary per saved run
+- Outputs index run table shows the latest observation marker prediction, outcome, note, and live status summary per saved run
 - Outputs index run table links replayable `learner_tuned_config.yaml` files when available
 - Outputs index run table links directly to each run's prioritized plot images
 - Run reports show configured preset cards and summarize learner actions, latest slider values, preset choices, observation markers, and raw interaction events

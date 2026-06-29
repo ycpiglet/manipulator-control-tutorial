@@ -1020,6 +1020,7 @@ class LearnerMenuTests(unittest.TestCase):
                             "name": "observation",
                             "value": {
                                 "prediction": "The response should overshoot.",
+                                "outcome": "Matched",
                                 "note": "Saw overshoot in the position plot.",
                                 "status": {"Position [m]": "0.125", "Energy [J]": "0.040"},
                             },
@@ -1034,6 +1035,7 @@ class LearnerMenuTests(unittest.TestCase):
 
             self.assertIn("Latest evidence:", text)
             self.assertIn("Prediction: The response should overshoot.", text)
+            self.assertIn("Outcome: Matched", text)
             self.assertIn("Note: Saw overshoot in the position plot.", text)
             self.assertIn("Status: Position [m]=0.125", text)
             self.assertIn(text, lesson)

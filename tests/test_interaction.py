@@ -482,6 +482,7 @@ class KeyForcePulseTests(unittest.TestCase):
             status=status.snapshot(),
             question="Question: Which gain gives the cleanest response?",
             prediction="Kp 35 should reduce error without making force noisy.",
+            outcome="Matched",
             note="Kp 35 reduced error without visible jitter.",
         )
 
@@ -490,6 +491,7 @@ class KeyForcePulseTests(unittest.TestCase):
             {
                 "question": "Question: Which gain gives the cleanest response?",
                 "prediction": "Kp 35 should reduce error without making force noisy.",
+                "outcome": "Matched",
                 "note": "Kp 35 reduced error without visible jitter.",
                 "changed_sliders": {"kp": 35.0},
                 "sliders": {"kp": 35.0},

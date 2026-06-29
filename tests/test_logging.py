@@ -81,6 +81,7 @@ class LoggingTests(unittest.TestCase):
                         "value": {
                             "question": "Question: Which slider change made the response easiest to explain?",
                             "prediction": "Higher stiffness should create a sharper force peak.",
+                            "outcome": "Matched",
                             "evidence_prompt": "Evidence to capture: position, force, and total energy.",
                             "note": "Higher stiffness made the force spike easier to see.",
                             "changed_sliders": {"stiffness": 80.0},
@@ -177,11 +178,14 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Predictions saved", html)
             self.assertIn("Observation notes", html)
             self.assertIn("Latest observation", html)
+            self.assertIn("Latest outcome", html)
+            self.assertIn("Matched", html)
             self.assertIn("Evidence to compare", html)
             self.assertIn("Evidence Review Cue", html)
             self.assertIn("Review-ready pairs", html)
             self.assertIn("Prediction-only markers", html)
             self.assertIn("Observation-only markers", html)
+            self.assertIn("Outcome judgments", html)
             self.assertIn("Decide whether each prediction matched, partially matched, or surprised you.", html)
             self.assertIn("Latest prediction:", html)
             self.assertIn("Latest note:", html)
@@ -306,6 +310,7 @@ class LoggingTests(unittest.TestCase):
                             "label": "Mark observation",
                             "value": {
                                 "prediction": "More damping should settle faster.",
+                                "outcome": "Partly matched",
                                 "note": "The mass settled after the pulse.",
                             },
                         }
@@ -317,6 +322,8 @@ class LoggingTests(unittest.TestCase):
             html = write_run_report(output).read_text(encoding="utf-8")
             self.assertIn("Done for learning path", html)
             self.assertIn("at least one Mark observation entry with a prediction", html)
+            self.assertIn("Prediction outcome", html)
+            self.assertIn("Partly matched", html)
 
     def test_run_report_includes_saved_plot_images(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -373,7 +380,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Control Surface", html)
             self.assertIn("MCLab Interaction window", html)
             self.assertIn("Sliders with Changed values summary", html)
-            self.assertIn("Prediction, Use live status, Mark observation", html)
+            self.assertIn("Prediction, outcome, Use live status, Mark observation", html)
             self.assertIn("Damped PD", html)
             self.assertIn("Aggressive PID", html)
             self.assertIn("<span>kp</span>", html)
@@ -743,6 +750,7 @@ class LoggingTests(unittest.TestCase):
                             "name": "observation",
                             "value": {
                                 "prediction": "Higher damping should reduce overshoot.",
+                                "outcome": "Surprised",
                                 "note": "The trace settled faster after the preset.",
                                 "status": {
                                     "Error [m]": 0.0123456,
@@ -763,6 +771,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("2 observations, 2 predictions, 2 notes", html)
             self.assertIn(
                 "Latest: Prediction: Higher damping should reduce overshoot.; "
+                "Outcome: Surprised; "
                 "Note: The trace settled faster after the preset.; "
                 "Status: Error [m]=0.0123456, Control [N]=4.2, Mode=observe",
                 html,

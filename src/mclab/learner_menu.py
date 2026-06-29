@@ -1086,9 +1086,12 @@ def action_latest_evidence_text(
     parts: list[str] = []
     prediction = str(value.get("prediction") or "").strip()
     note = str(value.get("note") or "").strip()
+    outcome = str(value.get("outcome") or "").strip()
     status = value.get("status")
     if prediction:
         parts.append(f"Prediction: {_short_text(prediction)}")
+    if outcome:
+        parts.append(f"Outcome: {_short_text(outcome, 40)}")
     if note:
         parts.append(f"Note: {_short_text(note)}")
     if isinstance(status, dict) and status:

@@ -1335,7 +1335,7 @@ def _control_surface_items(config: dict[str, Any]) -> list[tuple[str, str]]:
     if bool(interaction.get("reset_plant", interaction.get("reset_experiment", panel_enabled))):
         items.append(("Reset", "Reset plant"))
     if panel_enabled:
-        items.append(("Evidence", "Prediction, Use live status, Mark observation"))
+        items.append(("Evidence", "Prediction, outcome, Use live status, Mark observation"))
     if not items:
         return [
             ("Mode", "Auto run"),
@@ -2066,17 +2066,21 @@ def _observation_review_prompt(markers: list[dict[str, Any]]) -> str:
 def _prediction_review_prompt(markers: list[dict[str, Any]]) -> str:
     predictions: list[str] = []
     notes: list[str] = []
+    outcomes: list[str] = []
     evidence_prompts: list[str] = []
     for marker in markers:
         payload = marker.get("value")
         value = payload if isinstance(payload, dict) else {}
         prediction = str(value.get("prediction") or "").strip()
         note = str(value.get("note") or "").strip()
+        outcome = str(value.get("outcome") or "").strip()
         evidence_prompt = str(value.get("evidence_prompt") or "").strip()
         if prediction:
             predictions.append(prediction)
         if note:
             notes.append(note)
+        if outcome:
+            outcomes.append(outcome)
         if evidence_prompt and evidence_prompt not in evidence_prompts:
             evidence_prompts.append(evidence_prompt)
     if not predictions:
@@ -2089,6 +2093,8 @@ def _prediction_review_prompt(markers: list[dict[str, Any]]) -> str:
     ]
     if notes:
         items.append(("Latest observation", notes[-1]))
+    if outcomes:
+        items.append(("Latest outcome", outcomes[-1]))
     if evidence_prompts:
         items.append(("Evidence to compare", evidence_prompts[-1]))
     return _action_card(
@@ -2103,11 +2109,15 @@ def _evidence_review_cue(markers: list[dict[str, Any]]) -> str:
     prediction_only = 0
     note_only = 0
     missing_both = 0
+    outcome_judgments = 0
     for marker in markers:
         payload = marker.get("value")
         value = payload if isinstance(payload, dict) else {}
         has_prediction = bool(str(value.get("prediction") or "").strip())
         has_note = bool(str(value.get("note") or "").strip())
+        has_outcome = bool(str(value.get("outcome") or "").strip())
+        if has_outcome:
+            outcome_judgments += 1
         if has_prediction and has_note:
             ready_pairs += 1
         elif has_prediction:
@@ -2135,6 +2145,7 @@ def _evidence_review_cue(markers: list[dict[str, Any]]) -> str:
                 ("Prediction-only markers", prediction_only),
                 ("Observation-only markers", note_only),
                 ("Empty markers", missing_both),
+                ("Outcome judgments", outcome_judgments),
                 ("Next review step", next_step),
             )
         ),
@@ -2146,12 +2157,13 @@ def _observation_marker_card(event: dict[str, Any], marker_index: int) -> str:
     value = payload if isinstance(payload, dict) else {}
     question = _marker_text_group("Question", value.get("question"))
     prediction = _marker_text_group("Prediction", value.get("prediction"))
+    outcome = _marker_text_group("Prediction outcome", value.get("outcome"))
     evidence_prompt = _marker_text_group("Evidence prompt", value.get("evidence_prompt"))
     note = _marker_text_group("Learner note", value.get("note"))
     changed_sliders = _marker_value_group("Changed sliders", value.get("changed_sliders"))
     sliders = _marker_value_group("Sliders", value.get("sliders"))
     status = _marker_value_group("Live status", value.get("status"))
-    body = question + prediction + evidence_prompt + note + changed_sliders + sliders + status
+    body = question + prediction + outcome + evidence_prompt + note + changed_sliders + sliders + status
     if not body:
         body = '<p class="empty">No slider or status snapshot was saved for this marker.</p>'
     return (
@@ -2876,9 +2888,12 @@ def _latest_observation_evidence_from_events(events: list[dict[str, Any]]) -> st
         parts: list[str] = []
         prediction = str(value.get("prediction") or "").strip()
         note = str(value.get("note") or "").strip()
+        outcome = str(value.get("outcome") or "").strip()
         status = value.get("status")
         if prediction:
             parts.append(f"Prediction: {_short_evidence_text(prediction)}")
+        if outcome:
+            parts.append(f"Outcome: {_short_evidence_text(outcome, max_length=40)}")
         if note:
             parts.append(f"Note: {_short_evidence_text(note)}")
         if isinstance(status, dict):

@@ -23,6 +23,13 @@ INTERACTION_PANEL_MAX_WIDTH = 560
 INTERACTION_PANEL_MAX_HEIGHT = 820
 INTERACTION_PANEL_MIN_HEIGHT = 320
 INTERACTION_PANEL_SCREEN_MARGIN = 120
+PREDICTION_OUTCOME_UNJUDGED = "Not judged yet"
+PREDICTION_OUTCOME_CHOICES = (
+    PREDICTION_OUTCOME_UNJUDGED,
+    "Matched",
+    "Partly matched",
+    "Surprised",
+)
 
 
 @dataclass(frozen=True)
@@ -97,6 +104,7 @@ class InteractionLog:
         status: dict[str, Any] | None = None,
         question: str = "",
         prediction: str = "",
+        outcome: str = "",
         note: str = "",
         evidence_prompt: str = "",
     ) -> dict[str, Any]:
@@ -105,6 +113,8 @@ class InteractionLog:
             value["question"] = question.strip()
         if prediction.strip():
             value["prediction"] = prediction.strip()
+        if outcome.strip():
+            value["outcome"] = outcome.strip()
         if evidence_prompt.strip():
             value["evidence_prompt"] = evidence_prompt.strip()
         if note.strip():
@@ -905,6 +915,7 @@ def maybe_start_interaction_panel(
                     value="Learning path evidence: enter a prediction, then mark one observation."
                 )
                 marker_prediction = tk.StringVar(value="")
+                marker_outcome = tk.StringVar(value=PREDICTION_OUTCOME_UNJUDGED)
                 marker_note = tk.StringVar(value="")
                 marker_prompt = observation_prompt_for_guide(guide)
 
@@ -925,10 +936,12 @@ def maybe_start_interaction_panel(
                         status=status.snapshot() if status is not None else None,
                         question=question_for_guide(guide),
                         prediction=prediction,
+                        outcome=_prediction_outcome_value(marker_outcome.get()),
                         note=marker_note.get(),
                         evidence_prompt=marker_prompt,
                     )
                     marker_prediction.set("")
+                    marker_outcome.set(PREDICTION_OUTCOME_UNJUDGED)
                     marker_note.set("")
                     marker_status.set(_observation_marker_status_message(event_log, prediction))
 
@@ -948,6 +961,18 @@ def maybe_start_interaction_panel(
                     sticky="w",
                 )
                 tk.Entry(marker_frame, textvariable=marker_prediction, width=40).grid(
+                    row=marker_row,
+                    column=1,
+                    sticky="ew",
+                    padx=(12, 0),
+                )
+                marker_row += 1
+                tk.Label(marker_frame, text="Prediction outcome").grid(
+                    row=marker_row,
+                    column=0,
+                    sticky="w",
+                )
+                tk.OptionMenu(marker_frame, marker_outcome, *PREDICTION_OUTCOME_CHOICES).grid(
                     row=marker_row,
                     column=1,
                     sticky="ew",
@@ -1082,6 +1107,13 @@ def _observation_marker_status_message(event_log: InteractionLog, prediction: st
     if prediction.strip():
         return f"Marked observation {count} with prediction - learning path evidence saved."
     return f"Marked observation {count} - add a prediction next time to complete the learning path."
+
+
+def _prediction_outcome_value(value: str) -> str:
+    text = str(value or "").strip()
+    if not text or text == PREDICTION_OUTCOME_UNJUDGED:
+        return ""
+    return text
 
 
 def _live_status_observation_note(status: LiveStatus | None) -> str:
