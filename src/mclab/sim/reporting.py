@@ -2804,6 +2804,9 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
       font-size: 12px;
       text-decoration: none;
     }}
+    .path-links {{
+      margin-top: 8px;
+    }}
     th, td {{
       border-bottom: 1px solid #edf0f3;
       padding: 9px 10px;
@@ -2885,6 +2888,7 @@ def _learning_path_item(step: IndexPathStep, runs: list[dict[str, Any]]) -> dict
 def _learning_path_card(item: dict[str, Any]) -> str:
     step: IndexPathStep = item["step"]
     run = item["run"]
+    quick_links = _learning_path_quick_links(run)
     command_label = "Run this step" if run is None else "Repeat this step"
     command = _learning_path_command(step)
     command_block = (
@@ -2917,9 +2921,40 @@ def _learning_path_card(item: dict[str, Any]) -> str:
         f"<strong>{escape(step.title)}</strong>"
         f'<p class="muted">{escape(step.description)}</p>'
         f"{status}"
+        f"{quick_links}"
         f"{command_block}"
         "</article>"
     )
+
+
+def _learning_path_quick_links(run: dict[str, Any] | None) -> str:
+    if run is None:
+        return ""
+    links = [(str(run.get("report") or ""), "Report")]
+    worksheet = run.get("worksheet")
+    if isinstance(worksheet, dict):
+        links.append((str(worksheet.get("href") or ""), str(worksheet.get("label") or "Worksheet")))
+    plots = run.get("plots")
+    if isinstance(plots, list):
+        for plot in plots:
+            if not isinstance(plot, dict):
+                continue
+            href = str(plot.get("href") or "")
+            label = str(plot.get("label") or "")
+            if href and label:
+                links.append((href, f"Plot: {label}"))
+                break
+    replay = run.get("replay")
+    if isinstance(replay, dict):
+        links.append((str(replay.get("href") or ""), "Replay tuned"))
+    chips = [
+        f'<a class="plot-chip" href="{escape(href)}">{escape(label)}</a>'
+        for href, label in links
+        if href and label
+    ]
+    if not chips:
+        return ""
+    return '<p class="muted">Latest artifacts</p><div class="plot-links path-links">' + "".join(chips) + "</div>"
 
 
 def _learning_path_evidence_suffix(item: dict[str, Any]) -> str:
