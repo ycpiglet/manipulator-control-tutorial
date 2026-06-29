@@ -124,6 +124,8 @@ class BatchTests(unittest.TestCase):
             self.assertIn("Predict", report_html)
             self.assertIn("Question", report_html)
             self.assertIn("Watch", report_html)
+            self.assertIn("Control surface", report_html)
+            self.assertIn("Auto run; edit YAML before rerunning.", report_html)
             self.assertIn("What baseline motion", report_html)
             self.assertIn("Open report", report_html)
             self.assertIn("Open position.png", report_html)
@@ -291,12 +293,38 @@ class BatchTests(unittest.TestCase):
                 "report": "no_plot/report.html",
                 "plots": {},
                 "summary": {"max_abs_position": 0.2},
+                "config": load_config("configs/lab01_msd/default.yaml"),
             },
             ["max_abs_position"],
         )
 
         self.assertIn("Open report", html)
         self.assertIn("No plot link saved", html)
+        self.assertIn("Control surface", html)
+        self.assertIn("Auto run; edit YAML before rerunning.", html)
+
+    def test_scenario_card_shows_interactive_control_surface(self) -> None:
+        html = batch._scenario_card(
+            {
+                "label": "interactive",
+                "lab_name": "lab01",
+                "config_path": "configs/lab01_msd/interactive_pull.yaml",
+                "report": "interactive/report.html",
+                "plots": {},
+                "summary": {"max_abs_position": 0.2},
+                "config": load_config("configs/lab01_msd/interactive_pull.yaml"),
+            },
+            ["max_abs_position"],
+        )
+
+        self.assertIn("Control surface", html)
+        self.assertIn("MCLab Interaction window", html)
+        self.assertIn("Pull/Push buttons and A/D keys", html)
+        self.assertIn("live sliders with Changed values", html)
+        self.assertIn("quick presets (Lightly damped, Heavy damping, Stiff spring)", html)
+        self.assertIn("Pause/Step", html)
+        self.assertIn("Reset plant", html)
+        self.assertIn("Mark observation", html)
 
     def test_priority_plot_link_uses_index_plot_priority(self) -> None:
         selected = batch._priority_plot_link(

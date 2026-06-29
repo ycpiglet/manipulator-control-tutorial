@@ -79,6 +79,8 @@ Implemented and verified:
 - Batch scenario cards include run-report and priority-plot quick links when plots are available
 - Batch scenario cards summarize the first few YAML changes from the baseline scenario
 - Batch scenario cards summarize the largest metric changes from the baseline scenario
+- Batch scenario cards include a `Control surface` cue for available live controls when the scenario is rerun interactively
+- MuJoCo viewer side panels are hidden by default for learner demos and only shown with `--show-viewer-ui` for raw model debugging
 - Interactive `MCLab Interaction` quick presets, value previews, and per-slider step buttons for representative damping, PID, 2DOF reach, Panda reach, and virtual wall parameter sets
 - Interactive `MCLab Interaction` changed-values summary shows slider parameters changed from run start
 - Interactive `MCLab Interaction` panel is scrollable and resizable so dense demos keep observation and live-status controls reachable

@@ -890,6 +890,7 @@ def _scenario_card(
     if not metrics:
         metrics = '<p class="muted">No summary metrics were saved.</p>'
     learning_cues = _scenario_learning_cues(row)
+    control_surface = _scenario_control_surface(row)
     command = _scenario_run_command(row)
     quick_links = _scenario_quick_links(row)
     changes = _scenario_change_summary(row, baseline_config)
@@ -902,6 +903,7 @@ def _scenario_card(
         f"{changes}"
         f"{metric_changes}"
         f"{learning_cues}"
+        f"{control_surface}"
         f'<code class="command">{escape(command)}</code>'
         f"{metrics}"
         "</article>"
@@ -1074,6 +1076,68 @@ def _scenario_learning_cues(row: dict[str, Any]) -> str:
         for label, text in cues
         if text
     )
+
+
+def _scenario_control_surface(row: dict[str, Any]) -> str:
+    summary = _control_surface_summary(row.get("config", {}))
+    if not summary:
+        return ""
+    return (
+        '<div class="cue">'
+        "<strong>Control surface</strong>"
+        f"{escape(summary)}"
+        "</div>"
+    )
+
+
+def _control_surface_summary(config: Any) -> str:
+    if not isinstance(config, dict):
+        return ""
+    interaction = config.get("interaction")
+    if not isinstance(interaction, dict) or not interaction:
+        return "Auto run; edit YAML before rerunning."
+
+    panel_enabled = bool(interaction.get("panel", False))
+    controls: list[str] = []
+    if panel_enabled:
+        controls.append("MCLab Interaction window")
+    if bool(interaction.get("key_force", False)):
+        controls.append("Pull/Push buttons and A/D keys")
+    if bool(interaction.get("target_nudge", False)):
+        controls.append("Target -/+ buttons and A/D keys")
+    if bool(interaction.get("live_tuning", False)):
+        controls.append("live sliders with Changed values")
+    preset_labels = _configured_preset_labels(config)
+    if preset_labels:
+        controls.append(f"quick presets ({', '.join(preset_labels)})")
+    if bool(interaction.get("playback_speed", panel_enabled)):
+        controls.append("playback speed")
+    if bool(interaction.get("pause_resume", interaction.get("pause", panel_enabled))):
+        controls.append("Pause/Step")
+    if bool(interaction.get("reset_plant", interaction.get("reset_experiment", panel_enabled))):
+        controls.append("Reset plant")
+    if panel_enabled:
+        controls.append("Mark observation")
+    if not controls:
+        return "Auto run; edit YAML before rerunning."
+    return "; ".join(dict.fromkeys(controls)) + "."
+
+
+def _configured_preset_labels(config: dict[str, Any]) -> list[str]:
+    interaction = config.get("interaction")
+    if not isinstance(interaction, dict):
+        return []
+    presets = interaction.get("tuning_presets")
+    if not isinstance(presets, list):
+        return []
+    labels: list[str] = []
+    for index, preset in enumerate(presets, start=1):
+        if not isinstance(preset, dict):
+            continue
+        label = str(preset.get("label") or preset.get("name") or f"Preset {index}").strip()
+        if label:
+            labels.append(label)
+    return labels
 
 
 def _next_experiments(guide: BatchGuide) -> str:
