@@ -19,6 +19,7 @@ from mclab.sim.interaction import (  # noqa: E402
     _panel_guide_rows,
     _panel_guide_title,
     _observation_marker_count,
+    _observation_marker_status_message,
     tuning_presets_from_config,
 )
 from mclab.config import load_config  # noqa: E402
@@ -273,6 +274,21 @@ class KeyForcePulseTests(unittest.TestCase):
         )
         self.assertEqual(log.events()[-1]["value"]["prediction"], payload["prediction"])
         self.assertEqual(log.events()[-1]["value"]["evidence_prompt"], payload["evidence_prompt"])
+
+    def test_observation_marker_status_message_reports_learning_path_evidence(self) -> None:
+        log = InteractionLog()
+
+        log.mark_observation(note="The response settled.")
+        self.assertEqual(
+            _observation_marker_status_message(log, ""),
+            "Marked observation 1 - add a prediction next time to complete the learning path.",
+        )
+
+        log.mark_observation(prediction="More damping should settle faster.")
+        self.assertEqual(
+            _observation_marker_status_message(log, "More damping should settle faster."),
+            "Marked observation 2 with prediction - learning path evidence saved.",
+        )
 
     def test_live_status_formats_dashboard_values(self) -> None:
         status = LiveStatus([StatusSpec("position", "Position [m]"), StatusSpec("mode", "Mode")])

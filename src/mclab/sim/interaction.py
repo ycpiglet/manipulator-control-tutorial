@@ -542,18 +542,19 @@ def maybe_start_interaction_panel(
                 marker_prompt = observation_prompt_for_guide(guide)
 
                 def mark_observation() -> None:
+                    prediction = marker_prediction.get()
                     event_log.mark_observation(
                         changed_sliders=tuning.changed_values() if tuning is not None else None,
                         sliders=tuning.snapshot() if tuning is not None else None,
                         status=status.snapshot() if status is not None else None,
                         question=question_for_guide(guide),
-                        prediction=marker_prediction.get(),
+                        prediction=prediction,
                         note=marker_note.get(),
                         evidence_prompt=marker_prompt,
                     )
                     marker_prediction.set("")
                     marker_note.set("")
-                    marker_status.set(f"Marked observation {_observation_marker_count(event_log)}")
+                    marker_status.set(_observation_marker_status_message(event_log, prediction))
 
                 marker_row = 0
                 if marker_prompt:
@@ -565,7 +566,7 @@ def maybe_start_interaction_panel(
                         wraplength=430,
                     ).grid(row=marker_row, column=0, columnspan=2, sticky="w", pady=(0, 6))
                     marker_row += 1
-                tk.Label(marker_frame, text="Prediction").grid(
+                tk.Label(marker_frame, text="Prediction (required)").grid(
                     row=marker_row,
                     column=0,
                     sticky="w",
@@ -672,6 +673,13 @@ def _observation_marker_count(event_log: InteractionLog) -> int:
         if str(event.get("kind", "")).lower() == "marker"
         and str(event.get("name", "")).lower() == "observation"
     )
+
+
+def _observation_marker_status_message(event_log: InteractionLog, prediction: str) -> str:
+    count = _observation_marker_count(event_log)
+    if prediction.strip():
+        return f"Marked observation {count} with prediction - learning path evidence saved."
+    return f"Marked observation {count} - add a prediction next time to complete the learning path."
 
 
 def _format_status_value(value: Any) -> str:

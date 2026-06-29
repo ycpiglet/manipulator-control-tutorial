@@ -74,6 +74,7 @@ Implemented and verified:
 - Learner menu scenario value previews for key YAML parameters, searchable from the menu
 - Learner menu, interaction panel, and run report reflection questions, searchable from the menu
 - Learner menu, interaction panel, and run report prediction prompts, searchable from the menu
+- Interaction panel marks whether an observation includes prediction-bearing learning-path evidence
 - Learner menu scenario follow-up guidance and `Next` buttons for guided comparison flow
 - Learner menu scenario-to-batch comparison guidance and `Compare` buttons
 - Learner menu batch readiness checks that disable unavailable comparison launches
