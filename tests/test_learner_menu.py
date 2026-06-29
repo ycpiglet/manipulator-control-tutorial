@@ -119,6 +119,8 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF early DLS damping"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF late DLS damping"), labels)
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF low-torque DLS"), labels)
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF high-torque DLS"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF interactive"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "Step profile"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "Minimum jerk"), labels)
@@ -581,6 +583,7 @@ class LearnerMenuTests(unittest.TestCase):
         by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
         lab01_interactive = by_label[("Lab01 Mass-Spring-Damper", "Interactive")]
         lab03_dls = by_label[("Lab03 2DOF Arm and Trajectories", "2DOF DLS singularity")]
+        lab03_low_torque = by_label[("Lab03 2DOF Arm and Trajectories", "2DOF low-torque DLS")]
         lab04_wall = by_label[("Lab04 Panda Manipulator", "Virtual wall")]
 
         self.assertIn("Hands-on", action_badges(lab01_interactive))
@@ -590,6 +593,11 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("2DOF", action_badges(lab03_dls))
         self.assertIn("Singularity", action_badges(lab03_dls))
         self.assertIn("Badges: Hands-on, Compare, 2DOF", lesson_text(lab03_dls))
+
+        self.assertIn("Compare", action_badges(lab03_low_torque))
+        self.assertIn("Singularity", action_badges(lab03_low_torque))
+        self.assertIn("Tuning", action_badges(lab03_low_torque))
+        self.assertIn("Badges: Compare, 2DOF", lesson_text(lab03_low_torque))
 
         self.assertIn("Panda", action_badges(lab04_wall))
         self.assertIn("Wall", action_badges(lab04_wall))
@@ -621,6 +629,10 @@ class LearnerMenuTests(unittest.TestCase):
             action_compare_batch(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF DLS singularity")]).batch_name,
             "lab03_2dof_compare",
         )
+        self.assertEqual(
+            action_compare_batch(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF low-torque DLS")]).batch_name,
+            "lab03_2dof_compare",
+        )
         self.assertEqual(action_compare_batch(by_label[("Lab04 Panda Manipulator", "Virtual wall")]).batch_name, "lab04_wall_compare")
         self.assertEqual(
             action_compare_batch(by_label[("Lab04 Panda Manipulator", "Cartesian reach")]).batch_name,
@@ -649,6 +661,9 @@ class LearnerMenuTests(unittest.TestCase):
         interactive = config_value_preview(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF interactive")])
         self.assertIn("target_xy=", interactive)
         self.assertIn("tracking_controller.torque_limit=", interactive)
+
+        low_torque = config_value_preview(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF low-torque DLS")])
+        self.assertIn("tracking_controller.torque_limit=", low_torque)
 
     def test_filter_menu_actions_matches_search_terms(self) -> None:
         labels = {action.label for action in filter_menu_actions("pid noise")}
@@ -684,6 +699,10 @@ class LearnerMenuTests(unittest.TestCase):
 
         prediction_labels = {(action.group, action.label) for action in filter_menu_actions("prediction live target")}
         self.assertIn(("Lab02 PID Control", "Interactive"), prediction_labels)
+
+        torque_labels = {(action.group, action.label) for action in filter_menu_actions("torque limit")}
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF low-torque DLS"), torque_labels)
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF high-torque DLS"), torque_labels)
 
     def test_experience_filters_group_scenarios_by_learning_mode(self) -> None:
         filter_keys = {filter_option.key for filter_option in EXPERIENCE_FILTERS}
@@ -734,6 +753,8 @@ class LearnerMenuTests(unittest.TestCase):
                 "2DOF condition-aware DLS",
                 "2DOF early DLS damping",
                 "2DOF late DLS damping",
+                "2DOF low-torque DLS",
+                "2DOF high-torque DLS",
             },
         )
 
@@ -773,6 +794,10 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(
             "condition_damping_full",
             parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF early DLS damping")]),
+        )
+        self.assertIn(
+            "tracking_controller.torque_limit",
+            parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF low-torque DLS")]),
         )
         self.assertIn(
             "cartesian_target.gain",

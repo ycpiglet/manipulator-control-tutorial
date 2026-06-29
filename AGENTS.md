@@ -58,6 +58,7 @@ Implemented and verified:
 - Lab03 DLS singularity has a one-line `run_lab03_dls_interactive.cmd` launcher
 - Lab03 condition-aware DLS supports live schedule presets and a one-line `run_lab03_condition_dls_interactive.cmd` launcher
 - Lab03 condition-aware DLS low/high torque-limit comparison configs for actuator-limit lessons
+- Learner menu exposes Lab03 low/high torque-limit DLS scenario cards with compare/search/filter support
 - Lab04 Franka Emika Panda manipulator using MuJoCo Menagerie
 - Lab04 30-second neutral-hold stability check config and report checks
 - Lab04 Cartesian reach with damped-least-squares Jacobian target offsets
