@@ -3004,7 +3004,8 @@ def _learning_path_summary(items: list[dict[str, Any]]) -> str:
     next_step: IndexPathStep = next_item["step"]
     return (
         f"{completed}/{total} steps complete.{evidence_text}{outcome_text} "
-        f"Next: {next_step.title}. Next action: {_learning_path_action_label(next_step)}."
+        f"Next: {next_step.title}. Next action: {_learning_path_action_label(next_step)}. "
+        f"{_learning_path_completion_text(next_step)}"
     )
 
 
@@ -3014,6 +3015,7 @@ def _learning_path_card(item: dict[str, Any]) -> str:
     quick_links = _learning_path_quick_links(run)
     latest_evidence = _learning_path_latest_evidence(run)
     learning_cue = _learning_path_learning_cue(step)
+    completion_text = _learning_path_completion_text(step)
     command_label = "Run this step" if run is None else "Repeat this step"
     command = _learning_path_command(step)
     command_block = (
@@ -3051,6 +3053,7 @@ def _learning_path_card(item: dict[str, Any]) -> str:
         '<article class="path-card">'
         f"<strong>{escape(step.title)}</strong>"
         f'<p class="muted">{escape(step.description)}</p>'
+        f'<p class="muted"><strong>Done when:</strong> {escape(completion_text.removeprefix("Done when:").strip())}</p>'
         f"{learning_cue}"
         f"{status}"
         f"{latest_evidence}"
@@ -3119,6 +3122,14 @@ def _learning_path_action_label(step: IndexPathStep) -> str:
     if lab_name:
         return f"run {lab_name}"
     return "open the saved command"
+
+
+def _learning_path_completion_text(step: IndexPathStep) -> str:
+    if step.batch_name:
+        return "Done when: the comparison report, plots, and worksheet are saved."
+    if _learning_path_requires_evidence(step):
+        return "Done when: save one Mark observation with a Prediction; add the outcome during review."
+    return "Done when: the run report, priority plot, and worksheet are saved."
 
 
 def _learning_path_learning_cue(step: IndexPathStep) -> str:
