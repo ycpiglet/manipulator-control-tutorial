@@ -21,7 +21,7 @@ from mclab.learning_guides import (
     reflection_question_for_context,
     viewer_legend_for_guide,
 )
-from mclab.sim.reporting import INDEX_PLOT_PRIORITY, write_outputs_index
+from mclab.sim.reporting import INDEX_PLOT_PRIORITY, plot_guidance, write_outputs_index
 
 RUN_COMPLETE_PREFIX = "Run complete:"
 BATCH_COMPLETE_PREFIX = "Batch complete:"
@@ -1163,6 +1163,20 @@ def action_plot_text(
     return f"Plots: Latest {latest_plot.name}"
 
 
+def action_plot_review_text(
+    action: MenuAction | BatchMenuAction,
+    outputs_root: Path | None = None,
+) -> str:
+    latest_plot = action_latest_plot(action, outputs_root)
+    if latest_plot is None:
+        return "Plot review: Not available until a plot is saved"
+    guidance = plot_guidance(latest_plot.name)
+    if guidance is None:
+        return "Plot review: Open the latest plot and compare it with the worksheet"
+    title, detail = guidance
+    return f"Plot review: {title} - {detail}"
+
+
 def action_worksheet_text(
     action: MenuAction | BatchMenuAction,
     outputs_root: Path | None = None,
@@ -1859,6 +1873,7 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
         f"{action_evidence_text(action, outputs_root)}\n"
         f"{action_latest_evidence_text(action, outputs_root)}\n"
         f"{action_plot_text(action, outputs_root)}\n"
+        f"{action_plot_review_text(action, outputs_root)}\n"
         f"{action_worksheet_text(action, outputs_root)}\n"
         f"{action_replay_text(action, outputs_root)}\n"
         f"{action_controls_text(action)}\n"
@@ -2829,6 +2844,7 @@ def lesson_text_for_batch(action: BatchMenuAction, outputs_root: Path | None = N
         f"Setup: {readiness.label}{setup_detail}{setup_fix}\n"
         f"{action_history_text(action, outputs_root)}\n"
         f"{action_plot_text(action, outputs_root)}\n"
+        f"{action_plot_review_text(action, outputs_root)}\n"
         f"{action_worksheet_text(action, outputs_root)}\n"
         f"Try: {action.try_this}\n"
         f"Watch: {action.watch}\n"

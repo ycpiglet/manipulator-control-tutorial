@@ -39,6 +39,7 @@ from mclab.learner_menu import (  # noqa: E402
     action_latest_plot,
     action_latest_tuned_config,
     action_latest_worksheet,
+    action_plot_review_text,
     action_plot_text,
     action_readiness,
     action_replay_text,
@@ -982,7 +983,9 @@ class LearnerMenuTests(unittest.TestCase):
             self.assertIn("History: Latest run_lab01", action_history_text(MENU_ACTIONS[0], outputs))
             self.assertEqual(action_latest_evidence_text(MENU_ACTIONS[0], outputs), "Latest evidence: None yet")
             self.assertEqual(action_plot_text(MENU_ACTIONS[0], outputs), "Plots: Latest position.png")
+            self.assertIn("Plot review: Position - Compare actual motion", action_plot_review_text(MENU_ACTIONS[0], outputs))
             self.assertEqual(action_worksheet_text(MENU_ACTIONS[0], outputs), "Worksheet: Latest worksheet.md")
+            self.assertIn("Plot review: Position - Compare actual motion", lesson_text(MENU_ACTIONS[0], outputs))
             self.assertIn("Worksheet: Latest worksheet.md", lesson_text(MENU_ACTIONS[0], outputs))
             self.assertEqual(
                 action_replay_text(MENU_ACTIONS[0], outputs),
@@ -991,6 +994,10 @@ class LearnerMenuTests(unittest.TestCase):
             self.assertIn("Replay: Latest learner_tuned_config.yaml", lesson_text(MENU_ACTIONS[0], outputs))
             self.assertEqual(action_history_text(MENU_ACTIONS[1], outputs), "History: Not run yet")
             self.assertEqual(action_plot_text(MENU_ACTIONS[1], outputs), "Plots: Not saved yet")
+            self.assertEqual(
+                action_plot_review_text(MENU_ACTIONS[1], outputs),
+                "Plot review: Not available until a plot is saved",
+            )
             self.assertIsNone(action_latest_worksheet(MENU_ACTIONS[1], outputs))
             self.assertEqual(action_worksheet_text(MENU_ACTIONS[1], outputs), "Worksheet: Not saved yet")
             self.assertIsNone(action_latest_tuned_config(MENU_ACTIONS[1], outputs))
@@ -1136,7 +1143,9 @@ class LearnerMenuTests(unittest.TestCase):
             self.assertEqual(action_latest_worksheet(lab01_batch, outputs), worksheet)
             self.assertIn("History: Latest batch_lab01", action_history_text(lab01_batch, outputs))
             self.assertEqual(action_plot_text(lab01_batch, outputs), "Plots: Latest error_compare.png")
+            self.assertIn("Plot review: Error - Check how quickly error shrinks", action_plot_review_text(lab01_batch, outputs))
             self.assertEqual(action_worksheet_text(lab01_batch, outputs), "Worksheet: Latest worksheet.md")
+            self.assertIn("Plot review: Error - Check how quickly error shrinks", lesson_text_for_batch(lab01_batch, outputs))
             self.assertIn("Worksheet: Latest worksheet.md", lesson_text_for_batch(lab01_batch, outputs))
             self.assertEqual(action_history_text(lab02_batch, outputs), "History: Not run yet")
 
@@ -1174,6 +1183,7 @@ class LearnerMenuTests(unittest.TestCase):
 
             self.assertIn("History: Not run yet", text_variable.value)
             self.assertIn("Plots: Not saved yet", text_variable.value)
+            self.assertIn("Plot review: Not available until a plot is saved", text_variable.value)
             self.assertIn("Worksheet: Not saved yet", text_variable.value)
             self.assertEqual(report_button.state_calls[-1], ["disabled"])
             self.assertEqual(plot_button.state_calls[-1], ["disabled"])
@@ -1200,6 +1210,7 @@ class LearnerMenuTests(unittest.TestCase):
 
         self.assertIn("History: Latest batch_lab01", text_variable.value)
         self.assertIn("Plots: Latest position_compare.png", text_variable.value)
+        self.assertIn("Plot review: Position - Compare actual motion", text_variable.value)
         self.assertIn("Worksheet: Latest worksheet.md", text_variable.value)
         self.assertEqual(report_button.state_calls[-1], ["!disabled"])
         self.assertEqual(plot_button.state_calls[-1], ["!disabled"])

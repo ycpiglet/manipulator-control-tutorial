@@ -106,6 +106,7 @@ Implemented and verified:
 - Learner menu scenario readiness checks that disable run buttons when config or model assets are missing
 - Learner menu scenario history labels and per-scenario latest-report buttons
 - Learner menu scenario, batch, and learning-path plot buttons that open the latest prioritized plot when one exists
+- Learner menu scenario and batch cards show `Plot review` guidance for the latest prioritized plot
 - Learner menu scenario, batch, and learning-path `Worksheet` buttons that open the latest `worksheet.md` when one exists
 - Learner menu bottom bar includes `Open latest worksheet` for the most recently completed run or batch
 - Learner menu refreshes batch history, report, and plot state after comparison runs complete
