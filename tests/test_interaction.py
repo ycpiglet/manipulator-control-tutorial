@@ -19,6 +19,7 @@ from mclab.sim.interaction import (  # noqa: E402
     StatusSpec,
     TargetOffsetControl,
     TuningPreset,
+    _live_status_observation_note,
     _panel_guide_rows,
     _panel_guide_title,
     _observation_marker_count,
@@ -517,6 +518,25 @@ class KeyForcePulseTests(unittest.TestCase):
         self.assertEqual(snapshot["position"], "1.235")
         self.assertEqual(snapshot["mode"], "tracking")
         self.assertNotIn("ignored", snapshot)
+
+    def test_live_status_observation_note_summarizes_available_values(self) -> None:
+        status = LiveStatus(
+            [
+                StatusSpec("position", "Position [m]"),
+                StatusSpec("force", "Force [N]"),
+                StatusSpec("pending", "Pending value"),
+            ]
+        )
+
+        self.assertEqual(_live_status_observation_note(None), "")
+        self.assertEqual(_live_status_observation_note(status), "")
+
+        status.set_values(position=0.125, force=-3.5)
+
+        self.assertEqual(
+            _live_status_observation_note(status),
+            "Position [m]: 0.125; Force [N]: -3.500",
+        )
 
     def test_learner_snapshot_collects_final_interactive_state(self) -> None:
         log = InteractionLog()

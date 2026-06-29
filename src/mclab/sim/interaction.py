@@ -831,10 +831,21 @@ def maybe_start_interaction_panel(
                 marker_frame = tk.Frame(frame)
                 marker_frame.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(12, 4))
                 marker_frame.columnconfigure(1, weight=1)
-                marker_status = tk.StringVar(value="")
+                marker_status = tk.StringVar(
+                    value="Learning path evidence: enter a prediction, then mark one observation."
+                )
                 marker_prediction = tk.StringVar(value="")
                 marker_note = tk.StringVar(value="")
                 marker_prompt = observation_prompt_for_guide(guide)
+
+                def use_live_status_note() -> None:
+                    note = _live_status_observation_note(status)
+                    if not note:
+                        marker_status.set("No live status values are available yet.")
+                        return
+                    marker_note.set(note)
+                    event_log.record("button", "use_live_status_note", note, label="Use live status")
+                    marker_status.set("Copied live status into the observation note.")
 
                 def mark_observation() -> None:
                     prediction = marker_prediction.get()
@@ -885,17 +896,21 @@ def maybe_start_interaction_panel(
                     padx=(12, 0),
                 )
                 marker_row += 1
-                tk.Button(marker_frame, text="Mark observation", command=mark_observation).grid(
+                marker_buttons = tk.Frame(marker_frame)
+                marker_buttons.grid(row=marker_row, column=0, columnspan=2, sticky="w", pady=(6, 0))
+                tk.Button(marker_buttons, text="Use live status", command=use_live_status_note).pack(
+                    side="left",
+                    padx=(0, 8),
+                )
+                tk.Button(marker_buttons, text="Mark observation", command=mark_observation).pack(
+                    side="left",
+                )
+                marker_row += 1
+                tk.Label(marker_frame, textvariable=marker_status, anchor="w", wraplength=430).grid(
                     row=marker_row,
                     column=0,
-                    sticky="w",
-                    pady=(6, 0),
-                )
-                tk.Label(marker_frame, textvariable=marker_status, anchor="w").grid(
-                    row=marker_row,
-                    column=1,
+                    columnspan=2,
                     sticky="ew",
-                    padx=(12, 0),
                     pady=(6, 0),
                 )
                 row += 1
@@ -975,6 +990,19 @@ def _observation_marker_status_message(event_log: InteractionLog, prediction: st
     if prediction.strip():
         return f"Marked observation {count} with prediction - learning path evidence saved."
     return f"Marked observation {count} - add a prediction next time to complete the learning path."
+
+
+def _live_status_observation_note(status: LiveStatus | None) -> str:
+    if status is None or not status.enabled:
+        return ""
+    snapshot = status.snapshot()
+    parts: list[str] = []
+    for spec in status.specs:
+        value = str(snapshot.get(spec.name, "")).strip()
+        if not value or value == "--":
+            continue
+        parts.append(f"{spec.label}: {value}")
+    return "; ".join(parts)
 
 
 def _format_status_value(value: Any) -> str:
