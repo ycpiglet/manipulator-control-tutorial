@@ -392,6 +392,11 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Plot Guide", html)
             self.assertIn("Position", html)
             self.assertIn("steady-state error", html)
+            worksheet_text = (output / "worksheet.md").read_text(encoding="utf-8")
+            self.assertIn("## Plot Review", worksheet_text)
+            self.assertIn("Priority plot: plots/position.png", worksheet_text)
+            self.assertIn("Read first: Position", worksheet_text)
+            self.assertIn("Compare actual motion against target", worksheet_text)
 
     def test_run_report_renders_configured_presets_as_cards(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

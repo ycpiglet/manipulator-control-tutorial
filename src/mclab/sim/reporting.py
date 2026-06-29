@@ -541,6 +541,7 @@ def _render_worksheet(
     lines.extend(_worksheet_learning_guide_lines(guide))
     lines.extend(_worksheet_pairs_section("Key Parameters", _config_highlight_pairs(config)))
     lines.extend(_worksheet_pairs_section("Summary Values", list(summary.items())))
+    lines.extend(_worksheet_plot_review_lines(output, plots))
     lines.extend(_worksheet_observation_lines(interaction_events))
     lines.extend(_worksheet_review_checklist(interaction_events))
     lines.extend(_worksheet_next_experiment_lines(summary, config))
@@ -655,6 +656,48 @@ def _worksheet_review_checklist(events: list[dict[str, Any]]) -> list[str]:
                 "- [ ] Decide which suggested next run should be compared against this one.",
             ]
         )
+    lines.append("")
+    return lines
+
+
+def _worksheet_plot_review_lines(output: Path, plots: list[Path]) -> list[str]:
+    lines = ["## Plot Review", ""]
+    if not plots:
+        return [*lines, "- No plot images were saved for this run.", ""]
+
+    sorted_plots = sorted(plots, key=_index_plot_sort_key)
+    guided_plots: list[tuple[Path, tuple[str, str]]] = []
+    for plot in sorted_plots:
+        guidance = _plot_guidance(plot.name)
+        if guidance is not None:
+            guided_plots.append((plot, guidance))
+
+    if not guided_plots:
+        priority_plot = sorted_plots[0]
+        lines.extend(
+            [
+                f"- Priority plot: {_markdown_inline(_relative(output, priority_plot))}",
+                "- What to check: open this plot and compare the trace against your prediction.",
+                "",
+            ]
+        )
+        return lines
+
+    priority_plot, (title, detail) = guided_plots[0]
+    lines.extend(
+        [
+            f"- Priority plot: {_markdown_inline(_relative(output, priority_plot))}",
+            f"- Read first: {_markdown_inline(title)}",
+            f"- What to check: {_markdown_inline(detail)}",
+        ]
+    )
+    if len(guided_plots) > 1:
+        lines.append("- Other guided plots:")
+        for plot, (other_title, other_detail) in guided_plots[1:5]:
+            lines.append(
+                f"  - {_markdown_inline(_relative(output, plot))}: "
+                f"{_markdown_inline(other_title)} - {_markdown_inline(other_detail)}"
+            )
     lines.append("")
     return lines
 
