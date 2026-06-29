@@ -66,6 +66,7 @@ class RunLogger:
         *,
         interaction_events: list[Mapping[str, Any]] | None = None,
         learner_snapshot: Mapping[str, Any] | None = None,
+        learner_tuned_config: Mapping[str, Any] | None = None,
     ) -> Path:
         self._save_config_snapshot()
         self._save_csv()
@@ -74,6 +75,7 @@ class RunLogger:
         self._save_notes(notes)
         self._save_interaction_events(interaction_events)
         self._save_learner_snapshot(learner_snapshot)
+        self._save_learner_tuned_config(learner_tuned_config)
         write_run_report(self.output_path)
         return self.output_path
 
@@ -162,6 +164,14 @@ class RunLogger:
             return
         (self.output_path / "learner_snapshot.json").write_text(
             json.dumps(dict(snapshot), indent=2),
+            encoding="utf-8",
+        )
+
+    def _save_learner_tuned_config(self, config: Mapping[str, Any] | None) -> None:
+        if not config:
+            return
+        (self.output_path / "learner_tuned_config.yaml").write_text(
+            _dump_basic_yaml(config),
             encoding="utf-8",
         )
 

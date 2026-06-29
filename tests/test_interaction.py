@@ -24,6 +24,7 @@ from mclab.sim.interaction import (  # noqa: E402
     _observation_marker_count,
     _observation_marker_status_message,
     learner_snapshot,
+    learner_tuned_config,
     tuning_presets_from_config,
 )
 from mclab.config import load_config  # noqa: E402
@@ -544,6 +545,33 @@ class KeyForcePulseTests(unittest.TestCase):
                 "extra_controls": {"joint_target_offset": 0.2},
             },
         )
+
+    def test_learner_tuned_config_merges_updates_and_disables_live_controls(self) -> None:
+        base_config = {
+            "target": {"end": 0.0, "start": 0.0},
+            "controller": {"kp": 20.0, "kd": 2.0},
+            "interaction": {
+                "panel": True,
+                "live_tuning": True,
+                "key_force": True,
+                "target_nudge": True,
+                "playback_speed": True,
+            },
+        }
+
+        tuned = learner_tuned_config(
+            base_config,
+            {"target": {"end": 0.35}, "controller": {"kp": 60.0}},
+        )
+
+        self.assertEqual(tuned["target"], {"end": 0.35, "start": 0.0})
+        self.assertEqual(tuned["controller"], {"kp": 60.0, "kd": 2.0})
+        self.assertFalse(tuned["interaction"]["panel"])
+        self.assertFalse(tuned["interaction"]["live_tuning"])
+        self.assertFalse(tuned["interaction"]["key_force"])
+        self.assertFalse(tuned["interaction"]["target_nudge"])
+        self.assertFalse(tuned["interaction"]["playback_speed"])
+        self.assertTrue(base_config["interaction"]["panel"])
 
     def test_panel_guidance_uses_try_change_watch_fields(self) -> None:
         guide = RunGuide(

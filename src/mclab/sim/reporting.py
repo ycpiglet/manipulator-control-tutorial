@@ -485,6 +485,7 @@ def _render_report(
     title = _report_title(output, summary)
     learning_guide = _learning_guide_section(guide_for_run_summary(summary))
     reproduce_section = _reproduce_section(summary)
+    tuned_replay = _learner_tuned_config_section(output, summary)
     next_runs = _suggested_next_runs_section(summary, config)
     comparison_batch = _comparison_batch_section(summary)
     config_highlights = _config_highlights_section(config)
@@ -525,6 +526,7 @@ def _render_report(
             "states.npz",
             "interaction_events.json",
             "learner_snapshot.json",
+            "learner_tuned_config.yaml",
         )
         if (output / name).exists()
     )
@@ -834,6 +836,7 @@ def _render_report(
     <h1>{escape(title)} report</h1>
     {learning_guide}
     {reproduce_section}
+    {tuned_replay}
     {next_runs}
     {comparison_batch}
     {config_highlights}
@@ -922,6 +925,35 @@ def _reproduce_section(summary: dict[str, Any]) -> str:
         "</div>"
         "</div>"
         '<p class="empty">Edit the YAML config, rerun one command, then compare the new report and plots.</p>'
+        "</section>"
+    )
+
+
+def _learner_tuned_config_section(output: Path, summary: dict[str, Any]) -> str:
+    tuned_config = output / "learner_tuned_config.yaml"
+    lab_name = _cli_lab_name(str(summary.get("lab_name") or ""))
+    if not tuned_config.exists() or not lab_name:
+        return ""
+    command = f"python -m mclab run {lab_name} --config {tuned_config} --headless --plot --open-report"
+    viewer_command = (
+        f"python -m mclab run {lab_name} --config {tuned_config} "
+        "--viewer --realtime --pause-at-end --plot --open-report"
+    )
+    return (
+        "<section>"
+        "<h2>Replay Tuned Config</h2>"
+        '<p class="empty">This generated YAML applies the final learner slider values and disables live controls for repeatable replay.</p>'
+        '<div class="command-grid">'
+        '<div class="command-block">'
+        "<strong>Regenerate tuned artifacts</strong>"
+        f"<pre>{escape(command)}</pre>"
+        "</div>"
+        '<div class="command-block">'
+        "<strong>Watch tuned replay</strong>"
+        f"<pre>{escape(viewer_command)}</pre>"
+        "</div>"
+        "</div>"
+        f'<p class="empty"><a href="{escape(tuned_config.name)}">Open learner_tuned_config.yaml</a></p>'
         "</section>"
     )
 

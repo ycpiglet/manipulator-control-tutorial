@@ -18,6 +18,7 @@ from mclab.sim.interaction import (
     SliderSpec,
     StatusSpec,
     learner_snapshot,
+    learner_tuned_config,
     maybe_start_interaction_panel,
     tuning_presets_from_config,
 )
@@ -205,6 +206,7 @@ def run(
             status=live_status,
             playback_control=playback_control,
         ),
+        learner_tuned_config=learner_tuned_config(config, _learner_tuned_updates(live_tuning)),
     )
     if plot:
         _save_plots(output_path, logger.rows, plot_selection or config.get("plots"))
@@ -225,6 +227,17 @@ def _live_tuning(config: dict[str, Any], interaction_log: InteractionLog | None 
         event_log=interaction_log,
         presets=tuning_presets_from_config(config, specs),
     )
+
+
+def _learner_tuned_updates(live_tuning: LiveTuning) -> dict[str, Any]:
+    if not live_tuning.enabled:
+        return {}
+    values = live_tuning.snapshot()
+    return {
+        "mass": values["mass"],
+        "damping": values["damping"],
+        "stiffness": values["stiffness"],
+    }
 
 
 def _save_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSelection = None) -> None:

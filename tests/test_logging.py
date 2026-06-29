@@ -96,6 +96,13 @@ class LoggingTests(unittest.TestCase):
                     "playback_speed": 1.5,
                     "extra_controls": {"joint_target_offset": 0.1},
                 },
+                learner_tuned_config={
+                    "model_path": "models/lab01_msd/scene.xml",
+                    "mass": 1.0,
+                    "damping": 1.0,
+                    "stiffness": 80.0,
+                    "interaction": {"panel": False, "live_tuning": False},
+                },
             )
 
             report = output / "report.html"
@@ -145,6 +152,9 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Final control state", html)
             self.assertIn("Playback speed", html)
             self.assertIn("joint_target_offset", html)
+            self.assertIn("Replay Tuned Config", html)
+            self.assertIn("Regenerate tuned artifacts", html)
+            self.assertIn("Watch tuned replay", html)
             self.assertIn("Observation Markers", html)
             self.assertIn("1 marked observation saved.", html)
             self.assertIn("Review prompt", html)
@@ -171,6 +181,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("0.125", html)
             self.assertIn("interaction_events.json", html)
             self.assertIn("learner_snapshot.json", html)
+            self.assertIn("learner_tuned_config.yaml", html)
             self.assertIn("Check position.", html)
             self.assertIn("config.yaml", html)
             events = json.loads((output / "interaction_events.json").read_text(encoding="utf-8"))
@@ -178,6 +189,9 @@ class LoggingTests(unittest.TestCase):
             snapshot = json.loads((output / "learner_snapshot.json").read_text(encoding="utf-8"))
             self.assertEqual(snapshot["changed_sliders"], {"stiffness": 80.0})
             self.assertEqual(snapshot["playback_speed"], 1.5)
+            tuned_config = (output / "learner_tuned_config.yaml").read_text(encoding="utf-8")
+            self.assertIn("stiffness: 80.0", tuned_config)
+            self.assertIn("live_tuning: False", tuned_config)
             summary = json.loads((output / "summary.json").read_text(encoding="utf-8"))
             self.assertEqual(summary["config_path"], "configs/lab01_msd/default.yaml")
             self.assertEqual(summary["config_name"], "default")

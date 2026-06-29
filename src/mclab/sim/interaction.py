@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from collections.abc import Callable
 from dataclasses import dataclass
 from threading import Lock
@@ -294,6 +295,21 @@ def learner_snapshot(
         if controls:
             payload["extra_controls"] = controls
     return payload
+
+
+def learner_tuned_config(base_config: dict[str, Any], updates: dict[str, Any]) -> dict[str, Any]:
+    """Create a replay-oriented config from final learner control values."""
+
+    if not updates:
+        return {}
+    tuned = deepcopy(base_config)
+    _deep_update(tuned, updates)
+    interaction = tuned.get("interaction")
+    if isinstance(interaction, dict):
+        for name in ("panel", "live_tuning", "key_force", "target_nudge", "playback_speed"):
+            if name in interaction:
+                interaction[name] = False
+    return tuned
 
 
 class ExperimentResetControl:
@@ -1001,3 +1017,11 @@ def _event_value(value: Any) -> Any:
         return float(value)
     except (TypeError, ValueError):
         return str(value)
+
+
+def _deep_update(target: dict[str, Any], updates: dict[str, Any]) -> None:
+    for key, value in updates.items():
+        if isinstance(value, dict) and isinstance(target.get(key), dict):
+            _deep_update(target[key], value)
+        else:
+            target[key] = deepcopy(value)

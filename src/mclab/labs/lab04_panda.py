@@ -18,6 +18,7 @@ from mclab.sim.interaction import (
     StatusSpec,
     TargetOffsetControl,
     learner_snapshot,
+    learner_tuned_config,
     maybe_start_interaction_panel,
     tuning_presets_from_config,
 )
@@ -310,6 +311,10 @@ def run(
             playback_control=playback_control,
             extra_controls={"joint_target_offset": target_offset.value()} if target_offset.enabled else None,
         ),
+        learner_tuned_config=learner_tuned_config(
+            config,
+            _learner_tuned_updates(config, live_tuning, target_offset),
+        ),
     )
     if plot:
         _save_plots(output_path, logger.rows, plot_selection or config.get("plots"))
@@ -517,6 +522,45 @@ def _live_tuning(config: dict[str, Any], interaction_log: InteractionLog | None 
         event_log=interaction_log,
         presets=tuning_presets_from_config(config, specs),
     )
+
+
+def _learner_tuned_updates(
+    config: dict[str, Any],
+    live_tuning: LiveTuning,
+    target_offset: TargetOffsetControl,
+) -> dict[str, Any]:
+    values = live_tuning.snapshot() if live_tuning.enabled else {}
+    updates: dict[str, Any] = {}
+
+    if {"target_x", "target_y", "target_z"} <= values.keys():
+        updates["cartesian_target"] = {
+            "position": [values["target_x"], values["target_y"], values["target_z"]],
+        }
+    if "cartesian_gain" in values:
+        updates.setdefault("cartesian_target", {})["gain"] = values["cartesian_gain"]
+
+    wall_updates: dict[str, Any] = {}
+    if "wall_x" in values:
+        wall_updates["wall_x"] = values["wall_x"]
+    if "wall_stiffness" in values:
+        wall_updates["stiffness"] = values["wall_stiffness"]
+    if "wall_damping" in values:
+        wall_updates["damping"] = values["wall_damping"]
+    if "wall_retreat_gain" in values:
+        wall_updates["cartesian_retreat_gain"] = values["wall_retreat_gain"]
+    if wall_updates:
+        updates["virtual_wall"] = wall_updates
+
+    joint_offset = values.get("joint_target_offset", 0.0)
+    if target_offset.enabled:
+        joint_offset += target_offset.value()
+    if live_tuning.enabled or target_offset.enabled:
+        trajectory = dict(config.get("trajectory", {}))
+        start = float(trajectory.get("start", 0.0))
+        end = float(trajectory.get("end", start))
+        updates["trajectory"] = {"start": start + joint_offset, "end": end + joint_offset}
+
+    return updates
 
 
 def _wall_cartesian_target_enabled(config: dict[str, Any]) -> bool:

@@ -18,6 +18,7 @@ from mclab.sim.interaction import (
     SliderSpec,
     StatusSpec,
     learner_snapshot,
+    learner_tuned_config,
     maybe_start_interaction_panel,
     tuning_presets_from_config,
 )
@@ -259,6 +260,7 @@ def _run_slider_trajectory(
             status=live_status,
             playback_control=playback_control,
         ),
+        learner_tuned_config=learner_tuned_config(config, _slider_learner_tuned_updates(config, live_tuning)),
     )
     if plot:
         _save_plots(output_path, logger.rows, plot_selection or config.get("plots"))
@@ -517,6 +519,17 @@ def _run_two_link_arm(
             status=live_status,
             playback_control=playback_control,
         ),
+        learner_tuned_config=learner_tuned_config(
+            config,
+            _two_link_learner_tuned_updates(
+                config,
+                live_tuning,
+                mode=mode,
+                torque_limit=torque_limit,
+                target_q_goal=target_q_goal,
+                target_xy_goal=target_xy_goal,
+            ),
+        ),
     )
     if plot:
         _save_two_link_plots(output_path, logger.rows, plot_selection or config.get("plots"))
@@ -690,6 +703,76 @@ def _two_link_live_tuning(
         event_log=interaction_log,
         presets=tuning_presets_from_config(config, specs),
     )
+
+
+def _slider_learner_tuned_updates(config: dict[str, Any], live_tuning: LiveTuning) -> dict[str, Any]:
+    if not live_tuning.enabled:
+        return {}
+    values = live_tuning.snapshot()
+    trajectory = dict(config.get("trajectory", {}))
+    offset = values["target_offset"]
+    return {
+        "trajectory": {
+            "start": float(trajectory.get("start", 0.0)) + offset,
+            "end": float(trajectory.get("end", 0.0)) + offset,
+        },
+        "tracking_controller": {
+            "kp": values["kp"],
+            "kd": values["kd"],
+            "force_limit": values["force_limit"],
+        },
+    }
+
+
+def _two_link_learner_tuned_updates(
+    config: dict[str, Any],
+    live_tuning: LiveTuning,
+    *,
+    mode: str,
+    torque_limit: tuple[float, float],
+    target_q_goal: tuple[float, float],
+    target_xy_goal: tuple[float, float],
+) -> dict[str, Any]:
+    if not live_tuning.enabled:
+        return {}
+    values = live_tuning.snapshot()
+    controller_updates: dict[str, Any] = {}
+    updates: dict[str, Any] = {"tracking_controller": controller_updates}
+    if "torque_limit" in values:
+        controller_updates["torque_limit"] = _capped_limit_pair(torque_limit, values["torque_limit"])
+
+    if mode in DLS_MODES:
+        updates["target_xy"] = [values.get("target_x", target_xy_goal[0]), values.get("target_y", target_xy_goal[1])]
+        controller_updates["dls_gain"] = values["dls_gain"]
+        controller_updates["dls_damping"] = values["dls_damping"]
+        if "condition_damping_threshold" in values:
+            controller_updates["condition_damping_threshold"] = values["condition_damping_threshold"]
+        if "condition_damping_full" in values:
+            controller_updates["condition_damping_full"] = values["condition_damping_full"]
+        if "max_dls_damping" in values:
+            controller_updates["max_dls_damping"] = values["max_dls_damping"]
+        return updates
+
+    if mode in TASK_SPACE_MODES:
+        updates["target_xy"] = [values.get("target_x", target_xy_goal[0]), values.get("target_y", target_xy_goal[1])]
+        controller_updates["task_kp"] = values["task_kp"]
+        controller_updates["task_kd"] = values["task_kd"]
+        return updates
+
+    kp_base = _gain_pair(dict(config.get("tracking_controller", {})).get("kp", [80.0, 60.0]), "kp")
+    kd_base = _gain_pair(dict(config.get("tracking_controller", {})).get("kd", [8.0, 6.0]), "kd")
+    updates["target_q"] = [
+        target_q_goal[0] + values.get("q1_offset", 0.0),
+        target_q_goal[1] + values.get("q2_offset", 0.0),
+    ]
+    controller_updates["kp"] = [kp_base[0] * values.get("joint_kp", 1.0), kp_base[1] * values.get("joint_kp", 1.0)]
+    controller_updates["kd"] = [kd_base[0] * values.get("joint_kd", 1.0), kd_base[1] * values.get("joint_kd", 1.0)]
+    return updates
+
+
+def _capped_limit_pair(base_limits: tuple[float, float], limit_value: float) -> list[float]:
+    limit = abs(float(limit_value))
+    return [min(float(base_limits[0]), limit), min(float(base_limits[1]), limit)]
 
 
 def _two_link_handles(mujoco: Any, model: Any, config: dict[str, Any]) -> dict[str, Any]:

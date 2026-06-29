@@ -83,6 +83,7 @@ Implemented and verified:
 - Interactive `Step once` button advances exactly one physics step while staying paused for frame-by-frame observation
 - Interactive `Reset plant` button restores mass/arm/robot state while preserving current slider and preset values for repeated observations
 - Interactive runs save `learner_snapshot.json` and a report `Learner Snapshot` section with final slider, live status, playback, and nudge state
+- Interactive runs save replayable `learner_tuned_config.yaml` files and a report `Replay Tuned Config` section
 - Learner menu preset labels for interactive cards, including preset-name search
 - Learner menu Explore filters for hands-on, comparison, PID, 2DOF, Panda, wall, and singularity scenario discovery
 - Learner menu and CLI setup diagnostics through `python -m mclab doctor`
