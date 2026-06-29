@@ -1382,6 +1382,7 @@ class LearnerMenuTests(unittest.TestCase):
         status = FakeStatus()
         report_button = FakeButton()
         plot_button = FakeButton()
+        worksheet_button = FakeButton()
         latest_output: dict[str, Path | None] = {"path": None}
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -1390,6 +1391,8 @@ class LearnerMenuTests(unittest.TestCase):
             plot_dir.mkdir(parents=True)
             priority_plot = plot_dir / "position.png"
             priority_plot.write_bytes(b"fake-png")
+            worksheet = output_path / "worksheet.md"
+            worksheet.write_text("# Worksheet\n", encoding="utf-8")
 
             _set_status_after_run(
                 MENU_ACTIONS[0],
@@ -1399,13 +1402,17 @@ class LearnerMenuTests(unittest.TestCase):
                 latest_output=latest_output,
                 latest_button=report_button,
                 latest_plot_button=plot_button,
+                latest_worksheet_button=worksheet_button,
             )
 
         self.assertEqual(latest_output["path"], output_path)
         self.assertEqual(report_button.state_calls, [["!disabled"]])
         self.assertEqual(plot_button.state_calls, [["!disabled"]])
+        self.assertEqual(worksheet_button.state_calls, [["!disabled"]])
         self.assertIn("Latest plot:", status.value)
         self.assertIn("position.png", status.value)
+        self.assertIn("Latest worksheet:", status.value)
+        self.assertIn("worksheet.md", status.value)
 
     def test_failed_run_status_reports_exit_code(self) -> None:
         status = FakeStatus()

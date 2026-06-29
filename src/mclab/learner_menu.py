@@ -2107,6 +2107,7 @@ def main() -> int:
             latest_output=latest_output,
             latest_button=latest_button,
             latest_plot_button=latest_plot_button,
+            latest_worksheet_button=latest_worksheet_button,
             progress_callback=refresh_after_run,
         )
 
@@ -2168,6 +2169,7 @@ def main() -> int:
                 latest_output=latest_output,
                 latest_button=latest_button,
                 latest_plot_button=latest_plot_button,
+                latest_worksheet_button=latest_worksheet_button,
                 progress_callback=refresh_after_run,
             ),
         ).pack(side="left")
@@ -2212,6 +2214,7 @@ def main() -> int:
                 latest_output=latest_output,
                 latest_button=latest_button,
                 latest_plot_button=latest_plot_button,
+                latest_worksheet_button=latest_worksheet_button,
                 progress_callback=refresh_after_run,
             ),
         )
@@ -2244,6 +2247,7 @@ def main() -> int:
                 latest_output=latest_output,
                 latest_button=latest_button,
                 latest_plot_button=latest_plot_button,
+                latest_worksheet_button=latest_worksheet_button,
                 progress_callback=refresh_after_run,
             ),
         )
@@ -2309,6 +2313,13 @@ def main() -> int:
     latest_plot_button = ttk.Button(bottom, text="Open latest plot", command=lambda: launch_latest_plot(latest_output))
     latest_plot_button.pack(side="left", padx=(8, 0))
     latest_plot_button.state(["disabled"])
+    latest_worksheet_button = ttk.Button(
+        bottom,
+        text="Open latest worksheet",
+        command=lambda: launch_latest_worksheet(latest_output),
+    )
+    latest_worksheet_button.pack(side="left", padx=(8, 0))
+    latest_worksheet_button.state(["disabled"])
     ttk.Label(bottom, textvariable=status).pack(side="left", padx=12)
 
     def render_actions(*_args: Any) -> None:
@@ -2363,6 +2374,7 @@ def main() -> int:
                         latest_output=latest_output,
                         latest_button=latest_button,
                         latest_plot_button=latest_plot_button,
+                        latest_worksheet_button=latest_worksheet_button,
                         progress_callback=refresh_after_run,
                     ),
                 )
@@ -2419,6 +2431,7 @@ def main() -> int:
                         latest_output=latest_output,
                         latest_button=latest_button,
                         latest_plot_button=latest_plot_button,
+                        latest_worksheet_button=latest_worksheet_button,
                         progress_callback=refresh_after_run,
                     ),
                 )
@@ -2436,6 +2449,7 @@ def main() -> int:
                         latest_output=latest_output,
                         latest_button=latest_button,
                         latest_plot_button=latest_plot_button,
+                        latest_worksheet_button=latest_worksheet_button,
                         progress_callback=refresh_after_run,
                     ),
                 )
@@ -2455,6 +2469,7 @@ def main() -> int:
                         latest_output=latest_output,
                         latest_button=latest_button,
                         latest_plot_button=latest_plot_button,
+                        latest_worksheet_button=latest_worksheet_button,
                         progress_callback=refresh_after_run,
                     ),
                 )
@@ -2488,6 +2503,7 @@ def _launch_learning_path_from_menu(
     latest_output: dict[str, Path | None] | None = None,
     latest_button: Any | None = None,
     latest_plot_button: Any | None = None,
+    latest_worksheet_button: Any | None = None,
     progress_callback: Callable[[], None] | None = None,
 ) -> None:
     action = learning_path_target(step)
@@ -2498,6 +2514,7 @@ def _launch_learning_path_from_menu(
         latest_output=latest_output,
         latest_button=latest_button,
         latest_plot_button=latest_plot_button,
+        latest_worksheet_button=latest_worksheet_button,
         progress_callback=progress_callback,
     )
 
@@ -2510,6 +2527,7 @@ def _launch_target_from_menu(
     latest_output: dict[str, Path | None] | None = None,
     latest_button: Any | None = None,
     latest_plot_button: Any | None = None,
+    latest_worksheet_button: Any | None = None,
     progress_callback: Callable[[], None] | None = None,
 ) -> None:
     if isinstance(target, BatchMenuAction):
@@ -2520,6 +2538,7 @@ def _launch_target_from_menu(
             latest_output=latest_output,
             latest_button=latest_button,
             latest_plot_button=latest_plot_button,
+            latest_worksheet_button=latest_worksheet_button,
             progress_callback=progress_callback,
         )
         return
@@ -2530,6 +2549,7 @@ def _launch_target_from_menu(
         latest_output=latest_output,
         latest_button=latest_button,
         latest_plot_button=latest_plot_button,
+        latest_worksheet_button=latest_worksheet_button,
         progress_callback=progress_callback,
     )
 
@@ -2542,6 +2562,7 @@ def _launch_from_menu(
     latest_output: dict[str, Path | None] | None = None,
     latest_button: Any | None = None,
     latest_plot_button: Any | None = None,
+    latest_worksheet_button: Any | None = None,
     progress_callback: Callable[[], None] | None = None,
 ) -> None:
     readiness = action_readiness(action)
@@ -2560,6 +2581,7 @@ def _launch_from_menu(
             "latest_output": latest_output,
             "latest_button": latest_button,
             "latest_plot_button": latest_plot_button,
+            "latest_worksheet_button": latest_worksheet_button,
             "progress_callback": progress_callback,
         },
         daemon=True,
@@ -2574,6 +2596,7 @@ def _launch_tuned_replay_from_menu(
     latest_output: dict[str, Path | None] | None = None,
     latest_button: Any | None = None,
     latest_plot_button: Any | None = None,
+    latest_worksheet_button: Any | None = None,
     progress_callback: Callable[[], None] | None = None,
 ) -> None:
     tuned_config = action_latest_tuned_config(action)
@@ -2593,6 +2616,7 @@ def _launch_tuned_replay_from_menu(
             "latest_output": latest_output,
             "latest_button": latest_button,
             "latest_plot_button": latest_plot_button,
+            "latest_worksheet_button": latest_worksheet_button,
             "progress_callback": progress_callback,
         },
         daemon=True,
@@ -2607,6 +2631,7 @@ def _launch_learning_path_tuned_replay_from_menu(
     latest_output: dict[str, Path | None] | None = None,
     latest_button: Any | None = None,
     latest_plot_button: Any | None = None,
+    latest_worksheet_button: Any | None = None,
     progress_callback: Callable[[], None] | None = None,
 ) -> None:
     target = learning_path_target(step)
@@ -2620,6 +2645,7 @@ def _launch_learning_path_tuned_replay_from_menu(
         latest_output=latest_output,
         latest_button=latest_button,
         latest_plot_button=latest_plot_button,
+        latest_worksheet_button=latest_worksheet_button,
         progress_callback=progress_callback,
     )
 
@@ -2632,6 +2658,7 @@ def _launch_batch_from_menu(
     latest_output: dict[str, Path | None] | None = None,
     latest_button: Any | None = None,
     latest_plot_button: Any | None = None,
+    latest_worksheet_button: Any | None = None,
     progress_callback: Callable[[], None] | None = None,
 ) -> None:
     readiness = batch_readiness(action)
@@ -2650,6 +2677,7 @@ def _launch_batch_from_menu(
             "latest_output": latest_output,
             "latest_button": latest_button,
             "latest_plot_button": latest_plot_button,
+            "latest_worksheet_button": latest_worksheet_button,
             "progress_callback": progress_callback,
         },
         daemon=True,
@@ -2713,6 +2741,7 @@ def _watch_process(
     latest_output: dict[str, Path | None] | None = None,
     latest_button: Any | None = None,
     latest_plot_button: Any | None = None,
+    latest_worksheet_button: Any | None = None,
     progress_callback: Callable[[], None] | None = None,
 ) -> None:
     output_path: Path | None = None
@@ -2731,6 +2760,7 @@ def _watch_process(
         latest_output=latest_output,
         latest_button=latest_button,
         latest_plot_button=latest_plot_button,
+        latest_worksheet_button=latest_worksheet_button,
         progress_callback=progress_callback,
     )
 
@@ -2745,6 +2775,7 @@ def _set_status_after_run(
     latest_output: dict[str, Path | None] | None = None,
     latest_button: Any | None = None,
     latest_plot_button: Any | None = None,
+    latest_worksheet_button: Any | None = None,
     progress_callback: Callable[[], None] | None = None,
 ) -> None:
     def update_ui() -> None:
@@ -2757,9 +2788,20 @@ def _set_status_after_run(
                 latest_plot = latest_output_plot(output_path)
                 if latest_plot_button is not None:
                     latest_plot_button.state(["!disabled"] if latest_plot is not None else ["disabled"])
+                latest_worksheet = latest_output_worksheet(output_path)
+                if latest_worksheet_button is not None:
+                    latest_worksheet_button.state(["!disabled"] if latest_worksheet is not None else ["disabled"])
                 latest = _preferred_output_entry(output_path)
                 plot_suffix = f" Latest plot: {latest_plot}" if latest_plot is not None else " No plot saved yet."
-                status.set(f"Completed {action.group} - {action.label}. Latest report: {latest}.{plot_suffix}")
+                worksheet_suffix = (
+                    f" Latest worksheet: {latest_worksheet}"
+                    if latest_worksheet is not None
+                    else " No worksheet saved yet."
+                )
+                status.set(
+                    f"Completed {action.group} - {action.label}. "
+                    f"Latest report: {latest}.{plot_suffix}{worksheet_suffix}"
+                )
             else:
                 status.set(f"Completed {action.group} - {action.label}. Open the outputs folder for results.")
             if progress_callback is not None:
