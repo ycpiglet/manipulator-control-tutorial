@@ -659,6 +659,7 @@ def _batch_worksheet_comparison_plot_lines(output: Path) -> list[str]:
     lines = ["## Comparison Plot Guide", ""]
     for plot, title, detail in guided:
         lines.append(f"- comparison_plots/{plot.name}: {title} - {detail}")
+        lines.append(f"  - [ ] {_plot_checkpoint(plot.name, title)}")
     lines.append("")
     return lines
 
@@ -1796,6 +1797,7 @@ def _comparison_plot_guide(output: Path) -> str:
             f"<h3>{escape(title)}</h3>"
             f'<p class="muted">{escape(plot.name)}</p>'
             f"<p>{escape(detail)}</p>"
+            f'<p><strong>Checkpoint:</strong> {escape(_plot_checkpoint(plot.name, title))}</p>'
             "</article>"
         )
         for plot, title, detail in guided
@@ -1820,6 +1822,20 @@ def _guided_comparison_plots(output: Path) -> list[tuple[Path, str, str]]:
         title, detail = guidance
         guided.append((plot, title, detail))
     return guided
+
+
+def _plot_checkpoint(filename: str, title: str) -> str:
+    name = filename.lower()
+    normalized_title = title.lower()
+    if "wall_key_moment_timing" in name or normalized_title == "wall timing":
+        return "Name which scenario contacts first, which reaches peak damping earliest, and what parameter caused it."
+    if "error" in name:
+        return "Name which scenario leaves the largest error and cite the matching metric table value."
+    if "force" in name or "torque" in name or "effort" in normalized_title:
+        return "Name which scenario demands the largest effort and identify the parameter change behind the peak."
+    if "position" in name or "end_effector" in name:
+        return "Name which scenario changes motion most visibly and describe whether it moved earlier, farther, or smoother."
+    return "Name the scenario with the clearest visual difference and cite one metric that supports it."
 
 
 def _comparison_plot_paths(output: Path) -> list[Path]:

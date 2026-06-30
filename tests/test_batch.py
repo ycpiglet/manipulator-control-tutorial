@@ -364,6 +364,7 @@ class BatchTests(unittest.TestCase):
             self.assertIn("Comparison Plot Guide", report_html)
             self.assertIn("Position", report_html)
             self.assertIn("Compare actual motion against target", report_html)
+            self.assertIn("Checkpoint:", report_html)
             self.assertIn("Comparison Plots", report_html)
             self.assertIn("comparison_plots/position_compare.png", report_html)
             worksheet = (output / "worksheet.md").read_text(encoding="utf-8")
@@ -372,6 +373,7 @@ class BatchTests(unittest.TestCase):
             self.assertIn("overshoot percent", worksheet)
             self.assertIn("## Comparison Plot Guide", worksheet)
             self.assertIn("comparison_plots/position_compare.png: Position - Compare actual motion against target", worksheet)
+            self.assertIn("- [ ] Name which scenario changes motion most visibly", worksheet)
             self.assertIn("comparison_plots/position_compare.png", worksheet)
 
     def test_summary_comparison_plots_are_written_from_scenario_summaries(self) -> None:
@@ -411,10 +413,12 @@ class BatchTests(unittest.TestCase):
             self.assertIn("Comparison Plot Guide", report_html)
             self.assertIn("Wall Timing", report_html)
             self.assertIn("Compare when contact, peak penetration", report_html)
+            self.assertIn("Name which scenario contacts first", report_html)
             self.assertIn("peak wall force time", report_html)
             self.assertIn("wall_key_moment_timing_compare.png", worksheet)
             self.assertIn("## Comparison Plot Guide", worksheet)
             self.assertIn("comparison_plots/wall_key_moment_timing_compare.png: Wall Timing", worksheet)
+            self.assertIn("- [ ] Name which scenario contacts first", worksheet)
 
     def test_scenario_card_reports_missing_plot_links_without_failing(self) -> None:
         html = batch._scenario_card(
