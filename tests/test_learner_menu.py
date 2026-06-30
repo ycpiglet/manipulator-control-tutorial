@@ -1956,6 +1956,29 @@ class LearnerMenuTests(unittest.TestCase):
                             "value": {
                                 "prediction": "High gain will overshoot.",
                                 "outcome": "Matched",
+                            },
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            self.assertEqual(
+                action_next_cue_text(lab02_interactive, outputs),
+                "Next cue: Add a short note or Use live status before moving on.",
+            )
+
+            (run_path / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {"kind": "preset", "name": "gentle_p", "label": "Gentle P"},
+                        {"kind": "preset", "name": "damped_pd", "label": "Damped PD"},
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "prediction": "High gain will overshoot.",
+                                "outcome": "Matched",
                                 "note": "Overshoot happened.",
                             },
                         },

@@ -1582,7 +1582,7 @@ def action_next_cue_text(action: MenuAction, outputs_root: Path | None = None) -
     if latest is None:
         return "Next cue: Run this scenario, then review the saved plot and worksheet."
 
-    markers, predictions, _notes, outcomes = _observation_evidence_counts(latest)
+    markers, predictions, notes, outcomes = _observation_evidence_counts(latest)
     if predictions > outcomes:
         return "Next cue: Review latest evidence and choose the missing prediction outcome."
 
@@ -1604,6 +1604,8 @@ def action_next_cue_text(action: MenuAction, outputs_root: Path | None = None) -
         return "Next cue: Change one control and Mark observation with a prediction."
     if hands_on and predictions == 0:
         return "Next cue: Add a prediction before marking the next observation."
+    if hands_on and notes == 0:
+        return "Next cue: Add a short note or Use live status before moving on."
 
     if action_latest_tuned_config(action, outputs_root) is not None:
         return "Next cue: Replay the tuned config, then run Compare for the broader tradeoff."
