@@ -171,6 +171,7 @@ Implemented and verified:
 - Observation markers capture the active learning question, learner predictions, evidence prompt, learner notes, changed sliders, full slider snapshots, and live status snapshots
 - Run reports show hands-on evidence completion status for interactive runs
 - Run reports summarize observation marker questions, predictions, prediction outcomes, learner notes, and prediction-review prompts
+- Run report review prompts surface the latest `Learner note evidence` items before the individual marker cards
 - Run reports and worksheets split semicolon-separated learner notes into `Learner note evidence` items for easier review
 - Run reports show an evidence review cue that counts review-ready prediction-observation pairs and incomplete markers
 - Run reports and generated `worksheet.md` artifacts show run-level `Done when` completion criteria plus prediction outcomes, pending outcome review, notes, live status, key parameters, priority plot review prompts, checklist prompts, suggested next experiments, and comparison batch commands

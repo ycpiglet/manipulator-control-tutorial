@@ -3234,6 +3234,16 @@ def _observation_review_prompt(markers: list[dict[str, Any]]) -> str:
         if latest_note
         else ""
     )
+    latest_note_items = _note_evidence_items(latest_note)
+    latest_note_evidence_html = ""
+    if len(latest_note_items) > 1:
+        rows = "\n".join(f"<li>{escape(item)}</li>" for item in latest_note_items)
+        latest_note_evidence_html = (
+            '<div class="marker-group">'
+            "<strong>Latest note evidence</strong>"
+            f"<ul>{rows}</ul>"
+            "</div>"
+        )
     return (
         '<div class="marker-group">'
         "<strong>Review prompt</strong>"
@@ -3244,6 +3254,7 @@ def _observation_review_prompt(markers: list[dict[str, Any]]) -> str:
         f"{note_count} learner note{'s' if note_count != 1 else ''} were saved.</p>"
         f"{latest_prediction_html}"
         f"{latest_note_html}"
+        f"{latest_note_evidence_html}"
         "</div>"
     )
 

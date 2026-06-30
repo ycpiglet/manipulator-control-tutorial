@@ -240,6 +240,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Decide whether each prediction matched, partially matched, or surprised you.", html)
             self.assertIn("Latest prediction:", html)
             self.assertIn("Latest note:", html)
+            self.assertIn("Latest note evidence", html)
             self.assertIn("Which slider change made the response easiest to explain?", html)
             self.assertIn("Prediction", html)
             self.assertIn("Higher stiffness should create a sharper force peak.", html)
