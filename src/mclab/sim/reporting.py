@@ -3760,10 +3760,17 @@ def _observation_next_step_text_from_events(
     events: list[dict[str, Any]],
     *,
     evidence_required: bool = False,
+    learner_control_phrase: str = "",
 ) -> str:
     markers, predictions, notes, outcomes = _observation_evidence_counts_from_events(events)
     if markers <= 0:
         if evidence_required:
+            if _learner_control_event_count(events) <= 0:
+                control_phrase = learner_control_phrase.strip() or "at least one learner control"
+                return (
+                    f"Observation next step: use {control_phrase}, then mark one observation "
+                    "with a prediction and note."
+                )
             return "Observation next step: mark one observation with a prediction and note."
         return ""
     if predictions < markers:
@@ -4248,9 +4255,11 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
         outcome_counts = _observation_outcome_counts_from_events(interaction_events)
         latest_evidence = _latest_observation_evidence_from_events(interaction_events)
         observation_flow = _observation_flow_text_from_events(interaction_events)
+        evidence_required = _summary_requires_hands_on_evidence(summary)
         observation_next_step = _observation_next_step_text_from_events(
             interaction_events,
-            evidence_required=_summary_requires_hands_on_evidence(summary),
+            evidence_required=evidence_required,
+            learner_control_phrase=_report_learner_control_phrase(config, summary) if evidence_required else "",
         )
         plots = _discover_run_plots(child)
         worksheet = _discover_worksheet(child)

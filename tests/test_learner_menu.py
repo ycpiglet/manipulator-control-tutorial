@@ -1720,10 +1720,12 @@ class LearnerMenuTests(unittest.TestCase):
 
             self.assertEqual(
                 action_observation_next_step_text(lab01_interactive, outputs),
-                "Observation next step: mark one observation with a prediction and note.",
+                "Observation next step: use experiment buttons, live sliders, or Quick presets, "
+                "then mark one observation with a prediction and note.",
             )
             self.assertIn(
-                "Observation next step: mark one observation with a prediction and note.",
+                "Observation next step: use experiment buttons, live sliders, or Quick presets, "
+                "then mark one observation with a prediction and note.",
                 lesson_text(lab01_interactive, outputs),
             )
 

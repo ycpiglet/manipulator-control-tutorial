@@ -1504,11 +1504,21 @@ def action_observation_next_step_text(
     evidence_required = isinstance(action, MenuAction) and "hands-on" in action_tags(action)
     if latest is None:
         if evidence_required:
-            return _observation_next_step_text_from_events([], evidence_required=True)
+            assert isinstance(action, MenuAction)
+            return _observation_next_step_text_from_events(
+                [],
+                evidence_required=True,
+                learner_control_phrase=_action_learner_control_phrase(action, None),
+            )
         return ""
     return _observation_next_step_text_from_events(
         _read_json_list(latest / "interaction_events.json"),
         evidence_required=evidence_required,
+        learner_control_phrase=(
+            _action_learner_control_phrase(action, latest)
+            if isinstance(action, MenuAction) and evidence_required
+            else ""
+        ),
     )
 
 
@@ -1916,14 +1926,22 @@ def action_next_cue_text(action: MenuAction, outputs_root: Path | None = None) -
 
 
 def _action_learner_control_action(action: MenuAction, latest: Path) -> str:
-    text = learner_control_action_text_for_config(_config_for_action(action, latest)).strip()
+    phrase = _action_learner_control_phrase(action, latest)
+    if phrase != "one learner control":
+        return f"Use {phrase}"
+    return "Use one learner control"
+
+
+def _action_learner_control_phrase(action: MenuAction, latest: Path | None) -> str:
+    config = _config_for_action(action, latest) if latest is not None else _loaded_action_config(action.config_path)
+    text = learner_control_action_text_for_config(config).strip()
     prefix = "Use "
     suffix = " before moving on."
     if text.startswith(prefix) and text.endswith(suffix):
-        cue = text[: -len(suffix)].strip()
-        if cue and cue != "Use one learner control":
-            return cue
-    return "Use one learner control"
+        phrase = text[len(prefix) : -len(suffix)].strip()
+        if phrase and phrase != "one learner control":
+            return phrase
+    return "one learner control"
 
 
 def action_plot_text(

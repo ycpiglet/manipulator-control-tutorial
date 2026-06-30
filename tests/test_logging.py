@@ -1465,6 +1465,11 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("<th>Challenge evidence</th>", html)
             self.assertIn("No markers", html)
             self.assertIn("No learner controls", html)
+            self.assertIn(
+                "Observation next step: use experiment buttons, live sliders, or Quick presets, "
+                "then mark one observation with a prediction and note.",
+                html,
+            )
             self.assertIn("Needs observation; Run the demo, write a prediction, then press Mark observation.", html)
             self.assertIn(
                 "Challenge evidence: Needs observation evidence; source Learner control, Mark observation, "
