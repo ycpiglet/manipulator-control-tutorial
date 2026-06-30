@@ -103,6 +103,52 @@ INDEX_PLOT_PRIORITY = (
 
 INDEX_MAX_PLOT_LINKS = 4
 
+
+def plot_priorities_for_context(
+    *,
+    config_path: str = "",
+    config_name: str = "",
+    lab_name: str = "",
+    batch_name: str = "",
+) -> tuple[str, ...]:
+    """Return learner-facing plot priorities for a run or comparison context."""
+    context = " ".join((config_path, config_name, lab_name, batch_name)).replace("\\", "/").lower()
+    if "lab04_wall_compare" in context:
+        return _plot_priority_sequence(
+            "wall_key_moment_timing",
+            "wall_penetration",
+            "wall_force",
+            "virtual_wall",
+            "wall_target",
+        )
+    if "lab03_2dof" in context and ("dls" in context or "condition_aware" in context):
+        return _plot_priority_sequence("dls", "singularity", "disturbance", "error", "end_effector")
+    if "lab04_panda" in context and (
+        "wall" in context or "impedance_wall" in context or "virtual_wall" in context
+    ):
+        return _plot_priority_sequence(
+            "wall_target",
+            "virtual_wall",
+            "wall_key_moment_timing",
+            "end_effector",
+            "cartesian_error",
+            "error",
+        )
+    if "lab04_panda" in context and ("cartesian" in context or "reach" in context):
+        return _plot_priority_sequence("cartesian_error", "end_effector", "error", "position")
+    return INDEX_PLOT_PRIORITY
+
+
+def _plot_priority_sequence(*preferred: str) -> tuple[str, ...]:
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for name in (*preferred, *INDEX_PLOT_PRIORITY):
+        if name not in seen:
+            ordered.append(name)
+            seen.add(name)
+    return tuple(ordered)
+
+
 CONFIG_HIGHLIGHT_KEYS = (
     "sim_time",
     "dt",
@@ -4411,7 +4457,7 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
             evidence_required=evidence_required,
             learner_control_phrase=_report_learner_control_phrase(config, summary) if evidence_required else "",
         )
-        plots = _discover_run_plots(child)
+        plots = _discover_run_plots(child, summary)
         worksheet = _discover_worksheet(child)
         runs.append(
             {
@@ -5692,7 +5738,7 @@ def _discover_worksheet(child: Path) -> dict[str, str] | None:
     }
 
 
-def _discover_run_plots(child: Path) -> list[dict[str, str]]:
+def _discover_run_plots(child: Path, summary: dict[str, Any] | None = None) -> list[dict[str, str]]:
     candidates: list[tuple[Path, str]] = []
     for directory_name in ("plots", "comparison_plots"):
         plot_dir = child / directory_name
@@ -5700,7 +5746,14 @@ def _discover_run_plots(child: Path) -> list[dict[str, str]]:
             continue
         candidates.extend((plot, directory_name) for plot in plot_dir.glob("*.png"))
 
-    plots = sorted(candidates, key=lambda item: _index_plot_sort_key(item[0]))
+    summary = summary or {}
+    priorities = plot_priorities_for_context(
+        config_path=str(summary.get("config_path") or ""),
+        config_name=str(summary.get("config_name") or ""),
+        lab_name=str(summary.get("lab_name") or ""),
+        batch_name=str(summary.get("batch_name") or ""),
+    )
+    plots = sorted(candidates, key=lambda item: _index_plot_sort_key(item[0], priorities))
     return [
         {
             "href": f"{child.name}/{directory_name}/{plot.name}",
@@ -5710,12 +5763,12 @@ def _discover_run_plots(child: Path) -> list[dict[str, str]]:
     ]
 
 
-def _index_plot_sort_key(plot: Path) -> tuple[int, str]:
+def _index_plot_sort_key(plot: Path, priorities: tuple[str, ...] = INDEX_PLOT_PRIORITY) -> tuple[int, str]:
     name = _index_plot_name(plot)
-    for index, priority in enumerate(INDEX_PLOT_PRIORITY):
+    for index, priority in enumerate(priorities):
         if name == priority or name.startswith(f"{priority}_") or name.endswith(f"_{priority}"):
             return index, name
-    return len(INDEX_PLOT_PRIORITY), name
+    return len(priorities), name
 
 
 def _index_plot_label(plot: Path) -> str:

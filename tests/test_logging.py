@@ -18,6 +18,7 @@ from mclab.sim.reporting import (  # noqa: E402
     _activity_mix_items,
     _learning_path_prediction_cue_text,
     _normalize_path,
+    plot_priorities_for_context,
     write_outputs_index,
     write_run_report,
 )
@@ -30,6 +31,20 @@ class FixedDatetime:
 
 
 class LoggingTests(unittest.TestCase):
+    def test_plot_priorities_follow_lesson_context(self) -> None:
+        dls_priorities = plot_priorities_for_context(
+            config_path="configs/lab03_2dof/condition_aware_dls_adaptive_speed_retarget_2dof.yaml",
+            lab_name="lab03_2dof",
+        )
+        wall_batch_priorities = plot_priorities_for_context(
+            config_name="lab04_wall_compare",
+            batch_name="lab04_wall_compare",
+        )
+
+        self.assertEqual(dls_priorities[0], "dls")
+        self.assertLess(dls_priorities.index("dls"), dls_priorities.index("error"))
+        self.assertEqual(wall_batch_priorities[0], "wall_key_moment_timing")
+
     def test_learning_path_prediction_cue_preserves_dls_acronym(self) -> None:
         cue = _learning_path_prediction_cue_text(
             "Prediction: Before changing schedule, predict how DLS task-speed limit will change."
@@ -1370,6 +1385,44 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("No markers", html)
             self.assertIn("max abs position", html)
             self.assertIn("0.24", html)
+
+    def test_outputs_index_prioritizes_dls_plot_for_dls_learning_step(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "20260701_064136_lab03_2dof"
+            plot_dir = output / "plots"
+            plot_dir.mkdir(parents=True)
+            (plot_dir / "error.png").write_bytes(b"fake-png")
+            (plot_dir / "dls.png").write_bytes(b"fake-png")
+            (plot_dir / "end_effector.png").write_bytes(b"fake-png")
+            (output / "report.html").write_text("<html></html>", encoding="utf-8")
+            (output / "worksheet.md").write_text("# Worksheet\n", encoding="utf-8")
+            (output / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab03_2dof",
+                        "config_path": (
+                            "configs/lab03_2dof/"
+                            "condition_aware_dls_adaptive_speed_retarget_2dof.yaml"
+                        ),
+                        "config_name": "condition_aware_dls_adaptive_speed_retarget_2dof",
+                        "samples": 10,
+                        "duration": 1.0,
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
+
+            self.assertIn(
+                f'href="{output.name}/plots/dls.png">Plot: Damped Least Squares</a>',
+                html,
+            )
+            self.assertNotIn(f'href="{output.name}/plots/error.png">Plot: Error</a>', html)
+            self.assertLess(
+                html.index(f'href="{output.name}/plots/dls.png">Damped Least Squares</a>'),
+                html.index(f'href="{output.name}/plots/error.png">Error</a>'),
+            )
 
     def test_outputs_index_links_to_batch_index_when_no_run_report_exists(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

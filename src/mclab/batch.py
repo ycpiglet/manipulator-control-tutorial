@@ -21,7 +21,13 @@ from mclab.learning_guides import (
     prediction_prompt_for_guide,
     question_for_guide,
 )
-from mclab.sim.reporting import INDEX_METRIC_KEYS, INDEX_PLOT_PRIORITY, plot_guidance, write_outputs_index
+from mclab.sim.reporting import (
+    INDEX_METRIC_KEYS,
+    INDEX_PLOT_PRIORITY,
+    plot_guidance,
+    plot_priorities_for_context,
+    write_outputs_index,
+)
 
 LabRunner = Callable[..., Path]
 
@@ -729,7 +735,7 @@ def _batch_worksheet_scenario_lines(rows: list[dict[str, Any]], metric_keys: lis
                 f"- Worksheet: {row.get('worksheet') or 'n/a'}",
             ]
         )
-        plot = _priority_plot_link(row.get("plots", {}))
+        plot = _priority_plot_link(row.get("plots", {}), row)
         lines.append(f"- Priority plot: {plot[1] if plot else 'n/a'}")
         if plot is not None:
             guidance = plot_guidance(plot[0])
@@ -1422,7 +1428,7 @@ def _scenario_metric_change_summary(
 
 
 def _scenario_quick_links(row: dict[str, Any]) -> str:
-    plot = _priority_plot_link(row.get("plots", {}))
+    plot = _priority_plot_link(row.get("plots", {}), row)
     plot_link = (
         f'<a href="{escape(plot[1])}">Open {escape(plot[0])}</a>'
         if plot is not None
@@ -1444,7 +1450,7 @@ def _scenario_quick_links(row: dict[str, Any]) -> str:
 
 
 def _scenario_plot_review(row: dict[str, Any]) -> str:
-    plot = _priority_plot_link(row.get("plots", {}))
+    plot = _priority_plot_link(row.get("plots", {}), row)
     if plot is None:
         return ""
     guidance = plot_guidance(plot[0])
@@ -1458,22 +1464,36 @@ def _scenario_plot_review(row: dict[str, Any]) -> str:
     )
 
 
-def _priority_plot_link(plots: Any) -> tuple[str, str] | None:
+def _priority_plot_link(plots: Any, row: dict[str, Any] | None = None) -> tuple[str, str] | None:
     if not isinstance(plots, dict) or not plots:
         return None
     plot_names = sorted(str(name) for name in plots if str(name).endswith(".png"))
     if not plot_names:
         return None
-    selected = min(plot_names, key=_plot_priority_key)
+    selected = min(plot_names, key=lambda name: _plot_priority_key(name, _plot_priorities_for_row(row)))
     return selected, str(plots[selected])
 
 
-def _plot_priority_key(name: str) -> tuple[int, str]:
+def _plot_priority_key(name: str, priorities: tuple[str, ...] = INDEX_PLOT_PRIORITY) -> tuple[int, str]:
     stem = Path(name).stem
-    for index, priority in enumerate(INDEX_PLOT_PRIORITY):
+    for index, priority in enumerate(priorities):
         if stem == priority or stem.startswith(f"{priority}_") or stem.endswith(f"_{priority}"):
             return index, name
-    return len(INDEX_PLOT_PRIORITY), name
+    return len(priorities), name
+
+
+def _plot_priorities_for_row(row: dict[str, Any] | None) -> tuple[str, ...]:
+    if not isinstance(row, dict):
+        return INDEX_PLOT_PRIORITY
+    summary = row.get("summary")
+    if not isinstance(summary, dict):
+        summary = {}
+    return plot_priorities_for_context(
+        config_path=str(row.get("config_path") or summary.get("config_path") or ""),
+        config_name=str(row.get("config_name") or summary.get("config_name") or ""),
+        lab_name=str(row.get("lab_name") or summary.get("lab_name") or ""),
+        batch_name=str(row.get("batch_name") or summary.get("batch_name") or ""),
+    )
 
 
 def _reproduce_commands(batch_name: str, rows: list[dict[str, Any]]) -> str:

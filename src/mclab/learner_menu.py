@@ -37,6 +37,7 @@ from mclab.sim.reporting import (
     _observation_flow_text_from_events,
     _observation_next_step_text_from_events,
     _read_config,
+    plot_priorities_for_context,
     plot_guidance,
     write_outputs_index,
 )
@@ -1441,7 +1442,10 @@ def action_latest_plot(
     action: MenuAction | BatchMenuAction,
     outputs_root: Path | None = None,
 ) -> Path | None:
-    return latest_output_plot(action_latest_output(action, outputs_root))
+    return latest_output_plot(
+        action_latest_output(action, outputs_root),
+        plot_priorities=_action_plot_priorities(action),
+    )
 
 
 def action_latest_worksheet(
@@ -2438,7 +2442,7 @@ def _preferred_output_entry(path: Path) -> Path:
     return path
 
 
-def latest_output_plot(path: Path | None) -> Path | None:
+def latest_output_plot(path: Path | None, plot_priorities: tuple[str, ...] | None = None) -> Path | None:
     if path is None:
         return None
     candidates: list[Path] = []
@@ -2448,7 +2452,8 @@ def latest_output_plot(path: Path | None) -> Path | None:
             candidates.extend(plot_dir.glob("*.png"))
     if not candidates:
         return None
-    return sorted(candidates, key=_plot_sort_key)[0]
+    priorities = plot_priorities if plot_priorities is not None else _output_plot_priorities(path)
+    return sorted(candidates, key=lambda plot: _plot_sort_key(plot, priorities))[0]
 
 
 def latest_output_worksheet(path: Path | None) -> Path | None:
@@ -2458,12 +2463,36 @@ def latest_output_worksheet(path: Path | None) -> Path | None:
     return worksheet if worksheet.exists() else None
 
 
-def _plot_sort_key(plot: Path) -> tuple[int, str]:
+def _action_plot_priorities(action: MenuAction | BatchMenuAction) -> tuple[str, ...]:
+    if isinstance(action, BatchMenuAction):
+        return plot_priorities_for_context(
+            lab_name="batch",
+            config_name=action.batch_name,
+            batch_name=action.batch_name,
+        )
+    return plot_priorities_for_context(
+        config_path=action.config_path,
+        config_name=Path(action.config_path).stem,
+        lab_name=action.lab_name,
+    )
+
+
+def _output_plot_priorities(path: Path) -> tuple[str, ...]:
+    summary = _read_json(path / "summary.json")
+    return plot_priorities_for_context(
+        config_path=str(summary.get("config_path") or ""),
+        config_name=str(summary.get("config_name") or ""),
+        lab_name=str(summary.get("lab_name") or ""),
+        batch_name=str(summary.get("batch_name") or ""),
+    )
+
+
+def _plot_sort_key(plot: Path, priorities: tuple[str, ...] = INDEX_PLOT_PRIORITY) -> tuple[int, str]:
     name = plot.stem.lower().replace("-", "_").removesuffix("_compare")
-    for index, priority in enumerate(INDEX_PLOT_PRIORITY):
+    for index, priority in enumerate(priorities):
         if name == priority or name.startswith(f"{priority}_") or name.endswith(f"_{priority}"):
             return index, name
-    return len(INDEX_PLOT_PRIORITY), name
+    return len(priorities), name
 
 
 def open_path(path: Path) -> subprocess.Popen[Any] | None:

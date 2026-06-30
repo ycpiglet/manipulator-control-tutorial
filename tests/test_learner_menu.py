@@ -100,6 +100,7 @@ from mclab.learner_menu import (  # noqa: E402
     launch_latest_output,
     next_review_output,
     next_learning_path_step,
+    latest_output_plot,
     open_editable_path,
     parameter_hint,
     parse_run_output_path,
@@ -1598,6 +1599,32 @@ class LearnerMenuTests(unittest.TestCase):
 
             opener.assert_called_once_with(worksheet)
             self.assertIsNone(missing_worksheet)
+
+    def test_dls_action_latest_plot_prefers_dls_plot_over_error(self) -> None:
+        action = next(item for item in MENU_ACTIONS if item.label == "2DOF adaptive-speed retarget DLS")
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            run_path = outputs / "run_lab03_dls"
+            plot_dir = run_path / "plots"
+            plot_dir.mkdir(parents=True)
+            (plot_dir / "error.png").write_bytes(b"fake-png")
+            dls_plot = plot_dir / "dls.png"
+            dls_plot.write_bytes(b"fake-png")
+            (run_path / "report.html").write_text("<html></html>", encoding="utf-8")
+            (run_path / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab03_2dof",
+                        "config_path": action.config_path,
+                        "config_name": Path(action.config_path).stem,
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            self.assertEqual(action_latest_plot(action, outputs), dls_plot)
+            self.assertEqual(latest_output_plot(run_path), dls_plot)
+            self.assertEqual(action_plot_text(action, outputs), "Plots: Latest dls.png")
 
     def test_action_evidence_summarizes_latest_observation_markers(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
