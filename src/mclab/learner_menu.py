@@ -19,6 +19,7 @@ from mclab.course_progress import course_milestone_summary
 from mclab.learning_guides import (
     batch_start_steps_text,
     challenge_prompt_for_guide,
+    control_credit_text_for_config,
     guide_for_config,
     playbook_for_guide,
     prediction_prompt_for_guide,
@@ -2593,6 +2594,10 @@ def action_controls_text(action: MenuAction) -> str:
     return _action_controls_text(action.config_path)
 
 
+def action_control_credit_text(action: MenuAction) -> str:
+    return _action_control_credit_text(action.config_path)
+
+
 def action_plan_text(action: MenuAction) -> str:
     return (
         f"Plan: {_action_level(action)}; {_action_experience_kind(action)}; "
@@ -2733,6 +2738,16 @@ def _action_controls_text(config_path: str) -> str:
     if not controls:
         return "Controls: Auto run; edit YAML before running"
     return f"Controls: {', '.join(dict.fromkeys(controls))}"
+
+
+@lru_cache(maxsize=256)
+def _action_control_credit_text(config_path: str) -> str:
+    try:
+        config = load_config(config_path)
+    except (OSError, ValueError):
+        return ""
+    text = control_credit_text_for_config(config)
+    return f"Counts as control: {text}" if text else ""
 
 
 def _target_nudge_control_label(interaction: dict[str, Any]) -> str:
@@ -2943,6 +2958,8 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
     observation_flow_text = f"{observation_flow}\n" if observation_flow else ""
     observation_next_step = action_observation_next_step_text(action, outputs_root)
     observation_next_step_text = f"{observation_next_step}\n" if observation_next_step else ""
+    control_credit = action_control_credit_text(action)
+    control_credit_line = f"{control_credit}\n" if control_credit else ""
     readiness = action_readiness(action)
     setup_detail = f" - {readiness.detail}" if readiness.status != "ok" and readiness.detail else ""
     setup_fix = f" Fix: {readiness.fix}" if readiness.status != "ok" and readiness.fix else ""
@@ -2970,6 +2987,7 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
         f"{action_worksheet_text(action, outputs_root)}\n"
         f"{action_replay_text(action, outputs_root)}\n"
         f"{action_controls_text(action)}\n"
+        f"{control_credit_line}"
         f"{action_viewer_text(action)}\n"
         f"Try: {action.try_this}\n"
         f"Change: {parameter_hint(action)}\n"
@@ -3213,6 +3231,7 @@ def _action_matches_terms(action: MenuAction, terms: list[str]) -> bool:
         prediction_prompt(action),
         reflection_question(action),
         action_controls_text(action),
+        action_control_credit_text(action),
         action_viewer_text(action),
         action_plan_text(action),
         action_mission_text(action),

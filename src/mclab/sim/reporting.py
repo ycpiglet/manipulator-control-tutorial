@@ -14,8 +14,10 @@ from mclab.learning_guides import (
     RunGuide,
     batch_start_steps_text,
     challenge_prompt_for_guide,
+    control_credit_text_for_config,
     guide_for_config,
     guide_for_run_summary,
+    learner_control_families_from_config,
     mission_prompt_for_guide,
     playbook_for_guide,
     prediction_prompt_for_guide,
@@ -886,6 +888,7 @@ def _worksheet_learning_guide_lines(
         ("Mission", mission_prompt_for_guide(guide).removeprefix("Mission:").strip()),
         ("Playbook", playbook_for_guide(guide).removeprefix("Playbook:").strip()),
         ("Start steps", _start_steps_text(guide, config)),
+        ("Counts as control", control_credit_text_for_config(config)),
         ("Challenge", challenge_prompt_for_guide(guide).removeprefix("Challenge:").strip()),
         ("Try", guide.try_this),
         ("Change", guide.change),
@@ -894,7 +897,7 @@ def _worksheet_learning_guide_lines(
         ("Watch", guide.watch),
         ("Next", guide.next_step),
     ]
-    lines.extend(_worksheet_mapping_lines(dict(rows)))
+    lines.extend(_worksheet_mapping_lines(dict((label, value) for label, value in rows if value)))
     legend = viewer_legend_for_guide(guide)
     if legend:
         lines.append("- Viewer legend:")
@@ -1136,7 +1139,7 @@ def _worksheet_control_coverage_lines(events: list[dict[str, Any]], config: dict
     if has_presets:
         checks.append(("Try one Quick preset to compare a named parameter regime.", counts.get("preset", 0)))
     if has_sliders:
-        checks.append(("Move one slider to tune a parameter or playback speed.", counts.get("slider", 0)))
+        checks.append(("Move one live slider to test a smaller parameter change.", counts.get("slider", 0)))
     if has_buttons:
         checks.append(("Use one experiment button such as pulse, nudge, or reset.", counts.get("button", 0)))
     checks.append(("Save one Mark observation with prediction and note.", complete_observation_markers))
@@ -1809,6 +1812,7 @@ def _learning_guide_section(
         ("Mission", mission_prompt_for_guide(guide).removeprefix("Mission:").strip()),
         ("Playbook", playbook_for_guide(guide).removeprefix("Playbook:").strip()),
         ("Start steps", _start_steps_text(guide, config)),
+        ("Counts as control", control_credit_text_for_config(config)),
         ("Challenge", challenge_prompt_for_guide(guide).removeprefix("Challenge:").strip()),
         ("Try", guide.try_this),
         ("Change", guide.change),
@@ -1825,6 +1829,7 @@ def _learning_guide_section(
             "</div>"
         )
         for label, text in items
+        if text
     )
     viewer_legend = _viewer_legend_block(guide)
     return (
@@ -2240,6 +2245,9 @@ def _control_surface_items(config: dict[str, Any]) -> list[tuple[str, str]]:
     presets = _configured_preset_labels(config)
     if presets:
         items.append(("Quick presets", ", ".join(presets)))
+    credit_text = control_credit_text_for_config(config)
+    if credit_text:
+        items.append(("Counts as control", credit_text))
     if bool(interaction.get("playback_speed", panel_enabled)):
         items.append(("Playback", "Playback speed slider"))
     if bool(interaction.get("pause_resume", interaction.get("pause", panel_enabled))):
@@ -3504,15 +3512,7 @@ def _activity_available_control_families(
             counts.get("preset", 0) > 0,
         )
 
-    panel_enabled = bool(interaction.get("panel", False))
-    has_buttons = any(
-        bool(interaction.get(name, False))
-        for name in ("key_force", "target_nudge", "joint_disturbance")
-    )
-    has_buttons = has_buttons or bool(interaction.get("pause_resume", interaction.get("pause", panel_enabled)))
-    has_buttons = has_buttons or bool(interaction.get("reset_plant", interaction.get("reset_experiment", panel_enabled)))
-    has_sliders = bool(interaction.get("live_tuning", False)) or bool(interaction.get("playback_speed", panel_enabled))
-    has_presets = bool(_configured_preset_labels(config))
+    has_buttons, has_sliders, has_presets = learner_control_families_from_config(config)
     return (
         has_buttons or counts.get("button", 0) > 0,
         has_sliders or counts.get("slider", 0) > 0,
@@ -3566,7 +3566,7 @@ def _activity_mix_next_step(
     if has_sliders and counts.get("slider", 0) <= 0:
         if has_presets:
             return "Move one slider after a preset to test a smaller parameter change."
-        return "Move one slider to tune a parameter or playback speed."
+        return "Move one live slider to test a smaller parameter change."
     if has_buttons and counts.get("button", 0) <= 0:
         return "Use one experiment button such as pulse, nudge, or reset."
     if observation_markers <= 0:

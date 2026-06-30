@@ -130,6 +130,7 @@ Implemented and verified:
 - Learner menu cards and outputs index learning-path/run-table views summarize `Challenge evidence` proof status, proof source, and next challenge step from the latest saved run
 - Learner menu scenario cards include a `Viewer` marker legend and marker-name search support
 - Learner menu scenario cards include a `Controls` summary of actual buttons, sliders, presets, pause/step, reset, and observation controls
+- Learner menu scenario cards include a `Counts as control` cue matching the live panel so learners know which controls satisfy hands-on evidence before launch
 - Learner menu scenario and batch cards include a `Plan` line with level, mode, run length, and saved artifacts
 - Learner menu scenario, batch, and learning-path cards include a `Mission` line that turns Try/Change/Watch guidance into one evidence-focused task
 - Learner menu scenario and batch cards, the live interaction panel, run reports, and worksheets include a `Playbook` line that turns each demo into predict, manipulate, and evidence-review steps
@@ -192,7 +193,7 @@ Implemented and verified:
 - Run reports include suggested next-run cards with reflection questions, key parameter changes, and ready-to-run commands for every guided config
 - Run reports and worksheets show `Course Position` with the matching milestone, learning-path step, focus, completion rule, and repeat command
 - Run reports include a top-level `Next Actions` shortcut section for evidence review, priority plot opening, tuned replay, suggested next run, and comparison batch
-- Run reports include a `Control Surface` section and suggested-run control summaries for available buttons, sliders, presets, and evidence controls
+- Run reports include a `Control Surface` section and suggested-run control summaries for available buttons, sliders, presets, learner-control credit, and evidence controls
 - Run reports include a relevant comparison batch command for the current lab or Panda wall/reach mode
 - Observation markers capture the active learning question, learner predictions, evidence prompt, learner notes, changed sliders, full slider snapshots, and live status snapshots
 - Run reports show hands-on evidence completion status for interactive runs

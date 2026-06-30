@@ -30,6 +30,7 @@ from mclab.learner_menu import (  # noqa: E402
     action_challenge_text,
     action_compare_batch,
     action_compare_text,
+    action_control_credit_text,
     action_controls_text,
     action_activity_mix_text,
     action_evidence_text,
@@ -769,6 +770,8 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertIn("Mission evidence:", text)
                 self.assertIn("Challenge evidence:", text)
                 self.assertIn("Controls:", text)
+                if action_control_credit_text(action):
+                    self.assertIn(action_control_credit_text(action), text)
                 self.assertIn("Viewer:", text)
                 self.assertIn("Try:", text)
                 self.assertIn("Change:", text)
@@ -833,6 +836,11 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Reset plant", lab01_controls)
         self.assertIn("Mark observation", lab01_controls)
         self.assertIn(lab01_controls, lesson_text(lab01_interactive))
+        self.assertIn(
+            "Counts as control: experiment buttons, live sliders, Quick presets",
+            action_control_credit_text(lab01_interactive),
+        )
+        self.assertIn("Use live status do not count", action_control_credit_text(lab01_interactive))
 
         dls_controls = action_controls_text(lab03_condition_dls)
         self.assertIn("Shoulder/Elbow pulse buttons and A/D keys", dls_controls)
@@ -846,6 +854,7 @@ class LearnerMenuTests(unittest.TestCase):
         wall_controls = action_controls_text(lab04_wall)
         self.assertIn("Target X + into wall", wall_controls)
         self.assertIn("quick presets (Soft wall, Stiff wall, Close wall, Back away, Re-enter wall)", wall_controls)
+        self.assertIn("Counts as control:", lesson_text(lab04_wall))
         self.assertIn(
             "try required presets Close wall -> Back away -> Re-enter wall",
             action_start_steps_text(lab04_wall),
@@ -1253,6 +1262,9 @@ class LearnerMenuTests(unittest.TestCase):
 
         pause_labels = {(action.group, action.label) for action in filter_menu_actions("pause step")}
         self.assertIn(("Lab04 Panda Manipulator", "Virtual wall"), pause_labels)
+
+        credit_labels = {(action.group, action.label) for action in filter_menu_actions("counts as control quick presets")}
+        self.assertIn(("Lab04 Panda Manipulator", "Virtual wall"), credit_labels)
 
         red_plane_labels = {(action.group, action.label) for action in filter_menu_actions("red plane")}
         self.assertIn(("Lab04 Panda Manipulator", "Virtual wall"), red_plane_labels)

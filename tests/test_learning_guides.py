@@ -11,6 +11,8 @@ from mclab.learning_guides import (  # noqa: E402
     RUN_GUIDES,
     batch_start_steps_text,
     challenge_prompt_for_guide,
+    control_credit_text,
+    control_credit_text_for_config,
     guide_for_config,
     guide_for_run_summary,
     mission_prompt_for_guide,
@@ -141,6 +143,29 @@ class LearningGuideTests(unittest.TestCase):
         self.assertEqual(
             batch_start_steps_text(),
             "Start steps: Predict the strongest scenario effect -> Run comparison batch -> Open the worksheet Prediction Check.",
+        )
+
+    def test_control_credit_text_names_completion_controls(self) -> None:
+        self.assertEqual(
+            control_credit_text(True, True, True),
+            "experiment buttons, live sliders, Quick presets; "
+            "view/evidence helpers such as Pause, Playback speed, and Use live status do not count.",
+        )
+        self.assertEqual(control_credit_text(False, False, False), "")
+        self.assertEqual(
+            control_credit_text_for_config(
+                {
+                    "interaction": {
+                        "panel": True,
+                        "live_tuning": True,
+                        "playback_speed": True,
+                        "pause_resume": True,
+                        "tuning_presets": [{"label": "Soft"}],
+                    }
+                }
+            ),
+            "experiment buttons, live sliders, Quick presets; "
+            "view/evidence helpers such as Pause, Playback speed, and Use live status do not count.",
         )
 
     def test_challenge_guides_visible_evidence_goal(self) -> None:

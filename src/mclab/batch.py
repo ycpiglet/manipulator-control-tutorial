@@ -15,7 +15,12 @@ from typing import Any
 
 from mclab.config import PROJECT_ROOT, load_config, resolve_project_path
 from mclab.labs import lab01_msd, lab02_pid, lab03_2dof, lab04_panda
-from mclab.learning_guides import guide_for_config, prediction_prompt_for_guide, question_for_guide
+from mclab.learning_guides import (
+    control_credit_text_for_config,
+    guide_for_config,
+    prediction_prompt_for_guide,
+    question_for_guide,
+)
 from mclab.sim.reporting import INDEX_METRIC_KEYS, INDEX_PLOT_PRIORITY, plot_guidance, write_outputs_index
 
 LabRunner = Callable[..., Path]
@@ -1553,6 +1558,9 @@ def _control_surface_summary(config: Any) -> str:
         controls.append("Mark observation")
     if not controls:
         return "Auto run; edit YAML before rerunning."
+    credit_text = control_credit_text_for_config(config)
+    if credit_text:
+        controls.append(f"Counts as control: {credit_text}")
     return "; ".join(dict.fromkeys(controls)) + "."
 
 

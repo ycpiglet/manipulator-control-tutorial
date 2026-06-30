@@ -378,7 +378,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Control coverage checklist:", worksheet_text)
             self.assertIn("- [x] Try one Quick preset to compare a named parameter regime. (1 recorded)", worksheet_text)
             self.assertIn(
-                "- [x] Move one slider to tune a parameter or playback speed. (1 recorded)",
+                "- [x] Move one live slider to test a smaller parameter change. (1 recorded)",
                 worksheet_text,
             )
             self.assertIn("- [x] Save one Mark observation with prediction and note. (1 recorded)", worksheet_text)
@@ -552,11 +552,13 @@ class LoggingTests(unittest.TestCase):
             html = write_run_report(output).read_text(encoding="utf-8")
             worksheet_text = (output / "worksheet.md").read_text(encoding="utf-8")
 
-            self.assertIn("1/2 control families", html)
-            self.assertIn("Move one slider to tune a parameter or playback speed.", html)
+            self.assertIn("1/1 control families", html)
+            self.assertIn("Counts as control", html)
+            self.assertIn("experiment buttons; view/evidence helpers", html)
+            self.assertNotIn("Move one live slider to test a smaller parameter change.", html)
             self.assertNotIn("Try a Quick preset to compare a named parameter regime.", html)
-            self.assertIn("- Interaction variety: 1/2 control families", worksheet_text)
-            self.assertIn("- [ ] Move one slider to tune a parameter or playback speed. (0 recorded)", worksheet_text)
+            self.assertIn("- Interaction variety: 1/1 control families", worksheet_text)
+            self.assertNotIn("- [ ] Move one live slider", worksheet_text)
             self.assertIn(
                 "- [x] Use one experiment button such as pulse, nudge, or reset. (1 recorded)",
                 worksheet_text,

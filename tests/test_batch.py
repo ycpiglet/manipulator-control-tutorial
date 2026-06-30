@@ -584,6 +584,7 @@ class BatchTests(unittest.TestCase):
         self.assertIn("Pull/Push buttons and A/D keys", html)
         self.assertIn("live sliders with Changed values", html)
         self.assertIn("quick presets (Lightly damped, Heavy damping, Stiff spring)", html)
+        self.assertIn("Counts as control: experiment buttons, live sliders, Quick presets", html)
         self.assertIn("Pause/Step", html)
         self.assertIn("Reset plant", html)
         self.assertIn("Mark observation", html)

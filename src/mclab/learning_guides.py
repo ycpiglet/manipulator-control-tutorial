@@ -124,6 +124,40 @@ def batch_start_steps_text(*, scenario_count: int | None = None, course_level: b
     return "Start steps: Predict the strongest scenario effect -> Run comparison batch -> Open the worksheet Prediction Check."
 
 
+def learner_control_families_from_config(config: dict[str, Any] | None) -> tuple[bool, bool, bool]:
+    if not isinstance(config, dict):
+        return False, False, False
+    interaction = config.get("interaction")
+    if not isinstance(interaction, dict) or not interaction:
+        return False, False, False
+    panel_enabled = bool(interaction.get("panel", False))
+    has_buttons = any(
+        bool(interaction.get(name, False))
+        for name in ("key_force", "target_nudge", "joint_disturbance")
+    )
+    has_buttons = has_buttons or bool(interaction.get("reset_plant", interaction.get("reset_experiment", panel_enabled)))
+    has_sliders = bool(interaction.get("live_tuning", False))
+    has_presets = _has_tuning_presets(interaction)
+    return has_buttons, has_sliders, has_presets
+
+
+def control_credit_text(has_buttons: bool, has_sliders: bool, has_presets: bool) -> str:
+    controls: list[str] = []
+    if has_buttons:
+        controls.append("experiment buttons")
+    if has_sliders:
+        controls.append("live sliders")
+    if has_presets:
+        controls.append("Quick presets")
+    if not controls:
+        return ""
+    return f"{', '.join(controls)}; view/evidence helpers such as Pause, Playback speed, and Use live status do not count."
+
+
+def control_credit_text_for_config(config: dict[str, Any] | None) -> str:
+    return control_credit_text(*learner_control_families_from_config(config))
+
+
 def challenge_prompt_for_guide(guide: RunGuide | None) -> str:
     if guide is None:
         return ""
@@ -201,6 +235,11 @@ def _is_compare_hint(guide: RunGuide) -> bool:
             "run before",
         )
     )
+
+
+def _has_tuning_presets(interaction: dict[str, Any]) -> bool:
+    presets = interaction.get("tuning_presets")
+    return isinstance(presets, list) and any(isinstance(preset, dict) for preset in presets)
 
 
 def viewer_legend_for_guide(guide: RunGuide | None) -> list[tuple[str, str]]:

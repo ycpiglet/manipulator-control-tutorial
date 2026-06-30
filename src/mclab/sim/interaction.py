@@ -10,6 +10,7 @@ from typing import Any
 
 from mclab.learning_guides import (
     challenge_prompt_for_guide,
+    control_credit_text,
     mission_prompt_for_guide,
     observation_prompt_for_guide,
     playbook_for_guide,
@@ -1559,16 +1560,7 @@ def _panel_completion_text() -> str:
 
 
 def _panel_control_credit_text(has_buttons: bool, has_sliders: bool, has_presets: bool) -> str:
-    controls: list[str] = []
-    if has_buttons:
-        controls.append("experiment buttons")
-    if has_sliders:
-        controls.append("live sliders")
-    if has_presets:
-        controls.append("Quick presets")
-    if not controls:
-        return ""
-    return f"{', '.join(controls)}; view/evidence helpers such as Pause, Playback speed, and Use live status do not count."
+    return control_credit_text(has_buttons, has_sliders, has_presets)
 
 
 def _panel_viewer_legend_rows(guide: Any | None) -> list[tuple[str, str]]:
