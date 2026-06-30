@@ -402,6 +402,7 @@ class BatchTests(unittest.TestCase):
                 (run_dir / "report.html").write_text("<html></html>", encoding="utf-8")
 
             written = batch.write_comparison_plots(output, "lab04_wall_compare", scenarios)
+            (output / "comparison_plots" / "wall_penetration_compare.png").write_bytes(b"fake-png")
             batch.write_batch_report(output, "lab04_wall_compare", scenarios)
 
             timing_plot = output / "comparison_plots" / "wall_key_moment_timing_compare.png"
@@ -414,11 +415,15 @@ class BatchTests(unittest.TestCase):
             self.assertIn("Wall Timing", report_html)
             self.assertIn("Compare when contact, peak penetration", report_html)
             self.assertIn("Name which scenario contacts first", report_html)
+            self.assertIn("Wall Penetration", report_html)
+            self.assertIn("Name which scenario penetrates deepest", report_html)
             self.assertIn("peak wall force time", report_html)
             self.assertIn("wall_key_moment_timing_compare.png", worksheet)
             self.assertIn("## Comparison Plot Guide", worksheet)
             self.assertIn("comparison_plots/wall_key_moment_timing_compare.png: Wall Timing", worksheet)
             self.assertIn("- [ ] Name which scenario contacts first", worksheet)
+            self.assertIn("comparison_plots/wall_penetration_compare.png: Wall Penetration", worksheet)
+            self.assertIn("- [ ] Name which scenario penetrates deepest", worksheet)
 
     def test_scenario_card_reports_missing_plot_links_without_failing(self) -> None:
         html = batch._scenario_card(

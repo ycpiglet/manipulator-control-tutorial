@@ -3000,6 +3000,26 @@ def _plot_guidance(filename: str) -> tuple[str, str] | None:
             "Wall Parameters",
             "Connect slider changes to wall position, stiffness, damping, and retreat settings used during the run.",
         )
+    if "wall_penetration" in name:
+        return (
+            "Wall Penetration",
+            "Compare how far the hand moves through the virtual wall. Larger penetration usually means a softer wall, later retreat, or faster approach.",
+        )
+    if "wall_retreat" in name:
+        return (
+            "Wall Retreat",
+            "Compare how strongly the controller backs the target away from the wall after contact.",
+        )
+    if "hand_x_speed" in name:
+        return (
+            "Hand X Speed",
+            "Compare approach velocity along the wall normal. Faster approach should make damping force easier to see.",
+        )
+    if "hand_x" in name:
+        return (
+            "Hand X Position",
+            "Compare how far the hand moves toward or away from the wall across scenarios.",
+        )
     if "end_effector" in name:
         return (
             "End Effector",

@@ -1829,6 +1829,14 @@ def _plot_checkpoint(filename: str, title: str) -> str:
     normalized_title = title.lower()
     if "wall_key_moment_timing" in name or normalized_title == "wall timing":
         return "Name which scenario contacts first, which reaches peak damping earliest, and what parameter caused it."
+    if "wall_penetration" in name:
+        return "Name which scenario penetrates deepest and whether stiffness, wall position, or approach speed explains it."
+    if "wall_retreat" in name:
+        return "Name which scenario retreats most and identify whether force-to-retreat gain or wall force drove it."
+    if "hand_x_speed" in name:
+        return "Name the fastest approach scenario and connect it to the damping-force comparison."
+    if "hand_x" in name:
+        return "Name which scenario moves the hand closest to the wall and compare it with penetration."
     if "error" in name:
         return "Name which scenario leaves the largest error and cite the matching metric table value."
     if "force" in name or "torque" in name or "effort" in normalized_title:
