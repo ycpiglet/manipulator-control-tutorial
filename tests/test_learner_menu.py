@@ -1803,6 +1803,40 @@ class LearnerMenuTests(unittest.TestCase):
             opener.assert_called_once_with(worksheet)
             self.assertIsNone(missing_worksheet)
 
+    def test_lab04_wall_batch_prioritizes_timing_comparison_plot(self) -> None:
+        lab04_wall_batch = next(action for action in BATCH_ACTIONS if action.batch_name == "lab04_wall_compare")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            batch_path = outputs / "batch_lab04_wall"
+            batch_path.mkdir()
+            (batch_path / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "batch",
+                        "config_name": "lab04_wall_compare",
+                        "batch_name": "lab04_wall_compare",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (batch_path / "report.html").write_text("<html></html>", encoding="utf-8")
+            (batch_path / "worksheet.md").write_text("# Worksheet\n", encoding="utf-8")
+            plot_dir = batch_path / "comparison_plots"
+            plot_dir.mkdir()
+            timing_plot = plot_dir / "wall_key_moment_timing_compare.png"
+            timing_plot.write_bytes(b"fake-png")
+            (plot_dir / "wall_force_compare.png").write_bytes(b"fake-png")
+            (plot_dir / "wall_penetration_compare.png").write_bytes(b"fake-png")
+
+            self.assertEqual(action_latest_plot(lab04_wall_batch, outputs), timing_plot)
+            self.assertEqual(
+                action_plot_text(lab04_wall_batch, outputs),
+                "Plots: Latest wall_key_moment_timing_compare.png",
+            )
+            self.assertIn("Plot review: Wall Timing - Compare when contact", action_plot_review_text(lab04_wall_batch, outputs))
+            self.assertIn("Plot review: Wall Timing - Compare when contact", lesson_text_for_batch(lab04_wall_batch, outputs))
+
     def test_refresh_batch_menu_state_updates_text_and_buttons(self) -> None:
         lab01_batch = next(action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare")
         text_variable = FakeTextVariable()

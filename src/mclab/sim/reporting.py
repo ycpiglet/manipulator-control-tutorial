@@ -66,6 +66,7 @@ INDEX_PLOT_PRIORITY = (
     "error",
     "cartesian_error",
     "end_effector",
+    "wall_key_moment_timing",
     "virtual_wall",
     "singularity",
     "dls",
@@ -2984,6 +2985,11 @@ def plot_guidance(filename: str) -> tuple[str, str] | None:
 
 def _plot_guidance(filename: str) -> tuple[str, str] | None:
     name = filename.lower()
+    if "wall_key_moment_timing" in name:
+        return (
+            "Wall Timing",
+            "Compare when contact, peak penetration, peak force, peak damping, and peak hand speed occur across wall scenarios.",
+        )
     if "virtual_wall" in name:
         return (
             "Virtual Wall",
