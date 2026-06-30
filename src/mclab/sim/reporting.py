@@ -3283,6 +3283,38 @@ def _observation_flow_item_summary(item: dict[str, str], *, include_note: bool) 
     return prefix + ", ".join(parts)
 
 
+def _observation_next_step_text_from_events(
+    events: list[dict[str, Any]],
+    *,
+    evidence_required: bool = False,
+) -> str:
+    markers, predictions, notes, outcomes = _observation_evidence_counts_from_events(events)
+    if markers <= 0:
+        if evidence_required:
+            return "Observation next step: mark one observation with a prediction and note."
+        return ""
+    if predictions < markers:
+        missing = markers - predictions
+        return (
+            "Observation next step: add a prediction before marking the next observation "
+            f"({missing} marker{'s' if missing != 1 else ''} missing prediction)."
+        )
+    if notes < markers:
+        missing = markers - notes
+        return (
+            "Observation next step: add a learner note or Use live status snapshot "
+            f"({missing} marker{'s' if missing != 1 else ''} missing note evidence)."
+        )
+    if outcomes < predictions:
+        missing = predictions - outcomes
+        return (
+            "Observation next step: judge "
+            f"{missing} prediction outcome{'s' if missing != 1 else ''} "
+            "(Matched, Partly matched, or Surprised)."
+        )
+    return "Observation next step: ready for review; compare the saved markers with plots and worksheet."
+
+
 def _observation_markers_section(events: list[dict[str, Any]]) -> str:
     markers = [event for event in events if _is_observation_marker(event)]
     if not markers:
@@ -3737,6 +3769,10 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
         outcome_counts = _observation_outcome_counts_from_events(interaction_events)
         latest_evidence = _latest_observation_evidence_from_events(interaction_events)
         observation_flow = _observation_flow_text_from_events(interaction_events)
+        observation_next_step = _observation_next_step_text_from_events(
+            interaction_events,
+            evidence_required=_summary_requires_hands_on_evidence(summary),
+        )
         plots = _discover_run_plots(child)
         runs.append(
             {
@@ -3761,6 +3797,7 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
                 "outcome_counts": outcome_counts,
                 "latest_evidence": latest_evidence,
                 "observation_flow": observation_flow,
+                "observation_next_step": observation_next_step,
                 "activity_mix": _activity_mix_index_text(interaction_events),
                 "mission_evidence": _mission_evidence_index_text(summary, interaction_events, plots, config),
                 "config": config,
@@ -4059,6 +4096,7 @@ def _learning_path_card(item: dict[str, Any]) -> str:
     quick_links = _learning_path_quick_links(run)
     latest_evidence = _learning_path_latest_evidence(run)
     observation_flow = _learning_path_observation_flow(run)
+    observation_next_step = _learning_path_observation_next_step(run)
     activity_mix = _learning_path_activity_mix(run)
     mission_evidence = _learning_path_mission_evidence(run)
     learning_cue = _learning_path_learning_cue(step)
@@ -4123,6 +4161,7 @@ def _learning_path_card(item: dict[str, Any]) -> str:
         f"{status}"
         f"{latest_evidence}"
         f"{observation_flow}"
+        f"{observation_next_step}"
         f"{activity_mix}"
         f"{mission_evidence}"
         f"{quick_links}"
@@ -4147,6 +4186,15 @@ def _learning_path_observation_flow(run: dict[str, Any] | None) -> str:
     if not flow:
         return ""
     return f'<p class="muted">{escape(flow)}</p>'
+
+
+def _learning_path_observation_next_step(run: dict[str, Any] | None) -> str:
+    if run is None:
+        return ""
+    next_step = str(run.get("observation_next_step") or "").strip()
+    if not next_step:
+        return ""
+    return f'<p class="muted">{escape(next_step)}</p>'
 
 
 def _learning_path_activity_mix(run: dict[str, Any] | None) -> str:
@@ -4536,6 +4584,9 @@ def _run_evidence_cell(run: dict[str, Any]) -> str:
     flow = str(run.get("observation_flow") or "").strip()
     if flow:
         parts.append(flow)
+    next_step = str(run.get("observation_next_step") or "").strip()
+    if next_step:
+        parts.append(next_step)
     return ", ".join(parts)
 
 

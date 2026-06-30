@@ -26,6 +26,7 @@ from mclab.sim.reporting import (
     _activity_mix_items,
     _latest_observation_evidence_from_events,
     _observation_flow_text_from_events,
+    _observation_next_step_text_from_events,
     plot_guidance,
     write_outputs_index,
 )
@@ -1383,6 +1384,22 @@ def action_observation_flow_text(
     return _observation_flow_text_from_events(_read_json_list(latest / "interaction_events.json"))
 
 
+def action_observation_next_step_text(
+    action: MenuAction | BatchMenuAction,
+    outputs_root: Path | None = None,
+) -> str:
+    latest = action_latest_output(action, outputs_root)
+    evidence_required = isinstance(action, MenuAction) and "hands-on" in action_tags(action)
+    if latest is None:
+        if evidence_required:
+            return _observation_next_step_text_from_events([], evidence_required=True)
+        return ""
+    return _observation_next_step_text_from_events(
+        _read_json_list(latest / "interaction_events.json"),
+        evidence_required=evidence_required,
+    )
+
+
 def action_mission_evidence_text(
     action: MenuAction | BatchMenuAction,
     outputs_root: Path | None = None,
@@ -2565,6 +2582,8 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
     activity_mix_text = f"{activity_mix}\n" if activity_mix else ""
     observation_flow = action_observation_flow_text(action, outputs_root)
     observation_flow_text = f"{observation_flow}\n" if observation_flow else ""
+    observation_next_step = action_observation_next_step_text(action, outputs_root)
+    observation_next_step_text = f"{observation_next_step}\n" if observation_next_step else ""
     readiness = action_readiness(action)
     setup_detail = f" - {readiness.detail}" if readiness.status != "ok" and readiness.detail else ""
     setup_fix = f" Fix: {readiness.fix}" if readiness.status != "ok" and readiness.fix else ""
@@ -2578,6 +2597,7 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
         f"{action_evidence_text(action, outputs_root)}\n"
         f"{action_latest_evidence_text(action, outputs_root)}\n"
         f"{observation_flow_text}"
+        f"{observation_next_step_text}"
         f"{action_mission_evidence_text(action, outputs_root)}\n"
         f"{preset_evidence_text}"
         f"{activity_mix_text}"

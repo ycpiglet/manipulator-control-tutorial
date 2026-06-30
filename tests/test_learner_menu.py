@@ -44,6 +44,7 @@ from mclab.learner_menu import (  # noqa: E402
     action_mission_evidence_text,
     action_next_cue_text,
     action_observation_flow_text,
+    action_observation_next_step_text,
     action_plan_text,
     action_plot_review_text,
     action_plot_text,
@@ -1502,6 +1503,7 @@ class LearnerMenuTests(unittest.TestCase):
 
             text = action_latest_evidence_text(MENU_ACTIONS[0], outputs)
             flow = action_observation_flow_text(MENU_ACTIONS[0], outputs)
+            next_step = action_observation_next_step_text(MENU_ACTIONS[0], outputs)
             lesson = lesson_text(MENU_ACTIONS[0], outputs)
 
             self.assertIn("Latest evidence:", text)
@@ -1521,6 +1523,11 @@ class LearnerMenuTests(unittest.TestCase):
                 flow,
             )
             self.assertIn(flow, lesson)
+            self.assertEqual(
+                next_step,
+                "Observation next step: ready for review; compare the saved markers with plots and worksheet.",
+            )
+            self.assertIn(next_step, lesson)
 
             (run_path / "interaction_events.json").write_text(
                 json.dumps(
@@ -1539,8 +1546,29 @@ class LearnerMenuTests(unittest.TestCase):
             )
 
             missing_outcome_text = action_latest_evidence_text(MENU_ACTIONS[0], outputs)
+            missing_outcome_next_step = action_observation_next_step_text(MENU_ACTIONS[0], outputs)
             self.assertIn("Outcome: missing review", missing_outcome_text)
             self.assertIn("Outcome: missing review", lesson_text(MENU_ACTIONS[0], outputs))
+            self.assertEqual(
+                missing_outcome_next_step,
+                "Observation next step: judge 1 prediction outcome (Matched, Partly matched, or Surprised).",
+            )
+
+    def test_action_observation_next_step_prompts_unrun_hands_on_observation(self) -> None:
+        lab01_interactive = next(
+            action for action in MENU_ACTIONS if action.config_path == "configs/lab01_msd/interactive_pull.yaml"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+
+            self.assertEqual(
+                action_observation_next_step_text(lab01_interactive, outputs),
+                "Observation next step: mark one observation with a prediction and note.",
+            )
+            self.assertIn(
+                "Observation next step: mark one observation with a prediction and note.",
+                lesson_text(lab01_interactive, outputs),
+            )
 
     def test_action_activity_mix_summarizes_latest_hands_on_controls(self) -> None:
         lab02_interactive = next(

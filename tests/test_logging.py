@@ -1475,6 +1475,11 @@ class LoggingTests(unittest.TestCase):
                 "status Error [m]=0.0123456, Control [N]=4.2, Mode=observe",
                 html,
             )
+            self.assertIn(
+                "Observation next step: judge 1 prediction outcome "
+                "(Matched, Partly matched, or Surprised).",
+                html,
+            )
             self.assertNotIn("Old prediction should not be summarized.", html)
 
     def test_outputs_index_shows_mission_review_queue(self) -> None:
