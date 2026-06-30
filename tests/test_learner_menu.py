@@ -372,6 +372,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(first_worksheet, worksheet)
         self.assertEqual(first_tuned, tuned_config)
         self.assertIn("Status: Done - latest run_lab01", first_progress_text)
+        self.assertIn("Latest artifacts: worksheet worksheet.md; replay learner_tuned_config.yaml", first_progress_text)
         self.assertIn("Latest plot: position.png", first_progress_text)
         self.assertIn("Plot review: Position - Compare actual motion", first_progress_text)
         self.assertTrue(last_progress.completed)
@@ -1632,6 +1633,7 @@ class LearnerMenuTests(unittest.TestCase):
             self.assertEqual(latest_output_plot(run_path), dls_plot)
             self.assertEqual(action_plot_text(action, outputs), "Plots: Latest dls.png")
             progress_text = learning_path_progress_text(step, learning_path_progress(step, outputs))
+            self.assertIn("Latest artifacts: worksheet not saved yet", progress_text)
             self.assertIn("Latest plot: dls.png", progress_text)
             self.assertIn("Plot review: Damped Least Squares - Compare task speed", progress_text)
 

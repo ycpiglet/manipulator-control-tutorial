@@ -1256,8 +1256,15 @@ def learning_path_progress_text(
             f"Status: Needs observation - latest {current.latest_output.name}. "
             "Add one Mark observation entry before moving on."
         )
-    plot_review = _learning_path_progress_plot_review_text(current.latest_output)
-    suffix = f"\n{plot_review}" if plot_review else ""
+    suffix_parts = [
+        text
+        for text in (
+            _learning_path_progress_artifacts_text(current.latest_output),
+            _learning_path_progress_plot_review_text(current.latest_output),
+        )
+        if text
+    ]
+    suffix = "\n" + "\n".join(suffix_parts) if suffix_parts else ""
     return f"{learning_path_text(step)}\n{status}{suffix}"
 
 
@@ -1307,6 +1314,17 @@ def _learning_path_progress_plot_review_text(output_path: Path | None) -> str:
         return f"Latest plot: {latest_plot.name}\nPlot review: Open the latest plot and compare it with the worksheet"
     title, detail = guidance
     return f"Latest plot: {latest_plot.name}\nPlot review: {title} - {detail}"
+
+
+def _learning_path_progress_artifacts_text(output_path: Path | None) -> str:
+    if output_path is None:
+        return ""
+    worksheet = latest_output_worksheet(output_path)
+    parts = [f"worksheet {worksheet.name}" if worksheet is not None else "worksheet not saved yet"]
+    tuned_config = output_path / "learner_tuned_config.yaml"
+    if tuned_config.exists():
+        parts.append(f"replay {tuned_config.name}")
+    return f"Latest artifacts: {'; '.join(parts)}"
 
 
 def learning_path_progress_items(
