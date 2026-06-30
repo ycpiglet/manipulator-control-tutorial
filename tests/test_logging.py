@@ -1382,6 +1382,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Progress Snapshot", html)
             self.assertIn("Batches", html)
             self.assertIn("1 saved run", html)
+            self.assertIn("python -m mclab batch lab02_pid_compare --open-report", html)
             self.assertIn("Next cue: Rerun the comparison batch to regenerate the worksheet.", html)
             self.assertIn("20260627_151000_lab02_pid_compare/comparison_plots/error_compare.png", html)
 
@@ -1477,9 +1478,19 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("20260627_150100_lab01_interactive/report.html", html)
             self.assertIn("<th>Evidence</th>", html)
             self.assertIn("<th>Next cue</th>", html)
+            self.assertIn("<th>Repeat command</th>", html)
             self.assertIn("<th>Activity</th>", html)
             self.assertIn("<th>Mission evidence</th>", html)
             self.assertIn("<th>Challenge evidence</th>", html)
+            self.assertIn(
+                "python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot --open-report",
+                html,
+            )
+            self.assertIn(
+                "python -m mclab run lab01 --config configs/lab01_msd/interactive_pull.yaml "
+                "--viewer --realtime --pause-at-end --plot --open-report",
+                html,
+            )
             self.assertIn("No markers", html)
             self.assertIn("No learner controls", html)
             self.assertIn("Next cue: Try preset Lightly damped, then mark a comparison observation.", html)

@@ -4443,6 +4443,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
             f"<td>{escape(str(run.get('lesson_title', '')))}</td>"
             f"<td>{escape(str(run.get('next_step', '')))}</td>"
             f'<td class="cue-cell">{escape(_run_next_cue_text(run))}</td>'
+            f"<td>{_run_repeat_command_cell(run)}</td>"
             f"<td>{escape(_run_evidence_cell(run))}</td>"
             f"<td>{escape(str(run.get('activity_mix', '')))}</td>"
             f"<td>{escape(str(run.get('mission_evidence', '')))}</td>"
@@ -4461,7 +4462,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
         for run in runs
     )
     if not rows:
-        rows = f'<tr><td colspan="{15 + len(metric_keys)}">No run reports were found yet.</td></tr>'
+        rows = f'<tr><td colspan="{16 + len(metric_keys)}">No run reports were found yet.</td></tr>'
 
     return f"""<!doctype html>
 <html lang="en">
@@ -4560,6 +4561,22 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
       max-width: 360px;
       white-space: normal;
     }}
+    .command-cell {{
+      min-width: 300px;
+      max-width: 420px;
+      white-space: normal;
+    }}
+    .command-cell code {{
+      display: block;
+      padding: 8px;
+      border: 1px solid #e0e4ea;
+      border-radius: 6px;
+      background: #fbfcfd;
+      color: #202124;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font-size: 12px;
+    }}
     .plot-links {{
       display: flex;
       flex-wrap: wrap;
@@ -4607,7 +4624,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
     <section>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Run</th><th>Lab</th><th>Config</th><th>Lesson</th><th>Next</th><th>Next cue</th><th>Evidence</th><th>Activity</th><th>Mission evidence</th><th>Challenge evidence</th><th>Worksheet</th><th>Replay</th><th>Plots</th><th>Duration [s]</th><th>Samples</th>{metric_headers}</tr></thead>
+          <thead><tr><th>Run</th><th>Lab</th><th>Config</th><th>Lesson</th><th>Next</th><th>Next cue</th><th>Repeat command</th><th>Evidence</th><th>Activity</th><th>Mission evidence</th><th>Challenge evidence</th><th>Worksheet</th><th>Replay</th><th>Plots</th><th>Duration [s]</th><th>Samples</th>{metric_headers}</tr></thead>
           <tbody>{rows}</tbody>
         </table>
       </div>
@@ -5269,6 +5286,42 @@ def _config_cell(run: dict[str, Any]) -> str:
     config_name = str(run.get("config_name") or "")
     config_path = str(run.get("config_path") or "")
     return config_path or config_name
+
+
+def _run_repeat_command_cell(run: dict[str, Any]) -> str:
+    command = _run_repeat_command(run)
+    if not command:
+        return '<span class="muted">No command</span>'
+    return f'<div class="command-cell"><code>{escape(command)}</code></div>'
+
+
+def _run_repeat_command(run: dict[str, Any]) -> str:
+    summary = run.get("summary")
+    summary = summary if isinstance(summary, dict) else {}
+    if _summary_is_all_batch(summary):
+        return "python -m mclab batch all --open-report"
+    if _summary_is_comparison_batch(summary):
+        batch_name = _summary_batch_command_name(summary)
+        return f"python -m mclab batch {batch_name} --open-report" if batch_name else ""
+
+    config_path = str(summary.get("config_path") or run.get("config_path") or "").strip()
+    lab_name = _cli_lab_name(str(summary.get("lab_name") or run.get("lab_name") or config_path))
+    if not config_path or not lab_name:
+        return ""
+    if _summary_requires_hands_on_evidence(summary):
+        return (
+            f"python -m mclab run {lab_name} --config {config_path} "
+            "--viewer --realtime --pause-at-end --plot --open-report"
+        )
+    return f"python -m mclab run {lab_name} --config {config_path} --headless --plot --open-report"
+
+
+def _summary_batch_command_name(summary: dict[str, Any]) -> str:
+    for key in ("batch_name", "config_name"):
+        value = str(summary.get(key) or "").strip()
+        if value:
+            return value
+    return ""
 
 
 def _run_next_cue_text(run: dict[str, Any]) -> str:
