@@ -9,6 +9,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from mclab.learning_guides import (  # noqa: E402
     RUN_GUIDES,
+    batch_start_steps_text,
     challenge_prompt_for_guide,
     guide_for_config,
     guide_for_run_summary,
@@ -126,6 +127,20 @@ class LearningGuideTests(unittest.TestCase):
         self.assertEqual(
             start_steps_for_guide(compare_guide),
             "Start steps: Predict -> Run scenario -> Compare priority plot and worksheet.",
+        )
+
+    def test_batch_start_steps_share_course_and_batch_wording(self) -> None:
+        self.assertEqual(
+            batch_start_steps_text(course_level=True, scenario_count=99),
+            "Start steps: Predict the strongest course-level effect -> Run all comparison batches -> Open the course worksheet.",
+        )
+        self.assertEqual(
+            batch_start_steps_text(scenario_count=6),
+            "Start steps: Predict the strongest effect -> Run 6 scenarios -> Open the worksheet Prediction Check.",
+        )
+        self.assertEqual(
+            batch_start_steps_text(),
+            "Start steps: Predict the strongest scenario effect -> Run comparison batch -> Open the worksheet Prediction Check.",
         )
 
     def test_challenge_guides_visible_evidence_goal(self) -> None:

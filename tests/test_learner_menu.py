@@ -803,6 +803,15 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("try presets Early damping -> Balanced schedule -> Late damping", action_start_steps_text(lab03_dls))
         self.assertIn("prediction-backed observation", action_challenge_text(lab03_dls))
 
+        batch_by_label = {(action.group, action.label): action for action in BATCH_ACTIONS}
+        all_compare = batch_by_label[("Comparison Batches", "All compare")]
+        lab01_compare = batch_by_label[("Comparison Batches", "Lab01 compare")]
+        self.assertEqual(
+            action_start_steps_text(all_compare),
+            "Start steps: Predict the strongest course-level effect -> Run all comparison batches -> Open the course worksheet.",
+        )
+        self.assertIn("Run 5 scenarios", action_start_steps_text(lab01_compare))
+
     def test_menu_cards_show_actual_control_affordances(self) -> None:
         by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
         auto_demo = by_label[("Lab01 Mass-Spring-Damper", "Auto demo")]

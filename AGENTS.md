@@ -134,6 +134,7 @@ Implemented and verified:
 - Learner menu scenario and batch cards, the live interaction panel, run reports, and worksheets include a `Playbook` line that turns each demo into predict, manipulate, and evidence-review steps
 - Learner menu scenario and batch cards, the live interaction panel, run reports, and worksheets include a compact `Start steps` line for the shortest predict-run-control-review sequence before learners read the longer card
 - `Start steps` uses concrete configured preset names and required-preset order when available, such as `Close wall -> Back away -> Re-enter wall`
+- Batch `Start steps` wording is shared between the learner menu and `outputs/index.html`, including the course-level `Run all comparison batches` path
 - Learner menu scenario and batch cards, the live interaction panel, run reports, and worksheets include a `Challenge` line that gives learners an active visible-effect task to prove with plots or observation evidence
 - Learner menu scenario and batch cards include `Mission evidence` proof status from the latest run before opening the report
 - Learner menu batch cards include a `Prediction check` cue that points learners to the saved worksheet outcome table

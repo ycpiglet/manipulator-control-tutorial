@@ -12,6 +12,7 @@ from mclab.config import load_config
 from mclab.course_progress import course_milestone_label_for_step_index, course_milestone_summary
 from mclab.learning_guides import (
     RunGuide,
+    batch_start_steps_text,
     challenge_prompt_for_guide,
     guide_for_config,
     guide_for_run_summary,
@@ -4771,10 +4772,7 @@ def _learning_path_action_label(step: IndexPathStep) -> str:
 
 def _learning_path_start_steps(step: IndexPathStep) -> str:
     if step.batch_name:
-        if step.batch_name == "all":
-            text = "Predict the strongest course-level effect -> Run all comparison batches -> Open the course worksheet."
-        else:
-            text = "Predict the strongest scenario effect -> Run comparison batch -> Open the worksheet Prediction Check."
+        text = batch_start_steps_text(course_level=step.batch_name == "all").removeprefix("Start steps:").strip()
         return f'<p class="muted"><strong>Start steps:</strong> {escape(text)}</p>'
     if not step.config_path:
         return ""

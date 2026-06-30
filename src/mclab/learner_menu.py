@@ -17,6 +17,7 @@ from mclab.batch import ALL_BATCH_NAME, BATCH_SETS
 from mclab.config import PROJECT_ROOT, load_config
 from mclab.course_progress import course_milestone_summary
 from mclab.learning_guides import (
+    batch_start_steps_text,
     challenge_prompt_for_guide,
     guide_for_config,
     playbook_for_guide,
@@ -2633,10 +2634,9 @@ def action_playbook_text(action: MenuAction | BatchMenuAction) -> str:
 
 def action_start_steps_text(action: MenuAction | BatchMenuAction) -> str:
     if isinstance(action, BatchMenuAction):
-        return (
-            "Start steps: Predict the strongest effect -> "
-            f"Run {_batch_scenario_count(action)} scenarios -> "
-            "Open the worksheet Prediction Check."
+        return batch_start_steps_text(
+            scenario_count=_batch_scenario_count(action),
+            course_level=action.batch_name == ALL_BATCH_NAME,
         )
 
     if "hands-on" in action_tags(action):

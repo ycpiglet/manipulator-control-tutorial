@@ -112,6 +112,18 @@ def start_steps_for_guide(guide: RunGuide | None) -> str:
     return "Start steps: Predict -> Run scenario -> Review priority plot and worksheet."
 
 
+def batch_start_steps_text(*, scenario_count: int | None = None, course_level: bool = False) -> str:
+    if course_level:
+        return "Start steps: Predict the strongest course-level effect -> Run all comparison batches -> Open the course worksheet."
+    if scenario_count and scenario_count > 0:
+        return (
+            "Start steps: Predict the strongest effect -> "
+            f"Run {scenario_count} scenarios -> "
+            "Open the worksheet Prediction Check."
+        )
+    return "Start steps: Predict the strongest scenario effect -> Run comparison batch -> Open the worksheet Prediction Check."
+
+
 def challenge_prompt_for_guide(guide: RunGuide | None) -> str:
     if guide is None:
         return ""
