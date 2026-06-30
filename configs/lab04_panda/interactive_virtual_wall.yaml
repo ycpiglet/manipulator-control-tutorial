@@ -37,6 +37,7 @@ interaction:
   live_tuning: true
   tuning_presets:
     - label: Soft wall
+      purpose: Lower contact force and penetration risk.
       values:
         target_x: 0.59
         target_y: 0.00
@@ -48,6 +49,7 @@ interaction:
         wall_damping: 8.0
         wall_retreat_gain: 0.25
     - label: Stiff wall
+      purpose: Stronger virtual contact response.
       values:
         target_x: 0.62
         target_y: 0.00
@@ -59,6 +61,7 @@ interaction:
         wall_damping: 22.0
         wall_retreat_gain: 0.70
     - label: Close wall
+      purpose: Put target deeper into the wall.
       values:
         target_x: 0.64
         target_y: 0.00

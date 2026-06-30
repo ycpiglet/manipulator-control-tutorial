@@ -1846,12 +1846,15 @@ def _configured_presets_section(config: dict[str, Any]) -> str:
 
 def _configured_preset_card(preset: dict[str, Any]) -> str:
     label = str(preset.get("label") or preset.get("name") or "Preset")
+    purpose = str(preset.get("purpose") or preset.get("description") or "").strip()
     values = preset.get("values")
     items = values.items() if isinstance(values, dict) else ()
     body = _action_value_list(items) or '<p class="empty">No slider values were configured.</p>'
+    purpose_text = f'<p class="empty">{escape(purpose)}</p>' if purpose else ""
     return (
         '<article class="action-card">'
         f"<strong>{escape(label)}</strong>"
+        f"{purpose_text}"
         f"{body}"
         "</article>"
     )

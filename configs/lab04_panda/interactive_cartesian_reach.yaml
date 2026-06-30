@@ -24,18 +24,21 @@ interaction:
   live_tuning: true
   tuning_presets:
     - label: Soft reach
+      purpose: Slow reach with lower effort.
       values:
         target_x: 0.57
         target_y: 0.08
         target_z: 0.60
         cartesian_gain: 0.50
     - label: Default reach
+      purpose: Balanced Cartesian tracking.
       values:
         target_x: 0.60
         target_y: 0.10
         target_z: 0.59
         cartesian_gain: 1.00
     - label: Far target
+      purpose: Larger hand move and error.
       values:
         target_x: 0.66
         target_y: 0.16

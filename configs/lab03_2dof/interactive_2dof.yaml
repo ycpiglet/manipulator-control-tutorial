@@ -23,6 +23,7 @@ interaction:
   live_tuning: true
   tuning_presets:
     - label: Soft reach
+      purpose: Lower effort and slower hand motion.
       values:
         target_x: 0.52
         target_y: 0.34
@@ -30,6 +31,7 @@ interaction:
         task_kd: 14.0
         torque_limit: 35.0
     - label: Default reach
+      purpose: Balanced tracking and torque.
       values:
         target_x: 0.62
         target_y: 0.42
@@ -37,6 +39,7 @@ interaction:
         task_kd: 18.0
         torque_limit: 50.0
     - label: Near edge
+      purpose: Push toward poorer conditioning.
       values:
         target_x: 0.88
         target_y: 0.18

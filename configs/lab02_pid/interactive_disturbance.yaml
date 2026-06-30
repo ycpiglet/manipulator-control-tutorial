@@ -29,6 +29,7 @@ interaction:
   duration: 0.35
   tuning_presets:
     - label: Gentle P
+      purpose: Slow but calm disturbance recovery.
       values:
         target_position: 0.0
         kp: 24.0
@@ -36,6 +37,7 @@ interaction:
         kd: 3.0
         output_limit: 60.0
     - label: Damped PD
+      purpose: Show damping reducing overshoot.
       values:
         target_position: 0.0
         kp: 60.0
@@ -43,6 +45,7 @@ interaction:
         kd: 16.0
         output_limit: 80.0
     - label: Aggressive PID
+      purpose: Faster target chase with more effort.
       values:
         target_position: 0.35
         kp: 120.0

@@ -47,6 +47,7 @@ class TuningPreset:
     name: str
     label: str
     values: dict[str, float]
+    purpose: str = ""
 
 
 @dataclass(frozen=True)
@@ -221,7 +222,10 @@ class LiveTuning:
             parts.append(f"{spec.label}={_format_tuning_value(number)}")
         if not parts:
             return preset.label
-        return f"{preset.label}: {', '.join(parts)}"
+        value_text = ", ".join(parts)
+        if preset.purpose:
+            return f"{preset.label}: {preset.purpose}; {value_text}"
+        return f"{preset.label}: {value_text}"
 
     def reset(self) -> dict[str, float]:
         with self._lock:
@@ -262,7 +266,8 @@ def tuning_presets_from_config(config: dict[str, Any], specs: list[SliderSpec]) 
             continue
         label = str(raw_preset.get("label") or raw_preset.get("name") or f"Preset {index}")
         name = str(raw_preset.get("name") or _preset_name(label, index))
-        presets.append(TuningPreset(name=name, label=label, values=values))
+        purpose = str(raw_preset.get("purpose") or raw_preset.get("description") or "").strip()
+        presets.append(TuningPreset(name=name, label=label, values=values, purpose=purpose))
     return presets
 
 

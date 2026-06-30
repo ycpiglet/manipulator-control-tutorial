@@ -32,6 +32,7 @@ interaction:
   live_tuning: true
   tuning_presets:
     - label: Early damping
+      purpose: Damping activates before the edge.
       values:
         dls_gain: 4.2
         dls_damping: 0.08
@@ -40,6 +41,7 @@ interaction:
         max_dls_damping: 0.36
         torque_limit: 42.0
     - label: Balanced schedule
+      purpose: Default condition-aware tradeoff.
       values:
         dls_gain: 4.2
         dls_damping: 0.08
@@ -48,6 +50,7 @@ interaction:
         max_dls_damping: 0.3
         torque_limit: 42.0
     - label: Late damping
+      purpose: Delays damping until conditioning is poor.
       values:
         dls_gain: 4.2
         dls_damping: 0.08

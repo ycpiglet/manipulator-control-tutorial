@@ -2024,6 +2024,8 @@ def _format_config_value(value: Any) -> str:
 def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
     preset_labels = configured_preset_labels(action.config_path)
     presets = f"\nPresets: {', '.join(preset_labels)}" if preset_labels else ""
+    preset_purposes = configured_preset_purposes(action.config_path)
+    preset_purpose_text = f"\nPreset purpose: {'; '.join(preset_purposes)}" if preset_purposes else ""
     readiness = action_readiness(action)
     setup_detail = f" - {readiness.detail}" if readiness.status != "ok" and readiness.detail else ""
     setup_fix = f" Fix: {readiness.fix}" if readiness.status != "ok" and readiness.fix else ""
@@ -2050,6 +2052,7 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
         f"{action_compare_text(action)}\n"
         f"Watch: {action.watch}"
         f"{presets}"
+        f"{preset_purpose_text}"
     )
 
 
@@ -2073,6 +2076,30 @@ def configured_preset_labels(config_path: str) -> tuple[str, ...]:
         if label:
             labels.append(label)
     return tuple(labels)
+
+
+@lru_cache(maxsize=128)
+def configured_preset_purposes(config_path: str) -> tuple[str, ...]:
+    try:
+        config = load_config(config_path)
+    except (OSError, ValueError):
+        return ()
+    interaction = config.get("interaction")
+    if not isinstance(interaction, dict):
+        return ()
+    presets = interaction.get("tuning_presets")
+    if not isinstance(presets, list):
+        return ()
+    purposes: list[str] = []
+    for index, preset in enumerate(presets, start=1):
+        if not isinstance(preset, dict):
+            continue
+        purpose = str(preset.get("purpose") or preset.get("description") or "").strip()
+        if not purpose:
+            continue
+        label = str(preset.get("label") or preset.get("name") or f"Preset {index}").strip()
+        purposes.append(f"{label}: {purpose}" if label else purpose)
+    return tuple(purposes)
 
 
 def action_tags(action: MenuAction) -> tuple[str, ...]:
@@ -2203,6 +2230,7 @@ def _action_matches_terms(action: MenuAction, terms: list[str]) -> bool:
         action_viewer_text(action),
         action_plan_text(action),
         " ".join(configured_preset_labels(action.config_path)),
+        " ".join(configured_preset_purposes(action.config_path)),
         action_readiness(action).label,
         action_readiness(action).detail,
         " ".join(action_tags(action)),

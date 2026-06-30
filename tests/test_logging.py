@@ -463,6 +463,7 @@ class LoggingTests(unittest.TestCase):
                     "  live_tuning: true\n"
                     "  tuning_presets:\n"
                     "    - label: Damped PD\n"
+                    "      purpose: Show damping reducing overshoot.\n"
                     "      values:\n"
                     "        kp: 60.0\n"
                     "        kd: 16.0\n"
@@ -483,6 +484,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Sliders with Changed values summary", html)
             self.assertIn("Prediction, outcome, Use live status, Mark observation", html)
             self.assertIn("Damped PD", html)
+            self.assertIn("Show damping reducing overshoot.", html)
             self.assertIn("Aggressive PID", html)
             self.assertIn("<span>kp</span>", html)
             self.assertIn("<strong>60</strong>", html)

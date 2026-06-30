@@ -28,16 +28,19 @@ interaction:
   live_tuning: true
   tuning_presets:
     - label: Low DLS damping
+      purpose: Fast motion but higher joint speed.
       values:
         dls_gain: 4.2
         dls_damping: 0.02
         torque_limit: 42.0
     - label: Balanced DLS
+      purpose: Middle tradeoff near singularity.
       values:
         dls_gain: 4.2
         dls_damping: 0.08
         torque_limit: 42.0
     - label: High DLS damping
+      purpose: Safer joints with slower hand motion.
       values:
         dls_gain: 4.2
         dls_damping: 0.24

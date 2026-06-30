@@ -295,6 +295,7 @@ class KeyForcePulseTests(unittest.TestCase):
                     "tuning_presets": [
                         {
                             "label": "Calm",
+                            "purpose": "Slow the response for inspection.",
                             "values": {"kp": 20, "kd": 10, "missing": 1, "bad": "nope"},
                         },
                         {"label": "Empty", "values": {"missing": 2}},
@@ -307,7 +308,13 @@ class KeyForcePulseTests(unittest.TestCase):
         self.assertEqual(len(presets), 1)
         self.assertEqual(presets[0].name, "calm")
         self.assertEqual(presets[0].label, "Calm")
+        self.assertEqual(presets[0].purpose, "Slow the response for inspection.")
         self.assertEqual(presets[0].values, {"kp": 20.0, "kd": 10.0})
+        tuning = LiveTuning(specs, presets=presets)
+        self.assertEqual(
+            tuning.preset_summary("calm"),
+            "Calm: Slow the response for inspection.; Kp=20, Kd=10",
+        )
 
     def test_interactive_configs_expose_quick_presets(self) -> None:
         lab01_config = load_config("configs/lab01_msd/interactive_pull.yaml")
@@ -379,6 +386,7 @@ class KeyForcePulseTests(unittest.TestCase):
         for tuning, expected_labels in cases:
             with self.subTest(expected_labels=expected_labels):
                 self.assertEqual([preset.label for preset in tuning.presets], expected_labels)
+                self.assertTrue(all(preset.purpose for preset in tuning.presets))
                 self.assertTrue(all(preset.values for preset in tuning.presets))
 
     def test_interactive_configs_enable_plant_reset_by_default(self) -> None:
