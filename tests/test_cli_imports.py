@@ -72,15 +72,24 @@ class CliImportTests(unittest.TestCase):
             output.mkdir()
             report = output / "report.html"
             report.write_text("<html></html>", encoding="utf-8")
+            (output / "worksheet.md").write_text("# Batch worksheet\n", encoding="utf-8")
+            (output / "comparison_plots").mkdir()
+            (output / "comparison_plots" / "error_compare.png").write_bytes(b"fake-png")
 
             with (
                 patch("mclab.cli.run_batch", return_value=output) as runner,
                 patch("mclab.cli._open_path") as opener,
+                patch("builtins.print") as printer,
             ):
                 self.assertEqual(main(["batch", "lab01_msd_compare", "--open-report"]), 0)
 
             runner.assert_called_once()
             opener.assert_called_once_with(report)
+            printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
+            self.assertIn(f"Batch complete: {output}", printed)
+            self.assertIn(f"Report: {report}", printed)
+            self.assertIn(f"Worksheet: {output / 'worksheet.md'}", printed)
+            self.assertIn(f"Comparison plots: {output / 'comparison_plots'} (1 PNG; first: error_compare.png)", printed)
 
     def test_cli_runs_all_batches_when_requested(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -215,6 +224,9 @@ class CliImportTests(unittest.TestCase):
             output.mkdir()
             report = output / "report.html"
             report.write_text("<html></html>", encoding="utf-8")
+            (output / "worksheet.md").write_text("# Run worksheet\n", encoding="utf-8")
+            (output / "plots").mkdir()
+            (output / "plots" / "position.png").write_bytes(b"fake-png")
 
             def fake_runner(_config: dict[str, object], **_kwargs: object) -> Path:
                 return output
@@ -223,6 +235,7 @@ class CliImportTests(unittest.TestCase):
                 patch.dict("mclab.cli.LABS", {"unit_lab": fake_runner}, clear=False),
                 patch("mclab.cli.load_config", return_value={"model_path": "demo.xml"}),
                 patch("mclab.cli._open_path") as opener,
+                patch("builtins.print") as printer,
             ):
                 self.assertEqual(
                     main(
@@ -238,3 +251,8 @@ class CliImportTests(unittest.TestCase):
                 )
 
             opener.assert_called_once_with(report)
+            printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
+            self.assertIn(f"Run complete: {output}", printed)
+            self.assertIn(f"Report: {report}", printed)
+            self.assertIn(f"Worksheet: {output / 'worksheet.md'}", printed)
+            self.assertIn(f"Plots: {output / 'plots'} (1 PNG; first: position.png)", printed)

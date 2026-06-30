@@ -115,7 +115,7 @@ def main(argv: list[str] | None = None) -> int:
             plot_selection=args.plots,
             seed=args.seed,
         )
-        print(f"Run complete: {output_path}")
+        _print_output_summary("Run", output_path)
         if args.open_report:
             _open_path(_preferred_output_entry(output_path))
         return 0
@@ -130,7 +130,7 @@ def main(argv: list[str] | None = None) -> int:
             output_path = run_all_batches(**batch_kwargs)
         else:
             output_path = run_batch(args.batch_name, **batch_kwargs)
-        print(f"Batch complete: {output_path}")
+        _print_output_summary("Batch", output_path)
         if args.open_report:
             _open_path(_preferred_output_entry(output_path))
         return 0
@@ -161,6 +161,38 @@ def _preferred_output_entry(output_path: Path) -> Path:
     if index.exists():
         return index
     return output_path
+
+
+def _print_output_summary(kind: str, output_path: Path) -> None:
+    print(f"{kind} complete: {output_path}")
+    for line in _output_artifact_lines(output_path):
+        print(f"  {line}")
+
+
+def _output_artifact_lines(output_path: Path) -> list[str]:
+    lines: list[str] = []
+    for label, filename in (
+        ("Report", "report.html"),
+        ("Worksheet", "worksheet.md"),
+        ("Index", "index.html"),
+    ):
+        artifact = output_path / filename
+        if artifact.exists():
+            lines.append(f"{label}: {artifact}")
+    lines.extend(_plot_artifact_lines(output_path, "plots", "Plots"))
+    lines.extend(_plot_artifact_lines(output_path, "comparison_plots", "Comparison plots"))
+    return lines
+
+
+def _plot_artifact_lines(output_path: Path, directory_name: str, label: str) -> list[str]:
+    plot_dir = output_path / directory_name
+    if not plot_dir.exists():
+        return []
+    plots = sorted(plot_dir.glob("*.png"))
+    if not plots:
+        return []
+    first_plot = plots[0]
+    return [f"{label}: {plot_dir} ({len(plots)} PNG; first: {first_plot.name})"]
 
 
 def _open_path(path: Path) -> None:

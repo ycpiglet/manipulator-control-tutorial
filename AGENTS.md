@@ -102,6 +102,7 @@ Implemented and verified:
 - CLI `--viewer` and `--headless` are mutually exclusive so contradictory learner commands fail early with a usage error
 - CLI `--realtime` and `--pause-at-end` require `--viewer` so viewer-only options are never silently ignored in headless runs
 - CLI `--plots` requires `--plot` so plot preset selections are never silently ignored
+- CLI run and batch completion output lists key artifact paths such as report, worksheet, plots, and comparison plots
 - Interactive `MCLab Interaction` quick presets, purpose/value previews, and per-slider step buttons for representative damping, PID, 2DOF reach, Panda reach, and virtual wall parameter sets
 - Lab03 2DOF interactive viewer demos include Shoulder/Elbow pulse buttons for live joint-disturbance recovery observations
 - Interactive preset groups show a compare-in-order hint so learners try multiple parameter regimes before marking an observation

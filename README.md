@@ -508,6 +508,8 @@ outputs/
 - `outputs/index.html`: 추천 학습 경로 진행표, milestone 진행도, 단계별 `Done when` 완료 기준, 단계별 `Start steps` 실행 순서, 단계별 `Counts as control` learner-control 기준, evidence/outcome pending 상단 요약, hands-on evidence 상태, 단계별 prediction/compare/watch cue, 최신 evidence, `Note evidence` 항목, observation flow와 observation next step, mission evidence와 challenge evidence 요약, report/worksheet/priority plot/replay 바로가기, evidence quality와 outcome mix 요약, mission review queue의 ready/pending 및 observation/prediction/outcome/note/control/artifact 부족 카운트와 다음 review 링크, run별 observation/prediction/outcome/note 요약, 최신 prediction outcome 요약, 단계별 실행/반복 명령, Lab별 진행 요약, 실행 리포트, worksheet, replayable tuned-config 바로가기, plot 바로가기, `Lesson` / `Next` 안내, 핵심 summary metric을 최신순으로 비교하는 목록 페이지
 - `plots/`: 강의 자료에 바로 쓰기 좋은 PNG plot
 
+CLI는 run이나 batch가 끝나면 `report.html`, `worksheet.md`, `plots/` 또는 `comparison_plots/`처럼 바로 열어볼 주요 산출물 경로를 터미널에 요약합니다.
+
 ### 검증 명령
 
 ```bash
@@ -905,6 +907,8 @@ outputs/
 - `worksheet.md`: a Markdown review/submission worksheet with `Mission`, `Playbook`, `Start steps`, `Challenge`, `Done when` completion criteria, `Course Position`, mission evidence status and next proof step, challenge evidence status/proof source, predictions, prediction outcomes, pending outcome review, learner notes, observation timeline, live status, key parameters, Lab04 `Key Moments`, priority plot review prompts, a review checklist, suggested next experiments, and comparison batch commands
 - `outputs/index.html`: a newest-first index with the recommended learning path, milestone progress, per-step `Done when` completion criteria, per-step `Start steps` launch sequence, per-step `Counts as control` learner-control criteria, top-level evidence/outcome pending summaries, hands-on evidence status, per-step prediction/compare/watch cues, batch `Prediction Check` cues, latest evidence, note-evidence items, observation flow, observation next step, mission evidence and challenge evidence summaries plus report/worksheet/priority-plot/replay links, evidence-quality and outcome-mix summaries, a mission review queue with ready/pending totals, observation/prediction/outcome/note/control/artifact gap counts, and the next review link, per-run observation/prediction/outcome/note summaries, latest prediction-outcome snippets, per-step run/repeat commands, lab progress cards, run reports, worksheets, replayable tuned-config shortcuts, plot shortcuts, `Lesson` / `Next` guidance, and key summary metrics
 - `plots/`: PNG plots suitable for quick inspection or lecture slides
+
+After each run or batch, the CLI prints the key artifact paths to open next, including `report.html`, `worksheet.md`, `plots/`, or `comparison_plots/` when they exist.
 
 ### Verification
 
