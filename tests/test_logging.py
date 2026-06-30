@@ -2035,5 +2035,16 @@ class LoggingTests(unittest.TestCase):
             index = write_outputs_index(temp_dir)
 
             html = index.read_text(encoding="utf-8")
+            self.assertIn("Starter Commands", html)
+            self.assertIn(r".\run_mclab.cmd", html)
+            self.assertIn(
+                "python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot --open-report",
+                html,
+            )
+            self.assertIn(
+                "python -m mclab run lab01 --config configs/lab01_msd/interactive_pull.yaml "
+                "--viewer --realtime --pause-at-end --plot --open-report",
+                html,
+            )
             self.assertIn("No run reports were found yet.", html)
             self.assertIn("No saved runs yet.", html)

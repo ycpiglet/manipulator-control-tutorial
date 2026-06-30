@@ -4615,6 +4615,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
 <body>
   <main>
     <h1>MuJoCo Control Lab outputs</h1>
+    {_starter_commands_section()}
     {learning_path}
     <section>
       <h2>Progress Snapshot</h2>
@@ -4633,6 +4634,48 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
 </body>
 </html>
 """
+
+
+def _starter_commands_section() -> str:
+    items = (
+        (
+            "Open learner menu",
+            "Best first step: browse scenarios, filters, reports, plots, and worksheets with buttons.",
+            r".\run_mclab.cmd",
+        ),
+        (
+            "Generate first artifacts",
+            "Run the baseline 1D physics demo headless and save the first report, worksheet, and plots.",
+            "python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot --open-report",
+        ),
+        (
+            "Try first hands-on demo",
+            "Open the side-panel-free viewer plus MCLab Interaction controls for live push, preset, and slider practice.",
+            (
+                "python -m mclab run lab01 --config configs/lab01_msd/interactive_pull.yaml "
+                "--viewer --realtime --pause-at-end --plot --open-report"
+            ),
+        ),
+    )
+    cards = "\n".join(
+        (
+            '<article class="path-card">'
+            f"<strong>{escape(title)}</strong>"
+            f'<p class="muted">{escape(description)}</p>'
+            f'<pre class="path-command">{escape(command)}</pre>'
+            "</article>"
+        )
+        for title, description, command in items
+    )
+    return (
+        "<section>"
+        "<h2>Starter Commands</h2>"
+        '<p class="muted">Use these when this page is empty or when a learner just needs the shortest safe start.</p>'
+        '<div class="path-grid">'
+        f"{cards}"
+        "</div>"
+        "</section>"
+    )
 
 
 def _learning_path_section(runs: list[dict[str, Any]]) -> str:
