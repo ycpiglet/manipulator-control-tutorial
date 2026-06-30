@@ -451,13 +451,13 @@ class KeyForcePulseTests(unittest.TestCase):
             comparison.preset_progress_summary(),
             "Preset progress: 0/3 tried; 0/2 required; next required: Close. Try required presets before Mark observation.",
         )
-        self.assertEqual(comparison.preset_checklist_state(), "needs another preset")
+        self.assertEqual(comparison.preset_checklist_state(), "needs required preset Close")
         comparison.apply_preset("soft")
         self.assertEqual(
             comparison.preset_progress_summary(),
             "Preset progress: 1/3 tried; 0/2 required; next required: Close. Try required presets before Mark observation.",
         )
-        self.assertEqual(comparison.preset_checklist_state(), "needs another preset")
+        self.assertEqual(comparison.preset_checklist_state(), "needs required preset Close")
         comparison.apply_preset("close")
         self.assertEqual(log.events()[-1]["label"], "Close")
         self.assertEqual(log.events()[-1]["value"]["required"], True)
@@ -465,7 +465,7 @@ class KeyForcePulseTests(unittest.TestCase):
             comparison.preset_progress_summary(),
             "Preset progress: 2/3 tried; 1/2 required; next required: Back. Try required presets before Mark observation.",
         )
-        self.assertEqual(comparison.preset_checklist_state(), "needs another preset")
+        self.assertEqual(comparison.preset_checklist_state(), "needs required preset Back")
         comparison.apply_preset("back")
         self.assertEqual(
             comparison.preset_progress_summary(),
@@ -754,6 +754,15 @@ class KeyForcePulseTests(unittest.TestCase):
                 preset_state="needs another preset",
             ),
             "Evidence checklist: Prediction ready; Preset comparison needs another preset; Outcome selected; Note ready.",
+        )
+        self.assertEqual(
+            _observation_checklist_status(
+                "Target should release after backing away.",
+                "Matched",
+                "Wall phase returned before contact.",
+                preset_state="needs required preset Back away",
+            ),
+            "Evidence checklist: Prediction ready; Preset comparison needs required preset Back away; Outcome selected; Note ready.",
         )
         self.assertEqual(
             _observation_checklist_status(

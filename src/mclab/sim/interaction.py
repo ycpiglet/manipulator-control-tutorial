@@ -292,11 +292,12 @@ class LiveTuning:
     def preset_checklist_state(self) -> str:
         if len(self.presets) < 2:
             return ""
-        required_names = {preset.name for preset in self.presets if preset.required}
+        required_presets = [preset for preset in self.presets if preset.required]
         with self._lock:
             tried_names = set(self._tried_presets)
-        if required_names:
-            return "ready" if required_names.issubset(tried_names) else "needs another preset"
+        if required_presets:
+            next_required = next((preset for preset in required_presets if preset.name not in tried_names), None)
+            return "ready" if next_required is None else f"needs required preset {next_required.label}"
         tried_count = len(tried_names)
         return "ready" if tried_count >= 2 else "needs another preset"
 
