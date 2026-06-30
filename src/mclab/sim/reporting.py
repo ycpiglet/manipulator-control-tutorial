@@ -852,6 +852,7 @@ def _render_worksheet(
     lines.extend(_worksheet_learning_guide_lines(guide, summary))
     lines.extend(_worksheet_course_position_lines(summary))
     lines.extend(_worksheet_mission_evidence_lines(summary, interaction_events, plots, config))
+    lines.extend(_worksheet_challenge_evidence_lines(summary, interaction_events, plots, config))
     lines.extend(_worksheet_pairs_section("Key Parameters", _config_highlight_pairs(config)))
     lines.extend(_worksheet_key_moments_lines(summary))
     lines.extend(_worksheet_pairs_section("Summary Values", list(summary.items())))
@@ -922,6 +923,18 @@ def _worksheet_mission_evidence_lines(
 ) -> list[str]:
     lines = ["## Mission Evidence", ""]
     lines.extend(_worksheet_mapping_lines(dict(_mission_evidence_items(summary, events, plots, config))))
+    lines.append("")
+    return lines
+
+
+def _worksheet_challenge_evidence_lines(
+    summary: dict[str, Any],
+    events: list[dict[str, Any]],
+    plots: list[Path],
+    config: dict[str, Any],
+) -> list[str]:
+    lines = ["## Challenge Evidence", ""]
+    lines.extend(_worksheet_mapping_lines(dict(_challenge_evidence_items(summary, events, plots, config))))
     lines.append("")
     return lines
 
@@ -1323,6 +1336,7 @@ def _render_report(
     result_check = _result_check_section(summary)
     key_moments = _key_moments_section(summary)
     mission_evidence = _mission_evidence_section(summary, interaction_events, plots, config)
+    challenge_evidence = _challenge_evidence_section(summary, interaction_events, plots, config)
     hands_on_evidence = _hands_on_evidence_section(summary, interaction_events)
     learner_action_summary = _learner_action_summary_section(interaction_events, config)
     learner_snapshot_section = _learner_snapshot_section(learner_snapshot)
@@ -1692,6 +1706,7 @@ def _render_report(
     {result_check}
     {key_moments}
     {mission_evidence}
+    {challenge_evidence}
     {hands_on_evidence}
     {learner_action_summary}
     {learner_snapshot_section}
@@ -2872,6 +2887,65 @@ def _mission_evidence_items(
     return items
 
 
+def _challenge_evidence_items(
+    summary: dict[str, Any],
+    events: list[dict[str, Any]],
+    plots: list[Any],
+    config: dict[str, Any] | None = None,
+) -> list[tuple[str, Any]]:
+    guide = guide_for_run_summary(summary)
+    challenge = challenge_prompt_for_guide(guide).removeprefix("Challenge:").strip()
+    mission_items = dict(_mission_evidence_items(summary, events, plots, config))
+    mission_status = str(mission_items.get("Status") or "")
+    mission_next_step = str(mission_items.get("Next proof step") or "")
+    requires_hands_on = _summary_requires_hands_on_evidence(summary)
+    return [
+        ("Challenge", challenge or "Name one visible change and point to the evidence that proves it."),
+        ("Challenge status", _challenge_status_text(mission_status)),
+        ("Proof source", _challenge_proof_source(requires_hands_on)),
+        ("Mission evidence status", mission_status),
+        ("Next challenge step", _challenge_next_step(mission_status, mission_next_step, requires_hands_on)),
+    ]
+
+
+def _challenge_status_text(mission_status: str) -> str:
+    status = mission_status.strip().lower()
+    if status in {"artifacts ready", "ready for review"}:
+        return "Ready to review"
+    if status == "outcome review pending":
+        return "Needs prediction outcome review"
+    if status == "ready, add note next":
+        return "Needs learner note"
+    if status.startswith("needs required preset"):
+        return "Needs required preset evidence"
+    if status == "needs learner control":
+        return "Needs learner control evidence"
+    if status == "needs prediction":
+        return "Needs prediction evidence"
+    if status == "needs observation":
+        return "Needs observation evidence"
+    if status == "needs plot":
+        return "Needs plot evidence"
+    return mission_status or "Needs evidence"
+
+
+def _challenge_proof_source(requires_hands_on: bool) -> str:
+    if requires_hands_on:
+        return "Learner control, Mark observation, live status, and priority plot"
+    return "Priority plot and worksheet"
+
+
+def _challenge_next_step(mission_status: str, mission_next_step: str, requires_hands_on: bool) -> str:
+    status = mission_status.strip().lower()
+    if status in {"artifacts ready", "ready for review"}:
+        if requires_hands_on:
+            return "Compare the prediction-backed observation with the priority plot and worksheet."
+        return "Compare the challenge statement with the priority plot and worksheet."
+    if mission_next_step:
+        return mission_next_step
+    return "Rerun the scenario and collect the missing challenge evidence."
+
+
 def _mission_evidence_section(
     summary: dict[str, Any],
     events: list[dict[str, Any]],
@@ -2886,6 +2960,26 @@ def _mission_evidence_section(
         "<strong>Mission proof status</strong>"
         '<p class="empty">Use this before moving on: it tells whether the mission has enough saved evidence.</p>'
         f"{_action_value_list(_mission_evidence_items(summary, events, plots, config))}"
+        "</article>"
+        "</div>"
+        "</section>"
+    )
+
+
+def _challenge_evidence_section(
+    summary: dict[str, Any],
+    events: list[dict[str, Any]],
+    plots: list[Path],
+    config: dict[str, Any],
+) -> str:
+    return (
+        "<section>"
+        "<h2>Challenge Evidence</h2>"
+        '<div class="action-grid">'
+        '<article class="action-card action-wide">'
+        "<strong>Challenge proof status</strong>"
+        '<p class="empty">Use this after the run: it turns the visible-effect challenge into evidence to check.</p>'
+        f"{_action_value_list(_challenge_evidence_items(summary, events, plots, config))}"
         "</article>"
         "</div>"
         "</section>"
