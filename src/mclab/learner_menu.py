@@ -1926,10 +1926,8 @@ def action_next_cue_text(action: MenuAction, outputs_root: Path | None = None) -
 
 
 def _action_learner_control_action(action: MenuAction, latest: Path) -> str:
-    phrase = _action_learner_control_phrase(action, latest)
-    if phrase != "one learner control":
-        return f"Use {phrase}"
-    return "Use one learner control"
+    step = _hands_on_start_control_step(action)
+    return step[:1].upper() + step[1:] if step else "Use one learner control"
 
 
 def _action_learner_control_phrase(action: MenuAction, latest: Path | None) -> str:
@@ -2710,11 +2708,11 @@ def _hands_on_start_control_step(action: MenuAction) -> str:
     if not isinstance(interaction, dict):
         interaction = {}
     if bool(interaction.get("key_force", False)):
-        return "use Pull/Push"
+        return "use Pull/Push buttons and A/D keys"
     if bool(interaction.get("target_nudge", False)):
-        return "use Target X buttons"
+        return f"use {_target_nudge_control_label(interaction)}"
     if bool(interaction.get("joint_disturbance", False)):
-        return "use Shoulder/Elbow pulse"
+        return "use Shoulder/Elbow pulse buttons and A/D keys"
     if bool(interaction.get("live_tuning", False)):
         return "move one live slider"
     return "use one button, slider, or preset"
@@ -2792,8 +2790,8 @@ def _action_control_credit_text(config_path: str) -> str:
 
 
 def _target_nudge_control_label(interaction: dict[str, Any]) -> str:
-    left = str(interaction.get("target_left_label", "")).strip()
-    right = str(interaction.get("target_right_label", "")).strip()
+    left = str(interaction.get("target_left_label", "Joint Target -  A / Left")).strip()
+    right = str(interaction.get("target_right_label", "Joint Target +  D / Right")).strip()
     if left and right:
         return f"{left} / {right}"
     return "Target -/+ buttons and A/D keys"

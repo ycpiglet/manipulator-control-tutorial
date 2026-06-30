@@ -808,6 +808,11 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Run viewer", action_start_steps_text(lab03_dls))
         self.assertIn("try presets Early damping -> Balanced schedule -> Late damping", action_start_steps_text(lab03_dls))
         self.assertIn("prediction-backed observation", action_challenge_text(lab03_dls))
+        lab04_joint = by_label[("Lab04 Panda Manipulator", "Joint target")]
+        self.assertIn(
+            "use Joint Target -  A / Left / Joint Target +  D / Right",
+            action_start_steps_text(lab04_joint),
+        )
 
         batch_by_label = {(action.group, action.label): action for action in BATCH_ACTIONS}
         all_compare = batch_by_label[("Comparison Batches", "All compare")]
@@ -2431,7 +2436,8 @@ class LearnerMenuTests(unittest.TestCase):
             (joint_run_path / "interaction_events.json").write_text("[]", encoding="utf-8")
             self.assertEqual(
                 action_next_cue_text(lab04_joint_interactive, outputs),
-                "Next cue: Use experiment buttons, then Mark observation with a prediction.",
+                "Next cue: Use Joint Target -  A / Left / Joint Target +  D / Right, "
+                "then Mark observation with a prediction.",
             )
 
             run_path = outputs / "run_lab02_interactive"

@@ -155,6 +155,7 @@ Implemented and verified:
 - Activity mix next-step and worksheet coverage checklist text names configured button types such as Pull/Push, Shoulder/Elbow pulse, and target nudge when available
 - Learner menu scenario cards include a `Next cue` that points learners toward the next best action: run, try another preset, mark observation, review outcome, replay, or compare
 - Learner menu `Next cue` distinguishes missing learner control from already-used learner control so learners mark evidence instead of repeating controls unnecessarily
+- Learner menu `Next cue` and hands-on `Start steps` name configured button labels such as Pull/Push, Joint Target, Target X, and Shoulder/Elbow pulse when learner-control evidence is missing
 - Interactive `Playback speed` slider controls realtime viewer pacing from slow-motion to faster skim
 - Interactive `Pause / Resume` button pauses physics stepping and logging while keeping viewer and sliders responsive
 - Interactive `Step once` button advances exactly one physics step while staying paused for frame-by-frame observation
