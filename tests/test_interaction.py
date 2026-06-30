@@ -837,6 +837,20 @@ class KeyForcePulseTests(unittest.TestCase):
             "Marked observation 1 - add a prediction next time; "
             "use experiment buttons, live sliders, or Quick presets to complete the learning path.",
         )
+        self.assertEqual(
+            _observation_marker_status_message(
+                log,
+                "",
+                "The response settled.",
+                has_buttons=True,
+                has_sliders=True,
+                has_presets=True,
+                button_next_step="Use Target X - away or Target X + into wall.",
+            ),
+            "Marked observation 1 - add a prediction next time; use experiment buttons "
+            "(Target X - away or Target X + into wall), live sliders, or Quick presets "
+            "to complete the learning path.",
+        )
 
         log.mark_observation(prediction="A softer preset should reduce force.")
         self.assertEqual(
@@ -845,8 +859,11 @@ class KeyForcePulseTests(unittest.TestCase):
                 "A softer preset should reduce force.",
                 "",
                 "needs another preset",
+                has_buttons=True,
+                button_next_step="Use Pull Left A / Left or Push Right D / Right.",
             ),
-            "Marked observation 2 - use one button, slider, or preset; add a short note or Use live status; "
+            "Marked observation 2 - use Pull Left A / Left or Push Right D / Right; "
+            "add a short note or Use live status; "
             "try another preset to complete the learning path.",
         )
 

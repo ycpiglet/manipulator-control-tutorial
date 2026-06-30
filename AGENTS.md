@@ -128,6 +128,7 @@ Implemented and verified:
 - Interactive `MCLab Interaction` live `Activity mix` next-step text names the actual panel button labels such as Pull/Push, Shoulder/Elbow pulse, Target X nudge, or Reset plant when button evidence is still missing
 - Interactive `MCLab Interaction` observation area shows a live `Action log` cue confirming the latest learner button, slider, preset, or marker event
 - Interactive `MCLab Interaction` observation area shows a wrapped `Note preview` so accumulated evidence is readable before `Mark observation`
+- Interactive `MCLab Interaction` post-`Mark observation` status messages name missing button, slider, or preset evidence using actual panel labels when available
 - Hands-on mission evidence and learning-path completion require at least one learner control event (`button`, `slider`, or `preset`) plus a prediction-and-note observation marker
 - Evidence helper buttons such as `Use live status` and `Use changed values`, plus view/pacing controls such as pause, step, and playback speed, do not satisfy the learner-control requirement by themselves
 - Run reports and worksheets include `Mission Evidence` status with observation, prediction, outcome, note, learner-control, plot counts, and the next proof step

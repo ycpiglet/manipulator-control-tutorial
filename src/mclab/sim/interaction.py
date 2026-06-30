@@ -1350,6 +1350,7 @@ def maybe_start_interaction_panel(
                             has_buttons=activity_has_buttons,
                             has_sliders=activity_has_sliders,
                             has_presets=activity_has_presets,
+                            button_next_step=activity_button_next_step,
                         )
                     )
 
@@ -1885,13 +1886,21 @@ def _observation_marker_status_message(
     has_buttons: bool = False,
     has_sliders: bool = False,
     has_presets: bool = False,
+    button_next_step: str = "",
 ) -> str:
     count = _observation_marker_count(event_log)
     missing: list[str] = []
     if not prediction.strip():
         missing.append("add a prediction next time")
     if controls_available and _learner_control_event_count(event_log.events()) <= 0:
-        missing.append(_learner_control_followup_text(has_buttons, has_sliders, has_presets))
+        missing.append(
+            _learner_control_followup_text(
+                has_buttons,
+                has_sliders,
+                has_presets,
+                button_next_step=button_next_step,
+            )
+        )
     if not note.strip():
         missing.append("add a short note or Use live status")
     preset_followup = _preset_state_followup(preset_state)
