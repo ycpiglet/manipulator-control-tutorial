@@ -186,6 +186,7 @@ Implemented and verified:
 - Learner menu scenario, batch, and learning-path plot buttons that open the latest prioritized plot when one exists
 - Learner menu scenario and batch cards show `Plot review` guidance for the latest prioritized plot
 - Learner menu scenario, batch, and learning-path `Worksheet` buttons that open the latest `worksheet.md` when one exists
+- Learner menu scenario, batch, and learning-path `Folder` buttons open each latest output directory for raw logs, configs, snapshots, and tuned YAML artifacts
 - Learner menu bottom bar includes `Open latest worksheet` for the most recently completed run or batch
 - Learner menu bottom bar includes `Open latest folder` for the newest output's raw logs, configs, snapshots, and tuned YAML artifacts
 - Learner menu bottom bar initializes latest report/plot/worksheet buttons from the newest saved output on startup
@@ -234,7 +235,7 @@ Implemented and verified:
 - Outputs index learning path cards include evidence status, latest evidence summaries, latest report/worksheet/priority-plot/replay links, and ready-to-run or repeat commands for each course step
 - Outputs index learning path cards show the priority plot review cue directly under the latest artifact links so learners know what to inspect before opening the plot
 - Learner menu learning-path cards show the latest worksheet/replay artifacts, latest priority plot filename, and the same plot review cue in the progress text
-- Learner menu learning-path cards separate the scenario launch button from Report/Plot/Worksheet/Replay artifact buttons so the 3-column path layout stays readable
+- Learner menu learning-path cards separate the scenario launch button from Report/Plot/Worksheet/Folder/Replay artifact buttons so the 3-column path layout stays readable
 - Learner menu learning-path artifact buttons update their labels from saved outputs, such as `Plot: dls` or `Plot: position`, while staying short enough for the path grid
 - Learner menu bottom-bar latest artifact buttons update after a run, including short plot-specific labels such as `Open plot: position`
 - Outputs index learning path cards show `Done when` completion criteria matching the learner menu

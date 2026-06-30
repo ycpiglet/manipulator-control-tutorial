@@ -119,6 +119,7 @@ class ExperienceFilter:
 
 BatchMenuStateItem = tuple[BatchMenuAction, Any, Any, Any]
 BatchMenuStateItemWithWorksheet = tuple[BatchMenuAction, Any, Any, Any, Any]
+BatchMenuStateItemWithFolder = tuple[BatchMenuAction, Any, Any, Any, Any, Any]
 
 
 EXPERIENCE_FILTERS: tuple[ExperienceFilter, ...] = (
@@ -1453,6 +1454,16 @@ def launch_learning_path_latest_worksheet(
     return open_path(worksheet)
 
 
+def launch_learning_path_latest_folder(
+    step: LearningPathStep,
+    outputs_root: Path | None = None,
+) -> subprocess.Popen[Any] | None:
+    latest = learning_path_latest_output(step, outputs_root)
+    if latest is None:
+        return None
+    return open_path(latest)
+
+
 def learning_path_latest_tuned_config(
     step: LearningPathStep,
     outputs_root: Path | None = None,
@@ -1473,6 +1484,7 @@ def learning_path_artifact_button_labels(
         "report": "Report",
         "plot": plot_label,
         "worksheet": "Worksheet",
+        "folder": "Folder",
         "replay": "Replay",
     }
 
@@ -2188,21 +2200,23 @@ def action_replay_text(action: MenuAction, outputs_root: Path | None = None) -> 
 
 
 def refresh_batch_menu_state(
-    items: tuple[BatchMenuStateItem | BatchMenuStateItemWithWorksheet, ...],
+    items: tuple[BatchMenuStateItem | BatchMenuStateItemWithWorksheet | BatchMenuStateItemWithFolder, ...],
     outputs_root: Path | None = None,
 ) -> None:
     for item in items:
         action, text_variable, report_button, plot_button = item[:4]
         worksheet_button = item[4] if len(item) > 4 else None
+        folder_button = item[5] if len(item) > 5 else None
+        latest_output = action_latest_output(action, outputs_root)
         text_variable.set(lesson_text_for_batch(action, outputs_root))
-        report_button.state(
-            ["!disabled"] if action_latest_output(action, outputs_root) is not None else ["disabled"]
-        )
+        report_button.state(["!disabled"] if latest_output is not None else ["disabled"])
         plot_button.state(["!disabled"] if action_latest_plot(action, outputs_root) is not None else ["disabled"])
         if worksheet_button is not None:
             worksheet_button.state(
                 ["!disabled"] if action_latest_worksheet(action, outputs_root) is not None else ["disabled"]
             )
+        if folder_button is not None:
+            folder_button.state(["!disabled"] if latest_output is not None else ["disabled"])
 
 
 def action_followup(action: MenuAction) -> MenuAction | BatchMenuAction:
@@ -2632,6 +2646,16 @@ def launch_action_latest_worksheet(
     if worksheet is None:
         return None
     return open_path(worksheet)
+
+
+def launch_action_latest_folder(
+    action: MenuAction | BatchMenuAction,
+    outputs_root: Path | None = None,
+) -> subprocess.Popen[Any] | None:
+    latest = action_latest_output(action, outputs_root)
+    if latest is None:
+        return None
+    return open_path(latest)
 
 
 def _preferred_output_entry(path: Path) -> Path:
@@ -3694,13 +3718,14 @@ def main() -> int:
     path_report_buttons: list[tuple[LearningPathStep, Any]] = []
     path_plot_buttons: list[tuple[LearningPathStep, Any]] = []
     path_worksheet_buttons: list[tuple[LearningPathStep, Any]] = []
+    path_folder_buttons: list[tuple[LearningPathStep, Any]] = []
     path_replay_buttons: list[tuple[LearningPathStep, Any]] = []
     path_summary = tk.StringVar(value=learning_path_summary_text())
     path_milestones = tk.StringVar(value=learning_path_milestone_text())
     next_step_ref: dict[str, LearningPathStep | None] = {"step": next_learning_path_step()}
     next_button_ref: dict[str, Any | None] = {"button": None}
     next_review_button_ref: dict[str, Any | None] = {"button": None}
-    batch_state_items: list[BatchMenuStateItem | BatchMenuStateItemWithWorksheet] = []
+    batch_state_items: list[BatchMenuStateItem | BatchMenuStateItemWithWorksheet | BatchMenuStateItemWithFolder] = []
     post_run_refresh_ref: dict[str, Callable[[], None]] = {}
     review_queue = tk.StringVar(value=review_queue_summary_text())
 
@@ -3726,6 +3751,9 @@ def main() -> int:
         for step, button in path_worksheet_buttons:
             update_learning_path_button_text(step, button, "worksheet")
             button.state(["!disabled"] if learning_path_latest_worksheet(step) is not None else ["disabled"])
+        for step, button in path_folder_buttons:
+            update_learning_path_button_text(step, button, "folder")
+            button.state(["!disabled"] if learning_path_latest_output(step) is not None else ["disabled"])
         for step, button in path_replay_buttons:
             update_learning_path_button_text(step, button, "replay")
             button.state(["!disabled"] if learning_path_latest_tuned_config(step) is not None else ["disabled"])
@@ -3910,8 +3938,20 @@ def main() -> int:
             step_worksheet_button.state(["disabled"])
         step_worksheet_button.pack(side="left", padx=(6, 0))
         path_worksheet_buttons.append((step, step_worksheet_button))
+        artifact_second_row = ttk.Frame(cell)
+        artifact_second_row.pack(anchor="w", pady=(4, 0))
+        step_folder_button = ttk.Button(
+            artifact_second_row,
+            text=artifact_labels["folder"],
+            width=8,
+            command=lambda selected=step: launch_learning_path_latest_folder(selected),
+        )
+        if learning_path_latest_output(step) is None:
+            step_folder_button.state(["disabled"])
+        step_folder_button.pack(side="left")
+        path_folder_buttons.append((step, step_folder_button))
         step_replay_button = ttk.Button(
-            artifact_row,
+            artifact_second_row,
             text=artifact_labels["replay"],
             width=8,
             command=lambda selected=step: _launch_learning_path_tuned_replay_from_menu(
@@ -3995,11 +4035,20 @@ def main() -> int:
         if batch_worksheet is None:
             worksheet_button.state(["disabled"])
         worksheet_button.pack(anchor="w", pady=(4, 0))
+        folder_button = ttk.Button(
+            cell,
+            text="Folder",
+            width=10,
+            command=lambda selected=action: launch_action_latest_folder(selected),
+        )
+        if batch_latest is None:
+            folder_button.state(["disabled"])
+        folder_button.pack(anchor="w", pady=(4, 0))
         batch_text = tk.StringVar(value=lesson_text_for_batch(action))
         ttk.Label(cell, textvariable=batch_text, wraplength=360, justify="left").pack(
             anchor="w", pady=(4, 0)
         )
-        batch_state_items.append((action, batch_text, report_button, plot_button, worksheet_button))
+        batch_state_items.append((action, batch_text, report_button, plot_button, worksheet_button, folder_button))
 
     canvas = tk.Canvas(outer, highlightthickness=0)
     scrollbar = ttk.Scrollbar(outer, orient="vertical", command=canvas.yview)
@@ -4098,7 +4147,7 @@ def main() -> int:
         for group, actions in grouped.items():
             frame = ttk.LabelFrame(scroll_frame, text=group, padding=12)
             frame.grid(row=row, column=0, sticky="ew", pady=6)
-            frame.columnconfigure(9, weight=1)
+            frame.columnconfigure(10, weight=1)
             row += 1
             for action_index, action in enumerate(actions):
                 readiness = action_readiness(action)
@@ -4167,6 +4216,15 @@ def main() -> int:
                 if latest_worksheet is None:
                     worksheet_button.state(["disabled"])
                 worksheet_button.grid(row=action_index, column=5, sticky="w", padx=(0, 12), pady=4)
+                folder_button = ttk.Button(
+                    frame,
+                    text="Folder",
+                    width=8,
+                    command=lambda selected=action: launch_action_latest_folder(selected),
+                )
+                if latest is None:
+                    folder_button.state(["disabled"])
+                folder_button.grid(row=action_index, column=6, sticky="w", padx=(0, 12), pady=4)
                 replay_button = ttk.Button(
                     frame,
                     text="Replay",
@@ -4186,7 +4244,7 @@ def main() -> int:
                 )
                 if latest_tuned_config is None:
                     replay_button.state(["disabled"])
-                replay_button.grid(row=action_index, column=6, sticky="w", padx=(0, 12), pady=4)
+                replay_button.grid(row=action_index, column=7, sticky="w", padx=(0, 12), pady=4)
                 next_button = ttk.Button(
                     frame,
                     text="Next",
@@ -4208,7 +4266,7 @@ def main() -> int:
                     next_button.state(["disabled"])
                 if isinstance(followup, BatchMenuAction) and batch_readiness(followup).status != "ok":
                     next_button.state(["disabled"])
-                next_button.grid(row=action_index, column=7, sticky="w", padx=(0, 12), pady=4)
+                next_button.grid(row=action_index, column=8, sticky="w", padx=(0, 12), pady=4)
                 compare_button = ttk.Button(
                     frame,
                     text="Compare",
@@ -4228,9 +4286,9 @@ def main() -> int:
                 )
                 if batch_readiness(compare_batch).status != "ok":
                     compare_button.state(["disabled"])
-                compare_button.grid(row=action_index, column=8, sticky="w", padx=(0, 12), pady=4)
+                compare_button.grid(row=action_index, column=9, sticky="w", padx=(0, 12), pady=4)
                 ttk.Label(frame, text=lesson_text(action), wraplength=500, justify="left").grid(
-                    row=action_index, column=9, sticky="w", pady=4
+                    row=action_index, column=10, sticky="w", pady=4
                 )
         canvas.configure(scrollregion=canvas.bbox("all"))
 

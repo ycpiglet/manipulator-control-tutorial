@@ -92,8 +92,10 @@ from mclab.learner_menu import (  # noqa: E402
     configured_preset_purposes,
     configured_required_preset_labels,
     launch_action_latest_output,
+    launch_action_latest_folder,
     launch_action_latest_plot,
     launch_action_latest_worksheet,
+    launch_learning_path_latest_folder,
     launch_learning_path_latest_output,
     launch_learning_path_latest_worksheet,
     launch_next_review_output,
@@ -744,6 +746,14 @@ class LearnerMenuTests(unittest.TestCase):
 
             opener.assert_called_once_with(report)
             self.assertIsNone(missing)
+
+            with patch("mclab.learner_menu.open_path") as opener:
+                launch_learning_path_latest_folder(first_step, outputs)
+                missing_folder = launch_learning_path_latest_folder(second_step, outputs)
+
+            opener.assert_called_once_with(run_dir)
+            self.assertIsNone(missing_folder)
+            self.assertEqual(learning_path_artifact_button_labels(first_step, outputs)["folder"], "Folder")
 
             with patch("mclab.learner_menu.open_path") as opener:
                 launch_learning_path_latest_worksheet(first_step, outputs)
@@ -1614,6 +1624,13 @@ class LearnerMenuTests(unittest.TestCase):
 
             opener.assert_called_once_with(report)
             self.assertIsNone(missing)
+
+            with patch("mclab.learner_menu.open_path") as opener:
+                launch_action_latest_folder(MENU_ACTIONS[0], outputs)
+                missing_folder = launch_action_latest_folder(MENU_ACTIONS[1], outputs)
+
+            opener.assert_called_once_with(run_path)
+            self.assertIsNone(missing_folder)
 
             with patch("mclab.learner_menu.open_path") as opener:
                 launch_action_latest_plot(MENU_ACTIONS[0], outputs)
@@ -2702,6 +2719,13 @@ class LearnerMenuTests(unittest.TestCase):
             self.assertIsNone(missing)
 
             with patch("mclab.learner_menu.open_path") as opener:
+                launch_action_latest_folder(lab01_batch, outputs)
+                missing_folder = launch_action_latest_folder(lab02_batch, outputs)
+
+            opener.assert_called_once_with(batch_path)
+            self.assertIsNone(missing_folder)
+
+            with patch("mclab.learner_menu.open_path") as opener:
                 launch_action_latest_plot(lab01_batch, outputs)
                 missing_plot = launch_action_latest_plot(lab02_batch, outputs)
 
@@ -2755,10 +2779,14 @@ class LearnerMenuTests(unittest.TestCase):
         report_button = FakeButton()
         plot_button = FakeButton()
         worksheet_button = FakeButton()
+        folder_button = FakeButton()
 
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)
-            refresh_batch_menu_state(((lab01_batch, text_variable, report_button, plot_button, worksheet_button),), outputs)
+            refresh_batch_menu_state(
+                ((lab01_batch, text_variable, report_button, plot_button, worksheet_button, folder_button),),
+                outputs,
+            )
 
             self.assertIn("History: Not run yet", text_variable.value)
             self.assertIn("Plots: Not saved yet", text_variable.value)
@@ -2768,6 +2796,7 @@ class LearnerMenuTests(unittest.TestCase):
             self.assertEqual(report_button.state_calls[-1], ["disabled"])
             self.assertEqual(plot_button.state_calls[-1], ["disabled"])
             self.assertEqual(worksheet_button.state_calls[-1], ["disabled"])
+            self.assertEqual(folder_button.state_calls[-1], ["disabled"])
 
             batch_path = outputs / "batch_lab01"
             batch_path.mkdir()
@@ -2786,7 +2815,10 @@ class LearnerMenuTests(unittest.TestCase):
             (batch_path / "comparison_plots").mkdir()
             (batch_path / "comparison_plots" / "position_compare.png").write_bytes(b"fake-png")
 
-            refresh_batch_menu_state(((lab01_batch, text_variable, report_button, plot_button, worksheet_button),), outputs)
+            refresh_batch_menu_state(
+                ((lab01_batch, text_variable, report_button, plot_button, worksheet_button, folder_button),),
+                outputs,
+            )
 
         self.assertIn("History: Latest batch_lab01", text_variable.value)
         self.assertIn("Plots: Latest position_compare.png", text_variable.value)
@@ -2796,6 +2828,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(report_button.state_calls[-1], ["!disabled"])
         self.assertEqual(plot_button.state_calls[-1], ["!disabled"])
         self.assertEqual(worksheet_button.state_calls[-1], ["!disabled"])
+        self.assertEqual(folder_button.state_calls[-1], ["!disabled"])
 
     def test_launch_latest_output_opens_report_when_available(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
