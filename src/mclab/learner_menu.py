@@ -1874,6 +1874,8 @@ def action_next_cue_text(action: MenuAction, outputs_root: Path | None = None) -
         return "Next cue: Run this scenario, then review the saved plot and worksheet."
 
     markers, predictions, notes, outcomes = _observation_evidence_counts(latest)
+    events = _read_json_list(latest / "interaction_events.json")
+    learner_controls = _learner_control_event_count(events)
     if predictions > outcomes:
         return "Next cue: Review latest evidence and choose the missing prediction outcome."
 
@@ -1895,7 +1897,9 @@ def action_next_cue_text(action: MenuAction, outputs_root: Path | None = None) -
 
     hands_on = "hands-on" in action_tags(action)
     if hands_on and markers == 0:
-        return "Next cue: Change one control and Mark observation with a prediction."
+        if learner_controls > 0:
+            return "Next cue: Mark observation with a prediction for the control you just changed."
+        return f"Next cue: {_action_learner_control_action(action, latest)}, then Mark observation with a prediction."
     if hands_on and predictions == 0:
         return "Next cue: Add a prediction before marking the next observation."
     if hands_on and notes == 0:
@@ -1909,6 +1913,17 @@ def action_next_cue_text(action: MenuAction, outputs_root: Path | None = None) -
     if action_latest_worksheet(action, outputs_root) is None:
         return "Next cue: Re-run or regenerate the worksheet before moving on."
     return "Next cue: Review the latest plot and worksheet, then run Next or Compare."
+
+
+def _action_learner_control_action(action: MenuAction, latest: Path) -> str:
+    text = learner_control_action_text_for_config(_config_for_action(action, latest)).strip()
+    prefix = "Use "
+    suffix = " before moving on."
+    if text.startswith(prefix) and text.endswith(suffix):
+        cue = text[: -len(suffix)].strip()
+        if cue and cue != "Use one learner control":
+            return cue
+    return "Use one learner control"
 
 
 def action_plot_text(

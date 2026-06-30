@@ -147,6 +147,7 @@ Implemented and verified:
 - Learner menu scenario cards include an `Activity mix` summary from the latest hands-on run's button, slider, preset, and observation-marker events
 - Learner menu cards and outputs index activity summaries include a compact latest `Activity path`
 - Learner menu scenario cards include a `Next cue` that points learners toward the next best action: run, try another preset, mark observation, review outcome, replay, or compare
+- Learner menu `Next cue` distinguishes missing learner control from already-used learner control so learners mark evidence instead of repeating controls unnecessarily
 - Interactive `Playback speed` slider controls realtime viewer pacing from slow-motion to faster skim
 - Interactive `Pause / Resume` button pauses physics stepping and logging while keeping viewer and sliders responsive
 - Interactive `Step once` button advances exactly one physics step while staying paused for frame-by-frame observation

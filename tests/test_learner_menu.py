@@ -2366,12 +2366,35 @@ class LearnerMenuTests(unittest.TestCase):
             for action in MENU_ACTIONS
             if action.config_path == "configs/lab02_pid/interactive_disturbance.yaml"
         )
+        lab04_joint_interactive = next(
+            action
+            for action in MENU_ACTIONS
+            if action.config_path == "configs/lab04_panda/interactive_joint_hold.yaml"
+        )
 
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)
             self.assertEqual(
                 action_next_cue_text(lab02_interactive, outputs),
                 "Next cue: Run this scenario, then review the saved plot and worksheet.",
+            )
+
+            joint_run_path = outputs / "run_lab04_joint_interactive"
+            joint_run_path.mkdir()
+            (joint_run_path / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": lab04_joint_interactive.lab_name,
+                        "config_path": lab04_joint_interactive.config_path,
+                        "config_name": Path(lab04_joint_interactive.config_path).stem,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (joint_run_path / "interaction_events.json").write_text("[]", encoding="utf-8")
+            self.assertEqual(
+                action_next_cue_text(lab04_joint_interactive, outputs),
+                "Next cue: Use experiment buttons, then Mark observation with a prediction.",
             )
 
             run_path = outputs / "run_lab02_interactive"
@@ -2408,7 +2431,7 @@ class LearnerMenuTests(unittest.TestCase):
             )
             self.assertEqual(
                 action_next_cue_text(lab02_interactive, outputs),
-                "Next cue: Change one control and Mark observation with a prediction.",
+                "Next cue: Mark observation with a prediction for the control you just changed.",
             )
 
             (run_path / "interaction_events.json").write_text(
