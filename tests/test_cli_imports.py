@@ -91,6 +91,8 @@ class CliImportTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "batch"
             output.mkdir()
+            all_reports_index = Path(tmp) / "index.html"
+            all_reports_index.write_text("<html></html>", encoding="utf-8")
             report = output / "report.html"
             report.write_text("<html></html>", encoding="utf-8")
             (output / "worksheet.md").write_text("# Batch worksheet\n", encoding="utf-8")
@@ -110,6 +112,7 @@ class CliImportTests(unittest.TestCase):
             self.assertIn(f"Batch complete: {output}", printed)
             self.assertIn(f"Report: {report}", printed)
             self.assertIn(f"Worksheet: {output / 'worksheet.md'}", printed)
+            self.assertIn(f"All reports index: {all_reports_index}", printed)
             self.assertIn(f"Comparison plots: {output / 'comparison_plots'} (1 PNG; first: error_compare.png)", printed)
 
     def test_cli_runs_all_batches_when_requested(self) -> None:
@@ -243,6 +246,8 @@ class CliImportTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "run"
             output.mkdir()
+            all_reports_index = Path(tmp) / "index.html"
+            all_reports_index.write_text("<html></html>", encoding="utf-8")
             report = output / "report.html"
             report.write_text("<html></html>", encoding="utf-8")
             (output / "worksheet.md").write_text("# Run worksheet\n", encoding="utf-8")
@@ -276,4 +281,5 @@ class CliImportTests(unittest.TestCase):
             self.assertIn(f"Run complete: {output}", printed)
             self.assertIn(f"Report: {report}", printed)
             self.assertIn(f"Worksheet: {output / 'worksheet.md'}", printed)
+            self.assertIn(f"All reports index: {all_reports_index}", printed)
             self.assertIn(f"Plots: {output / 'plots'} (1 PNG; first: position.png)", printed)

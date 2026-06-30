@@ -191,6 +191,9 @@ def _output_artifact_lines(output_path: Path) -> list[str]:
         artifact = output_path / filename
         if artifact.exists():
             lines.append(f"{label}: {artifact}")
+    parent_index = output_path.parent / "index.html"
+    if parent_index.exists() and parent_index != output_path / "index.html":
+        lines.append(f"All reports index: {parent_index}")
     lines.extend(_plot_artifact_lines(output_path, "plots", "Plots"))
     lines.extend(_plot_artifact_lines(output_path, "comparison_plots", "Comparison plots"))
     return lines
