@@ -792,9 +792,11 @@ def maybe_start_interaction_panel(
     panel_enabled = bool(getattr(control, "panel_enabled", False)) or reset_enabled or pause_enabled or playback_enabled
     tuning_enabled = bool(tuning is not None and tuning.enabled)
     status_enabled = bool(status is not None and status.enabled)
-    activity_has_buttons = bool(control_enabled or reset_enabled or pause_enabled or tuning_enabled or playback_enabled)
-    activity_has_sliders = bool(tuning_enabled or playback_enabled)
-    activity_has_presets = bool(tuning is not None and tuning.presets)
+    activity_has_buttons, activity_has_sliders, activity_has_presets = _available_learner_control_families(
+        control_enabled=control_enabled,
+        reset_enabled=reset_enabled,
+        tuning=tuning,
+    )
     if not panel_enabled or not (
         control_enabled or reset_enabled or pause_enabled or playback_enabled or tuning_enabled or status_enabled
     ):
@@ -853,7 +855,13 @@ def maybe_start_interaction_panel(
             tk.Label(frame, text="Interactive controls").grid(row=row, column=0, columnspan=2, pady=(0, 8))
             row += 1
             guide_title = _panel_guide_title(guide)
-            guide_rows = _panel_guide_rows(guide, tuning=tuning)
+            guide_rows = _panel_guide_rows(
+                guide,
+                tuning=tuning,
+                has_buttons=activity_has_buttons,
+                has_sliders=activity_has_sliders,
+                has_presets=activity_has_presets,
+            )
             viewer_legend_rows = _panel_viewer_legend_rows(guide)
             if guide_title or guide_rows or viewer_legend_rows:
                 if guide_title:
@@ -1493,7 +1501,27 @@ def _panel_guide_title(guide: Any | None) -> str:
     return str(getattr(guide, "title", "") or "").strip()
 
 
-def _panel_guide_rows(guide: Any | None, *, tuning: LiveTuning | None = None) -> list[tuple[str, str]]:
+def _available_learner_control_families(
+    *,
+    control_enabled: bool = False,
+    reset_enabled: bool = False,
+    tuning: LiveTuning | None = None,
+) -> tuple[bool, bool, bool]:
+    tuning_enabled = bool(tuning is not None and tuning.enabled)
+    has_buttons = bool(control_enabled or reset_enabled)
+    has_sliders = bool(tuning_enabled and tuning is not None and tuning.specs)
+    has_presets = bool(tuning_enabled and tuning is not None and tuning.presets)
+    return has_buttons, has_sliders, has_presets
+
+
+def _panel_guide_rows(
+    guide: Any | None,
+    *,
+    tuning: LiveTuning | None = None,
+    has_buttons: bool = False,
+    has_sliders: bool = False,
+    has_presets: bool = False,
+) -> list[tuple[str, str]]:
     if guide is None:
         return []
     rows = [
@@ -1504,6 +1532,7 @@ def _panel_guide_rows(guide: Any | None, *, tuning: LiveTuning | None = None) ->
         ("Try", str(getattr(guide, "try_this", "") or "").strip()),
         ("Change", str(getattr(guide, "change", "") or "").strip()),
         ("Done when", _panel_completion_text()),
+        ("Counts as control", _panel_control_credit_text(has_buttons, has_sliders, has_presets)),
         ("Prediction", prediction_prompt_for_guide(guide).removeprefix("Prediction:").strip()),
         ("Question", question_for_guide(guide).removeprefix("Question:").strip()),
         ("Watch", str(getattr(guide, "watch", "") or "").strip()),
@@ -1527,6 +1556,19 @@ def _panel_completion_text() -> str:
         "use at least one button, slider, or preset, then write a Prediction and note, "
         "choose an outcome if known, and press Mark observation."
     )
+
+
+def _panel_control_credit_text(has_buttons: bool, has_sliders: bool, has_presets: bool) -> str:
+    controls: list[str] = []
+    if has_buttons:
+        controls.append("experiment buttons")
+    if has_sliders:
+        controls.append("live sliders")
+    if has_presets:
+        controls.append("Quick presets")
+    if not controls:
+        return ""
+    return f"{', '.join(controls)}; view/evidence helpers such as Pause, Playback speed, and Use live status do not count."
 
 
 def _panel_viewer_legend_rows(guide: Any | None) -> list[tuple[str, str]]:

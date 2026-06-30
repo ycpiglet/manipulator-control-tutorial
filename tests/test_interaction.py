@@ -22,6 +22,7 @@ from mclab.sim.interaction import (  # noqa: E402
     TuningPreset,
     _activity_mix_status_message,
     _append_observation_note,
+    _available_learner_control_families,
     _bounded_panel_dimension,
     _changed_tuning_observation_note,
     _changed_tuning_summary,
@@ -29,6 +30,7 @@ from mclab.sim.interaction import (  # noqa: E402
     _observation_challenge_proof_status,
     _observation_checklist_status,
     _observation_evidence_quality,
+    _panel_control_credit_text,
     _panel_guide_rows,
     _panel_guide_title,
     _panel_viewer_legend_rows,
@@ -1088,11 +1090,44 @@ class KeyForcePulseTests(unittest.TestCase):
             "Next: Move one slider to test a smaller parameter change.",
         )
 
-        log.record("button", "manual_force", 12.0, label="Push Right")
+        slider_only_log = InteractionLog()
+        slider_only_log.record("slider", "kp", 35.0, label="Kp")
         self.assertEqual(
-            _activity_mix_status_message(log, has_buttons=False, has_sliders=False, has_presets=False),
+            _activity_mix_status_message(slider_only_log, has_buttons=False, has_sliders=True, has_presets=False),
+            "Activity mix: 1/1 control families; buttons 0, sliders 1, presets 0, markers 0. "
+            "Next: Save one Mark observation with prediction and live-status evidence.",
+        )
+
+        button_only_log = InteractionLog()
+        button_only_log.record("button", "manual_force", 12.0, label="Push Right")
+        self.assertEqual(
+            _activity_mix_status_message(button_only_log, has_buttons=False, has_sliders=False, has_presets=False),
             "Activity mix: 1/1 control families; buttons 1, sliders 0, presets 0, markers 0. "
             "Next: Save one Mark observation with prediction and live-status evidence.",
+        )
+
+    def test_available_learner_control_families_ignore_view_helpers(self) -> None:
+        tuning = LiveTuning([SliderSpec("kp", "Kp", 0.0, 100.0, 20.0, 1.0)])
+        preset_tuning = LiveTuning(
+            [SliderSpec("kp", "Kp", 0.0, 100.0, 20.0, 1.0)],
+            presets=[TuningPreset("soft", "Soft", {"kp": 10.0})],
+        )
+
+        self.assertEqual(
+            _available_learner_control_families(control_enabled=False, reset_enabled=False, tuning=tuning),
+            (False, True, False),
+        )
+        self.assertEqual(
+            _available_learner_control_families(control_enabled=True, reset_enabled=False, tuning=None),
+            (True, False, False),
+        )
+        self.assertEqual(
+            _available_learner_control_families(control_enabled=False, reset_enabled=True, tuning=None),
+            (True, False, False),
+        )
+        self.assertEqual(
+            _available_learner_control_families(control_enabled=False, reset_enabled=False, tuning=preset_tuning),
+            (False, True, True),
         )
 
     def test_activity_mix_status_ignores_helper_and_view_buttons_as_controls(self) -> None:
@@ -1304,6 +1339,27 @@ class KeyForcePulseTests(unittest.TestCase):
             ],
         )
         self.assertEqual(_panel_guide_rows(None), [])
+
+    def test_panel_guidance_names_controls_that_count_for_completion(self) -> None:
+        guide = RunGuide(
+            title="Demo Guide",
+            focus="Focus text",
+            try_this="Move the slider.",
+            change="controller.kp",
+            question="Which gain gives the cleanest response?",
+            watch="Tracking error.",
+            next_step="Run the comparison.",
+        )
+
+        self.assertIn(
+            (
+                "Counts as control",
+                "experiment buttons, live sliders, Quick presets; "
+                "view/evidence helpers such as Pause, Playback speed, and Use live status do not count.",
+            ),
+            _panel_guide_rows(guide, has_buttons=True, has_sliders=True, has_presets=True),
+        )
+        self.assertEqual(_panel_control_credit_text(False, False, False), "")
 
     def test_panel_guidance_names_required_preset_start_steps(self) -> None:
         guide = RunGuide(
