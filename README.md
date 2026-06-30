@@ -243,7 +243,7 @@ Interactive launcher는 사이드 패널 없는 MuJoCo viewer와 함께 작은 `
 
 Lab04 wall live status는 total wall force뿐 아니라 spring force, damping force, wall retreat도 따로 보여주므로 stiffness와 damping이 각각 무엇을 바꾸는지 실행 중에 구분할 수 있습니다.
 
-Observation 영역의 `Next action` 줄은 현재 상태에서 바로 해야 할 일을 한 문장으로 보여줍니다. 예측이 비어 있으면 prediction 입력을 먼저 안내하고, required preset이 남아 있으면 다음 preset을 이름으로 알려주며, note가 없으면 `Use live status`나 짧은 observation note를 권장한 뒤 `Mark observation`으로 넘어가게 합니다.
+Observation 영역의 `Next action` 줄은 현재 상태에서 바로 해야 할 일을 한 문장으로 보여줍니다. 예측이 비어 있으면 prediction 입력을 먼저 안내하고, button evidence가 필요하면 `Pull Left` / `Push Right`, `Target X -` / `Target X +`처럼 실제 패널 버튼 라벨을 알려주며, required preset이 남아 있으면 다음 preset을 이름으로 알려줍니다. note가 없으면 `Use live status`나 짧은 observation note를 권장한 뒤 `Mark observation`으로 넘어가게 합니다.
 
 `Evidence quality` 줄은 observation이 incomplete인지, outcome 없이도 mark 가능한 상태인지, review-ready 상태인지 저장 전에 바로 알려줍니다.
 
@@ -637,7 +637,7 @@ The panel's `Counts as control` line separates experiment buttons, live sliders,
 
 Lab04 wall live status separates total wall force, spring force, damping force, and wall retreat so learners can tell what stiffness and damping are changing while the run is still moving.
 
-The observation area's `Next action` line names the immediate learner step from the current state. It asks for a prediction first, names the next required preset when one is missing, recommends `Use live status` or a short note when evidence is thin, and then moves the learner toward `Mark observation`.
+The observation area's `Next action` line names the immediate learner step from the current state. It asks for a prediction first, names actual panel button labels such as `Pull Left` / `Push Right` or `Target X -` / `Target X +` when button evidence is missing, names the next required preset when one is missing, recommends `Use live status` or a short note when evidence is thin, and then moves the learner toward `Mark observation`.
 
 The `Evidence quality` line tells learners before saving whether the observation is incomplete, ready to mark without an outcome, or review-ready.
 

@@ -11,7 +11,6 @@ from typing import Any
 from mclab.learning_guides import (
     challenge_prompt_for_guide,
     control_credit_text,
-    learner_control_action_text,
     mission_prompt_for_guide,
     observation_prompt_for_guide,
     playbook_for_guide,
@@ -1191,6 +1190,7 @@ def maybe_start_interaction_panel(
                         has_buttons=activity_has_buttons,
                         has_sliders=activity_has_sliders,
                         has_presets=activity_has_presets,
+                        button_next_step=activity_button_next_step,
                     )
                 )
                 recent_action_status = tk.StringVar(value=_recent_action_status_message(event_log))
@@ -1252,6 +1252,7 @@ def maybe_start_interaction_panel(
                             has_buttons=activity_has_buttons,
                             has_sliders=activity_has_sliders,
                             has_presets=activity_has_presets,
+                            button_next_step=activity_button_next_step,
                         )
                     )
                     recent_action_status.set(_recent_action_status_message(event_log))
@@ -1914,10 +1915,16 @@ def _observation_next_action(
     has_buttons: bool = False,
     has_sliders: bool = False,
     has_presets: bool = False,
+    button_next_step: str = "",
 ) -> str:
     preset_followup = _preset_state_followup(preset_state)
     control_followup = (
-        _learner_control_followup_text(has_buttons, has_sliders, has_presets)
+        _learner_control_followup_text(
+            has_buttons,
+            has_sliders,
+            has_presets,
+            button_next_step=button_next_step,
+        )
         if controls_available and learner_controls <= 0
         else ""
     )
@@ -1938,12 +1945,47 @@ def _observation_next_action(
     return "Next action: Press Mark observation."
 
 
-def _learner_control_followup_text(has_buttons: bool, has_sliders: bool, has_presets: bool) -> str:
+def _learner_control_followup_text(
+    has_buttons: bool,
+    has_sliders: bool,
+    has_presets: bool,
+    *,
+    button_next_step: str = "",
+) -> str:
     if not any((has_buttons, has_sliders, has_presets)):
         return "use one button, slider, or preset"
-    action = learner_control_action_text(has_buttons, has_sliders, has_presets)
-    action = action.removesuffix(" before moving on.").removeprefix("Use ")
-    return f"use {action}"
+    button_label = _button_control_label(button_next_step)
+    control_count = sum(1 for available in (has_buttons, has_sliders, has_presets) if available)
+    controls: list[str] = []
+    if has_buttons:
+        if button_label and control_count == 1:
+            controls.append(button_label)
+        elif button_label:
+            controls.append(f"experiment buttons ({button_label})")
+        else:
+            controls.append("experiment buttons")
+    if has_sliders:
+        controls.append("live sliders")
+    if has_presets:
+        controls.append("Quick presets")
+    return f"use {_control_list_text(controls)}"
+
+
+def _button_control_label(button_next_step: str) -> str:
+    text = str(button_next_step or "").strip().rstrip(".")
+    if text.lower().startswith("use "):
+        text = text[4:]
+    return text.strip()
+
+
+def _control_list_text(controls: list[str]) -> str:
+    if not controls:
+        return "one button, slider, or preset"
+    if len(controls) == 1:
+        return controls[0]
+    if len(controls) == 2:
+        return f"{controls[0]} or {controls[1]}"
+    return f"{', '.join(controls[:-1])}, or {controls[-1]}"
 
 
 def _sentence_start(text: str) -> str:

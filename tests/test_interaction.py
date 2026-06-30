@@ -1024,6 +1024,19 @@ class KeyForcePulseTests(unittest.TestCase):
             "Next action: Write a prediction, then use experiment buttons, live sliders, or Quick presets.",
         )
         self.assertEqual(
+            _observation_next_action(
+                "",
+                "Not judged yet",
+                "",
+                has_buttons=True,
+                has_sliders=True,
+                has_presets=True,
+                button_next_step="Use Target X - away or Target X + into wall.",
+            ),
+            "Next action: Write a prediction, then use experiment buttons "
+            "(Target X - away or Target X + into wall), live sliders, or Quick presets.",
+        )
+        self.assertEqual(
             _observation_next_action("", "Not judged yet", "", preset_state="needs required preset Close wall"),
             "Next action: Write a prediction, then try required preset Close wall.",
         )
@@ -1040,6 +1053,16 @@ class KeyForcePulseTests(unittest.TestCase):
         self.assertEqual(
             _observation_next_action("Stiff wall should push harder.", "Not judged yet", ""),
             "Next action: Use one button, slider, or preset, then capture the result.",
+        )
+        self.assertEqual(
+            _observation_next_action(
+                "Stiff wall should push harder.",
+                "Not judged yet",
+                "",
+                has_buttons=True,
+                button_next_step="Use Pull Left A / Left or Push Right D / Right.",
+            ),
+            "Next action: Use Pull Left A / Left or Push Right D / Right, then capture the result.",
         )
         self.assertEqual(
             _observation_next_action(
