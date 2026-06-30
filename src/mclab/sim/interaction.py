@@ -853,7 +853,7 @@ def maybe_start_interaction_panel(
             tk.Label(frame, text="Interactive controls").grid(row=row, column=0, columnspan=2, pady=(0, 8))
             row += 1
             guide_title = _panel_guide_title(guide)
-            guide_rows = _panel_guide_rows(guide)
+            guide_rows = _panel_guide_rows(guide, tuning=tuning)
             viewer_legend_rows = _panel_viewer_legend_rows(guide)
             if guide_title or guide_rows or viewer_legend_rows:
                 if guide_title:
@@ -1493,13 +1493,13 @@ def _panel_guide_title(guide: Any | None) -> str:
     return str(getattr(guide, "title", "") or "").strip()
 
 
-def _panel_guide_rows(guide: Any | None) -> list[tuple[str, str]]:
+def _panel_guide_rows(guide: Any | None, *, tuning: LiveTuning | None = None) -> list[tuple[str, str]]:
     if guide is None:
         return []
     rows = [
         ("Mission", mission_prompt_for_guide(guide).removeprefix("Mission:").strip()),
         ("Playbook", playbook_for_guide(guide).removeprefix("Playbook:").strip()),
-        ("Start steps", start_steps_for_guide(guide).removeprefix("Start steps:").strip()),
+        ("Start steps", _panel_start_steps_text(guide, tuning)),
         ("Challenge", challenge_prompt_for_guide(guide).removeprefix("Challenge:").strip()),
         ("Try", str(getattr(guide, "try_this", "") or "").strip()),
         ("Change", str(getattr(guide, "change", "") or "").strip()),
@@ -1509,6 +1509,17 @@ def _panel_guide_rows(guide: Any | None) -> list[tuple[str, str]]:
         ("Watch", str(getattr(guide, "watch", "") or "").strip()),
     ]
     return [(label, text) for label, text in rows if text]
+
+
+def _panel_start_steps_text(guide: Any | None, tuning: LiveTuning | None = None) -> str:
+    if tuning is not None and tuning.presets:
+        required_labels = [preset.label for preset in tuning.presets if preset.required and preset.label]
+        if required_labels:
+            return f"Predict -> Run viewer -> try required presets {' -> '.join(required_labels)} -> Mark observation."
+        preset_labels = [preset.label for preset in tuning.presets if preset.label]
+        if len(preset_labels) >= 2:
+            return f"Predict -> Run viewer -> try presets {' -> '.join(preset_labels[:3])} -> Mark observation."
+    return start_steps_for_guide(guide).removeprefix("Start steps:").strip()
 
 
 def _panel_completion_text() -> str:

@@ -1305,6 +1305,34 @@ class KeyForcePulseTests(unittest.TestCase):
         )
         self.assertEqual(_panel_guide_rows(None), [])
 
+    def test_panel_guidance_names_required_preset_start_steps(self) -> None:
+        guide = RunGuide(
+            title="Wall Guide",
+            focus="Create and release virtual wall contact.",
+            try_this="Use the required presets.",
+            change="live sliders/presets: wall target",
+            question="Which preset releases contact?",
+            watch="Wall phase and penetration.",
+            next_step="Review the worksheet.",
+        )
+        tuning = LiveTuning(
+            [SliderSpec("target_x", "Target X", 0.0, 1.0, 0.5, 0.01)],
+            presets=[
+                TuningPreset("soft_wall", "Soft wall", {"target_x": 0.55}),
+                TuningPreset("close_wall", "Close wall", {"target_x": 0.64}, required=True),
+                TuningPreset("back_away", "Back away", {"target_x": 0.52}, required=True),
+                TuningPreset("re_enter_wall", "Re-enter wall", {"target_x": 0.65}, required=True),
+            ],
+        )
+
+        self.assertIn(
+            (
+                "Start steps",
+                "Predict -> Run viewer -> try required presets Close wall -> Back away -> Re-enter wall -> Mark observation.",
+            ),
+            _panel_guide_rows(guide, tuning=tuning),
+        )
+
     def test_panel_guidance_exposes_viewer_legend(self) -> None:
         guide = RunGuide(
             "Lab04 Virtual Wall Interactive",

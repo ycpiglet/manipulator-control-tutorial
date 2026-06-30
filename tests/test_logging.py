@@ -928,6 +928,10 @@ class LoggingTests(unittest.TestCase):
             report = write_run_report(output)
 
             html = report.read_text(encoding="utf-8")
+            self.assertIn(
+                "Predict -&gt; Run viewer -&gt; try required presets Close wall -&gt; Back away -&gt; Re-enter wall -&gt; Mark observation.",
+                html,
+            )
             self.assertIn("Required evidence: Close wall -&gt; Back away -&gt; Re-enter wall.", html)
             self.assertIn("Required evidence preset.", html)
             self.assertIn("Required presets", html)
@@ -940,6 +944,11 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("<span>Required evidence</span>", html)
             self.assertIn("<strong>yes</strong>", html)
             worksheet_text = (output / "worksheet.md").read_text(encoding="utf-8")
+            self.assertIn(
+                "- Start steps: Predict -> Run viewer -> try required presets Close wall -> Back away -> "
+                "Re-enter wall -> Mark observation.",
+                worksheet_text,
+            )
             self.assertIn("- Status: Needs required preset Back away", worksheet_text)
             self.assertIn("- Required presets tried: 1/3", worksheet_text)
             self.assertIn("- [ ] Try required preset Back away, watch live status, then mark one observation.", worksheet_text)

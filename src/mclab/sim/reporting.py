@@ -850,7 +850,7 @@ def _render_worksheet(
         "- Report: report.html",
         "",
     ]
-    lines.extend(_worksheet_learning_guide_lines(guide, summary))
+    lines.extend(_worksheet_learning_guide_lines(guide, summary, config))
     lines.extend(_worksheet_course_position_lines(summary))
     lines.extend(_worksheet_mission_evidence_lines(summary, interaction_events, plots, config))
     lines.extend(_worksheet_challenge_evidence_lines(summary, interaction_events, plots, config))
@@ -869,7 +869,11 @@ def _render_worksheet(
     return "\n".join(lines).rstrip() + "\n"
 
 
-def _worksheet_learning_guide_lines(guide: RunGuide | None, summary: dict[str, Any]) -> list[str]:
+def _worksheet_learning_guide_lines(
+    guide: RunGuide | None,
+    summary: dict[str, Any],
+    config: dict[str, Any] | None = None,
+) -> list[str]:
     lines = ["## Learning Guide", ""]
     completion_text = _run_completion_text(summary)
     if guide is None:
@@ -880,7 +884,7 @@ def _worksheet_learning_guide_lines(guide: RunGuide | None, summary: dict[str, A
         ("Done when", completion_text.removeprefix("Done when:").strip()),
         ("Mission", mission_prompt_for_guide(guide).removeprefix("Mission:").strip()),
         ("Playbook", playbook_for_guide(guide).removeprefix("Playbook:").strip()),
-        ("Start steps", start_steps_for_guide(guide).removeprefix("Start steps:").strip()),
+        ("Start steps", _start_steps_text(guide, config)),
         ("Challenge", challenge_prompt_for_guide(guide).removeprefix("Challenge:").strip()),
         ("Try", guide.try_this),
         ("Change", guide.change),
@@ -1327,7 +1331,7 @@ def _render_report(
     learner_snapshot: dict[str, Any],
 ) -> str:
     title = _report_title(output, summary)
-    learning_guide = _learning_guide_section(guide_for_run_summary(summary), summary)
+    learning_guide = _learning_guide_section(guide_for_run_summary(summary), summary, config)
     course_position = _course_position_section(summary)
     worksheet = _worksheet_section(output)
     next_actions = _next_actions_section(output, summary, config, plots, interaction_events)
@@ -1791,7 +1795,11 @@ def _course_position_for_summary(summary: dict[str, Any]) -> tuple[IndexPathStep
     return None
 
 
-def _learning_guide_section(guide: RunGuide | None, summary: dict[str, Any]) -> str:
+def _learning_guide_section(
+    guide: RunGuide | None,
+    summary: dict[str, Any],
+    config: dict[str, Any] | None = None,
+) -> str:
     if guide is None:
         return ""
     items = (
@@ -1799,7 +1807,7 @@ def _learning_guide_section(guide: RunGuide | None, summary: dict[str, Any]) -> 
         ("Done when", _run_completion_text(summary).removeprefix("Done when:").strip()),
         ("Mission", mission_prompt_for_guide(guide).removeprefix("Mission:").strip()),
         ("Playbook", playbook_for_guide(guide).removeprefix("Playbook:").strip()),
-        ("Start steps", start_steps_for_guide(guide).removeprefix("Start steps:").strip()),
+        ("Start steps", _start_steps_text(guide, config)),
         ("Challenge", challenge_prompt_for_guide(guide).removeprefix("Challenge:").strip()),
         ("Try", guide.try_this),
         ("Change", guide.change),
@@ -1848,6 +1856,17 @@ def _viewer_legend_block(guide: RunGuide | None) -> str:
         f"{body}"
         "</div>"
     )
+
+
+def _start_steps_text(guide: RunGuide | None, config: dict[str, Any] | None = None) -> str:
+    if isinstance(config, dict) and config:
+        required_labels = _configured_required_preset_labels(config)
+        if required_labels:
+            return f"Predict -> Run viewer -> try required presets {' -> '.join(required_labels)} -> Mark observation."
+        preset_labels = _configured_preset_labels(config)
+        if len(preset_labels) >= 2:
+            return f"Predict -> Run viewer -> try presets {' -> '.join(preset_labels[:3])} -> Mark observation."
+    return start_steps_for_guide(guide).removeprefix("Start steps:").strip()
 
 
 def _reproduce_section(summary: dict[str, Any]) -> str:
