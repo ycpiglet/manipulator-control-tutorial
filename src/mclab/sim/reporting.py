@@ -871,7 +871,7 @@ def _worksheet_review_checklist(events: list[dict[str, Any]], config: dict[str, 
             )
         lines.extend(
             [
-                "- [ ] Save one observation marker with a prediction.",
+                "- [ ] Save one observation marker with a prediction and note.",
                 "- [ ] Capture one live status or note before moving to the next scenario.",
             ]
         )

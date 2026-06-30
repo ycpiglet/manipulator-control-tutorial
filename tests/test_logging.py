@@ -656,7 +656,7 @@ class LoggingTests(unittest.TestCase):
                 "- [ ] Try required preset Close wall, watch live status, then mark one observation.",
                 worksheet_text,
             )
-            self.assertIn("- [ ] Save one observation marker with a prediction.", worksheet_text)
+            self.assertIn("- [ ] Save one observation marker with a prediction and note.", worksheet_text)
 
     def test_run_report_suggests_next_runs(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
