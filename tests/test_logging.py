@@ -57,12 +57,15 @@ class LoggingTests(unittest.TestCase):
             "Ready: compare this interaction mix against plots and the worksheet.",
         )
 
-    def test_activity_mix_ignores_evidence_helper_buttons_as_controls(self) -> None:
+    def test_activity_mix_ignores_helper_and_view_events_as_controls(self) -> None:
         items = dict(
             _activity_mix_items(
                 [
                     {"kind": "button", "name": "use_live_status_note", "label": "Use live status"},
                     {"kind": "button", "name": "use_changed_values_note", "label": "Use changed values"},
+                    {"kind": "button", "name": "pause_simulation", "label": "Pause simulation"},
+                    {"kind": "button", "name": "step_simulation", "label": "Step once"},
+                    {"kind": "slider", "name": "playback_speed", "label": "Playback speed", "value": 0.5},
                     {"kind": "marker", "name": "observation", "label": "Mark observation"},
                 ]
             )
@@ -528,7 +531,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("- Interaction variety: 1/2 control families", worksheet_text)
             self.assertIn("- [ ] Move one slider to tune a parameter or playback speed. (0 recorded)", worksheet_text)
             self.assertIn(
-                "- [x] Use one button control such as pulse, nudge, pause, step, or reset. (1 recorded)",
+                "- [x] Use one experiment button such as pulse, nudge, or reset. (1 recorded)",
                 worksheet_text,
             )
             self.assertIn("- [x] Save one Mark observation with prediction and note. (1 recorded)", worksheet_text)

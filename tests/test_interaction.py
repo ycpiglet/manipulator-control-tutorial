@@ -1002,10 +1002,10 @@ class KeyForcePulseTests(unittest.TestCase):
         self.assertEqual(
             _activity_mix_status_message(log, has_buttons=True, has_sliders=True, has_presets=True),
             "Activity mix: 2/3 control families; buttons 0, sliders 1, presets 1, markers 0. "
-            "Next: Use one button control such as pulse, nudge, pause, step, or reset.",
+            "Next: Use one experiment button such as pulse, nudge, or reset.",
         )
 
-        log.record("button", "pause_simulation", True, label="Pause simulation")
+        log.record("button", "manual_force", 12.0, label="Push Right")
         self.assertEqual(
             _activity_mix_status_message(log, has_buttons=True, has_sliders=True, has_presets=True),
             "Activity mix: 3/3 control families; buttons 1, sliders 1, presets 1, markers 0. "
@@ -1035,15 +1035,18 @@ class KeyForcePulseTests(unittest.TestCase):
             "Next: Save one Mark observation with prediction and live-status evidence.",
         )
 
-    def test_activity_mix_status_ignores_evidence_helper_buttons_as_controls(self) -> None:
+    def test_activity_mix_status_ignores_helper_and_view_buttons_as_controls(self) -> None:
         log = InteractionLog()
 
         log.record("button", "use_live_status_note", "position=0.1", label="Use live status")
         log.record("button", "use_changed_values_note", "Kp=40", label="Use changed values")
+        log.record("button", "pause_simulation", True, label="Pause simulation")
+        log.record("button", "step_simulation", True, label="Step once")
+        log.record("slider", "playback_speed", 0.5, label="Playback speed")
         self.assertEqual(
-            _activity_mix_status_message(log, has_buttons=True, has_sliders=False, has_presets=False),
-            "Activity mix: 0/1 control families; buttons 0, sliders 0, presets 0, markers 0. "
-            "Next: Use one button control such as pulse, nudge, pause, step, or reset.",
+            _activity_mix_status_message(log, has_buttons=True, has_sliders=True, has_presets=False),
+            "Activity mix: 0/2 control families; buttons 0, sliders 0, presets 0, markers 0. "
+            "Next: Move one slider to test a smaller parameter change.",
         )
         self.assertEqual(
             _observation_evidence_quality(

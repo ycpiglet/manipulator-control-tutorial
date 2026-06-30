@@ -1086,7 +1086,7 @@ def _worksheet_control_coverage_lines(events: list[dict[str, Any]], config: dict
     if has_sliders:
         checks.append(("Move one slider to tune a parameter or playback speed.", counts.get("slider", 0)))
     if has_buttons:
-        checks.append(("Use one button control such as pulse, nudge, pause, step, or reset.", counts.get("button", 0)))
+        checks.append(("Use one experiment button such as pulse, nudge, or reset.", counts.get("button", 0)))
     checks.append(("Save one Mark observation with prediction and note.", complete_observation_markers))
     lines = ["", "Control coverage checklist:"]
     for label, count in checks:
@@ -2938,7 +2938,14 @@ def _observation_evidence_counts_from_events(events: list[dict[str, Any]]) -> tu
     return markers, predictions, notes, outcomes
 
 
-EVIDENCE_HELPER_BUTTON_NAMES = {"use_live_status_note", "use_changed_values_note"}
+NON_LEARNER_CONTROL_BUTTON_NAMES = {
+    "pause_simulation",
+    "resume_simulation",
+    "step_simulation",
+    "use_changed_values_note",
+    "use_live_status_note",
+}
+NON_LEARNER_CONTROL_SLIDER_NAMES = {"playback_speed"}
 
 
 def _learner_control_event_count(events: list[dict[str, Any]]) -> int:
@@ -2947,11 +2954,14 @@ def _learner_control_event_count(events: list[dict[str, Any]]) -> int:
 
 def _is_learner_control_event(event: dict[str, Any]) -> bool:
     kind = str(event.get("kind") or "").strip().lower()
-    if kind in {"slider", "preset"}:
+    name = str(event.get("name") or "").strip().lower()
+    if kind == "preset":
         return True
+    if kind == "slider":
+        return name not in NON_LEARNER_CONTROL_SLIDER_NAMES
     if kind != "button":
         return False
-    return str(event.get("name") or "").strip().lower() not in EVIDENCE_HELPER_BUTTON_NAMES
+    return name not in NON_LEARNER_CONTROL_BUTTON_NAMES
 
 
 def _check_state_class(state: str) -> str:
@@ -3407,7 +3417,7 @@ def _activity_mix_next_step(
             return "Move one slider after a preset to test a smaller parameter change."
         return "Move one slider to tune a parameter or playback speed."
     if has_buttons and counts.get("button", 0) <= 0:
-        return "Use one button control such as pulse, nudge, pause, step, or reset."
+        return "Use one experiment button such as pulse, nudge, or reset."
     if observation_markers <= 0:
         return "Save one Mark observation with prediction and live-status evidence."
     return "Ready: compare this interaction mix against plots and the worksheet."
