@@ -115,6 +115,9 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("lab01_msd - default report", html)
             self.assertIn("Lab01 Baseline", html)
             self.assertIn("Mission", html)
+            self.assertIn("Mission Evidence", html)
+            self.assertIn("Mission proof status", html)
+            self.assertIn("Next proof step", html)
             self.assertIn("Try", html)
             self.assertIn("Change", html)
             self.assertIn("Prediction", html)
@@ -224,6 +227,8 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("## Learning Guide", worksheet_text)
             self.assertIn("- Done when: report.html, priority plot, and worksheet.md are saved.", worksheet_text)
             self.assertIn("- Mission:", worksheet_text)
+            self.assertIn("## Mission Evidence", worksheet_text)
+            self.assertIn("- Next proof step:", worksheet_text)
             self.assertIn("## Key Parameters", worksheet_text)
             self.assertIn("## Observation Markers", worksheet_text)
             self.assertIn("Higher stiffness should create a sharper force peak.", worksheet_text)
@@ -290,6 +295,9 @@ class LoggingTests(unittest.TestCase):
             write_run_report(output)
 
             worksheet_text = (output / "worksheet.md").read_text(encoding="utf-8")
+            self.assertIn("## Mission Evidence", worksheet_text)
+            self.assertIn("- Status: Outcome review pending", worksheet_text)
+            self.assertIn("- Next proof step: Choose Matched, Partly matched, or Surprised", worksheet_text)
             self.assertIn("- Predictions: 1", worksheet_text)
             self.assertIn("- Prediction outcomes: 0", worksheet_text)
             self.assertIn(

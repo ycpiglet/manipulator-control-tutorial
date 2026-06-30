@@ -583,6 +583,7 @@ def _render_worksheet(
         "",
     ]
     lines.extend(_worksheet_learning_guide_lines(guide, summary))
+    lines.extend(_worksheet_mission_evidence_lines(summary, interaction_events, plots))
     lines.extend(_worksheet_pairs_section("Key Parameters", _config_highlight_pairs(config)))
     lines.extend(_worksheet_pairs_section("Summary Values", list(summary.items())))
     lines.extend(_worksheet_plot_review_lines(output, plots))
@@ -618,6 +619,17 @@ def _worksheet_learning_guide_lines(guide: RunGuide | None, summary: dict[str, A
         lines.append("- Viewer legend:")
         for label, description in legend:
             lines.append(f"  - {_markdown_inline(label)}: {_markdown_inline(description)}")
+    lines.append("")
+    return lines
+
+
+def _worksheet_mission_evidence_lines(
+    summary: dict[str, Any],
+    events: list[dict[str, Any]],
+    plots: list[Path],
+) -> list[str]:
+    lines = ["## Mission Evidence", ""]
+    lines.extend(_worksheet_mapping_lines(dict(_mission_evidence_items(summary, events, plots))))
     lines.append("")
     return lines
 
@@ -894,6 +906,7 @@ def _render_report(
     config_highlights = _config_highlights_section(config)
     configured_presets = _configured_presets_section(config)
     result_check = _result_check_section(summary)
+    mission_evidence = _mission_evidence_section(summary, interaction_events, plots)
     hands_on_evidence = _hands_on_evidence_section(summary, interaction_events)
     learner_action_summary = _learner_action_summary_section(interaction_events, config)
     learner_snapshot_section = _learner_snapshot_section(learner_snapshot)
@@ -1252,6 +1265,7 @@ def _render_report(
     {config_highlights}
     {configured_presets}
     {result_check}
+    {mission_evidence}
     {hands_on_evidence}
     {learner_action_summary}
     {learner_snapshot_section}
@@ -2102,6 +2116,74 @@ def _result_checks(summary: dict[str, Any]) -> list[tuple[str, str, str]]:
         checks.append(("Learner actions", "Recorded", f"{_format_value(interaction_events)} interaction events saved."))
 
     return checks
+
+
+def _mission_evidence_items(
+    summary: dict[str, Any],
+    events: list[dict[str, Any]],
+    plots: list[Path],
+) -> list[tuple[str, Any]]:
+    markers, predictions, notes, outcomes = _observation_evidence_counts_from_events(events)
+    pending_outcomes = max(0, predictions - outcomes)
+    plot_count = len(plots)
+
+    requires_hands_on = _summary_requires_hands_on_evidence(summary)
+    evidence_type = "Hands-on observation" if requires_hands_on else "Plot and worksheet artifacts"
+
+    if predictions > 0 and pending_outcomes > 0:
+        status = "Outcome review pending"
+        next_step = "Choose Matched, Partly matched, or Surprised for each saved prediction."
+    elif requires_hands_on:
+        if markers <= 0:
+            status = "Needs observation"
+            next_step = "Run the demo, write a prediction, then press Mark observation."
+        elif predictions <= 0:
+            status = "Needs prediction"
+            next_step = "Repeat or continue the demo and save a Mark observation with a prediction."
+        elif notes <= 0:
+            status = "Ready, add note next"
+            next_step = "Compare the prediction with the plots and add a short learner note next time."
+        else:
+            status = "Ready for review"
+            next_step = "Compare mission evidence with the priority plot, then run Next or Compare."
+    else:
+        evidence_type = "Plot and worksheet artifacts"
+        if plot_count > 0:
+            status = "Artifacts ready"
+            next_step = "Review the priority plot and worksheet, then run Next or Compare."
+        else:
+            status = "Needs plot"
+            next_step = "Rerun with --plot so the mission can be checked visually."
+
+    return [
+        ("Evidence type", evidence_type),
+        ("Status", status),
+        ("Observation markers", markers),
+        ("Predictions", predictions),
+        ("Prediction outcomes", outcomes),
+        ("Learner notes", notes),
+        ("Saved plots", plot_count),
+        ("Next proof step", next_step),
+    ]
+
+
+def _mission_evidence_section(
+    summary: dict[str, Any],
+    events: list[dict[str, Any]],
+    plots: list[Path],
+) -> str:
+    return (
+        "<section>"
+        "<h2>Mission Evidence</h2>"
+        '<div class="action-grid">'
+        '<article class="action-card action-wide">'
+        "<strong>Mission proof status</strong>"
+        '<p class="empty">Use this before moving on: it tells whether the mission has enough saved evidence.</p>'
+        f"{_action_value_list(_mission_evidence_items(summary, events, plots))}"
+        "</article>"
+        "</div>"
+        "</section>"
+    )
 
 
 def _hands_on_evidence_section(summary: dict[str, Any], events: list[dict[str, Any]]) -> str:
