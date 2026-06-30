@@ -15,6 +15,7 @@ from typing import Any
 
 from mclab.batch import ALL_BATCH_NAME, BATCH_SETS
 from mclab.config import PROJECT_ROOT, load_config
+from mclab.course_progress import course_milestone_summary
 from mclab.learning_guides import (
     guide_for_config,
     prediction_prompt_for_guide,
@@ -1211,6 +1212,13 @@ def learning_path_summary_text(
         f"Progress: {completed}/{total} complete.{evidence_text}{outcome_text} "
         f"Next: {next_step.title} - {description}. {_learning_path_next_action_text(next_step)}"
     )
+
+
+def learning_path_milestone_text(
+    progress_items: tuple[LearningPathProgressItem, ...] | None = None,
+) -> str:
+    items = progress_items if progress_items is not None else learning_path_progress_items()
+    return course_milestone_summary(tuple(progress.completed for _step, progress in items))
 
 
 def _learning_path_next_action_text(step: LearningPathStep) -> str:
@@ -2894,6 +2902,7 @@ def main() -> int:
     path_worksheet_buttons: list[tuple[LearningPathStep, Any]] = []
     path_replay_buttons: list[tuple[LearningPathStep, Any]] = []
     path_summary = tk.StringVar(value=learning_path_summary_text())
+    path_milestones = tk.StringVar(value=learning_path_milestone_text())
     next_step_ref: dict[str, LearningPathStep | None] = {"step": next_learning_path_step()}
     next_button_ref: dict[str, Any | None] = {"button": None}
     next_review_button_ref: dict[str, Any | None] = {"button": None}
@@ -2922,6 +2931,7 @@ def main() -> int:
         next_step = next_learning_path_step(items)
         next_step_ref["step"] = next_step
         path_summary.set(learning_path_summary_text(items))
+        path_milestones.set(learning_path_milestone_text(items))
         review_queue.set(review_queue_summary_text())
         next_button = next_button_ref["button"]
         if next_button is not None:
@@ -3003,6 +3013,9 @@ def main() -> int:
     path_header.columnconfigure(0, weight=1)
     ttk.Label(path_header, textvariable=path_summary, wraplength=760, justify="left").grid(
         row=0, column=0, sticky="w"
+    )
+    ttk.Label(path_header, textvariable=path_milestones, wraplength=760, justify="left").grid(
+        row=1, column=0, sticky="w", pady=(4, 0)
     )
     next_button = ttk.Button(path_header, text="Run next", command=launch_next_learning_path_step)
     next_button.grid(row=0, column=1, sticky="e", padx=(12, 0))

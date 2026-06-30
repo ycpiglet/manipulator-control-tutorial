@@ -72,6 +72,7 @@ from mclab.learner_menu import (  # noqa: E402
     learning_path_progress,
     learning_path_requires_evidence,
     learning_path_progress_text,
+    learning_path_milestone_text,
     learning_path_summary_text,
     learning_path_target,
     learning_path_text,
@@ -356,6 +357,11 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Done when: save one Mark observation with a Prediction", learning_path_summary_text(progress_items))
         self.assertIn("Predict:", learning_path_summary_text(progress_items))
         self.assertIn("Watch:", learning_path_summary_text(progress_items))
+        self.assertEqual(
+            learning_path_milestone_text(progress_items),
+            "Milestones: 1D Dynamics 1/2; PID Control 0/2; 2DOF Control 0/3; "
+            "Panda Manipulation 0/3; Course Compare 1/1. Next milestone: 1D Dynamics.",
+        )
 
     def test_recommended_learning_path_requires_observation_for_hands_on_steps(self) -> None:
         first_step = LEARNING_PATH[0]
@@ -655,6 +661,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIsNone(next_learning_path_step(progress_items))
         self.assertIn("Progress: 11/11 complete", learning_path_summary_text(progress_items))
         self.assertIn("Course path complete", learning_path_summary_text(progress_items))
+        self.assertIn("All milestones ready for review.", learning_path_milestone_text(progress_items))
 
         batch_next_items = tuple(
             (

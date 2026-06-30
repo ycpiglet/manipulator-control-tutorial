@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from mclab.config import load_config
+from mclab.course_progress import course_milestone_summary
 from mclab.learning_guides import (
     RunGuide,
     guide_for_config,
@@ -4005,11 +4006,13 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
 def _learning_path_section(runs: list[dict[str, Any]]) -> str:
     items = [_learning_path_item(step, runs) for step in INDEX_LEARNING_PATH]
     summary = _learning_path_summary(items)
+    milestones = _learning_path_milestone_summary(items)
     cards = "\n".join(_learning_path_card(item) for item in items)
     return (
         "<section>"
         "<h2>Learning Path</h2>"
         f'<p class="muted">{escape(summary)}</p>'
+        f'<p class="muted">{escape(milestones)}</p>'
         '<div class="path-grid">'
         f"{cards}"
         "</div>"
@@ -4088,6 +4091,10 @@ def _learning_path_summary(items: list[dict[str, Any]]) -> str:
         f"Next: {next_step.title}. Next action: {_learning_path_action_label(next_step)}. "
         f"{_learning_path_completion_text(next_step)}"
     )
+
+
+def _learning_path_milestone_summary(items: list[dict[str, Any]]) -> str:
+    return course_milestone_summary(tuple(bool(item["completed"]) for item in items))
 
 
 def _learning_path_card(item: dict[str, Any]) -> str:

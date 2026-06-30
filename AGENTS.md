@@ -150,6 +150,7 @@ Implemented and verified:
 - Learner menu and outputs index latest-evidence summaries split multi-part learner notes into `Note evidence` items
 - Learner menu and outputs index show an `Observation flow` summary from first marker state to latest marker state
 - Learner menu and outputs index show an `Observation next step` cue for missing predictions, notes, outcomes, or review-ready markers
+- Learner menu and outputs index show `Milestones` progress for 1D Dynamics, PID Control, 2DOF Control, Panda Manipulation, and Course Compare
 - Recommended learning path progress in the menu and outputs index requires prediction-bearing observation markers for hands-on steps
 - Recommended learning path cards show a `Done when` completion criterion for auto, hands-on, and batch steps
 - Recommended learning path summary flags completed hands-on steps that still need prediction outcome review

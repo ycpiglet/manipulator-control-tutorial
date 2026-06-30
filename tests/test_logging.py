@@ -1053,6 +1053,11 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Progress Snapshot", html)
             self.assertIn("Learning Path", html)
             self.assertIn("1/11 steps complete", html)
+            self.assertIn(
+                "Milestones: 1D Dynamics 1/2; PID Control 0/2; 2DOF Control 0/3; "
+                "Panda Manipulation 0/3; Course Compare 0/1. Next milestone: 1D Dynamics.",
+                html,
+            )
             self.assertIn("Next action: run lab01", html)
             self.assertIn("Done when: save one Mark observation with a Prediction", html)
             self.assertIn("1. Feel 1D physics", html)
