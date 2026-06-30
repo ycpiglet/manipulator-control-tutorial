@@ -1360,6 +1360,7 @@ class LoggingTests(unittest.TestCase):
                 html,
             )
             self.assertIn("Mission evidence: Course artifacts ready; Open the course worksheet", html)
+            self.assertIn("Challenge evidence: Ready to review; source course worksheet", html)
             self.assertNotIn("Mission evidence: Needs plot", html)
             self.assertIn("Mission Review Queue", html)
             self.assertIn("1 ready, 0 pending", html)
@@ -1409,9 +1410,15 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("<th>Evidence</th>", html)
             self.assertIn("<th>Activity</th>", html)
             self.assertIn("<th>Mission evidence</th>", html)
+            self.assertIn("<th>Challenge evidence</th>", html)
             self.assertIn("No markers", html)
             self.assertIn("No learner controls", html)
             self.assertIn("Needs observation; Run the demo, write a prediction, then press Mark observation.", html)
+            self.assertIn(
+                "Challenge evidence: Needs observation evidence; source Learner control, Mark observation, "
+                "live status, and priority plot",
+                html,
+            )
 
             (interactive / "interaction_events.json").write_text(
                 json.dumps(
@@ -1474,6 +1481,11 @@ class LoggingTests(unittest.TestCase):
                 html,
             )
             self.assertIn(
+                "Challenge evidence: Needs prediction outcome review; "
+                "source Learner control, Mark observation, live status, and priority plot",
+                html,
+            )
+            self.assertIn(
                 "Latest evidence: Prediction: More damping should settle faster.; "
                 "Outcome: missing review; "
                 "Note: The mass settled faster after damping changed.",
@@ -1531,6 +1543,11 @@ class LoggingTests(unittest.TestCase):
             self.assertIn(
                 "Mission evidence: Ready for review; "
                 "Compare mission evidence with the priority plot, then run Next or Compare.",
+                html,
+            )
+            self.assertIn(
+                "Challenge evidence: Ready to review; "
+                "source Learner control, Mark observation, live status, and priority plot",
                 html,
             )
             self.assertIn(
@@ -1602,6 +1619,11 @@ class LoggingTests(unittest.TestCase):
             self.assertIn(
                 "Mission evidence: Needs required preset Back away; "
                 "Try required preset Back away, watch live status, then mark one observation.",
+                html,
+            )
+            self.assertIn(
+                "Challenge evidence: Needs required preset evidence; "
+                "source Learner control, Mark observation, live status, and priority plot",
                 html,
             )
             self.assertIn("required preset: 1", html)

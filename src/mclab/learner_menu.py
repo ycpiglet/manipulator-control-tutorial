@@ -27,10 +27,12 @@ from mclab.learning_guides import (
 from mclab.sim.reporting import (
     INDEX_PLOT_PRIORITY,
     _activity_mix_items,
+    _challenge_evidence_items,
     _learner_control_event_count,
     _latest_observation_evidence_from_events,
     _observation_flow_text_from_events,
     _observation_next_step_text_from_events,
+    _read_config,
     plot_guidance,
     write_outputs_index,
 )
@@ -1551,6 +1553,75 @@ def action_mission_evidence_text(
     return f"Mission evidence: Artifacts ready; plot {plot.name}; worksheet {worksheet.name}"
 
 
+def action_challenge_evidence_text(
+    action: MenuAction | BatchMenuAction,
+    outputs_root: Path | None = None,
+) -> str:
+    latest = action_latest_output(action, outputs_root)
+    if latest is None:
+        return "Challenge evidence: Not run yet"
+
+    summary = _read_json(latest / "summary.json")
+    if not summary:
+        summary = _summary_for_action(action)
+
+    if isinstance(action, BatchMenuAction) and action.batch_name == ALL_BATCH_NAME:
+        worksheet = action_latest_worksheet(action, outputs_root)
+        if worksheet is None:
+            return "Challenge evidence: Needs worksheet evidence; rerun all batches to regenerate course review artifacts"
+        return "Challenge evidence: Ready to review; source course worksheet; compare linked batch Prediction Checks"
+
+    events = _read_json_list(latest / "interaction_events.json")
+    config = _config_for_action(action, latest)
+    plots = _challenge_plot_inputs(action, outputs_root)
+    items = dict(_challenge_evidence_items(summary, events, plots, config))
+    status = str(items.get("Challenge status") or "").strip()
+    source = str(items.get("Proof source") or "").strip()
+    next_step = str(items.get("Next challenge step") or "").strip()
+    details = []
+    if source:
+        details.append(f"source {source}")
+    if next_step:
+        details.append(_short_menu_text(next_step, max_length=96))
+    suffix = f"; {'; '.join(details)}" if details else ""
+    return f"Challenge evidence: {status or 'Needs evidence'}{suffix}"
+
+
+def _summary_for_action(action: MenuAction | BatchMenuAction) -> dict[str, Any]:
+    if isinstance(action, BatchMenuAction):
+        return {
+            "lab_name": "batch_group",
+            "batch_name": action.batch_name,
+            "config_name": action.batch_name,
+        }
+    return {
+        "lab_name": action.lab_name,
+        "config_path": action.config_path,
+        "config_name": Path(action.config_path).stem,
+    }
+
+
+def _config_for_action(action: MenuAction | BatchMenuAction, latest: Path) -> dict[str, Any]:
+    config = _read_config(latest / "config.yaml")
+    if config:
+        return config
+    if isinstance(action, MenuAction):
+        return _loaded_action_config(action.config_path)
+    return {}
+
+
+def _challenge_plot_inputs(action: MenuAction | BatchMenuAction, outputs_root: Path | None = None) -> list[Path]:
+    plot = action_latest_plot(action, outputs_root)
+    return [plot] if plot is not None else []
+
+
+def _short_menu_text(text: str, *, max_length: int) -> str:
+    collapsed = " ".join(text.split())
+    if len(collapsed) <= max_length:
+        return collapsed
+    return f"{collapsed[: max_length - 3].rstrip()}..."
+
+
 def _mission_evidence_counts(
     markers: int,
     predictions: int,
@@ -2845,6 +2916,7 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
         f"{observation_flow_text}"
         f"{observation_next_step_text}"
         f"{action_mission_evidence_text(action, outputs_root)}\n"
+        f"{action_challenge_evidence_text(action, outputs_root)}\n"
         f"{preset_evidence_text}"
         f"{activity_mix_text}"
         f"{action_next_cue_text(action, outputs_root)}\n"
@@ -3101,9 +3173,9 @@ def _action_matches_terms(action: MenuAction, terms: list[str]) -> bool:
         action_mission_text(action),
         action_playbook_text(action),
         action_challenge_text(action),
-        "mission evidence artifact observation prediction outcome note proof",
+        "mission evidence challenge evidence artifact observation prediction outcome note proof",
         "playbook predict change mark review worksheet",
-        "challenge visible effect prove strongest effect",
+        "challenge visible effect prove strongest effect proof source",
         "next cue run preset observation outcome replay compare",
         " ".join(configured_preset_labels(action.config_path)),
         " ".join(configured_preset_purposes(action.config_path)),
@@ -3970,6 +4042,7 @@ def lesson_text_for_batch(action: BatchMenuAction, outputs_root: Path | None = N
         f"{action_challenge_text(action)}\n"
         f"{action_history_text(action, outputs_root)}\n"
         f"{action_mission_evidence_text(action, outputs_root)}\n"
+        f"{action_challenge_evidence_text(action, outputs_root)}\n"
         f"{action_plot_text(action, outputs_root)}\n"
         f"{action_plot_review_text(action, outputs_root)}\n"
         f"{action_worksheet_text(action, outputs_root)}\n"

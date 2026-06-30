@@ -125,6 +125,7 @@ Implemented and verified:
 - Evidence helper buttons such as `Use live status` and `Use changed values`, plus view/pacing controls such as pause, step, and playback speed, do not satisfy the learner-control requirement by themselves
 - Run reports and worksheets include `Mission Evidence` status with observation, prediction, outcome, note, learner-control, plot counts, and the next proof step
 - Run reports and worksheets include `Challenge Evidence` status that maps the visible-effect challenge to proof status, proof source, mission evidence status, and next challenge step
+- Learner menu cards and outputs index learning-path/run-table views summarize `Challenge evidence` proof status, proof source, and next challenge step from the latest saved run
 - Learner menu scenario cards include a `Viewer` marker legend and marker-name search support
 - Learner menu scenario cards include a `Controls` summary of actual buttons, sliders, presets, pause/step, reset, and observation controls
 - Learner menu scenario and batch cards include a `Plan` line with level, mode, run length, and saved artifacts

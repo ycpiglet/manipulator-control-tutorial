@@ -26,6 +26,7 @@ from mclab.learner_menu import (  # noqa: E402
     _set_status_after_run,
     _set_status_after_doctor,
     action_badges,
+    action_challenge_evidence_text,
     action_challenge_text,
     action_compare_batch,
     action_compare_text,
@@ -245,6 +246,7 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertIn("Challenge:", text)
                 self.assertIn(action_challenge_text(action), text)
                 self.assertIn("Mission evidence:", text)
+                self.assertIn("Challenge evidence:", text)
                 self.assertIn("History:", text)
                 self.assertIn("Try:", text)
                 self.assertIn("Watch:", text)
@@ -760,6 +762,7 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertIn("Evidence:", text)
                 self.assertIn("Latest evidence:", text)
                 self.assertIn("Mission evidence:", text)
+                self.assertIn("Challenge evidence:", text)
                 self.assertIn("Controls:", text)
                 self.assertIn("Viewer:", text)
                 self.assertIn("Try:", text)
@@ -1863,6 +1866,102 @@ class LearnerMenuTests(unittest.TestCase):
                 "Mission evidence: Ready for review; 1 observation, 1 prediction, 1 outcome, 1 note, 1 control",
             )
             self.assertIn("Mission evidence: Ready for review", lesson_text(lab02_interactive, outputs))
+
+    def test_action_challenge_evidence_summarizes_latest_proof_status(self) -> None:
+        lab02_interactive = next(
+            action
+            for action in MENU_ACTIONS
+            if action.config_path == "configs/lab02_pid/interactive_disturbance.yaml"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+
+            self.assertEqual(action_challenge_evidence_text(MENU_ACTIONS[0], outputs), "Challenge evidence: Not run yet")
+
+            auto_path = outputs / "run_lab01"
+            auto_path.mkdir()
+            (auto_path / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": MENU_ACTIONS[0].lab_name,
+                        "config_path": MENU_ACTIONS[0].config_path,
+                        "config_name": Path(MENU_ACTIONS[0].config_path).stem,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                action_challenge_evidence_text(MENU_ACTIONS[0], outputs),
+                "Challenge evidence: Needs plot evidence; source Priority plot and worksheet; "
+                "Rerun with --plot so the mission can be checked visually.",
+            )
+            (auto_path / "plots").mkdir()
+            (auto_path / "plots" / "position.png").write_bytes(b"fake-png")
+            (auto_path / "worksheet.md").write_text("# Worksheet\n", encoding="utf-8")
+            self.assertEqual(
+                action_challenge_evidence_text(MENU_ACTIONS[0], outputs),
+                "Challenge evidence: Ready to review; source Priority plot and worksheet; "
+                "Compare the challenge statement with the priority plot and worksheet.",
+            )
+
+            all_batch = next(action for action in BATCH_ACTIONS if action.batch_name == "all")
+            all_batch_path = outputs / "run_all_batches"
+            all_batch_path.mkdir()
+            (all_batch_path / "summary.json").write_text(
+                json.dumps({"lab_name": "batch_group", "batch_name": "all", "config_name": "all"}),
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                action_challenge_evidence_text(all_batch, outputs),
+                "Challenge evidence: Needs worksheet evidence; rerun all batches to regenerate course review artifacts",
+            )
+            (all_batch_path / "worksheet.md").write_text("# Course worksheet\n", encoding="utf-8")
+            self.assertEqual(
+                action_challenge_evidence_text(all_batch, outputs),
+                "Challenge evidence: Ready to review; source course worksheet; compare linked batch Prediction Checks",
+            )
+
+            interactive_path = outputs / "run_lab02_interactive"
+            interactive_path.mkdir()
+            (interactive_path / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": lab02_interactive.lab_name,
+                        "config_path": lab02_interactive.config_path,
+                        "config_name": Path(lab02_interactive.config_path).stem,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            self.assertIn(
+                "Challenge evidence: Needs observation evidence; source Learner control, Mark observation, "
+                "live status, and priority plot",
+                action_challenge_evidence_text(lab02_interactive, outputs),
+            )
+
+            (interactive_path / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {"kind": "slider", "name": "kp", "label": "Kp", "value": 12.0},
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "prediction": "Higher Kp will overshoot.",
+                                "outcome": "Matched",
+                                "note": "Overshoot was visible.",
+                            },
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                action_challenge_evidence_text(lab02_interactive, outputs),
+                "Challenge evidence: Ready to review; source Learner control, Mark observation, live status, "
+                "and priority plot; Compare the prediction-backed observation with the priority plot and worksheet.",
+            )
+            self.assertIn("Challenge evidence: Ready to review", lesson_text(lab02_interactive, outputs))
 
     def test_review_queue_summary_counts_saved_mission_evidence_states(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -4215,6 +4215,13 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
                     config,
                     worksheet=worksheet,
                 ),
+                "challenge_evidence": _challenge_evidence_index_text(
+                    summary,
+                    interaction_events,
+                    plots,
+                    config,
+                    worksheet=worksheet,
+                ),
                 "config": config,
                 "interaction_events": interaction_events,
             }
@@ -4251,6 +4258,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
             f"<td>{escape(_run_evidence_cell(run))}</td>"
             f"<td>{escape(str(run.get('activity_mix', '')))}</td>"
             f"<td>{escape(str(run.get('mission_evidence', '')))}</td>"
+            f"<td>{escape(str(run.get('challenge_evidence', '')))}</td>"
             f"<td>{_run_worksheet_cell(run)}</td>"
             f"<td>{_run_replay_cell(run)}</td>"
             f"<td>{_run_plots_cell(run)}</td>"
@@ -4265,7 +4273,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
         for run in runs
     )
     if not rows:
-        rows = f'<tr><td colspan="{13 + len(metric_keys)}">No run reports were found yet.</td></tr>'
+        rows = f'<tr><td colspan="{14 + len(metric_keys)}">No run reports were found yet.</td></tr>'
 
     return f"""<!doctype html>
 <html lang="en">
@@ -4406,7 +4414,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
     <section>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Run</th><th>Lab</th><th>Config</th><th>Lesson</th><th>Next</th><th>Evidence</th><th>Activity</th><th>Mission evidence</th><th>Worksheet</th><th>Replay</th><th>Plots</th><th>Duration [s]</th><th>Samples</th>{metric_headers}</tr></thead>
+          <thead><tr><th>Run</th><th>Lab</th><th>Config</th><th>Lesson</th><th>Next</th><th>Evidence</th><th>Activity</th><th>Mission evidence</th><th>Challenge evidence</th><th>Worksheet</th><th>Replay</th><th>Plots</th><th>Duration [s]</th><th>Samples</th>{metric_headers}</tr></thead>
           <tbody>{rows}</tbody>
         </table>
       </div>
@@ -4531,6 +4539,7 @@ def _learning_path_card(item: dict[str, Any]) -> str:
     observation_next_step = _learning_path_observation_next_step(run)
     activity_mix = _learning_path_activity_mix(run)
     mission_evidence = _learning_path_mission_evidence(run)
+    challenge_evidence = _learning_path_challenge_evidence(run)
     learning_cue = _learning_path_learning_cue(step)
     completion_text = _learning_path_completion_text(step)
     command_label = "Run this step" if run is None else "Repeat this step"
@@ -4606,6 +4615,7 @@ def _learning_path_card(item: dict[str, Any]) -> str:
         f"{observation_next_step}"
         f"{activity_mix}"
         f"{mission_evidence}"
+        f"{challenge_evidence}"
         f"{quick_links}"
         f"{command_block}"
         "</article>"
@@ -4655,6 +4665,15 @@ def _learning_path_mission_evidence(run: dict[str, Any] | None) -> str:
     if not mission:
         return ""
     return f'<p class="muted">Mission evidence: {escape(mission)}</p>'
+
+
+def _learning_path_challenge_evidence(run: dict[str, Any] | None) -> str:
+    if run is None:
+        return ""
+    challenge = str(run.get("challenge_evidence") or "").strip()
+    if not challenge:
+        return ""
+    return f'<p class="muted">Challenge evidence: {escape(challenge)}</p>'
 
 
 def _learning_path_quick_links(run: dict[str, Any] | None) -> str:
@@ -5084,6 +5103,31 @@ def _mission_evidence_index_text(
     if status and next_step:
         return f"{status}; {_short_evidence_text(next_step, max_length=96)}"
     return status or next_step
+
+
+def _challenge_evidence_index_text(
+    summary: dict[str, Any],
+    events: list[dict[str, Any]],
+    plots: list[dict[str, str]],
+    config: dict[str, Any] | None = None,
+    *,
+    worksheet: dict[str, str] | None = None,
+) -> str:
+    if _summary_is_all_batch(summary):
+        if isinstance(worksheet, dict):
+            return "Ready to review; source course worksheet; compare linked batch Prediction Checks."
+        return "Needs worksheet evidence; Rerun all batches to regenerate course review artifacts."
+    items = dict(_challenge_evidence_items(summary, events, plots, config))
+    status = str(items.get("Challenge status") or "").strip()
+    source = str(items.get("Proof source") or "").strip()
+    next_step = str(items.get("Next challenge step") or "").strip()
+    details = []
+    if source:
+        details.append(f"source {source}")
+    if next_step:
+        details.append(_short_evidence_text(next_step, max_length=96))
+    suffix = f"; {'; '.join(details)}" if details else ""
+    return f"{status or 'Needs evidence'}{suffix}"
 
 
 def _summary_is_all_batch(summary: dict[str, Any]) -> bool:
