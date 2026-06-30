@@ -1247,6 +1247,23 @@ def action_latest_evidence_text(
     return f"Latest evidence: {'; '.join(parts)}"
 
 
+def action_preset_evidence_text(action: MenuAction, outputs_root: Path | None = None) -> str:
+    labels = list(configured_preset_labels(action.config_path))
+    if len(labels) < 2:
+        return ""
+    latest = action_latest_output(action, outputs_root)
+    if latest is None:
+        return "Preset evidence: Not run yet"
+    tried = _distinct_preset_labels(latest, labels)
+    next_label = next((label for label in labels if label not in tried), "")
+    count = f"{len(tried)}/{len(labels)}"
+    if len(tried) >= 2:
+        return f"Preset evidence: {count} presets tried; ready to review comparison"
+    if next_label:
+        return f"Preset evidence: {count} presets tried; next {next_label}"
+    return f"Preset evidence: {count} presets tried; try one more preset"
+
+
 def action_plot_text(
     action: MenuAction | BatchMenuAction,
     outputs_root: Path | None = None,
@@ -1446,6 +1463,19 @@ def _latest_observation_marker(output_path: Path) -> dict[str, Any] | None:
         if _is_observation_marker_event(event):
             return event
     return None
+
+
+def _distinct_preset_labels(output_path: Path, configured_labels: list[str]) -> list[str]:
+    configured_lookup = {label.lower(): label for label in configured_labels}
+    seen: list[str] = []
+    for event in _read_json_list(output_path / "interaction_events.json"):
+        if str(event.get("kind", "")).lower() != "preset":
+            continue
+        label = str(event.get("label") or event.get("name") or "").strip()
+        canonical = configured_lookup.get(label.lower())
+        if canonical and canonical not in seen:
+            seen.append(canonical)
+    return seen
 
 
 def _is_observation_marker_event(event: dict[str, Any]) -> bool:
@@ -2028,6 +2058,8 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
     preset_purpose_text = f"\nPreset purpose: {'; '.join(preset_purposes)}" if preset_purposes else ""
     preset_compare = configured_preset_comparison(action.config_path)
     preset_compare_text = f"\nPreset compare: {preset_compare}" if preset_compare else ""
+    preset_evidence = action_preset_evidence_text(action, outputs_root)
+    preset_evidence_text = f"{preset_evidence}\n" if preset_evidence else ""
     readiness = action_readiness(action)
     setup_detail = f" - {readiness.detail}" if readiness.status != "ok" and readiness.detail else ""
     setup_fix = f" Fix: {readiness.fix}" if readiness.status != "ok" and readiness.fix else ""
@@ -2039,6 +2071,7 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
         f"{action_history_text(action, outputs_root)}\n"
         f"{action_evidence_text(action, outputs_root)}\n"
         f"{action_latest_evidence_text(action, outputs_root)}\n"
+        f"{preset_evidence_text}"
         f"{action_plot_text(action, outputs_root)}\n"
         f"{action_plot_review_text(action, outputs_root)}\n"
         f"{action_worksheet_text(action, outputs_root)}\n"

@@ -42,6 +42,7 @@ from mclab.learner_menu import (  # noqa: E402
     action_plan_text,
     action_plot_review_text,
     action_plot_text,
+    action_preset_evidence_text,
     action_readiness,
     action_replay_text,
     action_tags,
@@ -1291,6 +1292,63 @@ class LearnerMenuTests(unittest.TestCase):
             missing_outcome_text = action_latest_evidence_text(MENU_ACTIONS[0], outputs)
             self.assertIn("Outcome: missing review", missing_outcome_text)
             self.assertIn("Outcome: missing review", lesson_text(MENU_ACTIONS[0], outputs))
+
+    def test_action_preset_evidence_summarizes_latest_preset_progress(self) -> None:
+        lab02_interactive = next(
+            action
+            for action in MENU_ACTIONS
+            if action.config_path == "configs/lab02_pid/interactive_disturbance.yaml"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            run_path = outputs / "run_lab02_interactive"
+            run_path.mkdir()
+            (run_path / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": lab02_interactive.lab_name,
+                        "config_path": lab02_interactive.config_path,
+                        "config_name": Path(lab02_interactive.config_path).stem,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (run_path / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "preset",
+                            "name": "gentle_p",
+                            "label": "Gentle P",
+                            "value": {"values": {"kp": 25.0}},
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            self.assertEqual(
+                action_preset_evidence_text(lab02_interactive, outputs),
+                "Preset evidence: 1/3 presets tried; next Damped PD",
+            )
+            self.assertIn(
+                "Preset evidence: 1/3 presets tried; next Damped PD",
+                lesson_text(lab02_interactive, outputs),
+            )
+
+            (run_path / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {"kind": "preset", "name": "gentle_p", "label": "Gentle P"},
+                        {"kind": "preset", "name": "damped_pd", "label": "Damped PD"},
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                action_preset_evidence_text(lab02_interactive, outputs),
+                "Preset evidence: 2/3 presets tried; ready to review comparison",
+            )
 
     def test_batch_history_tracks_latest_matching_report(self) -> None:
         lab01_batch = next(action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare")
