@@ -1145,6 +1145,16 @@ def maybe_start_interaction_panel(
                         controls_available=controls_available,
                     )
                 )
+                marker_challenge_proof = tk.StringVar(
+                    value=_observation_challenge_proof_status(
+                        "",
+                        PREDICTION_OUTCOME_UNJUDGED,
+                        "",
+                        preset_state=tuning.preset_checklist_state() if tuning is not None else "",
+                        learner_controls=_learner_control_event_count(event_log.events()),
+                        controls_available=controls_available,
+                    )
+                )
                 marker_next_action = tk.StringVar(
                     value=_observation_next_action(
                         "",
@@ -1181,6 +1191,16 @@ def maybe_start_interaction_panel(
                     )
                     marker_quality.set(
                         _observation_evidence_quality(
+                            marker_prediction.get(),
+                            marker_outcome.get(),
+                            marker_note.get(),
+                            preset_state=preset_state,
+                            learner_controls=learner_controls,
+                            controls_available=controls_available,
+                        )
+                    )
+                    marker_challenge_proof.set(
+                        _observation_challenge_proof_status(
                             marker_prediction.get(),
                             marker_outcome.get(),
                             marker_note.get(),
@@ -1330,6 +1350,14 @@ def maybe_start_interaction_panel(
                 tk.Label(
                     marker_frame,
                     textvariable=marker_quality,
+                    anchor="w",
+                    justify="left",
+                    wraplength=430,
+                ).grid(row=marker_row, column=0, columnspan=2, sticky="ew", pady=(2, 0))
+                marker_row += 1
+                tk.Label(
+                    marker_frame,
+                    textvariable=marker_challenge_proof,
                     anchor="w",
                     justify="left",
                     wraplength=430,
@@ -1729,6 +1757,34 @@ def _observation_evidence_quality(
     if _prediction_outcome_value(outcome):
         return "Evidence quality: review-ready - prediction, outcome, note, and required controls are ready."
     return "Evidence quality: ready to mark - add outcome now or during review."
+
+
+def _observation_challenge_proof_status(
+    prediction: str,
+    outcome: str,
+    note: str,
+    *,
+    preset_state: str = "",
+    learner_controls: int = 0,
+    controls_available: bool = True,
+) -> str:
+    preset_followup = _preset_state_followup(preset_state)
+    control_needed = controls_available and learner_controls <= 0
+    if not prediction.strip():
+        if preset_followup:
+            return f"Challenge proof: needs prediction, then {preset_followup}."
+        if control_needed:
+            return "Challenge proof: needs prediction, then learner control."
+        return "Challenge proof: needs prediction."
+    if preset_followup:
+        return f"Challenge proof: needs preset evidence - {preset_followup}."
+    if control_needed:
+        return "Challenge proof: needs learner control evidence."
+    if not note.strip():
+        return "Challenge proof: needs note or live-status evidence."
+    if not _prediction_outcome_value(outcome):
+        return "Challenge proof: ready to mark; outcome can be added now or during review."
+    return "Challenge proof: review-ready; compare the saved observation with plots after the run."
 
 
 def _observation_next_action(

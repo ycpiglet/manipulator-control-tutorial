@@ -245,6 +245,8 @@ Observation 영역의 `Next action` 줄은 현재 상태에서 바로 해야 할
 
 `Evidence quality` 줄은 observation이 incomplete인지, outcome 없이도 mark 가능한 상태인지, review-ready 상태인지 저장 전에 바로 알려줍니다.
 
+`Challenge proof` 줄은 visible-effect challenge를 증명하려면 prediction, learner control, preset evidence, note/live-status evidence, outcome review 중 무엇이 아직 필요한지 바로 알려줍니다.
+
 Observation 영역의 live `Activity mix` 줄은 현재 실행에서 버튼, 슬라이더, preset, observation marker를 몇 번 썼는지 계속 갱신하고, 아직 빠진 조작군이 있으면 다음에 시도할 행동을 바로 제안합니다.
 
 Observation 영역의 live `Action log` 줄은 방금 누른 버튼, 바꾼 슬라이더, 적용한 preset, 저장한 marker가 실제로 기록됐는지 이벤트 수와 마지막 조작 이름으로 확인해줍니다.
@@ -634,6 +636,8 @@ Lab04 wall live status separates total wall force, spring force, damping force, 
 The observation area's `Next action` line names the immediate learner step from the current state. It asks for a prediction first, names the next required preset when one is missing, recommends `Use live status` or a short note when evidence is thin, and then moves the learner toward `Mark observation`.
 
 The `Evidence quality` line tells learners before saving whether the observation is incomplete, ready to mark without an outcome, or review-ready.
+
+The `Challenge proof` line tells learners whether the visible-effect challenge still needs a prediction, learner control, preset evidence, note/live-status evidence, or outcome review.
 
 The observation area's live `Activity mix` line continuously counts button, slider, preset, and observation-marker use during the current run, then recommends the next missing control family to try.
 

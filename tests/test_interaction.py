@@ -26,6 +26,7 @@ from mclab.sim.interaction import (  # noqa: E402
     _changed_tuning_observation_note,
     _changed_tuning_summary,
     _live_status_observation_note,
+    _observation_challenge_proof_status,
     _observation_checklist_status,
     _observation_evidence_quality,
     _panel_guide_rows,
@@ -929,6 +930,63 @@ class KeyForcePulseTests(unittest.TestCase):
                 learner_controls=1,
             ),
             "Evidence quality: review-ready - prediction, outcome, note, and required controls are ready.",
+        )
+
+    def test_observation_challenge_proof_status_summarizes_missing_evidence(self) -> None:
+        self.assertEqual(
+            _observation_challenge_proof_status("", "Not judged yet", ""),
+            "Challenge proof: needs prediction, then learner control.",
+        )
+        self.assertEqual(
+            _observation_challenge_proof_status(
+                "",
+                "Not judged yet",
+                "",
+                preset_state="needs required preset Back away",
+                learner_controls=1,
+            ),
+            "Challenge proof: needs prediction, then try required preset Back away.",
+        )
+        self.assertEqual(
+            _observation_challenge_proof_status(
+                "Backing away should release contact.",
+                "Not judged yet",
+                "",
+                preset_state="needs required preset Back away",
+                learner_controls=1,
+            ),
+            "Challenge proof: needs preset evidence - try required preset Back away.",
+        )
+        self.assertEqual(
+            _observation_challenge_proof_status("Stiff wall should push harder.", "Not judged yet", ""),
+            "Challenge proof: needs learner control evidence.",
+        )
+        self.assertEqual(
+            _observation_challenge_proof_status(
+                "Stiff wall should push harder.",
+                "Not judged yet",
+                "",
+                learner_controls=1,
+            ),
+            "Challenge proof: needs note or live-status evidence.",
+        )
+        self.assertEqual(
+            _observation_challenge_proof_status(
+                "Stiff wall should push harder.",
+                "Not judged yet",
+                "Force increased.",
+                learner_controls=1,
+            ),
+            "Challenge proof: ready to mark; outcome can be added now or during review.",
+        )
+        self.assertEqual(
+            _observation_challenge_proof_status(
+                "Stiff wall should push harder.",
+                "Matched",
+                "Force increased.",
+                learner_controls=1,
+            ),
+            "Challenge proof: review-ready; compare the saved observation with plots after the run.",
         )
 
     def test_observation_next_action_names_the_next_learner_step(self) -> None:
