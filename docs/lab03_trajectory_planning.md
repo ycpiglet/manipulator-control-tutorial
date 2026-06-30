@@ -143,6 +143,16 @@ python -m mclab batch lab03_2dof_compare --open-report
 
 These two configs keep the same near-edge target, timing, condition-aware damping schedule, torque limits, and gains while changing only `tracking_controller.max_joint_speed`. The low-joint-speed case clips the DLS joint command earlier, so it should leave more hand tracking error while keeping the same damping trigger. The high-joint-speed case lets the arm chase the target more aggressively. Compare `dls_joint_speed_compare.png`, `task_error_compare.png`, `dls_damping_compare.png`, and `torque.png`.
 
+Condition-aware retargeting-path comparison:
+
+```bash
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_direct_retarget_2dof.yaml --headless --plot --plots dls
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_inward_retarget_2dof.yaml --headless --plot --plots dls
+python -m mclab batch lab03_2dof_compare --open-report
+```
+
+These two configs keep the same near-edge final target, condition-aware damping schedule, torque limits, and gains while changing only `target_xy_waypoints`. The direct-retarget case moves straight from the start pose to the workspace edge. The inward-retarget case moves through an inner waypoint before returning to the edge, so learners can see whether a geometric detour lowers conditioning cost or simply asks for faster motion and more torque. Compare `hand_x_compare.png`, `hand_y_compare.png`, `dls_task_speed_compare.png`, `dls_joint_speed_compare.png`, `dls_damping_compare.png`, and `task_error_compare.png`.
+
 Interactive 2DOF demo:
 
 ```powershell

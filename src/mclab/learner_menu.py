@@ -664,6 +664,26 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
     ),
     MenuAction(
         group="Lab03 2DOF Arm and Trajectories",
+        label="2DOF direct-retarget DLS",
+        lab_name="lab03",
+        config_path="configs/lab03_2dof/condition_aware_dls_direct_retarget_2dof.yaml",
+        plots="dls",
+        description="Moves the hand target directly from the start pose to the near-edge DLS target.",
+        try_this="Run before inward-retarget DLS and compare target path effects.",
+        watch="Condition scale, DLS damping, joint speed, task error, and torque during retargeting.",
+    ),
+    MenuAction(
+        group="Lab03 2DOF Arm and Trajectories",
+        label="2DOF inward-retarget DLS",
+        lab_name="lab03",
+        config_path="configs/lab03_2dof/condition_aware_dls_inward_retarget_2dof.yaml",
+        plots="dls",
+        description="Moves through an inner waypoint before returning to the near-edge DLS target.",
+        try_this="Compare directly against direct-retarget DLS with the same controller limits.",
+        watch="Whether the detour lowers condition cost or raises command speed and torque.",
+    ),
+    MenuAction(
+        group="Lab03 2DOF Arm and Trajectories",
         label="2DOF interactive",
         lab_name="lab03",
         config_path="configs/lab03_2dof/interactive_2dof.yaml",
@@ -2384,6 +2404,8 @@ def parameter_hint(action: MenuAction) -> str:
             "2dof fast-command dls",
             "2dof low-joint-speed dls",
             "2dof high-joint-speed dls",
+            "2dof direct-retarget dls",
+            "2dof inward-retarget dls",
         }:
             if label == "2dof condition-aware dls":
                 return (
@@ -2425,6 +2447,11 @@ def parameter_hint(action: MenuAction) -> str:
             if label in {"2dof low-joint-speed dls", "2dof high-joint-speed dls"}:
                 return (
                     "tracking_controller.max_joint_speed, target_xy, tracking_controller.max_task_speed, "
+                    "tracking_controller.condition_damping_threshold, tracking_controller.max_dls_damping"
+                )
+            if label in {"2dof direct-retarget dls", "2dof inward-retarget dls"}:
+                return (
+                    "target_xy_waypoints, target_xy, tracking_controller.max_task_speed, "
                     "tracking_controller.condition_damping_threshold, tracking_controller.max_dls_damping"
                 )
             return (
@@ -2688,6 +2715,8 @@ def _resolve_preview_values(config: dict[str, Any], path: str) -> tuple[tuple[st
         )
 
     value = _get_config_value(config, path)
+    if path.endswith("waypoints") and _is_preview_waypoint_list(value):
+        return ((path, value),)
     if not _is_preview_value(value):
         return ()
     return ((path, value),)
@@ -2719,6 +2748,10 @@ def _is_preview_value(value: Any) -> bool:
     return False
 
 
+def _is_preview_waypoint_list(value: Any) -> bool:
+    return isinstance(value, list) and bool(value) and all(isinstance(item, dict) for item in value)
+
+
 def _format_config_value(value: Any) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
@@ -2726,11 +2759,30 @@ def _format_config_value(value: Any) -> str:
         return f"{value:g}"
     if isinstance(value, str):
         return value if len(value) <= 32 else f"{value[:29]}..."
+    if _is_preview_waypoint_list(value):
+        return _format_waypoint_preview(value)
     if isinstance(value, list | tuple):
         shown = [_format_config_value(item) for item in value[:4]]
         suffix = ", ..." if len(value) > 4 else ""
         return f"[{', '.join(shown)}{suffix}]"
     return str(value)
+
+
+def _format_waypoint_preview(waypoints: list[dict[str, Any]]) -> str:
+    first = _waypoint_position_preview(waypoints[0])
+    last = _waypoint_position_preview(waypoints[-1])
+    return f"{len(waypoints)} waypoints: {first} -> {last}"
+
+
+def _waypoint_position_preview(waypoint: dict[str, Any]) -> str:
+    raw_position = waypoint.get("position", waypoint.get("xy"))
+    if raw_position is None:
+        raw_position = [waypoint.get("x", "?"), waypoint.get("y", "?")]
+    if isinstance(raw_position, list | tuple):
+        shown = [_format_config_value(item) for item in raw_position[:3]]
+        suffix = ", ..." if len(raw_position) > 3 else ""
+        return f"[{', '.join(shown)}{suffix}]"
+    return _format_config_value(raw_position)
 
 
 def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
@@ -2959,6 +3011,10 @@ def _is_compare_action(action: MenuAction) -> bool:
         "2dof high-torque dls",
         "2dof slow-command dls",
         "2dof fast-command dls",
+        "2dof low-joint-speed dls",
+        "2dof high-joint-speed dls",
+        "2dof direct-retarget dls",
+        "2dof inward-retarget dls",
         "step profile",
         "trapezoid",
         "minimum jerk",

@@ -1053,6 +1053,10 @@ class LearnerMenuTests(unittest.TestCase):
             ).batch_name,
             "lab03_2dof_compare",
         )
+        self.assertEqual(
+            action_compare_batch(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF direct-retarget DLS")]).batch_name,
+            "lab03_2dof_compare",
+        )
         self.assertEqual(action_compare_batch(by_label[("Lab04 Panda Manipulator", "Virtual wall")]).batch_name, "lab04_wall_compare")
         self.assertEqual(
             action_compare_batch(by_label[("Lab04 Panda Manipulator", "Cartesian reach")]).batch_name,
@@ -1108,6 +1112,11 @@ class LearnerMenuTests(unittest.TestCase):
             by_label[("Lab03 2DOF Arm and Trajectories", "2DOF low-joint-speed DLS")]
         )
         self.assertIn("tracking_controller.max_joint_speed=", low_joint_speed)
+        direct_retarget = config_value_preview(
+            by_label[("Lab03 2DOF Arm and Trajectories", "2DOF direct-retarget DLS")]
+        )
+        self.assertIn("target_xy_waypoints", direct_retarget)
+        self.assertIn("tracking_controller.max_task_speed=", direct_retarget)
         deep_push_wall = config_value_preview(by_label[("Lab04 Panda Manipulator", "Deep push wall")])
         self.assertIn("cartesian_target.waypoints", deep_push_wall)
         self.assertIn("virtual_wall.wall_x=", deep_push_wall)
@@ -1175,6 +1184,9 @@ class LearnerMenuTests(unittest.TestCase):
         joint_speed_labels = {(action.group, action.label) for action in filter_menu_actions("joint speed limit")}
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF low-joint-speed DLS"), joint_speed_labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF high-joint-speed DLS"), joint_speed_labels)
+        retarget_labels = {(action.group, action.label) for action in filter_menu_actions("retarget dls")}
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF direct-retarget DLS"), retarget_labels)
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF inward-retarget DLS"), retarget_labels)
         edge_target_labels = {(action.group, action.label) for action in filter_menu_actions("edge target dls")}
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF edge-target DLS"), edge_target_labels)
         path_branch_labels = {(action.group, action.label) for action in filter_menu_actions("elbow branch")}
@@ -1292,6 +1304,8 @@ class LearnerMenuTests(unittest.TestCase):
                 "2DOF fast-command DLS",
                 "2DOF low-joint-speed DLS",
                 "2DOF high-joint-speed DLS",
+                "2DOF direct-retarget DLS",
+                "2DOF inward-retarget DLS",
             },
         )
 
@@ -1359,6 +1373,10 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(
             "tracking_controller.max_joint_speed",
             parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF low-joint-speed DLS")]),
+        )
+        self.assertIn(
+            "target_xy_waypoints",
+            parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF inward-retarget DLS")]),
         )
         self.assertIn(
             "cartesian_target.gain",

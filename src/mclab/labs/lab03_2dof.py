@@ -309,6 +309,7 @@ def _run_two_link_arm(
     target_q_goal = _pair(config.get("target_q", [0.9, -1.1]), "target_q")
     start_xy = forward_kinematics(initial_q, geometry)
     target_xy_goal = _pair(config.get("target_xy", start_xy), "target_xy")
+    target_xy_waypoints = _two_link_target_xy_waypoints(config)
     dls_target_q = list(initial_q)
     simulation_dt = float(model.opt.timestep)
 
@@ -385,18 +386,21 @@ def _run_two_link_arm(
             alpha_dot = target.velocity
 
             if mode in DLS_MODES:
-                target_xy_goal = (
-                    live_tuning.value("target_x", target_xy_goal[0]),
-                    live_tuning.value("target_y", target_xy_goal[1]),
+                target_xy, target_xdot = _two_link_target_xy_command(
+                    start_xy=start_xy,
+                    goal_xy=target_xy_goal,
+                    alpha=alpha,
+                    alpha_dot=alpha_dot,
+                    time=float(data.time),
+                    waypoints=target_xy_waypoints,
+                    live_tuning=live_tuning,
                 )
                 command = _dls_task_space_command(
                     q=q,
                     qdot=qdot,
                     target_q_state=dls_target_q,
-                    start_xy=start_xy,
-                    goal_xy=target_xy_goal,
-                    alpha=alpha,
-                    alpha_dot=alpha_dot,
+                    target_xy=target_xy,
+                    target_xdot=target_xdot,
                     dt=simulation_dt,
                     geometry=geometry,
                     controller_config=controller_config,
@@ -407,17 +411,20 @@ def _run_two_link_arm(
                 )
                 dls_target_q = list(command["target_q"])
             elif mode in TASK_SPACE_MODES:
-                target_xy_goal = (
-                    live_tuning.value("target_x", target_xy_goal[0]),
-                    live_tuning.value("target_y", target_xy_goal[1]),
-                )
-                command = _task_space_command(
-                    q=q,
-                    qdot=qdot,
+                target_xy, target_xdot = _two_link_target_xy_command(
                     start_xy=start_xy,
                     goal_xy=target_xy_goal,
                     alpha=alpha,
                     alpha_dot=alpha_dot,
+                    time=float(data.time),
+                    waypoints=target_xy_waypoints,
+                    live_tuning=live_tuning,
+                )
+                command = _task_space_command(
+                    q=q,
+                    qdot=qdot,
+                    target_xy=target_xy,
+                    target_xdot=target_xdot,
                     geometry=geometry,
                     controller_config=controller_config,
                     live_tuning=live_tuning,
@@ -501,6 +508,7 @@ def _run_two_link_arm(
                 x_ee=x_ee,
                 xdot_ee=xdot_ee,
                 target_x_ee=command["target_xy"],
+                target_xdot_ee=command.get("target_xdot", [0.0, 0.0]),
                 task_error=task_error,
                 task_error_norm=task_error_norm,
                 tau_cmd=command["tau"],
@@ -890,6 +898,80 @@ def _two_link_state(data: Any, handles: dict[str, Any]) -> tuple[list[float], li
     return q, qdot
 
 
+def _two_link_target_xy_command(
+    *,
+    start_xy: tuple[float, float],
+    goal_xy: tuple[float, float],
+    alpha: float,
+    alpha_dot: float,
+    time: float,
+    waypoints: list[tuple[float, tuple[float, float]]],
+    live_tuning: LiveTuning,
+) -> tuple[list[float], list[float]]:
+    if waypoints:
+        return _interpolate_two_link_target_xy_waypoints(waypoints, time)
+
+    tuned_goal = (
+        live_tuning.value("target_x", goal_xy[0]),
+        live_tuning.value("target_y", goal_xy[1]),
+    )
+    target_xy = [start_xy[index] + alpha * (tuned_goal[index] - start_xy[index]) for index in range(2)]
+    target_xdot = [alpha_dot * (tuned_goal[index] - start_xy[index]) for index in range(2)]
+    return target_xy, target_xdot
+
+
+def _two_link_target_xy_waypoints(config: dict[str, Any]) -> list[tuple[float, tuple[float, float]]]:
+    raw_waypoints = config.get("target_xy_waypoints")
+    if not isinstance(raw_waypoints, list):
+        return []
+
+    waypoints: list[tuple[float, tuple[float, float]]] = []
+    for index, raw in enumerate(raw_waypoints):
+        if not isinstance(raw, dict):
+            raise ValueError(f"target_xy_waypoints[{index}] must be a mapping")
+        waypoint_time = float(raw.get("time", raw.get("t", 0.0)))
+        if "position" in raw:
+            position = _pair(raw["position"], f"target_xy_waypoints[{index}].position")
+        elif "xy" in raw:
+            position = _pair(raw["xy"], f"target_xy_waypoints[{index}].xy")
+        else:
+            position = (
+                float(raw.get("x", 0.0)),
+                float(raw.get("y", 0.0)),
+            )
+        waypoints.append((waypoint_time, position))
+    return sorted(waypoints, key=lambda item: item[0])
+
+
+def _interpolate_two_link_target_xy_waypoints(
+    waypoints: list[tuple[float, tuple[float, float]]],
+    time: float,
+) -> tuple[list[float], list[float]]:
+    if not waypoints:
+        raise ValueError("At least one target_xy waypoint is required")
+    if len(waypoints) == 1 or time <= waypoints[0][0]:
+        return list(waypoints[0][1]), [0.0, 0.0]
+    if time >= waypoints[-1][0]:
+        return list(waypoints[-1][1]), [0.0, 0.0]
+
+    for (start_time, start_position), (end_time, end_position) in zip(waypoints, waypoints[1:]):
+        if start_time <= time <= end_time:
+            duration = max(1e-9, end_time - start_time)
+            phase = max(0.0, min(1.0, (time - start_time) / duration))
+            smooth = phase**3 * (10.0 - 15.0 * phase + 6.0 * phase**2)
+            smooth_dot = (30.0 * phase**2 - 60.0 * phase**3 + 30.0 * phase**4) / duration
+            position = [
+                start_position[index] + smooth * (end_position[index] - start_position[index])
+                for index in range(2)
+            ]
+            velocity = [
+                smooth_dot * (end_position[index] - start_position[index])
+                for index in range(2)
+            ]
+            return position, velocity
+    return list(waypoints[-1][1]), [0.0, 0.0]
+
+
 def _joint_space_command(
     *,
     q: list[float],
@@ -934,10 +1016,8 @@ def _task_space_command(
     *,
     q: list[float],
     qdot: list[float],
-    start_xy: tuple[float, float],
-    goal_xy: tuple[float, float],
-    alpha: float,
-    alpha_dot: float,
+    target_xy: list[float],
+    target_xdot: list[float],
     geometry: TwoLinkGeometry,
     controller_config: dict[str, Any],
     live_tuning: LiveTuning,
@@ -945,8 +1025,6 @@ def _task_space_command(
 ) -> dict[str, Any]:
     x_ee = forward_kinematics(q, geometry)
     xdot_ee = end_effector_velocity(q, qdot, geometry)
-    target_xy = [start_xy[index] + alpha * (goal_xy[index] - start_xy[index]) for index in range(2)]
-    target_xdot = [alpha_dot * (goal_xy[index] - start_xy[index]) for index in range(2)]
     kp = live_tuning.value("task_kp", float(controller_config.get("task_kp", 90.0)))
     kd = live_tuning.value("task_kd", float(controller_config.get("task_kd", 16.0)))
     joint_damping = float(controller_config.get("joint_damping", 0.5))
@@ -962,6 +1040,7 @@ def _task_space_command(
     return {
         "target_q": list(inverse_kinematics(target_xy, geometry)),
         "target_xy": target_xy,
+        "target_xdot": target_xdot,
         "tau": tau,
         "kp": kp,
         "kd": kd,
@@ -974,10 +1053,8 @@ def _dls_task_space_command(
     q: list[float],
     qdot: list[float],
     target_q_state: list[float],
-    start_xy: tuple[float, float],
-    goal_xy: tuple[float, float],
-    alpha: float,
-    alpha_dot: float,
+    target_xy: list[float],
+    target_xdot: list[float],
     dt: float,
     geometry: TwoLinkGeometry,
     controller_config: dict[str, Any],
@@ -986,8 +1063,6 @@ def _dls_task_space_command(
     condition_aware: bool = False,
 ) -> dict[str, Any]:
     x_ee = forward_kinematics(q, geometry)
-    target_xy = [start_xy[index] + alpha * (goal_xy[index] - start_xy[index]) for index in range(2)]
-    target_xdot = [alpha_dot * (goal_xy[index] - start_xy[index]) for index in range(2)]
     error = [target_xy[index] - x_ee[index] for index in range(2)]
 
     dls_gain = live_tuning.value("dls_gain", float(controller_config.get("dls_gain", 4.0)))
@@ -1051,6 +1126,7 @@ def _dls_task_space_command(
     return {
         "target_q": target_q,
         "target_xy": target_xy,
+        "target_xdot": target_xdot,
         "tau": tau,
         "kp": sum(kp_base) * 0.5,
         "kd": sum(kd_base) * 0.5,

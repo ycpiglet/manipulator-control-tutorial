@@ -165,6 +165,18 @@ BATCH_SETS: dict[str, tuple[BatchScenario, ...]] = {
             "configs/lab03_2dof/condition_aware_dls_high_joint_speed_2dof.yaml",
             "dls",
         ),
+        BatchScenario(
+            "condition_aware_direct_retarget",
+            "lab03",
+            "configs/lab03_2dof/condition_aware_dls_direct_retarget_2dof.yaml",
+            "dls",
+        ),
+        BatchScenario(
+            "condition_aware_inward_retarget",
+            "lab03",
+            "configs/lab03_2dof/condition_aware_dls_inward_retarget_2dof.yaml",
+            "dls",
+        ),
     ),
     "lab04_wall_compare": (
         BatchScenario("soft_wall", "lab04", "configs/lab04_panda/wall_soft.yaml", "wall_compare"),
@@ -261,6 +273,7 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             "How much does a lower torque limit increase task error when the damping schedule is unchanged?",
             "How does a faster hand command change DLS joint speed, task speed clipping, and task error?",
             "How does the DLS response change when only the joint-speed limit is tightened or relaxed?",
+            "How does retargeting through an inner waypoint change DLS damping, joint speed, and torque versus going straight to the edge?",
             "How do the torque plots change when the task is expressed in end-effector space?",
         ),
         followups=(
@@ -274,6 +287,7 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             "Compare `condition_aware_dls_low_torque_2dof.yaml` and `condition_aware_dls_high_torque_2dof.yaml`.",
             "Compare `condition_aware_dls_slow_command_2dof.yaml` and `condition_aware_dls_fast_command_2dof.yaml`.",
             "Compare `condition_aware_dls_low_joint_speed_2dof.yaml` and `condition_aware_dls_high_joint_speed_2dof.yaml`.",
+            "Compare `condition_aware_dls_direct_retarget_2dof.yaml` and `condition_aware_dls_inward_retarget_2dof.yaml`.",
             "Copy `configs/lab03_2dof/condition_aware_dls_2dof.yaml` and change `condition_damping_threshold`.",
             "Lower `tracking_controller.torque_limit` and compare how joint and task errors grow.",
         ),

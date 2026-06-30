@@ -11,7 +11,10 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from mclab.labs.lab03_2dof import (  # noqa: E402
     _condition_aware_dls_damping,
+    _interpolate_two_link_target_xy_waypoints,
     _smooth_pulse_scale,
+    _two_link_target_xy_command,
+    _two_link_target_xy_waypoints,
     _two_link_disturbance_recovery_metrics,
     _two_link_disturbance_torque,
     _two_link_viewer_guides,
@@ -114,6 +117,65 @@ class TwoLinkKinematicsTests(unittest.TestCase):
         self.assertAlmostEqual(mid_scale, 0.5)
         self.assertAlmostEqual(mid_damping, 0.14)
         self.assertEqual((high_damping, high_scale), (0.24, 1.0))
+
+    def test_two_link_target_xy_waypoints_use_smooth_interpolation_and_velocity(self) -> None:
+        waypoints = _two_link_target_xy_waypoints(
+            {
+                "target_xy_waypoints": [
+                    {"time": 1.0, "xy": [0.80, 0.10]},
+                    {"time": 0.0, "position": [0.50, 0.20]},
+                    {"time": 2.0, "x": 1.04, "y": 0.0},
+                ]
+            }
+        )
+
+        self.assertEqual(waypoints[0], (0.0, (0.50, 0.20)))
+        self.assertEqual(_interpolate_two_link_target_xy_waypoints(waypoints, -0.1), ([0.50, 0.20], [0.0, 0.0]))
+        self.assertEqual(_interpolate_two_link_target_xy_waypoints(waypoints, 2.5), ([1.04, 0.0], [0.0, 0.0]))
+        position, velocity = _interpolate_two_link_target_xy_waypoints(waypoints, 0.5)
+
+        self.assertAlmostEqual(position[0], 0.65)
+        self.assertAlmostEqual(position[1], 0.15)
+        self.assertGreater(velocity[0], 0.0)
+        self.assertLess(velocity[1], 0.0)
+
+    def test_two_link_target_xy_command_preserves_existing_single_goal_behavior(self) -> None:
+        class DummyLiveTuning:
+            def value(self, _name: str, default: float) -> float:
+                return default
+
+        target_xy, target_xdot = _two_link_target_xy_command(
+            start_xy=(0.40, 0.10),
+            goal_xy=(0.80, 0.50),
+            alpha=0.25,
+            alpha_dot=0.5,
+            time=1.0,
+            waypoints=[],
+            live_tuning=DummyLiveTuning(),  # type: ignore[arg-type]
+        )
+
+        self.assertEqual(target_xy, [0.50, 0.20])
+        self.assertEqual(target_xdot, [0.20, 0.20])
+
+    def test_two_link_target_xy_command_prefers_waypoints_when_configured(self) -> None:
+        class DummyLiveTuning:
+            def value(self, _name: str, default: float) -> float:
+                return default + 10.0
+
+        target_xy, target_xdot = _two_link_target_xy_command(
+            start_xy=(0.40, 0.10),
+            goal_xy=(0.80, 0.50),
+            alpha=0.25,
+            alpha_dot=0.5,
+            time=0.5,
+            waypoints=[(0.0, (0.50, 0.20)), (1.0, (0.70, 0.20))],
+            live_tuning=DummyLiveTuning(),  # type: ignore[arg-type]
+        )
+
+        self.assertAlmostEqual(target_xy[0], 0.60)
+        self.assertAlmostEqual(target_xy[1], 0.20)
+        self.assertGreater(target_xdot[0], 0.0)
+        self.assertAlmostEqual(target_xdot[1], 0.0)
 
     def test_two_link_disturbance_torque_uses_smooth_window(self) -> None:
         config = {

@@ -40,6 +40,8 @@ class BatchTests(unittest.TestCase):
         self.assertIn("condition_aware_fast_command", lab03_labels)
         self.assertIn("condition_aware_low_joint_speed", lab03_labels)
         self.assertIn("condition_aware_high_joint_speed", lab03_labels)
+        self.assertIn("condition_aware_direct_retarget", lab03_labels)
+        self.assertIn("condition_aware_inward_retarget", lab03_labels)
         lab04_wall_labels = {scenario.label for scenario in batch.BATCH_SETS["lab04_wall_compare"]}
         self.assertIn("low_damping_wall", lab04_wall_labels)
         self.assertIn("high_damping_wall", lab04_wall_labels)
@@ -105,6 +107,9 @@ class BatchTests(unittest.TestCase):
         )
         self.assertTrue(
             any("joint-speed limit" in question for question in lab03_guide.questions)
+        )
+        self.assertTrue(
+            any("retargeting through an inner waypoint" in question for question in lab03_guide.questions)
         )
         self.assertTrue(
             any("inner workspace to the edge" in question for question in lab03_guide.questions)

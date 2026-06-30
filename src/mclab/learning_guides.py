@@ -544,6 +544,22 @@ RUN_GUIDES: dict[str, RunGuide] = {
         "Higher DLS joint speed, smaller task error, DLS damping timing, and actuator effort.",
         "Tighten max_joint_speed gradually and find where tracking error becomes visible.",
     ),
+    "configs/lab03_2dof/condition_aware_dls_direct_retarget_2dof.yaml": RunGuide(
+        "Lab03 2DOF Direct-Retarget Condition-Aware DLS",
+        "The hand target moves directly from the start pose to the near-edge DLS target.",
+        "Run before inward-retarget DLS and compare how the direct path loads the same damping schedule.",
+        "target_xy_waypoints with the same condition-aware damping schedule",
+        "Condition scale, DLS damping, joint speed, task error, and torque during the retarget.",
+        "Run inward-retarget DLS next and compare whether the detour reduces conditioning cost or raises command effort.",
+    ),
+    "configs/lab03_2dof/condition_aware_dls_inward_retarget_2dof.yaml": RunGuide(
+        "Lab03 2DOF Inward-Retarget Condition-Aware DLS",
+        "The hand target first moves through an inner waypoint, then returns to the near-edge DLS target.",
+        "Compare directly against direct-retarget DLS with the same controller limits.",
+        "target_xy_waypoints with the same condition-aware damping schedule",
+        "DLS task speed, joint speed, torque, condition scale, and final hand error.",
+        "Move the inner waypoint or timing to see when retargeting helps versus simply asking for faster motion.",
+    ),
     "configs/lab03_2dof/interactive_2dof.yaml": RunGuide(
         "Lab03 2DOF Interactive",
         "Tune hand target and task-space gains, then disturb the shoulder or elbow while the 2DOF arm runs.",

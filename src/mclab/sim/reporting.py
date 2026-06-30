@@ -142,6 +142,7 @@ CONFIG_HIGHLIGHT_KEYS = (
     "initial_q",
     "target_q",
     "target_xy",
+    "target_xy_waypoints",
     "controlled_joint_index",
     "cartesian_target.position",
     "cartesian_target.waypoints",
@@ -624,6 +625,30 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
         NextRunSuggestion(
             "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
             "Return to the default joint-speed limit.",
+            "dls",
+        ),
+    ),
+    "configs/lab03_2dof/condition_aware_dls_direct_retarget_2dof.yaml": (
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_inward_retarget_2dof.yaml",
+            "Route through the inner waypoint and compare speed, torque, and damping.",
+            "dls",
+        ),
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
+            "Return to the single near-edge target.",
+            "dls",
+        ),
+    ),
+    "configs/lab03_2dof/condition_aware_dls_inward_retarget_2dof.yaml": (
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_direct_retarget_2dof.yaml",
+            "Remove the inner waypoint and compare the direct edge path.",
+            "dls",
+        ),
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
+            "Return to the single near-edge target.",
             "dls",
         ),
     ),
