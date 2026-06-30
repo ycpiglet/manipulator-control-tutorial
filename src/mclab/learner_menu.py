@@ -3969,7 +3969,7 @@ def main() -> int:
 
     bottom = ttk.Frame(outer)
     bottom.pack(fill="x", pady=(12, 0))
-    ttk.Button(bottom, text="Refresh path", command=lambda: refresh_after_run(update_status=True)).pack(side="left")
+    ttk.Button(bottom, text="Refresh menu", command=lambda: refresh_after_run(update_status=True)).pack(side="left")
     ttk.Button(bottom, text="Check setup", command=lambda: _launch_doctor_from_menu(status, root=root)).pack(
         side="left", padx=(8, 0)
     )
