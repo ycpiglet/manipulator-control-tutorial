@@ -93,6 +93,7 @@ class BatchTests(unittest.TestCase):
         )
         self.assertIn("max_abs_tau_disturbance", lab03_guide.metric_keys)
         self.assertIn("max_task_error_during_disturbance", lab03_guide.metric_keys)
+        self.assertIn("disturbance_recovery_duration", lab03_guide.metric_keys)
         self.assertIn(
             ("dls_task_speed_compare.png", "DLS Task Speed Comparison", "task speed", "dls_task_speed"),
             lab03_guide.comparison_specs,
@@ -112,6 +113,15 @@ class BatchTests(unittest.TestCase):
         self.assertIn(
             ("elbow_disturbance_compare.png", "Elbow Disturbance Comparison", "torque [N m]", "tau_disturbance_1"),
             lab03_guide.comparison_specs,
+        )
+        self.assertIn(
+            (
+                "disturbance_recovery_time_compare.png",
+                "Disturbance Recovery Time Comparison",
+                "time [s]",
+                ("disturbance_recovery_duration",),
+            ),
+            lab03_guide.summary_comparison_specs,
         )
 
         for batch_name, scenarios in batch.BATCH_SETS.items():

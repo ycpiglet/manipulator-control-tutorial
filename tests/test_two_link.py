@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from mclab.labs.lab03_2dof import (  # noqa: E402
     _condition_aware_dls_damping,
     _smooth_pulse_scale,
+    _two_link_disturbance_recovery_metrics,
     _two_link_disturbance_torque,
     _two_link_viewer_guides,
     _update_two_link_viewer_guides,
@@ -137,6 +138,37 @@ class TwoLinkKinematicsTests(unittest.TestCase):
 
     def test_smooth_pulse_scale_handles_zero_ramp(self) -> None:
         self.assertEqual(_smooth_pulse_scale(elapsed=0.0, duration=0.2, ramp_time=0.0), 1.0)
+
+    def test_two_link_disturbance_recovery_metrics_find_return_to_pre_error_band(self) -> None:
+        rows = [
+            {"time": 0.9, "disturbance_active": 0.0, "joint_error_norm": 0.001, "task_error_norm": 0.002},
+            {"time": 1.0, "disturbance_active": 1.0, "joint_error_norm": 0.004, "task_error_norm": 0.008},
+            {"time": 1.1, "disturbance_active": 1.0, "joint_error_norm": 0.006, "task_error_norm": 0.012},
+            {"time": 1.2, "disturbance_active": 0.0, "joint_error_norm": 0.003, "task_error_norm": 0.007},
+            {"time": 1.3, "disturbance_active": 0.0, "joint_error_norm": 0.0012, "task_error_norm": 0.004},
+        ]
+
+        metrics = _two_link_disturbance_recovery_metrics(rows)
+
+        self.assertEqual(metrics["first_disturbance_time"], 1.0)
+        self.assertEqual(metrics["last_disturbance_time"], 1.1)
+        self.assertAlmostEqual(metrics["disturbance_duration"], 0.1)
+        self.assertEqual(metrics["pre_disturbance_joint_error_norm"], 0.001)
+        self.assertEqual(metrics["pre_disturbance_task_error_norm"], 0.002)
+        self.assertEqual(metrics["disturbance_recovery_threshold"], 0.00125)
+        self.assertTrue(metrics["disturbance_recovered"])
+        self.assertEqual(metrics["disturbance_recovery_time"], 1.3)
+        self.assertAlmostEqual(metrics["disturbance_recovery_duration"], 0.2)
+        self.assertEqual(metrics["peak_task_error_during_disturbance_time"], 1.1)
+        self.assertEqual(metrics["peak_joint_error_during_disturbance_time"], 1.1)
+
+    def test_two_link_disturbance_recovery_metrics_skip_runs_without_disturbance(self) -> None:
+        rows = [
+            {"time": 0.0, "disturbance_active": 0.0, "joint_error_norm": 0.001, "task_error_norm": 0.002},
+            {"time": 0.1, "disturbance_active": 0.0, "joint_error_norm": 0.001, "task_error_norm": 0.002},
+        ]
+
+        self.assertEqual(_two_link_disturbance_recovery_metrics(rows), {})
 
     def test_two_link_viewer_guides_default_to_enabled(self) -> None:
         guides = _two_link_viewer_guides({})

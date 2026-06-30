@@ -269,6 +269,8 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             "max_abs_tau_disturbance",
             "max_abs_tau_total",
             "max_task_error_during_disturbance",
+            "disturbance_recovery_duration",
+            "disturbance_recovery_threshold",
         ),
         preview_plots=("dls.png", "end_effector.png", "singularity.png", "error.png"),
         comparison_specs=(
@@ -285,6 +287,14 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             ("shoulder_disturbance_compare.png", "Shoulder Disturbance Comparison", "torque [N m]", "tau_disturbance_0"),
             ("elbow_disturbance_compare.png", "Elbow Disturbance Comparison", "torque [N m]", "tau_disturbance_1"),
             ("total_elbow_torque_compare.png", "Total Elbow Torque Comparison", "torque [N m]", "tau_total_1"),
+        ),
+        summary_comparison_specs=(
+            (
+                "disturbance_recovery_time_compare.png",
+                "Disturbance Recovery Time Comparison",
+                "time [s]",
+                ("disturbance_recovery_duration",),
+            ),
         ),
     ),
     "lab04_wall_compare": BatchGuide(
@@ -1875,6 +1885,8 @@ def _plot_checkpoint(filename: str, title: str) -> str:
         return "Name which scenario takes the upper or lower hand path and connect it to the arm posture."
     if "hand_x" in name:
         return "Name which scenario moves the hand farthest along X and cite the target or wall setting that caused it."
+    if "disturbance_recovery" in name:
+        return "Name which disturbance recovers sooner and cite the recovery duration metric."
     if "disturbance" in name:
         return "Name which scenario receives the larger disturbance pulse and compare the recovery error."
     if "error" in name:

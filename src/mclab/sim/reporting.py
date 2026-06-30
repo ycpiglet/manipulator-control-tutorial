@@ -46,6 +46,8 @@ INDEX_METRIC_KEYS = (
     "max_abs_tau_disturbance",
     "max_abs_tau_total",
     "max_task_error_during_disturbance",
+    "disturbance_recovery_duration",
+    "disturbance_recovery_time",
     "max_dls_task_speed",
     "max_dls_joint_speed",
     "max_dls_damping",
@@ -2213,6 +2215,23 @@ def _result_checks(summary: dict[str, Any]) -> list[tuple[str, str, str]]:
                 f"External torque pulse reached {_format_value(disturbance)} N m; compare disturbance and error plots.",
             )
         )
+        recovery_duration = _number(summary.get("disturbance_recovery_duration"))
+        if recovery_duration is not None:
+            checks.append(
+                (
+                    "Disturbance recovery",
+                    "OK" if bool(summary.get("disturbance_recovered")) else "Inspect",
+                    f"Joint error returned to the recovery band after {_format_value(recovery_duration)} seconds.",
+                )
+            )
+        elif summary.get("disturbance_recovered") is False:
+            checks.append(
+                (
+                    "Disturbance recovery",
+                    "Inspect",
+                    "Joint error did not return to the pre-disturbance recovery band before the run ended.",
+                )
+            )
 
     qdot = _number(summary.get("max_settled_abs_qdot"))
     drift = _number(summary.get("max_joint_drift_norm"))
@@ -3125,6 +3144,11 @@ def _plot_guidance(filename: str) -> tuple[str, str] | None:
         return (
             "Damped Least Squares",
             "Compare task speed, joint speed, and damping. More damping usually calms joint motion near singularity but leaves more task error.",
+        )
+    if "disturbance_recovery" in name:
+        return (
+            "Disturbance Recovery",
+            "Compare how long each disturbance case takes to return joint error to its pre-disturbance recovery band.",
         )
     if "disturbance" in name:
         return (

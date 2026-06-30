@@ -313,7 +313,7 @@ Implemented so far:
 
 Remaining likely extension:
 
-- richer singularity comparison lessons, such as repeated disturbances or recovery-time scoring
+- richer singularity comparison lessons, such as repeated or timed disturbance sequences
 
 ### Phase 6 - Lab04 Advanced Control
 

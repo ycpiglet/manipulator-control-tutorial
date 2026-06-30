@@ -1090,6 +1090,7 @@ def _two_link_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
         if disturbed_rows:
             summary["max_task_error_during_disturbance"] = max(float(row["task_error_norm"]) for row in disturbed_rows)
             summary["max_joint_error_during_disturbance"] = max(float(row["joint_error_norm"]) for row in disturbed_rows)
+        summary.update(_two_link_disturbance_recovery_metrics(rows))
     dls_joint_speeds = _finite_row_values(rows, "dls_joint_speed")
     if dls_joint_speeds:
         summary.update(
@@ -1104,6 +1105,66 @@ def _two_link_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
             summary["max_dls_condition_scale"] = max(condition_scales)
             summary["max_dls_damping"] = max(_finite_row_values(rows, "dls_damping"))
     return summary
+
+
+def _two_link_disturbance_recovery_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    active_indices = [
+        index
+        for index, row in enumerate(rows)
+        if _safe_float(row.get("disturbance_active", 0.0), default=0.0) > 0.5
+    ]
+    if not active_indices:
+        return {}
+
+    start_index = active_indices[0]
+    end_index = active_indices[-1]
+    pre_index = max(0, start_index - 1)
+    pre_joint_error = _safe_float(rows[pre_index].get("joint_error_norm"), default=0.0)
+    pre_task_error = _safe_float(rows[pre_index].get("task_error_norm"), default=0.0)
+    joint_threshold = max(pre_joint_error * 1.25, pre_joint_error + 0.00025, 0.0005)
+
+    recovery_time: float | None = None
+    for row in rows[end_index + 1 :]:
+        joint_error = _safe_float(row.get("joint_error_norm"), default=math.inf)
+        if joint_error <= joint_threshold:
+            recovery_time = _safe_float(row.get("time"), default=math.inf)
+            break
+
+    start_time = _safe_float(rows[start_index].get("time"), default=0.0)
+    end_time = _safe_float(rows[end_index].get("time"), default=start_time)
+    disturbed_rows = [rows[index] for index in active_indices]
+    peak_task_row = max(
+        disturbed_rows,
+        key=lambda row: _safe_float(row.get("task_error_norm"), default=-math.inf),
+    )
+    peak_joint_row = max(
+        disturbed_rows,
+        key=lambda row: _safe_float(row.get("joint_error_norm"), default=-math.inf),
+    )
+    metrics: dict[str, Any] = {
+        "first_disturbance_time": start_time,
+        "last_disturbance_time": end_time,
+        "disturbance_duration": max(0.0, end_time - start_time),
+        "pre_disturbance_joint_error_norm": pre_joint_error,
+        "pre_disturbance_task_error_norm": pre_task_error,
+        "disturbance_recovery_threshold": joint_threshold,
+        "disturbance_recovered": recovery_time is not None,
+        "disturbance_recovery_time": recovery_time,
+        "disturbance_recovery_duration": None if recovery_time is None else max(0.0, recovery_time - end_time),
+        "peak_task_error_during_disturbance_time": _safe_float(peak_task_row.get("time"), default=start_time),
+        "peak_joint_error_during_disturbance_time": _safe_float(peak_joint_row.get("time"), default=start_time),
+    }
+    return metrics
+
+
+def _safe_float(value: Any, *, default: float) -> float:
+    try:
+        result = float(value)
+    except (TypeError, ValueError):
+        return default
+    if math.isnan(result):
+        return default
+    return result
 
 
 def _two_link_notes(config: dict[str, Any]) -> str:
