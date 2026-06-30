@@ -9,6 +9,7 @@ from threading import Lock
 from typing import Any
 
 from mclab.learning_guides import (
+    mission_prompt_for_guide,
     observation_prompt_for_guide,
     prediction_prompt_for_guide,
     question_for_guide,
@@ -1177,6 +1178,7 @@ def _panel_guide_rows(guide: Any | None) -> list[tuple[str, str]]:
     if guide is None:
         return []
     rows = [
+        ("Mission", mission_prompt_for_guide(guide).removeprefix("Mission:").strip()),
         ("Try", str(getattr(guide, "try_this", "") or "").strip()),
         ("Change", str(getattr(guide, "change", "") or "").strip()),
         ("Done when", _panel_completion_text()),

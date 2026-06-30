@@ -35,6 +35,23 @@ def observation_prompt_for_guide(guide: RunGuide | None) -> str:
     return f"Evidence to capture: {watch}"
 
 
+def mission_prompt_for_guide(guide: RunGuide | None) -> str:
+    if guide is None:
+        return ""
+    try_this = _short_sentence(guide.try_this)
+    change = _short_sentence(guide.change)
+    watch = _short_sentence(guide.watch)
+    if watch and change and _is_live_change_hint(change):
+        return f"Mission: Change {change}; prove it with {watch}."
+    if watch and try_this:
+        return f"Mission: {try_this}; prove it with {watch}."
+    if watch and change:
+        return f"Mission: Change {change}; prove it with {watch}."
+    if try_this:
+        return f"Mission: {try_this}."
+    return ""
+
+
 def prediction_prompt_for_guide(guide: RunGuide | None) -> str:
     if guide is None:
         return ""
@@ -163,6 +180,20 @@ def _question_prefix(text: str) -> str:
     if stripped.startswith("Question:"):
         return stripped
     return f"Question: {stripped}"
+
+
+def _short_sentence(value: str, limit: int = 140) -> str:
+    text = " ".join(str(value).split())
+    if len(text) > limit:
+        text = f"{text[: max(0, limit - 3)].rstrip()}..."
+    if text.endswith("..."):
+        return text
+    return text.removesuffix(".")
+
+
+def _is_live_change_hint(value: str) -> bool:
+    lowered = value.lower()
+    return any(term in lowered for term in ("live", "slider", "preset", "button", "target -/+"))
 
 
 RUN_GUIDES: dict[str, RunGuide] = {

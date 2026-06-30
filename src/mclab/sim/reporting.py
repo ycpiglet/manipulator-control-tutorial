@@ -13,6 +13,7 @@ from mclab.learning_guides import (
     RunGuide,
     guide_for_config,
     guide_for_run_summary,
+    mission_prompt_for_guide,
     prediction_prompt_for_guide,
     question_for_guide,
     viewer_legend_for_guide,
@@ -603,6 +604,7 @@ def _worksheet_learning_guide_lines(guide: RunGuide | None, summary: dict[str, A
     rows: list[tuple[str, Any]] = [
         ("Title", guide.title),
         ("Done when", completion_text.removeprefix("Done when:").strip()),
+        ("Mission", mission_prompt_for_guide(guide).removeprefix("Mission:").strip()),
         ("Try", guide.try_this),
         ("Change", guide.change),
         ("Prediction", prediction_prompt_for_guide(guide).removeprefix("Prediction:").strip()),
@@ -1295,6 +1297,7 @@ def _learning_guide_section(guide: RunGuide | None, summary: dict[str, Any]) -> 
     items = (
         ("Focus", guide.focus),
         ("Done when", _run_completion_text(summary).removeprefix("Done when:").strip()),
+        ("Mission", mission_prompt_for_guide(guide).removeprefix("Mission:").strip()),
         ("Try", guide.try_this),
         ("Change", guide.change),
         ("Prediction", prediction_prompt_for_guide(guide).removeprefix("Prediction:").strip()),

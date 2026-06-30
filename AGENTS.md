@@ -94,6 +94,7 @@ Implemented and verified:
 - Interactive `MCLab Interaction` changed-values summary shows slider parameters changed from run start
 - Interactive `MCLab Interaction` panel is scrollable and resizable so dense demos keep observation and live-status controls reachable
 - Interactive `MCLab Interaction` panel and run reports show a `Viewer legend` for visible target/current/force/singularity/wall markers
+- Interactive `MCLab Interaction` panel, run reports, and worksheets show a shared `Mission` prompt so the learner sees the same evidence-focused task during launch, live tuning, and review
 - Interactive `MCLab Interaction` panel shows a `Done when` evidence criterion before Prediction and Mark observation controls
 - Interactive `MCLab Interaction` observation area shows a live `Evidence checklist` for prediction, preset comparison, outcome, and note readiness before marking
 - Learner menu scenario cards include a `Viewer` marker legend and marker-name search support

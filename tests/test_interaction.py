@@ -733,6 +733,7 @@ class KeyForcePulseTests(unittest.TestCase):
         self.assertEqual(
             _panel_guide_rows(guide),
             [
+                ("Mission", "Move the slider; prove it with Tracking error."),
                 ("Try", "Move the slider."),
                 ("Change", "controller.kp"),
                 ("Done when", "write a Prediction, choose an outcome if known, then press Mark observation."),

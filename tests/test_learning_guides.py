@@ -11,6 +11,7 @@ from mclab.learning_guides import (  # noqa: E402
     RUN_GUIDES,
     guide_for_config,
     guide_for_run_summary,
+    mission_prompt_for_guide,
     observation_prompt_for_guide,
     prediction_prompt_for_guide,
     question_for_guide,
@@ -34,6 +35,7 @@ class LearningGuideTests(unittest.TestCase):
                 self.assertTrue(guide.change)
                 self.assertTrue(guide.watch)
                 self.assertTrue(guide.next_step)
+                self.assertTrue(mission_prompt_for_guide(guide).startswith("Mission: "))
                 self.assertTrue(question_for_guide(guide).startswith("Question: "))
                 self.assertTrue(observation_prompt_for_guide(guide).startswith("Evidence to capture: "))
                 self.assertTrue(prediction_prompt_for_guide(guide).startswith("Prediction: "))
@@ -76,10 +78,15 @@ class LearningGuideTests(unittest.TestCase):
 
         self.assertIsNotNone(guide)
         assert guide is not None
+        mission = mission_prompt_for_guide(guide)
+        self.assertIn("Mission:", mission)
+        self.assertIn("live sliders", mission)
+        self.assertIn("Live target", mission)
         prompt = prediction_prompt_for_guide(guide)
         self.assertIn("Prediction:", prompt)
         self.assertIn("live sliders", prompt)
         self.assertIn("Live target", prompt)
+        self.assertEqual(mission_prompt_for_guide(None), "")
         self.assertEqual(prediction_prompt_for_guide(None), "")
 
     def test_viewer_legend_matches_visible_guides(self) -> None:
