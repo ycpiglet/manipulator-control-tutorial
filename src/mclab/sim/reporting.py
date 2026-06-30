@@ -2169,6 +2169,13 @@ def _key_moment_rows(summary: dict[str, Any]) -> list[tuple[str, float, str, Any
         "Start reading virtual_wall.png here; this is where penetration and force first become meaningful.",
     )
     add(
+        "Deepest target-wall command",
+        "peak_target_wall_gap_time",
+        "max_target_wall_gap_cm",
+        "Target past wall [cm]",
+        "Use wall_target.png to separate the commanded target crossing from the actual hand contact.",
+    )
+    add(
         "Peak wall penetration",
         "peak_wall_penetration_time",
         "max_wall_penetration_cm",
@@ -2363,6 +2370,18 @@ def _result_checks(summary: dict[str, Any]) -> list[tuple[str, str, str]]:
                     f"First contact at {_format_value(wall_contact_start)} s; "
                     f"contact duration {_format_value(wall_contact_duration)} s{fraction_text}."
                 ),
+            )
+        )
+
+    target_wall_gap = _number(summary.get("max_target_wall_gap_cm"))
+    if target_wall_gap is not None and target_wall_gap > 0.0:
+        final_phase = str(summary.get("final_wall_phase") or "").strip()
+        phase_text = f"; final phase {final_phase}" if final_phase else ""
+        checks.append(
+            (
+                "Target-wall command",
+                "Observed",
+                f"Target moved {_format_value(target_wall_gap)} cm past the wall{phase_text}.",
             )
         )
 

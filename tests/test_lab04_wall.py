@@ -21,6 +21,7 @@ from mclab.labs.lab04_panda import (  # noqa: E402
     _virtual_wall_force,
     _virtual_wall_force_components,
     _wall_contact_metrics,
+    _wall_phase,
     _wall_retreat_distance,
 )
 
@@ -99,6 +100,24 @@ class Lab04WallTests(unittest.TestCase):
 
         self.assertGreater(high_retreat, low_retreat)
 
+    def test_wall_phase_separates_target_command_from_contact(self) -> None:
+        self.assertEqual(
+            _wall_phase(target_wall_gap_m=-0.02, wall_penetration_m=0.0, wall_force_x=0.0),
+            "Clear",
+        )
+        self.assertEqual(
+            _wall_phase(target_wall_gap_m=0.0, wall_penetration_m=0.0, wall_force_x=0.0),
+            "At wall",
+        )
+        self.assertEqual(
+            _wall_phase(target_wall_gap_m=0.03, wall_penetration_m=0.0, wall_force_x=0.0),
+            "Target past wall",
+        )
+        self.assertEqual(
+            _wall_phase(target_wall_gap_m=0.03, wall_penetration_m=0.004, wall_force_x=-8.0),
+            "Contact: wall pushing back",
+        )
+
     def test_lab04_summary_reports_hold_stability_metrics(self) -> None:
         rows = [
             {
@@ -145,6 +164,76 @@ class Lab04WallTests(unittest.TestCase):
         self.assertIsNone(summary["last_wall_contact_time"])
         self.assertAlmostEqual(summary["wall_contact_duration"], 0.0)
         self.assertAlmostEqual(summary["wall_contact_fraction"], 0.0)
+
+    def test_lab04_summary_reports_target_wall_command_phase(self) -> None:
+        rows = [
+            {
+                "time": 0.0,
+                "error_norm": 0.0,
+                "q_0": 0.0,
+                "qdot_0": 0.0,
+                "xdot_ee_0": 0.0,
+                "xdot_ee_1": 0.0,
+                "xdot_ee_2": 0.0,
+                "tau_cmd_0": 0.0,
+                "target_wall_gap_cm": -2.0,
+                "wall_phase": "Clear",
+                "wall_penetration_cm": 0.0,
+                "wall_penetration": 0.0,
+                "wall_retreat_cm": 0.0,
+                "force_virtual_0": 0.0,
+                "force_virtual_spring_0": 0.0,
+                "force_virtual_damping_0": 0.0,
+                "cartesian_error_cm": 0.1,
+            },
+            {
+                "time": 0.4,
+                "error_norm": 0.01,
+                "q_0": 0.0,
+                "qdot_0": 0.0,
+                "xdot_ee_0": 0.0,
+                "xdot_ee_1": 0.0,
+                "xdot_ee_2": 0.0,
+                "tau_cmd_0": 0.0,
+                "target_wall_gap_cm": 3.5,
+                "wall_phase": "Target past wall",
+                "wall_penetration_cm": 0.0,
+                "wall_penetration": 0.0,
+                "wall_retreat_cm": 0.0,
+                "force_virtual_0": 0.0,
+                "force_virtual_spring_0": 0.0,
+                "force_virtual_damping_0": 0.0,
+                "cartesian_error_cm": 0.2,
+            },
+            {
+                "time": 0.8,
+                "error_norm": 0.02,
+                "q_0": 0.0,
+                "qdot_0": 0.0,
+                "xdot_ee_0": 0.0,
+                "xdot_ee_1": 0.0,
+                "xdot_ee_2": 0.0,
+                "tau_cmd_0": 0.0,
+                "target_wall_gap_cm": 1.0,
+                "wall_phase": "Contact: wall pushing back",
+                "wall_penetration_cm": 0.4,
+                "wall_penetration": 0.004,
+                "wall_retreat_cm": 0.1,
+                "force_virtual_0": -2.0,
+                "force_virtual_spring_0": -1.6,
+                "force_virtual_damping_0": -0.4,
+                "cartesian_error_cm": 0.3,
+            },
+        ]
+
+        summary = _summary(rows)
+        markers = _plot_event_markers(rows)
+
+        self.assertAlmostEqual(summary["max_target_wall_gap_cm"], 3.5)
+        self.assertAlmostEqual(summary["peak_target_wall_gap_time"], 0.4)
+        self.assertAlmostEqual(summary["final_target_wall_gap_cm"], 1.0)
+        self.assertEqual(summary["final_wall_phase"], "Contact: wall pushing back")
+        self.assertIn((0.4, "deepest target"), markers["wall_target"])
 
     def test_wall_contact_metrics_report_timing_and_duration(self) -> None:
         rows = [
@@ -304,6 +393,7 @@ class Lab04WallTests(unittest.TestCase):
         self.assertIn("wall_x", names)
         self.assertIn("target_wall_gap_cm", names)
         self.assertIn("wall_penetration_cm", names)
+        self.assertIn("wall_phase", names)
 
         joint_names = [spec.name for spec in _live_status_specs("joint_trajectory")]
         self.assertNotIn("wall_x", joint_names)

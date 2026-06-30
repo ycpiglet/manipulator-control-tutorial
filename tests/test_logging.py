@@ -632,6 +632,7 @@ class LoggingTests(unittest.TestCase):
                         "max_wall_penetration_cm": 1.2,
                         "max_wall_retreat_cm": 0.5,
                         "first_wall_contact_time": 1.4,
+                        "peak_target_wall_gap_time": 1.6,
                         "peak_wall_penetration_time": 2.1,
                         "peak_wall_force_time": 2.2,
                         "peak_wall_damping_force_time": 1.8,
@@ -639,6 +640,9 @@ class LoggingTests(unittest.TestCase):
                         "peak_hand_speed_time": 1.7,
                         "wall_contact_duration": 2.2,
                         "wall_contact_fraction": 0.44,
+                        "max_target_wall_gap_cm": 4.0,
+                        "final_target_wall_gap_cm": 2.5,
+                        "final_wall_phase": "Contact: wall pushing back",
                         "max_abs_virtual_wall_force": 22.0,
                         "max_abs_virtual_wall_spring_force": 18.0,
                         "max_abs_virtual_wall_damping_force": 4.0,
@@ -667,10 +671,14 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Wall retreat", html)
             self.assertIn("Wall contact timing", html)
             self.assertIn("First contact at", html)
+            self.assertIn("Target-wall command", html)
+            self.assertIn("Target moved", html)
+            self.assertIn("final phase Contact: wall pushing back", html)
             self.assertIn("Wall force", html)
             self.assertIn("Wall force components", html)
             self.assertIn("Key Moments", html)
             self.assertIn("First wall contact", html)
+            self.assertIn("Deepest target-wall command", html)
             self.assertIn("Peak wall penetration", html)
             self.assertIn("Peak wall force", html)
             self.assertIn("Peak damping force", html)
@@ -681,6 +689,7 @@ class LoggingTests(unittest.TestCase):
             worksheet_text = (output / "worksheet.md").read_text(encoding="utf-8")
             self.assertIn("## Key Moments", worksheet_text)
             self.assertIn("First wall contact: time 1.4 s; Contact duration [s]: 2.2.", worksheet_text)
+            self.assertIn("Deepest target-wall command: time 1.6 s; Target past wall [cm]: 4.", worksheet_text)
             self.assertIn("Peak wall penetration: time 2.1 s; Penetration [cm]: 1.2.", worksheet_text)
             self.assertIn("Peak wall force: time 2.2 s; Wall force: 22.", worksheet_text)
             self.assertIn("Peak damping force: time 1.8 s; Damping force: 4.", worksheet_text)

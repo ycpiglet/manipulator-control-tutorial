@@ -228,6 +228,14 @@ def run(
                 target_x_ee = ee_position
                 cartesian_error = [0.0, 0.0, 0.0]
             cartesian_error_norm = _norm(cartesian_error)
+            wall_x = float(wall_config.get("wall_x", target_x_ee[0]))
+            target_wall_gap_m = target_x_ee[0] - wall_x
+            target_wall_gap_cm = 100.0 * target_wall_gap_m
+            wall_phase = _wall_phase(
+                target_wall_gap_m=target_wall_gap_m,
+                wall_penetration_m=wall_penetration,
+                wall_force_x=wall_force[0],
+            )
             live_status.set_values(
                 joint_offset=button_joint_offset + tuned_joint_offset,
                 target_x_nudge=button_target_x_offset,
@@ -235,10 +243,11 @@ def run(
                 ee_x=ee_position[0],
                 target_x=target_x_ee[0],
                 cartesian_error_cm=100.0 * cartesian_error_norm,
-                wall_x=wall_config.get("wall_x"),
-                target_wall_gap_cm=100.0 * (target_x_ee[0] - float(wall_config.get("wall_x", target_x_ee[0]))),
+                wall_x=wall_x,
+                target_wall_gap_cm=target_wall_gap_cm,
                 wall_penetration_cm=100.0 * wall_penetration,
                 wall_force_x=wall_force[0],
+                wall_phase=wall_phase,
             )
             logger.record(
                 time=float(data.time),
@@ -266,12 +275,13 @@ def run(
                 tuned_target_x=live_tuning.value("target_x", target_x_ee[0]),
                 tuned_target_y=live_tuning.value("target_y", target_x_ee[1]),
                 tuned_target_z=live_tuning.value("target_z", target_x_ee[2]),
-                target_wall_gap_m=target_x_ee[0] - float(wall_config.get("wall_x", target_x_ee[0])),
-                target_wall_gap_cm=100.0 * (target_x_ee[0] - float(wall_config.get("wall_x", target_x_ee[0]))),
+                target_wall_gap_m=target_wall_gap_m,
+                target_wall_gap_cm=target_wall_gap_cm,
+                wall_phase=wall_phase,
                 target_x_nudge=button_target_x_offset,
                 joint_target_nudge=button_joint_offset,
                 tuned_joint_target_offset=tuned_joint_offset,
-                tuned_wall_x=float(wall_config.get("wall_x", 10.0)),
+                tuned_wall_x=wall_x,
                 tuned_wall_stiffness=float(wall_config.get("stiffness", 0.0)),
                 tuned_wall_damping=float(wall_config.get("damping", 0.0)),
                 tuned_wall_retreat_gain=float(wall_config.get("cartesian_retreat_gain", 0.0)),
@@ -368,6 +378,7 @@ def _live_status_specs(mode: str, *, cartesian_target_nudge: bool = False) -> li
                 StatusSpec("target_wall_gap_cm", "Target-Wall [cm]"),
                 StatusSpec("wall_penetration_cm", "Wall penetration [cm]"),
                 StatusSpec("wall_force_x", "Wall force X [N]"),
+                StatusSpec("wall_phase", "Wall phase"),
             ]
         )
     return specs
@@ -762,6 +773,26 @@ def _wall_retreat_distance(
     return min(max_cartesian_retreat, penetration * cartesian_gain + force_retreat)
 
 
+def _wall_phase(
+    *,
+    target_wall_gap_m: float,
+    wall_penetration_m: float,
+    wall_force_x: float,
+    threshold_m: float = 1e-4,
+) -> str:
+    """Learner-facing virtual-wall state for the live status panel."""
+
+    if wall_penetration_m > threshold_m:
+        if abs(wall_force_x) > 1e-9:
+            return "Contact: wall pushing back"
+        return "Contact"
+    if target_wall_gap_m > threshold_m:
+        return "Target past wall"
+    if abs(target_wall_gap_m) <= threshold_m:
+        return "At wall"
+    return "Clear"
+
+
 def _clip_to_ctrl_range(model: Any, actuator_ids: list[int], target_q: list[float]) -> list[float]:
     clipped = target_q.copy()
     for index, actuator_id in enumerate(actuator_ids):
@@ -797,6 +828,7 @@ def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
     peak_wall_penetration = _peak_time_value(rows, lambda row: float(row.get("wall_penetration_cm", 0.0)))
     peak_wall_force = _peak_time_value(rows, lambda row: abs(float(row.get("force_virtual_0", 0.0))))
     peak_wall_damping = _peak_time_value(rows, lambda row: abs(float(row.get("force_virtual_damping_0", 0.0))))
+    peak_target_wall_gap = _peak_time_value(rows, lambda row: float(row.get("target_wall_gap_cm", 0.0)))
     peak_cartesian_error = _peak_time_value(rows, lambda row: float(row.get("cartesian_error_cm", 0.0)))
     peak_hand_speed = _peak_time_value(
         rows,
@@ -830,6 +862,10 @@ def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "last_wall_contact_time": wall_contact["last_wall_contact_time"],
         "wall_contact_duration": wall_contact["wall_contact_duration"],
         "wall_contact_fraction": wall_contact["wall_contact_fraction"],
+        "max_target_wall_gap_cm": max(float(row.get("target_wall_gap_cm", 0.0)) for row in rows),
+        "peak_target_wall_gap_time": peak_target_wall_gap[0] if peak_target_wall_gap[1] > 0.0 else None,
+        "final_target_wall_gap_cm": rows[-1].get("target_wall_gap_cm", 0.0),
+        "final_wall_phase": rows[-1].get("wall_phase", ""),
         "max_abs_virtual_wall_force": max(abs(float(row.get("force_virtual_0", 0.0))) for row in rows),
         "peak_wall_force_time": peak_wall_force[0] if peak_wall_force[1] > 0.0 else None,
         "max_abs_virtual_wall_spring_force": max(
@@ -955,6 +991,7 @@ def _plot_event_markers(rows: list[dict[str, Any]]) -> PlotEventMarkers:
     virtual_wall_markers = _compact_plot_event_markers(
         (
             (summary.get("first_wall_contact_time"), "first contact"),
+            (summary.get("peak_target_wall_gap_time"), "deepest target"),
             (summary.get("peak_wall_penetration_time"), "peak penetration"),
             (summary.get("peak_wall_force_time"), "peak force"),
             (summary.get("peak_wall_damping_force_time"), "peak damping"),
@@ -967,6 +1004,7 @@ def _plot_event_markers(rows: list[dict[str, Any]]) -> PlotEventMarkers:
         wall_target_markers = _compact_plot_event_markers(
             (
                 (summary.get("first_wall_contact_time"), "first contact"),
+                (summary.get("peak_target_wall_gap_time"), "deepest target"),
                 (summary.get("peak_wall_penetration_time"), "peak penetration"),
             )
         )
