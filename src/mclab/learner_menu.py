@@ -1553,6 +1553,29 @@ def initialize_latest_output_state(
     return output_path
 
 
+def refresh_latest_output_state(
+    latest_output: dict[str, Path | None],
+    status: Any | None = None,
+    *,
+    outputs_root: Path | None = None,
+    latest_button: Any | None = None,
+    latest_plot_button: Any | None = None,
+    latest_worksheet_button: Any | None = None,
+    latest_replay_button: Any | None = None,
+) -> Path | None:
+    output_path = initialize_latest_output_state(
+        latest_output,
+        outputs_root=outputs_root,
+        latest_button=latest_button,
+        latest_plot_button=latest_plot_button,
+        latest_worksheet_button=latest_worksheet_button,
+        latest_replay_button=latest_replay_button,
+    )
+    if status is not None:
+        status.set(latest_output_status_text(output_path))
+    return output_path
+
+
 def action_latest_output(
     action: MenuAction | BatchMenuAction,
     outputs_root: Path | None = None,
@@ -3681,9 +3704,20 @@ def main() -> int:
         if next_review_button is not None:
             next_review_button.state(["!disabled"] if next_review_output() is not None else ["disabled"])
 
-    def refresh_after_run() -> None:
+    def refresh_latest_artifact_buttons(*, update_status: bool = False) -> None:
+        refresh_latest_output_state(
+            latest_output,
+            status if update_status else None,
+            latest_button=latest_button,
+            latest_plot_button=latest_plot_button,
+            latest_worksheet_button=latest_worksheet_button,
+            latest_replay_button=latest_replay_button,
+        )
+
+    def refresh_after_run(*, update_status: bool = False) -> None:
         refresh_callback = post_run_refresh_ref.get("callback", refresh_learning_path_progress)
         refresh_callback()
+        refresh_latest_artifact_buttons(update_status=update_status)
 
     def refresh_batch_cards() -> None:
         refresh_batch_menu_state(tuple(batch_state_items))
@@ -3935,7 +3969,7 @@ def main() -> int:
 
     bottom = ttk.Frame(outer)
     bottom.pack(fill="x", pady=(12, 0))
-    ttk.Button(bottom, text="Refresh path", command=refresh_after_run).pack(side="left")
+    ttk.Button(bottom, text="Refresh path", command=lambda: refresh_after_run(update_status=True)).pack(side="left")
     ttk.Button(bottom, text="Check setup", command=lambda: _launch_doctor_from_menu(status, root=root)).pack(
         side="left", padx=(8, 0)
     )
@@ -3971,14 +4005,14 @@ def main() -> int:
     )
     latest_replay_button.pack(side="left", padx=(8, 0))
     latest_replay_button.state(["disabled"])
-    restored_latest_output = initialize_latest_output_state(
+    refresh_latest_output_state(
         latest_output,
+        status,
         latest_button=latest_button,
         latest_plot_button=latest_plot_button,
         latest_worksheet_button=latest_worksheet_button,
         latest_replay_button=latest_replay_button,
     )
-    status.set(latest_output_status_text(restored_latest_output))
     ttk.Label(bottom, textvariable=status).pack(side="left", padx=12)
 
     def render_actions(*_args: Any) -> None:

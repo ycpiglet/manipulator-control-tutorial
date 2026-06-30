@@ -109,6 +109,7 @@ from mclab.learner_menu import (  # noqa: E402
     latest_output_status_text,
     latest_output_tuned_config,
     initialize_latest_output_state,
+    refresh_latest_output_state,
     next_review_output,
     next_learning_path_step,
     latest_output_plot,
@@ -3071,6 +3072,59 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(latest_output["path"], output_path)
         self.assertEqual(replay_button.config["text"], "Replay tuned")
         self.assertEqual(replay_button.state_calls[-1], ["!disabled"])
+
+    def test_refresh_latest_output_state_updates_status_and_buttons_from_disk(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            old_output = outputs / "old_run"
+            new_output = outputs / "new_run"
+            old_output.mkdir(parents=True)
+            new_output.mkdir()
+            (old_output / "summary.json").write_text(
+                json.dumps({"lab_name": "lab01_msd", "config_path": "configs/lab01_msd/default.yaml"}),
+                encoding="utf-8",
+            )
+            (new_output / "summary.json").write_text(
+                json.dumps({"lab_name": "lab01_msd", "config_path": "configs/lab01_msd/default.yaml"}),
+                encoding="utf-8",
+            )
+            (old_output / "report.html").write_text("<html></html>", encoding="utf-8")
+            (new_output / "report.html").write_text("<html></html>", encoding="utf-8")
+            plot_dir = new_output / "plots"
+            plot_dir.mkdir()
+            (plot_dir / "position.png").write_bytes(b"fake-png")
+            (new_output / "worksheet.md").write_text("# Worksheet\n", encoding="utf-8")
+            now = time.time()
+            for path in (old_output / "summary.json", old_output / "report.html"):
+                os.utime(path, (now - 20.0, now - 20.0))
+            for path in (new_output / "summary.json", new_output / "report.html"):
+                os.utime(path, (now, now))
+            latest_output: dict[str, Path | None] = {"path": old_output}
+            status = FakeStatus()
+            report_button = FakeButton()
+            plot_button = FakeButton()
+            worksheet_button = FakeButton()
+            replay_button = FakeButton()
+
+            selected = refresh_latest_output_state(
+                latest_output,
+                status,
+                outputs_root=outputs,
+                latest_button=report_button,
+                latest_plot_button=plot_button,
+                latest_worksheet_button=worksheet_button,
+                latest_replay_button=replay_button,
+            )
+
+        self.assertEqual(selected, new_output)
+        self.assertEqual(latest_output["path"], new_output)
+        self.assertIn("Latest saved output: new_run", status.value)
+        self.assertIn("Plot: position.png", status.value)
+        self.assertIn("Worksheet: worksheet.md", status.value)
+        self.assertEqual(report_button.state_calls[-1], ["!disabled"])
+        self.assertEqual(plot_button.state_calls[-1], ["!disabled"])
+        self.assertEqual(worksheet_button.state_calls[-1], ["!disabled"])
+        self.assertEqual(replay_button.state_calls[-1], ["disabled"])
 
     def test_latest_replay_stays_disabled_when_tuned_config_has_no_matching_action(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
