@@ -243,6 +243,8 @@ Observation 영역의 `Next action` 줄은 현재 상태에서 바로 해야 할
 
 프리셋 선택 기록은 적용 목적과 실제 slider 값을 함께 저장하므로, 실행 후 `Preset choices` 카드에서 학습자가 어떤 의도로 어떤 파라미터 조합을 시험했는지 복기할 수 있습니다. 프리셋이 여러 개인 데모는 `Compare presets` 안내로 권장 비교 순서를 보여주므로, 한 가지 값만 눌러보고 끝내지 않고 여러 파라미터 regime을 관찰한 뒤 `Mark observation`으로 남기게 유도합니다. 실행 중에도 preset status가 지금까지 몇 개를 눌렀고 다음에 어떤 preset을 눌러야 하는지 보여줍니다. 리포트와 `worksheet.md`의 `Preset comparison progress`는 전체 프리셋 중 서로 다른 regime을 몇 개 시험했는지와 다음에 눌러볼 프리셋을 알려줍니다.
 
+리포트와 `worksheet.md`의 `Hands-on activity mix`는 버튼, 슬라이더, preset, observation marker를 각각 몇 번 사용했는지와 조작 다양성을 요약합니다. 학습자가 preset만 누르고 끝냈는지, 슬라이더 미세 조정이나 버튼형 외란/정지/리셋까지 써봤는지 바로 확인할 수 있습니다.
+
 실행 중에도 같은 `Mission`, `Viewer legend`, `Done when` 완료 기준이 패널 상단에 표시되므로, MuJoCo 기본 사이드 패널 없이도 화면의 색상 마커와 학습 증거 조건을 바로 해석할 수 있습니다.
 
 무엇을 보면 되는지:
@@ -615,6 +617,8 @@ Lab04 wall live status separates total wall force, spring force, damping force, 
 The observation area's `Next action` line names the immediate learner step from the current state. It asks for a prediction first, names the next required preset when one is missing, recommends `Use live status` or a short note when evidence is thin, and then moves the learner toward `Mark observation`.
 
 Preset choice events save both the preset purpose and the applied slider values, so the report's `Preset choices` card shows why a learner tried that parameter set. Demos with multiple presets also show a `Compare presets` hint so learners try more than one parameter regime before saving a `Mark observation`. During a live run, the preset status also shows how many presets have been tried and which preset to try next. The report and `worksheet.md` `Preset comparison progress` entries show how many distinct regimes were tried and which preset to try next.
+
+The report and `worksheet.md` `Hands-on activity mix` summarize button, slider, preset, and observation-marker usage. This makes it easy to see whether learners only clicked a preset or also tried fine slider tuning and button-based disturbances, pauses, nudges, or resets.
 
 The same `Viewer legend` and `Done when` completion criterion appear near the top of the panel during a live run, so learners can read the colored scene markers and evidence requirement without opening the MuJoCo side panels.
 

@@ -13,7 +13,13 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from mclab.sim.logging import RunLogger, create_output_path  # noqa: E402
 from mclab.learning_guides import guide_for_config  # noqa: E402
-from mclab.sim.reporting import NEXT_RUN_SUGGESTIONS, _normalize_path, write_outputs_index, write_run_report  # noqa: E402
+from mclab.sim.reporting import (  # noqa: E402
+    NEXT_RUN_SUGGESTIONS,
+    _activity_mix_items,
+    _normalize_path,
+    write_outputs_index,
+    write_run_report,
+)
 
 
 class FixedDatetime:
@@ -23,6 +29,30 @@ class FixedDatetime:
 
 
 class LoggingTests(unittest.TestCase):
+    def test_activity_mix_items_summarize_interaction_variety(self) -> None:
+        items = dict(
+            _activity_mix_items(
+                [
+                    {"kind": "preset", "label": "Soft wall"},
+                    {"kind": "slider", "label": "Wall stiffness", "value": 300.0},
+                    {"kind": "button", "label": "Pause simulation"},
+                    {"kind": "marker", "name": "observation", "label": "Mark observation"},
+                ]
+            )
+        )
+
+        self.assertEqual(items["Control types used"], "button -> slider -> preset -> marker")
+        self.assertEqual(items["Button actions"], 1)
+        self.assertEqual(items["Slider changes"], 1)
+        self.assertEqual(items["Preset choices"], 1)
+        self.assertEqual(items["Observation markers"], 1)
+        self.assertEqual(items["Hands-on controls before review"], 3)
+        self.assertEqual(items["Interaction variety"], "3/3 control families")
+        self.assertEqual(
+            items["Next activity step"],
+            "Ready: compare this interaction mix against plots and the worksheet.",
+        )
+
     def test_guided_configs_have_suggested_next_runs(self) -> None:
         missing: list[str] = []
         for config_path in sorted((ROOT / "configs").glob("**/*.yaml")):
@@ -165,6 +195,12 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("n/a", html)
             self.assertIn("Learner Action Summary", html)
             self.assertIn("Actions recorded", html)
+            self.assertIn("Hands-on activity mix", html)
+            self.assertIn("Control types used", html)
+            self.assertIn("slider -&gt; preset -&gt; marker", html)
+            self.assertIn("Interaction variety", html)
+            self.assertIn("2/3 control families", html)
+            self.assertIn("Use one button control such as pulse, nudge, pause, step, or reset.", html)
             self.assertIn("Latest slider values", html)
             self.assertIn("Preset choices", html)
             self.assertIn("Stiff spring", html)
@@ -237,6 +273,9 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("energy: 0.125", worksheet_text)
             self.assertIn("## Review Checklist", worksheet_text)
             self.assertIn("- [ ] Compare the latest prediction with the plots in report.html.", worksheet_text)
+            self.assertIn("## Hands-on Activity Mix", worksheet_text)
+            self.assertIn("- Interaction variety: 2/3 control families", worksheet_text)
+            self.assertIn("- Next activity step: Use one button control such as pulse, nudge, pause, step, or reset.", worksheet_text)
             self.assertNotIn("Outcome review pending", worksheet_text)
             self.assertIn("## Suggested Next Experiments", worksheet_text)
             self.assertIn("### Lab01 Underdamped", worksheet_text)

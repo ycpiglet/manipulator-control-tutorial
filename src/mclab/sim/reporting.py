@@ -774,6 +774,7 @@ def _render_worksheet(
     lines.extend(_worksheet_plot_review_lines(output, plots))
     lines.extend(_worksheet_observation_lines(interaction_events))
     lines.extend(_worksheet_review_checklist(interaction_events, config))
+    lines.extend(_worksheet_activity_mix_lines(interaction_events))
     lines.extend(_worksheet_preset_comparison_lines(interaction_events, config))
     lines.extend(_worksheet_next_experiment_lines(summary, config))
     lines.extend(_worksheet_notes_lines(notes))
@@ -960,6 +961,16 @@ def _worksheet_preset_comparison_lines(events: list[dict[str, Any]], config: dic
             dict(_preset_comparison_progress_items(configured_labels, tried_labels, required_labels, required_tried, next_required))
         )
     )
+    lines.append("")
+    return lines
+
+
+def _worksheet_activity_mix_lines(events: list[dict[str, Any]]) -> list[str]:
+    items = _activity_mix_items(events)
+    if not items:
+        return []
+    lines = ["## Hands-on Activity Mix", ""]
+    lines.extend(_worksheet_mapping_lines(dict(items)))
     lines.append("")
     return lines
 
@@ -2763,6 +2774,9 @@ def _learner_action_summary_section(events: list[dict[str, Any]], config: dict[s
                 _action_value_list(latest_sliders),
             )
         )
+    activity_mix = _activity_mix_card(events)
+    if activity_mix:
+        cards.append(activity_mix)
     preset_progress = _preset_comparison_progress_card(events, config)
     if preset_progress:
         cards.append(preset_progress)
@@ -3038,6 +3052,63 @@ def _kind_count_items(events: list[dict[str, Any]]) -> list[tuple[str, int]]:
         kind = str(event.get("kind", "") or "unknown")
         counts[kind] = counts.get(kind, 0) + 1
     return sorted(counts.items())
+
+
+def _activity_mix_card(events: list[dict[str, Any]]) -> str:
+    items = _activity_mix_items(events)
+    if not items:
+        return ""
+    return _action_card(
+        "Hands-on activity mix",
+        "Checks whether the run used multiple kinds of learner interaction before review.",
+        _action_value_list(items),
+    )
+
+
+def _activity_mix_items(events: list[dict[str, Any]]) -> list[tuple[str, Any]]:
+    if not events:
+        return []
+    counts = _event_kind_counts(events)
+    control_kinds = ("button", "slider", "preset", "marker")
+    observation_markers = sum(1 for event in events if _is_observation_marker(event))
+    used_kinds = [
+        kind
+        for kind in control_kinds
+        if counts.get(kind, 0) > 0 and (kind != "marker" or observation_markers > 0)
+    ]
+    varied_controls = sum(1 for kind in ("button", "slider", "preset") if counts.get(kind, 0) > 0)
+    total_controls = sum(counts.get(kind, 0) for kind in ("button", "slider", "preset"))
+    next_step = _activity_mix_next_step(counts, observation_markers)
+    return [
+        ("Control types used", " -> ".join(used_kinds) if used_kinds else "none"),
+        ("Button actions", counts.get("button", 0)),
+        ("Slider changes", counts.get("slider", 0)),
+        ("Preset choices", counts.get("preset", 0)),
+        ("Observation markers", observation_markers),
+        ("Hands-on controls before review", total_controls),
+        ("Interaction variety", f"{varied_controls}/3 control families"),
+        ("Next activity step", next_step),
+    ]
+
+
+def _event_kind_counts(events: list[dict[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for event in events:
+        kind = str(event.get("kind", "") or "unknown").lower()
+        counts[kind] = counts.get(kind, 0) + 1
+    return counts
+
+
+def _activity_mix_next_step(counts: dict[str, int], observation_markers: int) -> str:
+    if counts.get("preset", 0) <= 0:
+        return "Try a Quick preset to compare a named parameter regime."
+    if counts.get("slider", 0) <= 0:
+        return "Move one slider after a preset to test a smaller parameter change."
+    if counts.get("button", 0) <= 0:
+        return "Use one button control such as pulse, nudge, pause, step, or reset."
+    if observation_markers <= 0:
+        return "Save one Mark observation with prediction and live-status evidence."
+    return "Ready: compare this interaction mix against plots and the worksheet."
 
 
 def _latest_named_event_values(events: list[dict[str, Any]], kind: str) -> list[tuple[str, Any]]:
