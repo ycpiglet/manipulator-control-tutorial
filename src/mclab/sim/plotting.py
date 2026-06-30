@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from math import isfinite
 from pathlib import Path
 from typing import Any
 
@@ -10,6 +11,8 @@ from mclab.sim.reporting import write_run_report
 
 
 PlotSpec = tuple[str, str, str, Sequence[str]]
+PlotEventMarker = tuple[float, str]
+PlotEventMarkers = Mapping[str, Sequence[PlotEventMarker]]
 PlotSelection = str | Sequence[str] | None
 
 
@@ -17,6 +20,8 @@ def save_time_series_plots(
     output_path: str | Path,
     rows: Sequence[dict[str, Any]],
     specs: Sequence[PlotSpec],
+    *,
+    event_markers: PlotEventMarkers | None = None,
 ) -> None:
     """Save simple time-series plots from logger rows."""
 
@@ -34,6 +39,10 @@ def save_time_series_plots(
     output = Path(output_path)
     plot_dir = output / "plots"
     plot_dir.mkdir(parents=True, exist_ok=True)
+    marker_map = {
+        _plot_name(plot_name): markers
+        for plot_name, markers in (event_markers or {}).items()
+    }
 
     time = [_as_float(row.get("time", index)) for index, row in enumerate(rows)]
     for filename, title, ylabel, keys in specs:
@@ -48,6 +57,7 @@ def save_time_series_plots(
         axis.set_xlabel("time [s]")
         axis.set_ylabel(ylabel)
         axis.grid(True, alpha=0.3)
+        _apply_event_markers(axis, marker_map.get(_plot_name(filename), ()))
         axis.legend()
         fig.savefig(plot_dir / filename, dpi=150)
         plt.close(fig)
@@ -99,6 +109,31 @@ def _selection_tokens(selection: PlotSelection) -> list[str]:
 
 def _plot_name(value: str) -> str:
     return Path(str(value).strip()).stem.lower().replace("-", "_")
+
+
+def _apply_event_markers(axis: Any, markers: Sequence[PlotEventMarker]) -> None:
+    clean_markers = [
+        (float(time), str(label))
+        for time, label in markers
+        if isfinite(float(time)) and str(label).strip()
+    ]
+    if not clean_markers:
+        return
+
+    transform = axis.get_xaxis_transform()
+    for index, (time, label) in enumerate(clean_markers):
+        axis.axvline(time, color="#2f2f2f", linestyle="--", linewidth=1.0, alpha=0.45)
+        axis.text(
+            time,
+            0.98 - 0.12 * (index % 3),
+            label,
+            rotation=90,
+            va="top",
+            ha="right",
+            fontsize=7,
+            color="#2f2f2f",
+            transform=transform,
+        )
 
 
 def _as_float(value: Any) -> float:

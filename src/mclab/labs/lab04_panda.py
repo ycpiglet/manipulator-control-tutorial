@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -37,7 +37,7 @@ from mclab.sim.mujoco_utils import (
     viewer_clock,
     viewer_is_running,
 )
-from mclab.sim.plotting import PlotSelection, save_time_series_plots, select_plot_specs
+from mclab.sim.plotting import PlotEventMarker, PlotEventMarkers, PlotSelection, save_time_series_plots, select_plot_specs
 from mclab.trajectories import build_trajectory
 
 
@@ -899,7 +899,67 @@ def _save_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSe
         "wall": ["end_effector", "wall_target", "virtual_wall", "torque", "error"],
         "wall_compare": ["end_effector", "wall_target", "virtual_wall", "wall_parameters", "torque", "error"],
     }
-    save_time_series_plots(output_path, rows, select_plot_specs(specs, selection, presets=presets))
+    save_time_series_plots(
+        output_path,
+        rows,
+        select_plot_specs(specs, selection, presets=presets),
+        event_markers=_plot_event_markers(rows),
+    )
+
+
+def _plot_event_markers(rows: list[dict[str, Any]]) -> PlotEventMarkers:
+    summary = _summary(rows)
+    virtual_wall_markers = _compact_plot_event_markers(
+        (
+            (summary.get("first_wall_contact_time"), "first contact"),
+            (summary.get("peak_wall_penetration_time"), "peak penetration"),
+            (summary.get("peak_wall_force_time"), "peak force"),
+            (summary.get("peak_wall_damping_force_time"), "peak damping"),
+            (summary.get("peak_hand_speed_time"), "peak speed"),
+        )
+    )
+    markers: dict[str, Sequence[PlotEventMarker]] = {}
+    if virtual_wall_markers:
+        markers["virtual_wall"] = virtual_wall_markers
+        wall_target_markers = _compact_plot_event_markers(
+            (
+                (summary.get("first_wall_contact_time"), "first contact"),
+                (summary.get("peak_wall_penetration_time"), "peak penetration"),
+            )
+        )
+        if wall_target_markers:
+            markers["wall_target"] = wall_target_markers
+    peak_cartesian_error_time = _optional_float(summary.get("peak_cartesian_error_time"))
+    if peak_cartesian_error_time is not None:
+        markers["cartesian_error"] = ((peak_cartesian_error_time, "peak error"),)
+    return markers
+
+
+def _compact_plot_event_markers(
+    markers: Sequence[tuple[Any, str]],
+    *,
+    tolerance: float = 0.02,
+) -> tuple[PlotEventMarker, ...]:
+    compacted: list[tuple[float, list[str]]] = []
+    for raw_time, label in sorted(
+        ((time, str(label).strip()) for time, label in markers),
+        key=lambda item: float("inf") if _optional_float(item[0]) is None else float(item[0]),
+    ):
+        time = _optional_float(raw_time)
+        if time is None or not label:
+            continue
+        if compacted and abs(time - compacted[-1][0]) <= tolerance:
+            compacted[-1][1].append(label)
+        else:
+            compacted.append((time, [label]))
+    return tuple((time, " / ".join(labels)) for time, labels in compacted)
+
+
+def _optional_float(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _notes(config: dict[str, Any]) -> str:
