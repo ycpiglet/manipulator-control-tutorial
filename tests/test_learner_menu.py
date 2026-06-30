@@ -99,6 +99,7 @@ from mclab.learner_menu import (  # noqa: E402
     launch_latest_worksheet,
     launch_outputs_index,
     launch_latest_output,
+    latest_output_button_labels,
     next_review_output,
     next_learning_path_step,
     latest_output_plot,
@@ -123,9 +124,13 @@ class FakeStatus:
 class FakeButton:
     def __init__(self) -> None:
         self.state_calls: list[list[str]] = []
+        self.config: dict[str, str] = {}
 
     def state(self, states: list[str]) -> None:
         self.state_calls.append(states)
+
+    def configure(self, **kwargs: str) -> None:
+        self.config.update(kwargs)
 
 
 class FakeTextVariable:
@@ -2949,6 +2954,7 @@ class LearnerMenuTests(unittest.TestCase):
 
         self.assertEqual(latest_output["path"], output_path)
         self.assertEqual(button.state_calls, [["!disabled"]])
+        self.assertEqual(button.config["text"], "Open report")
         self.assertIn("Completed", status.value)
         self.assertIn(str(output_path), status.value)
 
@@ -2978,11 +2984,16 @@ class LearnerMenuTests(unittest.TestCase):
                 latest_plot_button=plot_button,
                 latest_worksheet_button=worksheet_button,
             )
+            latest_labels = latest_output_button_labels(output_path)
 
         self.assertEqual(latest_output["path"], output_path)
         self.assertEqual(report_button.state_calls, [["!disabled"]])
         self.assertEqual(plot_button.state_calls, [["!disabled"]])
         self.assertEqual(worksheet_button.state_calls, [["!disabled"]])
+        self.assertEqual(latest_labels["plot"], "Open plot: position")
+        self.assertEqual(report_button.config["text"], "Open report")
+        self.assertEqual(plot_button.config["text"], "Open plot: position")
+        self.assertEqual(worksheet_button.config["text"], "Open worksheet")
         self.assertIn("Latest plot:", status.value)
         self.assertIn("position.png", status.value)
         self.assertIn("Latest worksheet:", status.value)

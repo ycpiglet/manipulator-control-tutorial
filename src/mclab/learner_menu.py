@@ -1484,6 +1484,27 @@ def _short_artifact_button_name(path: Path, max_length: int = 10) -> str:
     return f"{name[: max_length - 3]}..."
 
 
+def latest_output_button_labels(output_path: Path | None) -> dict[str, str]:
+    if output_path is None:
+        return {
+            "report": "Open latest report",
+            "plot": "Open latest plot",
+            "worksheet": "Open latest worksheet",
+        }
+    latest_plot = latest_output_plot(output_path)
+    plot_label = (
+        "Open latest plot"
+        if latest_plot is None
+        else f"Open plot: {_short_artifact_button_name(latest_plot, max_length=12)}"
+    )
+    worksheet_label = "Open latest worksheet" if latest_output_worksheet(output_path) is None else "Open worksheet"
+    return {
+        "report": "Open report",
+        "plot": plot_label,
+        "worksheet": worksheet_label,
+    }
+
+
 def action_latest_output(
     action: MenuAction | BatchMenuAction,
     outputs_root: Path | None = None,
@@ -3777,15 +3798,16 @@ def main() -> int:
     )
     ttk.Button(bottom, text="Open all reports", command=launch_outputs_index).pack(side="left", padx=(8, 0))
     ttk.Button(bottom, text="Open outputs folder", command=launch_outputs_folder).pack(side="left", padx=(8, 0))
-    latest_button = ttk.Button(bottom, text="Open latest report", command=lambda: launch_latest_output(latest_output))
+    latest_labels = latest_output_button_labels(None)
+    latest_button = ttk.Button(bottom, text=latest_labels["report"], command=lambda: launch_latest_output(latest_output))
     latest_button.pack(side="left", padx=(8, 0))
     latest_button.state(["disabled"])
-    latest_plot_button = ttk.Button(bottom, text="Open latest plot", command=lambda: launch_latest_plot(latest_output))
+    latest_plot_button = ttk.Button(bottom, text=latest_labels["plot"], command=lambda: launch_latest_plot(latest_output))
     latest_plot_button.pack(side="left", padx=(8, 0))
     latest_plot_button.state(["disabled"])
     latest_worksheet_button = ttk.Button(
         bottom,
-        text="Open latest worksheet",
+        text=latest_labels["worksheet"],
         command=lambda: launch_latest_worksheet(latest_output),
     )
     latest_worksheet_button.pack(side="left", padx=(8, 0))
@@ -4253,13 +4275,17 @@ def _set_status_after_run(
             if output_path is not None:
                 if latest_output is not None:
                     latest_output["path"] = output_path
+                latest_labels = latest_output_button_labels(output_path)
                 if latest_button is not None:
+                    latest_button.configure(text=latest_labels["report"])
                     latest_button.state(["!disabled"])
                 latest_plot = latest_output_plot(output_path)
                 if latest_plot_button is not None:
+                    latest_plot_button.configure(text=latest_labels["plot"])
                     latest_plot_button.state(["!disabled"] if latest_plot is not None else ["disabled"])
                 latest_worksheet = latest_output_worksheet(output_path)
                 if latest_worksheet_button is not None:
+                    latest_worksheet_button.configure(text=latest_labels["worksheet"])
                     latest_worksheet_button.state(["!disabled"] if latest_worksheet is not None else ["disabled"])
                 latest = _preferred_output_entry(output_path)
                 plot_suffix = f" Latest plot: {latest_plot}" if latest_plot is not None else " No plot saved yet."

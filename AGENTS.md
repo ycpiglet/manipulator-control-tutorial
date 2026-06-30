@@ -231,6 +231,7 @@ Implemented and verified:
 - Learner menu learning-path cards show the latest worksheet/replay artifacts, latest priority plot filename, and the same plot review cue in the progress text
 - Learner menu learning-path cards separate the scenario launch button from Report/Plot/Worksheet/Replay artifact buttons so the 3-column path layout stays readable
 - Learner menu learning-path artifact buttons update their labels from saved outputs, such as `Plot: dls` or `Plot: position`, while staying short enough for the path grid
+- Learner menu bottom-bar latest artifact buttons update after a run, including short plot-specific labels such as `Open plot: position`
 - Outputs index learning path cards show `Done when` completion criteria matching the learner menu
 - Outputs index learning path cards show `Start steps` launch sequences matching the learner menu, including concrete required-preset order when configured
 - Outputs index learning path cards show `Counts as control` learner-control criteria with concrete configured button labels for hands-on configs
