@@ -140,6 +140,8 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _validate_run_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
+    if args.plots and not args.plot:
+        parser.error("--plots requires --plot.")
     viewer_only_flags = []
     if args.realtime:
         viewer_only_flags.append("--realtime")

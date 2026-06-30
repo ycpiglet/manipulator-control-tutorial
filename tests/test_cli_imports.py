@@ -193,6 +193,22 @@ class CliImportTests(unittest.TestCase):
                 self.assertEqual(context.exception.code, 2)
                 loader.assert_not_called()
 
+    def test_cli_rejects_plot_selection_without_plot_flag(self) -> None:
+        with patch("mclab.cli.load_config") as loader:
+            with self.assertRaises(SystemExit) as context:
+                main(
+                    [
+                        "run",
+                        "lab04",
+                        "--config",
+                        "configs/lab04_panda/joint_pd.yaml",
+                        "--plots",
+                        "essential",
+                    ]
+                )
+            self.assertEqual(context.exception.code, 2)
+            loader.assert_not_called()
+
     def test_cli_opens_run_report_when_requested(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "run"

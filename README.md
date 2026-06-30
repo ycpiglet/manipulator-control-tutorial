@@ -378,8 +378,10 @@ MuJoCo viewer 양옆 패널은 이 프로젝트의 주 제어 UI가 아닙니다
 CLI 형식:
 
 ```bash
-python -m mclab run <lab_name> --config <config_path> [--headless | --viewer] [--realtime] [--pause-at-end] [--plot] [--plots <preset_or_names>] [--output-dir <path>]
+python -m mclab run <lab_name> --config <config_path> [--headless | --viewer] [--realtime] [--pause-at-end] [--plot [--plots <preset_or_names>]] [--output-dir <path>]
 ```
+
+`--plots`는 어떤 plot preset이나 plot 이름을 저장할지 고르는 옵션이므로 `--plot`과 함께 써야 합니다.
 
 사용 가능한 lab 이름 확인:
 
@@ -774,8 +776,10 @@ The MuJoCo viewer side panels are not the main control UI for this project. The 
 CLI shape:
 
 ```bash
-python -m mclab run <lab_name> --config <config_path> [--headless | --viewer] [--realtime] [--pause-at-end] [--plot] [--plots <preset_or_names>] [--output-dir <path>]
+python -m mclab run <lab_name> --config <config_path> [--headless | --viewer] [--realtime] [--pause-at-end] [--plot [--plots <preset_or_names>]] [--output-dir <path>]
 ```
+
+`--plots` selects which plot preset or plot names to save, so it must be used with `--plot`.
 
 List available labs:
 
