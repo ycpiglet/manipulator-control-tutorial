@@ -1071,7 +1071,36 @@ def _worksheet_activity_mix_lines(events: list[dict[str, Any]]) -> list[str]:
         return []
     lines = ["## Hands-on Activity Mix", ""]
     lines.extend(_worksheet_mapping_lines(dict(items)))
+    lines.extend(_worksheet_control_coverage_lines(events))
     lines.append("")
+    return lines
+
+
+def _worksheet_control_coverage_lines(events: list[dict[str, Any]]) -> list[str]:
+    counts = _event_kind_counts(events)
+    observation_markers = sum(1 for event in events if _is_observation_marker(event))
+    checks = [
+        (
+            "Try one Quick preset to compare a named parameter regime.",
+            counts.get("preset", 0),
+        ),
+        (
+            "Move one slider or step button to test a smaller parameter change.",
+            counts.get("slider", 0),
+        ),
+        (
+            "Use one button control such as pulse, nudge, pause, step, or reset.",
+            counts.get("button", 0),
+        ),
+        (
+            "Save one Mark observation with prediction and note.",
+            observation_markers,
+        ),
+    ]
+    lines = ["", "Control coverage checklist:"]
+    for label, count in checks:
+        mark = "x" if count > 0 else " "
+        lines.append(f"- [{mark}] {label} ({count} recorded)")
     return lines
 
 

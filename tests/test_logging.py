@@ -325,6 +325,17 @@ class LoggingTests(unittest.TestCase):
             )
             self.assertIn("- Interaction variety: 2/3 control families", worksheet_text)
             self.assertIn("- Next activity step: Use one button control such as pulse, nudge, pause, step, or reset.", worksheet_text)
+            self.assertIn("Control coverage checklist:", worksheet_text)
+            self.assertIn("- [x] Try one Quick preset to compare a named parameter regime. (1 recorded)", worksheet_text)
+            self.assertIn(
+                "- [x] Move one slider or step button to test a smaller parameter change. (1 recorded)",
+                worksheet_text,
+            )
+            self.assertIn(
+                "- [ ] Use one button control such as pulse, nudge, pause, step, or reset. (0 recorded)",
+                worksheet_text,
+            )
+            self.assertIn("- [x] Save one Mark observation with prediction and note. (1 recorded)", worksheet_text)
             self.assertNotIn("Outcome review pending", worksheet_text)
             self.assertIn("## Suggested Next Experiments", worksheet_text)
             self.assertIn("### Lab01 Underdamped", worksheet_text)
