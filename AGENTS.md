@@ -59,7 +59,7 @@ Implemented and verified:
 - Lab03 condition-aware DLS supports live schedule presets and a one-line `run_lab03_condition_dls_interactive.cmd` launcher
 - Lab03 condition-aware DLS inner/edge target comparison configs for target-position conditioning lessons
 - Lab03 condition-aware DLS upper/lower path comparison configs for mirrored IK-branch lessons
-- Lab03 condition-aware DLS shoulder/elbow disturbance comparison configs for recovery lessons
+- Lab03 condition-aware DLS shoulder/elbow/staggered disturbance comparison configs for recovery lessons
 - Lab03 condition-aware DLS low/high torque-limit comparison configs for actuator-limit lessons
 - Lab03 condition-aware DLS slow/fast command-speed comparison configs for target-speed lessons
 - Learner menu exposes Lab03 upper/lower path, shoulder/elbow disturbance, low/high torque-limit, and slow/fast command-speed DLS scenario cards with compare/search/filter support
@@ -73,6 +73,7 @@ Implemented and verified:
 - Lab04 virtual wall interactive demo supports live hand target X/Y/Z tuning plus wall parameter tuning
 - Lab04 virtual wall interactive demo includes a Back away preset for one-click target return and contact-release observation
 - Lab04 virtual wall live status and logs include Target-Wall gap, Wall phase, target crossing, and contact release for clearer wall-contact lessons
+- Lab04 virtual wall live status separates total wall force, spring force, damping force, and retreat distance during live interaction
 - Lab04 wall plot preset includes `wall_target.png` for target/wall/gap interpretation
 - Lab04 low/high damping virtual wall configs that isolate damping with fixed stiffness and retreat gains
 - Lab04 near/far virtual wall configs that isolate wall position with fixed stiffness, damping, and retreat gains
@@ -309,14 +310,14 @@ Implemented so far:
 - early/default/late condition-aware DLS schedule comparison configs for Lab03
 - inner/edge target-position condition-aware DLS comparison configs for Lab03
 - upper/lower path condition-aware DLS comparison configs for mirrored IK-branch lessons
-- shoulder/elbow disturbance condition-aware DLS comparison configs for recovery lessons
+- shoulder/elbow/staggered disturbance condition-aware DLS comparison configs for recovery lessons
 - low/high torque-limit condition-aware DLS comparison configs for Lab03
 - slow/fast command-speed condition-aware DLS comparison configs for Lab03
 - standard logs and plots for joint position, end-effector position, torque, current proxy, and error
 
 Remaining likely extension:
 
-- richer singularity comparison lessons, such as repeated or timed disturbance sequences
+- richer condition-aware task-control comparisons, such as adaptive speed or damping schedules under changing targets
 
 ### Phase 6 - Lab04 Advanced Control
 

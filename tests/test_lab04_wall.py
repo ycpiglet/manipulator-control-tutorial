@@ -415,10 +415,15 @@ class Lab04WallTests(unittest.TestCase):
         self.assertIn("wall_x", names)
         self.assertIn("target_wall_gap_cm", names)
         self.assertIn("wall_penetration_cm", names)
+        self.assertIn("wall_force_x", names)
+        self.assertIn("wall_spring_force_x", names)
+        self.assertIn("wall_damping_force_x", names)
+        self.assertIn("wall_retreat_cm", names)
         self.assertIn("wall_phase", names)
 
         joint_names = [spec.name for spec in _live_status_specs("joint_trajectory")]
         self.assertNotIn("wall_x", joint_names)
+        self.assertNotIn("wall_spring_force_x", joint_names)
 
     def test_wall_plot_preset_includes_target_wall_relationship(self) -> None:
         rows = [

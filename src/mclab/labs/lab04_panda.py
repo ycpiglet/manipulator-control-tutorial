@@ -247,6 +247,9 @@ def run(
                 target_wall_gap_cm=target_wall_gap_cm,
                 wall_penetration_cm=100.0 * wall_penetration,
                 wall_force_x=wall_force[0],
+                wall_spring_force_x=wall_spring_force[0],
+                wall_damping_force_x=wall_damping_force[0],
+                wall_retreat_cm=100.0 * wall_retreat,
                 wall_phase=wall_phase,
             )
             logger.record(
@@ -378,6 +381,9 @@ def _live_status_specs(mode: str, *, cartesian_target_nudge: bool = False) -> li
                 StatusSpec("target_wall_gap_cm", "Target-Wall [cm]"),
                 StatusSpec("wall_penetration_cm", "Wall penetration [cm]"),
                 StatusSpec("wall_force_x", "Wall force X [N]"),
+                StatusSpec("wall_spring_force_x", "Spring force X [N]"),
+                StatusSpec("wall_damping_force_x", "Damping force X [N]"),
+                StatusSpec("wall_retreat_cm", "Wall retreat [cm]"),
                 StatusSpec("wall_phase", "Wall phase"),
             ]
         )
