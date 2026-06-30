@@ -583,6 +583,7 @@ def _render_batch_worksheet(output: Path, batch_name: str, guide: BatchGuide, ro
     lines.append("")
     lines.extend(_batch_worksheet_scenario_lines(rows, metric_keys))
     lines.extend(_batch_worksheet_comparison_lines(rows, metric_keys))
+    lines.extend(_batch_worksheet_comparison_plot_lines(output))
     lines.extend(_batch_worksheet_followup_lines(batch_name, guide, rows))
     lines.extend(_batch_worksheet_artifact_lines(output, rows))
     return "\n".join(lines).rstrip() + "\n"
@@ -651,6 +652,17 @@ def _batch_worksheet_checklist_lines() -> list[str]:
     ]
 
 
+def _batch_worksheet_comparison_plot_lines(output: Path) -> list[str]:
+    guided = _guided_comparison_plots(output)
+    if not guided:
+        return []
+    lines = ["## Comparison Plot Guide", ""]
+    for plot, title, detail in guided:
+        lines.append(f"- comparison_plots/{plot.name}: {title} - {detail}")
+    lines.append("")
+    return lines
+
+
 def _batch_worksheet_followup_lines(batch_name: str, guide: BatchGuide, rows: list[dict[str, Any]]) -> list[str]:
     lines = ["## Reproduce And Extend", "", f"- Batch command: python -m mclab batch {batch_name} --open-report"]
     for row in rows:
@@ -672,7 +684,7 @@ def _batch_worksheet_artifact_lines(output: Path, rows: list[dict[str, Any]]) ->
     lines = ["## Artifacts", "", "- report.html", "- index.html", "- batch_summary.json", "- summary.json"]
     if (output / "comparison_plots").exists():
         lines.append("- comparison_plots:")
-        for plot in sorted((output / "comparison_plots").glob("*.png")):
+        for plot in _comparison_plot_paths(output):
             lines.append(f"  - comparison_plots/{plot.name}")
     if rows:
         lines.append("- scenario reports:")
@@ -754,6 +766,7 @@ def _render_batch_report(output: Path, batch_name: str, guide: BatchGuide, rows:
     metric_highlights = _metric_highlights(rows, metric_keys)
     baseline_changes = _baseline_metric_changes(rows, metric_keys)
     parameter_differences = _parameter_differences(rows)
+    comparison_plot_guide = _comparison_plot_guide(output)
     comparison_plots = _comparison_plots(output)
     plot_previews = _plot_previews(rows, guide.preview_plots)
     metric_headers = "".join(f"<th>{escape(_label(key))}</th>" for key in metric_keys)
@@ -957,6 +970,7 @@ def _render_batch_report(output: Path, batch_name: str, guide: BatchGuide, rows:
     {metric_highlights}
     {baseline_changes}
     {parameter_differences}
+    {comparison_plot_guide}
     {comparison_plots}
     {plot_previews}
     <section>
@@ -1772,10 +1786,51 @@ def _plot_previews(rows: list[dict[str, Any]], preview_plots: tuple[str, ...]) -
     )
 
 
-def _comparison_plots(output: Path) -> str:
+def _comparison_plot_guide(output: Path) -> str:
+    guided = _guided_comparison_plots(output)
+    if not guided:
+        return ""
+    cards = "\n".join(
+        (
+            '<article class="takeaway">'
+            f"<h3>{escape(title)}</h3>"
+            f'<p class="muted">{escape(plot.name)}</p>'
+            f"<p>{escape(detail)}</p>"
+            "</article>"
+        )
+        for plot, title, detail in guided
+    )
+    return (
+        "<section>"
+        "<h2>Comparison Plot Guide</h2>"
+        '<p class="muted">Read these comparison plots before diving into every individual run trace.</p>'
+        '<div class="takeaway-grid">'
+        f"{cards}"
+        "</div>"
+        "</section>"
+    )
+
+
+def _guided_comparison_plots(output: Path) -> list[tuple[Path, str, str]]:
+    guided: list[tuple[Path, str, str]] = []
+    for plot in _comparison_plot_paths(output):
+        guidance = plot_guidance(plot.name)
+        if guidance is None:
+            continue
+        title, detail = guidance
+        guided.append((plot, title, detail))
+    return guided
+
+
+def _comparison_plot_paths(output: Path) -> list[Path]:
     plot_dir = output / "comparison_plots"
     if not plot_dir.exists():
-        return ""
+        return []
+    return sorted(plot_dir.glob("*.png"), key=lambda plot: _plot_priority_key(plot.name))
+
+
+def _comparison_plots(output: Path) -> str:
+    plots = _comparison_plot_paths(output)
     figures = "\n".join(
         (
             '<figure class="comparison">'
@@ -1783,7 +1838,7 @@ def _comparison_plots(output: Path) -> str:
             f"<figcaption>{escape(plot.name)}</figcaption>"
             "</figure>"
         )
-        for plot in sorted(plot_dir.glob("*.png"))
+        for plot in plots
     )
     if not figures:
         return ""
