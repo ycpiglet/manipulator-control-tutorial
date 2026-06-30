@@ -236,20 +236,26 @@ INDEX_LEARNING_PATH: tuple[IndexPathStep, ...] = (
         "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
         plots="dls",
     ),
-    IndexPathStep("8. Hold Panda", "Stable neutral-hold baseline for Panda.", "configs/lab04_panda/neutral_hold.yaml"),
     IndexPathStep(
-        "9. Reach in Cartesian",
+        "8. Compare DLS retarget",
+        "Adaptive task-speed scheduling on the same near-edge retarget path.",
+        "configs/lab03_2dof/condition_aware_dls_adaptive_speed_retarget_2dof.yaml",
+        plots="dls",
+    ),
+    IndexPathStep("9. Hold Panda", "Stable neutral-hold baseline for Panda.", "configs/lab04_panda/neutral_hold.yaml"),
+    IndexPathStep(
+        "10. Reach in Cartesian",
         "Panda hand reaches an explicit XYZ target.",
         "configs/lab04_panda/cartesian_reach.yaml",
         plots="cartesian_reach",
     ),
     IndexPathStep(
-        "10. Touch virtual wall",
+        "11. Touch virtual wall",
         "Interactive Panda virtual wall behavior.",
         "configs/lab04_panda/interactive_virtual_wall.yaml",
         plots="wall",
     ),
-    IndexPathStep("11. Compare the course", "Full comparison report set.", batch_name="all"),
+    IndexPathStep("12. Compare the course", "Full comparison report set.", batch_name="all"),
 )
 
 
@@ -5136,8 +5142,14 @@ def _learning_path_prediction_cue_text(prediction: str) -> str:
     if tail.startswith("How "):
         return text[:tail_index] + tail.removeprefix("How ")
     if tail:
-        return text[:tail_index] + tail[0].lower() + tail[1:]
+        return text[:tail_index] + _lowercase_sentence_start_unless_acronym(tail)
     return text
+
+
+def _lowercase_sentence_start_unless_acronym(text: str) -> str:
+    if len(text) >= 2 and text[0].isupper() and text[1].isupper():
+        return text
+    return text[:1].lower() + text[1:]
 
 
 def _learning_path_requires_evidence(step: IndexPathStep) -> bool:

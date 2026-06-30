@@ -230,6 +230,11 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Lab03 2DOF compare", labels)
         self.assertIn("Lab04 wall compare", labels)
         self.assertIn("Lab04 Cartesian compare", labels)
+        lab03_compare = next(action for action in BATCH_ACTIONS if action.label == "Lab03 2DOF compare")
+        self.assertIn("retarget", lab03_compare.description)
+        self.assertIn("speed-limit", lab03_compare.description)
+        self.assertIn("speed limits", lab03_compare.try_this)
+        self.assertIn("retarget strategy", lab03_compare.watch)
 
         for action in BATCH_ACTIONS:
             with self.subTest(label=action.label):
@@ -271,9 +276,10 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("python -m mclab doctor", status.value)
 
     def test_recommended_learning_path_targets_real_actions(self) -> None:
-        self.assertGreaterEqual(len(LEARNING_PATH), 11)
+        self.assertGreaterEqual(len(LEARNING_PATH), 12)
         self.assertEqual(LEARNING_PATH[0].title, "1. Feel 1D physics")
         self.assertEqual(LEARNING_PATH[6].title, "7. Handle singularity")
+        self.assertEqual(LEARNING_PATH[7].title, "8. Compare DLS retarget")
         self.assertEqual(LEARNING_PATH[-1].label, "All compare")
 
         for step in LEARNING_PATH:
@@ -371,7 +377,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertFalse(second_progress.completed)
         self.assertIn("Status: Not run yet", learning_path_progress_text(LEARNING_PATH[1], second_progress))
         self.assertEqual(next_learning_path_step(progress_items), LEARNING_PATH[1])
-        self.assertIn("Progress: 2/11 complete", learning_path_summary_text(progress_items))
+        self.assertIn("Progress: 2/12 complete", learning_path_summary_text(progress_items))
         self.assertIn("Next: 2. Disturb and tune", learning_path_summary_text(progress_items))
         self.assertIn("Next action: run Lab01 Mass-Spring-Damper - Interactive", learning_path_summary_text(progress_items))
         self.assertIn("Done when: use at least one button, slider, or preset", learning_path_summary_text(progress_items))
@@ -379,7 +385,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Watch:", learning_path_summary_text(progress_items))
         self.assertEqual(
             learning_path_milestone_text(progress_items),
-            "Milestones: 1D Dynamics 1/2; PID Control 0/2; 2DOF Control 0/3; "
+            "Milestones: 1D Dynamics 1/2; PID Control 0/2; 2DOF Control 0/4; "
             "Panda Manipulation 0/3; Course Compare 1/1. Next milestone: 1D Dynamics.",
         )
 
@@ -519,7 +525,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(needs_evidence.observation_markers, 0)
         self.assertIn("Status: Needs observation - latest run_lab01_interactive", learning_path_progress_text(second_step, needs_evidence))
         self.assertIn("Add one Mark observation entry", learning_path_progress_text(second_step, needs_evidence))
-        self.assertIn("Progress: 1/11 complete", needs_summary)
+        self.assertIn("Progress: 1/12 complete", needs_summary)
         self.assertIn("Evidence pending: 1 hands-on step(s).", needs_summary)
         self.assertIn("Next: 2. Disturb and tune", needs_summary)
 
@@ -532,7 +538,7 @@ class LearnerMenuTests(unittest.TestCase):
             learning_path_progress_text(second_step, needs_prediction),
         )
         self.assertIn("Add one Prediction in Mark observation", learning_path_progress_text(second_step, needs_prediction))
-        self.assertIn("Progress: 1/11 complete", needs_prediction_summary)
+        self.assertIn("Progress: 1/12 complete", needs_prediction_summary)
         self.assertIn("Evidence pending: 1 hands-on step(s).", needs_prediction_summary)
 
         self.assertTrue(needs_outcome.completed)
@@ -543,7 +549,7 @@ class LearnerMenuTests(unittest.TestCase):
 
         self.assertFalse(needs_note.completed)
         self.assertEqual(needs_note.learner_notes, 0)
-        self.assertIn("Progress: 1/11 complete", needs_note_summary)
+        self.assertIn("Progress: 1/12 complete", needs_note_summary)
         self.assertIn("Evidence pending: 1 hands-on step(s).", needs_note_summary)
         self.assertIn(
             "Status: Needs note - latest run_lab01_interactive (1 observation, 1 prediction, 1 outcome, 0 controls)",
@@ -587,8 +593,17 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertTrue(learning_path_requires_evidence(dls_step))
         self.assertIn("condition-aware DLS", learning_path_text(dls_step))
 
+    def test_recommended_learning_path_includes_adaptive_retarget_step(self) -> None:
+        retarget_step = LEARNING_PATH[7]
+        action = learning_path_target(retarget_step)
+
+        self.assertEqual(retarget_step.title, "8. Compare DLS retarget")
+        self.assertEqual(action.label, "2DOF adaptive-speed retarget DLS")
+        self.assertFalse(learning_path_requires_evidence(retarget_step))
+        self.assertIn("adaptive task-speed schedule", learning_path_text(retarget_step))
+
     def test_recommended_learning_path_requires_wall_required_presets(self) -> None:
-        wall_step = LEARNING_PATH[9]
+        wall_step = LEARNING_PATH[10]
         action = learning_path_target(wall_step)
         assert isinstance(action, MenuAction)
 
@@ -644,7 +659,7 @@ class LearnerMenuTests(unittest.TestCase):
             write_events(run_path, ["Close wall", "Back away", "Re-enter wall"])
             complete = learning_path_progress(wall_step, outputs)
 
-        self.assertEqual(wall_step.title, "10. Touch virtual wall")
+        self.assertEqual(wall_step.title, "11. Touch virtual wall")
         self.assertIn("required presets: Close wall -> Back away -> Re-enter wall", learning_path_completion_text(wall_step))
         self.assertFalse(missing_close.completed)
         self.assertEqual(missing_close.required_presets, 3)
@@ -714,7 +729,7 @@ class LearnerMenuTests(unittest.TestCase):
         )
 
         self.assertIsNone(next_learning_path_step(progress_items))
-        self.assertIn("Progress: 11/11 complete", learning_path_summary_text(progress_items))
+        self.assertIn("Progress: 12/12 complete", learning_path_summary_text(progress_items))
         self.assertIn("Course path complete", learning_path_summary_text(progress_items))
         self.assertIn("All milestones ready for review.", learning_path_milestone_text(progress_items))
 
@@ -726,7 +741,7 @@ class LearnerMenuTests(unittest.TestCase):
             for index, step in enumerate(LEARNING_PATH, start=1)
         )
         batch_summary = learning_path_summary_text(batch_next_items)
-        self.assertIn("Next: 11. Compare the course", batch_summary)
+        self.assertIn("Next: 12. Compare the course", batch_summary)
         self.assertIn("Next action: run Comparison Batches - All compare", batch_summary)
         self.assertIn("Compare:", batch_summary)
 

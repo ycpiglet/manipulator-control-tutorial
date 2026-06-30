@@ -199,7 +199,7 @@ Implemented and verified:
 - Recommended learning path cards show a `Done when` completion criterion for auto, hands-on, and batch steps
 - Recommended learning path summary flags completed hands-on steps that still need prediction outcome review
 - Recommended learning path summary shows the next action plus prediction/compare and watch cues before launch
-- Recommended learning path includes a Lab03 condition-aware DLS singularity step before moving to Panda
+- Recommended learning path includes Lab03 condition-aware DLS singularity and adaptive retarget steps before moving to Panda
 - Learner menu scenario value previews for key YAML parameters, searchable from the menu
 - Learner menu, interaction panel, and run report reflection questions, searchable from the menu
 - Learner menu, interaction panel, and run report prediction prompts, searchable from the menu

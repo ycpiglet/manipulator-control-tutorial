@@ -156,7 +156,7 @@ python -m mclab doctor
 |---|---|
 | Lab01 | underdamped, overdamped, high/low stiffness, interactive pull |
 | Lab02 | low/high P gain, PD damping, saturation, windup vs anti-windup, sensor noise, control delay, interactive disturbance |
-| Lab03 | 2DOF joint-space, 2DOF task-space, singularity, DLS singularity with live damping presets, early/default/late, inner/edge-target, upper/lower-path, shoulder/elbow/staggered-disturbance recovery-time, low/high-torque, slow/fast-command, low/high-joint-speed, and direct/inward-retarget condition-aware DLS, interactive XY target tuning, step/trapezoidal/minimum-jerk/S-curve profiles |
+| Lab03 | 2DOF joint-space, 2DOF task-space, singularity, DLS singularity with live damping presets, early/default/late, inner/edge-target, upper/lower-path, shoulder/elbow/staggered-disturbance recovery-time, low/high-torque, slow/fast-command, low/high-joint-speed, direct/inward-retarget, and fixed/adaptive-speed-retarget condition-aware DLS, interactive XY target tuning, step/trapezoidal/minimum-jerk/S-curve profiles |
 | Lab04 | neutral hold, 30s stability hold, joint trajectories, hand X motion, Cartesian reach, soft/stiff Cartesian reach, soft/stiff, low/high damping, near/far, slow/fast approach, shallow/deep target push, contact-cycle, and low/high retreat virtual wall, joint target nudge, virtual wall |
 
 처음 학습자는 메뉴 상단의 `Recommended learning path`를 순서대로 따라가면 됩니다.
@@ -171,10 +171,11 @@ python -m mclab doctor
 | 5 | `Move 2DOF joints` | 2DOF joint-space tracking |
 | 6 | `Control the hand` | Jacobian 기반 task-space hand control |
 | 7 | `Handle singularity` | condition-aware DLS와 Jacobian conditioning |
-| 8 | `Hold Panda` | 7DOF Panda neutral hold baseline |
-| 9 | `Reach in Cartesian` | Panda 손끝 XYZ 목표 추종 |
-| 10 | `Touch virtual wall` | virtual wall stiffness/damping 체험 |
-| 11 | `Compare the course` | 모든 batch 비교 리포트 생성 |
+| 8 | `Compare DLS retarget` | adaptive task-speed schedule과 retarget path 비교 |
+| 9 | `Hold Panda` | 7DOF Panda neutral hold baseline |
+| 10 | `Reach in Cartesian` | Panda 손끝 XYZ 목표 추종 |
+| 11 | `Touch virtual wall` | virtual wall stiffness/damping 체험 |
+| 12 | `Compare the course` | 모든 batch 비교 리포트 생성 |
 
 개별 랩을 바로 실행하고 싶으면:
 
@@ -554,7 +555,7 @@ Main comparison scenarios in the menu:
 |---|---|
 | Lab01 | underdamped, overdamped, high/low stiffness, interactive pull |
 | Lab02 | low/high P gain, PD damping, saturation, windup vs anti-windup, sensor noise, control delay, interactive disturbance |
-| Lab03 | 2DOF joint-space, 2DOF task-space, singularity, DLS singularity with live damping presets, early/default/late, inner/edge-target, upper/lower-path, shoulder/elbow/staggered-disturbance recovery-time, low/high-torque, slow/fast-command, low/high-joint-speed, and direct/inward-retarget condition-aware DLS, interactive XY target tuning, step/trapezoidal/minimum-jerk/S-curve profiles |
+| Lab03 | 2DOF joint-space, 2DOF task-space, singularity, DLS singularity with live damping presets, early/default/late, inner/edge-target, upper/lower-path, shoulder/elbow/staggered-disturbance recovery-time, low/high-torque, slow/fast-command, low/high-joint-speed, direct/inward-retarget, and fixed/adaptive-speed-retarget condition-aware DLS, interactive XY target tuning, step/trapezoidal/minimum-jerk/S-curve profiles |
 | Lab04 | neutral hold, 30s stability hold, joint trajectories, hand X motion, Cartesian reach, soft/stiff Cartesian reach, soft/stiff, low/high damping, near/far, slow/fast approach, shallow/deep target push, contact-cycle, and low/high retreat virtual wall, joint target nudge, virtual wall |
 
 First-time learners can follow the `Recommended learning path` at the top of the menu.
@@ -569,10 +570,11 @@ Each step reads the saved runs under `outputs/` and shows `Done`, `Needs observa
 | 5 | `Move 2DOF joints` | 2DOF joint-space tracking |
 | 6 | `Control the hand` | Jacobian-based task-space hand control |
 | 7 | `Handle singularity` | condition-aware DLS and Jacobian conditioning |
-| 8 | `Hold Panda` | 7DOF Panda neutral-hold baseline |
-| 9 | `Reach in Cartesian` | Panda hand XYZ target tracking |
-| 10 | `Touch virtual wall` | virtual wall stiffness/damping behavior |
-| 11 | `Compare the course` | full batch comparison report set |
+| 8 | `Compare DLS retarget` | adaptive task-speed schedule and retarget-path comparison |
+| 9 | `Hold Panda` | 7DOF Panda neutral-hold baseline |
+| 10 | `Reach in Cartesian` | Panda hand XYZ target tracking |
+| 11 | `Touch virtual wall` | virtual wall stiffness/damping behavior |
+| 12 | `Compare the course` | full batch comparison report set |
 
 To launch individual labs directly:
 

@@ -15,7 +15,7 @@ class CourseMilestone:
 COURSE_MILESTONES: tuple[CourseMilestone, ...] = (
     CourseMilestone("1D Dynamics", 2),
     CourseMilestone("PID Control", 2),
-    CourseMilestone("2DOF Control", 3),
+    CourseMilestone("2DOF Control", 4),
     CourseMilestone("Panda Manipulation", 3),
     CourseMilestone("Course Compare", 1),
 )

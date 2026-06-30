@@ -16,6 +16,7 @@ from mclab.learning_guides import guide_for_config  # noqa: E402
 from mclab.sim.reporting import (  # noqa: E402
     NEXT_RUN_SUGGESTIONS,
     _activity_mix_items,
+    _learning_path_prediction_cue_text,
     _normalize_path,
     write_outputs_index,
     write_run_report,
@@ -29,6 +30,14 @@ class FixedDatetime:
 
 
 class LoggingTests(unittest.TestCase):
+    def test_learning_path_prediction_cue_preserves_dls_acronym(self) -> None:
+        cue = _learning_path_prediction_cue_text(
+            "Prediction: Before changing schedule, predict how DLS task-speed limit will change."
+        )
+
+        self.assertIn("predict how DLS task-speed limit", cue)
+        self.assertNotIn("dLS", cue)
+
     def test_activity_mix_items_summarize_interaction_variety(self) -> None:
         items = dict(
             _activity_mix_items(
@@ -1282,9 +1291,9 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Config", html)
             self.assertIn("Progress Snapshot", html)
             self.assertIn("Learning Path", html)
-            self.assertIn("1/11 steps complete", html)
+            self.assertIn("1/12 steps complete", html)
             self.assertIn(
-                "Milestones: 1D Dynamics 1/2; PID Control 0/2; 2DOF Control 0/3; "
+                "Milestones: 1D Dynamics 1/2; PID Control 0/2; 2DOF Control 0/4; "
                 "Panda Manipulation 0/3; Course Compare 0/1. Next milestone: 1D Dynamics.",
                 html,
             )
@@ -1293,6 +1302,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("1. Feel 1D physics", html)
             self.assertIn("2. Disturb and tune", html)
             self.assertIn("7. Handle singularity", html)
+            self.assertIn("8. Compare DLS retarget", html)
             self.assertIn(
                 "<strong>Done when:</strong> the run report, priority plot, and worksheet are saved.",
                 html,
@@ -1412,8 +1422,8 @@ class LoggingTests(unittest.TestCase):
 
             html = index.read_text(encoding="utf-8")
             self.assertIn("Learning Path", html)
-            self.assertIn("1/11 steps complete", html)
-            self.assertIn("11. Compare the course", html)
+            self.assertIn("1/12 steps complete", html)
+            self.assertIn("12. Compare the course", html)
             self.assertIn(
                 "<strong>Done when:</strong> the course comparison report, worksheet, and linked batch Prediction Checks are saved.",
                 html,
@@ -1474,7 +1484,7 @@ class LoggingTests(unittest.TestCase):
             index = write_outputs_index(temp_dir)
             html = index.read_text(encoding="utf-8")
 
-            self.assertIn("1/11 steps complete. Evidence pending: 1 hands-on step(s).", html)
+            self.assertIn("1/12 steps complete. Evidence pending: 1 hands-on step(s).", html)
             self.assertIn("Next: 2. Disturb and tune", html)
             self.assertIn("Needs observation", html)
             self.assertIn("Add one Mark observation entry before moving on.", html)
@@ -1527,7 +1537,7 @@ class LoggingTests(unittest.TestCase):
             )
 
             html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
-            self.assertIn("1/11 steps complete. Evidence pending: 1 hands-on step(s).", html)
+            self.assertIn("1/12 steps complete. Evidence pending: 1 hands-on step(s).", html)
             self.assertIn("Next: 2. Disturb and tune", html)
             self.assertIn("Needs prediction (1 observation, 1 note, 0 controls)", html)
             self.assertIn("Add one Prediction in Mark observation before moving on.", html)
@@ -1599,7 +1609,7 @@ class LoggingTests(unittest.TestCase):
             )
 
             html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
-            self.assertIn("2/11 steps complete. Outcome review pending: 1 hands-on step(s).", html)
+            self.assertIn("2/12 steps complete. Outcome review pending: 1 hands-on step(s).", html)
             self.assertIn("Next: 3. Close the loop", html)
             self.assertIn("Next cue: Review latest evidence and choose the missing prediction outcome.", html)
             self.assertIn("Done (1 observation, 1 prediction, 1 note, 3 controls)", html)
@@ -1639,7 +1649,7 @@ class LoggingTests(unittest.TestCase):
             )
 
             html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
-            self.assertIn("1/11 steps complete. Evidence pending: 1 hands-on step(s).", html)
+            self.assertIn("1/12 steps complete. Evidence pending: 1 hands-on step(s).", html)
             self.assertIn("Next: 2. Disturb and tune", html)
             self.assertIn("Needs note (1 observation, 1 prediction, 1 outcome, 0 controls)", html)
             self.assertIn("Next cue: Add a short note or Use live status before moving on.", html)
@@ -1667,7 +1677,7 @@ class LoggingTests(unittest.TestCase):
             )
 
             html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
-            self.assertIn("2/11 steps complete. Next: 3. Close the loop", html)
+            self.assertIn("2/12 steps complete. Next: 3. Close the loop", html)
             self.assertIn("Next cue: Try preset Lightly damped, then mark a comparison observation.", html)
             self.assertIn("Done (1 observation, 1 prediction, 1 outcome, 1 note, 3 controls)", html)
             self.assertIn("1 observation, 1 prediction, 1 outcome, 1 note", html)
@@ -1735,7 +1745,7 @@ class LoggingTests(unittest.TestCase):
 
             html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
 
-            self.assertIn("10. Touch virtual wall", html)
+            self.assertIn("11. Touch virtual wall", html)
             self.assertIn(
                 "<strong>Done when:</strong> use at least one button, slider, or preset, then save one Mark observation "
                 "with a Prediction and note after required presets: "
