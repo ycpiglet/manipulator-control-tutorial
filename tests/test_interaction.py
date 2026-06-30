@@ -20,6 +20,7 @@ from mclab.sim.interaction import (  # noqa: E402
     StatusSpec,
     TargetOffsetControl,
     TuningPreset,
+    _activity_mix_status_message,
     _bounded_panel_dimension,
     _changed_tuning_summary,
     _live_status_observation_note,
@@ -907,6 +908,59 @@ class KeyForcePulseTests(unittest.TestCase):
         self.assertEqual(
             _observation_next_action("Stiff wall should push harder.", "Matched", "Force increased."),
             "Next action: Press Mark observation.",
+        )
+
+    def test_activity_mix_status_guides_live_control_variety(self) -> None:
+        log = InteractionLog()
+
+        self.assertEqual(
+            _activity_mix_status_message(log, has_buttons=True, has_sliders=True, has_presets=True),
+            "Activity mix: 0/3 control families; buttons 0, sliders 0, presets 0, markers 0. "
+            "Next: Try a Quick preset to compare a named parameter regime.",
+        )
+
+        log.record("preset", "soft", {"kp": 20.0}, label="Soft")
+        self.assertEqual(
+            _activity_mix_status_message(log, has_buttons=True, has_sliders=True, has_presets=True),
+            "Activity mix: 1/3 control families; buttons 0, sliders 0, presets 1, markers 0. "
+            "Next: Move one slider after a preset to test a smaller parameter change.",
+        )
+
+        log.record("slider", "kp", 35.0, label="Kp")
+        self.assertEqual(
+            _activity_mix_status_message(log, has_buttons=True, has_sliders=True, has_presets=True),
+            "Activity mix: 2/3 control families; buttons 0, sliders 1, presets 1, markers 0. "
+            "Next: Use one button control such as pulse, nudge, pause, step, or reset.",
+        )
+
+        log.record("button", "pause_simulation", True, label="Pause simulation")
+        self.assertEqual(
+            _activity_mix_status_message(log, has_buttons=True, has_sliders=True, has_presets=True),
+            "Activity mix: 3/3 control families; buttons 1, sliders 1, presets 1, markers 0. "
+            "Next: Save one Mark observation with prediction and live-status evidence.",
+        )
+
+        log.mark_observation(prediction="Stiffer control should react faster.", note="Error fell quickly.")
+        self.assertEqual(
+            _activity_mix_status_message(log, has_buttons=True, has_sliders=True, has_presets=True),
+            "Activity mix: 3/3 control families; buttons 1, sliders 1, presets 1, markers 1. "
+            "Next: Ready: compare this interaction mix against plots and the worksheet.",
+        )
+
+    def test_activity_mix_status_uses_available_live_controls(self) -> None:
+        log = InteractionLog()
+
+        self.assertEqual(
+            _activity_mix_status_message(log, has_buttons=True, has_sliders=True, has_presets=False),
+            "Activity mix: 0/2 control families; buttons 0, sliders 0, presets 0, markers 0. "
+            "Next: Move one slider to test a smaller parameter change.",
+        )
+
+        log.record("button", "manual_force", 12.0, label="Push Right")
+        self.assertEqual(
+            _activity_mix_status_message(log, has_buttons=False, has_sliders=False, has_presets=False),
+            "Activity mix: 1/1 control families; buttons 1, sliders 0, presets 0, markers 0. "
+            "Next: Save one Mark observation with prediction and live-status evidence.",
         )
 
     def test_live_status_formats_dashboard_values(self) -> None:

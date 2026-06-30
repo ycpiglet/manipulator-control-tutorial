@@ -241,6 +241,8 @@ Lab04 wall live status는 total wall force뿐 아니라 spring force, damping fo
 
 Observation 영역의 `Next action` 줄은 현재 상태에서 바로 해야 할 일을 한 문장으로 보여줍니다. 예측이 비어 있으면 prediction 입력을 먼저 안내하고, required preset이 남아 있으면 다음 preset을 이름으로 알려주며, note가 없으면 `Use live status`나 짧은 observation note를 권장한 뒤 `Mark observation`으로 넘어가게 합니다.
 
+Observation 영역의 live `Activity mix` 줄은 현재 실행에서 버튼, 슬라이더, preset, observation marker를 몇 번 썼는지 계속 갱신하고, 아직 빠진 조작군이 있으면 다음에 시도할 행동을 바로 제안합니다.
+
 프리셋 선택 기록은 적용 목적과 실제 slider 값을 함께 저장하므로, 실행 후 `Preset choices` 카드에서 학습자가 어떤 의도로 어떤 파라미터 조합을 시험했는지 복기할 수 있습니다. 프리셋이 여러 개인 데모는 `Compare presets` 안내로 권장 비교 순서를 보여주므로, 한 가지 값만 눌러보고 끝내지 않고 여러 파라미터 regime을 관찰한 뒤 `Mark observation`으로 남기게 유도합니다. 실행 중에도 preset status가 지금까지 몇 개를 눌렀고 다음에 어떤 preset을 눌러야 하는지 보여줍니다. 리포트와 `worksheet.md`의 `Preset comparison progress`는 전체 프리셋 중 서로 다른 regime을 몇 개 시험했는지와 다음에 눌러볼 프리셋을 알려줍니다.
 
 리포트와 `worksheet.md`의 `Hands-on activity mix`는 버튼, 슬라이더, preset, observation marker를 각각 몇 번 사용했는지와 조작 다양성을 요약합니다. 학습자가 preset만 누르고 끝냈는지, 슬라이더 미세 조정이나 버튼형 외란/정지/리셋까지 써봤는지 바로 확인할 수 있습니다.
@@ -615,6 +617,8 @@ Each interactive launcher opens the MuJoCo viewer without side panels plus a sma
 Lab04 wall live status separates total wall force, spring force, damping force, and wall retreat so learners can tell what stiffness and damping are changing while the run is still moving.
 
 The observation area's `Next action` line names the immediate learner step from the current state. It asks for a prediction first, names the next required preset when one is missing, recommends `Use live status` or a short note when evidence is thin, and then moves the learner toward `Mark observation`.
+
+The observation area's live `Activity mix` line continuously counts button, slider, preset, and observation-marker use during the current run, then recommends the next missing control family to try.
 
 Preset choice events save both the preset purpose and the applied slider values, so the report's `Preset choices` card shows why a learner tried that parameter set. Demos with multiple presets also show a `Compare presets` hint so learners try more than one parameter regime before saving a `Mark observation`. During a live run, the preset status also shows how many presets have been tried and which preset to try next. The report and `worksheet.md` `Preset comparison progress` entries show how many distinct regimes were tried and which preset to try next.
 

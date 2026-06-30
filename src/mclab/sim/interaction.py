@@ -785,6 +785,9 @@ def maybe_start_interaction_panel(
     panel_enabled = bool(getattr(control, "panel_enabled", False)) or reset_enabled or pause_enabled or playback_enabled
     tuning_enabled = bool(tuning is not None and tuning.enabled)
     status_enabled = bool(status is not None and status.enabled)
+    activity_has_buttons = bool(control_enabled or reset_enabled or pause_enabled or tuning_enabled or playback_enabled)
+    activity_has_sliders = bool(tuning_enabled or playback_enabled)
+    activity_has_presets = bool(tuning is not None and tuning.presets)
     if not panel_enabled or not (
         control_enabled or reset_enabled or pause_enabled or playback_enabled or tuning_enabled or status_enabled
     ):
@@ -1134,6 +1137,14 @@ def maybe_start_interaction_panel(
                         preset_state=tuning.preset_checklist_state() if tuning is not None else "",
                     )
                 )
+                activity_mix_status = tk.StringVar(
+                    value=_activity_mix_status_message(
+                        event_log,
+                        has_buttons=activity_has_buttons,
+                        has_sliders=activity_has_sliders,
+                        has_presets=activity_has_presets,
+                    )
+                )
                 marker_prompt = observation_prompt_for_guide(guide)
 
                 def update_marker_checklist(*_args: Any) -> None:
@@ -1155,10 +1166,22 @@ def maybe_start_interaction_panel(
                         )
                     )
 
+                def refresh_activity_mix_status() -> None:
+                    activity_mix_status.set(
+                        _activity_mix_status_message(
+                            event_log,
+                            has_buttons=activity_has_buttons,
+                            has_sliders=activity_has_sliders,
+                            has_presets=activity_has_presets,
+                        )
+                    )
+                    root.after(300, refresh_activity_mix_status)
+
                 refresh_marker_checklist_callback = update_marker_checklist
                 marker_prediction.trace_add("write", update_marker_checklist)
                 marker_outcome.trace_add("write", update_marker_checklist)
                 marker_note.trace_add("write", update_marker_checklist)
+                refresh_activity_mix_status()
 
                 def use_live_status_note() -> None:
                     note = _live_status_observation_note(status)
@@ -1245,6 +1268,14 @@ def maybe_start_interaction_panel(
                 tk.Label(
                     marker_frame,
                     textvariable=marker_next_action,
+                    anchor="w",
+                    justify="left",
+                    wraplength=430,
+                ).grid(row=marker_row, column=0, columnspan=2, sticky="ew", pady=(2, 0))
+                marker_row += 1
+                tk.Label(
+                    marker_frame,
+                    textvariable=activity_mix_status,
                     anchor="w",
                     justify="left",
                     wraplength=430,
@@ -1358,11 +1389,82 @@ def _panel_viewer_legend_rows(guide: Any | None) -> list[tuple[str, str]]:
     return viewer_legend_for_guide(guide)
 
 
-def _observation_marker_count(event_log: InteractionLog) -> int:
-    return sum(
+def _activity_mix_status_message(
+    event_log: InteractionLog,
+    *,
+    has_buttons: bool = False,
+    has_sliders: bool = False,
+    has_presets: bool = False,
+) -> str:
+    events = event_log.events()
+    counts = _activity_event_kind_counts(events)
+    button_count = counts.get("button", 0)
+    slider_count = counts.get("slider", 0)
+    preset_count = counts.get("preset", 0)
+    marker_count = sum(1 for event in events if _is_observation_marker_event(event))
+    available_buttons = bool(has_buttons or button_count > 0)
+    available_sliders = bool(has_sliders or slider_count > 0)
+    available_presets = bool(has_presets or preset_count > 0)
+    available_families = sum(1 for available in (available_buttons, available_sliders, available_presets) if available)
+    used_families = sum(
         1
-        for event in event_log.events()
-        if str(event.get("kind", "")).lower() == "marker"
+        for count, available in (
+            (button_count, available_buttons),
+            (slider_count, available_sliders),
+            (preset_count, available_presets),
+        )
+        if available and count > 0
+    )
+    next_step = _activity_mix_next_step(
+        counts,
+        marker_count,
+        has_buttons=available_buttons,
+        has_sliders=available_sliders,
+        has_presets=available_presets,
+    )
+    return (
+        f"Activity mix: {used_families}/{available_families} control families; "
+        f"buttons {button_count}, sliders {slider_count}, presets {preset_count}, markers {marker_count}. "
+        f"Next: {next_step}"
+    )
+
+
+def _activity_event_kind_counts(events: list[dict[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for event in events:
+        kind = str(event.get("kind", "") or "unknown").lower()
+        counts[kind] = counts.get(kind, 0) + 1
+    return counts
+
+
+def _activity_mix_next_step(
+    counts: dict[str, int],
+    observation_markers: int,
+    *,
+    has_buttons: bool = False,
+    has_sliders: bool = False,
+    has_presets: bool = False,
+) -> str:
+    if has_presets and counts.get("preset", 0) <= 0:
+        return "Try a Quick preset to compare a named parameter regime."
+    if has_sliders and counts.get("slider", 0) <= 0:
+        if has_presets:
+            return "Move one slider after a preset to test a smaller parameter change."
+        return "Move one slider to test a smaller parameter change."
+    if has_buttons and counts.get("button", 0) <= 0:
+        return "Use one button control such as pulse, nudge, pause, step, or reset."
+    if observation_markers <= 0:
+        return "Save one Mark observation with prediction and live-status evidence."
+    return "Ready: compare this interaction mix against plots and the worksheet."
+
+
+def _observation_marker_count(event_log: InteractionLog) -> int:
+    return sum(1 for event in event_log.events() if _is_observation_marker_event(event))
+
+
+def _is_observation_marker_event(event: dict[str, Any]) -> bool:
+    return (
+        str(event.get("kind", "")).lower() == "marker"
         and str(event.get("name", "")).lower() == "observation"
     )
 
