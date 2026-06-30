@@ -4442,6 +4442,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
             f"<td>{escape(_config_cell(run))}</td>"
             f"<td>{escape(str(run.get('lesson_title', '')))}</td>"
             f"<td>{escape(str(run.get('next_step', '')))}</td>"
+            f'<td class="cue-cell">{escape(_run_next_cue_text(run))}</td>'
             f"<td>{escape(_run_evidence_cell(run))}</td>"
             f"<td>{escape(str(run.get('activity_mix', '')))}</td>"
             f"<td>{escape(str(run.get('mission_evidence', '')))}</td>"
@@ -4460,7 +4461,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
         for run in runs
     )
     if not rows:
-        rows = f'<tr><td colspan="{14 + len(metric_keys)}">No run reports were found yet.</td></tr>'
+        rows = f'<tr><td colspan="{15 + len(metric_keys)}">No run reports were found yet.</td></tr>'
 
     return f"""<!doctype html>
 <html lang="en">
@@ -4554,6 +4555,11 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
       color: #596270;
       font-size: 13px;
     }}
+    .cue-cell {{
+      min-width: 260px;
+      max-width: 360px;
+      white-space: normal;
+    }}
     .plot-links {{
       display: flex;
       flex-wrap: wrap;
@@ -4601,7 +4607,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
     <section>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Run</th><th>Lab</th><th>Config</th><th>Lesson</th><th>Next</th><th>Evidence</th><th>Activity</th><th>Mission evidence</th><th>Challenge evidence</th><th>Worksheet</th><th>Replay</th><th>Plots</th><th>Duration [s]</th><th>Samples</th>{metric_headers}</tr></thead>
+          <thead><tr><th>Run</th><th>Lab</th><th>Config</th><th>Lesson</th><th>Next</th><th>Next cue</th><th>Evidence</th><th>Activity</th><th>Mission evidence</th><th>Challenge evidence</th><th>Worksheet</th><th>Replay</th><th>Plots</th><th>Duration [s]</th><th>Samples</th>{metric_headers}</tr></thead>
           <tbody>{rows}</tbody>
         </table>
       </div>
@@ -5265,6 +5271,92 @@ def _config_cell(run: dict[str, Any]) -> str:
     return config_path or config_name
 
 
+def _run_next_cue_text(run: dict[str, Any]) -> str:
+    summary = run.get("summary")
+    summary = summary if isinstance(summary, dict) else {}
+    events = run.get("interaction_events")
+    events = events if isinstance(events, list) else []
+    config = run.get("config")
+    config = config if isinstance(config, dict) else {}
+    has_plots = bool(run.get("plots"))
+    has_worksheet = isinstance(run.get("worksheet"), dict)
+
+    if _summary_is_all_batch(summary):
+        if has_worksheet:
+            return "Next cue: Open the course worksheet, then compare each linked batch Prediction Check."
+        return "Next cue: Rerun all comparison batches to regenerate the course worksheet."
+
+    if _summary_is_comparison_batch(summary):
+        if not has_worksheet:
+            return "Next cue: Rerun the comparison batch to regenerate the worksheet."
+        if not has_plots:
+            return "Next cue: Rerun the comparison batch with plots, then inspect the comparison plots."
+        return "Next cue: Open the worksheet Prediction Check, then compare the scenario plots."
+
+    if _summary_requires_hands_on_evidence(summary):
+        return _hands_on_run_next_cue(summary, events, config, has_plots=has_plots, has_worksheet=has_worksheet, run=run)
+
+    if not has_plots:
+        return "Next cue: Rerun with --plot, then inspect the priority graph."
+    if not has_worksheet:
+        return "Next cue: Rerun or regenerate the worksheet before moving on."
+    next_step = str(run.get("next_step") or "").strip()
+    if next_step:
+        return f"Next cue: Review the priority plot and worksheet, then try: {_short_evidence_text(next_step, max_length=96)}"
+    return "Next cue: Review the priority plot and worksheet, then run the next guided scenario."
+
+
+def _hands_on_run_next_cue(
+    summary: dict[str, Any],
+    events: list[dict[str, Any]],
+    config: dict[str, Any],
+    *,
+    has_plots: bool,
+    has_worksheet: bool,
+    run: dict[str, Any],
+) -> str:
+    markers, predictions, notes, outcomes = _observation_evidence_counts_from_events(events)
+    learner_controls = _learner_control_event_count(events)
+    if predictions > outcomes:
+        return "Next cue: Review latest evidence and choose the missing prediction outcome."
+
+    labels = _configured_preset_labels(config)
+    if len(labels) >= 2:
+        required_labels, _required_tried, next_required = _required_preset_progress(config, events)
+        if required_labels and next_required:
+            return f"Next cue: Try required preset {next_required}, then mark a comparison observation."
+        tried = _distinct_preset_labels(events, labels)
+        if not required_labels and markers <= 0 and len(tried) < 2:
+            next_label = next((label for label in labels if label not in tried), "")
+            preset_text = f"preset {next_label}" if next_label else "one more preset"
+            return f"Next cue: Try {preset_text}, then mark a comparison observation."
+
+    control_phrase = _report_learner_control_phrase(config, summary)
+    if markers <= 0:
+        if learner_controls > 0:
+            return "Next cue: Mark observation with a prediction and note for the control you changed."
+        return f"Next cue: Use {control_phrase}, then Mark observation with a prediction and note."
+    if predictions <= 0:
+        return "Next cue: Add a prediction before marking the next observation."
+    if notes <= 0:
+        return "Next cue: Add a short note or Use live status before moving on."
+    if learner_controls <= 0:
+        return f"Next cue: Use {control_phrase}, then mark another observation with a prediction and note."
+    if len(labels) >= 2:
+        tried = _distinct_preset_labels(events, labels)
+        if len(tried) < 2:
+            next_label = next((label for label in labels if label not in tried), "")
+            preset_text = f"preset {next_label}" if next_label else "one more preset"
+            return f"Next cue: Try {preset_text}, then mark a comparison observation."
+    if isinstance(run.get("replay"), dict):
+        return "Next cue: Replay the tuned config, then run Compare for the broader tradeoff."
+    if not has_plots:
+        return "Next cue: Rerun with plots, then inspect the priority graph."
+    if not has_worksheet:
+        return "Next cue: Rerun or regenerate the worksheet before moving on."
+    return "Next cue: Review the latest plot and worksheet, then run Next or Compare."
+
+
 def _run_evidence_cell(run: dict[str, Any]) -> str:
     markers = int(run.get("observation_markers", 0))
     predictions = int(run.get("learner_predictions", 0))
@@ -5355,6 +5447,15 @@ def _challenge_evidence_index_text(
 def _summary_is_all_batch(summary: dict[str, Any]) -> bool:
     batch_name = str(summary.get("batch_name") or summary.get("config_name") or "").strip()
     return batch_name == "all"
+
+
+def _summary_is_comparison_batch(summary: dict[str, Any]) -> bool:
+    if _summary_is_all_batch(summary):
+        return False
+    lab_name = str(summary.get("lab_name") or "").strip()
+    batch_name = str(summary.get("batch_name") or "").strip()
+    config_name = str(summary.get("config_name") or "").strip()
+    return bool(batch_name) or lab_name in {"batch", "batch_group"} or config_name.endswith("_compare")
 
 
 def _run_replay_cell(run: dict[str, Any]) -> str:

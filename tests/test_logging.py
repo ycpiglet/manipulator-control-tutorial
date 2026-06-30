@@ -1382,6 +1382,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Progress Snapshot", html)
             self.assertIn("Batches", html)
             self.assertIn("1 saved run", html)
+            self.assertIn("Next cue: Rerun the comparison batch to regenerate the worksheet.", html)
             self.assertIn("20260627_151000_lab02_pid_compare/comparison_plots/error_compare.png", html)
 
     def test_outputs_index_marks_all_batch_learning_path_step(self) -> None:
@@ -1428,6 +1429,10 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Mission Review Queue", html)
             self.assertIn("1 ready, 0 pending", html)
             self.assertIn("No pending mission evidence.", html)
+            self.assertIn(
+                "Next cue: Open the course worksheet, then compare each linked batch Prediction Check.",
+                html,
+            )
             self.assertIn("Next action: run lab01", html)
             self.assertIn("20260627_151000_all_batches/report.html", html)
             self.assertIn("python -m mclab batch all --open-report", html)
@@ -1471,11 +1476,13 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Add one Mark observation entry before moving on.", html)
             self.assertIn("20260627_150100_lab01_interactive/report.html", html)
             self.assertIn("<th>Evidence</th>", html)
+            self.assertIn("<th>Next cue</th>", html)
             self.assertIn("<th>Activity</th>", html)
             self.assertIn("<th>Mission evidence</th>", html)
             self.assertIn("<th>Challenge evidence</th>", html)
             self.assertIn("No markers", html)
             self.assertIn("No learner controls", html)
+            self.assertIn("Next cue: Try preset Lightly damped, then mark a comparison observation.", html)
             self.assertIn(
                 "Observation next step: use experiment buttons (Pull/Push buttons and A/D keys), "
                 "live sliders, or Quick presets, "
@@ -1511,6 +1518,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Needs prediction (1 observation, 1 note, 0 controls)", html)
             self.assertIn("Add one Prediction in Mark observation before moving on.", html)
             self.assertIn("1 observation, 0 predictions, 1 note", html)
+            self.assertIn("Next cue: Add a prediction before marking the next observation.", html)
             self.assertIn("Needs prediction; Repeat or continue the demo and save a Mark observation with a prediction.", html)
             self.assertIn(
                 "Latest evidence: Note: The mass settled faster after damping changed.",
@@ -1539,6 +1547,11 @@ class LoggingTests(unittest.TestCase):
 
             html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
             self.assertIn("Needs learner control (1 observation, 1 prediction, 1 outcome, 1 note, 0 controls)", html)
+            self.assertIn(
+                "Next cue: Use experiment buttons (Pull/Push buttons and A/D keys), "
+                "live sliders, or Quick presets, then mark another observation with a prediction and note.",
+                html,
+            )
             self.assertIn(
                 "Use experiment buttons (Pull/Push buttons and A/D keys), live sliders, or Quick presets "
                 "before moving on.",
@@ -1574,6 +1587,7 @@ class LoggingTests(unittest.TestCase):
             html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
             self.assertIn("2/11 steps complete. Outcome review pending: 1 hands-on step(s).", html)
             self.assertIn("Next: 3. Close the loop", html)
+            self.assertIn("Next cue: Review latest evidence and choose the missing prediction outcome.", html)
             self.assertIn("Done (1 observation, 1 prediction, 1 note, 3 controls)", html)
             self.assertIn("Add one Prediction outcome while reviewing.", html)
             self.assertIn(
@@ -1614,6 +1628,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("1/11 steps complete. Evidence pending: 1 hands-on step(s).", html)
             self.assertIn("Next: 2. Disturb and tune", html)
             self.assertIn("Needs note (1 observation, 1 prediction, 1 outcome, 0 controls)", html)
+            self.assertIn("Next cue: Add a short note or Use live status before moving on.", html)
             self.assertIn("Add a short note or Use live status before moving on.", html)
 
             (interactive / "interaction_events.json").write_text(
@@ -1639,6 +1654,7 @@ class LoggingTests(unittest.TestCase):
 
             html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
             self.assertIn("2/11 steps complete. Next: 3. Close the loop", html)
+            self.assertIn("Next cue: Try preset Lightly damped, then mark a comparison observation.", html)
             self.assertIn("Done (1 observation, 1 prediction, 1 outcome, 1 note, 3 controls)", html)
             self.assertIn("1 observation, 1 prediction, 1 outcome, 1 note", html)
             self.assertIn(
@@ -1717,6 +1733,7 @@ class LoggingTests(unittest.TestCase):
                 html,
             )
             self.assertIn("Try required preset Back away before moving on.", html)
+            self.assertIn("Next cue: Try required preset Back away, then mark a comparison observation.", html)
             self.assertIn(
                 "Mission evidence: Needs required preset Back away; "
                 "Try required preset Back away, watch live status, then mark one observation.",

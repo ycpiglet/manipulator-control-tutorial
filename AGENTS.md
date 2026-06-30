@@ -235,6 +235,7 @@ Implemented and verified:
 - Learner menu top panel includes the same review queue summary, an `Open next review` button for the next pending run, and an `Open review queue` button that regenerates `outputs/index.html`
 - Outputs index run table summarizes observation, prediction, outcome, and learner note evidence per saved run
 - Outputs index run table and learning-path cards summarize latest hands-on activity mix before opening individual reports
+- Outputs index run table includes a per-run `Next cue` so saved result review pages point to the next learner action without reopening the menu
 - Outputs index run table and learning-path cards summarize `Mission evidence` proof status and next proof step per saved run
 - Outputs index run table shows the latest observation marker prediction, outcome, note, and live status summary per saved run
 - Outputs index run table links directly to each run's `worksheet.md` when available
