@@ -1490,7 +1490,7 @@ class LearnerMenuTests(unittest.TestCase):
                             "value": {
                                 "prediction": "The response should overshoot.",
                                 "outcome": "Matched",
-                                "note": "Saw overshoot in the position plot.",
+                                "note": "Plot: Saw overshoot in the position plot.; Changed values: damping=0.8",
                                 "status": {"Position [m]": "0.125", "Energy [J]": "0.040"},
                             },
                         }
@@ -1505,7 +1505,11 @@ class LearnerMenuTests(unittest.TestCase):
             self.assertIn("Latest evidence:", text)
             self.assertIn("Prediction: The response should overshoot.", text)
             self.assertIn("Outcome: Matched", text)
-            self.assertIn("Note: Saw overshoot in the position plot.", text)
+            self.assertIn("Note: Plot: Saw overshoot in the position plot.; Changed values: damping=0.8", text)
+            self.assertIn(
+                "Note evidence: Plot: Saw overshoot in the position plot. | Changed values: damping=0.8",
+                text,
+            )
             self.assertIn("Status: Position [m]=0.125", text)
             self.assertIn(text, lesson)
 

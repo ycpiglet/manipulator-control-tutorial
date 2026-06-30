@@ -1359,7 +1359,10 @@ class LoggingTests(unittest.TestCase):
                             "value": {
                                 "prediction": "Higher damping should reduce overshoot.",
                                 "outcome": "Surprised",
-                                "note": "The trace settled faster after the preset.",
+                                "note": (
+                                    "Settling: The trace settled faster after the preset.; "
+                                    "Changed values: Damping=5.0"
+                                ),
                                 "status": {
                                     "Error [m]": 0.0123456,
                                     "Control [N]": 4.2,
@@ -1383,7 +1386,8 @@ class LoggingTests(unittest.TestCase):
             self.assertIn(
                 "Latest: Prediction: Higher damping should reduce overshoot.; "
                 "Outcome: Surprised; "
-                "Note: The trace settled faster after the preset.; "
+                "Note: Settling: The trace settled faster after the preset.; Changed values: Damping=5.0; "
+                "Note evidence: Settling: The trace settled faster after the preset. | Changed values: Damping=5.0; "
                 "Status: Error [m]=0.0123456, Control [N]=4.2, Mode=observe",
                 html,
             )

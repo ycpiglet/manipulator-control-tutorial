@@ -4603,6 +4603,9 @@ def _latest_observation_evidence_from_events(events: list[dict[str, Any]]) -> st
             parts.append("Outcome: missing review")
         if note:
             parts.append(f"Note: {_short_evidence_text(note)}")
+            note_summary = _note_evidence_summary(note)
+            if note_summary:
+                parts.append(f"Note evidence: {note_summary}")
         if isinstance(status, dict):
             status_text = _latest_status_evidence(status)
             if status_text:
@@ -4623,6 +4626,16 @@ def _latest_status_evidence(status: dict[str, Any], *, limit: int = 3) -> str:
         if len(pairs) >= limit:
             break
     return ", ".join(pairs)
+
+
+def _note_evidence_summary(value: Any, *, limit: int = 3) -> str:
+    items = _note_evidence_items(value)
+    if len(items) <= 1:
+        return ""
+    shown = [_short_evidence_text(item, max_length=64) for item in items[:limit]]
+    if len(items) > limit:
+        shown.append("...")
+    return " | ".join(shown)
 
 
 def _short_evidence_text(value: str, *, max_length: int = 88) -> str:

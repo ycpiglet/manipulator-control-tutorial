@@ -21,7 +21,13 @@ from mclab.learning_guides import (
     reflection_question_for_context,
     viewer_legend_for_guide,
 )
-from mclab.sim.reporting import INDEX_PLOT_PRIORITY, _activity_mix_items, plot_guidance, write_outputs_index
+from mclab.sim.reporting import (
+    INDEX_PLOT_PRIORITY,
+    _activity_mix_items,
+    _latest_observation_evidence_from_events,
+    plot_guidance,
+    write_outputs_index,
+)
 
 RUN_COMPLETE_PREFIX = "Run complete:"
 BATCH_COMPLETE_PREFIX = "Batch complete:"
@@ -1356,36 +1362,14 @@ def action_latest_evidence_text(
     latest = action_latest_output(action, outputs_root)
     if latest is None:
         return "Latest evidence: None yet"
-    marker = _latest_observation_marker(latest)
-    if marker is None:
+    evidence = _latest_observation_evidence_from_events(_read_json_list(latest / "interaction_events.json"))
+    if not evidence:
         return "Latest evidence: None yet"
-    value = marker.get("value")
-    if not isinstance(value, dict):
+    if evidence == "marker saved without details":
         return "Latest evidence: Observation marker saved without details"
-    parts: list[str] = []
-    prediction = str(value.get("prediction") or "").strip()
-    note = str(value.get("note") or "").strip()
-    outcome = str(value.get("outcome") or "").strip()
-    status = value.get("status")
-    if prediction:
-        parts.append(f"Prediction: {_short_text(prediction)}")
-    if outcome:
-        parts.append(f"Outcome: {_short_text(outcome, 40)}")
-    elif prediction:
-        parts.append("Outcome: missing review")
-    if note:
-        parts.append(f"Note: {_short_text(note)}")
-    if isinstance(status, dict) and status:
-        shown = [
-            f"{name}={value}"
-            for name, value in list(status.items())[:3]
-            if str(value).strip() and str(value).strip() != "--"
-        ]
-        if shown:
-            parts.append(f"Status: {', '.join(shown)}")
-    if not parts:
+    if evidence == "marker saved without prediction or note":
         return "Latest evidence: Observation marker saved without prediction or note"
-    return f"Latest evidence: {'; '.join(parts)}"
+    return f"Latest evidence: {evidence}"
 
 
 def action_mission_evidence_text(
