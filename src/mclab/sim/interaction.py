@@ -1148,6 +1148,10 @@ def maybe_start_interaction_panel(
                         preset_state=tuning.preset_checklist_state() if tuning is not None else "",
                         learner_controls=_learner_control_event_count(event_log.events()),
                         controls_available=controls_available,
+                        has_buttons=activity_has_buttons,
+                        has_sliders=activity_has_sliders,
+                        has_presets=activity_has_presets,
+                        button_next_step=activity_button_next_step,
                     )
                 )
                 marker_quality = tk.StringVar(
@@ -1158,6 +1162,10 @@ def maybe_start_interaction_panel(
                         preset_state=tuning.preset_checklist_state() if tuning is not None else "",
                         learner_controls=_learner_control_event_count(event_log.events()),
                         controls_available=controls_available,
+                        has_buttons=activity_has_buttons,
+                        has_sliders=activity_has_sliders,
+                        has_presets=activity_has_presets,
+                        button_next_step=activity_button_next_step,
                     )
                 )
                 marker_challenge_proof = tk.StringVar(
@@ -1168,6 +1176,10 @@ def maybe_start_interaction_panel(
                         preset_state=tuning.preset_checklist_state() if tuning is not None else "",
                         learner_controls=_learner_control_event_count(event_log.events()),
                         controls_available=controls_available,
+                        has_buttons=activity_has_buttons,
+                        has_sliders=activity_has_sliders,
+                        has_presets=activity_has_presets,
+                        button_next_step=activity_button_next_step,
                     )
                 )
                 marker_next_action = tk.StringVar(
@@ -1207,6 +1219,10 @@ def maybe_start_interaction_panel(
                             preset_state=preset_state,
                             learner_controls=learner_controls,
                             controls_available=controls_available,
+                            has_buttons=activity_has_buttons,
+                            has_sliders=activity_has_sliders,
+                            has_presets=activity_has_presets,
+                            button_next_step=activity_button_next_step,
                         )
                     )
                     marker_quality.set(
@@ -1217,6 +1233,10 @@ def maybe_start_interaction_panel(
                             preset_state=preset_state,
                             learner_controls=learner_controls,
                             controls_available=controls_available,
+                            has_buttons=activity_has_buttons,
+                            has_sliders=activity_has_sliders,
+                            has_presets=activity_has_presets,
+                            button_next_step=activity_button_next_step,
                         )
                     )
                     marker_challenge_proof.set(
@@ -1227,6 +1247,10 @@ def maybe_start_interaction_panel(
                             preset_state=preset_state,
                             learner_controls=learner_controls,
                             controls_available=controls_available,
+                            has_buttons=activity_has_buttons,
+                            has_sliders=activity_has_sliders,
+                            has_presets=activity_has_presets,
+                            button_next_step=activity_button_next_step,
                         )
                     )
                     marker_next_action.set(
@@ -1296,6 +1320,10 @@ def maybe_start_interaction_panel(
                         preset_state=preset_state,
                         learner_controls=learner_controls,
                         controls_available=controls_available,
+                        has_buttons=activity_has_buttons,
+                        has_sliders=activity_has_sliders,
+                        has_presets=activity_has_presets,
+                        button_next_step=activity_button_next_step,
                     )
                     event_log.mark_observation(
                         changed_sliders=tuning.changed_values() if tuning is not None else None,
@@ -1824,12 +1852,25 @@ def _observation_checklist_status(
     preset_state: str = "",
     learner_controls: int = 0,
     controls_available: bool = True,
+    has_buttons: bool = False,
+    has_sliders: bool = False,
+    has_presets: bool = False,
+    button_next_step: str = "",
 ) -> str:
     prediction_state = "ready" if prediction.strip() else "missing"
     control_text = ""
     if controls_available:
         control_state = "tried" if learner_controls > 0 else "needed"
-        control_text = f"Control {control_state}; "
+        control_hint = ""
+        if learner_controls <= 0:
+            control_followup = _control_evidence_followup(
+                has_buttons,
+                has_sliders,
+                has_presets,
+                button_next_step=button_next_step,
+            )
+            control_hint = f" ({control_followup})" if control_followup else ""
+        control_text = f"Control {control_state}{control_hint}; "
     outcome_state = "selected" if _prediction_outcome_value(outcome) else "optional"
     note_state = "ready" if note.strip() else "recommended"
     preset_text = f"Preset comparison {preset_state}; " if preset_state else ""
@@ -1851,12 +1892,25 @@ def _observation_evidence_quality(
     preset_state: str = "",
     learner_controls: int = 0,
     controls_available: bool = True,
+    has_buttons: bool = False,
+    has_sliders: bool = False,
+    has_presets: bool = False,
+    button_next_step: str = "",
 ) -> str:
     missing: list[str] = []
     if not prediction.strip():
         missing.append("prediction")
     if controls_available and learner_controls <= 0:
-        missing.append("learner control")
+        control_followup = _control_evidence_followup(
+            has_buttons,
+            has_sliders,
+            has_presets,
+            button_next_step=button_next_step,
+        )
+        if control_followup:
+            missing.append(f"control evidence ({control_followup})")
+        else:
+            missing.append("learner control")
     if _preset_state_followup(preset_state):
         missing.append("preset comparison")
     if not note.strip():
@@ -1876,18 +1930,32 @@ def _observation_challenge_proof_status(
     preset_state: str = "",
     learner_controls: int = 0,
     controls_available: bool = True,
+    has_buttons: bool = False,
+    has_sliders: bool = False,
+    has_presets: bool = False,
+    button_next_step: str = "",
 ) -> str:
     preset_followup = _preset_state_followup(preset_state)
     control_needed = controls_available and learner_controls <= 0
+    control_followup = _control_evidence_followup(
+        has_buttons,
+        has_sliders,
+        has_presets,
+        button_next_step=button_next_step,
+    )
     if not prediction.strip():
         if preset_followup:
             return f"Challenge proof: needs prediction, then {preset_followup}."
         if control_needed:
+            if control_followup:
+                return f"Challenge proof: needs prediction, then {control_followup}."
             return "Challenge proof: needs prediction, then learner control."
         return "Challenge proof: needs prediction."
     if preset_followup:
         return f"Challenge proof: needs preset evidence - {preset_followup}."
     if control_needed:
+        if control_followup:
+            return f"Challenge proof: needs control evidence - {control_followup}."
         return "Challenge proof: needs learner control evidence."
     if not note.strip():
         return "Challenge proof: needs note or live-status evidence."
@@ -1969,6 +2037,23 @@ def _learner_control_followup_text(
     if has_presets:
         controls.append("Quick presets")
     return f"use {_control_list_text(controls)}"
+
+
+def _control_evidence_followup(
+    has_buttons: bool,
+    has_sliders: bool,
+    has_presets: bool,
+    *,
+    button_next_step: str = "",
+) -> str:
+    if not any((has_buttons, has_sliders, has_presets)) and not button_next_step:
+        return ""
+    return _learner_control_followup_text(
+        has_buttons,
+        has_sliders,
+        has_presets,
+        button_next_step=button_next_step,
+    )
 
 
 def _button_control_label(button_next_step: str) -> str:

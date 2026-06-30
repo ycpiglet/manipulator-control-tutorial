@@ -876,6 +876,17 @@ class KeyForcePulseTests(unittest.TestCase):
         )
         self.assertEqual(
             _observation_checklist_status(
+                "",
+                "Not judged yet",
+                "",
+                has_buttons=True,
+                button_next_step="Use Pull Left A / Left or Push Right D / Right.",
+            ),
+            "Evidence checklist: Prediction missing; Control needed "
+            "(use Pull Left A / Left or Push Right D / Right); Outcome optional; Note recommended.",
+        )
+        self.assertEqual(
+            _observation_checklist_status(
                 "More damping should settle faster.",
                 "Matched",
                 "Energy dropped.",
@@ -923,6 +934,18 @@ class KeyForcePulseTests(unittest.TestCase):
         )
         self.assertEqual(
             _observation_evidence_quality(
+                "",
+                "Not judged yet",
+                "",
+                has_buttons=True,
+                has_sliders=True,
+                button_next_step="Use Target X - away or Target X + into wall.",
+            ),
+            "Evidence quality: incomplete - add prediction, control evidence "
+            "(use experiment buttons (Target X - away or Target X + into wall) or live sliders), note.",
+        )
+        self.assertEqual(
+            _observation_evidence_quality(
                 "Stiffer wall should push harder.",
                 "Not judged yet",
                 "Force increased.",
@@ -960,6 +983,16 @@ class KeyForcePulseTests(unittest.TestCase):
                 "",
                 "Not judged yet",
                 "",
+                has_buttons=True,
+                button_next_step="Use Pull Left A / Left or Push Right D / Right.",
+            ),
+            "Challenge proof: needs prediction, then use Pull Left A / Left or Push Right D / Right.",
+        )
+        self.assertEqual(
+            _observation_challenge_proof_status(
+                "",
+                "Not judged yet",
+                "",
                 preset_state="needs required preset Back away",
                 learner_controls=1,
             ),
@@ -978,6 +1011,19 @@ class KeyForcePulseTests(unittest.TestCase):
         self.assertEqual(
             _observation_challenge_proof_status("Stiff wall should push harder.", "Not judged yet", ""),
             "Challenge proof: needs learner control evidence.",
+        )
+        self.assertEqual(
+            _observation_challenge_proof_status(
+                "Stiff wall should push harder.",
+                "Not judged yet",
+                "",
+                has_buttons=True,
+                has_sliders=True,
+                has_presets=True,
+                button_next_step="Use Target X - away or Target X + into wall.",
+            ),
+            "Challenge proof: needs control evidence - use experiment buttons "
+            "(Target X - away or Target X + into wall), live sliders, or Quick presets.",
         )
         self.assertEqual(
             _observation_challenge_proof_status(

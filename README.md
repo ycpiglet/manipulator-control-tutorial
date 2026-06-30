@@ -245,9 +245,9 @@ Lab04 wall live status는 total wall force뿐 아니라 spring force, damping fo
 
 Observation 영역의 `Next action` 줄은 현재 상태에서 바로 해야 할 일을 한 문장으로 보여줍니다. 예측이 비어 있으면 prediction 입력을 먼저 안내하고, button evidence가 필요하면 `Pull Left` / `Push Right`, `Target X -` / `Target X +`처럼 실제 패널 버튼 라벨을 알려주며, required preset이 남아 있으면 다음 preset을 이름으로 알려줍니다. note가 없으면 `Use live status`나 짧은 observation note를 권장한 뒤 `Mark observation`으로 넘어가게 합니다.
 
-`Evidence quality` 줄은 observation이 incomplete인지, outcome 없이도 mark 가능한 상태인지, review-ready 상태인지 저장 전에 바로 알려줍니다.
+`Evidence quality` 줄은 observation이 incomplete인지, outcome 없이도 mark 가능한 상태인지, review-ready 상태인지 저장 전에 바로 알려주고, control evidence가 빠졌을 때는 필요한 버튼/슬라이더/preset 조작을 함께 보여줍니다.
 
-`Challenge proof` 줄은 visible-effect challenge를 증명하려면 prediction, learner control, preset evidence, note/live-status evidence, outcome review 중 무엇이 아직 필요한지 바로 알려줍니다.
+`Challenge proof` 줄은 visible-effect challenge를 증명하려면 prediction, learner control, preset evidence, note/live-status evidence, outcome review 중 무엇이 아직 필요한지 바로 알려주며, learner control이 빠졌으면 실제 패널 버튼이나 control family를 이름으로 안내합니다.
 
 Observation 영역의 live `Activity mix` 줄은 현재 실행에서 버튼, 슬라이더, preset, observation marker를 몇 번 썼는지 계속 갱신하고, 아직 빠진 조작군이 있으면 다음에 시도할 행동을 바로 제안합니다.
 
@@ -639,9 +639,9 @@ Lab04 wall live status separates total wall force, spring force, damping force, 
 
 The observation area's `Next action` line names the immediate learner step from the current state. It asks for a prediction first, names actual panel button labels such as `Pull Left` / `Push Right` or `Target X -` / `Target X +` when button evidence is missing, names the next required preset when one is missing, recommends `Use live status` or a short note when evidence is thin, and then moves the learner toward `Mark observation`.
 
-The `Evidence quality` line tells learners before saving whether the observation is incomplete, ready to mark without an outcome, or review-ready.
+The `Evidence quality` line tells learners before saving whether the observation is incomplete, ready to mark without an outcome, or review-ready, and it names the needed button, slider, or preset action when control evidence is missing.
 
-The `Challenge proof` line tells learners whether the visible-effect challenge still needs a prediction, learner control, preset evidence, note/live-status evidence, or outcome review.
+The `Challenge proof` line tells learners whether the visible-effect challenge still needs a prediction, learner control, preset evidence, note/live-status evidence, or outcome review, and it names the actual panel button or control family when learner control is missing.
 
 The observation area's live `Activity mix` line continuously counts button, slider, preset, and observation-marker use during the current run, then recommends the next missing control family to try.
 
