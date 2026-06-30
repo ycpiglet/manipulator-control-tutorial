@@ -1256,7 +1256,9 @@ def learning_path_progress_text(
             f"Status: Needs observation - latest {current.latest_output.name}. "
             "Add one Mark observation entry before moving on."
         )
-    return f"{learning_path_text(step)}\n{status}"
+    plot_review = _learning_path_progress_plot_review_text(current.latest_output)
+    suffix = f"\n{plot_review}" if plot_review else ""
+    return f"{learning_path_text(step)}\n{status}{suffix}"
 
 
 def _learning_path_evidence_suffix(progress: LearningPathProgress) -> str:
@@ -1292,6 +1294,19 @@ def _learning_path_evidence_suffix(progress: LearningPathProgress) -> str:
         f"{'s' if progress.observation_markers != 1 else ''}{prediction_text}{outcome_text}{note_text}"
         f"{control_text}{preset_text})"
     )
+
+
+def _learning_path_progress_plot_review_text(output_path: Path | None) -> str:
+    if output_path is None:
+        return ""
+    latest_plot = latest_output_plot(output_path)
+    if latest_plot is None:
+        return "Plot review: Not available until a plot is saved"
+    guidance = plot_guidance(latest_plot.name)
+    if guidance is None:
+        return f"Latest plot: {latest_plot.name}\nPlot review: Open the latest plot and compare it with the worksheet"
+    title, detail = guidance
+    return f"Latest plot: {latest_plot.name}\nPlot review: {title} - {detail}"
 
 
 def learning_path_progress_items(

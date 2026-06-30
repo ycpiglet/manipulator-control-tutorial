@@ -336,6 +336,8 @@ class LearnerMenuTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (run_dir / "report.html").write_text("<html></html>", encoding="utf-8")
+            (run_dir / "plots").mkdir()
+            (run_dir / "plots" / "position.png").write_bytes(b"fake-png")
             worksheet = run_dir / "worksheet.md"
             worksheet.write_text("# Worksheet\n", encoding="utf-8")
             tuned_config = run_dir / "learner_tuned_config.yaml"
@@ -361,6 +363,7 @@ class LearnerMenuTests(unittest.TestCase):
             last_worksheet = learning_path_latest_worksheet(last_step, outputs)
             first_tuned = learning_path_latest_tuned_config(first_step, outputs)
             last_tuned = learning_path_latest_tuned_config(last_step, outputs)
+            first_progress_text = learning_path_progress_text(first_step, first_progress)
 
         self.assertTrue(first_progress.completed)
         self.assertEqual(first_progress.latest_output.name, "run_lab01")
@@ -368,7 +371,9 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(first_latest.name, "run_lab01")
         self.assertEqual(first_worksheet, worksheet)
         self.assertEqual(first_tuned, tuned_config)
-        self.assertIn("Status: Done - latest run_lab01", learning_path_progress_text(first_step, first_progress))
+        self.assertIn("Status: Done - latest run_lab01", first_progress_text)
+        self.assertIn("Latest plot: position.png", first_progress_text)
+        self.assertIn("Plot review: Position - Compare actual motion", first_progress_text)
         self.assertTrue(last_progress.completed)
         self.assertEqual(last_progress.latest_output.name, "all_batches")
         assert last_latest is not None
@@ -1602,6 +1607,7 @@ class LearnerMenuTests(unittest.TestCase):
 
     def test_dls_action_latest_plot_prefers_dls_plot_over_error(self) -> None:
         action = next(item for item in MENU_ACTIONS if item.label == "2DOF adaptive-speed retarget DLS")
+        step = next(item for item in LEARNING_PATH if item.label == action.label)
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)
             run_path = outputs / "run_lab03_dls"
@@ -1625,6 +1631,9 @@ class LearnerMenuTests(unittest.TestCase):
             self.assertEqual(action_latest_plot(action, outputs), dls_plot)
             self.assertEqual(latest_output_plot(run_path), dls_plot)
             self.assertEqual(action_plot_text(action, outputs), "Plots: Latest dls.png")
+            progress_text = learning_path_progress_text(step, learning_path_progress(step, outputs))
+            self.assertIn("Latest plot: dls.png", progress_text)
+            self.assertIn("Plot review: Damped Least Squares - Compare task speed", progress_text)
 
     def test_action_evidence_summarizes_latest_observation_markers(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
