@@ -620,7 +620,7 @@ class LoggingTests(unittest.TestCase):
 
             html = write_run_report(output).read_text(encoding="utf-8")
             self.assertIn("Hands-on Evidence", html)
-            self.assertIn("save one Mark observation with a Prediction and note; add the outcome during review.", html)
+            self.assertIn("use at least one button, slider, or preset", html)
             self.assertIn("Needs observation", html)
             self.assertIn("write a prediction and note", html)
 
@@ -664,6 +664,28 @@ class LoggingTests(unittest.TestCase):
             )
 
             html = write_run_report(output).read_text(encoding="utf-8")
+            self.assertIn("Needs learner control", html)
+            self.assertIn("Use at least one button, slider, or preset control", html)
+
+            (output / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {"kind": "button", "name": "push_right", "label": "Push Right", "value": 12.0},
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "label": "Mark observation",
+                            "value": {
+                                "prediction": "More damping should settle faster.",
+                                "note": "The mass settled after the pulse.",
+                            },
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            html = write_run_report(output).read_text(encoding="utf-8")
             self.assertIn("Done for learning path", html)
             self.assertIn("Judge prediction outcome", html)
             self.assertIn("mark whether the prediction matched", html)
@@ -671,6 +693,7 @@ class LoggingTests(unittest.TestCase):
             (output / "interaction_events.json").write_text(
                 json.dumps(
                     [
+                        {"kind": "button", "name": "push_right", "label": "Push Right", "value": 12.0},
                         {
                             "kind": "marker",
                             "name": "observation",
@@ -688,7 +711,7 @@ class LoggingTests(unittest.TestCase):
 
             html = write_run_report(output).read_text(encoding="utf-8")
             self.assertIn("Done for learning path", html)
-            self.assertIn("at least one Mark observation entry with a prediction", html)
+            self.assertIn("one learner control plus a Mark observation with prediction and note", html)
             self.assertIn("Prediction outcome", html)
             self.assertIn("Partly matched", html)
 
@@ -1190,7 +1213,7 @@ class LoggingTests(unittest.TestCase):
                 html,
             )
             self.assertIn("Next action: run lab01", html)
-            self.assertIn("Done when: save one Mark observation with a Prediction", html)
+            self.assertIn("Done when: use at least one button, slider, or preset", html)
             self.assertIn("1. Feel 1D physics", html)
             self.assertIn("2. Disturb and tune", html)
             self.assertIn("7. Handle singularity", html)
@@ -1199,7 +1222,8 @@ class LoggingTests(unittest.TestCase):
                 html,
             )
             self.assertIn(
-                "<strong>Done when:</strong> save one Mark observation with a Prediction and note; add the outcome during review.",
+                "<strong>Done when:</strong> use at least one button, slider, or preset, then save one Mark observation "
+                "with a Prediction and note; add the outcome during review.",
                 html,
             )
             self.assertIn("configs/lab03_2dof/condition_aware_dls_2dof.yaml", html)
@@ -1530,7 +1554,8 @@ class LoggingTests(unittest.TestCase):
 
             self.assertIn("10. Touch virtual wall", html)
             self.assertIn(
-                "<strong>Done when:</strong> save one Mark observation with a Prediction and note after required presets: "
+                "<strong>Done when:</strong> use at least one button, slider, or preset, then save one Mark observation "
+                "with a Prediction and note after required presets: "
                 "Close wall -&gt; Back away -&gt; Re-enter wall; add the outcome during review.",
                 html,
             )
@@ -1716,6 +1741,7 @@ class LoggingTests(unittest.TestCase):
             (outcome_pending / "interaction_events.json").write_text(
                 json.dumps(
                     [
+                        {"kind": "slider", "name": "target_x", "label": "Target X", "value": 0.45},
                         {
                             "kind": "marker",
                             "name": "observation",
@@ -1764,7 +1790,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Mission Review Queue", html)
             self.assertIn("1 ready, 5 pending", html)
             self.assertIn(
-                "Needs observation: 1; prediction: 1; outcome: 1; required preset: 1; note: 0; artifact: 1",
+                "Needs observation: 1; prediction: 1; outcome: 1; required preset: 1; note: 0; control: 0; artifact: 1",
                 html,
             )
             self.assertIn(
@@ -1798,6 +1824,7 @@ class LoggingTests(unittest.TestCase):
             (dls_run / "interaction_events.json").write_text(
                 json.dumps(
                     [
+                        {"kind": "preset", "name": "balanced_dls", "label": "Balanced DLS"},
                         {
                             "kind": "marker",
                             "name": "observation",

@@ -291,7 +291,8 @@ class LearnerMenuTests(unittest.TestCase):
         )
         self.assertEqual(
             learning_path_completion_text(LEARNING_PATH[1]),
-            "Done when: save one Mark observation with a Prediction and note; add the outcome during review.",
+            "Done when: use at least one button, slider, or preset, then save one Mark observation "
+            "with a Prediction and note; add the outcome during review.",
         )
         self.assertEqual(
             learning_path_completion_text(LEARNING_PATH[-1]),
@@ -361,7 +362,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Progress: 2/11 complete", learning_path_summary_text(progress_items))
         self.assertIn("Next: 2. Disturb and tune", learning_path_summary_text(progress_items))
         self.assertIn("Next action: run Lab01 Mass-Spring-Damper - Interactive", learning_path_summary_text(progress_items))
-        self.assertIn("Done when: save one Mark observation with a Prediction", learning_path_summary_text(progress_items))
+        self.assertIn("Done when: use at least one button, slider, or preset", learning_path_summary_text(progress_items))
         self.assertIn("Predict:", learning_path_summary_text(progress_items))
         self.assertIn("Watch:", learning_path_summary_text(progress_items))
         self.assertEqual(
@@ -424,6 +425,7 @@ class LearnerMenuTests(unittest.TestCase):
             (interactive_dir / "interaction_events.json").write_text(
                 json.dumps(
                     [
+                        {"kind": "slider", "name": "damping", "label": "Damping", "value": 4.0},
                         {
                             "kind": "marker",
                             "name": "observation",
@@ -462,6 +464,26 @@ class LearnerMenuTests(unittest.TestCase):
             (interactive_dir / "interaction_events.json").write_text(
                 json.dumps(
                     [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "question": "Question: demo?",
+                                "prediction": "More damping should settle faster.",
+                                "outcome": "Matched",
+                                "note": "Saw the mass settle.",
+                            },
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            needs_control = learning_path_progress(second_step, outputs)
+
+            (interactive_dir / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {"kind": "slider", "name": "damping", "label": "Damping", "value": 4.0},
                         {
                             "kind": "marker",
                             "name": "observation",
@@ -520,7 +542,17 @@ class LearnerMenuTests(unittest.TestCase):
             learning_path_progress_text(second_step, needs_note),
         )
 
+        self.assertFalse(needs_control.completed)
+        self.assertEqual(needs_control.learner_controls, 0)
+        self.assertIn(
+            "Status: Needs learner control - latest run_lab01_interactive "
+            "(1 observation, 1 prediction, 1 outcome, 1 note)",
+            learning_path_progress_text(second_step, needs_control),
+        )
+        self.assertIn("Use one button, slider, or preset before moving on.", learning_path_progress_text(second_step, needs_control))
+
         self.assertTrue(complete_progress.completed)
+        self.assertEqual(complete_progress.learner_controls, 1)
         self.assertEqual(complete_progress.observation_markers, 1)
         self.assertEqual(complete_progress.learner_predictions, 1)
         self.assertEqual(complete_progress.learner_outcomes, 1)
@@ -1731,6 +1763,7 @@ class LearnerMenuTests(unittest.TestCase):
             (interactive_path / "interaction_events.json").write_text(
                 json.dumps(
                     [
+                        {"kind": "slider", "name": "kp", "label": "Kp", "value": 12.0},
                         {
                             "kind": "marker",
                             "name": "observation",
@@ -1748,6 +1781,28 @@ class LearnerMenuTests(unittest.TestCase):
             (interactive_path / "interaction_events.json").write_text(
                 json.dumps(
                     [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "prediction": "Higher Kp will overshoot.",
+                                "outcome": "Matched",
+                                "note": "Overshoot was visible.",
+                            },
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                action_mission_evidence_text(lab02_interactive, outputs),
+                "Mission evidence: Needs learner control; 1 observation, 1 prediction, 1 outcome, 1 note",
+            )
+
+            (interactive_path / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {"kind": "slider", "name": "kp", "label": "Kp", "value": 12.0},
                         {
                             "kind": "marker",
                             "name": "observation",
@@ -1818,6 +1873,7 @@ class LearnerMenuTests(unittest.TestCase):
             (outcome_pending / "interaction_events.json").write_text(
                 json.dumps(
                     [
+                        {"kind": "slider", "name": "target_x", "label": "Target X", "value": 0.4},
                         {
                             "kind": "marker",
                             "name": "observation",
@@ -1876,7 +1932,7 @@ class LearnerMenuTests(unittest.TestCase):
                 review_queue_summary_text(outputs),
                 (
                     "Review queue: 1 ready, 6 pending. "
-                    "Needs observation: 1; prediction: 1; outcome: 1; required preset: 1; note: 1; artifact: 1. "
+                    "Needs observation: 1; prediction: 1; outcome: 1; required preset: 1; note: 1; control: 0; artifact: 1. "
                     "Next review: run_lab03_outcome_pending - Outcome review pending."
                 ),
             )
@@ -1944,6 +2000,7 @@ class LearnerMenuTests(unittest.TestCase):
             (pending / "interaction_events.json").write_text(
                 json.dumps(
                     [
+                        {"kind": "slider", "name": "kp", "label": "Kp", "value": 12.0},
                         {
                             "kind": "marker",
                             "name": "observation",
@@ -1962,6 +2019,7 @@ class LearnerMenuTests(unittest.TestCase):
             (pending / "interaction_events.json").write_text(
                 json.dumps(
                     [
+                        {"kind": "slider", "name": "kp", "label": "Kp", "value": 12.0},
                         {
                             "kind": "marker",
                             "name": "observation",

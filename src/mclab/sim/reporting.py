@@ -2779,16 +2779,14 @@ def _mission_evidence_items(
 ) -> list[tuple[str, Any]]:
     markers, predictions, notes, outcomes = _observation_evidence_counts_from_events(events)
     pending_outcomes = max(0, predictions - outcomes)
+    learner_controls = _learner_control_event_count(events)
     plot_count = len(plots)
     required_labels, required_tried, next_required = _required_preset_progress(config or {}, events)
 
     requires_hands_on = _summary_requires_hands_on_evidence(summary)
     evidence_type = "Hands-on observation" if requires_hands_on else "Plot and worksheet artifacts"
 
-    if predictions > 0 and pending_outcomes > 0:
-        status = "Outcome review pending"
-        next_step = "Choose Matched, Partly matched, or Surprised for each saved prediction."
-    elif requires_hands_on:
+    if requires_hands_on:
         if markers <= 0:
             status = "Needs observation"
             next_step = "Run the demo, write a prediction, then press Mark observation."
@@ -2805,9 +2803,18 @@ def _mission_evidence_items(
         elif notes <= 0:
             status = "Ready, add note next"
             next_step = "Compare the prediction with the plots and add a short learner note next time."
+        elif learner_controls <= 0:
+            status = "Needs learner control"
+            next_step = "Use at least one button, slider, or preset control, then mark the observation."
+        elif predictions > 0 and pending_outcomes > 0:
+            status = "Outcome review pending"
+            next_step = "Choose Matched, Partly matched, or Surprised for each saved prediction."
         else:
             status = "Ready for review"
             next_step = "Compare mission evidence with the priority plot, then run Next or Compare."
+    elif predictions > 0 and pending_outcomes > 0:
+        status = "Outcome review pending"
+        next_step = "Choose Matched, Partly matched, or Surprised for each saved prediction."
     else:
         evidence_type = "Plot and worksheet artifacts"
         if plot_count > 0:
@@ -2824,12 +2831,13 @@ def _mission_evidence_items(
         ("Predictions", predictions),
         ("Prediction outcomes", outcomes),
         ("Learner notes", notes),
+        ("Learner controls", learner_controls),
         ("Saved plots", plot_count),
         ("Next proof step", next_step),
     ]
     if required_labels:
-        items.insert(6, ("Required presets", " -> ".join(required_labels)))
-        items.insert(7, ("Required presets tried", f"{len(required_tried)}/{len(required_labels)}"))
+        items.insert(7, ("Required presets", " -> ".join(required_labels)))
+        items.insert(8, ("Required presets tried", f"{len(required_tried)}/{len(required_labels)}"))
     return items
 
 
@@ -2857,21 +2865,29 @@ def _hands_on_evidence_section(summary: dict[str, Any], events: list[dict[str, A
     if not _summary_requires_hands_on_evidence(summary):
         return ""
     markers, predictions, notes, outcomes = _observation_evidence_counts_from_events(events)
-    if markers > 0 and predictions > 0:
+    learner_controls = _learner_control_event_count(events)
+    if markers > 0 and predictions > 0 and notes > 0 and learner_controls > 0:
         status = "Done for learning path"
-        detail = "This hands-on run has at least one Mark observation entry with a prediction."
+        detail = "This hands-on run has one learner control plus a Mark observation with prediction and note."
+    elif markers > 0 and predictions > 0 and notes > 0:
+        status = "Needs learner control"
+        detail = "Repeat this hands-on step and use at least one button, slider, or preset before review."
+    elif markers > 0 and predictions > 0:
+        status = "Needs note"
+        detail = "Add a learner note or Use live status before moving on."
     elif markers > 0:
         status = "Needs prediction"
         detail = "Repeat this hands-on step and fill the Prediction field before pressing Mark observation."
     else:
         status = "Needs observation"
-        detail = "Repeat this hands-on step, write a prediction and note, then press Mark observation."
+        detail = "Repeat this hands-on step, use a learner control, write a prediction and note, then press Mark observation."
     items: list[tuple[str, Any]] = [
         ("Status", status),
         ("Observation markers", markers),
         ("Predictions", predictions),
         ("Prediction outcomes", outcomes),
         ("Learner notes", notes),
+        ("Learner controls", learner_controls),
     ]
     return (
         "<section>"
@@ -2889,7 +2905,10 @@ def _hands_on_evidence_section(summary: dict[str, Any], events: list[dict[str, A
 
 def _run_completion_text(summary: dict[str, Any]) -> str:
     if _summary_requires_hands_on_evidence(summary):
-        return "Done when: save one Mark observation with a Prediction and note; add the outcome during review."
+        return (
+            "Done when: use at least one button, slider, or preset, then save one Mark observation "
+            "with a Prediction and note; add the outcome during review."
+        )
     return "Done when: report.html, priority plot, and worksheet.md are saved."
 
 
@@ -2917,6 +2936,10 @@ def _observation_evidence_counts_from_events(events: list[dict[str, Any]]) -> tu
         if str(value.get("note") or "").strip():
             notes += 1
     return markers, predictions, notes, outcomes
+
+
+def _learner_control_event_count(events: list[dict[str, Any]]) -> int:
+    return sum(1 for event in events if str(event.get("kind") or "").strip().lower() in {"button", "slider", "preset"})
 
 
 def _check_state_class(state: str) -> str:
@@ -4267,6 +4290,10 @@ def _learning_path_item(step: IndexPathStep, runs: list[dict[str, Any]]) -> dict
     predictions = int(run.get("learner_predictions", 0)) if run is not None else 0
     notes = int(run.get("learner_notes", 0)) if run is not None else 0
     outcomes = int(run.get("learner_outcomes", 0)) if run is not None else 0
+    events = run.get("interaction_events") if run is not None else []
+    if not isinstance(events, list):
+        events = []
+    learner_controls = _learner_control_event_count(events)
     required_total, required_tried, next_required = _learning_path_required_preset_progress(step, run)
     required_ready = required_total == 0 or required_tried >= required_total
     if step.batch_name:
@@ -4275,7 +4302,8 @@ def _learning_path_item(step: IndexPathStep, runs: list[dict[str, Any]]) -> dict
         completed = run is not None and has_worksheet and has_plot
     else:
         completed = run is not None and (
-            not evidence_required or (markers > 0 and predictions > 0 and notes > 0 and required_ready)
+            not evidence_required
+            or (markers > 0 and predictions > 0 and notes > 0 and learner_controls > 0 and required_ready)
         )
     return {
         "step": step,
@@ -4286,6 +4314,7 @@ def _learning_path_item(step: IndexPathStep, runs: list[dict[str, Any]]) -> dict
         "learner_predictions": predictions,
         "learner_notes": notes,
         "learner_outcomes": outcomes,
+        "learner_controls": learner_controls,
         "required_presets": required_total,
         "required_presets_tried": required_tried,
         "next_required_preset": next_required,
@@ -4397,6 +4426,16 @@ def _learning_path_card(item: dict[str, Any]) -> str:
             f'<span class="status">Needs note{escape(_learning_path_evidence_suffix(item))}</span>'
             f'<p class="muted">Latest: <a href="{escape(str(run["report"]))}">{escape(str(run["name"]))}</a></p>'
             '<p class="muted">Add a short note or Use live status before moving on.</p>'
+        )
+    elif (
+        item["evidence_required"]
+        and int(item["observation_markers"]) > 0
+        and int(item.get("learner_controls", 0)) <= 0
+    ):
+        status = (
+            f'<span class="status">Needs learner control{escape(_learning_path_evidence_suffix(item))}</span>'
+            f'<p class="muted">Latest: <a href="{escape(str(run["report"]))}">{escape(str(run["name"]))}</a></p>'
+            '<p class="muted">Use one button, slider, or preset before moving on.</p>'
         )
     else:
         status = (
@@ -4544,10 +4583,14 @@ def _learning_path_completion_text(step: IndexPathStep) -> str:
         required_labels = _index_step_required_preset_labels(step)
         if required_labels:
             return (
-                "Done when: save one Mark observation with a Prediction and note after required presets: "
+                "Done when: use at least one button, slider, or preset, then save one Mark observation "
+                "with a Prediction and note after required presets: "
                 f"{' -> '.join(required_labels)}; add the outcome during review."
             )
-        return "Done when: save one Mark observation with a Prediction and note; add the outcome during review."
+        return (
+            "Done when: use at least one button, slider, or preset, then save one Mark observation "
+            "with a Prediction and note; add the outcome during review."
+        )
     return "Done when: the run report, priority plot, and worksheet are saved."
 
 
@@ -4711,6 +4754,7 @@ def _mission_review_queue_card(runs: list[dict[str, Any]]) -> str:
         f"outcome: {counts.get('outcome', 0)}; "
         f"required preset: {counts.get('preset', 0)}; "
         f"note: {counts.get('note', 0)}; "
+        f"control: {counts.get('control', 0)}; "
         f"artifact: {counts.get('artifact', 0)}"
         "</p>"
         f'<p class="muted">Next review: {next_review_text}</p>'
@@ -4721,7 +4765,7 @@ def _mission_review_queue_card(runs: list[dict[str, Any]]) -> str:
 def _mission_review_queue_counts(runs: list[dict[str, Any]]) -> dict[str, int]:
     counts = {
         key: 0
-        for key in ("ready", "observation", "prediction", "outcome", "preset", "note", "artifact", "other")
+        for key in ("ready", "observation", "prediction", "outcome", "preset", "note", "control", "artifact", "other")
     }
     for run in runs:
         bucket = _mission_review_bucket(_mission_review_status(run))
@@ -4730,7 +4774,7 @@ def _mission_review_queue_counts(runs: list[dict[str, Any]]) -> dict[str, int]:
 
 
 def _mission_review_next_run(runs: list[dict[str, Any]]) -> dict[str, Any] | None:
-    priority = ("outcome", "observation", "prediction", "preset", "note", "artifact", "other")
+    priority = ("outcome", "observation", "prediction", "preset", "note", "control", "artifact", "other")
     for bucket in priority:
         for run in runs:
             if _mission_review_bucket(_mission_review_status(run)) == bucket:
@@ -4757,6 +4801,8 @@ def _mission_review_bucket(status: str) -> str:
         return "preset"
     if normalized == "ready, add note next":
         return "note"
+    if normalized == "needs learner control":
+        return "control"
     if normalized in {"needs plot", "needs worksheet"}:
         return "artifact"
     return "other"

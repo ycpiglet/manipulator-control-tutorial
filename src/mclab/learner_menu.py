@@ -25,6 +25,7 @@ from mclab.learning_guides import (
 from mclab.sim.reporting import (
     INDEX_PLOT_PRIORITY,
     _activity_mix_items,
+    _learner_control_event_count,
     _latest_observation_evidence_from_events,
     _observation_flow_text_from_events,
     _observation_next_step_text_from_events,
@@ -83,6 +84,7 @@ class LearningPathProgress:
     learner_predictions: int = 0
     learner_notes: int = 0
     learner_outcomes: int = 0
+    learner_controls: int = 0
     required_presets: int = 0
     required_presets_tried: int = 0
     next_required_preset: str = ""
@@ -1085,10 +1087,14 @@ def learning_path_completion_text(step: LearningPathStep) -> str:
         required_labels = configured_required_preset_labels(action.config_path)
         if required_labels:
             return (
-                "Done when: save one Mark observation with a Prediction and note after required presets: "
+                "Done when: use at least one button, slider, or preset, then save one Mark observation "
+                "with a Prediction and note after required presets: "
                 f"{' -> '.join(required_labels)}; add the outcome during review."
             )
-        return "Done when: save one Mark observation with a Prediction and note; add the outcome during review."
+        return (
+            "Done when: use at least one button, slider, or preset, then save one Mark observation "
+            "with a Prediction and note; add the outcome during review."
+        )
     return "Done when: the run report, priority plot, and worksheet are saved."
 
 
@@ -1109,9 +1115,11 @@ def learning_path_progress(
 ) -> LearningPathProgress:
     latest = learning_path_latest_output(step, outputs_root)
     evidence_required = learning_path_requires_evidence(step)
+    events = _read_json_list(latest / "interaction_events.json") if latest is not None else []
     markers, predictions, notes, outcomes = (
         _observation_evidence_counts(latest) if latest is not None else (0, 0, 0, 0)
     )
+    learner_controls = _learner_control_event_count(events)
     action = learning_path_target(step)
     required_total, required_tried, next_required = (
         _required_preset_progress_for_action(action, latest) if latest is not None else (0, 0, "")
@@ -1123,7 +1131,8 @@ def learning_path_progress(
         completed = latest is not None and has_worksheet and has_plot
     else:
         completed = latest is not None and (
-            not evidence_required or (markers > 0 and predictions > 0 and notes > 0 and required_ready)
+            not evidence_required
+            or (markers > 0 and predictions > 0 and notes > 0 and learner_controls > 0 and required_ready)
         )
     return LearningPathProgress(
         completed=completed,
@@ -1133,6 +1142,7 @@ def learning_path_progress(
         learner_predictions=predictions,
         learner_notes=notes,
         learner_outcomes=outcomes,
+        learner_controls=learner_controls,
         required_presets=required_total,
         required_presets_tried=required_tried,
         next_required_preset=next_required,
@@ -1171,6 +1181,12 @@ def learning_path_progress_text(
             f"Status: Needs note - latest {current.latest_output.name}"
             f"{_learning_path_evidence_suffix(current)}. "
             "Add a short note or Use live status before moving on."
+        )
+    elif current.evidence_required and current.observation_markers > 0 and current.learner_controls <= 0:
+        status = (
+            f"Status: Needs learner control - latest {current.latest_output.name}"
+            f"{_learning_path_evidence_suffix(current)}. "
+            "Use one button, slider, or preset before moving on."
         )
     else:
         status = (
@@ -1463,9 +1479,9 @@ def action_mission_evidence_text(
     if latest is None:
         return "Mission evidence: Not run yet"
 
+    events = _read_json_list(latest / "interaction_events.json")
+    learner_controls = _learner_control_event_count(events)
     markers, predictions, notes, outcomes = _observation_evidence_counts(latest)
-    if predictions > outcomes:
-        return f"Mission evidence: Outcome review pending; {_mission_evidence_counts(markers, predictions, outcomes, notes)}"
 
     if isinstance(action, MenuAction) and "hands-on" in action_tags(action):
         required_total, required_tried, next_required = _required_preset_progress_for_action(action, latest)
@@ -1477,10 +1493,17 @@ def action_mission_evidence_text(
             status = f"Needs required preset {next_required}" if next_required else "Needs required preset"
         elif notes <= 0:
             status = "Ready; add note next"
+        elif learner_controls <= 0:
+            status = "Needs learner control"
+        elif predictions > outcomes:
+            status = "Outcome review pending"
         else:
             status = "Ready for review"
         preset_text = _required_preset_progress_text(required_total, required_tried)
         return f"Mission evidence: {status}; {_mission_evidence_counts(markers, predictions, outcomes, notes)}{preset_text}"
+
+    if predictions > outcomes:
+        return f"Mission evidence: Outcome review pending; {_mission_evidence_counts(markers, predictions, outcomes, notes)}"
 
     if isinstance(action, BatchMenuAction) and action.batch_name == ALL_BATCH_NAME:
         worksheet = action_latest_worksheet(action, outputs_root)
@@ -1527,6 +1550,7 @@ def review_queue_summary_text(outputs_root: Path | None = None) -> str:
         f"outcome: {counts.get('outcome', 0)}; "
         f"required preset: {counts.get('preset', 0)}; "
         f"note: {counts.get('note', 0)}; "
+        f"control: {counts.get('control', 0)}; "
         f"artifact: {counts.get('artifact', 0)}."
     )
     next_item = _next_review_queue_item(items)
@@ -1555,8 +1579,6 @@ def _review_queue_items(outputs_root: Path) -> list[tuple[Path, str, str, float]
 
 def _review_queue_status(output_path: Path, summary: dict[str, Any]) -> str:
     markers, predictions, notes, outcomes = _observation_evidence_counts(output_path)
-    if predictions > outcomes:
-        return "Outcome review pending"
 
     if _summary_requires_hands_on_evidence(summary):
         if markers <= 0:
@@ -1568,7 +1590,14 @@ def _review_queue_status(output_path: Path, summary: dict[str, Any]) -> str:
             return f"Needs required preset {next_required}" if next_required else "Needs required preset"
         if notes <= 0:
             return "Ready; add note next"
+        if _learner_control_event_count(_read_json_list(output_path / "interaction_events.json")) <= 0:
+            return "Needs learner control"
+        if predictions > outcomes:
+            return "Outcome review pending"
         return "Ready for review"
+
+    if predictions > outcomes:
+        return "Outcome review pending"
 
     if _summary_is_all_batch(summary):
         return "Artifacts ready" if (output_path / "worksheet.md").exists() else "Needs worksheet"
@@ -1619,6 +1648,8 @@ def _review_queue_bucket(status: str) -> str:
         return "preset"
     if normalized == "ready; add note next":
         return "note"
+    if normalized == "needs learner control":
+        return "control"
     if normalized in {"needs plot", "needs worksheet"}:
         return "artifact"
     return "other"
@@ -1627,7 +1658,7 @@ def _review_queue_bucket(status: str) -> str:
 def _review_queue_counts(items: list[tuple[Path, str, str, float]]) -> dict[str, int]:
     counts = {
         key: 0
-        for key in ("ready", "observation", "prediction", "outcome", "preset", "note", "artifact", "other")
+        for key in ("ready", "observation", "prediction", "outcome", "preset", "note", "control", "artifact", "other")
     }
     for _path, _status, bucket, _modified in items:
         counts[bucket] = counts.get(bucket, 0) + 1
@@ -1635,7 +1666,7 @@ def _review_queue_counts(items: list[tuple[Path, str, str, float]]) -> dict[str,
 
 
 def _next_review_queue_item(items: list[tuple[Path, str, str, float]]) -> tuple[Path, str, str, float] | None:
-    priority = ("outcome", "observation", "prediction", "preset", "note", "artifact", "other")
+    priority = ("outcome", "observation", "prediction", "preset", "note", "control", "artifact", "other")
     for bucket in priority:
         for item in items:
             if item[2] == bucket:
