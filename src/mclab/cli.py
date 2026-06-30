@@ -100,6 +100,7 @@ def main(argv: list[str] | None = None) -> int:
         return doctor_exit_code(checks)
 
     if args.command == "run":
+        _validate_run_args(parser, args)
         config = load_config(args.config)
         runner = LABS[args.lab_name]
         output_path = runner(
@@ -136,6 +137,18 @@ def main(argv: list[str] | None = None) -> int:
 
     parser.error(f"Unknown command: {args.command}")
     return 2
+
+
+def _validate_run_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
+    viewer_only_flags = []
+    if args.realtime:
+        viewer_only_flags.append("--realtime")
+    if args.pause_at_end:
+        viewer_only_flags.append("--pause-at-end")
+    if viewer_only_flags and not args.viewer:
+        joined = " and ".join(viewer_only_flags)
+        verb = "requires" if len(viewer_only_flags) == 1 else "require"
+        parser.error(f"{joined} {verb} --viewer.")
 
 
 def _preferred_output_entry(output_path: Path) -> Path:

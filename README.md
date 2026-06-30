@@ -358,7 +358,7 @@ python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless 
 .\.venv\Scripts\python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless --plot
 ```
 
-Viewer를 띄우고 움직임을 실제 시간에 가깝게 보려면 `--headless` 대신 `--viewer --realtime`을 사용합니다. `--viewer`와 `--headless`는 동시에 쓸 수 없으며, 함께 넣으면 CLI가 바로 사용법 오류를 냅니다. 실행이 끝난 뒤 창을 유지하려면 `--pause-at-end`를 함께 붙입니다. Viewer 사이드 패널은 항상 숨겨지며, 실험 조작은 YAML config나 `MCLab Interaction` 창에서 합니다.
+Viewer를 띄우고 움직임을 실제 시간에 가깝게 보려면 `--headless` 대신 `--viewer --realtime`을 사용합니다. `--viewer`와 `--headless`는 동시에 쓸 수 없으며, 함께 넣으면 CLI가 바로 사용법 오류를 냅니다. `--realtime`과 `--pause-at-end`는 viewer 전용 옵션이므로 `--viewer` 없이 쓰면 CLI가 바로 멈춥니다. 실행이 끝난 뒤 창을 유지하려면 `--pause-at-end`를 함께 붙입니다. Viewer 사이드 패널은 항상 숨겨지며, 실험 조작은 YAML config나 `MCLab Interaction` 창에서 합니다.
 
 ```bash
 python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --viewer --realtime --pause-at-end --plot
@@ -754,7 +754,7 @@ Without activating the virtual environment on Windows:
 .\.venv\Scripts\python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless --plot
 ```
 
-Use `--viewer --realtime` instead of `--headless` to open the MuJoCo viewer and pace motion close to wall-clock time. `--viewer` and `--headless` are mutually exclusive; using both makes the CLI stop with a usage error. Add `--pause-at-end` to keep the window open after the simulation finishes. Viewer side panels are always hidden; change experiments through YAML configs or the `MCLab Interaction` window.
+Use `--viewer --realtime` instead of `--headless` to open the MuJoCo viewer and pace motion close to wall-clock time. `--viewer` and `--headless` are mutually exclusive; using both makes the CLI stop with a usage error. `--realtime` and `--pause-at-end` are viewer-only flags, so the CLI stops if they are used without `--viewer`. Add `--pause-at-end` to keep the window open after the simulation finishes. Viewer side panels are always hidden; change experiments through YAML configs or the `MCLab Interaction` window.
 
 ```bash
 python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --viewer --realtime --pause-at-end --plot

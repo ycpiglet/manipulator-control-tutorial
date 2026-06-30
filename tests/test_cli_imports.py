@@ -171,6 +171,28 @@ class CliImportTests(unittest.TestCase):
                 ]
             )
 
+    def test_cli_rejects_viewer_only_flags_without_viewer(self) -> None:
+        cases = [
+            ["--realtime"],
+            ["--pause-at-end"],
+            ["--headless", "--realtime"],
+            ["--headless", "--pause-at-end"],
+        ]
+        for extra_args in cases:
+            with self.subTest(extra_args=extra_args), patch("mclab.cli.load_config") as loader:
+                with self.assertRaises(SystemExit) as context:
+                    main(
+                        [
+                            "run",
+                            "lab04",
+                            "--config",
+                            "configs/lab04_panda/joint_pd.yaml",
+                            *extra_args,
+                        ]
+                    )
+                self.assertEqual(context.exception.code, 2)
+                loader.assert_not_called()
+
     def test_cli_opens_run_report_when_requested(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "run"
