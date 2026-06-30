@@ -1009,14 +1009,12 @@ def maybe_start_interaction_panel(
                 def apply_preset(preset_name: str) -> None:
                     set_scale_values(tuning.apply_preset(preset_name))
                     if preset_status is not None:
-                        progress = tuning.preset_progress_summary()
-                        progress_text = f"\n{progress}" if progress else ""
-                        preset_status.set(f"Applied {tuning.preset_summary(preset_name)}{progress_text}")
+                        preset_status.set(_preset_panel_status(tuning, preset_name, applied=True))
                     refresh_marker_checklist_callback()
 
                 def preview_preset(preset_name: str) -> None:
                     if preset_status is not None:
-                        preset_status.set(tuning.preset_summary(preset_name))
+                        preset_status.set(_preset_panel_status(tuning, preset_name))
 
                 tk.Button(tuning_header, text="Reset sliders", command=reset_sliders).grid(
                     row=0,
@@ -1050,7 +1048,7 @@ def maybe_start_interaction_panel(
                         )
                         button.grid(row=index // 2, column=index % 2, padx=4, pady=3, sticky="ew")
                         button.bind("<Enter>", lambda _event, preset_name=preset.name: preview_preset(preset_name))
-                    preset_status = tk.StringVar(value="Hover a preset to preview its slider values.")
+                    preset_status = tk.StringVar(value=_preset_panel_status(tuning))
                     tk.Label(
                         frame,
                         textvariable=preset_status,
@@ -1338,6 +1336,24 @@ def _preset_display_label(preset: TuningPreset) -> str:
 
 def _preset_button_label(preset: TuningPreset) -> str:
     return _preset_display_label(preset)
+
+
+def _preset_panel_status(
+    tuning: LiveTuning,
+    preset_name: str | None = None,
+    *,
+    applied: bool = False,
+) -> str:
+    if preset_name is None:
+        main = "Hover a preset to preview its slider values."
+    else:
+        summary = tuning.preset_summary(preset_name)
+        main = f"Applied {summary}" if applied else summary
+
+    progress = tuning.preset_progress_summary()
+    if progress:
+        return f"{main}\n{progress}"
+    return main
 
 
 def _observation_marker_status_message(
