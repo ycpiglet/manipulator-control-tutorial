@@ -280,7 +280,7 @@ class LearnerMenuTests(unittest.TestCase):
         )
         self.assertEqual(
             learning_path_completion_text(LEARNING_PATH[1]),
-            "Done when: save one Mark observation with a Prediction; add the outcome during review.",
+            "Done when: save one Mark observation with a Prediction and note; add the outcome during review.",
         )
         self.assertEqual(
             learning_path_completion_text(LEARNING_PATH[-1]),
@@ -432,6 +432,25 @@ class LearnerMenuTests(unittest.TestCase):
                                 "question": "Question: demo?",
                                 "prediction": "More damping should settle faster.",
                                 "outcome": "Matched",
+                            },
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            needs_note = learning_path_progress(second_step, outputs)
+            needs_note_summary = learning_path_summary_text(learning_path_progress_items(outputs))
+
+            (interactive_dir / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "question": "Question: demo?",
+                                "prediction": "More damping should settle faster.",
+                                "outcome": "Matched",
                                 "note": "Saw the mass settle.",
                             },
                         }
@@ -469,6 +488,19 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(needs_outcome.learner_outcomes, 0)
         self.assertIn("Outcome review pending: 1 hands-on step(s).", needs_outcome_summary)
         self.assertIn("Add one Prediction outcome while reviewing.", learning_path_progress_text(second_step, needs_outcome))
+
+        self.assertFalse(needs_note.completed)
+        self.assertEqual(needs_note.learner_notes, 0)
+        self.assertIn("Progress: 1/11 complete", needs_note_summary)
+        self.assertIn("Evidence pending: 1 hands-on step(s).", needs_note_summary)
+        self.assertIn(
+            "Status: Needs note - latest run_lab01_interactive (1 observation, 1 prediction, 1 outcome)",
+            learning_path_progress_text(second_step, needs_note),
+        )
+        self.assertIn(
+            "Add a short note or Use live status before moving on.",
+            learning_path_progress_text(second_step, needs_note),
+        )
 
         self.assertTrue(complete_progress.completed)
         self.assertEqual(complete_progress.observation_markers, 1)

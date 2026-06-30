@@ -2639,7 +2639,7 @@ def _hands_on_evidence_section(summary: dict[str, Any], events: list[dict[str, A
 
 def _run_completion_text(summary: dict[str, Any]) -> str:
     if _summary_requires_hands_on_evidence(summary):
-        return "Done when: save one Mark observation with a Prediction; add the outcome during review."
+        return "Done when: save one Mark observation with a Prediction and note; add the outcome during review."
     return "Done when: report.html, priority plot, and worksheet.md are saved."
 
 
@@ -3663,7 +3663,9 @@ def _learning_path_item(step: IndexPathStep, runs: list[dict[str, Any]]) -> dict
     outcomes = int(run.get("learner_outcomes", 0)) if run is not None else 0
     required_total, required_tried, next_required = _learning_path_required_preset_progress(step, run)
     required_ready = required_total == 0 or required_tried >= required_total
-    completed = run is not None and (not evidence_required or (markers > 0 and predictions > 0 and required_ready))
+    completed = run is not None and (
+        not evidence_required or (markers > 0 and predictions > 0 and notes > 0 and required_ready)
+    )
     return {
         "step": step,
         "run": run,
@@ -3771,6 +3773,12 @@ def _learning_path_card(item: dict[str, Any]) -> str:
             f'<span class="status">Needs required preset{escape(_learning_path_evidence_suffix(item))}</span>'
             f'<p class="muted">Latest: <a href="{escape(str(run["report"]))}">{escape(str(run["name"]))}</a></p>'
             f'<p class="muted">{escape(next_text)}</p>'
+        )
+    elif int(item["observation_markers"]) > 0 and int(item["learner_notes"]) == 0:
+        status = (
+            f'<span class="status">Needs note{escape(_learning_path_evidence_suffix(item))}</span>'
+            f'<p class="muted">Latest: <a href="{escape(str(run["report"]))}">{escape(str(run["name"]))}</a></p>'
+            '<p class="muted">Add a short note or Use live status before moving on.</p>'
         )
     else:
         status = (
@@ -3886,10 +3894,10 @@ def _learning_path_completion_text(step: IndexPathStep) -> str:
         required_labels = _index_step_required_preset_labels(step)
         if required_labels:
             return (
-                "Done when: save one Mark observation with a Prediction after required presets: "
+                "Done when: save one Mark observation with a Prediction and note after required presets: "
                 f"{' -> '.join(required_labels)}; add the outcome during review."
             )
-        return "Done when: save one Mark observation with a Prediction; add the outcome during review."
+        return "Done when: save one Mark observation with a Prediction and note; add the outcome during review."
     return "Done when: the run report, priority plot, and worksheet are saved."
 
 

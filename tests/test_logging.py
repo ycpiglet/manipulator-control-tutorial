@@ -363,7 +363,7 @@ class LoggingTests(unittest.TestCase):
 
             html = write_run_report(output).read_text(encoding="utf-8")
             self.assertIn("Hands-on Evidence", html)
-            self.assertIn("save one Mark observation with a Prediction; add the outcome during review.", html)
+            self.assertIn("save one Mark observation with a Prediction and note; add the outcome during review.", html)
             self.assertIn("Needs observation", html)
             self.assertIn("write a prediction and note", html)
 
@@ -870,7 +870,7 @@ class LoggingTests(unittest.TestCase):
                 html,
             )
             self.assertIn(
-                "<strong>Done when:</strong> save one Mark observation with a Prediction; add the outcome during review.",
+                "<strong>Done when:</strong> save one Mark observation with a Prediction and note; add the outcome during review.",
                 html,
             )
             self.assertIn("configs/lab03_2dof/condition_aware_dls_2dof.yaml", html)
@@ -1086,6 +1086,29 @@ class LoggingTests(unittest.TestCase):
                                 "question": "Question: demo?",
                                 "prediction": "More damping should settle faster.",
                                 "outcome": "Matched",
+                            },
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
+            self.assertIn("1/11 steps complete. Evidence pending: 1 hands-on step(s).", html)
+            self.assertIn("Next: 2. Disturb and tune", html)
+            self.assertIn("Needs note (1 observation, 1 prediction, 1 outcome)", html)
+            self.assertIn("Add a short note or Use live status before moving on.", html)
+
+            (interactive / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "question": "Question: demo?",
+                                "prediction": "More damping should settle faster.",
+                                "outcome": "Matched",
                                 "note": "The mass settled faster after damping changed.",
                             },
                         }
@@ -1153,7 +1176,7 @@ class LoggingTests(unittest.TestCase):
 
             self.assertIn("10. Touch virtual wall", html)
             self.assertIn(
-                "<strong>Done when:</strong> save one Mark observation with a Prediction after required presets: "
+                "<strong>Done when:</strong> save one Mark observation with a Prediction and note after required presets: "
                 "Close wall -&gt; Back away; add the outcome during review.",
                 html,
             )

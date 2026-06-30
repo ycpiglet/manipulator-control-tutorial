@@ -1316,7 +1316,7 @@ def _panel_guide_rows(guide: Any | None) -> list[tuple[str, str]]:
 
 
 def _panel_completion_text() -> str:
-    return "write a Prediction, choose an outcome if known, then press Mark observation."
+    return "write a Prediction and note, choose an outcome if known, then press Mark observation."
 
 
 def _panel_viewer_legend_rows(guide: Any | None) -> list[tuple[str, str]]:

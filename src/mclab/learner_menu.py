@@ -1014,10 +1014,10 @@ def learning_path_completion_text(step: LearningPathStep) -> str:
         required_labels = configured_required_preset_labels(action.config_path)
         if required_labels:
             return (
-                "Done when: save one Mark observation with a Prediction after required presets: "
+                "Done when: save one Mark observation with a Prediction and note after required presets: "
                 f"{' -> '.join(required_labels)}; add the outcome during review."
             )
-        return "Done when: save one Mark observation with a Prediction; add the outcome during review."
+        return "Done when: save one Mark observation with a Prediction and note; add the outcome during review."
     return "Done when: the run report, priority plot, and worksheet are saved."
 
 
@@ -1046,7 +1046,9 @@ def learning_path_progress(
         _required_preset_progress_for_action(action, latest) if latest is not None else (0, 0, "")
     )
     required_ready = required_total == 0 or required_tried >= required_total
-    completed = latest is not None and (not evidence_required or (markers > 0 and predictions > 0 and required_ready))
+    completed = latest is not None and (
+        not evidence_required or (markers > 0 and predictions > 0 and notes > 0 and required_ready)
+    )
     return LearningPathProgress(
         completed=completed,
         latest_output=latest,
@@ -1087,6 +1089,12 @@ def learning_path_progress_text(
         status = (
             f"Status: Needs required preset - latest {current.latest_output.name}"
             f"{_learning_path_evidence_suffix(current)}. {next_text}"
+        )
+    elif current.observation_markers > 0 and current.learner_notes == 0:
+        status = (
+            f"Status: Needs note - latest {current.latest_output.name}"
+            f"{_learning_path_evidence_suffix(current)}. "
+            "Add a short note or Use live status before moving on."
         )
     else:
         status = (
