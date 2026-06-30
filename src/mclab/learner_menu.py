@@ -1248,6 +1248,47 @@ def action_latest_evidence_text(
     return f"Latest evidence: {'; '.join(parts)}"
 
 
+def action_mission_evidence_text(
+    action: MenuAction | BatchMenuAction,
+    outputs_root: Path | None = None,
+) -> str:
+    latest = action_latest_output(action, outputs_root)
+    if latest is None:
+        return "Mission evidence: Not run yet"
+
+    markers, predictions, notes, outcomes = _observation_evidence_counts(latest)
+    if predictions > outcomes:
+        return f"Mission evidence: Outcome review pending; {_mission_evidence_counts(markers, predictions, outcomes, notes)}"
+
+    if isinstance(action, MenuAction) and "hands-on" in action_tags(action):
+        if markers <= 0:
+            status = "Needs observation"
+        elif predictions <= 0:
+            status = "Needs prediction"
+        elif notes <= 0:
+            status = "Ready; add note next"
+        else:
+            status = "Ready for review"
+        return f"Mission evidence: {status}; {_mission_evidence_counts(markers, predictions, outcomes, notes)}"
+
+    plot = action_latest_plot(action, outputs_root)
+    worksheet = action_latest_worksheet(action, outputs_root)
+    if plot is None:
+        return "Mission evidence: Needs plot; rerun with plots enabled"
+    if worksheet is None:
+        return "Mission evidence: Needs worksheet; rerun or regenerate review artifacts"
+    return f"Mission evidence: Artifacts ready; plot {plot.name}; worksheet {worksheet.name}"
+
+
+def _mission_evidence_counts(markers: int, predictions: int, outcomes: int, notes: int) -> str:
+    return (
+        f"{markers} observation{'s' if markers != 1 else ''}, "
+        f"{predictions} prediction{'s' if predictions != 1 else ''}, "
+        f"{outcomes} outcome{'s' if outcomes != 1 else ''}, "
+        f"{notes} note{'s' if notes != 1 else ''}"
+    )
+
+
 def action_preset_evidence_text(action: MenuAction, outputs_root: Path | None = None) -> str:
     labels = list(configured_preset_labels(action.config_path))
     if len(labels) < 2:
@@ -2134,6 +2175,7 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
         f"{action_history_text(action, outputs_root)}\n"
         f"{action_evidence_text(action, outputs_root)}\n"
         f"{action_latest_evidence_text(action, outputs_root)}\n"
+        f"{action_mission_evidence_text(action, outputs_root)}\n"
         f"{preset_evidence_text}"
         f"{action_next_cue_text(action, outputs_root)}\n"
         f"{action_plot_text(action, outputs_root)}\n"
@@ -2338,6 +2380,7 @@ def _action_matches_terms(action: MenuAction, terms: list[str]) -> bool:
         action_viewer_text(action),
         action_plan_text(action),
         action_mission_text(action),
+        "mission evidence artifact observation prediction outcome note proof",
         "next cue run preset observation outcome replay compare",
         " ".join(configured_preset_labels(action.config_path)),
         " ".join(configured_preset_purposes(action.config_path)),
@@ -3168,6 +3211,7 @@ def lesson_text_for_batch(action: BatchMenuAction, outputs_root: Path | None = N
         f"{batch_plan_text(action)}\n"
         f"{action_mission_text(action)}\n"
         f"{action_history_text(action, outputs_root)}\n"
+        f"{action_mission_evidence_text(action, outputs_root)}\n"
         f"{action_plot_text(action, outputs_root)}\n"
         f"{action_plot_review_text(action, outputs_root)}\n"
         f"{action_worksheet_text(action, outputs_root)}\n"

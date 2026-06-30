@@ -40,6 +40,7 @@ from mclab.learner_menu import (  # noqa: E402
     action_latest_tuned_config,
     action_latest_worksheet,
     action_mission_text,
+    action_mission_evidence_text,
     action_next_cue_text,
     action_plan_text,
     action_plot_review_text,
@@ -216,6 +217,7 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertIn("Setup:", text)
                 self.assertIn("Mission:", text)
                 self.assertIn(action_mission_text(action), text)
+                self.assertIn("Mission evidence:", text)
                 self.assertIn("History:", text)
                 self.assertIn("Try:", text)
                 self.assertIn("Watch:", text)
@@ -570,6 +572,7 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertIn("History:", text)
                 self.assertIn("Evidence:", text)
                 self.assertIn("Latest evidence:", text)
+                self.assertIn("Mission evidence:", text)
                 self.assertIn("Controls:", text)
                 self.assertIn("Viewer:", text)
                 self.assertIn("Try:", text)
@@ -1302,6 +1305,97 @@ class LearnerMenuTests(unittest.TestCase):
             missing_outcome_text = action_latest_evidence_text(MENU_ACTIONS[0], outputs)
             self.assertIn("Outcome: missing review", missing_outcome_text)
             self.assertIn("Outcome: missing review", lesson_text(MENU_ACTIONS[0], outputs))
+
+    def test_action_mission_evidence_summarizes_latest_proof_status(self) -> None:
+        lab02_interactive = next(
+            action
+            for action in MENU_ACTIONS
+            if action.config_path == "configs/lab02_pid/interactive_disturbance.yaml"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+
+            self.assertEqual(action_mission_evidence_text(MENU_ACTIONS[0], outputs), "Mission evidence: Not run yet")
+
+            auto_path = outputs / "run_lab01"
+            auto_path.mkdir()
+            (auto_path / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": MENU_ACTIONS[0].lab_name,
+                        "config_path": MENU_ACTIONS[0].config_path,
+                        "config_name": Path(MENU_ACTIONS[0].config_path).stem,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                action_mission_evidence_text(MENU_ACTIONS[0], outputs),
+                "Mission evidence: Needs plot; rerun with plots enabled",
+            )
+            (auto_path / "plots").mkdir()
+            (auto_path / "plots" / "position.png").write_bytes(b"fake-png")
+            (auto_path / "worksheet.md").write_text("# Worksheet\n", encoding="utf-8")
+            self.assertEqual(
+                action_mission_evidence_text(MENU_ACTIONS[0], outputs),
+                "Mission evidence: Artifacts ready; plot position.png; worksheet worksheet.md",
+            )
+
+            interactive_path = outputs / "run_lab02_interactive"
+            interactive_path.mkdir()
+            (interactive_path / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": lab02_interactive.lab_name,
+                        "config_path": lab02_interactive.config_path,
+                        "config_name": Path(lab02_interactive.config_path).stem,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                action_mission_evidence_text(lab02_interactive, outputs),
+                "Mission evidence: Needs observation; 0 observations, 0 predictions, 0 outcomes, 0 notes",
+            )
+
+            (interactive_path / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {"prediction": "Higher Kp will overshoot.", "note": "Overshoot was visible."},
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                action_mission_evidence_text(lab02_interactive, outputs),
+                "Mission evidence: Outcome review pending; 1 observation, 1 prediction, 0 outcomes, 1 note",
+            )
+
+            (interactive_path / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "prediction": "Higher Kp will overshoot.",
+                                "outcome": "Matched",
+                                "note": "Overshoot was visible.",
+                            },
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                action_mission_evidence_text(lab02_interactive, outputs),
+                "Mission evidence: Ready for review; 1 observation, 1 prediction, 1 outcome, 1 note",
+            )
+            self.assertIn("Mission evidence: Ready for review", lesson_text(lab02_interactive, outputs))
 
     def test_action_preset_evidence_summarizes_latest_preset_progress(self) -> None:
         lab02_interactive = next(
