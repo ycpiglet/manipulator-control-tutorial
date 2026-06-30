@@ -917,7 +917,23 @@ def maybe_start_interaction_panel(
                 marker_prediction = tk.StringVar(value="")
                 marker_outcome = tk.StringVar(value=PREDICTION_OUTCOME_UNJUDGED)
                 marker_note = tk.StringVar(value="")
+                marker_checklist = tk.StringVar(
+                    value=_observation_checklist_status("", PREDICTION_OUTCOME_UNJUDGED, "")
+                )
                 marker_prompt = observation_prompt_for_guide(guide)
+
+                def refresh_marker_checklist(*_args: Any) -> None:
+                    marker_checklist.set(
+                        _observation_checklist_status(
+                            marker_prediction.get(),
+                            marker_outcome.get(),
+                            marker_note.get(),
+                        )
+                    )
+
+                marker_prediction.trace_add("write", refresh_marker_checklist)
+                marker_outcome.trace_add("write", refresh_marker_checklist)
+                marker_note.trace_add("write", refresh_marker_checklist)
 
                 def use_live_status_note() -> None:
                     note = _live_status_observation_note(status)
@@ -990,6 +1006,14 @@ def maybe_start_interaction_panel(
                     sticky="ew",
                     padx=(12, 0),
                 )
+                marker_row += 1
+                tk.Label(
+                    marker_frame,
+                    textvariable=marker_checklist,
+                    anchor="w",
+                    justify="left",
+                    wraplength=430,
+                ).grid(row=marker_row, column=0, columnspan=2, sticky="ew", pady=(4, 0))
                 marker_row += 1
                 marker_buttons = tk.Frame(marker_frame)
                 marker_buttons.grid(row=marker_row, column=0, columnspan=2, sticky="w", pady=(6, 0))
@@ -1112,6 +1136,18 @@ def _observation_marker_status_message(event_log: InteractionLog, prediction: st
     if prediction.strip():
         return f"Marked observation {count} with prediction - learning path evidence saved."
     return f"Marked observation {count} - add a prediction next time to complete the learning path."
+
+
+def _observation_checklist_status(prediction: str, outcome: str, note: str) -> str:
+    prediction_state = "ready" if prediction.strip() else "missing"
+    outcome_state = "selected" if _prediction_outcome_value(outcome) else "optional"
+    note_state = "ready" if note.strip() else "optional"
+    return (
+        "Evidence checklist: "
+        f"Prediction {prediction_state}; "
+        f"Outcome {outcome_state}; "
+        f"Note {note_state}."
+    )
 
 
 def _prediction_outcome_value(value: str) -> str:

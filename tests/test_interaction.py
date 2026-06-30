@@ -22,6 +22,7 @@ from mclab.sim.interaction import (  # noqa: E402
     _bounded_panel_dimension,
     _changed_tuning_summary,
     _live_status_observation_note,
+    _observation_checklist_status,
     _panel_guide_rows,
     _panel_guide_title,
     _panel_viewer_legend_rows,
@@ -545,6 +546,16 @@ class KeyForcePulseTests(unittest.TestCase):
         self.assertEqual(
             _observation_marker_status_message(log, "More damping should settle faster."),
             "Marked observation 2 with prediction - learning path evidence saved.",
+        )
+
+    def test_observation_checklist_status_guides_before_marking(self) -> None:
+        self.assertEqual(
+            _observation_checklist_status("", "Not judged yet", ""),
+            "Evidence checklist: Prediction missing; Outcome optional; Note optional.",
+        )
+        self.assertEqual(
+            _observation_checklist_status("More damping should settle faster.", "Matched", "Energy dropped."),
+            "Evidence checklist: Prediction ready; Outcome selected; Note ready.",
         )
 
     def test_live_status_formats_dashboard_values(self) -> None:
