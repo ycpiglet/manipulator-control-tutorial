@@ -66,6 +66,27 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("MCLab Doctor", printed)
         self.assertIn("[OK] Python", printed)
 
+    def test_cli_generates_outputs_index(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp) / "outputs"
+            index_path = output_dir / "index.html"
+
+            args = build_parser().parse_args(["index", "--output-dir", str(output_dir), "--open"])
+            self.assertEqual(args.command, "index")
+            self.assertEqual(args.output_dir, str(output_dir))
+            self.assertTrue(args.open)
+
+            with (
+                patch("mclab.cli.write_outputs_index", return_value=index_path) as writer,
+                patch("mclab.cli._open_path") as opener,
+                patch("builtins.print") as printer,
+            ):
+                self.assertEqual(main(["index", "--output-dir", str(output_dir), "--open"]), 0)
+
+            writer.assert_called_once_with(output_dir)
+            opener.assert_called_once_with(index_path)
+            printer.assert_called_once_with(f"Outputs index: {index_path}")
+
     def test_cli_opens_batch_report_when_requested(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "batch"

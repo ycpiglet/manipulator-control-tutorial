@@ -103,6 +103,7 @@ Implemented and verified:
 - CLI `--realtime` and `--pause-at-end` require `--viewer` so viewer-only options are never silently ignored in headless runs
 - CLI `--plots` requires `--plot` so plot preset selections are never silently ignored
 - CLI run and batch completion output lists key artifact paths such as report, worksheet, plots, and comparison plots
+- CLI `python -m mclab index --open` regenerates and opens `outputs/index.html` without launching the learner menu
 - Interactive `MCLab Interaction` quick presets, purpose/value previews, and per-slider step buttons for representative damping, PID, 2DOF reach, Panda reach, and virtual wall parameter sets
 - Lab03 2DOF interactive viewer demos include Shoulder/Elbow pulse buttons for live joint-disturbance recovery observations
 - Interactive preset groups show a compare-in-order hint so learners try multiple parameter regimes before marking an observation

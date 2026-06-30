@@ -13,6 +13,7 @@ from .config import load_config
 from .doctor import doctor_exit_code, format_doctor_report, run_doctor_checks
 from .learner_menu import main as learner_menu_main
 from .labs import lab01_msd, lab02_pid, lab03_2dof, lab04_panda
+from .sim.reporting import write_outputs_index
 
 
 LabRunner = Callable[..., Path]
@@ -46,6 +47,10 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("list", help="List available labs.")
     subparsers.add_parser("menu", help="Open the learner launcher menu.")
     subparsers.add_parser("doctor", help="Check local setup, packages, configs, assets, and outputs.")
+
+    index_parser = subparsers.add_parser("index", help="Generate the outputs review index.")
+    index_parser.add_argument("--output-dir", default="outputs", help="Outputs root directory.")
+    index_parser.add_argument("--open", action="store_true", help="Open the generated index after completion.")
 
     run_parser = subparsers.add_parser("run", help="Run a lab.")
     run_parser.add_argument("lab_name", choices=sorted(LABS), help="Lab to run.")
@@ -98,6 +103,13 @@ def main(argv: list[str] | None = None) -> int:
         checks = run_doctor_checks()
         print(format_doctor_report(checks))
         return doctor_exit_code(checks)
+
+    if args.command == "index":
+        index_path = write_outputs_index(Path(args.output_dir))
+        print(f"Outputs index: {index_path}")
+        if args.open:
+            _open_path(index_path)
+        return 0
 
     if args.command == "run":
         _validate_run_args(parser, args)
