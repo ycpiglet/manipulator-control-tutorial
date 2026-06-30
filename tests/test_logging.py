@@ -1468,6 +1468,13 @@ class LoggingTests(unittest.TestCase):
                 "Status: Error [m]=0.0123456, Control [N]=4.2, Mode=observe",
                 html,
             )
+            self.assertIn(
+                "Observation flow: 2 markers; first prediction saved, outcome missing -&gt; "
+                "latest prediction saved, outcome Surprised, "
+                "note Settling: The trace settled faster after the preset. | Changed values: Damping=5.0, "
+                "status Error [m]=0.0123456, Control [N]=4.2, Mode=observe",
+                html,
+            )
             self.assertNotIn("Old prediction should not be summarized.", html)
 
     def test_outputs_index_shows_mission_review_queue(self) -> None:

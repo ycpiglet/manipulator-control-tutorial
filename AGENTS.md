@@ -148,6 +148,7 @@ Implemented and verified:
 - Learner menu scenario evidence labels for latest observation markers, predictions, learner notes, and pending outcome review
 - Learner menu and outputs index latest-evidence summaries flag missing prediction outcome review
 - Learner menu and outputs index latest-evidence summaries split multi-part learner notes into `Note evidence` items
+- Learner menu and outputs index show an `Observation flow` summary from first marker state to latest marker state
 - Recommended learning path progress in the menu and outputs index requires prediction-bearing observation markers for hands-on steps
 - Recommended learning path cards show a `Done when` completion criterion for auto, hands-on, and batch steps
 - Recommended learning path summary flags completed hands-on steps that still need prediction outcome review

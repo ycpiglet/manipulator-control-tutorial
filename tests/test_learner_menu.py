@@ -43,6 +43,7 @@ from mclab.learner_menu import (  # noqa: E402
     action_mission_text,
     action_mission_evidence_text,
     action_next_cue_text,
+    action_observation_flow_text,
     action_plan_text,
     action_plot_review_text,
     action_plot_text,
@@ -1500,6 +1501,7 @@ class LearnerMenuTests(unittest.TestCase):
             )
 
             text = action_latest_evidence_text(MENU_ACTIONS[0], outputs)
+            flow = action_observation_flow_text(MENU_ACTIONS[0], outputs)
             lesson = lesson_text(MENU_ACTIONS[0], outputs)
 
             self.assertIn("Latest evidence:", text)
@@ -1512,6 +1514,13 @@ class LearnerMenuTests(unittest.TestCase):
             )
             self.assertIn("Status: Position [m]=0.125", text)
             self.assertIn(text, lesson)
+            self.assertIn(
+                "Observation flow: 1 marker; prediction saved, outcome Matched, "
+                "note Plot: Saw overshoot in the position plot. | Changed values: damping=0.8, "
+                "status Position [m]=0.125, Energy [J]=0.040",
+                flow,
+            )
+            self.assertIn(flow, lesson)
 
             (run_path / "interaction_events.json").write_text(
                 json.dumps(

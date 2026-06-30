@@ -3257,6 +3257,32 @@ def _observation_timeline_items(events: list[dict[str, Any]], *, limit: int | No
     return items
 
 
+def _observation_flow_text_from_events(events: list[dict[str, Any]]) -> str:
+    items = _observation_timeline_items(events)
+    if not items:
+        return ""
+    if len(items) == 1:
+        return f"Observation flow: 1 marker; {_observation_flow_item_summary(items[0], include_note=True)}"
+    first = items[0]
+    latest = items[-1]
+    return (
+        f"Observation flow: {len(items)} markers; "
+        f"first {_observation_flow_item_summary(first, include_note=False)} -> "
+        f"latest {_observation_flow_item_summary(latest, include_note=True)}"
+    )
+
+
+def _observation_flow_item_summary(item: dict[str, str], *, include_note: bool) -> str:
+    prefix = f"{item['time']} s " if item["time"] and item["time"] != "n/a" else ""
+    parts = ["prediction saved" if item["prediction"] else "prediction missing"]
+    parts.append(f"outcome {item['outcome']}" if item["outcome"] else "outcome missing")
+    if include_note and item["note"]:
+        parts.append(f"note {_short_evidence_text(item['note'], max_length=88)}")
+    if include_note and item["status"]:
+        parts.append(f"status {_short_evidence_text(item['status'], max_length=64)}")
+    return prefix + ", ".join(parts)
+
+
 def _observation_markers_section(events: list[dict[str, Any]]) -> str:
     markers = [event for event in events if _is_observation_marker(event)]
     if not markers:
@@ -3710,6 +3736,7 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
         )
         outcome_counts = _observation_outcome_counts_from_events(interaction_events)
         latest_evidence = _latest_observation_evidence_from_events(interaction_events)
+        observation_flow = _observation_flow_text_from_events(interaction_events)
         plots = _discover_run_plots(child)
         runs.append(
             {
@@ -3733,6 +3760,7 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
                 "learner_outcomes": learner_outcomes,
                 "outcome_counts": outcome_counts,
                 "latest_evidence": latest_evidence,
+                "observation_flow": observation_flow,
                 "activity_mix": _activity_mix_index_text(interaction_events),
                 "mission_evidence": _mission_evidence_index_text(summary, interaction_events, plots, config),
                 "config": config,
@@ -4030,6 +4058,7 @@ def _learning_path_card(item: dict[str, Any]) -> str:
     run = item["run"]
     quick_links = _learning_path_quick_links(run)
     latest_evidence = _learning_path_latest_evidence(run)
+    observation_flow = _learning_path_observation_flow(run)
     activity_mix = _learning_path_activity_mix(run)
     mission_evidence = _learning_path_mission_evidence(run)
     learning_cue = _learning_path_learning_cue(step)
@@ -4093,6 +4122,7 @@ def _learning_path_card(item: dict[str, Any]) -> str:
         f"{learning_cue}"
         f"{status}"
         f"{latest_evidence}"
+        f"{observation_flow}"
         f"{activity_mix}"
         f"{mission_evidence}"
         f"{quick_links}"
@@ -4108,6 +4138,15 @@ def _learning_path_latest_evidence(run: dict[str, Any] | None) -> str:
     if not latest:
         return ""
     return f'<p class="muted">Latest evidence: {escape(latest)}</p>'
+
+
+def _learning_path_observation_flow(run: dict[str, Any] | None) -> str:
+    if run is None:
+        return ""
+    flow = str(run.get("observation_flow") or "").strip()
+    if not flow:
+        return ""
+    return f'<p class="muted">{escape(flow)}</p>'
 
 
 def _learning_path_activity_mix(run: dict[str, Any] | None) -> str:
@@ -4494,6 +4533,9 @@ def _run_evidence_cell(run: dict[str, Any]) -> str:
     latest = str(run.get("latest_evidence") or "").strip()
     if latest:
         parts.append(f"Latest: {latest}")
+    flow = str(run.get("observation_flow") or "").strip()
+    if flow:
+        parts.append(flow)
     return ", ".join(parts)
 
 

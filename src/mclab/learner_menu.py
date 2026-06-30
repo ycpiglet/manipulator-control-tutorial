@@ -25,6 +25,7 @@ from mclab.sim.reporting import (
     INDEX_PLOT_PRIORITY,
     _activity_mix_items,
     _latest_observation_evidence_from_events,
+    _observation_flow_text_from_events,
     plot_guidance,
     write_outputs_index,
 )
@@ -1372,6 +1373,16 @@ def action_latest_evidence_text(
     return f"Latest evidence: {evidence}"
 
 
+def action_observation_flow_text(
+    action: MenuAction | BatchMenuAction,
+    outputs_root: Path | None = None,
+) -> str:
+    latest = action_latest_output(action, outputs_root)
+    if latest is None:
+        return ""
+    return _observation_flow_text_from_events(_read_json_list(latest / "interaction_events.json"))
+
+
 def action_mission_evidence_text(
     action: MenuAction | BatchMenuAction,
     outputs_root: Path | None = None,
@@ -2552,6 +2563,8 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
     preset_evidence_text = f"{preset_evidence}\n" if preset_evidence else ""
     activity_mix = action_activity_mix_text(action, outputs_root)
     activity_mix_text = f"{activity_mix}\n" if activity_mix else ""
+    observation_flow = action_observation_flow_text(action, outputs_root)
+    observation_flow_text = f"{observation_flow}\n" if observation_flow else ""
     readiness = action_readiness(action)
     setup_detail = f" - {readiness.detail}" if readiness.status != "ok" and readiness.detail else ""
     setup_fix = f" Fix: {readiness.fix}" if readiness.status != "ok" and readiness.fix else ""
@@ -2564,6 +2577,7 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
         f"{action_history_text(action, outputs_root)}\n"
         f"{action_evidence_text(action, outputs_root)}\n"
         f"{action_latest_evidence_text(action, outputs_root)}\n"
+        f"{observation_flow_text}"
         f"{action_mission_evidence_text(action, outputs_root)}\n"
         f"{preset_evidence_text}"
         f"{activity_mix_text}"
