@@ -295,6 +295,7 @@ class KeyForcePulseTests(unittest.TestCase):
             tuning.preset_summary("aggressive"),
             "Aggressive: Fast response with lower damping.; Kp=100, Kd=2",
         )
+        self.assertEqual(tuning.preset_comparison_hint(), "")
         self.assertEqual(tuning.preset_summary("missing"), "")
 
     def test_tuning_presets_from_config_filters_to_known_numeric_sliders(self) -> None:
@@ -328,6 +329,18 @@ class KeyForcePulseTests(unittest.TestCase):
         self.assertEqual(
             tuning.preset_summary("calm"),
             "Calm: Slow the response for inspection.; Kp=20, Kd=10",
+        )
+
+        comparison = LiveTuning(
+            specs,
+            presets=[
+                TuningPreset("soft", "Soft", {"kp": 20.0}),
+                TuningPreset("stiff", "Stiff", {"kp": 80.0}),
+            ],
+        )
+        self.assertEqual(
+            comparison.preset_comparison_hint(),
+            "Compare presets: Soft -> Stiff. Watch live status, then save one Mark observation.",
         )
 
     def test_interactive_configs_expose_quick_presets(self) -> None:

@@ -70,6 +70,7 @@ from mclab.learner_menu import (  # noqa: E402
     learning_path_text,
     lesson_text_for_batch,
     lesson_text,
+    configured_preset_comparison,
     configured_preset_labels,
     configured_preset_purposes,
     launch_action_latest_output,
@@ -755,8 +756,16 @@ class LearnerMenuTests(unittest.TestCase):
             "Damped PD: Show damping reducing overshoot.",
             configured_preset_purposes(lab02_interactive.config_path),
         )
+        self.assertEqual(
+            configured_preset_comparison(lab02_interactive.config_path),
+            "Gentle P -> Damped PD -> Aggressive PID; watch live status, then mark one observation.",
+        )
         self.assertIn("Presets: Gentle P, Damped PD, Aggressive PID", lesson_text(lab02_interactive))
         self.assertIn("Preset purpose: Gentle P: Slow but calm disturbance recovery.", lesson_text(lab02_interactive))
+        self.assertIn(
+            "Preset compare: Gentle P -> Damped PD -> Aggressive PID; watch live status, then mark one observation.",
+            lesson_text(lab02_interactive),
+        )
         self.assertIn("Presets: Low DLS damping, Balanced DLS, High DLS damping", lesson_text(lab03_dls))
         self.assertIn("Presets: Early damping, Balanced schedule, Late damping", lesson_text(lab03_condition_dls))
         self.assertIn("Presets: Soft reach, Default reach, Far target", lesson_text(lab04_cartesian))
@@ -876,6 +885,8 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(("Lab04 Panda Manipulator", "Cartesian interactive"), preset_labels)
         preset_purpose_labels = {(action.group, action.label) for action in filter_menu_actions("safer joints")}
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF DLS singularity"), preset_purpose_labels)
+        preset_compare_labels = {(action.group, action.label) for action in filter_menu_actions("mark one observation")}
+        self.assertIn(("Lab02 PID Control", "Interactive"), preset_compare_labels)
 
         value_labels = {(action.group, action.label) for action in filter_menu_actions("anti_windup=true")}
         self.assertIn(("Lab02 PID Control", "Anti-windup"), value_labels)

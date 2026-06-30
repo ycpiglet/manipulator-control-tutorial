@@ -1828,6 +1828,8 @@ def _configured_presets_section(config: dict[str, Any]) -> str:
     if not presets:
         return ""
     cards = "".join(_configured_preset_card(preset) for preset in presets[:6])
+    comparison_text = _configured_preset_comparison_text(presets)
+    comparison = f'<p class="empty">{escape(comparison_text)}</p>' if comparison_text else ""
     count_text = (
         f"Showing the first 6 of {len(presets)} configured presets."
         if len(presets) > 6
@@ -1837,6 +1839,7 @@ def _configured_presets_section(config: dict[str, Any]) -> str:
         "<section>"
         "<h2>Configured Presets</h2>"
         f'<p class="empty">{escape(count_text)} These are the Quick presets shown in the interaction panel.</p>'
+        f"{comparison}"
         '<div class="action-grid">'
         f"{cards}"
         "</div>"
@@ -1868,6 +1871,17 @@ def _configured_presets(config: dict[str, Any]) -> list[dict[str, Any]]:
     if not isinstance(presets, list):
         return []
     return [preset for preset in presets if isinstance(preset, dict)]
+
+
+def _configured_preset_comparison_text(presets: list[dict[str, Any]]) -> str:
+    labels = [
+        str(preset.get("label") or preset.get("name") or f"Preset {index}").strip()
+        for index, preset in enumerate(presets, start=1)
+    ]
+    labels = [label for label in labels if label]
+    if len(labels) < 2:
+        return ""
+    return f"Compare presets in order: {' -> '.join(labels)}. Watch live status, then mark one observation."
 
 
 def _configured_preset_labels(config: dict[str, Any]) -> list[str]:

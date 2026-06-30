@@ -490,6 +490,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Damped PD", html)
             self.assertIn("Show damping reducing overshoot.", html)
             self.assertIn("Aggressive PID", html)
+            self.assertIn("Compare presets in order: Damped PD -&gt; Aggressive PID.", html)
             self.assertIn("<span>kp</span>", html)
             self.assertIn("<strong>60</strong>", html)
             self.assertNotIn("interaction.tuning_presets", html)

@@ -86,6 +86,7 @@ Implemented and verified:
 - Batch scenario cards include a `Control surface` cue for available live controls when the scenario is rerun interactively
 - MuJoCo viewer side panels are hidden by default for learner demos and only shown with `--show-viewer-ui` for raw model debugging
 - Interactive `MCLab Interaction` quick presets, purpose/value previews, and per-slider step buttons for representative damping, PID, 2DOF reach, Panda reach, and virtual wall parameter sets
+- Interactive preset groups show a compare-in-order hint so learners try multiple parameter regimes before marking an observation
 - Interactive preset choices save purpose text into `interaction_events.json` and the run report `Preset choices` card
 - Interactive `MCLab Interaction` changed-values summary shows slider parameters changed from run start
 - Interactive `MCLab Interaction` panel is scrollable and resizable so dense demos keep observation and live-status controls reachable
@@ -106,6 +107,7 @@ Implemented and verified:
 - Interactive runs save replayable `learner_tuned_config.yaml` files and a report `Replay Tuned Config` section
 - Learner menu scenario cards enable `Replay` only when the latest run has `learner_tuned_config.yaml`
 - Learner menu preset labels and purpose summaries for interactive cards, including preset-name and preset-purpose search
+- Learner menu preset comparison hints for interactive cards, including preset-comparison search
 - Learner menu Explore filters for Intro, Build, Deep dive, hands-on, comparison, PID, 2DOF, Panda, wall, and singularity scenario discovery
 - Learner menu scenario cards show readable `Badges` for hands-on, compare, PID, 2DOF, Panda, wall, singularity, trajectory, Cartesian, tuning, and dynamics modes
 - Learner menu and CLI setup diagnostics through `python -m mclab doctor`

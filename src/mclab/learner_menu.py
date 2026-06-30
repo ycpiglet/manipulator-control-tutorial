@@ -2026,6 +2026,8 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
     presets = f"\nPresets: {', '.join(preset_labels)}" if preset_labels else ""
     preset_purposes = configured_preset_purposes(action.config_path)
     preset_purpose_text = f"\nPreset purpose: {'; '.join(preset_purposes)}" if preset_purposes else ""
+    preset_compare = configured_preset_comparison(action.config_path)
+    preset_compare_text = f"\nPreset compare: {preset_compare}" if preset_compare else ""
     readiness = action_readiness(action)
     setup_detail = f" - {readiness.detail}" if readiness.status != "ok" and readiness.detail else ""
     setup_fix = f" Fix: {readiness.fix}" if readiness.status != "ok" and readiness.fix else ""
@@ -2053,6 +2055,7 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
         f"Watch: {action.watch}"
         f"{presets}"
         f"{preset_purpose_text}"
+        f"{preset_compare_text}"
     )
 
 
@@ -2100,6 +2103,14 @@ def configured_preset_purposes(config_path: str) -> tuple[str, ...]:
         label = str(preset.get("label") or preset.get("name") or f"Preset {index}").strip()
         purposes.append(f"{label}: {purpose}" if label else purpose)
     return tuple(purposes)
+
+
+@lru_cache(maxsize=128)
+def configured_preset_comparison(config_path: str) -> str:
+    labels = configured_preset_labels(config_path)
+    if len(labels) < 2:
+        return ""
+    return f"{' -> '.join(labels)}; watch live status, then mark one observation."
 
 
 def action_tags(action: MenuAction) -> tuple[str, ...]:
@@ -2231,6 +2242,7 @@ def _action_matches_terms(action: MenuAction, terms: list[str]) -> bool:
         action_plan_text(action),
         " ".join(configured_preset_labels(action.config_path)),
         " ".join(configured_preset_purposes(action.config_path)),
+        configured_preset_comparison(action.config_path),
         action_readiness(action).label,
         action_readiness(action).detail,
         " ".join(action_tags(action)),

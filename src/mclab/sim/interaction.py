@@ -230,6 +230,15 @@ class LiveTuning:
             return f"{preset.label}: {preset.purpose}; {value_text}"
         return f"{preset.label}: {value_text}"
 
+    def preset_comparison_hint(self) -> str:
+        labels = [preset.label for preset in self.presets if preset.label]
+        if len(labels) < 2:
+            return ""
+        return (
+            f"Compare presets: {' -> '.join(labels)}. "
+            "Watch live status, then save one Mark observation."
+        )
+
     def reset(self) -> dict[str, float]:
         with self._lock:
             changed = any(
@@ -856,6 +865,16 @@ def maybe_start_interaction_panel(
                 if tuning.presets:
                     tk.Label(frame, text="Quick presets").grid(row=row, column=0, columnspan=2, sticky="w", pady=(2, 2))
                     row += 1
+                    comparison_hint = tuning.preset_comparison_hint()
+                    if comparison_hint:
+                        tk.Label(
+                            frame,
+                            text=comparison_hint,
+                            justify="left",
+                            anchor="w",
+                            wraplength=430,
+                        ).grid(row=row, column=0, columnspan=2, sticky="w", pady=(0, 4))
+                        row += 1
                     preset_frame = tk.Frame(frame)
                     preset_frame.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(0, 6))
                     for index, preset in enumerate(tuning.presets):
