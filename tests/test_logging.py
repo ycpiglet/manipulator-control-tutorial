@@ -42,6 +42,10 @@ class LoggingTests(unittest.TestCase):
         )
 
         self.assertEqual(items["Control types used"], "button -> slider -> preset -> marker")
+        self.assertEqual(
+            items["Activity path"],
+            "preset: Soft wall -> slider: Wall stiffness -> button: Pause simulation -> observation: Mark observation",
+        )
         self.assertEqual(items["Button actions"], 1)
         self.assertEqual(items["Slider changes"], 1)
         self.assertEqual(items["Preset choices"], 1)
@@ -208,6 +212,11 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Hands-on activity mix", html)
             self.assertIn("Control types used", html)
             self.assertIn("slider -&gt; preset -&gt; marker", html)
+            self.assertIn("Activity path", html)
+            self.assertIn(
+                "slider: Stiffness [N/m] -&gt; preset: Stiff spring -&gt; observation: Mark observation",
+                html,
+            )
             self.assertIn("Interaction variety", html)
             self.assertIn("2/3 control families", html)
             self.assertIn("Use one button control such as pulse, nudge, pause, step, or reset.", html)
@@ -310,6 +319,10 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("## Review Checklist", worksheet_text)
             self.assertIn("- [ ] Compare the latest prediction with the plots in report.html.", worksheet_text)
             self.assertIn("## Hands-on Activity Mix", worksheet_text)
+            self.assertIn(
+                "- Activity path: slider: Stiffness [N/m] -> preset: Stiff spring -> observation: Mark observation",
+                worksheet_text,
+            )
             self.assertIn("- Interaction variety: 2/3 control families", worksheet_text)
             self.assertIn("- Next activity step: Use one button control such as pulse, nudge, pause, step, or reset.", worksheet_text)
             self.assertNotIn("Outcome review pending", worksheet_text)

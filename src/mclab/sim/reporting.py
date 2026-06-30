@@ -3231,6 +3231,7 @@ def _activity_mix_items(events: list[dict[str, Any]]) -> list[tuple[str, Any]]:
     next_step = _activity_mix_next_step(counts, observation_markers)
     return [
         ("Control types used", " -> ".join(used_kinds) if used_kinds else "none"),
+        ("Activity path", _activity_path(events)),
         ("Button actions", counts.get("button", 0)),
         ("Slider changes", counts.get("slider", 0)),
         ("Preset choices", counts.get("preset", 0)),
@@ -3239,6 +3240,25 @@ def _activity_mix_items(events: list[dict[str, Any]]) -> list[tuple[str, Any]]:
         ("Interaction variety", f"{varied_controls}/3 control families"),
         ("Next activity step", next_step),
     ]
+
+
+def _activity_path(events: list[dict[str, Any]], *, limit: int = 6) -> str:
+    steps: list[str] = []
+    for event in events:
+        kind = str(event.get("kind", "") or "unknown").lower()
+        if kind not in {"button", "slider", "preset", "marker"}:
+            continue
+        label = _event_label(event)
+        if kind == "marker" and not _is_observation_marker(event):
+            continue
+        display_kind = "observation" if kind == "marker" else kind
+        steps.append(f"{display_kind}: {label}")
+    if not steps:
+        return "none"
+    shown = steps[:limit]
+    if len(steps) > limit:
+        shown.append(f"... {len(steps) - limit} more")
+    return " -> ".join(shown)
 
 
 def _event_kind_counts(events: list[dict[str, Any]]) -> dict[str, int]:

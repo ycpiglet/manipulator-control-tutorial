@@ -105,6 +105,7 @@ Implemented and verified:
 - Run reports show `Preset comparison progress` for interactive runs so learners know whether they tried enough preset regimes
 - Generated `worksheet.md` artifacts include preset comparison progress for interactive runs with multiple presets
 - Run reports and generated `worksheet.md` artifacts include a `Hands-on activity mix` summary for button, slider, preset, and observation-marker variety
+- Run reports and generated `worksheet.md` artifacts include a chronological `Activity path` for the learner's button, slider, preset, and observation-marker sequence
 - Interactive `MCLab Interaction` changed-values summary shows slider parameters changed from run start
 - Interactive `MCLab Interaction` panel is scrollable and resizable so dense demos keep observation and live-status controls reachable
 - Interactive `MCLab Interaction` panel and run reports show a `Viewer legend` for visible target/current/force/singularity/wall markers
