@@ -1514,12 +1514,14 @@ def latest_output_status_text(output_path: Path | None) -> str:
     latest_plot = latest_output_plot(output_path)
     latest_worksheet = latest_output_worksheet(output_path)
     replay_context = latest_output_replay_context(output_path)
+    title = latest_output_title(output_path)
+    output_text = title if title == output_path.name else f"{title} ({output_path.name})"
     plot_text = f"Plot: {latest_plot.name}." if latest_plot is not None else "No plot yet."
     worksheet_text = (
         f"Worksheet: {latest_worksheet.name}." if latest_worksheet is not None else "No worksheet yet."
     )
     replay_text = f"Replay: {replay_context[1].name}." if replay_context is not None else "No replay yet."
-    return f"Ready. Latest saved output: {output_path.name}. {plot_text} {worksheet_text} {replay_text}"
+    return f"Ready. Latest saved output: {output_text}. {plot_text} {worksheet_text} {replay_text}"
 
 
 def latest_saved_output(outputs_root: Path | None = None) -> Path | None:
@@ -2655,16 +2657,33 @@ def latest_output_tuned_config(path: Path | None) -> Path | None:
     return tuned_config if tuned_config.exists() else None
 
 
-def latest_output_menu_action(path: Path | None) -> MenuAction | None:
+def latest_output_action(path: Path | None) -> MenuAction | BatchMenuAction | None:
     if path is None:
         return None
     summary = _read_json(path / "summary.json")
     if not summary:
         return None
+    for action in BATCH_ACTIONS:
+        if _summary_matches_action(summary, action):
+            return action
     for action in MENU_ACTIONS:
         if _summary_matches_action(summary, action):
             return action
     return None
+
+
+def latest_output_menu_action(path: Path | None) -> MenuAction | None:
+    action = latest_output_action(path)
+    return action if isinstance(action, MenuAction) else None
+
+
+def latest_output_title(path: Path | None) -> str:
+    if path is None:
+        return ""
+    action = latest_output_action(path)
+    if action is None:
+        return path.name
+    return f"{action.group} - {action.label}"
 
 
 def latest_output_replay_context(path: Path | None) -> tuple[MenuAction, Path] | None:

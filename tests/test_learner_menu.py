@@ -103,10 +103,12 @@ from mclab.learner_menu import (  # noqa: E402
     launch_outputs_index,
     launch_latest_output,
     latest_output_button_labels,
+    latest_output_action,
     latest_output_menu_action,
     latest_output_replay_context,
     latest_saved_output,
     latest_output_status_text,
+    latest_output_title,
     latest_output_tuned_config,
     initialize_latest_output_state,
     refresh_latest_output_state,
@@ -3118,7 +3120,7 @@ class LearnerMenuTests(unittest.TestCase):
 
         self.assertEqual(selected, new_output)
         self.assertEqual(latest_output["path"], new_output)
-        self.assertIn("Latest saved output: new_run", status.value)
+        self.assertIn("Latest saved output: Lab01 Mass-Spring-Damper - Auto demo (new_run)", status.value)
         self.assertIn("Plot: position.png", status.value)
         self.assertIn("Worksheet: worksheet.md", status.value)
         self.assertEqual(report_button.state_calls[-1], ["!disabled"])
@@ -3173,8 +3175,31 @@ class LearnerMenuTests(unittest.TestCase):
 
         self.assertEqual(
             text,
-            "Ready. Latest saved output: run_lab01. Plot: position.png. Worksheet: worksheet.md. No replay yet.",
+            "Ready. Latest saved output: Lab01 Mass-Spring-Damper - Auto demo (run_lab01). "
+            "Plot: position.png. Worksheet: worksheet.md. No replay yet.",
         )
+
+    def test_latest_output_title_uses_batch_card_when_summary_matches_batch(self) -> None:
+        batch_action = next(action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare")
+        with tempfile.TemporaryDirectory() as tmp:
+            output_path = Path(tmp) / "batch_lab01"
+            output_path.mkdir()
+            (output_path / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "batch",
+                        "config_name": batch_action.batch_name,
+                        "batch_name": batch_action.batch_name,
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            title = latest_output_title(output_path)
+            matched = latest_output_action(output_path)
+
+        self.assertEqual(title, f"{batch_action.group} - {batch_action.label}")
+        self.assertEqual(matched, batch_action)
 
     def test_latest_output_status_text_reports_empty_startup_state(self) -> None:
         self.assertEqual(latest_output_status_text(None), "Ready.")

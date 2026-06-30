@@ -188,7 +188,7 @@ Implemented and verified:
 - Learner menu scenario, batch, and learning-path `Worksheet` buttons that open the latest `worksheet.md` when one exists
 - Learner menu bottom bar includes `Open latest worksheet` for the most recently completed run or batch
 - Learner menu bottom bar initializes latest report/plot/worksheet buttons from the newest saved output on startup
-- Learner menu startup status summarizes the restored latest output, priority plot, and worksheet availability
+- Learner menu startup status summarizes the restored latest output scenario, priority plot, worksheet availability, and replay availability
 - Learner menu bottom bar exposes `Replay tuned` for the newest saved output only when `learner_tuned_config.yaml` maps back to a menu scenario
 - Learner menu `Refresh menu` refreshes learning path, review queue, batch history, and bottom latest report/plot/worksheet/replay buttons from disk
 - Learner menu refreshes batch history, report, and plot state after comparison runs complete
