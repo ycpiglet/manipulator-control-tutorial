@@ -47,6 +47,7 @@ class BatchGuide:
     metric_keys: tuple[str, ...]
     preview_plots: tuple[str, ...]
     comparison_specs: tuple[tuple[str, str, str, str], ...]
+    summary_comparison_specs: tuple[tuple[str, str, str, tuple[str, ...]], ...] = ()
 
 
 BATCH_SETS: dict[str, tuple[BatchScenario, ...]] = {
@@ -277,6 +278,10 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             "max_wall_penetration_cm",
             "max_wall_retreat_cm",
             "first_wall_contact_time",
+            "peak_wall_penetration_time",
+            "peak_wall_force_time",
+            "peak_wall_damping_force_time",
+            "peak_hand_speed_time",
             "wall_contact_duration",
             "wall_contact_fraction",
             "max_abs_virtual_wall_force",
@@ -297,6 +302,20 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             ("wall_damping_force_compare.png", "Virtual Wall Damping Force Comparison", "force", "force_virtual_damping_0"),
             ("wall_retreat_compare.png", "Wall Retreat Comparison", "retreat [cm]", "wall_retreat_cm"),
             ("hand_x_speed_compare.png", "Panda Hand X Speed Comparison", "x speed [m/s]", "xdot_ee_0"),
+        ),
+        summary_comparison_specs=(
+            (
+                "wall_key_moment_timing_compare.png",
+                "Wall Key Moment Timing Comparison",
+                "time [s]",
+                (
+                    "first_wall_contact_time",
+                    "peak_wall_penetration_time",
+                    "peak_wall_force_time",
+                    "peak_wall_damping_force_time",
+                    "peak_hand_speed_time",
+                ),
+            ),
         ),
     ),
     "lab04_cartesian_compare": BatchGuide(
@@ -1868,6 +1887,58 @@ def write_comparison_plots(
         axis.set_title(title)
         axis.set_xlabel("time [s]")
         axis.set_ylabel(ylabel)
+        axis.grid(True, alpha=0.3)
+        axis.legend(fontsize="small")
+        target = plot_dir / filename
+        fig.savefig(target, dpi=150)
+        plt.close(fig)
+        written.append(target)
+    written.extend(_write_summary_comparison_plots(plt, plot_dir, guide, output, scenarios))
+    return written
+
+
+def _write_summary_comparison_plots(
+    plt: Any,
+    plot_dir: Path,
+    guide: BatchGuide,
+    output: Path,
+    scenarios: tuple[BatchScenario, ...],
+) -> list[Path]:
+    if not guide.summary_comparison_specs:
+        return []
+
+    summaries = [
+        (scenario.label, _read_json(output / _safe_name(scenario.label) / "summary.json"))
+        for scenario in scenarios
+    ]
+    written: list[Path] = []
+    for filename, title, ylabel, metric_keys in guide.summary_comparison_specs:
+        series = [
+            (
+                metric_key,
+                [
+                    (label, value)
+                    for label, summary in summaries
+                    if (value := _as_finite_float(summary.get(metric_key))) is not None
+                ],
+            )
+            for metric_key in metric_keys
+        ]
+        series = [(metric_key, values) for metric_key, values in series if values]
+        if not series:
+            continue
+        labels = [label for label, _ in summaries]
+        label_positions = {label: index for index, label in enumerate(labels)}
+        fig, axis = plt.subplots(figsize=(9.5, 5.2), constrained_layout=True)
+        for metric_key, values in series:
+            x_values = [label_positions[label] for label, _ in values]
+            y_values = [value for _, value in values]
+            axis.plot(x_values, y_values, marker="o", linewidth=1.5, label=_label(metric_key))
+        axis.set_title(title)
+        axis.set_xlabel("scenario")
+        axis.set_ylabel(ylabel)
+        axis.set_xticks(range(len(labels)))
+        axis.set_xticklabels(labels, rotation=30, ha="right")
         axis.grid(True, alpha=0.3)
         axis.legend(fontsize="small")
         target = plot_dir / filename

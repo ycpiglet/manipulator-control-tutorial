@@ -48,9 +48,26 @@ class BatchTests(unittest.TestCase):
         )
         self.assertTrue(any("approach speed" in question for question in lab04_guide.questions))
         self.assertIn("max_hand_x_speed", lab04_guide.metric_keys)
+        self.assertIn("peak_wall_force_time", lab04_guide.metric_keys)
+        self.assertIn("peak_wall_damping_force_time", lab04_guide.metric_keys)
         self.assertIn(
             ("hand_x_speed_compare.png", "Panda Hand X Speed Comparison", "x speed [m/s]", "xdot_ee_0"),
             lab04_guide.comparison_specs,
+        )
+        self.assertIn(
+            (
+                "wall_key_moment_timing_compare.png",
+                "Wall Key Moment Timing Comparison",
+                "time [s]",
+                (
+                    "first_wall_contact_time",
+                    "peak_wall_penetration_time",
+                    "peak_wall_force_time",
+                    "peak_wall_damping_force_time",
+                    "peak_hand_speed_time",
+                ),
+            ),
+            lab04_guide.summary_comparison_specs,
         )
         self.assertIn("max_dls_condition_scale", batch.BATCH_GUIDES["lab03_2dof_compare"].metric_keys)
         self.assertIn("max_dls_task_speed", batch.BATCH_GUIDES["lab03_2dof_compare"].metric_keys)
@@ -351,6 +368,43 @@ class BatchTests(unittest.TestCase):
             self.assertIn("Comparison Notes", worksheet)
             self.assertIn("overshoot percent", worksheet)
             self.assertIn("comparison_plots/position_compare.png", worksheet)
+
+    def test_summary_comparison_plots_are_written_from_scenario_summaries(self) -> None:
+        scenarios = (
+            batch.BatchScenario("soft_wall", "lab04", "configs/lab04_panda/wall_soft.yaml", "wall_compare"),
+            batch.BatchScenario("fast_wall", "lab04", "configs/lab04_panda/wall_fast_approach.yaml", "wall_compare"),
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "batch_output"
+            for index, scenario in enumerate(scenarios):
+                run_dir = output / scenario.label
+                run_dir.mkdir(parents=True)
+                (run_dir / "summary.json").write_text(
+                    json.dumps(
+                        {
+                            "lab_name": "lab04_panda",
+                            "first_wall_contact_time": 0.8 + index,
+                            "peak_wall_penetration_time": 2.0 + index,
+                            "peak_wall_force_time": 2.1 + index,
+                            "peak_wall_damping_force_time": 0.9 + index,
+                            "peak_hand_speed_time": 1.1 + index,
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+                (run_dir / "report.html").write_text("<html></html>", encoding="utf-8")
+
+            written = batch.write_comparison_plots(output, "lab04_wall_compare", scenarios)
+            batch.write_batch_report(output, "lab04_wall_compare", scenarios)
+
+            timing_plot = output / "comparison_plots" / "wall_key_moment_timing_compare.png"
+            self.assertIn(timing_plot, written)
+            self.assertTrue(timing_plot.exists())
+            report_html = (output / "report.html").read_text(encoding="utf-8")
+            worksheet = (output / "worksheet.md").read_text(encoding="utf-8")
+            self.assertIn("wall_key_moment_timing_compare.png", report_html)
+            self.assertIn("peak wall force time", report_html)
+            self.assertIn("wall_key_moment_timing_compare.png", worksheet)
 
     def test_scenario_card_reports_missing_plot_links_without_failing(self) -> None:
         html = batch._scenario_card(
