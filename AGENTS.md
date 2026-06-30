@@ -202,6 +202,7 @@ Implemented and verified:
 - Run reports and generated `worksheet.md` artifacts show run-level `Done when` completion criteria plus prediction outcomes, pending outcome review, notes, live status, key parameters, priority plot review prompts, checklist prompts, suggested next experiments, and comparison batch commands
 - Outputs index learning path cards include evidence status, latest evidence summaries, latest report/worksheet/priority-plot/replay links, and ready-to-run or repeat commands for each course step
 - Outputs index learning path cards show `Done when` completion criteria matching the learner menu
+- Outputs index learning path cards show `Start steps` launch sequences matching the learner menu, including concrete required-preset order when configured
 - Outputs index batch learning-path cards include the same `Prediction check` cue used by the learner menu
 - Outputs index learning path summary flags evidence-pending and outcome-review-pending hands-on steps
 - Outputs index learning path cards show prediction/compare and watch cues before each ready-to-run or repeat command

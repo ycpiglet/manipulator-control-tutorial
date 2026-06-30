@@ -4569,6 +4569,7 @@ def _learning_path_card(item: dict[str, Any]) -> str:
     activity_mix = _learning_path_activity_mix(run)
     mission_evidence = _learning_path_mission_evidence(run)
     challenge_evidence = _learning_path_challenge_evidence(run)
+    start_steps = _learning_path_start_steps(step)
     learning_cue = _learning_path_learning_cue(step)
     completion_text = _learning_path_completion_text(step)
     command_label = "Run this step" if run is None else "Repeat this step"
@@ -4637,6 +4638,7 @@ def _learning_path_card(item: dict[str, Any]) -> str:
         f"<strong>{escape(step.title)}</strong>"
         f'<p class="muted">{escape(step.description)}</p>'
         f'<p class="muted"><strong>Done when:</strong> {escape(completion_text.removeprefix("Done when:").strip())}</p>'
+        f"{start_steps}"
         f"{learning_cue}"
         f"{status}"
         f"{latest_evidence}"
@@ -4765,6 +4767,23 @@ def _learning_path_action_label(step: IndexPathStep) -> str:
     if lab_name:
         return f"run {lab_name}"
     return "open the saved command"
+
+
+def _learning_path_start_steps(step: IndexPathStep) -> str:
+    if step.batch_name:
+        if step.batch_name == "all":
+            text = "Predict the strongest course-level effect -> Run all comparison batches -> Open the course worksheet."
+        else:
+            text = "Predict the strongest scenario effect -> Run comparison batch -> Open the worksheet Prediction Check."
+        return f'<p class="muted"><strong>Start steps:</strong> {escape(text)}</p>'
+    if not step.config_path:
+        return ""
+    config = _index_step_config(step)
+    guide = guide_for_config(config_path=step.config_path)
+    text = _start_steps_text(guide, config)
+    if not text:
+        return ""
+    return f'<p class="muted"><strong>Start steps:</strong> {escape(text)}</p>'
 
 
 def _index_step_required_preset_labels(step: IndexPathStep) -> list[str]:

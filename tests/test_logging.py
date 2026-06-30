@@ -1278,8 +1278,20 @@ class LoggingTests(unittest.TestCase):
                 html,
             )
             self.assertIn(
+                "<strong>Start steps:</strong> Predict -&gt; Run scenario -&gt; Review priority plot and worksheet.",
+                html,
+            )
+            self.assertIn(
                 "<strong>Done when:</strong> use at least one button, slider, or preset, then save one Mark observation "
                 "with a Prediction and note; add the outcome during review.",
+                html,
+            )
+            self.assertIn(
+                "<strong>Start steps:</strong> Predict -&gt; Run viewer -&gt; try presets Lightly damped -&gt; Heavy damping -&gt; Stiff spring -&gt; Mark observation.",
+                html,
+            )
+            self.assertIn(
+                "<strong>Start steps:</strong> Predict -&gt; Run viewer -&gt; try required presets Close wall -&gt; Back away -&gt; Re-enter wall -&gt; Mark observation.",
                 html,
             )
             self.assertIn("configs/lab03_2dof/condition_aware_dls_2dof.yaml", html)
@@ -1373,6 +1385,10 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("11. Compare the course", html)
             self.assertIn(
                 "<strong>Done when:</strong> the course comparison report, worksheet, and linked batch Prediction Checks are saved.",
+                html,
+            )
+            self.assertIn(
+                "<strong>Start steps:</strong> Predict the strongest course-level effect -&gt; Run all comparison batches -&gt; Open the course worksheet.",
                 html,
             )
             self.assertIn("<strong>Compare:</strong> Generate the course batch report set.", html)
