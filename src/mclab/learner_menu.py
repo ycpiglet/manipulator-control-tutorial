@@ -1424,6 +1424,7 @@ def review_queue_summary_text(outputs_root: Path | None = None) -> str:
         f"Needs observation: {counts.get('observation', 0)}; "
         f"prediction: {counts.get('prediction', 0)}; "
         f"outcome: {counts.get('outcome', 0)}; "
+        f"required preset: {counts.get('preset', 0)}; "
         f"note: {counts.get('note', 0)}; "
         f"artifact: {counts.get('artifact', 0)}."
     )
@@ -1461,6 +1462,9 @@ def _review_queue_status(output_path: Path, summary: dict[str, Any]) -> str:
             return "Needs observation"
         if predictions <= 0:
             return "Needs prediction"
+        required_total, required_tried, next_required = _required_preset_progress_for_summary(summary, output_path)
+        if required_total and required_tried < required_total:
+            return f"Needs required preset {next_required}" if next_required else "Needs required preset"
         if notes <= 0:
             return "Ready; add note next"
         return "Ready for review"
@@ -1477,6 +1481,20 @@ def _summary_requires_hands_on_evidence(summary: dict[str, Any]) -> bool:
     return "interactive" in config_text
 
 
+def _required_preset_progress_for_summary(summary: dict[str, Any], output_path: Path) -> tuple[int, int, str]:
+    config_path = str(summary.get("config_path") or "").strip()
+    if not config_path:
+        return 0, 0, ""
+    required_labels = list(configured_required_preset_labels(config_path))
+    if not required_labels:
+        return 0, 0, ""
+    labels = list(configured_preset_labels(config_path))
+    tried = _distinct_preset_labels(output_path, labels)
+    tried_required = [label for label in required_labels if label in tried]
+    next_required = next((label for label in required_labels if label not in tried), "")
+    return len(required_labels), len(tried_required), next_required
+
+
 def _review_queue_bucket(status: str) -> str:
     normalized = status.strip().lower()
     if normalized in {"ready for review", "artifacts ready"}:
@@ -1487,6 +1505,8 @@ def _review_queue_bucket(status: str) -> str:
         return "observation"
     if normalized == "needs prediction":
         return "prediction"
+    if normalized.startswith("needs required preset"):
+        return "preset"
     if normalized == "ready; add note next":
         return "note"
     if normalized in {"needs plot", "needs worksheet"}:
@@ -1495,14 +1515,17 @@ def _review_queue_bucket(status: str) -> str:
 
 
 def _review_queue_counts(items: list[tuple[Path, str, str, float]]) -> dict[str, int]:
-    counts = {key: 0 for key in ("ready", "observation", "prediction", "outcome", "note", "artifact", "other")}
+    counts = {
+        key: 0
+        for key in ("ready", "observation", "prediction", "outcome", "preset", "note", "artifact", "other")
+    }
     for _path, _status, bucket, _modified in items:
         counts[bucket] = counts.get(bucket, 0) + 1
     return counts
 
 
 def _next_review_queue_item(items: list[tuple[Path, str, str, float]]) -> tuple[Path, str, str, float] | None:
-    priority = ("outcome", "observation", "prediction", "note", "artifact", "other")
+    priority = ("outcome", "observation", "prediction", "preset", "note", "artifact", "other")
     for bucket in priority:
         for item in items:
             if item[2] == bucket:

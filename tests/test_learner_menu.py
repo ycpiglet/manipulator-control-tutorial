@@ -1614,15 +1614,16 @@ class LearnerMenuTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            note_pending = outputs / "run_lab04_note_pending"
+            preset_pending = outputs / "run_lab04_preset_pending"
             write_summary(
-                note_pending,
+                preset_pending,
                 "lab04_panda",
                 "configs/lab04_panda/interactive_virtual_wall.yaml",
             )
-            (note_pending / "interaction_events.json").write_text(
+            (preset_pending / "interaction_events.json").write_text(
                 json.dumps(
                     [
+                        {"kind": "preset", "name": "close_wall", "label": "Close wall"},
                         {
                             "kind": "marker",
                             "name": "observation",
@@ -1636,15 +1637,60 @@ class LearnerMenuTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
+            note_pending = outputs / "run_lab02_note_pending"
+            write_summary(note_pending, "lab02_pid", "configs/lab02_pid/interactive_disturbance.yaml")
+            (note_pending / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "prediction": "Higher Kp should overshoot.",
+                                "outcome": "Matched",
+                            },
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
             self.assertEqual(
                 review_queue_summary_text(outputs),
                 (
-                    "Review queue: 1 ready, 5 pending. "
-                    "Needs observation: 1; prediction: 1; outcome: 1; note: 1; artifact: 1. "
+                    "Review queue: 1 ready, 6 pending. "
+                    "Needs observation: 1; prediction: 1; outcome: 1; required preset: 1; note: 1; artifact: 1. "
                     "Next review: run_lab03_outcome_pending - Outcome review pending."
                 ),
             )
             self.assertEqual(next_review_output(outputs), outcome_pending)
+
+            preset_only_root = outputs / "preset_only_root"
+            preset_only_root.mkdir()
+            preset_only = preset_only_root / "run_lab04_preset_only"
+            write_summary(preset_only, "lab04_panda", "configs/lab04_panda/interactive_virtual_wall.yaml")
+            (preset_only / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {"kind": "preset", "name": "close_wall", "label": "Close wall"},
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "prediction": "Back away should release contact.",
+                                "outcome": "Matched",
+                                "note": "Contact stayed until backing away.",
+                            },
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            self.assertIn(
+                "Next review: run_lab04_preset_only - Needs required preset Back away.",
+                review_queue_summary_text(preset_only_root),
+            )
+            self.assertEqual(next_review_output(preset_only_root), preset_only)
 
     def test_launch_next_review_output_opens_the_pending_run_report(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
