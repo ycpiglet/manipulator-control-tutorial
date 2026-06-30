@@ -92,6 +92,7 @@ from mclab.learner_menu import (  # noqa: E402
     parse_run_output_path,
     prediction_prompt,
     reflection_question,
+    review_queue_summary_text,
     refresh_batch_menu_state,
 )
 
@@ -1396,6 +1397,101 @@ class LearnerMenuTests(unittest.TestCase):
                 "Mission evidence: Ready for review; 1 observation, 1 prediction, 1 outcome, 1 note",
             )
             self.assertIn("Mission evidence: Ready for review", lesson_text(lab02_interactive, outputs))
+
+    def test_review_queue_summary_counts_saved_mission_evidence_states(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            self.assertEqual(
+                review_queue_summary_text(outputs),
+                "Review queue: No saved runs yet. Run a scenario first.",
+            )
+
+            def write_summary(path: Path, lab_name: str, config_path: str) -> None:
+                path.mkdir()
+                (path / "summary.json").write_text(
+                    json.dumps(
+                        {
+                            "lab_name": lab_name,
+                            "config_path": config_path,
+                            "config_name": Path(config_path).stem,
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+                (path / "report.html").write_text("<html></html>", encoding="utf-8")
+
+            ready = outputs / "run_lab01_ready"
+            write_summary(ready, "lab01_msd", "configs/lab01_msd/default.yaml")
+            (ready / "plots").mkdir()
+            (ready / "plots" / "position.png").write_bytes(b"fake-png")
+            (ready / "worksheet.md").write_text("# Worksheet\n", encoding="utf-8")
+
+            write_summary(outputs / "run_lab01_needs_plot", "lab01_msd", "configs/lab01_msd/default.yaml")
+            write_summary(
+                outputs / "run_lab01_needs_observation",
+                "lab01_msd",
+                "configs/lab01_msd/interactive_pull.yaml",
+            )
+
+            needs_prediction = outputs / "run_lab02_needs_prediction"
+            write_summary(
+                needs_prediction,
+                "lab02_pid",
+                "configs/lab02_pid/interactive_disturbance.yaml",
+            )
+            (needs_prediction / "interaction_events.json").write_text(
+                json.dumps([{"kind": "marker", "name": "observation", "value": {"note": "Changed response."}}]),
+                encoding="utf-8",
+            )
+
+            outcome_pending = outputs / "run_lab03_outcome_pending"
+            write_summary(outcome_pending, "lab03_2dof", "configs/lab03_2dof/interactive_2dof.yaml")
+            (outcome_pending / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "prediction": "Farther target should need more torque.",
+                                "note": "Torque rose.",
+                            },
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            note_pending = outputs / "run_lab04_note_pending"
+            write_summary(
+                note_pending,
+                "lab04_panda",
+                "configs/lab04_panda/interactive_virtual_wall.yaml",
+            )
+            (note_pending / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "prediction": "Stiffer wall should retreat more.",
+                                "outcome": "Matched",
+                            },
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            self.assertEqual(
+                review_queue_summary_text(outputs),
+                (
+                    "Review queue: 1 ready, 5 pending. "
+                    "Needs observation: 1; prediction: 1; outcome: 1; note: 1; artifact: 1. "
+                    "Next review: run_lab03_outcome_pending - Outcome review pending."
+                ),
+            )
 
     def test_action_preset_evidence_summarizes_latest_preset_progress(self) -> None:
         lab02_interactive = next(

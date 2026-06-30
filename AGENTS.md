@@ -161,6 +161,7 @@ Implemented and verified:
 - Outputs index learning path cards show prediction/compare and watch cues before each ready-to-run or repeat command
 - Outputs index progress snapshot includes an evidence quality card with prediction outcome coverage and outcome mix
 - Outputs index progress snapshot includes a mission review queue with ready/pending totals, evidence gap counts, and the next review link
+- Learner menu top panel includes the same review queue summary and an `Open review queue` button that regenerates `outputs/index.html`
 - Outputs index run table summarizes observation, prediction, outcome, and learner note evidence per saved run
 - Outputs index run table and learning-path cards summarize `Mission evidence` proof status and next proof step per saved run
 - Outputs index run table shows the latest observation marker prediction, outcome, note, and live status summary per saved run

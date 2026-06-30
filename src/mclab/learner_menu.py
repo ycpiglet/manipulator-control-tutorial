@@ -1289,6 +1289,99 @@ def _mission_evidence_counts(markers: int, predictions: int, outcomes: int, note
     )
 
 
+def review_queue_summary_text(outputs_root: Path | None = None) -> str:
+    root = outputs_root if outputs_root is not None else PROJECT_ROOT / "outputs"
+    items = _review_queue_items(root)
+    if not items:
+        return "Review queue: No saved runs yet. Run a scenario first."
+
+    counts = _review_queue_counts(items)
+    ready = counts.get("ready", 0)
+    pending = len(items) - ready
+    gap_text = (
+        f"Needs observation: {counts.get('observation', 0)}; "
+        f"prediction: {counts.get('prediction', 0)}; "
+        f"outcome: {counts.get('outcome', 0)}; "
+        f"note: {counts.get('note', 0)}; "
+        f"artifact: {counts.get('artifact', 0)}."
+    )
+    next_item = _next_review_queue_item(items)
+    if next_item is None:
+        next_text = "Next review: all saved mission evidence is ready."
+    else:
+        next_text = f"Next review: {next_item[0].name} - {next_item[1]}."
+    return f"Review queue: {ready} ready, {pending} pending. {gap_text} {next_text}"
+
+
+def _review_queue_items(outputs_root: Path) -> list[tuple[Path, str, str, float]]:
+    if not outputs_root.exists():
+        return []
+    items = []
+    for output_path, summary, modified in _iter_output_summaries(outputs_root):
+        status = _review_queue_status(output_path, summary)
+        items.append((output_path, status, _review_queue_bucket(status), modified))
+    return sorted(items, key=lambda item: item[3], reverse=True)
+
+
+def _review_queue_status(output_path: Path, summary: dict[str, Any]) -> str:
+    markers, predictions, notes, outcomes = _observation_evidence_counts(output_path)
+    if predictions > outcomes:
+        return "Outcome review pending"
+
+    if _summary_requires_hands_on_evidence(summary):
+        if markers <= 0:
+            return "Needs observation"
+        if predictions <= 0:
+            return "Needs prediction"
+        if notes <= 0:
+            return "Ready; add note next"
+        return "Ready for review"
+
+    if latest_output_plot(output_path) is None:
+        return "Needs plot"
+    if latest_output_worksheet(output_path) is None:
+        return "Needs worksheet"
+    return "Artifacts ready"
+
+
+def _summary_requires_hands_on_evidence(summary: dict[str, Any]) -> bool:
+    config_text = " ".join(str(summary.get(name) or "") for name in ("config_path", "config_name")).lower()
+    return "interactive" in config_text
+
+
+def _review_queue_bucket(status: str) -> str:
+    normalized = status.strip().lower()
+    if normalized in {"ready for review", "artifacts ready"}:
+        return "ready"
+    if normalized == "outcome review pending":
+        return "outcome"
+    if normalized == "needs observation":
+        return "observation"
+    if normalized == "needs prediction":
+        return "prediction"
+    if normalized == "ready; add note next":
+        return "note"
+    if normalized in {"needs plot", "needs worksheet"}:
+        return "artifact"
+    return "other"
+
+
+def _review_queue_counts(items: list[tuple[Path, str, str, float]]) -> dict[str, int]:
+    counts = {key: 0 for key in ("ready", "observation", "prediction", "outcome", "note", "artifact", "other")}
+    for _path, _status, bucket, _modified in items:
+        counts[bucket] = counts.get(bucket, 0) + 1
+    return counts
+
+
+def _next_review_queue_item(items: list[tuple[Path, str, str, float]]) -> tuple[Path, str, str, float] | None:
+    priority = ("outcome", "observation", "prediction", "note", "artifact", "other")
+    for bucket in priority:
+        for item in items:
+            if item[2] == bucket:
+                return item
+    return None
+
+
 def action_preset_evidence_text(action: MenuAction, outputs_root: Path | None = None) -> str:
     labels = list(configured_preset_labels(action.config_path))
     if len(labels) < 2:
@@ -1698,8 +1791,7 @@ def launch_outputs_folder() -> subprocess.Popen[Any] | None:
 def launch_outputs_index() -> subprocess.Popen[Any] | None:
     outputs = PROJECT_ROOT / "outputs"
     index = outputs / "index.html"
-    if not index.exists():
-        write_outputs_index(outputs)
+    write_outputs_index(outputs)
     return open_path(index)
 
 
@@ -2438,6 +2530,7 @@ def main() -> int:
     next_button_ref: dict[str, Any | None] = {"button": None}
     batch_state_items: list[BatchMenuStateItem | BatchMenuStateItemWithWorksheet] = []
     post_run_refresh_ref: dict[str, Callable[[], None]] = {}
+    review_queue = tk.StringVar(value=review_queue_summary_text())
 
     def refresh_learning_path_progress() -> None:
         progress_items: list[LearningPathProgressItem] = []
@@ -2460,6 +2553,7 @@ def main() -> int:
         next_step = next_learning_path_step(items)
         next_step_ref["step"] = next_step
         path_summary.set(learning_path_summary_text(items))
+        review_queue.set(review_queue_summary_text())
         next_button = next_button_ref["button"]
         if next_button is not None:
             next_button.state(["disabled"] if next_step is None else ["!disabled"])
@@ -2535,10 +2629,19 @@ def main() -> int:
     next_button = ttk.Button(path_header, text="Run next", command=launch_next_learning_path_step)
     next_button.grid(row=0, column=1, sticky="e", padx=(12, 0))
     next_button_ref["button"] = next_button
+    review_header = ttk.Frame(path_frame)
+    review_header.grid(row=1, column=0, columnspan=3, sticky="ew", pady=(0, 8))
+    review_header.columnconfigure(0, weight=1)
+    ttk.Label(review_header, textvariable=review_queue, wraplength=760, justify="left").grid(
+        row=0, column=0, sticky="w"
+    )
+    ttk.Button(review_header, text="Open review queue", command=launch_outputs_index).grid(
+        row=0, column=1, sticky="e", padx=(12, 0)
+    )
     for step_index, step in enumerate(LEARNING_PATH):
         row_index, column_index = divmod(step_index, 3)
         cell = ttk.Frame(path_frame)
-        cell.grid(row=row_index + 1, column=column_index, sticky="ew", padx=(0, 12), pady=(0, 8))
+        cell.grid(row=row_index + 2, column=column_index, sticky="ew", padx=(0, 12), pady=(0, 8))
         progress_text = tk.StringVar(value=learning_path_progress_text(step))
         path_status_vars.append((step, progress_text))
         step_buttons = ttk.Frame(cell)
