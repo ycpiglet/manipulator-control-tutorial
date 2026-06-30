@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -100,6 +102,8 @@ from mclab.learner_menu import (  # noqa: E402
     launch_outputs_index,
     launch_latest_output,
     latest_output_button_labels,
+    latest_saved_output,
+    initialize_latest_output_state,
     next_review_output,
     next_learning_path_step,
     latest_output_plot,
@@ -2918,6 +2922,92 @@ class LearnerMenuTests(unittest.TestCase):
 
             self.assertTrue(index.exists())
             opener.assert_called_once_with(index)
+
+    def test_latest_saved_output_returns_newest_saved_run(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            older = outputs / "older_lab01"
+            newer = outputs / "newer_lab04"
+            older.mkdir(parents=True)
+            newer.mkdir(parents=True)
+            (older / "summary.json").write_text(
+                json.dumps({"lab_name": "lab01_msd", "config_path": "configs/lab01_msd/default.yaml"}),
+                encoding="utf-8",
+            )
+            (newer / "summary.json").write_text(
+                json.dumps({"lab_name": "lab04_panda", "config_path": "configs/lab04_panda/joint_pd.yaml"}),
+                encoding="utf-8",
+            )
+            (older / "report.html").write_text("<html></html>", encoding="utf-8")
+            (newer / "report.html").write_text("<html></html>", encoding="utf-8")
+            now = time.time()
+            for path in (older / "summary.json", older / "report.html"):
+                os.utime(path, (now - 20.0, now - 20.0))
+            for path in (newer / "summary.json", newer / "report.html"):
+                os.utime(path, (now, now))
+
+            self.assertEqual(latest_saved_output(outputs), newer)
+
+    def test_initialize_latest_output_state_enables_buttons_from_saved_outputs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            output_path = outputs / "run_lab01"
+            plot_dir = output_path / "plots"
+            plot_dir.mkdir(parents=True)
+            (output_path / "summary.json").write_text(
+                json.dumps({"lab_name": "lab01_msd", "config_path": "configs/lab01_msd/default.yaml"}),
+                encoding="utf-8",
+            )
+            (output_path / "report.html").write_text("<html></html>", encoding="utf-8")
+            (plot_dir / "energy.png").write_bytes(b"fake-png")
+            (plot_dir / "position.png").write_bytes(b"fake-png")
+            (output_path / "worksheet.md").write_text("# Worksheet\n", encoding="utf-8")
+            latest_output: dict[str, Path | None] = {"path": None}
+            report_button = FakeButton()
+            plot_button = FakeButton()
+            worksheet_button = FakeButton()
+
+            selected = initialize_latest_output_state(
+                latest_output,
+                outputs_root=outputs,
+                latest_button=report_button,
+                latest_plot_button=plot_button,
+                latest_worksheet_button=worksheet_button,
+            )
+
+        self.assertEqual(selected, output_path)
+        self.assertEqual(latest_output["path"], output_path)
+        self.assertEqual(report_button.config["text"], "Open report")
+        self.assertEqual(plot_button.config["text"], "Open plot: position")
+        self.assertEqual(worksheet_button.config["text"], "Open worksheet")
+        self.assertEqual(report_button.state_calls[-1], ["!disabled"])
+        self.assertEqual(plot_button.state_calls[-1], ["!disabled"])
+        self.assertEqual(worksheet_button.state_calls[-1], ["!disabled"])
+
+    def test_initialize_latest_output_state_keeps_buttons_disabled_without_outputs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "missing_outputs"
+            latest_output: dict[str, Path | None] = {"path": Path("old")}
+            report_button = FakeButton()
+            plot_button = FakeButton()
+            worksheet_button = FakeButton()
+
+            selected = initialize_latest_output_state(
+                latest_output,
+                outputs_root=outputs,
+                latest_button=report_button,
+                latest_plot_button=plot_button,
+                latest_worksheet_button=worksheet_button,
+            )
+
+        self.assertIsNone(selected)
+        self.assertIsNone(latest_output["path"])
+        self.assertEqual(report_button.config["text"], "Open latest report")
+        self.assertEqual(plot_button.config["text"], "Open latest plot")
+        self.assertEqual(worksheet_button.config["text"], "Open latest worksheet")
+        self.assertEqual(report_button.state_calls[-1], ["disabled"])
+        self.assertEqual(plot_button.state_calls[-1], ["disabled"])
+        self.assertEqual(worksheet_button.state_calls[-1], ["disabled"])
 
     def test_parse_run_output_path_detects_completed_run(self) -> None:
         parsed = parse_run_output_path(r"Run complete: C:\tmp\outputs\20260627_150117_lab04_panda")

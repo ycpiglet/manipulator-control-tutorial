@@ -1505,6 +1505,35 @@ def latest_output_button_labels(output_path: Path | None) -> dict[str, str]:
     }
 
 
+def latest_saved_output(outputs_root: Path | None = None) -> Path | None:
+    root = outputs_root if outputs_root is not None else PROJECT_ROOT / "outputs"
+    if not root.exists():
+        return None
+    summaries = _iter_output_summaries(root)
+    if not summaries:
+        return None
+    return max(summaries, key=lambda item: item[2])[0]
+
+
+def initialize_latest_output_state(
+    latest_output: dict[str, Path | None],
+    *,
+    outputs_root: Path | None = None,
+    latest_button: Any | None = None,
+    latest_plot_button: Any | None = None,
+    latest_worksheet_button: Any | None = None,
+) -> Path | None:
+    output_path = latest_saved_output(outputs_root)
+    latest_output["path"] = output_path
+    _configure_latest_output_buttons(
+        output_path,
+        latest_button=latest_button,
+        latest_plot_button=latest_plot_button,
+        latest_worksheet_button=latest_worksheet_button,
+    )
+    return output_path
+
+
 def action_latest_output(
     action: MenuAction | BatchMenuAction,
     outputs_root: Path | None = None,
@@ -2536,6 +2565,25 @@ def latest_output_worksheet(path: Path | None) -> Path | None:
         return None
     worksheet = path / "worksheet.md"
     return worksheet if worksheet.exists() else None
+
+
+def _configure_latest_output_buttons(
+    output_path: Path | None,
+    *,
+    latest_button: Any | None = None,
+    latest_plot_button: Any | None = None,
+    latest_worksheet_button: Any | None = None,
+) -> None:
+    labels = latest_output_button_labels(output_path)
+    if latest_button is not None:
+        latest_button.configure(text=labels["report"])
+        latest_button.state(["!disabled"] if output_path is not None else ["disabled"])
+    if latest_plot_button is not None:
+        latest_plot_button.configure(text=labels["plot"])
+        latest_plot_button.state(["!disabled"] if latest_output_plot(output_path) is not None else ["disabled"])
+    if latest_worksheet_button is not None:
+        latest_worksheet_button.configure(text=labels["worksheet"])
+        latest_worksheet_button.state(["!disabled"] if latest_output_worksheet(output_path) is not None else ["disabled"])
 
 
 def _action_plot_priorities(action: MenuAction | BatchMenuAction) -> tuple[str, ...]:
@@ -3812,6 +3860,12 @@ def main() -> int:
     )
     latest_worksheet_button.pack(side="left", padx=(8, 0))
     latest_worksheet_button.state(["disabled"])
+    initialize_latest_output_state(
+        latest_output,
+        latest_button=latest_button,
+        latest_plot_button=latest_plot_button,
+        latest_worksheet_button=latest_worksheet_button,
+    )
     ttk.Label(bottom, textvariable=status).pack(side="left", padx=12)
 
     def render_actions(*_args: Any) -> None:
@@ -4275,18 +4329,14 @@ def _set_status_after_run(
             if output_path is not None:
                 if latest_output is not None:
                     latest_output["path"] = output_path
-                latest_labels = latest_output_button_labels(output_path)
-                if latest_button is not None:
-                    latest_button.configure(text=latest_labels["report"])
-                    latest_button.state(["!disabled"])
                 latest_plot = latest_output_plot(output_path)
-                if latest_plot_button is not None:
-                    latest_plot_button.configure(text=latest_labels["plot"])
-                    latest_plot_button.state(["!disabled"] if latest_plot is not None else ["disabled"])
                 latest_worksheet = latest_output_worksheet(output_path)
-                if latest_worksheet_button is not None:
-                    latest_worksheet_button.configure(text=latest_labels["worksheet"])
-                    latest_worksheet_button.state(["!disabled"] if latest_worksheet is not None else ["disabled"])
+                _configure_latest_output_buttons(
+                    output_path,
+                    latest_button=latest_button,
+                    latest_plot_button=latest_plot_button,
+                    latest_worksheet_button=latest_worksheet_button,
+                )
                 latest = _preferred_output_entry(output_path)
                 plot_suffix = f" Latest plot: {latest_plot}" if latest_plot is not None else " No plot saved yet."
                 worksheet_suffix = (
