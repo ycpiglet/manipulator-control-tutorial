@@ -276,10 +276,17 @@ class LiveTuning:
                 tried_labels = ", ".join(preset.label for preset in tried_presets)
                 return (
                     f"Preset progress: {count_text}; {required_text}; "
-                    f"ready to Mark observation comparing {tried_labels}."
+                    f"required path complete; ready to Mark observation comparing {tried_labels}."
                 )
+            remaining_required = [
+                preset.label
+                for preset in required_presets
+                if preset.name not in tried_name_set
+            ]
+            remaining_text = " -> ".join(remaining_required)
             return (
-                f"Preset progress: {count_text}; {required_text}; next required: {next_required.label}. "
+                f"Preset progress: {count_text}; {required_text}; next required: {next_required.label}; "
+                f"remaining required: {remaining_text}. "
                 "Try required presets before Mark observation."
             )
         if len(tried_presets) >= 2:

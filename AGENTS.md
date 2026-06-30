@@ -97,7 +97,7 @@ Implemented and verified:
 - Lab03 2DOF interactive viewer demos include Shoulder/Elbow pulse buttons for live joint-disturbance recovery observations
 - Interactive preset groups show a compare-in-order hint so learners try multiple parameter regimes before marking an observation
 - Interactive preset status shows live preset comparison progress and the next preset to try
-- Interactive preset hover and apply previews keep preset progress and the next required preset visible
+- Interactive preset hover and apply previews keep preset progress, the next required preset, and the remaining required path visible
 - Interactive preset choices save purpose text into `interaction_events.json` and the run report `Preset choices` card
 - Run reports show `Preset comparison progress` for interactive runs so learners know whether they tried enough preset regimes
 - Generated `worksheet.md` artifacts include preset comparison progress for interactive runs with multiple presets

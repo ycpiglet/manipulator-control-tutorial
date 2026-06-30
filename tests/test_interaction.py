@@ -457,13 +457,17 @@ class KeyForcePulseTests(unittest.TestCase):
         )
         self.assertEqual(
             comparison.preset_progress_summary(),
-            "Preset progress: 0/3 tried; 0/2 required; next required: Close. Try required presets before Mark observation.",
+            (
+                "Preset progress: 0/3 tried; 0/2 required; next required: Close; "
+                "remaining required: Close -> Back. Try required presets before Mark observation."
+            ),
         )
         self.assertEqual(
             _preset_panel_status(comparison, "close"),
             (
                 "Close (required): Kp=80\n"
-                "Preset progress: 0/3 tried; 0/2 required; next required: Close. "
+                "Preset progress: 0/3 tried; 0/2 required; next required: Close; "
+                "remaining required: Close -> Back. "
                 "Try required presets before Mark observation."
             ),
         )
@@ -471,7 +475,10 @@ class KeyForcePulseTests(unittest.TestCase):
         comparison.apply_preset("soft")
         self.assertEqual(
             comparison.preset_progress_summary(),
-            "Preset progress: 1/3 tried; 0/2 required; next required: Close. Try required presets before Mark observation.",
+            (
+                "Preset progress: 1/3 tried; 0/2 required; next required: Close; "
+                "remaining required: Close -> Back. Try required presets before Mark observation."
+            ),
         )
         self.assertEqual(comparison.preset_checklist_state(), "needs required preset Close")
         comparison.apply_preset("close")
@@ -479,13 +486,17 @@ class KeyForcePulseTests(unittest.TestCase):
         self.assertEqual(log.events()[-1]["value"]["required"], True)
         self.assertEqual(
             comparison.preset_progress_summary(),
-            "Preset progress: 2/3 tried; 1/2 required; next required: Back. Try required presets before Mark observation.",
+            (
+                "Preset progress: 2/3 tried; 1/2 required; next required: Back; "
+                "remaining required: Back. Try required presets before Mark observation."
+            ),
         )
         self.assertEqual(
             _preset_panel_status(comparison, "close", applied=True),
             (
                 "Applied Close (required): Kp=80\n"
-                "Preset progress: 2/3 tried; 1/2 required; next required: Back. "
+                "Preset progress: 2/3 tried; 1/2 required; next required: Back; "
+                "remaining required: Back. "
                 "Try required presets before Mark observation."
             ),
         )
@@ -493,7 +504,10 @@ class KeyForcePulseTests(unittest.TestCase):
         comparison.apply_preset("back")
         self.assertEqual(
             comparison.preset_progress_summary(),
-            "Preset progress: 3/3 tried; 2/2 required; ready to Mark observation comparing Soft, Close, Back.",
+            (
+                "Preset progress: 3/3 tried; 2/2 required; required path complete; "
+                "ready to Mark observation comparing Soft, Close, Back."
+            ),
         )
         self.assertEqual(comparison.preset_checklist_state(), "ready")
 
