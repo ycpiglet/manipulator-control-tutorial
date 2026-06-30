@@ -40,9 +40,17 @@ class BatchTests(unittest.TestCase):
         self.assertIn("far_wall", lab04_wall_labels)
         self.assertIn("low_retreat_wall", lab04_wall_labels)
         self.assertIn("high_retreat_wall", lab04_wall_labels)
+        self.assertIn("slow_approach_wall", lab04_wall_labels)
+        self.assertIn("fast_approach_wall", lab04_wall_labels)
         lab04_guide = batch.BATCH_GUIDES["lab04_wall_compare"]
         self.assertTrue(
             any("force-to-retreat gain" in question for question in lab04_guide.questions)
+        )
+        self.assertTrue(any("approach speed" in question for question in lab04_guide.questions))
+        self.assertIn("max_hand_x_speed", lab04_guide.metric_keys)
+        self.assertIn(
+            ("hand_x_speed_compare.png", "Panda Hand X Speed Comparison", "x speed [m/s]", "xdot_ee_0"),
+            lab04_guide.comparison_specs,
         )
         self.assertIn("max_dls_condition_scale", batch.BATCH_GUIDES["lab03_2dof_compare"].metric_keys)
         self.assertIn("max_dls_task_speed", batch.BATCH_GUIDES["lab03_2dof_compare"].metric_keys)

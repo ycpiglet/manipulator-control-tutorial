@@ -623,6 +623,22 @@ RUN_GUIDES: dict[str, RunGuide] = {
         "Later contact, smaller penetration, virtual force, retreat, and hand X response.",
         "Move wall_x closer gradually and find when the hand starts producing a visible wall response.",
     ),
+    "configs/lab04_panda/wall_slow_approach.yaml": RunGuide(
+        "Lab04 Slow-Approach Virtual Wall",
+        "The same wall is approached slowly so velocity-dependent damping stays modest.",
+        "Run before the fast-approach wall and compare force_virtual_damping_0.",
+        "trajectory.duration with fixed virtual_wall.stiffness, virtual_wall.damping, and virtual_wall.wall_x",
+        "Lower hand X speed, damping force, contact duration, and penetration.",
+        "Run fast-approach wall next to see the same wall feel stronger when rushed.",
+    ),
+    "configs/lab04_panda/wall_fast_approach.yaml": RunGuide(
+        "Lab04 Fast-Approach Virtual Wall",
+        "The same wall is approached quickly to expose velocity-dependent damping.",
+        "Compare directly against slow-approach wall with the same wall settings.",
+        "trajectory.duration with fixed virtual_wall.stiffness, virtual_wall.damping, and virtual_wall.wall_x",
+        "Higher hand X speed, damping force, retreat, and actuator effort.",
+        "Slow trajectory.duration down until the damping-force spike becomes easier to control.",
+    ),
     "configs/lab04_panda/wall_low_retreat.yaml": RunGuide(
         "Lab04 Low-Retreat Virtual Wall",
         "Wall force settings stay fixed while force-to-retreat gain is low.",

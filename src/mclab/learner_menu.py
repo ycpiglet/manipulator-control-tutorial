@@ -800,6 +800,26 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
     ),
     MenuAction(
         group="Lab04 Panda Manipulator",
+        label="Slow approach wall",
+        lab_name="lab04",
+        config_path="configs/lab04_panda/wall_slow_approach.yaml",
+        plots="wall_compare",
+        description="Moves toward the same virtual wall slowly.",
+        try_this="Run before Fast approach wall with wall settings fixed.",
+        watch="Lower hand X speed, damping force, contact duration, and penetration.",
+    ),
+    MenuAction(
+        group="Lab04 Panda Manipulator",
+        label="Fast approach wall",
+        lab_name="lab04",
+        config_path="configs/lab04_panda/wall_fast_approach.yaml",
+        plots="wall_compare",
+        description="Moves toward the same virtual wall quickly.",
+        try_this="Compare against Slow approach wall to isolate velocity-dependent damping.",
+        watch="Higher hand X speed, damping force, retreat, and actuator effort.",
+    ),
+    MenuAction(
+        group="Lab04 Panda Manipulator",
         label="Low retreat wall",
         lab_name="lab04",
         config_path="configs/lab04_panda/wall_low_retreat.yaml",
@@ -2044,6 +2064,8 @@ def parameter_hint(action: MenuAction) -> str:
             )
         if "cartesian" in label:
             return "cartesian_target.position, cartesian_target.gain, cartesian_target.max_step"
+        if label in {"slow approach wall", "fast approach wall"}:
+            return "trajectory.duration, trajectory.start_time, virtual_wall.wall_x, virtual_wall.damping"
         if "wall" in label:
             return "virtual_wall.wall_x, virtual_wall.stiffness, virtual_wall.damping, virtual_wall.force_retreat_gain"
         if label == "joint target":

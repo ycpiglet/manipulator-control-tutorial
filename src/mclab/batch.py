@@ -132,6 +132,8 @@ BATCH_SETS: dict[str, tuple[BatchScenario, ...]] = {
         BatchScenario("far_wall", "lab04", "configs/lab04_panda/wall_far.yaml", "wall_compare"),
         BatchScenario("low_retreat_wall", "lab04", "configs/lab04_panda/wall_low_retreat.yaml", "wall_compare"),
         BatchScenario("high_retreat_wall", "lab04", "configs/lab04_panda/wall_high_retreat.yaml", "wall_compare"),
+        BatchScenario("slow_approach_wall", "lab04", "configs/lab04_panda/wall_slow_approach.yaml", "wall_compare"),
+        BatchScenario("fast_approach_wall", "lab04", "configs/lab04_panda/wall_fast_approach.yaml", "wall_compare"),
     ),
     "lab04_cartesian_compare": (
         BatchScenario("baseline_reach", "lab04", "configs/lab04_panda/cartesian_reach.yaml", "cartesian_reach"),
@@ -251,7 +253,7 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
     "lab04_wall_compare": BatchGuide(
         title="Lab04 Panda Virtual Wall Comparison",
         focus=(
-            "Compare wall stiffness, damping, position, and force-to-retreat gain on the "
+            "Compare wall stiffness, damping, position, approach speed, and force-to-retreat gain on the "
             "Panda end-effector response."
         ),
         questions=(
@@ -260,6 +262,7 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             "How does the hand X position change as retreat and damping increase?",
             "With stiffness fixed, how does damping change penetration, force, and retreat?",
             "With stiffness and damping fixed, how does wall position change contact timing and penetration?",
+            "With wall gains fixed, how does approach speed change damping force and contact duration?",
             "With wall force fixed, how does force-to-retreat gain change hand retreat and penetration?",
         ),
         followups=(
@@ -267,6 +270,7 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             "Copy `configs/lab04_panda/wall_stiff.yaml` and lower `virtual_wall.damping` to inspect force spikes.",
             "Compare `wall_low_damping.yaml` and `wall_high_damping.yaml` to isolate damping.",
             "Compare `wall_near.yaml` and `wall_far.yaml` to isolate wall position.",
+            "Compare `wall_slow_approach.yaml` and `wall_fast_approach.yaml` to isolate approach speed.",
             "Compare `wall_low_retreat.yaml` and `wall_high_retreat.yaml` to isolate force-to-retreat gain.",
         ),
         metric_keys=(
@@ -280,6 +284,8 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             "max_abs_virtual_wall_damping_force",
             "max_joint_error_norm",
             "max_abs_tau_cmd",
+            "max_hand_x_speed",
+            "max_hand_speed",
             "final_x_ee_0",
         ),
         preview_plots=("virtual_wall.png", "end_effector.png", "error.png"),
@@ -290,6 +296,7 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             ("wall_spring_force_compare.png", "Virtual Wall Spring Force Comparison", "force", "force_virtual_spring_0"),
             ("wall_damping_force_compare.png", "Virtual Wall Damping Force Comparison", "force", "force_virtual_damping_0"),
             ("wall_retreat_compare.png", "Wall Retreat Comparison", "retreat [cm]", "wall_retreat_cm"),
+            ("hand_x_speed_compare.png", "Panda Hand X Speed Comparison", "x speed [m/s]", "xdot_ee_0"),
         ),
     ),
     "lab04_cartesian_compare": BatchGuide(

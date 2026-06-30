@@ -724,6 +724,7 @@ def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
     if not rows:
         return {}
     qdot_keys = [key for key in rows[0] if key.startswith("qdot_")]
+    xdot_keys = [key for key in rows[0] if key.startswith("xdot_ee_")]
     start_time = float(rows[0].get("time", 0.0))
     settled_rows = [row for row in rows if float(row.get("time", start_time)) >= start_time + 1.0]
     if not settled_rows:
@@ -741,6 +742,12 @@ def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "max_abs_qdot": max(abs(float(row.get(key, 0.0))) for row in rows for key in qdot_keys) if qdot_keys else 0.0,
         "max_settled_abs_qdot": (
             max(abs(float(row.get(key, 0.0))) for row in settled_rows for key in qdot_keys) if qdot_keys else 0.0
+        ),
+        "max_hand_x_speed": max(abs(float(row.get("xdot_ee_0", 0.0))) for row in rows) if xdot_keys else 0.0,
+        "max_hand_speed": (
+            max(_norm([float(row.get(f"xdot_ee_{index}", 0.0)) for index in range(3)]) for row in rows)
+            if xdot_keys
+            else 0.0
         ),
         "max_joint_drift_norm": max(joint_drift_norms) if joint_drift_norms else 0.0,
         "max_abs_tau_cmd": max(

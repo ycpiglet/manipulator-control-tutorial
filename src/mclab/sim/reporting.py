@@ -35,6 +35,8 @@ INDEX_METRIC_KEYS = (
     "final_joint_error_norm",
     "max_abs_qdot",
     "max_settled_abs_qdot",
+    "max_hand_x_speed",
+    "max_hand_speed",
     "max_joint_drift_norm",
     "max_task_error_norm",
     "final_task_error_norm",
@@ -515,6 +517,7 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
         NextRunSuggestion("configs/lab04_panda/wall_stiff.yaml", "Compare higher stiffness and retreat.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_low_damping.yaml", "Isolate damping with fixed stiffness.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_near.yaml", "Move the wall closer to isolate contact timing.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/wall_slow_approach.yaml", "Slow the same wall approach to isolate damping force.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_low_retreat.yaml", "Isolate force-to-retreat gain.", "wall_compare"),
     ),
     "configs/lab04_panda/wall_soft.yaml": (
@@ -547,6 +550,16 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
         NextRunSuggestion("configs/lab04_panda/wall_near.yaml", "Compare the same wall placed closer.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/interactive_virtual_wall.yaml", "Tune wall position live.", "wall"),
     ),
+    "configs/lab04_panda/wall_slow_approach.yaml": (
+        NextRunSuggestion("configs/lab04_panda/wall_fast_approach.yaml", "Compare the same wall with a faster approach.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/wall_high_damping.yaml", "Keep speed fixed next and isolate damping.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/interactive_virtual_wall.yaml", "Tune the target and wall live.", "wall"),
+    ),
+    "configs/lab04_panda/wall_fast_approach.yaml": (
+        NextRunSuggestion("configs/lab04_panda/wall_slow_approach.yaml", "Compare the same wall with a slower approach.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/wall_high_retreat.yaml", "Increase retreat gain to counter the fast contact.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/interactive_virtual_wall.yaml", "Tune the target and wall live.", "wall"),
+    ),
     "configs/lab04_panda/wall_low_retreat.yaml": (
         NextRunSuggestion("configs/lab04_panda/wall_high_retreat.yaml", "Compare the same wall with stronger force-to-retreat gain.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_low_damping.yaml", "Return to the damping-only comparison.", "wall_compare"),
@@ -562,6 +575,7 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
         NextRunSuggestion("configs/lab04_panda/wall_stiff.yaml", "Save a deterministic stiff wall comparison.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_high_damping.yaml", "Save a deterministic damping comparison.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_near.yaml", "Save a deterministic wall-position comparison.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/wall_fast_approach.yaml", "Save a deterministic approach-speed comparison.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_high_retreat.yaml", "Save a deterministic retreat-gain comparison.", "wall_compare"),
     ),
 }

@@ -111,6 +111,16 @@ python -m mclab batch lab04_wall_compare --open-report
 
 These two configs keep wall stiffness, damping, retreat gains, and trajectory fixed while changing only `virtual_wall.wall_x`. The near wall should be reached earlier and produce larger penetration, force, and retreat. The far wall should barely be touched by the same motion. Compare `first_wall_contact_time`, `wall_contact_duration`, `wall_contact_fraction`, `wall_penetration_compare.png`, and `wall_force_compare.png`. Use this after the interactive wall demo so learners can connect the wall slider to a deterministic comparison report.
 
+Approach-speed wall comparison:
+
+```bash
+python -m mclab run lab04 --config configs/lab04_panda/wall_slow_approach.yaml --headless --plot --plots wall_compare
+python -m mclab run lab04 --config configs/lab04_panda/wall_fast_approach.yaml --headless --plot --plots wall_compare
+python -m mclab batch lab04_wall_compare --open-report
+```
+
+These two configs keep wall stiffness, damping, position, and retreat gains fixed while changing only `trajectory.duration`. Use this after the damping-only comparison to show that the damping term depends on approach velocity, not just penetration. Compare `hand_x_speed_compare.png`, `wall_damping_force_compare.png`, `wall_force_compare.png`, `wall_contact_duration`, `max_hand_x_speed`, and `max_abs_virtual_wall_damping_force`.
+
 Force-to-retreat comparison:
 
 ```bash
@@ -130,6 +140,7 @@ python -m mclab run lab04 --config configs/lab04_panda/impedance_wall.yaml --hea
 python -m mclab run lab04 --config configs/lab04_panda/wall_stiff.yaml --headless --plot --plots wall_compare
 python -m mclab run lab04 --config configs/lab04_panda/wall_high_damping.yaml --headless --plot --plots wall_compare
 python -m mclab run lab04 --config configs/lab04_panda/wall_near.yaml --headless --plot --plots wall_compare
+python -m mclab run lab04 --config configs/lab04_panda/wall_fast_approach.yaml --headless --plot --plots wall_compare
 python -m mclab run lab04 --config configs/lab04_panda/wall_high_retreat.yaml --headless --plot --plots wall_compare
 ```
 

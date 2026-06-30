@@ -165,6 +165,8 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(("Lab04 Panda Manipulator", "High damping wall"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Near wall"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Far wall"), labels)
+        self.assertIn(("Lab04 Panda Manipulator", "Slow approach wall"), labels)
+        self.assertIn(("Lab04 Panda Manipulator", "Fast approach wall"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Low retreat wall"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "High retreat wall"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Virtual wall"), labels)
@@ -1017,6 +1019,8 @@ class LearnerMenuTests(unittest.TestCase):
                 "High damping wall",
                 "Near wall",
                 "Far wall",
+                "Slow approach wall",
+                "Fast approach wall",
                 "Low retreat wall",
                 "High retreat wall",
                 "Virtual wall",
@@ -1098,6 +1102,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("virtual_wall.stiffness", parameter_hint(by_label[("Lab04 Panda Manipulator", "Virtual wall")]))
         self.assertIn("virtual_wall.damping", parameter_hint(by_label[("Lab04 Panda Manipulator", "Low damping wall")]))
         self.assertIn("virtual_wall.wall_x", parameter_hint(by_label[("Lab04 Panda Manipulator", "Near wall")]))
+        self.assertIn("trajectory.duration", parameter_hint(by_label[("Lab04 Panda Manipulator", "Fast approach wall")]))
         self.assertIn(
             "virtual_wall.force_retreat_gain",
             parameter_hint(by_label[("Lab04 Panda Manipulator", "High retreat wall")]),

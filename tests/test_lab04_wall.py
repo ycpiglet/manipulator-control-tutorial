@@ -107,6 +107,9 @@ class Lab04WallTests(unittest.TestCase):
                 "q_1": 0.0,
                 "qdot_0": 0.0,
                 "qdot_1": 0.0,
+                "xdot_ee_0": 0.0,
+                "xdot_ee_1": 0.0,
+                "xdot_ee_2": 0.0,
                 "tau_cmd_0": 0.0,
                 "tau_cmd_1": 0.0,
                 "cartesian_error_cm": 0.0,
@@ -118,6 +121,9 @@ class Lab04WallTests(unittest.TestCase):
                 "q_1": -0.004,
                 "qdot_0": 0.006,
                 "qdot_1": -0.008,
+                "xdot_ee_0": 0.03,
+                "xdot_ee_1": -0.04,
+                "xdot_ee_2": 0.0,
                 "tau_cmd_0": 0.01,
                 "tau_cmd_1": -0.02,
                 "cartesian_error_cm": 0.0,
@@ -128,6 +134,8 @@ class Lab04WallTests(unittest.TestCase):
 
         self.assertAlmostEqual(summary["max_abs_qdot"], 0.008)
         self.assertAlmostEqual(summary["max_settled_abs_qdot"], 0.008)
+        self.assertAlmostEqual(summary["max_hand_x_speed"], 0.03)
+        self.assertAlmostEqual(summary["max_hand_speed"], 0.05)
         self.assertAlmostEqual(summary["max_joint_drift_norm"], 0.005)
         self.assertAlmostEqual(summary["max_joint_error_norm"], 0.002)
         self.assertAlmostEqual(summary["max_abs_virtual_wall_spring_force"], 0.0)

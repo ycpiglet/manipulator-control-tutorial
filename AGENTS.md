@@ -72,6 +72,7 @@ Implemented and verified:
 - Lab04 wall plot preset includes `wall_target.png` for target/wall/gap interpretation
 - Lab04 low/high damping virtual wall configs that isolate damping with fixed stiffness and retreat gains
 - Lab04 near/far virtual wall configs that isolate wall position with fixed stiffness, damping, and retreat gains
+- Lab04 slow/fast approach virtual wall configs that isolate velocity-dependent damping force with fixed wall gains
 - Lab04 low/high retreat-gain virtual wall configs that isolate force-to-retreat mapping with fixed wall force settings
 - Lab04 viewer visual guides for Cartesian target, current hand position, contact state, and virtual wall
 - YAML configs, MuJoCo XML models, docs, and tests for the implemented labs
@@ -333,6 +334,7 @@ Implemented so far:
 - deterministic virtual wall with Jacobian-based target retreat
 - soft/stiff wall comparison using wall force, penetration, and retreat metrics
 - low/high damping wall comparison using fixed stiffness to isolate damping effects
+- slow/fast approach wall comparison using hand speed and damping-force metrics
 - low/high retreat-gain wall comparison using fixed wall force settings to isolate target retreat
 - interactive wall position/stiffness/damping/retreat tuning
 - viewer visual guides for target point, current hand point, contact hand point, and wall plane
