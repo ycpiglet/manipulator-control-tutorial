@@ -1676,7 +1676,7 @@ def action_activity_mix_text(action: MenuAction, outputs_root: Path | None = Non
     latest = action_latest_output(action, outputs_root)
     if latest is None:
         return "Activity mix: Not run yet"
-    items = dict(_activity_mix_items(_read_json_list(latest / "interaction_events.json")))
+    items = dict(_activity_mix_items(_read_json_list(latest / "interaction_events.json"), _loaded_action_config(action.config_path)))
     if not items:
         return "Activity mix: No learner controls yet"
     path = str(items.get("Activity path") or "").strip()
@@ -2732,6 +2732,15 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
         f"{preset_purpose_text}"
         f"{preset_compare_text}"
     )
+
+
+@lru_cache(maxsize=128)
+def _loaded_action_config(config_path: str) -> dict[str, Any]:
+    try:
+        config = load_config(config_path)
+    except (OSError, ValueError):
+        return {}
+    return config if isinstance(config, dict) else {}
 
 
 @lru_cache(maxsize=128)

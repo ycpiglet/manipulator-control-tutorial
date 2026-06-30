@@ -832,7 +832,7 @@ def _render_worksheet(
     lines.extend(_worksheet_observation_timeline_lines(interaction_events))
     lines.extend(_worksheet_observation_lines(interaction_events))
     lines.extend(_worksheet_review_checklist(interaction_events, config))
-    lines.extend(_worksheet_activity_mix_lines(interaction_events))
+    lines.extend(_worksheet_activity_mix_lines(interaction_events, config))
     lines.extend(_worksheet_preset_comparison_lines(interaction_events, config))
     lines.extend(_worksheet_next_experiment_lines(summary, config))
     lines.extend(_worksheet_notes_lines(notes))
@@ -1065,38 +1065,29 @@ def _worksheet_preset_comparison_lines(events: list[dict[str, Any]], config: dic
     return lines
 
 
-def _worksheet_activity_mix_lines(events: list[dict[str, Any]]) -> list[str]:
-    items = _activity_mix_items(events)
+def _worksheet_activity_mix_lines(events: list[dict[str, Any]], config: dict[str, Any] | None = None) -> list[str]:
+    items = _activity_mix_items(events, config)
     if not items:
         return []
     lines = ["## Hands-on Activity Mix", ""]
     lines.extend(_worksheet_mapping_lines(dict(items)))
-    lines.extend(_worksheet_control_coverage_lines(events))
+    lines.extend(_worksheet_control_coverage_lines(events, config))
     lines.append("")
     return lines
 
 
-def _worksheet_control_coverage_lines(events: list[dict[str, Any]]) -> list[str]:
+def _worksheet_control_coverage_lines(events: list[dict[str, Any]], config: dict[str, Any] | None = None) -> list[str]:
     counts = _event_kind_counts(events)
     complete_observation_markers = _complete_observation_evidence_count(events)
-    checks = [
-        (
-            "Try one Quick preset to compare a named parameter regime.",
-            counts.get("preset", 0),
-        ),
-        (
-            "Move one slider or step button to test a smaller parameter change.",
-            counts.get("slider", 0),
-        ),
-        (
-            "Use one button control such as pulse, nudge, pause, step, or reset.",
-            counts.get("button", 0),
-        ),
-        (
-            "Save one Mark observation with prediction and note.",
-            complete_observation_markers,
-        ),
-    ]
+    has_buttons, has_sliders, has_presets = _activity_available_control_families(config, counts)
+    checks: list[tuple[str, int]] = []
+    if has_presets:
+        checks.append(("Try one Quick preset to compare a named parameter regime.", counts.get("preset", 0)))
+    if has_sliders:
+        checks.append(("Move one slider to tune a parameter or playback speed.", counts.get("slider", 0)))
+    if has_buttons:
+        checks.append(("Use one button control such as pulse, nudge, pause, step, or reset.", counts.get("button", 0)))
+    checks.append(("Save one Mark observation with prediction and note.", complete_observation_markers))
     lines = ["", "Control coverage checklist:"]
     for label, count in checks:
         mark = "x" if count > 0 else " "
@@ -2968,7 +2959,7 @@ def _learner_action_summary_section(events: list[dict[str, Any]], config: dict[s
                 _action_value_list(latest_sliders),
             )
         )
-    activity_mix = _activity_mix_card(events)
+    activity_mix = _activity_mix_card(events, config)
     if activity_mix:
         cards.append(activity_mix)
     preset_progress = _preset_comparison_progress_card(events, config)
@@ -3248,8 +3239,8 @@ def _kind_count_items(events: list[dict[str, Any]]) -> list[tuple[str, int]]:
     return sorted(counts.items())
 
 
-def _activity_mix_card(events: list[dict[str, Any]]) -> str:
-    items = _activity_mix_items(events)
+def _activity_mix_card(events: list[dict[str, Any]], config: dict[str, Any] | None = None) -> str:
+    items = _activity_mix_items(events, config)
     if not items:
         return ""
     return _action_card(
@@ -3259,20 +3250,37 @@ def _activity_mix_card(events: list[dict[str, Any]]) -> str:
     )
 
 
-def _activity_mix_items(events: list[dict[str, Any]]) -> list[tuple[str, Any]]:
+def _activity_mix_items(events: list[dict[str, Any]], config: dict[str, Any] | None = None) -> list[tuple[str, Any]]:
     if not events:
         return []
     counts = _event_kind_counts(events)
     control_kinds = ("button", "slider", "preset", "marker")
     observation_markers = sum(1 for event in events if _is_observation_marker(event))
+    has_buttons, has_sliders, has_presets = _activity_available_control_families(config, counts)
+    available_control_kinds = {
+        "button": has_buttons,
+        "slider": has_sliders,
+        "preset": has_presets,
+    }
     used_kinds = [
         kind
         for kind in control_kinds
-        if counts.get(kind, 0) > 0 and (kind != "marker" or observation_markers > 0)
+        if counts.get(kind, 0) > 0
+        and (
+            (kind == "marker" and observation_markers > 0)
+            or available_control_kinds.get(kind, False)
+        )
     ]
-    varied_controls = sum(1 for kind in ("button", "slider", "preset") if counts.get(kind, 0) > 0)
-    total_controls = sum(counts.get(kind, 0) for kind in ("button", "slider", "preset"))
-    next_step = _activity_mix_next_step(counts, observation_markers)
+    available_controls = [kind for kind, available in available_control_kinds.items() if available]
+    varied_controls = sum(1 for kind in available_controls if counts.get(kind, 0) > 0)
+    total_controls = sum(counts.get(kind, 0) for kind in available_controls)
+    next_step = _activity_mix_next_step(
+        counts,
+        observation_markers,
+        has_buttons=has_buttons,
+        has_sliders=has_sliders,
+        has_presets=has_presets,
+    )
     return [
         ("Control types used", " -> ".join(used_kinds) if used_kinds else "none"),
         ("Activity path", _activity_path(events)),
@@ -3281,9 +3289,39 @@ def _activity_mix_items(events: list[dict[str, Any]]) -> list[tuple[str, Any]]:
         ("Preset choices", counts.get("preset", 0)),
         ("Observation markers", observation_markers),
         ("Hands-on controls before review", total_controls),
-        ("Interaction variety", f"{varied_controls}/3 control families"),
+        ("Interaction variety", f"{varied_controls}/{len(available_controls)} control families"),
         ("Next activity step", next_step),
     ]
+
+
+def _activity_available_control_families(
+    config: dict[str, Any] | None,
+    counts: dict[str, int],
+) -> tuple[bool, bool, bool]:
+    if config is None:
+        return True, True, True
+    interaction = config.get("interaction") if isinstance(config, dict) else None
+    if not isinstance(interaction, dict) or not interaction:
+        return (
+            counts.get("button", 0) > 0,
+            counts.get("slider", 0) > 0,
+            counts.get("preset", 0) > 0,
+        )
+
+    panel_enabled = bool(interaction.get("panel", False))
+    has_buttons = any(
+        bool(interaction.get(name, False))
+        for name in ("key_force", "target_nudge", "joint_disturbance")
+    )
+    has_buttons = has_buttons or bool(interaction.get("pause_resume", interaction.get("pause", panel_enabled)))
+    has_buttons = has_buttons or bool(interaction.get("reset_plant", interaction.get("reset_experiment", panel_enabled)))
+    has_sliders = bool(interaction.get("live_tuning", False)) or bool(interaction.get("playback_speed", panel_enabled))
+    has_presets = bool(_configured_preset_labels(config))
+    return (
+        has_buttons or counts.get("button", 0) > 0,
+        has_sliders or counts.get("slider", 0) > 0,
+        has_presets or counts.get("preset", 0) > 0,
+    )
 
 
 def _activity_path(events: list[dict[str, Any]], *, limit: int = 6) -> str:
@@ -3315,12 +3353,21 @@ def _event_kind_counts(events: list[dict[str, Any]]) -> dict[str, int]:
     return counts
 
 
-def _activity_mix_next_step(counts: dict[str, int], observation_markers: int) -> str:
-    if counts.get("preset", 0) <= 0:
+def _activity_mix_next_step(
+    counts: dict[str, int],
+    observation_markers: int,
+    *,
+    has_buttons: bool = True,
+    has_sliders: bool = True,
+    has_presets: bool = True,
+) -> str:
+    if has_presets and counts.get("preset", 0) <= 0:
         return "Try a Quick preset to compare a named parameter regime."
-    if counts.get("slider", 0) <= 0:
-        return "Move one slider after a preset to test a smaller parameter change."
-    if counts.get("button", 0) <= 0:
+    if has_sliders and counts.get("slider", 0) <= 0:
+        if has_presets:
+            return "Move one slider after a preset to test a smaller parameter change."
+        return "Move one slider to tune a parameter or playback speed."
+    if has_buttons and counts.get("button", 0) <= 0:
         return "Use one button control such as pulse, nudge, pause, step, or reset."
     if observation_markers <= 0:
         return "Save one Mark observation with prediction and live-status evidence."
@@ -3986,7 +4033,7 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
                 "latest_evidence": latest_evidence,
                 "observation_flow": observation_flow,
                 "observation_next_step": observation_next_step,
-                "activity_mix": _activity_mix_index_text(interaction_events),
+                "activity_mix": _activity_mix_index_text(interaction_events, config),
                 "mission_evidence": _mission_evidence_index_text(
                     summary,
                     interaction_events,
@@ -4798,8 +4845,8 @@ def _run_evidence_cell(run: dict[str, Any]) -> str:
     return ", ".join(parts)
 
 
-def _activity_mix_index_text(events: list[dict[str, Any]]) -> str:
-    items = dict(_activity_mix_items(events))
+def _activity_mix_index_text(events: list[dict[str, Any]], config: dict[str, Any] | None = None) -> str:
+    items = dict(_activity_mix_items(events, config))
     if not items:
         return "No learner controls"
     next_step = str(items.get("Next activity step") or "").strip()

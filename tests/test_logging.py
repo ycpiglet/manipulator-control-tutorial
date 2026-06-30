@@ -218,8 +218,8 @@ class LoggingTests(unittest.TestCase):
                 html,
             )
             self.assertIn("Interaction variety", html)
-            self.assertIn("2/3 control families", html)
-            self.assertIn("Use one button control such as pulse, nudge, pause, step, or reset.", html)
+            self.assertIn("2/2 control families", html)
+            self.assertIn("Ready: compare this interaction mix against plots and the worksheet.", html)
             self.assertIn("Latest slider values", html)
             self.assertIn("Preset choices", html)
             self.assertIn("Stiff spring", html)
@@ -323,16 +323,15 @@ class LoggingTests(unittest.TestCase):
                 "- Activity path: slider: Stiffness [N/m] -> preset: Stiff spring -> observation: Mark observation",
                 worksheet_text,
             )
-            self.assertIn("- Interaction variety: 2/3 control families", worksheet_text)
-            self.assertIn("- Next activity step: Use one button control such as pulse, nudge, pause, step, or reset.", worksheet_text)
+            self.assertIn("- Interaction variety: 2/2 control families", worksheet_text)
+            self.assertIn(
+                "- Next activity step: Ready: compare this interaction mix against plots and the worksheet.",
+                worksheet_text,
+            )
             self.assertIn("Control coverage checklist:", worksheet_text)
             self.assertIn("- [x] Try one Quick preset to compare a named parameter regime. (1 recorded)", worksheet_text)
             self.assertIn(
-                "- [x] Move one slider or step button to test a smaller parameter change. (1 recorded)",
-                worksheet_text,
-            )
-            self.assertIn(
-                "- [ ] Use one button control such as pulse, nudge, pause, step, or reset. (0 recorded)",
+                "- [x] Move one slider to tune a parameter or playback speed. (1 recorded)",
                 worksheet_text,
             )
             self.assertIn("- [x] Save one Mark observation with prediction and note. (1 recorded)", worksheet_text)
@@ -463,6 +462,60 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("- Predictions: 1", worksheet_text)
             self.assertIn("- Learner notes: 1", worksheet_text)
             self.assertIn("- [ ] Save one Mark observation with prediction and note. (0 recorded)", worksheet_text)
+
+    def test_activity_mix_uses_configured_control_families(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "run"
+            output.mkdir()
+            (output / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab04_panda",
+                        "config_path": "configs/lab04_panda/interactive_joint_hold.yaml",
+                        "config_name": "interactive_joint_hold",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (output / "config.yaml").write_text(
+                (
+                    "interaction:\n"
+                    "  panel: true\n"
+                    "  target_nudge: true\n"
+                ),
+                encoding="utf-8",
+            )
+            (output / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {"kind": "button", "name": "joint_target_offset", "label": "Target +", "value": 0.05},
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "prediction": "A positive nudge should move the joint target.",
+                                "note": "The joint target offset increased.",
+                            },
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            html = write_run_report(output).read_text(encoding="utf-8")
+            worksheet_text = (output / "worksheet.md").read_text(encoding="utf-8")
+
+            self.assertIn("1/2 control families", html)
+            self.assertIn("Move one slider to tune a parameter or playback speed.", html)
+            self.assertNotIn("Try a Quick preset to compare a named parameter regime.", html)
+            self.assertIn("- Interaction variety: 1/2 control families", worksheet_text)
+            self.assertIn("- [ ] Move one slider to tune a parameter or playback speed. (0 recorded)", worksheet_text)
+            self.assertIn(
+                "- [x] Use one button control such as pulse, nudge, pause, step, or reset. (1 recorded)",
+                worksheet_text,
+            )
+            self.assertIn("- [x] Save one Mark observation with prediction and note. (1 recorded)", worksheet_text)
+            self.assertNotIn("- [ ] Try one Quick preset", worksheet_text)
 
     def test_worksheet_review_checklist_flags_missing_prediction_outcomes(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
