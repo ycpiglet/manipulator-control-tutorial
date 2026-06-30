@@ -882,6 +882,11 @@ def _worksheet_observation_lines(events: list[dict[str, Any]]) -> list[str]:
         for label, text in scalar_rows.items():
             if str(text or "").strip():
                 lines.append(f"- {label}: {_markdown_inline(text)}")
+        note_items = _note_evidence_items(value.get("note"))
+        if len(note_items) > 1:
+            lines.append("- Learner note evidence:")
+            for item in note_items:
+                lines.append(f"  - {_markdown_inline(item)}")
         for label, key in (
             ("Changed sliders", "changed_sliders"),
             ("Current sliders", "sliders"),
@@ -3339,7 +3344,7 @@ def _observation_marker_card(event: dict[str, Any], marker_index: int) -> str:
     prediction = _marker_text_group("Prediction", value.get("prediction"))
     outcome = _marker_text_group("Prediction outcome", value.get("outcome"))
     evidence_prompt = _marker_text_group("Evidence prompt", value.get("evidence_prompt"))
-    note = _marker_text_group("Learner note", value.get("note"))
+    note = _marker_note_group(value.get("note"))
     changed_sliders = _marker_value_group("Changed sliders", value.get("changed_sliders"))
     sliders = _marker_value_group("Sliders", value.get("sliders"))
     status = _marker_value_group("Live status", value.get("status"))
@@ -3385,6 +3390,31 @@ def _marker_text_group(title: str, value: Any) -> str:
         f"<p>{escape(text)}</p>"
         "</div>"
     )
+
+
+def _marker_note_group(value: Any) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    items = _note_evidence_items(text)
+    if len(items) <= 1:
+        return _marker_text_group("Learner note", text)
+    rows = "\n".join(f"<li>{escape(item)}</li>" for item in items)
+    return (
+        '<div class="marker-group">'
+        "<strong>Learner note</strong>"
+        f"<p>{escape(text)}</p>"
+        "<strong>Learner note evidence</strong>"
+        f"<ul>{rows}</ul>"
+        "</div>"
+    )
+
+
+def _note_evidence_items(value: Any) -> list[str]:
+    text = str(value or "").strip()
+    if not text:
+        return []
+    return [part.strip() for part in text.split(";") if part.strip()]
 
 
 def _plot_guide_section(plots: list[Path]) -> str:

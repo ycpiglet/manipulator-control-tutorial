@@ -116,7 +116,10 @@ class LoggingTests(unittest.TestCase):
                             "prediction": "Higher stiffness should create a sharper force peak.",
                             "outcome": "Matched",
                             "evidence_prompt": "Evidence to capture: position, force, and total energy.",
-                            "note": "Higher stiffness made the force spike easier to see.",
+                            "note": (
+                                "Higher stiffness made the force spike easier to see.; "
+                                "Energy: 0.125; Changed values: Stiffness=80"
+                            ),
                             "changed_sliders": {"stiffness": 80.0},
                             "sliders": {"stiffness": 80.0},
                             "status": {"energy": "0.125"},
@@ -243,6 +246,9 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Evidence prompt", html)
             self.assertIn("position, force, and total energy", html)
             self.assertIn("Higher stiffness made the force spike easier to see.", html)
+            self.assertIn("Learner note evidence", html)
+            self.assertIn("<li>Energy: 0.125</li>", html)
+            self.assertIn("<li>Changed values: Stiffness=80</li>", html)
             self.assertIn("Changed sliders", html)
             self.assertIn("Sliders", html)
             self.assertIn("Live status", html)
@@ -269,6 +275,9 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("## Observation Markers", worksheet_text)
             self.assertIn("Higher stiffness should create a sharper force peak.", worksheet_text)
             self.assertIn("Prediction outcome: Matched", worksheet_text)
+            self.assertIn("- Learner note evidence:", worksheet_text)
+            self.assertIn("  - Energy: 0.125", worksheet_text)
+            self.assertIn("  - Changed values: Stiffness=80", worksheet_text)
             self.assertIn("Live status", worksheet_text)
             self.assertIn("energy: 0.125", worksheet_text)
             self.assertIn("## Review Checklist", worksheet_text)
