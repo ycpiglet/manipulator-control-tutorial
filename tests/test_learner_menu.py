@@ -1653,6 +1653,10 @@ class LearnerMenuTests(unittest.TestCase):
             self.assertIn("Activity mix: 2/3 control families", text)
             self.assertIn("buttons 0, sliders 1, presets 1, markers 1", text)
             self.assertIn("Use one button control such as pulse, nudge, pause", text)
+            self.assertIn(
+                "path preset: Gentle P -> slider: Kp -> observation: Mark observation",
+                text,
+            )
             self.assertIn(text, lesson_text(lab02_interactive, outputs))
 
     def test_action_mission_evidence_summarizes_latest_proof_status(self) -> None:

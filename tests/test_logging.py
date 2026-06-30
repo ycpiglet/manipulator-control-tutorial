@@ -1377,7 +1377,8 @@ class LoggingTests(unittest.TestCase):
             )
             self.assertIn(
                 "Activity mix: 3/3 control families; buttons 1, sliders 1, presets 1, markers 1; "
-                "next: Ready: compare this interaction mix against plots and the worksheet.",
+                "next: Ready: compare this interaction mix against plots and the worksheet.; "
+                "path: button: Push Right -&gt; preset: Heavy damping -&gt; slider: Damping -&gt; observation: Mark observation",
                 html,
             )
             self.assertIn(

@@ -3252,6 +3252,8 @@ def _activity_path(events: list[dict[str, Any]], *, limit: int = 6) -> str:
         if kind == "marker" and not _is_observation_marker(event):
             continue
         display_kind = "observation" if kind == "marker" else kind
+        if display_kind == "observation" and label.lower() == "observation":
+            label = "Mark observation"
         steps.append(f"{display_kind}: {label}")
     if not steps:
         return "none"
@@ -4758,11 +4760,14 @@ def _activity_mix_index_text(events: list[dict[str, Any]]) -> str:
         return "No learner controls"
     next_step = str(items.get("Next activity step") or "").strip()
     next_text = f"; next: {_short_evidence_text(next_step, max_length=72)}" if next_step else ""
+    path = str(items.get("Activity path") or "").strip()
+    path_text = f"; path: {_short_evidence_text(path, max_length=96)}" if path and path != "none" else ""
     return (
         f"{items.get('Interaction variety')}; "
         f"buttons {items.get('Button actions')}, sliders {items.get('Slider changes')}, "
         f"presets {items.get('Preset choices')}, markers {items.get('Observation markers')}"
         f"{next_text}"
+        f"{path_text}"
     )
 
 

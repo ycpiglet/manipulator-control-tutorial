@@ -126,6 +126,7 @@ Implemented and verified:
 - Learner menu batch cards include a `Prediction check` cue that points learners to the saved worksheet outcome table
 - Learner menu scenario cards include a `Latest evidence` summary from the latest observation marker prediction, outcome, note, and live status
 - Learner menu scenario cards include an `Activity mix` summary from the latest hands-on run's button, slider, preset, and observation-marker events
+- Learner menu cards and outputs index activity summaries include a compact latest `Activity path`
 - Learner menu scenario cards include a `Next cue` that points learners toward the next best action: run, try another preset, mark observation, review outcome, replay, or compare
 - Interactive `Playback speed` slider controls realtime viewer pacing from slow-motion to faster skim
 - Interactive `Pause / Resume` button pauses physics stepping and logging while keeping viewer and sliders responsive

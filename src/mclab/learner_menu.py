@@ -1679,11 +1679,14 @@ def action_activity_mix_text(action: MenuAction, outputs_root: Path | None = Non
     items = dict(_activity_mix_items(_read_json_list(latest / "interaction_events.json")))
     if not items:
         return "Activity mix: No learner controls yet"
+    path = str(items.get("Activity path") or "").strip()
+    path_text = f"; path {_short_text(path, 96)}" if path and path != "none" else ""
     return (
         f"Activity mix: {items.get('Interaction variety')}; "
         f"buttons {items.get('Button actions')}, sliders {items.get('Slider changes')}, "
         f"presets {items.get('Preset choices')}, markers {items.get('Observation markers')}; "
         f"next {_short_text(str(items.get('Next activity step') or ''), 80)}"
+        f"{path_text}"
     )
 
 
