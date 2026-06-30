@@ -1344,10 +1344,12 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("20260627_150117_lab01_msd/learner_tuned_config.yaml", html)
             self.assertIn("Tuned config", html)
             self.assertIn("Plots", html)
+            self.assertIn("<th>Plot review</th>", html)
             self.assertIn("20260627_150117_lab01_msd/plots/position.png", html)
             self.assertIn("20260627_150117_lab01_msd/plots/energy.png", html)
             self.assertIn("Position", html)
             self.assertIn("Energy", html)
+            self.assertIn("Plot review: Position - Compare actual motion against target", html)
             self.assertIn("Lab01 Baseline", html)
             self.assertIn("Run underdamped", html)
             self.assertIn("configs/lab01_msd/default.yaml", html)
@@ -1385,6 +1387,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("python -m mclab batch lab02_pid_compare --open-report", html)
             self.assertIn("Next cue: Rerun the comparison batch to regenerate the worksheet.", html)
             self.assertIn("20260627_151000_lab02_pid_compare/comparison_plots/error_compare.png", html)
+            self.assertIn("Plot review: Error - Check how quickly error shrinks", html)
 
     def test_outputs_index_marks_all_batch_learning_path_step(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

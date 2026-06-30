@@ -4451,6 +4451,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
             f"<td>{_run_worksheet_cell(run)}</td>"
             f"<td>{_run_replay_cell(run)}</td>"
             f"<td>{_run_plots_cell(run)}</td>"
+            f"<td>{escape(_run_plot_review_cell(run))}</td>"
             f"<td>{escape(_format_value(run['duration']))}</td>"
             f"<td>{escape(str(run['samples']))}</td>"
             + "".join(
@@ -4462,7 +4463,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
         for run in runs
     )
     if not rows:
-        rows = f'<tr><td colspan="{16 + len(metric_keys)}">No run reports were found yet.</td></tr>'
+        rows = f'<tr><td colspan="{17 + len(metric_keys)}">No run reports were found yet.</td></tr>'
 
     return f"""<!doctype html>
 <html lang="en">
@@ -4625,7 +4626,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
     <section>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Run</th><th>Lab</th><th>Config</th><th>Lesson</th><th>Next</th><th>Next cue</th><th>Repeat command</th><th>Evidence</th><th>Activity</th><th>Mission evidence</th><th>Challenge evidence</th><th>Worksheet</th><th>Replay</th><th>Plots</th><th>Duration [s]</th><th>Samples</th>{metric_headers}</tr></thead>
+          <thead><tr><th>Run</th><th>Lab</th><th>Config</th><th>Lesson</th><th>Next</th><th>Next cue</th><th>Repeat command</th><th>Evidence</th><th>Activity</th><th>Mission evidence</th><th>Challenge evidence</th><th>Worksheet</th><th>Replay</th><th>Plots</th><th>Plot review</th><th>Duration [s]</th><th>Samples</th>{metric_headers}</tr></thead>
           <tbody>{rows}</tbody>
         </table>
       </div>
@@ -5592,6 +5593,26 @@ def _run_plots_cell(run: dict[str, Any]) -> str:
     if not links:
         return '<span class="muted">No plots</span>'
     return '<div class="plot-links">' + "".join(links) + "</div>"
+
+
+def _run_plot_review_cell(run: dict[str, Any]) -> str:
+    plots = run.get("plots", [])
+    if not isinstance(plots, list) or not plots:
+        return "Plot review: Not available until a plot is saved."
+    for plot in plots:
+        if not isinstance(plot, dict):
+            continue
+        href = str(plot.get("href") or "")
+        label = str(plot.get("label") or "").strip()
+        if not href:
+            continue
+        guidance = _plot_guidance(Path(href).name)
+        if guidance is not None:
+            title, detail = guidance
+            return f"Plot review: {title} - {_short_evidence_text(detail, max_length=96)}"
+        if label:
+            return f"Plot review: Open {label} and compare it with the worksheet."
+    return "Plot review: Open the saved plot and compare it with the worksheet."
 
 
 def _run_link(child: Path, report_path: Path, index_path: Path) -> str:

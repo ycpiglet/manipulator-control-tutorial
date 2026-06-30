@@ -238,6 +238,7 @@ Implemented and verified:
 - Outputs index run table and learning-path cards summarize latest hands-on activity mix before opening individual reports
 - Outputs index run table includes a per-run `Next cue` so saved result review pages point to the next learner action without reopening the menu
 - Outputs index run table includes per-run and per-batch `Repeat command` snippets so saved results can be reproduced directly from the index page
+- Outputs index run table includes `Plot review` guidance beside plot links so learners know what to inspect before opening a report
 - Outputs index run table and learning-path cards summarize `Mission evidence` proof status and next proof step per saved run
 - Outputs index run table shows the latest observation marker prediction, outcome, note, and live status summary per saved run
 - Outputs index run table links directly to each run's `worksheet.md` when available
