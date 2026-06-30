@@ -34,4 +34,5 @@ tracking_controller:
   kd: [9.5, 6.5]
   torque_limit: [42.0, 32.0]
 viewer_guides:
+  target_path: true
   condition_threshold: 18.0

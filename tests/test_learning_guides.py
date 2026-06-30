@@ -92,6 +92,9 @@ class LearningGuideTests(unittest.TestCase):
     def test_viewer_legend_matches_visible_guides(self) -> None:
         lab01_guide = guide_for_config(config_path="configs/lab01_msd/interactive_pull.yaml")
         lab03_guide = guide_for_config(config_path="configs/lab03_2dof/condition_aware_dls_2dof.yaml")
+        lab03_retarget_guide = guide_for_config(
+            config_path="configs/lab03_2dof/condition_aware_dls_inward_retarget_2dof.yaml"
+        )
         lab04_wall_guide = guide_for_config(config_path="configs/lab04_panda/interactive_virtual_wall.yaml")
         lab04_joint_guide = guide_for_config(config_path="configs/lab04_panda/joint_pd.yaml")
 
@@ -99,6 +102,10 @@ class LearningGuideTests(unittest.TestCase):
         self.assertIn(
             ("Orange sphere", "Singularity warning when Jacobian conditioning is poor."),
             viewer_legend_for_guide(lab03_guide),
+        )
+        self.assertIn(
+            ("Small green spheres", "Planned target waypoint path."),
+            viewer_legend_for_guide(lab03_retarget_guide),
         )
         self.assertIn(("Red plane", "Virtual wall location."), viewer_legend_for_guide(lab04_wall_guide))
         self.assertIn(

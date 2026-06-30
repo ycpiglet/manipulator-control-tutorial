@@ -36,7 +36,6 @@ def maybe_launch_viewer(
     *,
     enabled: bool,
     key_callback: Any | None = None,
-    show_ui: bool = False,
 ) -> Any | None:
     if not enabled:
         return None
@@ -44,7 +43,6 @@ def maybe_launch_viewer(
         from mujoco import viewer as mujoco_viewer  # type: ignore
     except Exception as exc:  # pragma: no cover - depends on local GUI support.
         raise RuntimeError("MuJoCo viewer could not be launched in this environment.") from exc
-    _ = show_ui  # Kept for compatibility with older lab call sites.
     return mujoco_viewer.launch_passive(
         model,
         data,

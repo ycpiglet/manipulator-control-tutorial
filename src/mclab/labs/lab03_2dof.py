@@ -69,7 +69,6 @@ def run(
     headless: bool = False,
     realtime: bool = False,
     pause_at_end: bool = False,
-    show_viewer_ui: bool = False,
     plot_selection: PlotSelection = None,
     seed: int | None = None,
 ) -> Path:
@@ -83,7 +82,6 @@ def run(
             headless=headless,
             realtime=realtime,
             pause_at_end=pause_at_end,
-            show_viewer_ui=show_viewer_ui,
             plot_selection=plot_selection,
             seed=seed,
         )
@@ -96,7 +94,6 @@ def run(
         headless=headless,
         realtime=realtime,
         pause_at_end=pause_at_end,
-        show_viewer_ui=show_viewer_ui,
         plot_selection=plot_selection,
         seed=seed,
     )
@@ -112,7 +109,6 @@ def _run_slider_trajectory(
     headless: bool = False,
     realtime: bool = False,
     pause_at_end: bool = False,
-    show_viewer_ui: bool = False,
     plot_selection: PlotSelection = None,
     seed: int | None = None,
 ) -> Path:
@@ -157,7 +153,6 @@ def _run_slider_trajectory(
         data,
         enabled=viewer and not headless,
         key_callback=key_force.key_callback if key_force.enabled else None,
-        show_ui=show_viewer_ui,
     )
     interaction_panel = (
         maybe_start_interaction_panel(
@@ -279,7 +274,6 @@ def _run_two_link_arm(
     headless: bool = False,
     realtime: bool = False,
     pause_at_end: bool = False,
-    show_viewer_ui: bool = False,
     plot_selection: PlotSelection = None,
     seed: int | None = None,
 ) -> Path:
@@ -339,7 +333,6 @@ def _run_two_link_arm(
         data,
         enabled=viewer and not headless,
         key_callback=panel_control.key_callback if panel_control.enabled else None,
-        show_ui=show_viewer_ui,
     )
     interaction_panel = (
         maybe_start_interaction_panel(
@@ -486,6 +479,7 @@ def _run_two_link_arm(
                 guide_config=viewer_guides,
                 x_ee=x_ee,
                 target_xy=command["target_xy"],
+                target_path=target_xy_waypoints,
                 condition=condition_capped,
             )
             sync_viewer(
@@ -570,6 +564,7 @@ def _two_link_viewer_guides(config: dict[str, Any]) -> dict[str, bool | float]:
         "enabled": bool(guide_config.get("enabled", True)),
         "hand": bool(guide_config.get("hand", True)),
         "target": bool(guide_config.get("target", True)),
+        "target_path": bool(guide_config.get("target_path", True)),
         "condition_warning": bool(guide_config.get("condition_warning", True)),
         "condition_threshold": float(guide_config.get("condition_threshold", 20.0)),
     }
@@ -583,12 +578,23 @@ def _update_two_link_viewer_guides(
     x_ee: tuple[float, float],
     target_xy: list[float],
     condition: float,
+    target_path: list[tuple[float, tuple[float, float]]] | None = None,
 ) -> None:
     if viewer_handle is None:
         return
     reset_viewer_overlays(viewer_handle)
     if not bool(guide_config.get("enabled", True)):
         return
+
+    if bool(guide_config.get("target_path", True)) and target_path:
+        for _, waypoint_xy in target_path:
+            add_viewer_sphere(
+                mujoco,
+                viewer_handle,
+                _two_link_guide_position(waypoint_xy, z=0.075),
+                radius=0.018,
+                rgba=[0.62, 1.0, 0.22, 0.46],
+            )
 
     if bool(guide_config.get("target", True)):
         add_viewer_sphere(
@@ -612,8 +618,8 @@ def _update_two_link_viewer_guides(
         )
 
 
-def _two_link_guide_position(xy: tuple[float, float] | list[float]) -> list[float]:
-    return [float(xy[0]), float(xy[1]), 0.11]
+def _two_link_guide_position(xy: tuple[float, float] | list[float], *, z: float = 0.11) -> list[float]:
+    return [float(xy[0]), float(xy[1]), float(z)]
 
 
 def _two_link_disturbance_torque(config: dict[str, Any], time: float) -> list[float]:

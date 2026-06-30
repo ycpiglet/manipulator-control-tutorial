@@ -64,6 +64,7 @@ Implemented and verified:
 - Lab03 condition-aware DLS slow/fast command-speed comparison configs for target-speed lessons
 - Lab03 condition-aware DLS low/high joint-speed-limit comparison configs for speed-clipping lessons
 - Lab03 condition-aware DLS direct/inward retargeting comparison configs for target-path lessons
+- Lab03 retargeting DLS viewer guides show small green waypoint path markers for target-path lessons
 - Learner menu exposes Lab03 upper/lower path, shoulder/elbow disturbance, low/high torque-limit, slow/fast command-speed, low/high joint-speed-limit, and direct/inward retargeting DLS scenario cards with compare/search/filter support
 - Lab04 Franka Emika Panda manipulator using MuJoCo Menagerie
 - Lab04 30-second neutral-hold stability check config and report checks
@@ -111,7 +112,7 @@ Implemented and verified:
 - Activity mix and control coverage prompts only require control families that are available in the run config
 - Interactive `MCLab Interaction` changed-values summary shows slider parameters changed from run start
 - Interactive `MCLab Interaction` panel is scrollable and resizable so dense demos keep observation and live-status controls reachable
-- Interactive `MCLab Interaction` panel and run reports show a `Viewer legend` for visible target/current/force/singularity/wall markers
+- Interactive `MCLab Interaction` panel and run reports show a `Viewer legend` for visible target/current/waypoint/force/singularity/wall markers
 - Interactive `MCLab Interaction` panel, run reports, and worksheets show a shared `Mission` prompt so the learner sees the same evidence-focused task during launch, live tuning, and review
 - Interactive `MCLab Interaction` panel shows a `Done when` evidence criterion before Prediction and Mark observation controls, including the requirement to use at least one button, slider, or preset
 - Interactive `MCLab Interaction` observation area shows a live `Evidence checklist` for learner-control, prediction, preset comparison, outcome, and note readiness before marking

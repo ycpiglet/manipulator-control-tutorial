@@ -13,19 +13,14 @@ from mclab.sim.mujoco_utils import maybe_launch_viewer  # noqa: E402
 
 
 class MujocoViewerLaunchTests(unittest.TestCase):
-    def test_viewer_side_panels_are_hidden_by_default(self) -> None:
-        launched_kwargs = self._launch_kwargs(show_ui=False)
+    def test_viewer_side_panels_are_always_hidden(self) -> None:
+        launched_kwargs = self._launch_kwargs()
 
         self.assertFalse(launched_kwargs["show_left_ui"])
         self.assertFalse(launched_kwargs["show_right_ui"])
+        self.assertNotIn("show_ui", launched_kwargs)
 
-    def test_viewer_side_panels_stay_hidden_even_if_requested(self) -> None:
-        launched_kwargs = self._launch_kwargs(show_ui=True)
-
-        self.assertFalse(launched_kwargs["show_left_ui"])
-        self.assertFalse(launched_kwargs["show_right_ui"])
-
-    def _launch_kwargs(self, *, show_ui: bool) -> dict[str, object]:
+    def _launch_kwargs(self) -> dict[str, object]:
         def fake_launch_passive(*_args: object, **kwargs: object) -> dict[str, object]:
             return kwargs
 
@@ -38,5 +33,4 @@ class MujocoViewerLaunchTests(unittest.TestCase):
                 object(),
                 object(),
                 enabled=True,
-                show_ui=show_ui,
             )

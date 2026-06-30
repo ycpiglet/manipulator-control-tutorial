@@ -110,7 +110,6 @@ def main(argv: list[str] | None = None) -> int:
             headless=args.headless,
             realtime=args.realtime,
             pause_at_end=args.pause_at_end,
-            show_viewer_ui=False,
             plot_selection=args.plots,
             seed=args.seed,
         )

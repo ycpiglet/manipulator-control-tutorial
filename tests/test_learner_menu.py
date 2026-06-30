@@ -814,11 +814,13 @@ class LearnerMenuTests(unittest.TestCase):
         by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
         lab01_interactive = by_label[("Lab01 Mass-Spring-Damper", "Interactive")]
         lab03_condition_dls = by_label[("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS")]
+        lab03_retarget = by_label[("Lab03 2DOF Arm and Trajectories", "2DOF inward-retarget DLS")]
         lab04_wall = by_label[("Lab04 Panda Manipulator", "Virtual wall")]
         lab04_joint = by_label[("Lab04 Panda Manipulator", "Joint target")]
 
         self.assertIn("Green marker = Target position.", action_viewer_text(lab01_interactive))
         self.assertIn("Orange sphere = Singularity warning", action_viewer_text(lab03_condition_dls))
+        self.assertIn("Small green spheres = Planned target waypoint path.", action_viewer_text(lab03_retarget))
         self.assertIn("Red plane = Virtual wall location.", action_viewer_text(lab04_wall))
         self.assertIn("Standard MuJoCo scene", action_viewer_text(lab04_joint))
         lesson = lesson_text(lab01_interactive)

@@ -485,7 +485,6 @@ def run_batch(
             headless=True,
             realtime=False,
             pause_at_end=False,
-            show_viewer_ui=False,
             plot_selection=scenario.plots,
             seed=seed,
         )

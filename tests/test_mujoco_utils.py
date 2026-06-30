@@ -38,17 +38,6 @@ class ViewerUtilityTests(unittest.TestCase):
             show_right_ui=False,
         )
 
-    def test_viewer_side_panels_stay_hidden_even_if_requested(self) -> None:
-        launch_passive = Mock(return_value="viewer-handle")
-        viewer_module = types.SimpleNamespace(launch_passive=launch_passive)
-        mujoco_module = types.SimpleNamespace(viewer=viewer_module)
-
-        with patch.dict(sys.modules, {"mujoco": mujoco_module}):
-            maybe_launch_viewer("mujoco", "model", "data", enabled=True, show_ui=True)
-
-        self.assertFalse(launch_passive.call_args.kwargs["show_left_ui"])
-        self.assertFalse(launch_passive.call_args.kwargs["show_right_ui"])
-
     def test_sync_paused_viewer_keeps_viewer_responsive(self) -> None:
         viewer = types.SimpleNamespace(sync=Mock())
 

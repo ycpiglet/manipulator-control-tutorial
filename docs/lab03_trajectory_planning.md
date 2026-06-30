@@ -151,7 +151,7 @@ python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_inward
 python -m mclab batch lab03_2dof_compare --open-report
 ```
 
-These two configs keep the same near-edge final target, condition-aware damping schedule, torque limits, and gains while changing only `target_xy_waypoints`. The direct-retarget case moves straight from the start pose to the workspace edge. The inward-retarget case moves through an inner waypoint before returning to the edge, so learners can see whether a geometric detour lowers conditioning cost or simply asks for faster motion and more torque. Compare `hand_x_compare.png`, `hand_y_compare.png`, `dls_task_speed_compare.png`, `dls_joint_speed_compare.png`, `dls_damping_compare.png`, and `task_error_compare.png`.
+These two configs keep the same near-edge final target, condition-aware damping schedule, torque limits, and gains while changing only `target_xy_waypoints`. The direct-retarget case moves straight from the start pose to the workspace edge. The inward-retarget case moves through an inner waypoint before returning to the edge, so learners can see whether a geometric detour lowers conditioning cost or simply asks for faster motion and more torque. In viewer runs, small green spheres show the planned target waypoint path while the larger green sphere remains the current hand target. Compare `hand_x_compare.png`, `hand_y_compare.png`, `dls_task_speed_compare.png`, `dls_joint_speed_compare.png`, `dls_damping_compare.png`, and `task_error_compare.png`.
 
 Interactive 2DOF demo:
 

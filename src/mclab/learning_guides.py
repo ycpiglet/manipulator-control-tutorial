@@ -99,11 +99,14 @@ def viewer_legend_for_guide(guide: RunGuide | None) -> list[tuple[str, str]]:
         return []
 
     if "2dof" in context:
-        return [
+        items = [
             ("Green sphere", "Target hand point."),
             ("Blue sphere", "Current hand point."),
             ("Orange sphere", "Singularity warning when Jacobian conditioning is poor."),
         ]
+        if "retarget" in context or "waypoint" in context:
+            items.insert(1, ("Small green spheres", "Planned target waypoint path."))
+        return items
 
     if any(term in context for term in ("lab01", "lab02", "pid", "mass-spring", "1d", "trajectory")):
         return [

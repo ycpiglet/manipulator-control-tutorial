@@ -254,9 +254,11 @@ class TwoLinkKinematicsTests(unittest.TestCase):
 
         self.assertTrue(guides["enabled"])
         self.assertTrue(guides["target"])
+        self.assertTrue(guides["target_path"])
         self.assertTrue(guides["hand"])
         self.assertEqual(guides["condition_threshold"], 20.0)
         self.assertFalse(_two_link_viewer_guides({"viewer_guides": {"enabled": False}})["enabled"])
+        self.assertFalse(_two_link_viewer_guides({"viewer_guides": {"target_path": False}})["target_path"])
 
     def test_two_link_viewer_guides_draw_target_and_hand(self) -> None:
         def init_geom(geom, geom_type, size, pos, mat, rgba):
@@ -311,3 +313,48 @@ class TwoLinkKinematicsTests(unittest.TestCase):
         self.assertEqual(scene.ngeom, 1)
         self.assertEqual(scene.geoms[0].pos, [1.03, 0.02, 0.11])
         self.assertEqual(scene.geoms[0].rgba, [1.0, 0.48, 0.1, 0.9])
+
+    def test_two_link_viewer_guides_draw_retarget_waypoints(self) -> None:
+        def init_geom(geom, geom_type, size, pos, mat, rgba):
+            geom.geom_type = geom_type
+            geom.size = [float(value) for value in size]
+            geom.pos = [float(value) for value in pos]
+            geom.rgba = [float(value) for value in rgba]
+
+        fake_mujoco = types.SimpleNamespace(
+            mjv_initGeom=Mock(side_effect=init_geom),
+            mjtGeom=types.SimpleNamespace(mjGEOM_SPHERE="sphere"),
+            mjtCatBit=types.SimpleNamespace(mjCAT_DECOR="decor"),
+        )
+        scene = types.SimpleNamespace(ngeom=0, geoms=[types.SimpleNamespace() for _ in range(8)])
+        viewer = types.SimpleNamespace(user_scn=scene)
+        waypoints = [
+            (0.0, (0.50, 0.20)),
+            (1.0, (0.70, 0.10)),
+            (2.0, (1.04, 0.0)),
+        ]
+
+        _update_two_link_viewer_guides(
+            fake_mujoco,
+            viewer,
+            guide_config={
+                "enabled": True,
+                "hand": True,
+                "target": True,
+                "target_path": True,
+                "condition_warning": True,
+                "condition_threshold": 20.0,
+            },
+            x_ee=(0.55, 0.22),
+            target_xy=[0.62, 0.16],
+            target_path=waypoints,
+            condition=5.0,
+        )
+
+        self.assertEqual(scene.ngeom, 5)
+        self.assertEqual(scene.geoms[0].pos, [0.50, 0.20, 0.075])
+        self.assertEqual(scene.geoms[1].pos, [0.70, 0.10, 0.075])
+        self.assertEqual(scene.geoms[2].pos, [1.04, 0.0, 0.075])
+        self.assertEqual(scene.geoms[0].rgba, [0.62, 1.0, 0.22, 0.46])
+        self.assertEqual(scene.geoms[3].pos, [0.62, 0.16, 0.11])
+        self.assertEqual(scene.geoms[4].pos, [0.55, 0.22, 0.11])
