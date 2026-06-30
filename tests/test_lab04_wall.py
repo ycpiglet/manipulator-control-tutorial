@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from mclab.labs.lab04_panda import (  # noqa: E402
+    _cartesian_target_position,
     _live_status_specs,
     _plot_event_markers,
     _save_plots,
@@ -25,6 +26,11 @@ from mclab.labs.lab04_panda import (  # noqa: E402
     _wall_retreat_distance,
     _wall_target_crossing_metrics,
 )
+
+
+class DummyLiveTuning:
+    def value(self, _name: str, default: float) -> float:
+        return default
 
 
 class Lab04WallTests(unittest.TestCase):
@@ -81,6 +87,27 @@ class Lab04WallTests(unittest.TestCase):
         self.assertAlmostEqual(damping[0], -2.0)
         self.assertAlmostEqual(total[0], -11.0)
         self.assertEqual(_virtual_wall_force(ee_position, ee_velocity, wall), total)
+
+    def test_cartesian_target_waypoints_use_smooth_time_interpolation(self) -> None:
+        config = {
+            "cartesian_target": {
+                "waypoints": [
+                    {"time": 0.0, "position": [0.50, 0.0, 0.58]},
+                    {"time": 1.0, "position": [0.60, 0.0, 0.58]},
+                    {"time": 2.0, "position": [0.52, 0.0, 0.58]},
+                ]
+            }
+        }
+        tuning = DummyLiveTuning()
+        initial = [0.40, 0.0, 0.58]
+
+        self.assertEqual(_cartesian_target_position(config, tuning, initial, 1.0, time=-0.1), [0.50, 0.0, 0.58])
+        self.assertEqual(_cartesian_target_position(config, tuning, initial, 1.0, time=2.5), [0.52, 0.0, 0.58])
+        halfway = _cartesian_target_position(config, tuning, initial, 1.0, time=0.5)
+
+        self.assertAlmostEqual(halfway[0], 0.55)
+        self.assertAlmostEqual(halfway[1], 0.0)
+        self.assertAlmostEqual(halfway[2], 0.58)
 
     def test_force_retreat_gain_changes_retreat_with_same_wall_force(self) -> None:
         ee_position = [0.60, 0.0, 0.0]

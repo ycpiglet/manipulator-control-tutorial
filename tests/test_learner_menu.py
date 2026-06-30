@@ -171,6 +171,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(("Lab04 Panda Manipulator", "Far wall"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Slow approach wall"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Fast approach wall"), labels)
+        self.assertIn(("Lab04 Panda Manipulator", "Contact cycle wall"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Low retreat wall"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "High retreat wall"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Virtual wall"), labels)
@@ -1045,6 +1046,8 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Soft wall", wall_labels)
         self.assertIn("Stiff wall", wall_labels)
         self.assertIn("Virtual wall", wall_labels)
+        contact_labels = {action.label for action in filter_menu_actions("contact release")}
+        self.assertIn("Contact cycle wall", contact_labels)
         retreat_labels = {action.label for action in filter_menu_actions("retreat gain")}
         self.assertIn("Low retreat wall", retreat_labels)
         self.assertIn("High retreat wall", retreat_labels)
@@ -1177,6 +1180,7 @@ class LearnerMenuTests(unittest.TestCase):
                 "Far wall",
                 "Slow approach wall",
                 "Fast approach wall",
+                "Contact cycle wall",
                 "Low retreat wall",
                 "High retreat wall",
                 "Virtual wall",
@@ -1280,6 +1284,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("virtual_wall.damping", parameter_hint(by_label[("Lab04 Panda Manipulator", "Low damping wall")]))
         self.assertIn("virtual_wall.wall_x", parameter_hint(by_label[("Lab04 Panda Manipulator", "Near wall")]))
         self.assertIn("trajectory.duration", parameter_hint(by_label[("Lab04 Panda Manipulator", "Fast approach wall")]))
+        self.assertIn("cartesian_target.waypoints", parameter_hint(by_label[("Lab04 Panda Manipulator", "Contact cycle wall")]))
         self.assertIn(
             "virtual_wall.force_retreat_gain",
             parameter_hint(by_label[("Lab04 Panda Manipulator", "High retreat wall")]),

@@ -680,6 +680,14 @@ RUN_GUIDES: dict[str, RunGuide] = {
         "Higher hand X speed, damping force, retreat, and actuator effort.",
         "Slow trajectory.duration down until the damping-force spike becomes easier to control.",
     ),
+    "configs/lab04_panda/wall_contact_cycle.yaml": RunGuide(
+        "Lab04 Contact-Cycle Virtual Wall",
+        "The hand target crosses the same virtual wall, backs away, then crosses again.",
+        "Compare against slow/fast approach walls and inspect contact/release episodes.",
+        "cartesian_target.waypoints with fixed virtual_wall.wall_x, stiffness, damping, and retreat gain",
+        "Target crossing episodes, wall contact episodes, release timing, spring/damping force, and retreat.",
+        "Adjust waypoint timing or wall_x to see when repeated target crossings stop producing real contact.",
+    ),
     "configs/lab04_panda/wall_low_retreat.yaml": RunGuide(
         "Lab04 Low-Retreat Virtual Wall",
         "Wall force settings stay fixed while force-to-retreat gain is low.",

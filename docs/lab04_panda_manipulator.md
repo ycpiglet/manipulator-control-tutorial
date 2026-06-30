@@ -123,6 +123,15 @@ python -m mclab batch lab04_wall_compare --open-report
 
 These two configs keep wall stiffness, damping, position, and retreat gains fixed while changing only `trajectory.duration`. Use this after the damping-only comparison to show that the damping term depends on approach velocity, not just penetration. Compare `hand_x_speed_compare.png`, `wall_damping_force_compare.png`, `wall_force_compare.png`, `wall_key_moment_timing_compare.png`, `wall_contact_duration`, `max_hand_x_speed`, `peak_hand_speed_time`, and `max_abs_virtual_wall_damping_force`.
 
+Contact-cycle comparison:
+
+```bash
+python -m mclab run lab04 --config configs/lab04_panda/wall_contact_cycle.yaml --headless --plot --plots wall_compare
+python -m mclab batch lab04_wall_compare --open-report
+```
+
+This config uses `cartesian_target.waypoints` to move the green target through the wall, back before the wall, and through it again. Use it after the single-approach cases to discuss target crossing versus actual hand contact. Compare `wall_target.png`, `virtual_wall.png`, `target_wall_cross_episodes`, `wall_contact_episodes`, `first_wall_release_time`, and `first_target_wall_return_time`.
+
 Force-to-retreat comparison:
 
 ```bash
@@ -143,6 +152,7 @@ python -m mclab run lab04 --config configs/lab04_panda/wall_stiff.yaml --headles
 python -m mclab run lab04 --config configs/lab04_panda/wall_high_damping.yaml --headless --plot --plots wall_compare
 python -m mclab run lab04 --config configs/lab04_panda/wall_near.yaml --headless --plot --plots wall_compare
 python -m mclab run lab04 --config configs/lab04_panda/wall_fast_approach.yaml --headless --plot --plots wall_compare
+python -m mclab run lab04 --config configs/lab04_panda/wall_contact_cycle.yaml --headless --plot --plots wall_compare
 python -m mclab run lab04 --config configs/lab04_panda/wall_high_retreat.yaml --headless --plot --plots wall_compare
 ```
 

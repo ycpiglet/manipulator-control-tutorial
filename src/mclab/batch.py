@@ -165,6 +165,7 @@ BATCH_SETS: dict[str, tuple[BatchScenario, ...]] = {
         BatchScenario("high_retreat_wall", "lab04", "configs/lab04_panda/wall_high_retreat.yaml", "wall_compare"),
         BatchScenario("slow_approach_wall", "lab04", "configs/lab04_panda/wall_slow_approach.yaml", "wall_compare"),
         BatchScenario("fast_approach_wall", "lab04", "configs/lab04_panda/wall_fast_approach.yaml", "wall_compare"),
+        BatchScenario("contact_cycle_wall", "lab04", "configs/lab04_panda/wall_contact_cycle.yaml", "wall_compare"),
     ),
     "lab04_cartesian_compare": (
         BatchScenario("baseline_reach", "lab04", "configs/lab04_panda/cartesian_reach.yaml", "cartesian_reach"),
@@ -317,6 +318,7 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             "With stiffness and damping fixed, how does wall position change contact timing and penetration?",
             "With wall gains fixed, how does approach speed change damping force and contact duration?",
             "With wall force fixed, how does force-to-retreat gain change hand retreat and penetration?",
+            "How do repeated target crossings change contact and release episodes over one run?",
         ),
         followups=(
             "Copy `configs/lab04_panda/wall_soft.yaml` and raise `virtual_wall.stiffness` gradually.",
@@ -325,6 +327,7 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             "Compare `wall_near.yaml` and `wall_far.yaml` to isolate wall position.",
             "Compare `wall_slow_approach.yaml` and `wall_fast_approach.yaml` to isolate approach speed.",
             "Compare `wall_low_retreat.yaml` and `wall_high_retreat.yaml` to isolate force-to-retreat gain.",
+            "Run `wall_contact_cycle.yaml` to inspect repeated contact and release timing.",
         ),
         metric_keys=(
             "max_wall_penetration_cm",
@@ -339,8 +342,10 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             "peak_hand_speed_time",
             "target_past_wall_duration",
             "target_past_wall_fraction",
+            "target_wall_cross_episodes",
             "wall_contact_duration",
             "wall_contact_fraction",
+            "wall_contact_episodes",
             "max_abs_virtual_wall_force",
             "max_abs_virtual_wall_spring_force",
             "max_abs_virtual_wall_damping_force",

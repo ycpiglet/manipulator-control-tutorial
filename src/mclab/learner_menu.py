@@ -873,6 +873,16 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
     ),
     MenuAction(
         group="Lab04 Panda Manipulator",
+        label="Contact cycle wall",
+        lab_name="lab04",
+        config_path="configs/lab04_panda/wall_contact_cycle.yaml",
+        plots="wall_compare",
+        description="Moves the hand target through, back out of, and back into the same virtual wall.",
+        try_this="Compare against Slow/Fast approach wall to isolate repeated contact and release timing.",
+        watch="Target-wall crossing episodes, wall contact episodes, release timing, force, and retreat.",
+    ),
+    MenuAction(
+        group="Lab04 Panda Manipulator",
         label="Low retreat wall",
         lab_name="lab04",
         config_path="configs/lab04_panda/wall_low_retreat.yaml",
@@ -2243,6 +2253,8 @@ def parameter_hint(action: MenuAction) -> str:
             return "cartesian_target.position, cartesian_target.gain, cartesian_target.max_step"
         if label in {"slow approach wall", "fast approach wall"}:
             return "trajectory.duration, trajectory.start_time, virtual_wall.wall_x, virtual_wall.damping"
+        if label == "contact cycle wall":
+            return "cartesian_target.waypoints, virtual_wall.wall_x, virtual_wall.stiffness, virtual_wall.damping"
         if "wall" in label:
             return "virtual_wall.wall_x, virtual_wall.stiffness, virtual_wall.damping, virtual_wall.force_retreat_gain"
         if label == "joint target":
@@ -2719,6 +2731,7 @@ def _is_compare_action(action: MenuAction) -> bool:
         "high damping wall",
         "near wall",
         "far wall",
+        "contact cycle wall",
         "low retreat wall",
         "high retreat wall",
     }

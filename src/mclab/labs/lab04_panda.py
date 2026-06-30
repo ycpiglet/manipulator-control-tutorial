@@ -164,6 +164,7 @@ def run(
                     live_tuning,
                     initial_ee_position,
                     float(target.position),
+                    time=float(data.time),
                 )
                 target_x_ee[0] += button_target_x_offset
                 cartesian_error = [target_x_ee[index] - ee_position[index] for index in range(3)]
@@ -182,6 +183,7 @@ def run(
                         live_tuning,
                         initial_ee_position,
                         1.0,
+                        time=float(data.time),
                     )
                     target_x_ee[0] += button_target_x_offset
                     cartesian_error = [target_x_ee[index] - ee_position[index] for index in range(3)]
@@ -647,9 +649,14 @@ def _cartesian_target_position(
     live_tuning: LiveTuning,
     initial_ee_position: list[float],
     alpha: float,
+    *,
+    time: float | None = None,
 ) -> list[float]:
     target_config = dict(config.get("cartesian_target", {}))
-    if "position" in target_config:
+    waypoints = _cartesian_target_waypoints(target_config)
+    if waypoints and time is not None:
+        goal = _interpolate_cartesian_waypoints(waypoints, time)
+    elif "position" in target_config:
         goal = _float_list(target_config["position"], 3)
     else:
         offset = _float_list(target_config.get("offset", [0.05, 0.10, -0.03]), 3)
@@ -661,6 +668,48 @@ def _cartesian_target_position(
     ]
     alpha = max(0.0, min(1.0, alpha))
     return [initial_ee_position[index] + alpha * (goal[index] - initial_ee_position[index]) for index in range(3)]
+
+
+def _cartesian_target_waypoints(target_config: dict[str, Any]) -> list[tuple[float, list[float]]]:
+    raw_waypoints = target_config.get("waypoints")
+    if not isinstance(raw_waypoints, list):
+        return []
+
+    waypoints: list[tuple[float, list[float]]] = []
+    for index, raw in enumerate(raw_waypoints):
+        if not isinstance(raw, dict):
+            raise ValueError(f"cartesian_target.waypoints[{index}] must be a mapping")
+        waypoint_time = float(raw.get("time", raw.get("t", 0.0)))
+        if "position" in raw:
+            position = _float_list(raw["position"], 3)
+        else:
+            position = [
+                float(raw.get("x", 0.0)),
+                float(raw.get("y", 0.0)),
+                float(raw.get("z", 0.0)),
+            ]
+        waypoints.append((waypoint_time, position))
+    return sorted(waypoints, key=lambda item: item[0])
+
+
+def _interpolate_cartesian_waypoints(waypoints: list[tuple[float, list[float]]], time: float) -> list[float]:
+    if not waypoints:
+        raise ValueError("At least one Cartesian waypoint is required")
+    if len(waypoints) == 1 or time <= waypoints[0][0]:
+        return waypoints[0][1].copy()
+    if time >= waypoints[-1][0]:
+        return waypoints[-1][1].copy()
+
+    for (start_time, start_position), (end_time, end_position) in zip(waypoints, waypoints[1:]):
+        if start_time <= time <= end_time:
+            duration = max(1e-9, end_time - start_time)
+            phase = max(0.0, min(1.0, (time - start_time) / duration))
+            smooth = phase**3 * (10.0 - 15.0 * phase + 6.0 * phase**2)
+            return [
+                start_position[index] + smooth * (end_position[index] - start_position[index])
+                for index in range(3)
+            ]
+    return waypoints[-1][1].copy()
 
 
 def _apply_cartesian_target_offset(

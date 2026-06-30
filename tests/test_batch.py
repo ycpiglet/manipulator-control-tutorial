@@ -47,17 +47,21 @@ class BatchTests(unittest.TestCase):
         self.assertIn("high_retreat_wall", lab04_wall_labels)
         self.assertIn("slow_approach_wall", lab04_wall_labels)
         self.assertIn("fast_approach_wall", lab04_wall_labels)
+        self.assertIn("contact_cycle_wall", lab04_wall_labels)
         lab04_guide = batch.BATCH_GUIDES["lab04_wall_compare"]
         self.assertTrue(
             any("force-to-retreat gain" in question for question in lab04_guide.questions)
         )
         self.assertTrue(any("approach speed" in question for question in lab04_guide.questions))
+        self.assertTrue(any("repeated target crossings" in question for question in lab04_guide.questions))
         self.assertIn("max_hand_x_speed", lab04_guide.metric_keys)
         self.assertIn("first_target_wall_cross_time", lab04_guide.metric_keys)
         self.assertIn("first_wall_release_time", lab04_guide.metric_keys)
         self.assertIn("first_target_wall_return_time", lab04_guide.metric_keys)
         self.assertIn("peak_wall_force_time", lab04_guide.metric_keys)
         self.assertIn("peak_wall_damping_force_time", lab04_guide.metric_keys)
+        self.assertIn("target_wall_cross_episodes", lab04_guide.metric_keys)
+        self.assertIn("wall_contact_episodes", lab04_guide.metric_keys)
         self.assertIn(
             ("hand_x_speed_compare.png", "Panda Hand X Speed Comparison", "x speed [m/s]", "xdot_ee_0"),
             lab04_guide.comparison_specs,
