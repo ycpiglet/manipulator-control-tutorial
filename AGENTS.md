@@ -133,12 +133,12 @@ Implemented and verified:
 - Evidence helper buttons such as `Use live status` and `Use changed values`, plus view/pacing controls such as pause, step, and playback speed, do not satisfy the learner-control requirement by themselves
 - Run reports and worksheets include `Mission Evidence` status with observation, prediction, outcome, note, learner-control, plot counts, and the next proof step
 - Run reports and worksheets include `Challenge Evidence` status that maps the visible-effect challenge to proof status, proof source, mission evidence status, and next challenge step
-- Run report `Mission Evidence` and `Hands-on Evidence` next-step text names available learner-control families when a hands-on run still needs learner control
+- Run report `Mission Evidence`, `Hands-on Evidence`, and worksheet guide text name concrete configured learner controls when a hands-on run still needs learner control
 - Learner menu cards and outputs index learning-path/run-table views summarize `Challenge evidence` proof status, proof source, and next challenge step from the latest saved run
 - Learner menu scenario cards include a `Viewer` marker legend and marker-name search support
 - Learner menu scenario cards include a `Controls` summary of actual buttons, sliders, presets, pause/step, reset, and observation controls
 - Learner menu scenario cards include a `Counts as control` cue matching the live panel so learners know which controls satisfy hands-on evidence before launch
-- Learner menu and outputs index `Needs learner control` states name the available learner-control families, such as experiment buttons, live sliders, and Quick presets
+- Learner menu and outputs index `Needs learner control` states name the available learner-control families and concrete button labels, such as Pull/Push, Joint Target, Target X, Shoulder/Elbow pulse, live sliders, and Quick presets
 - Learner menu scenario and batch cards include a `Plan` line with level, mode, run length, and saved artifacts
 - Learner menu scenario, batch, and learning-path cards include a `Mission` line that turns Try/Change/Watch guidance into one evidence-focused task
 - Learner menu scenario and batch cards, the live interaction panel, run reports, and worksheets include a `Playbook` line that turns each demo into predict, manipulate, and evidence-review steps
@@ -220,7 +220,7 @@ Implemented and verified:
 - Outputs index learning path cards include evidence status, latest evidence summaries, latest report/worksheet/priority-plot/replay links, and ready-to-run or repeat commands for each course step
 - Outputs index learning path cards show `Done when` completion criteria matching the learner menu
 - Outputs index learning path cards show `Start steps` launch sequences matching the learner menu, including concrete required-preset order when configured
-- Outputs index learning path cards show `Counts as control` learner-control criteria for hands-on configs
+- Outputs index learning path cards show `Counts as control` learner-control criteria with concrete configured button labels for hands-on configs
 - Outputs index batch learning-path cards include the same `Prediction check` cue used by the learner menu
 - Outputs index learning path summary flags evidence-pending and outcome-review-pending hands-on steps
 - Outputs index learning path cards show prediction/compare and watch cues before each ready-to-run or repeat command

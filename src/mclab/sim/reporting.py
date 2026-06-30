@@ -14,7 +14,6 @@ from mclab.learning_guides import (
     RunGuide,
     batch_start_steps_text,
     challenge_prompt_for_guide,
-    control_credit_text_for_config,
     guide_for_config,
     guide_for_run_summary,
     learner_control_action_text_for_config,
@@ -889,7 +888,7 @@ def _worksheet_learning_guide_lines(
         ("Mission", mission_prompt_for_guide(guide).removeprefix("Mission:").strip()),
         ("Playbook", playbook_for_guide(guide).removeprefix("Playbook:").strip()),
         ("Start steps", _start_steps_text(guide, config)),
-        ("Counts as control", control_credit_text_for_config(config)),
+        ("Counts as control", _control_credit_text_for_config(config)),
         ("Challenge", challenge_prompt_for_guide(guide).removeprefix("Challenge:").strip()),
         ("Try", guide.try_this),
         ("Change", guide.change),
@@ -1813,7 +1812,7 @@ def _learning_guide_section(
         ("Mission", mission_prompt_for_guide(guide).removeprefix("Mission:").strip()),
         ("Playbook", playbook_for_guide(guide).removeprefix("Playbook:").strip()),
         ("Start steps", _start_steps_text(guide, config)),
-        ("Counts as control", control_credit_text_for_config(config)),
+        ("Counts as control", _control_credit_text_for_config(config)),
         ("Challenge", challenge_prompt_for_guide(guide).removeprefix("Challenge:").strip()),
         ("Try", guide.try_this),
         ("Change", guide.change),
@@ -1873,6 +1872,9 @@ def _start_steps_text(guide: RunGuide | None, config: dict[str, Any] | None = No
         preset_labels = _configured_preset_labels(config)
         if len(preset_labels) >= 2:
             return f"Predict -> Run viewer -> try presets {' -> '.join(preset_labels[:3])} -> Mark observation."
+        control_step = _hands_on_control_step_for_config(config)
+        if control_step:
+            return f"Predict -> Run viewer -> {control_step} -> Mark observation."
     return start_steps_for_guide(guide).removeprefix("Start steps:").strip()
 
 
@@ -2246,7 +2248,7 @@ def _control_surface_items(config: dict[str, Any]) -> list[tuple[str, str]]:
     presets = _configured_preset_labels(config)
     if presets:
         items.append(("Quick presets", ", ".join(presets)))
-    credit_text = control_credit_text_for_config(config)
+    credit_text = _control_credit_text_for_config(config)
     if credit_text:
         items.append(("Counts as control", credit_text))
     if bool(interaction.get("playback_speed", panel_enabled)):
@@ -2266,11 +2268,85 @@ def _control_surface_items(config: dict[str, Any]) -> list[tuple[str, str]]:
 
 
 def _target_nudge_control_label(interaction: dict[str, Any]) -> str:
-    left = str(interaction.get("target_left_label", "")).strip()
-    right = str(interaction.get("target_right_label", "")).strip()
+    left = str(interaction.get("target_left_label", "Joint Target -  A / Left")).strip()
+    right = str(interaction.get("target_right_label", "Joint Target +  D / Right")).strip()
     if left and right:
         return f"{left} / {right}"
     return "Target -/+ buttons and A/D keys"
+
+
+def _hands_on_control_step_for_config(config: dict[str, Any] | None) -> str:
+    interaction = _interaction_config(config)
+    if not interaction:
+        return ""
+    if bool(interaction.get("key_force", False)):
+        return "use Pull/Push buttons and A/D keys"
+    if bool(interaction.get("target_nudge", False)):
+        return f"use {_target_nudge_control_label(interaction)}"
+    if bool(interaction.get("joint_disturbance", False)):
+        return "use Shoulder/Elbow pulse buttons and A/D keys"
+    if bool(interaction.get("live_tuning", False)):
+        return "move one live slider"
+    panel_enabled = bool(interaction.get("panel", False))
+    if bool(interaction.get("reset_plant", interaction.get("reset_experiment", panel_enabled))):
+        return "use Reset plant after changing a control"
+    return ""
+
+
+def _control_credit_text_for_config(config: dict[str, Any] | None) -> str:
+    controls = _learner_control_labels_for_config(config)
+    if not controls:
+        return ""
+    return f"{', '.join(controls)}; view/evidence helpers such as Pause, Playback speed, and Use live status do not count."
+
+
+def _learner_control_phrase_for_config(config: dict[str, Any] | None) -> str:
+    controls = _learner_control_labels_for_config(config)
+    if not controls:
+        return ""
+    if len(controls) == 1:
+        return controls[0]
+    if len(controls) == 2:
+        return f"{controls[0]} or {controls[1]}"
+    return f"{', '.join(controls[:-1])}, or {controls[-1]}"
+
+
+def _learner_control_labels_for_config(config: dict[str, Any] | None) -> list[str]:
+    interaction = _interaction_config(config)
+    if not interaction:
+        return []
+    controls: list[str] = []
+    button_label = _button_control_label_for_config(interaction)
+    if button_label:
+        controls.append(f"experiment buttons ({button_label})")
+    if bool(interaction.get("live_tuning", False)):
+        controls.append("live sliders")
+    if _configured_preset_labels(config or {}):
+        controls.append("Quick presets")
+    return controls
+
+
+def _button_control_label_for_config(interaction: dict[str, Any]) -> str:
+    primary_labels: list[str] = []
+    if bool(interaction.get("key_force", False)):
+        primary_labels.append("Pull/Push buttons and A/D keys")
+    if bool(interaction.get("target_nudge", False)):
+        primary_labels.append(_target_nudge_control_label(interaction))
+    if bool(interaction.get("joint_disturbance", False)):
+        primary_labels.append("Shoulder/Elbow pulse buttons and A/D keys")
+    if primary_labels:
+        return "; ".join(dict.fromkeys(primary_labels))
+    panel_enabled = bool(interaction.get("panel", False))
+    if bool(interaction.get("reset_plant", interaction.get("reset_experiment", panel_enabled))):
+        return "Reset plant"
+    return ""
+
+
+def _interaction_config(config: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(config, dict):
+        return {}
+    interaction = config.get("interaction")
+    return interaction if isinstance(interaction, dict) else {}
 
 
 def _suggested_config_changes(current_config: dict[str, Any], suggested_config_path: str) -> str:
@@ -3022,7 +3098,11 @@ def _challenge_evidence_section(
 
 
 def _report_learner_control_phrase(config: dict[str, Any] | None, summary: dict[str, Any] | None = None) -> str:
-    text = learner_control_action_text_for_config(_report_control_config(config, summary)).strip()
+    report_config = _report_control_config(config, summary)
+    label_phrase = _learner_control_phrase_for_config(report_config)
+    if label_phrase:
+        return label_phrase
+    text = learner_control_action_text_for_config(report_config).strip()
     prefix = "Use "
     suffix = " before moving on."
     if text.startswith(prefix) and text.endswith(suffix):
@@ -4704,7 +4784,11 @@ def _learning_path_card(item: dict[str, Any]) -> str:
         control_action = ""
         step_config = _index_step_config(step)
         if step_config:
-            control_action = learner_control_action_text_for_config(step_config)
+            control_phrase = _learner_control_phrase_for_config(step_config)
+            if control_phrase:
+                control_action = f"Use {control_phrase} before moving on."
+            else:
+                control_action = learner_control_action_text_for_config(step_config)
         status = (
             f'<span class="status">Needs learner control{escape(_learning_path_evidence_suffix(item))}</span>'
             f'<p class="muted">Latest: <a href="{escape(str(run["report"]))}">{escape(str(run["name"]))}</a></p>'
@@ -4870,7 +4954,7 @@ def _learning_path_start_steps(step: IndexPathStep) -> str:
 def _learning_path_control_credit(step: IndexPathStep) -> str:
     if step.batch_name or not step.config_path:
         return ""
-    text = control_credit_text_for_config(_index_step_config(step))
+    text = _control_credit_text_for_config(_index_step_config(step))
     if not text:
         return ""
     return f'<p class="muted"><strong>Counts as control:</strong> {escape(text)}</p>'

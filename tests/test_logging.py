@@ -554,7 +554,11 @@ class LoggingTests(unittest.TestCase):
 
             self.assertIn("1/1 control families", html)
             self.assertIn("Counts as control", html)
-            self.assertIn("experiment buttons; view/evidence helpers", html)
+            self.assertIn(
+                "experiment buttons (Joint Target -  A / Left / Joint Target +  D / Right); "
+                "view/evidence helpers",
+                html,
+            )
             self.assertNotIn("Move one live slider to test a smaller parameter change.", html)
             self.assertNotIn("Try a Quick preset to compare a named parameter regime.", html)
             self.assertIn("- Interaction variety: 1/1 control families", worksheet_text)
@@ -673,7 +677,8 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Needs observation", html)
             self.assertIn("write a prediction and note", html)
             self.assertIn(
-                "Repeat this hands-on step, use experiment buttons, live sliders, or Quick presets at least once",
+                "Repeat this hands-on step, use experiment buttons (Pull/Push buttons and A/D keys), "
+                "live sliders, or Quick presets at least once",
                 html,
             )
 
@@ -718,9 +723,14 @@ class LoggingTests(unittest.TestCase):
 
             html = write_run_report(output).read_text(encoding="utf-8")
             self.assertIn("Needs learner control", html)
-            self.assertIn("Use experiment buttons, live sliders, or Quick presets, then mark the observation.", html)
             self.assertIn(
-                "Repeat this hands-on step and use experiment buttons, live sliders, or Quick presets at least once",
+                "Use experiment buttons (Pull/Push buttons and A/D keys), live sliders, or Quick presets, "
+                "then mark the observation.",
+                html,
+            )
+            self.assertIn(
+                "Repeat this hands-on step and use experiment buttons (Pull/Push buttons and A/D keys), "
+                "live sliders, or Quick presets at least once",
                 html,
             )
 
@@ -1301,7 +1311,8 @@ class LoggingTests(unittest.TestCase):
                 html,
             )
             self.assertIn(
-                "<strong>Counts as control:</strong> experiment buttons, live sliders, Quick presets; "
+                "<strong>Counts as control:</strong> experiment buttons (Pull/Push buttons and A/D keys), "
+                "live sliders, Quick presets; "
                 "view/evidence helpers such as Pause, Playback speed, and Use live status do not count.",
                 html,
             )
@@ -1466,7 +1477,8 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("No markers", html)
             self.assertIn("No learner controls", html)
             self.assertIn(
-                "Observation next step: use experiment buttons, live sliders, or Quick presets, "
+                "Observation next step: use experiment buttons (Pull/Push buttons and A/D keys), "
+                "live sliders, or Quick presets, "
                 "then mark one observation with a prediction and note.",
                 html,
             )
@@ -1527,9 +1539,14 @@ class LoggingTests(unittest.TestCase):
 
             html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
             self.assertIn("Needs learner control (1 observation, 1 prediction, 1 outcome, 1 note, 0 controls)", html)
-            self.assertIn("Use experiment buttons, live sliders, or Quick presets before moving on.", html)
             self.assertIn(
-                "Observation next step: use experiment buttons, live sliders, or Quick presets, "
+                "Use experiment buttons (Pull/Push buttons and A/D keys), live sliders, or Quick presets "
+                "before moving on.",
+                html,
+            )
+            self.assertIn(
+                "Observation next step: use experiment buttons (Pull/Push buttons and A/D keys), "
+                "live sliders, or Quick presets, "
                 "then mark another observation with a prediction and note.",
                 html,
             )
