@@ -1116,6 +1116,64 @@ class LoggingTests(unittest.TestCase):
                 html,
             )
 
+    def test_outputs_index_requires_wall_required_presets(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            wall = Path(temp_dir) / "20260627_160000_lab04_wall_interactive"
+            wall.mkdir()
+            (wall / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab04_panda",
+                        "config_path": "configs/lab04_panda/interactive_virtual_wall.yaml",
+                        "config_name": "interactive_virtual_wall",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (wall / "report.html").write_text("<html>wall</html>", encoding="utf-8")
+            (wall / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {"kind": "preset", "name": "close_wall", "label": "Close wall"},
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "prediction": "Back away should release contact.",
+                                "outcome": "Matched",
+                                "note": "Contact stayed active before backing away.",
+                            },
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
+
+            self.assertIn("10. Touch virtual wall", html)
+            self.assertIn(
+                "<strong>Done when:</strong> save one Mark observation with a Prediction after required presets: "
+                "Close wall -&gt; Back away; add the outcome during review.",
+                html,
+            )
+            self.assertIn(
+                "Needs required preset (1 observation, 1 prediction, 1 outcome, 1 note, required presets 1/2)",
+                html,
+            )
+            self.assertIn("Try required preset Back away before moving on.", html)
+            self.assertIn(
+                "Mission evidence: Needs required preset Back away; "
+                "Try required preset Back away, watch live status, then mark one observation.",
+                html,
+            )
+            self.assertIn("required preset: 1", html)
+            self.assertIn(
+                'Next review: <a href="20260627_160000_lab04_wall_interactive/report.html">'
+                "20260627_160000_lab04_wall_interactive</a> - Needs required preset Back away",
+                html,
+            )
+
     def test_outputs_index_summarizes_latest_observation_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             run = Path(temp_dir) / "20260627_151500_lab02_interactive"
@@ -1312,7 +1370,10 @@ class LoggingTests(unittest.TestCase):
 
             self.assertIn("Mission Review Queue", html)
             self.assertIn("1 ready, 5 pending", html)
-            self.assertIn("Needs observation: 1; prediction: 1; outcome: 1; note: 1; artifact: 1", html)
+            self.assertIn(
+                "Needs observation: 1; prediction: 1; outcome: 1; required preset: 1; note: 0; artifact: 1",
+                html,
+            )
             self.assertIn(
                 'Next review: <a href="20260627_150400_lab03_interactive_outcome/report.html">'
                 "20260627_150400_lab03_interactive_outcome</a> - Outcome review pending",

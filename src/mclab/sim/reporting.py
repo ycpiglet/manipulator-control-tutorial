@@ -3408,6 +3408,7 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
             default=child.stat().st_mtime,
         )
         interaction_events = _read_json_list(child / "interaction_events.json")
+        config = _index_run_config(child, summary)
         observation_markers, learner_predictions, learner_notes, learner_outcomes = (
             _observation_evidence_counts_from_events(interaction_events)
         )
@@ -3436,10 +3437,25 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
                 "learner_outcomes": learner_outcomes,
                 "outcome_counts": outcome_counts,
                 "latest_evidence": latest_evidence,
-                "mission_evidence": _mission_evidence_index_text(summary, interaction_events, plots),
+                "mission_evidence": _mission_evidence_index_text(summary, interaction_events, plots, config),
+                "config": config,
+                "interaction_events": interaction_events,
             }
         )
     return sorted(runs, key=lambda run: float(run["modified"]), reverse=True)
+
+
+def _index_run_config(child: Path, summary: dict[str, Any]) -> dict[str, Any]:
+    config = _read_config(child / "config.yaml")
+    if config:
+        return config
+    config_path = str(summary.get("config_path") or "").strip()
+    if not config_path:
+        return {}
+    try:
+        return load_config(config_path)
+    except (OSError, ValueError):
+        return {}
 
 
 def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
@@ -3645,7 +3661,9 @@ def _learning_path_item(step: IndexPathStep, runs: list[dict[str, Any]]) -> dict
     predictions = int(run.get("learner_predictions", 0)) if run is not None else 0
     notes = int(run.get("learner_notes", 0)) if run is not None else 0
     outcomes = int(run.get("learner_outcomes", 0)) if run is not None else 0
-    completed = run is not None and (not evidence_required or (markers > 0 and predictions > 0))
+    required_total, required_tried, next_required = _learning_path_required_preset_progress(step, run)
+    required_ready = required_total == 0 or required_tried >= required_total
+    completed = run is not None and (not evidence_required or (markers > 0 and predictions > 0 and required_ready))
     return {
         "step": step,
         "run": run,
@@ -3655,7 +3673,23 @@ def _learning_path_item(step: IndexPathStep, runs: list[dict[str, Any]]) -> dict
         "learner_predictions": predictions,
         "learner_notes": notes,
         "learner_outcomes": outcomes,
+        "required_presets": required_total,
+        "required_presets_tried": required_tried,
+        "next_required_preset": next_required,
     }
+
+
+def _learning_path_required_preset_progress(step: IndexPathStep, run: dict[str, Any] | None) -> tuple[int, int, str]:
+    if run is None:
+        return 0, 0, ""
+    config = run.get("config")
+    if not isinstance(config, dict):
+        config = _index_step_config(step)
+    events = run.get("interaction_events")
+    if not isinstance(events, list):
+        events = []
+    required_labels, required_tried, next_required = _required_preset_progress(config, events)
+    return len(required_labels), len(required_tried), next_required
 
 
 def _learning_path_summary(items: list[dict[str, Any]]) -> str:
@@ -3725,6 +3759,18 @@ def _learning_path_card(item: dict[str, Any]) -> str:
             f'<span class="status">Needs prediction{escape(_learning_path_evidence_suffix(item))}</span>'
             f'<p class="muted">Latest: <a href="{escape(str(run["report"]))}">{escape(str(run["name"]))}</a></p>'
             '<p class="muted">Add one Prediction in Mark observation before moving on.</p>'
+        )
+    elif int(item.get("required_presets", 0)) > int(item.get("required_presets_tried", 0)):
+        next_required = str(item.get("next_required_preset") or "").strip()
+        next_text = (
+            f"Try required preset {next_required} before moving on."
+            if next_required
+            else "Try the remaining required preset before moving on."
+        )
+        status = (
+            f'<span class="status">Needs required preset{escape(_learning_path_evidence_suffix(item))}</span>'
+            f'<p class="muted">Latest: <a href="{escape(str(run["report"]))}">{escape(str(run["name"]))}</a></p>'
+            f'<p class="muted">{escape(next_text)}</p>'
         )
     else:
         status = (
@@ -3805,7 +3851,10 @@ def _learning_path_evidence_suffix(item: dict[str, Any]) -> str:
     prediction_text = f", {predictions} prediction{'s' if predictions != 1 else ''}" if predictions else ""
     outcome_text = f", {outcomes} outcome{'s' if outcomes != 1 else ''}" if outcomes else ""
     note_text = f", {notes} note{'s' if notes != 1 else ''}" if notes else ""
-    return f" ({markers} observation{'s' if markers != 1 else ''}{prediction_text}{outcome_text}{note_text})"
+    required_total = int(item.get("required_presets", 0))
+    required_tried = int(item.get("required_presets_tried", 0))
+    preset_text = f", required presets {required_tried}/{required_total}" if required_total else ""
+    return f" ({markers} observation{'s' if markers != 1 else ''}{prediction_text}{outcome_text}{note_text}{preset_text})"
 
 
 def _learning_path_action_label(step: IndexPathStep) -> str:
@@ -3817,10 +3866,29 @@ def _learning_path_action_label(step: IndexPathStep) -> str:
     return "open the saved command"
 
 
+def _index_step_required_preset_labels(step: IndexPathStep) -> list[str]:
+    return _configured_required_preset_labels(_index_step_config(step))
+
+
+def _index_step_config(step: IndexPathStep) -> dict[str, Any]:
+    if not step.config_path:
+        return {}
+    try:
+        return load_config(step.config_path)
+    except (OSError, ValueError):
+        return {}
+
+
 def _learning_path_completion_text(step: IndexPathStep) -> str:
     if step.batch_name:
         return "Done when: the comparison report, plots, and worksheet are saved."
     if _learning_path_requires_evidence(step):
+        required_labels = _index_step_required_preset_labels(step)
+        if required_labels:
+            return (
+                "Done when: save one Mark observation with a Prediction after required presets: "
+                f"{' -> '.join(required_labels)}; add the outcome during review."
+            )
         return "Done when: save one Mark observation with a Prediction; add the outcome during review."
     return "Done when: the run report, priority plot, and worksheet are saved."
 
@@ -3982,6 +4050,7 @@ def _mission_review_queue_card(runs: list[dict[str, Any]]) -> str:
         f"Needs observation: {counts.get('observation', 0)}; "
         f"prediction: {counts.get('prediction', 0)}; "
         f"outcome: {counts.get('outcome', 0)}; "
+        f"required preset: {counts.get('preset', 0)}; "
         f"note: {counts.get('note', 0)}; "
         f"artifact: {counts.get('artifact', 0)}"
         "</p>"
@@ -3991,7 +4060,10 @@ def _mission_review_queue_card(runs: list[dict[str, Any]]) -> str:
 
 
 def _mission_review_queue_counts(runs: list[dict[str, Any]]) -> dict[str, int]:
-    counts = {key: 0 for key in ("ready", "observation", "prediction", "outcome", "note", "artifact", "other")}
+    counts = {
+        key: 0
+        for key in ("ready", "observation", "prediction", "outcome", "preset", "note", "artifact", "other")
+    }
     for run in runs:
         bucket = _mission_review_bucket(_mission_review_status(run))
         counts[bucket] = counts.get(bucket, 0) + 1
@@ -3999,7 +4071,7 @@ def _mission_review_queue_counts(runs: list[dict[str, Any]]) -> dict[str, int]:
 
 
 def _mission_review_next_run(runs: list[dict[str, Any]]) -> dict[str, Any] | None:
-    priority = ("outcome", "observation", "prediction", "note", "artifact", "other")
+    priority = ("outcome", "observation", "prediction", "preset", "note", "artifact", "other")
     for bucket in priority:
         for run in runs:
             if _mission_review_bucket(_mission_review_status(run)) == bucket:
@@ -4022,6 +4094,8 @@ def _mission_review_bucket(status: str) -> str:
         return "observation"
     if normalized == "needs prediction":
         return "prediction"
+    if normalized.startswith("needs required preset"):
+        return "preset"
     if normalized == "ready, add note next":
         return "note"
     if normalized in {"needs plot", "needs worksheet"}:
@@ -4110,8 +4184,9 @@ def _mission_evidence_index_text(
     summary: dict[str, Any],
     events: list[dict[str, Any]],
     plots: list[dict[str, str]],
+    config: dict[str, Any] | None = None,
 ) -> str:
-    items = dict(_mission_evidence_items(summary, events, plots))
+    items = dict(_mission_evidence_items(summary, events, plots, config))
     status = str(items.get("Status") or "").strip()
     next_step = str(items.get("Next proof step") or "").strip()
     if status and next_step:
