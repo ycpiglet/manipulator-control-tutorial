@@ -731,10 +731,26 @@ class KeyForcePulseTests(unittest.TestCase):
             "Marked observation 1 - add a prediction next time to complete the learning path.",
         )
 
+        log.mark_observation(prediction="A softer preset should reduce force.")
+        self.assertEqual(
+            _observation_marker_status_message(log, "A softer preset should reduce force.", "needs another preset"),
+            "Marked observation 2 - try another preset to complete the learning path.",
+        )
+
+        log.mark_observation(prediction="Backing away should release contact.")
+        self.assertEqual(
+            _observation_marker_status_message(
+                log,
+                "Backing away should release contact.",
+                "needs required preset Back away",
+            ),
+            "Marked observation 3 - try required preset Back away to complete the learning path.",
+        )
+
         log.mark_observation(prediction="More damping should settle faster.")
         self.assertEqual(
             _observation_marker_status_message(log, "More damping should settle faster."),
-            "Marked observation 2 with prediction - learning path evidence saved.",
+            "Marked observation 4 with prediction - learning path evidence saved.",
         )
 
     def test_observation_checklist_status_guides_before_marking(self) -> None:

@@ -1144,6 +1144,7 @@ def maybe_start_interaction_panel(
 
                 def mark_observation() -> None:
                     prediction = marker_prediction.get()
+                    preset_state = tuning.preset_checklist_state() if tuning is not None else ""
                     event_log.mark_observation(
                         changed_sliders=tuning.changed_values() if tuning is not None else None,
                         sliders=tuning.snapshot() if tuning is not None else None,
@@ -1157,7 +1158,7 @@ def maybe_start_interaction_panel(
                     marker_prediction.set("")
                     marker_outcome.set(PREDICTION_OUTCOME_UNJUDGED)
                     marker_note.set("")
-                    marker_status.set(_observation_marker_status_message(event_log, prediction))
+                    marker_status.set(_observation_marker_status_message(event_log, prediction, preset_state))
 
                 marker_row = 0
                 if marker_prompt:
@@ -1338,11 +1339,36 @@ def _preset_button_label(preset: TuningPreset) -> str:
     return _preset_display_label(preset)
 
 
-def _observation_marker_status_message(event_log: InteractionLog, prediction: str) -> str:
+def _observation_marker_status_message(
+    event_log: InteractionLog,
+    prediction: str,
+    preset_state: str = "",
+) -> str:
     count = _observation_marker_count(event_log)
-    if prediction.strip():
-        return f"Marked observation {count} with prediction - learning path evidence saved."
-    return f"Marked observation {count} - add a prediction next time to complete the learning path."
+    missing: list[str] = []
+    if not prediction.strip():
+        missing.append("add a prediction next time")
+    preset_followup = _preset_state_followup(preset_state)
+    if preset_followup:
+        missing.append(preset_followup)
+    if missing:
+        return f"Marked observation {count} - {'; '.join(missing)} to complete the learning path."
+    return f"Marked observation {count} with prediction - learning path evidence saved."
+
+
+def _preset_state_followup(preset_state: str) -> str:
+    state = str(preset_state or "").strip()
+    if not state or state == "ready":
+        return ""
+    required_prefix = "needs required preset "
+    if state.startswith(required_prefix):
+        label = state.removeprefix(required_prefix).strip()
+        if label:
+            return f"try required preset {label}"
+        return "try the remaining required preset"
+    if state == "needs another preset":
+        return "try another preset"
+    return f"finish preset comparison ({state})"
 
 
 def _observation_checklist_status(
