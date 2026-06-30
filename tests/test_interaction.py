@@ -22,6 +22,7 @@ from mclab.sim.interaction import (  # noqa: E402
     TuningPreset,
     _activity_mix_status_message,
     _bounded_panel_dimension,
+    _changed_tuning_observation_note,
     _changed_tuning_summary,
     _live_status_observation_note,
     _observation_checklist_status,
@@ -1005,6 +1006,21 @@ class KeyForcePulseTests(unittest.TestCase):
             _live_status_observation_note(status),
             "Position [m]: 0.125; Force [N]: -3.500",
         )
+
+    def test_changed_tuning_observation_note_summarizes_slider_changes(self) -> None:
+        tuning = LiveTuning(
+            [
+                SliderSpec("kp", "Kp", 0.0, 100.0, 20.0, 1.0),
+                SliderSpec("kd", "Kd", 0.0, 20.0, 2.0, 0.5),
+            ]
+        )
+
+        self.assertEqual(_changed_tuning_observation_note(None), "")
+        self.assertEqual(_changed_tuning_observation_note(tuning), "")
+
+        tuning.set_value("kp", 35.0)
+
+        self.assertEqual(_changed_tuning_observation_note(tuning), "Changed values: Kp=35")
 
     def test_learner_snapshot_collects_final_interactive_state(self) -> None:
         log = InteractionLog()

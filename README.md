@@ -245,6 +245,8 @@ Observation 영역의 live `Activity mix` 줄은 현재 실행에서 버튼, 슬
 
 Observation 영역의 live `Action log` 줄은 방금 누른 버튼, 바꾼 슬라이더, 적용한 preset, 저장한 marker가 실제로 기록됐는지 이벤트 수와 마지막 조작 이름으로 확인해줍니다.
 
+`Use changed values` 버튼은 실행 시작값 대비 바뀐 slider 값을 observation note에 바로 복사하므로, 학습자가 어떤 파라미터 변경을 근거로 결과를 해석했는지 빠르게 남길 수 있습니다.
+
 프리셋 선택 기록은 적용 목적과 실제 slider 값을 함께 저장하므로, 실행 후 `Preset choices` 카드에서 학습자가 어떤 의도로 어떤 파라미터 조합을 시험했는지 복기할 수 있습니다. 프리셋이 여러 개인 데모는 `Compare presets` 안내로 권장 비교 순서를 보여주므로, 한 가지 값만 눌러보고 끝내지 않고 여러 파라미터 regime을 관찰한 뒤 `Mark observation`으로 남기게 유도합니다. 실행 중에도 preset status가 지금까지 몇 개를 눌렀고 다음에 어떤 preset을 눌러야 하는지 보여줍니다. 리포트와 `worksheet.md`의 `Preset comparison progress`는 전체 프리셋 중 서로 다른 regime을 몇 개 시험했는지와 다음에 눌러볼 프리셋을 알려줍니다.
 
 리포트와 `worksheet.md`의 `Hands-on activity mix`는 버튼, 슬라이더, preset, observation marker를 각각 몇 번 사용했는지와 조작 다양성을 요약합니다. 학습자가 preset만 누르고 끝냈는지, 슬라이더 미세 조정이나 버튼형 외란/정지/리셋까지 써봤는지 바로 확인할 수 있습니다.
@@ -623,6 +625,8 @@ The observation area's `Next action` line names the immediate learner step from 
 The observation area's live `Activity mix` line continuously counts button, slider, preset, and observation-marker use during the current run, then recommends the next missing control family to try.
 
 The observation area's live `Action log` line confirms that the last button press, slider change, preset choice, or marker save was recorded by showing the event count and latest action name.
+
+The `Use changed values` button copies slider changes from the run's starting values into the observation note so learners can quickly record which parameter change supports their interpretation.
 
 Preset choice events save both the preset purpose and the applied slider values, so the report's `Preset choices` card shows why a learner tried that parameter set. Demos with multiple presets also show a `Compare presets` hint so learners try more than one parameter regime before saving a `Mark observation`. During a live run, the preset status also shows how many presets have been tried and which preset to try next. The report and `worksheet.md` `Preset comparison progress` entries show how many distinct regimes were tried and which preset to try next.
 

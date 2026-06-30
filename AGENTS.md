@@ -125,6 +125,7 @@ Implemented and verified:
 - Interactive `Step once` button advances exactly one physics step while staying paused for frame-by-frame observation
 - Interactive `Reset plant` button restores mass/arm/robot state while preserving current slider and preset values for repeated observations
 - Interactive `Use live status` button copies current live dashboard values into the observation note before `Mark observation`
+- Interactive `Use changed values` button copies slider changes from run start into the observation note before `Mark observation`
 - Interactive `Mark observation` saves an optional prediction outcome such as Matched, Partly matched, or Surprised
 - Interactive runs save `learner_snapshot.json` and a report `Learner Snapshot` section with final slider, live status, playback, and nudge state
 - Interactive runs save replayable `learner_tuned_config.yaml` files and a report `Replay Tuned Config` section

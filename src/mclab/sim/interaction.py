@@ -1194,6 +1194,15 @@ def maybe_start_interaction_panel(
                     event_log.record("button", "use_live_status_note", note, label="Use live status")
                     marker_status.set("Copied live status into the observation note.")
 
+                def use_changed_values_note() -> None:
+                    note = _changed_tuning_observation_note(tuning)
+                    if not note:
+                        marker_status.set("No changed slider values yet.")
+                        return
+                    marker_note.set(note)
+                    event_log.record("button", "use_changed_values_note", note, label="Use changed values")
+                    marker_status.set("Copied changed slider values into the observation note.")
+
                 def mark_observation() -> None:
                     prediction = marker_prediction.get()
                     note = marker_note.get()
@@ -1297,6 +1306,11 @@ def maybe_start_interaction_panel(
                     side="left",
                     padx=(0, 8),
                 )
+                if tuning_enabled:
+                    tk.Button(marker_buttons, text="Use changed values", command=use_changed_values_note).pack(
+                        side="left",
+                        padx=(0, 8),
+                    )
                 tk.Button(marker_buttons, text="Mark observation", command=mark_observation).pack(
                     side="left",
                 )
@@ -1634,6 +1648,15 @@ def _live_status_observation_note(status: LiveStatus | None) -> str:
             continue
         parts.append(f"{spec.label}: {value}")
     return "; ".join(parts)
+
+
+def _changed_tuning_observation_note(tuning: LiveTuning | None) -> str:
+    if tuning is None or not tuning.enabled:
+        return ""
+    changed = _changed_tuning_summary(tuning)
+    if changed == "Changed values: none yet":
+        return ""
+    return changed
 
 
 def _changed_tuning_summary(tuning: LiveTuning | None) -> str:
