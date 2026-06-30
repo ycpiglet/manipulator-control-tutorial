@@ -490,6 +490,75 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertTrue(learning_path_requires_evidence(dls_step))
         self.assertIn("condition-aware DLS", learning_path_text(dls_step))
 
+    def test_recommended_learning_path_requires_wall_required_presets(self) -> None:
+        wall_step = LEARNING_PATH[9]
+        action = learning_path_target(wall_step)
+        assert isinstance(action, MenuAction)
+
+        def write_events(run_path: Path, preset_labels: list[str]) -> None:
+            events = [
+                {"kind": "preset", "name": label.lower().replace(" ", "_"), "label": label}
+                for label in preset_labels
+            ]
+            events.append(
+                {
+                    "kind": "marker",
+                    "name": "observation",
+                    "value": {
+                        "question": "Question: wall release?",
+                        "prediction": "Back away should release contact.",
+                        "outcome": "Matched",
+                        "note": "Wall phase returned before contact.",
+                    },
+                }
+            )
+            (run_path / "interaction_events.json").write_text(json.dumps(events), encoding="utf-8")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            run_path = outputs / "run_lab04_wall_interactive"
+            run_path.mkdir()
+            (run_path / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": action.lab_name,
+                        "config_path": action.config_path,
+                        "config_name": Path(action.config_path).stem,
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            write_events(run_path, ["Soft wall", "Stiff wall"])
+            missing_close = learning_path_progress(wall_step, outputs)
+
+            write_events(run_path, ["Close wall"])
+            missing_back = learning_path_progress(wall_step, outputs)
+            missing_back_text = learning_path_progress_text(wall_step, missing_back)
+            missing_back_mission = action_mission_evidence_text(action, outputs)
+
+            write_events(run_path, ["Close wall", "Back away"])
+            complete = learning_path_progress(wall_step, outputs)
+
+        self.assertEqual(wall_step.title, "10. Touch virtual wall")
+        self.assertIn("required presets: Close wall -> Back away", learning_path_completion_text(wall_step))
+        self.assertFalse(missing_close.completed)
+        self.assertEqual(missing_close.required_presets, 2)
+        self.assertEqual(missing_close.required_presets_tried, 0)
+        self.assertEqual(missing_close.next_required_preset, "Close wall")
+        self.assertFalse(missing_back.completed)
+        self.assertEqual(missing_back.required_presets_tried, 1)
+        self.assertEqual(missing_back.next_required_preset, "Back away")
+        self.assertIn("Status: Needs required preset", missing_back_text)
+        self.assertIn("required presets 1/2", missing_back_text)
+        self.assertIn("Try required preset Back away", missing_back_text)
+        self.assertIn(
+            "Mission evidence: Needs required preset Back away; 1 observation, 1 prediction, 1 outcome, 1 note; required presets 1/2",
+            missing_back_mission,
+        )
+        self.assertTrue(complete.completed)
+        self.assertEqual(complete.required_presets_tried, 2)
+
     def test_recommended_learning_path_report_opens_latest_output(self) -> None:
         first_step = LEARNING_PATH[0]
         second_step = LEARNING_PATH[1]

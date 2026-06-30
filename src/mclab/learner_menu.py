@@ -74,6 +74,9 @@ class LearningPathProgress:
     learner_predictions: int = 0
     learner_notes: int = 0
     learner_outcomes: int = 0
+    required_presets: int = 0
+    required_presets_tried: int = 0
+    next_required_preset: str = ""
 
 
 LearningPathProgressItem = tuple[LearningPathStep, LearningPathProgress]
@@ -1008,6 +1011,12 @@ def learning_path_completion_text(step: LearningPathStep) -> str:
     if isinstance(action, BatchMenuAction):
         return "Done when: the comparison report, plots, and worksheet are saved."
     if "hands-on" in action_tags(action):
+        required_labels = configured_required_preset_labels(action.config_path)
+        if required_labels:
+            return (
+                "Done when: save one Mark observation with a Prediction after required presets: "
+                f"{' -> '.join(required_labels)}; add the outcome during review."
+            )
         return "Done when: save one Mark observation with a Prediction; add the outcome during review."
     return "Done when: the run report, priority plot, and worksheet are saved."
 
@@ -1032,7 +1041,12 @@ def learning_path_progress(
     markers, predictions, notes, outcomes = (
         _observation_evidence_counts(latest) if latest is not None else (0, 0, 0, 0)
     )
-    completed = latest is not None and (not evidence_required or (markers > 0 and predictions > 0))
+    action = learning_path_target(step)
+    required_total, required_tried, next_required = (
+        _required_preset_progress_for_action(action, latest) if latest is not None else (0, 0, "")
+    )
+    required_ready = required_total == 0 or required_tried >= required_total
+    completed = latest is not None and (not evidence_required or (markers > 0 and predictions > 0 and required_ready))
     return LearningPathProgress(
         completed=completed,
         latest_output=latest,
@@ -1041,6 +1055,9 @@ def learning_path_progress(
         learner_predictions=predictions,
         learner_notes=notes,
         learner_outcomes=outcomes,
+        required_presets=required_total,
+        required_presets_tried=required_tried,
+        next_required_preset=next_required,
     )
 
 
@@ -1060,6 +1077,16 @@ def learning_path_progress_text(
             f"Status: Needs prediction - latest {current.latest_output.name}"
             f"{_learning_path_evidence_suffix(current)}. "
             "Add one Prediction in Mark observation before moving on."
+        )
+    elif current.required_presets > 0 and current.required_presets_tried < current.required_presets:
+        next_text = (
+            f"Try required preset {current.next_required_preset} before moving on."
+            if current.next_required_preset
+            else "Try the remaining required preset before moving on."
+        )
+        status = (
+            f"Status: Needs required preset - latest {current.latest_output.name}"
+            f"{_learning_path_evidence_suffix(current)}. {next_text}"
         )
     else:
         status = (
@@ -1087,9 +1114,14 @@ def _learning_path_evidence_suffix(progress: LearningPathProgress) -> str:
         if progress.learner_outcomes
         else ""
     )
+    preset_text = (
+        f", required presets {progress.required_presets_tried}/{progress.required_presets}"
+        if progress.required_presets
+        else ""
+    )
     return (
         f" ({progress.observation_markers} observation"
-        f"{'s' if progress.observation_markers != 1 else ''}{prediction_text}{outcome_text}{note_text})"
+        f"{'s' if progress.observation_markers != 1 else ''}{prediction_text}{outcome_text}{note_text}{preset_text})"
     )
 
 
@@ -1341,15 +1373,19 @@ def action_mission_evidence_text(
         return f"Mission evidence: Outcome review pending; {_mission_evidence_counts(markers, predictions, outcomes, notes)}"
 
     if isinstance(action, MenuAction) and "hands-on" in action_tags(action):
+        required_total, required_tried, next_required = _required_preset_progress_for_action(action, latest)
         if markers <= 0:
             status = "Needs observation"
         elif predictions <= 0:
             status = "Needs prediction"
+        elif required_total and required_tried < required_total:
+            status = f"Needs required preset {next_required}" if next_required else "Needs required preset"
         elif notes <= 0:
             status = "Ready; add note next"
         else:
             status = "Ready for review"
-        return f"Mission evidence: {status}; {_mission_evidence_counts(markers, predictions, outcomes, notes)}"
+        preset_text = _required_preset_progress_text(required_total, required_tried)
+        return f"Mission evidence: {status}; {_mission_evidence_counts(markers, predictions, outcomes, notes)}{preset_text}"
 
     plot = action_latest_plot(action, outputs_root)
     worksheet = action_latest_worksheet(action, outputs_root)
@@ -1367,6 +1403,12 @@ def _mission_evidence_counts(markers: int, predictions: int, outcomes: int, note
         f"{outcomes} outcome{'s' if outcomes != 1 else ''}, "
         f"{notes} note{'s' if notes != 1 else ''}"
     )
+
+
+def _required_preset_progress_text(required_total: int, required_tried: int) -> str:
+    if required_total <= 0:
+        return ""
+    return f"; required presets {required_tried}/{required_total}"
 
 
 def review_queue_summary_text(outputs_root: Path | None = None) -> str:
@@ -1489,6 +1531,22 @@ def action_preset_evidence_text(action: MenuAction, outputs_root: Path | None = 
     if next_label:
         return f"Preset evidence: {count} presets tried; next {next_label}"
     return f"Preset evidence: {count} presets tried; try one more preset"
+
+
+def _required_preset_progress_for_action(
+    action: MenuAction | BatchMenuAction,
+    output_path: Path | None,
+) -> tuple[int, int, str]:
+    if not isinstance(action, MenuAction) or output_path is None:
+        return 0, 0, ""
+    required_labels = list(configured_required_preset_labels(action.config_path))
+    if not required_labels:
+        return 0, 0, ""
+    labels = list(configured_preset_labels(action.config_path))
+    tried = _distinct_preset_labels(output_path, labels)
+    tried_required = [label for label in required_labels if label in tried]
+    next_required = next((label for label in required_labels if label not in tried), "")
+    return len(required_labels), len(tried_required), next_required
 
 
 def action_next_cue_text(action: MenuAction, outputs_root: Path | None = None) -> str:
