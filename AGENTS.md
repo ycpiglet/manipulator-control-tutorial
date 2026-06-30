@@ -74,7 +74,7 @@ Implemented and verified:
 - Lab04 near/far virtual wall configs that isolate wall position with fixed stiffness, damping, and retreat gains
 - Lab04 slow/fast approach virtual wall configs that isolate velocity-dependent damping force with fixed wall gains
 - Lab04 low/high retreat-gain virtual wall configs that isolate force-to-retreat mapping with fixed wall force settings
-- Lab04 viewer visual guides for Cartesian target, current hand position, contact state, and virtual wall
+- Lab04 viewer visual guides for Cartesian target, current hand position, contact state, wall-force direction, and virtual wall
 - YAML configs, MuJoCo XML models, docs, and tests for the implemented labs
 - Run reports with domain-specific checks for singularity, DLS speed, virtual wall response, and actuator effort
 - Batch comparison reports with scenario cards, priority plot guidance, automatic comparison takeaways, min/max highlights, baseline deltas, parameter differences, and comparison plots
@@ -337,7 +337,7 @@ Implemented so far:
 - slow/fast approach wall comparison using hand speed and damping-force metrics
 - low/high retreat-gain wall comparison using fixed wall force settings to isolate target retreat
 - interactive wall position/stiffness/damping/retreat tuning
-- viewer visual guides for target point, current hand point, contact hand point, and wall plane
+- viewer visual guides for target point, current hand point, contact hand point, wall-force direction bar, and wall plane
 - torque/current proxy visualization from MuJoCo actuator force output
 
 Use translational-only impedance first. Add orientation impedance only after the simpler demo is stable.

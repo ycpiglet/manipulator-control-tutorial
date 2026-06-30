@@ -101,6 +101,10 @@ class LearningGuideTests(unittest.TestCase):
             viewer_legend_for_guide(lab03_guide),
         )
         self.assertIn(("Red plane", "Virtual wall location."), viewer_legend_for_guide(lab04_wall_guide))
+        self.assertIn(
+            ("Orange bar", "Virtual wall force direction and relative magnitude."),
+            viewer_legend_for_guide(lab04_wall_guide),
+        )
         self.assertEqual(viewer_legend_for_guide(lab04_joint_guide), [])
 
     def test_unknown_config_without_lab_context_has_no_guide(self) -> None:

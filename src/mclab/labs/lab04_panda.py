@@ -279,6 +279,7 @@ def run(
                 guide_config=viewer_guides,
                 ee_position=ee_position,
                 target_x_ee=target_x_ee,
+                wall_force=wall_force,
                 wall_config=wall_config,
                 wall_penetration=wall_penetration,
             )
@@ -329,6 +330,7 @@ def _viewer_guides(config: dict[str, Any], mode: str) -> dict[str, bool]:
         "hand": bool(guide_config.get("hand", True)),
         "target": bool(guide_config.get("target", True)),
         "wall": bool(guide_config.get("wall", True)),
+        "force": bool(guide_config.get("force", True)),
     }
 
 
@@ -365,6 +367,7 @@ def _update_viewer_guides(
     guide_config: dict[str, bool],
     ee_position: list[float],
     target_x_ee: list[float],
+    wall_force: list[float] | None,
     wall_config: dict[str, Any],
     wall_penetration: float,
 ) -> None:
@@ -401,6 +404,17 @@ def _update_viewer_guides(
             ee_position,
             radius=0.016,
             rgba=hand_color,
+        )
+    if guide_config.get("force", True) and is_wall and wall_force is not None and abs(float(wall_force[0])) > 1e-9:
+        force_x = float(wall_force[0])
+        length = min(0.16, max(0.025, abs(force_x) / 160.0))
+        direction = 1.0 if force_x >= 0.0 else -1.0
+        add_viewer_box(
+            mujoco,
+            viewer_handle,
+            [ee_position[0] + direction * length * 0.5, ee_position[1], ee_position[2] + 0.04],
+            half_size=[length * 0.5, 0.008, 0.008],
+            rgba=[1.0, 0.62, 0.05, 0.78],
         )
 
 

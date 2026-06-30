@@ -89,6 +89,7 @@ def viewer_legend_for_guide(guide: RunGuide | None) -> list[tuple[str, str]]:
             items.extend(
                 [
                     ("Orange sphere", "Hand point used to show wall contact or retreat."),
+                    ("Orange bar", "Virtual wall force direction and relative magnitude."),
                     ("Red plane", "Virtual wall location."),
                 ]
             )
