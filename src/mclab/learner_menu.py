@@ -1463,6 +1463,27 @@ def learning_path_latest_tuned_config(
     return action_latest_tuned_config(target, outputs_root)
 
 
+def learning_path_artifact_button_labels(
+    step: LearningPathStep,
+    outputs_root: Path | None = None,
+) -> dict[str, str]:
+    latest_plot = learning_path_latest_plot(step, outputs_root)
+    plot_label = "Plot" if latest_plot is None else f"Plot: {_short_artifact_button_name(latest_plot)}"
+    return {
+        "report": "Report",
+        "plot": plot_label,
+        "worksheet": "Worksheet",
+        "replay": "Replay",
+    }
+
+
+def _short_artifact_button_name(path: Path, max_length: int = 10) -> str:
+    name = path.stem.removesuffix("_compare")
+    if len(name) <= max_length:
+        return name
+    return f"{name[: max_length - 3]}..."
+
+
 def action_latest_output(
     action: MenuAction | BatchMenuAction,
     outputs_root: Path | None = None,
@@ -3462,6 +3483,10 @@ def main() -> int:
     post_run_refresh_ref: dict[str, Callable[[], None]] = {}
     review_queue = tk.StringVar(value=review_queue_summary_text())
 
+    def update_learning_path_button_text(step: LearningPathStep, button: Any, key: str) -> None:
+        labels = learning_path_artifact_button_labels(step)
+        button.configure(text=labels[key])
+
     def refresh_learning_path_progress() -> None:
         progress_items: list[LearningPathProgressItem] = []
         progress_by_step: dict[LearningPathStep, LearningPathProgress] = {}
@@ -3472,12 +3497,16 @@ def main() -> int:
             variable.set(learning_path_progress_text(step, progress))
         for step, button in path_report_buttons:
             progress = progress_by_step.get(step) or learning_path_progress(step)
+            update_learning_path_button_text(step, button, "report")
             button.state(["!disabled"] if progress.latest_output is not None else ["disabled"])
         for step, button in path_plot_buttons:
+            update_learning_path_button_text(step, button, "plot")
             button.state(["!disabled"] if learning_path_latest_plot(step) is not None else ["disabled"])
         for step, button in path_worksheet_buttons:
+            update_learning_path_button_text(step, button, "worksheet")
             button.state(["!disabled"] if learning_path_latest_worksheet(step) is not None else ["disabled"])
         for step, button in path_replay_buttons:
+            update_learning_path_button_text(step, button, "replay")
             button.state(["!disabled"] if learning_path_latest_tuned_config(step) is not None else ["disabled"])
         items = tuple(progress_items) if progress_items else learning_path_progress_items()
         next_step = next_learning_path_step(items)
@@ -3594,6 +3623,7 @@ def main() -> int:
         cell.grid(row=row_index + 2, column=column_index, sticky="ew", padx=(0, 12), pady=(0, 8))
         progress_text = tk.StringVar(value=learning_path_progress_text(step))
         path_status_vars.append((step, progress_text))
+        artifact_labels = learning_path_artifact_button_labels(step)
         launch_row = ttk.Frame(cell)
         launch_row.pack(anchor="w")
         ttk.Button(
@@ -3615,7 +3645,7 @@ def main() -> int:
         artifact_row.pack(anchor="w", pady=(4, 0))
         step_report_button = ttk.Button(
             artifact_row,
-            text="Report",
+            text=artifact_labels["report"],
             width=8,
             command=lambda selected=step: launch_learning_path_latest_output(selected),
         )
@@ -3625,8 +3655,8 @@ def main() -> int:
         path_report_buttons.append((step, step_report_button))
         step_plot_button = ttk.Button(
             artifact_row,
-            text="Plot",
-            width=8,
+            text=artifact_labels["plot"],
+            width=14,
             command=lambda selected=step: launch_learning_path_latest_plot(selected),
         )
         if learning_path_latest_plot(step) is None:
@@ -3635,7 +3665,7 @@ def main() -> int:
         path_plot_buttons.append((step, step_plot_button))
         step_worksheet_button = ttk.Button(
             artifact_row,
-            text="Worksheet",
+            text=artifact_labels["worksheet"],
             width=10,
             command=lambda selected=step: launch_learning_path_latest_worksheet(selected),
         )
@@ -3645,7 +3675,7 @@ def main() -> int:
         path_worksheet_buttons.append((step, step_worksheet_button))
         step_replay_button = ttk.Button(
             artifact_row,
-            text="Replay",
+            text=artifact_labels["replay"],
             width=8,
             command=lambda selected=step: _launch_learning_path_tuned_replay_from_menu(
                 selected,

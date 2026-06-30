@@ -70,6 +70,7 @@ from mclab.learner_menu import (  # noqa: E402
     config_value_preview,
     experience_filter_description,
     filter_menu_actions,
+    learning_path_artifact_button_labels,
     learning_path_completion_text,
     learning_path_progress_items,
     learning_path_latest_output,
@@ -364,6 +365,7 @@ class LearnerMenuTests(unittest.TestCase):
             first_tuned = learning_path_latest_tuned_config(first_step, outputs)
             last_tuned = learning_path_latest_tuned_config(last_step, outputs)
             first_progress_text = learning_path_progress_text(first_step, first_progress)
+            first_labels = learning_path_artifact_button_labels(first_step, outputs)
 
         self.assertTrue(first_progress.completed)
         self.assertEqual(first_progress.latest_output.name, "run_lab01")
@@ -375,6 +377,9 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Latest artifacts: worksheet worksheet.md; replay learner_tuned_config.yaml", first_progress_text)
         self.assertIn("Latest plot: position.png", first_progress_text)
         self.assertIn("Plot review: Position - Compare actual motion", first_progress_text)
+        self.assertEqual(first_labels["plot"], "Plot: position")
+        self.assertEqual(first_labels["worksheet"], "Worksheet")
+        self.assertEqual(first_labels["replay"], "Replay")
         self.assertTrue(last_progress.completed)
         self.assertEqual(last_progress.latest_output.name, "all_batches")
         assert last_latest is not None
@@ -1632,6 +1637,7 @@ class LearnerMenuTests(unittest.TestCase):
             self.assertEqual(action_latest_plot(action, outputs), dls_plot)
             self.assertEqual(latest_output_plot(run_path), dls_plot)
             self.assertEqual(action_plot_text(action, outputs), "Plots: Latest dls.png")
+            self.assertEqual(learning_path_artifact_button_labels(step, outputs)["plot"], "Plot: dls")
             progress_text = learning_path_progress_text(step, learning_path_progress(step, outputs))
             self.assertIn("Latest artifacts: worksheet not saved yet", progress_text)
             self.assertIn("Latest plot: dls.png", progress_text)
