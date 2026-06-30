@@ -160,6 +160,69 @@ class Lab04WallTests(unittest.TestCase):
         self.assertAlmostEqual(metrics["wall_contact_duration"], 0.2)
         self.assertAlmostEqual(metrics["wall_contact_fraction"], 2.0 / 3.0)
 
+    def test_lab04_summary_reports_key_moment_times(self) -> None:
+        rows = [
+            {
+                "time": 0.0,
+                "error_norm": 0.0,
+                "q_0": 0.0,
+                "qdot_0": 0.0,
+                "xdot_ee_0": 0.0,
+                "xdot_ee_1": 0.0,
+                "xdot_ee_2": 0.0,
+                "tau_cmd_0": 0.0,
+                "wall_penetration_cm": 0.0,
+                "wall_penetration": 0.0,
+                "wall_retreat_cm": 0.0,
+                "force_virtual_0": 0.0,
+                "force_virtual_spring_0": 0.0,
+                "force_virtual_damping_0": 0.0,
+                "cartesian_error_cm": 0.2,
+            },
+            {
+                "time": 0.4,
+                "error_norm": 0.02,
+                "q_0": 0.01,
+                "qdot_0": 0.1,
+                "xdot_ee_0": 0.2,
+                "xdot_ee_1": 0.0,
+                "xdot_ee_2": 0.0,
+                "tau_cmd_0": 1.0,
+                "wall_penetration_cm": 0.8,
+                "wall_penetration": 0.008,
+                "wall_retreat_cm": 0.2,
+                "force_virtual_0": -4.0,
+                "force_virtual_spring_0": -3.0,
+                "force_virtual_damping_0": -1.0,
+                "cartesian_error_cm": 1.4,
+            },
+            {
+                "time": 0.7,
+                "error_norm": 0.03,
+                "q_0": 0.02,
+                "qdot_0": 0.3,
+                "xdot_ee_0": 0.1,
+                "xdot_ee_1": 0.3,
+                "xdot_ee_2": 0.0,
+                "tau_cmd_0": -2.0,
+                "wall_penetration_cm": 1.6,
+                "wall_penetration": 0.016,
+                "wall_retreat_cm": 0.4,
+                "force_virtual_0": -9.0,
+                "force_virtual_spring_0": -6.0,
+                "force_virtual_damping_0": -3.0,
+                "cartesian_error_cm": 0.5,
+            },
+        ]
+
+        summary = _summary(rows)
+
+        self.assertAlmostEqual(summary["peak_wall_penetration_time"], 0.7)
+        self.assertAlmostEqual(summary["peak_wall_force_time"], 0.7)
+        self.assertAlmostEqual(summary["peak_wall_damping_force_time"], 0.7)
+        self.assertAlmostEqual(summary["peak_cartesian_error_time"], 0.4)
+        self.assertAlmostEqual(summary["peak_hand_speed_time"], 0.7)
+
     def test_lab04_viewer_guides_default_to_cartesian_and_wall_modes(self) -> None:
         self.assertTrue(_viewer_guides({}, "cartesian_reach")["enabled"])
         self.assertTrue(_viewer_guides({}, "impedance_wall")["enabled"])

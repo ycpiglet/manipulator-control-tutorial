@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -750,6 +751,14 @@ def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
             q = [float(row.get(f"q_{index}", 0.0)) for index in range(len(first_q))]
             joint_drift_norms.append(_norm([q[index] - first_q[index] for index in range(len(first_q))]))
     wall_contact = _wall_contact_metrics(rows)
+    peak_wall_penetration = _peak_time_value(rows, lambda row: float(row.get("wall_penetration_cm", 0.0)))
+    peak_wall_force = _peak_time_value(rows, lambda row: abs(float(row.get("force_virtual_0", 0.0))))
+    peak_wall_damping = _peak_time_value(rows, lambda row: abs(float(row.get("force_virtual_damping_0", 0.0))))
+    peak_cartesian_error = _peak_time_value(rows, lambda row: float(row.get("cartesian_error_cm", 0.0)))
+    peak_hand_speed = _peak_time_value(
+        rows,
+        lambda row: _norm([float(row.get(f"xdot_ee_{index}", 0.0)) for index in range(3)]),
+    )
     return {
         "max_joint_error_norm": max(float(row["error_norm"]) for row in rows),
         "final_joint_error_norm": rows[-1]["error_norm"],
@@ -772,24 +781,40 @@ def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
         ),
         "max_wall_penetration": max(float(row.get("wall_penetration", 0.0)) for row in rows),
         "max_wall_penetration_cm": max(float(row.get("wall_penetration_cm", 0.0)) for row in rows),
+        "peak_wall_penetration_time": peak_wall_penetration[0] if peak_wall_penetration[1] > 0.0 else None,
         "max_wall_retreat_cm": max(float(row.get("wall_retreat_cm", 0.0)) for row in rows),
         "first_wall_contact_time": wall_contact["first_wall_contact_time"],
         "last_wall_contact_time": wall_contact["last_wall_contact_time"],
         "wall_contact_duration": wall_contact["wall_contact_duration"],
         "wall_contact_fraction": wall_contact["wall_contact_fraction"],
         "max_abs_virtual_wall_force": max(abs(float(row.get("force_virtual_0", 0.0))) for row in rows),
+        "peak_wall_force_time": peak_wall_force[0] if peak_wall_force[1] > 0.0 else None,
         "max_abs_virtual_wall_spring_force": max(
             abs(float(row.get("force_virtual_spring_0", 0.0))) for row in rows
         ),
         "max_abs_virtual_wall_damping_force": max(
             abs(float(row.get("force_virtual_damping_0", 0.0))) for row in rows
         ),
+        "peak_wall_damping_force_time": peak_wall_damping[0] if peak_wall_damping[1] > 0.0 else None,
         "max_cartesian_error_cm": max(float(row.get("cartesian_error_cm", 0.0)) for row in rows),
+        "peak_cartesian_error_time": peak_cartesian_error[0] if peak_cartesian_error[1] > 0.0 else None,
         "final_cartesian_error_cm": rows[-1].get("cartesian_error_cm", 0.0),
+        "peak_hand_speed_time": peak_hand_speed[0] if peak_hand_speed[1] > 0.0 else None,
         "final_x_ee_0": rows[-1].get("x_ee_0"),
         "final_x_ee_1": rows[-1].get("x_ee_1"),
         "final_x_ee_2": rows[-1].get("x_ee_2"),
     }
+
+
+def _peak_time_value(rows: list[dict[str, Any]], value_fn: Callable[[dict[str, Any]], float]) -> tuple[float | None, float]:
+    best_time: float | None = None
+    best_value = float("-inf")
+    for row in rows:
+        value = float(value_fn(row))
+        if value > best_value:
+            best_value = value
+            best_time = float(row.get("time", 0.0))
+    return best_time, best_value if best_value > float("-inf") else 0.0
 
 
 def _wall_contact_metrics(rows: list[dict[str, Any]], threshold_cm: float = 1e-9) -> dict[str, float | None]:

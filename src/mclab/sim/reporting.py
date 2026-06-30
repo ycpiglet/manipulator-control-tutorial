@@ -955,6 +955,7 @@ def _render_report(
     config_highlights = _config_highlights_section(config)
     configured_presets = _configured_presets_section(config)
     result_check = _result_check_section(summary)
+    key_moments = _key_moments_section(summary)
     mission_evidence = _mission_evidence_section(summary, interaction_events, plots)
     hands_on_evidence = _hands_on_evidence_section(summary, interaction_events)
     learner_action_summary = _learner_action_summary_section(interaction_events, config)
@@ -1314,6 +1315,7 @@ def _render_report(
     {config_highlights}
     {configured_presets}
     {result_check}
+    {key_moments}
     {mission_evidence}
     {hands_on_evidence}
     {learner_action_summary}
@@ -2005,6 +2007,93 @@ def _result_check_section(summary: dict[str, Any]) -> str:
         "</div>"
         "</section>"
     )
+
+
+def _key_moments_section(summary: dict[str, Any]) -> str:
+    moments = _key_moment_rows(summary)
+    if not moments:
+        return ""
+    cards = "\n".join(
+        _action_card(
+            title,
+            detail,
+            _action_value_list((("Time [s]", _format_value(time_value)), (value_label, _format_value(value)))),
+        )
+        for title, time_value, value_label, value, detail in moments
+    )
+    return (
+        "<section>"
+        "<h2>Key Moments</h2>"
+        '<p class="empty">Use these timestamps to jump to the important parts of the plots before reading every trace.</p>'
+        '<div class="action-grid">'
+        f"{cards}"
+        "</div>"
+        "</section>"
+    )
+
+
+def _key_moment_rows(summary: dict[str, Any]) -> list[tuple[str, float, str, Any, str]]:
+    rows: list[tuple[str, float, str, Any, str]] = []
+
+    def add(
+        title: str,
+        time_key: str,
+        value_key: str,
+        value_label: str,
+        detail: str,
+    ) -> None:
+        time_value = _number(summary.get(time_key))
+        if time_value is None:
+            return
+        value = summary.get(value_key)
+        numeric_value = _number(value)
+        if numeric_value is not None and abs(numeric_value) <= 1e-12 and title != "First wall contact":
+            return
+        rows.append((title, time_value, value_label, value, detail))
+
+    add(
+        "First wall contact",
+        "first_wall_contact_time",
+        "wall_contact_duration",
+        "Contact duration [s]",
+        "Start reading virtual_wall.png here; this is where penetration and force first become meaningful.",
+    )
+    add(
+        "Peak wall penetration",
+        "peak_wall_penetration_time",
+        "max_wall_penetration_cm",
+        "Penetration [cm]",
+        "Check whether the hand pushed too far through the virtual wall.",
+    )
+    add(
+        "Peak wall force",
+        "peak_wall_force_time",
+        "max_abs_virtual_wall_force",
+        "Wall force",
+        "Compare this moment with wall stiffness, damping, and retreat settings.",
+    )
+    add(
+        "Peak damping force",
+        "peak_wall_damping_force_time",
+        "max_abs_virtual_wall_damping_force",
+        "Damping force",
+        "Use this for slow/fast approach comparisons where velocity changes the wall response.",
+    )
+    add(
+        "Peak hand speed",
+        "peak_hand_speed_time",
+        "max_hand_speed",
+        "Hand speed [m/s]",
+        "Look at the approach speed that produced the largest wall damping response.",
+    )
+    add(
+        "Peak Cartesian error",
+        "peak_cartesian_error_time",
+        "max_cartesian_error_cm",
+        "Error [cm]",
+        "Use this for Cartesian reach runs to find the largest target-tracking gap.",
+    )
+    return rows
 
 
 def _result_checks(summary: dict[str, Any]) -> list[tuple[str, str, str]]:

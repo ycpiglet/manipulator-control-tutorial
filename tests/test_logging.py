@@ -632,11 +632,18 @@ class LoggingTests(unittest.TestCase):
                         "max_wall_penetration_cm": 1.2,
                         "max_wall_retreat_cm": 0.5,
                         "first_wall_contact_time": 1.4,
+                        "peak_wall_penetration_time": 2.1,
+                        "peak_wall_force_time": 2.2,
+                        "peak_wall_damping_force_time": 1.8,
+                        "peak_cartesian_error_time": 0.6,
+                        "peak_hand_speed_time": 1.7,
                         "wall_contact_duration": 2.2,
                         "wall_contact_fraction": 0.44,
                         "max_abs_virtual_wall_force": 22.0,
                         "max_abs_virtual_wall_spring_force": 18.0,
                         "max_abs_virtual_wall_damping_force": 4.0,
+                        "max_cartesian_error_cm": 1.6,
+                        "max_hand_speed": 0.34,
                     }
                 ),
                 encoding="utf-8",
@@ -662,6 +669,13 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("First contact at", html)
             self.assertIn("Wall force", html)
             self.assertIn("Wall force components", html)
+            self.assertIn("Key Moments", html)
+            self.assertIn("First wall contact", html)
+            self.assertIn("Peak wall penetration", html)
+            self.assertIn("Peak wall force", html)
+            self.assertIn("Peak damping force", html)
+            self.assertIn("Peak hand speed", html)
+            self.assertIn("Peak Cartesian error", html)
             self.assertIn("check-inspect", html)
             self.assertIn("check-observed", html)
 
