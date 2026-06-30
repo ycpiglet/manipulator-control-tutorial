@@ -1293,6 +1293,11 @@ class LoggingTests(unittest.TestCase):
                 html,
             )
             self.assertIn(
+                "<strong>Counts as control:</strong> experiment buttons, live sliders, Quick presets; "
+                "view/evidence helpers such as Pause, Playback speed, and Use live status do not count.",
+                html,
+            )
+            self.assertIn(
                 "<strong>Start steps:</strong> Predict -&gt; Run viewer -&gt; try required presets Close wall -&gt; Back away -&gt; Re-enter wall -&gt; Mark observation.",
                 html,
             )

@@ -4571,6 +4571,7 @@ def _learning_path_card(item: dict[str, Any]) -> str:
     mission_evidence = _learning_path_mission_evidence(run)
     challenge_evidence = _learning_path_challenge_evidence(run)
     start_steps = _learning_path_start_steps(step)
+    control_credit = _learning_path_control_credit(step)
     learning_cue = _learning_path_learning_cue(step)
     completion_text = _learning_path_completion_text(step)
     command_label = "Run this step" if run is None else "Repeat this step"
@@ -4640,6 +4641,7 @@ def _learning_path_card(item: dict[str, Any]) -> str:
         f'<p class="muted">{escape(step.description)}</p>'
         f'<p class="muted"><strong>Done when:</strong> {escape(completion_text.removeprefix("Done when:").strip())}</p>'
         f"{start_steps}"
+        f"{control_credit}"
         f"{learning_cue}"
         f"{status}"
         f"{latest_evidence}"
@@ -4782,6 +4784,15 @@ def _learning_path_start_steps(step: IndexPathStep) -> str:
     if not text:
         return ""
     return f'<p class="muted"><strong>Start steps:</strong> {escape(text)}</p>'
+
+
+def _learning_path_control_credit(step: IndexPathStep) -> str:
+    if step.batch_name or not step.config_path:
+        return ""
+    text = control_credit_text_for_config(_index_step_config(step))
+    if not text:
+        return ""
+    return f'<p class="muted"><strong>Counts as control:</strong> {escape(text)}</p>'
 
 
 def _index_step_required_preset_labels(step: IndexPathStep) -> list[str]:
