@@ -613,14 +613,47 @@ def _two_link_disturbance_torque(config: dict[str, Any], time: float) -> list[fl
     if not pulse or not bool(pulse.get("enabled", True)):
         return [0.0, 0.0]
 
+    pulses = pulse.get("pulses")
+    if isinstance(pulses, list):
+        total = [0.0, 0.0]
+        default_duration = max(0.0, float(pulse.get("duration", 0.2)))
+        default_ramp = max(0.0, float(pulse.get("ramp_time", 0.0)))
+        for index, raw_pulse in enumerate(pulses):
+            if not isinstance(raw_pulse, dict):
+                continue
+            if not bool(raw_pulse.get("enabled", True)):
+                continue
+            torque = _disturbance_pulse_torque(
+                raw_pulse,
+                time,
+                name=f"disturbance_torque.pulses[{index}]",
+                default_duration=default_duration,
+                default_ramp_time=default_ramp,
+            )
+            total[0] += torque[0]
+            total[1] += torque[1]
+        return total
+
+    return _disturbance_pulse_torque(pulse, time, name="disturbance_torque")
+
+
+def _disturbance_pulse_torque(
+    pulse: dict[str, Any],
+    time: float,
+    *,
+    name: str,
+    default_duration: float | None = None,
+    default_ramp_time: float | None = None,
+) -> list[float]:
     start_time = float(pulse.get("start_time", 1.5))
-    duration = max(0.0, float(pulse.get("duration", 0.2)))
+    duration = max(0.0, float(pulse.get("duration", 0.2 if default_duration is None else default_duration)))
     elapsed = float(time) - start_time
     if duration <= 0.0 or elapsed < 0.0 or elapsed > duration:
         return [0.0, 0.0]
 
-    torque = _pair(pulse.get("torque", [0.0, 0.0]), "disturbance_torque.torque")
-    ramp_time = max(0.0, min(duration * 0.5, float(pulse.get("ramp_time", 0.0))))
+    torque = _pair(pulse.get("torque", [0.0, 0.0]), f"{name}.torque")
+    default_ramp = 0.0 if default_ramp_time is None else default_ramp_time
+    ramp_time = max(0.0, min(duration * 0.5, float(pulse.get("ramp_time", default_ramp))))
     scale = _smooth_pulse_scale(elapsed, duration, ramp_time)
     return [scale * torque[0], scale * torque[1]]
 

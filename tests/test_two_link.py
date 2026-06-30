@@ -136,6 +136,23 @@ class TwoLinkKinematicsTests(unittest.TestCase):
             [0.0, 0.0],
         )
 
+    def test_two_link_disturbance_torque_sums_staggered_pulses(self) -> None:
+        config = {
+            "disturbance_torque": {
+                "duration": 0.4,
+                "ramp_time": 0.0,
+                "pulses": [
+                    {"start_time": 1.0, "torque": [0.2, 0.0]},
+                    {"start_time": 1.2, "torque": [0.0, -0.1]},
+                ],
+            }
+        }
+
+        self.assertEqual(_two_link_disturbance_torque(config, 0.9), [0.0, 0.0])
+        self.assertEqual(_two_link_disturbance_torque(config, 1.1), [0.2, 0.0])
+        self.assertEqual(_two_link_disturbance_torque(config, 1.3), [0.2, -0.1])
+        self.assertEqual(_two_link_disturbance_torque(config, 1.7), [0.0, 0.0])
+
     def test_smooth_pulse_scale_handles_zero_ramp(self) -> None:
         self.assertEqual(_smooth_pulse_scale(elapsed=0.0, duration=0.2, ramp_time=0.0), 1.0)
 

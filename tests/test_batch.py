@@ -33,6 +33,7 @@ class BatchTests(unittest.TestCase):
         self.assertIn("condition_aware_lower_path", lab03_labels)
         self.assertIn("condition_aware_shoulder_disturbance", lab03_labels)
         self.assertIn("condition_aware_elbow_disturbance", lab03_labels)
+        self.assertIn("condition_aware_staggered_disturbance", lab03_labels)
         self.assertIn("condition_aware_low_torque", lab03_labels)
         self.assertIn("condition_aware_high_torque", lab03_labels)
         self.assertIn("condition_aware_slow_command", lab03_labels)
@@ -95,7 +96,7 @@ class BatchTests(unittest.TestCase):
             any("elbow-up and elbow-down paths" in question for question in lab03_guide.questions)
         )
         self.assertTrue(
-            any("shoulder or elbow disturbance" in question for question in lab03_guide.questions)
+            any("shoulder, elbow, or staggered disturbances" in question for question in lab03_guide.questions)
         )
         self.assertIn("max_abs_tau_disturbance", lab03_guide.metric_keys)
         self.assertIn("max_task_error_during_disturbance", lab03_guide.metric_keys)

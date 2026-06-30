@@ -107,10 +107,11 @@ Condition-aware disturbance comparison:
 ```bash
 python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_shoulder_disturbance_2dof.yaml --headless --plot --plots dls_disturbance
 python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_elbow_disturbance_2dof.yaml --headless --plot --plots dls_disturbance
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_staggered_disturbance_2dof.yaml --headless --plot --plots dls_disturbance
 python -m mclab batch lab03_2dof_compare --open-report
 ```
 
-These two configs keep the same near-edge target and condition-aware DLS schedule while adding a short torque pulse to either the shoulder or elbow. Compare `disturbance.png`, `torque.png`, `error.png`, `shoulder_disturbance_compare.png`, `elbow_disturbance_compare.png`, and `disturbance_recovery_time_compare.png` to see when the disturbance happens, how total torque changes, how much task error appears during recovery, and how long `disturbance_recovery_duration` says the joint error took to return to the pre-disturbance recovery band.
+These configs keep the same near-edge target and condition-aware DLS schedule while adding a short torque pulse to the shoulder, the elbow, or a shoulder-then-elbow staggered sequence. Compare `disturbance.png`, `torque.png`, `error.png`, `shoulder_disturbance_compare.png`, `elbow_disturbance_compare.png`, and `disturbance_recovery_time_compare.png` to see when each disturbance happens, how total torque changes, how much task error appears during each recovery window, and how long `disturbance_recovery_duration` says the joint error took to return to the pre-disturbance recovery band.
 
 Condition-aware torque-limit comparison:
 

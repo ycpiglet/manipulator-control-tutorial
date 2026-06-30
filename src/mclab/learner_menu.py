@@ -583,6 +583,16 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
     ),
     MenuAction(
         group="Lab03 2DOF Arm and Trajectories",
+        label="2DOF staggered-disturbance DLS",
+        lab_name="lab03",
+        config_path="configs/lab03_2dof/condition_aware_dls_staggered_disturbance_2dof.yaml",
+        plots="dls_disturbance",
+        description="Applies shoulder and elbow torque pulses at different times during the same near-edge DLS reach.",
+        try_this="Compare against the single-joint disturbance runs and inspect the second recovery.",
+        watch="Two disturbance windows, total torque, task error after each pulse, and DLS damping.",
+    ),
+    MenuAction(
+        group="Lab03 2DOF Arm and Trajectories",
         label="2DOF low-torque DLS",
         lab_name="lab03",
         config_path="configs/lab03_2dof/condition_aware_dls_low_torque_2dof.yaml",
@@ -2152,6 +2162,7 @@ def parameter_hint(action: MenuAction) -> str:
             "2dof lower-path dls",
             "2dof shoulder-disturbance dls",
             "2dof elbow-disturbance dls",
+            "2dof staggered-disturbance dls",
             "2dof low-torque dls",
             "2dof high-torque dls",
             "2dof slow-command dls",
@@ -2182,6 +2193,11 @@ def parameter_hint(action: MenuAction) -> str:
             if label in {"2dof shoulder-disturbance dls", "2dof elbow-disturbance dls"}:
                 return (
                     "disturbance_torque.start_time, disturbance_torque.duration, disturbance_torque.torque, "
+                    "target_xy, tracking_controller.condition_damping_threshold"
+                )
+            if label == "2dof staggered-disturbance dls":
+                return (
+                    "disturbance_torque.pulses, disturbance_torque.duration, disturbance_torque.ramp_time, "
                     "target_xy, tracking_controller.condition_damping_threshold"
                 )
             if label in {"2dof slow-command dls", "2dof fast-command dls"}:
@@ -2682,6 +2698,7 @@ def _is_compare_action(action: MenuAction) -> bool:
         "2dof lower-path dls",
         "2dof shoulder-disturbance dls",
         "2dof elbow-disturbance dls",
+        "2dof staggered-disturbance dls",
         "2dof low-torque dls",
         "2dof high-torque dls",
         "2dof slow-command dls",

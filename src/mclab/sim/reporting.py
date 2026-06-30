@@ -160,6 +160,11 @@ CONFIG_HIGHLIGHT_KEYS = (
     "interaction.joint_disturbance_torque",
     "interaction.joint_disturbance_duration",
     "interaction.live_tuning",
+    "disturbance_torque.start_time",
+    "disturbance_torque.duration",
+    "disturbance_torque.ramp_time",
+    "disturbance_torque.torque",
+    "disturbance_torque.pulses",
     "viewer_guides.enabled",
     "viewer_guides.condition_warning",
     "viewer_guides.condition_threshold",
@@ -375,6 +380,11 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
             "dls_disturbance",
         ),
         NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_staggered_disturbance_2dof.yaml",
+            "Add shoulder and elbow pulses at different times to test repeated recovery.",
+            "dls_disturbance",
+        ),
+        NextRunSuggestion(
             "configs/lab03_2dof/condition_aware_dls_fast_command_2dof.yaml",
             "Keep the target and schedule but command the motion faster.",
             "dls",
@@ -481,6 +491,11 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
             "dls_disturbance",
         ),
         NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_staggered_disturbance_2dof.yaml",
+            "Apply shoulder then elbow pulses and compare the second recovery.",
+            "dls_disturbance",
+        ),
+        NextRunSuggestion(
             "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
             "Return to the undisturbed condition-aware DLS case.",
             "dls",
@@ -490,6 +505,28 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
         NextRunSuggestion(
             "configs/lab03_2dof/condition_aware_dls_shoulder_disturbance_2dof.yaml",
             "Move the same pulse to the shoulder and compare recovery.",
+            "dls_disturbance",
+        ),
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_staggered_disturbance_2dof.yaml",
+            "Apply shoulder then elbow pulses and compare the second recovery.",
+            "dls_disturbance",
+        ),
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
+            "Return to the undisturbed condition-aware DLS case.",
+            "dls",
+        ),
+    ),
+    "configs/lab03_2dof/condition_aware_dls_staggered_disturbance_2dof.yaml": (
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_shoulder_disturbance_2dof.yaml",
+            "Isolate the first shoulder pulse by running the single-pulse case.",
+            "dls_disturbance",
+        ),
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_elbow_disturbance_2dof.yaml",
+            "Isolate the second elbow pulse by running the single-pulse case.",
             "dls_disturbance",
         ),
         NextRunSuggestion(

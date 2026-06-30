@@ -488,6 +488,14 @@ RUN_GUIDES: dict[str, RunGuide] = {
         "Disturbance torque, total torque, task error during the pulse, DLS damping, and recovery.",
         "Run the shoulder-disturbance case, then compare disturbance and task-error plots.",
     ),
+    "configs/lab03_2dof/condition_aware_dls_staggered_disturbance_2dof.yaml": RunGuide(
+        "Lab03 2DOF Staggered-Disturbance Condition-Aware DLS",
+        "A shoulder pulse followed by an elbow pulse disturbs the same near-edge DLS reach.",
+        "Compare against the single-joint disturbance cases and inspect whether the second pulse recovers differently.",
+        "disturbance_torque.pulses, tracking_controller.condition_damping_threshold, tracking_controller.max_dls_damping",
+        "Disturbance timing, total torque, task error after each pulse, DLS damping, and recovery duration.",
+        "Run the shoulder and elbow single-pulse cases to isolate which joint made the staggered sequence harder.",
+    ),
     "configs/lab03_2dof/condition_aware_dls_low_torque_2dof.yaml": RunGuide(
         "Lab03 2DOF Low-Torque Condition-Aware DLS",
         "The same condition-aware DLS target is constrained by a lower shoulder and elbow torque limit.",
