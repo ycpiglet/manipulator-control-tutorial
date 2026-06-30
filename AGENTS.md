@@ -107,6 +107,7 @@ Implemented and verified:
 - Interactive `MCLab Interaction` panel, run reports, and worksheets show a shared `Mission` prompt so the learner sees the same evidence-focused task during launch, live tuning, and review
 - Interactive `MCLab Interaction` panel shows a `Done when` evidence criterion before Prediction and Mark observation controls
 - Interactive `MCLab Interaction` observation area shows a live `Evidence checklist` for prediction, preset comparison, outcome, and note readiness before marking
+- Interactive `MCLab Interaction` observation area shows a live `Next action` cue so learners know whether to write a prediction, try a required preset, use live status, choose an outcome, or mark the observation
 - Run reports and worksheets include `Mission Evidence` status with observation, prediction, outcome, note, plot counts, and the next proof step
 - Learner menu scenario cards include a `Viewer` marker legend and marker-name search support
 - Learner menu scenario cards include a `Controls` summary of actual buttons, sliders, presets, pause/step, reset, and observation controls

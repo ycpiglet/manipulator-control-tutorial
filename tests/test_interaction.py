@@ -29,6 +29,7 @@ from mclab.sim.interaction import (  # noqa: E402
     _panel_viewer_legend_rows,
     _observation_marker_count,
     _observation_marker_status_message,
+    _observation_next_action,
     _ordered_required_prefix,
     _preset_button_label,
     _preset_panel_status,
@@ -875,6 +876,37 @@ class KeyForcePulseTests(unittest.TestCase):
                 preset_state="ready",
             ),
             "Evidence checklist: Prediction ready; Preset comparison ready; Outcome selected; Note ready.",
+        )
+
+    def test_observation_next_action_names_the_next_learner_step(self) -> None:
+        self.assertEqual(
+            _observation_next_action("", "Not judged yet", ""),
+            "Next action: Write a prediction before pressing Mark observation.",
+        )
+        self.assertEqual(
+            _observation_next_action("", "Not judged yet", "", preset_state="needs required preset Close wall"),
+            "Next action: Write a prediction, then try required preset Close wall.",
+        )
+        self.assertEqual(
+            _observation_next_action(
+                "Stiff wall should push harder.",
+                "Not judged yet",
+                "",
+                preset_state="needs required preset Back away",
+            ),
+            "Next action: Try required preset Back away, then capture the result.",
+        )
+        self.assertEqual(
+            _observation_next_action("Stiff wall should push harder.", "Not judged yet", ""),
+            "Next action: Use live status or write a short observation note.",
+        )
+        self.assertEqual(
+            _observation_next_action("Stiff wall should push harder.", "Not judged yet", "Force increased."),
+            "Next action: Optional: choose a prediction outcome, then press Mark observation.",
+        )
+        self.assertEqual(
+            _observation_next_action("Stiff wall should push harder.", "Matched", "Force increased."),
+            "Next action: Press Mark observation.",
         )
 
     def test_live_status_formats_dashboard_values(self) -> None:

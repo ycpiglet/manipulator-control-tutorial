@@ -1126,15 +1126,32 @@ def maybe_start_interaction_panel(
                         preset_state=tuning.preset_checklist_state() if tuning is not None else "",
                     )
                 )
+                marker_next_action = tk.StringVar(
+                    value=_observation_next_action(
+                        "",
+                        PREDICTION_OUTCOME_UNJUDGED,
+                        "",
+                        preset_state=tuning.preset_checklist_state() if tuning is not None else "",
+                    )
+                )
                 marker_prompt = observation_prompt_for_guide(guide)
 
                 def update_marker_checklist(*_args: Any) -> None:
+                    preset_state = tuning.preset_checklist_state() if tuning is not None else ""
                     marker_checklist.set(
                         _observation_checklist_status(
                             marker_prediction.get(),
                             marker_outcome.get(),
                             marker_note.get(),
-                            preset_state=tuning.preset_checklist_state() if tuning is not None else "",
+                            preset_state=preset_state,
+                        )
+                    )
+                    marker_next_action.set(
+                        _observation_next_action(
+                            marker_prediction.get(),
+                            marker_outcome.get(),
+                            marker_note.get(),
+                            preset_state=preset_state,
                         )
                     )
 
@@ -1224,6 +1241,14 @@ def maybe_start_interaction_panel(
                     justify="left",
                     wraplength=430,
                 ).grid(row=marker_row, column=0, columnspan=2, sticky="ew", pady=(4, 0))
+                marker_row += 1
+                tk.Label(
+                    marker_frame,
+                    textvariable=marker_next_action,
+                    anchor="w",
+                    justify="left",
+                    wraplength=430,
+                ).grid(row=marker_row, column=0, columnspan=2, sticky="ew", pady=(2, 0))
                 marker_row += 1
                 marker_buttons = tk.Frame(marker_frame)
                 marker_buttons.grid(row=marker_row, column=0, columnspan=2, sticky="w", pady=(6, 0))
@@ -1433,6 +1458,33 @@ def _observation_checklist_status(
         f"Outcome {outcome_state}; "
         f"Note {note_state}."
     )
+
+
+def _observation_next_action(
+    prediction: str,
+    outcome: str,
+    note: str,
+    *,
+    preset_state: str = "",
+) -> str:
+    preset_followup = _preset_state_followup(preset_state)
+    if not prediction.strip() and preset_followup:
+        return f"Next action: Write a prediction, then {preset_followup}."
+    if not prediction.strip():
+        return "Next action: Write a prediction before pressing Mark observation."
+    if preset_followup:
+        return f"Next action: {_sentence_start(preset_followup)}, then capture the result."
+    if not note.strip():
+        return "Next action: Use live status or write a short observation note."
+    if not _prediction_outcome_value(outcome):
+        return "Next action: Optional: choose a prediction outcome, then press Mark observation."
+    return "Next action: Press Mark observation."
+
+
+def _sentence_start(text: str) -> str:
+    if not text:
+        return ""
+    return text[0].upper() + text[1:]
 
 
 def _prediction_outcome_value(value: str) -> str:
