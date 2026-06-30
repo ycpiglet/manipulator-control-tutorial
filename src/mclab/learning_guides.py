@@ -528,6 +528,22 @@ RUN_GUIDES: dict[str, RunGuide] = {
         "Task-speed clipping, DLS joint speed, task error, condition scale, and torque peaks.",
         "Slow the command down until task error drops without changing the target.",
     ),
+    "configs/lab03_2dof/condition_aware_dls_low_joint_speed_2dof.yaml": RunGuide(
+        "Lab03 2DOF Low-Joint-Speed Condition-Aware DLS",
+        "The same near-edge hand target is constrained by a tight DLS joint-speed limit.",
+        "Compare against high-joint-speed DLS with the same target, timing, and damping schedule.",
+        "tracking_controller.max_joint_speed",
+        "Joint-speed clipping, larger task error, DLS damping, condition scale, and torque.",
+        "Run high-joint-speed DLS next and compare how much hand tracking improves.",
+    ),
+    "configs/lab03_2dof/condition_aware_dls_high_joint_speed_2dof.yaml": RunGuide(
+        "Lab03 2DOF High-Joint-Speed Condition-Aware DLS",
+        "The same near-edge hand target is allowed a relaxed DLS joint-speed limit.",
+        "Compare directly against low-joint-speed DLS.",
+        "tracking_controller.max_joint_speed",
+        "Higher DLS joint speed, smaller task error, DLS damping timing, and actuator effort.",
+        "Tighten max_joint_speed gradually and find where tracking error becomes visible.",
+    ),
     "configs/lab03_2dof/interactive_2dof.yaml": RunGuide(
         "Lab03 2DOF Interactive",
         "Tune hand target and task-space gains, then disturb the shoulder or elbow while the 2DOF arm runs.",

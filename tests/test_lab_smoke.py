@@ -82,6 +82,8 @@ class LabSmokeTests(unittest.TestCase):
             "configs/lab03_2dof/condition_aware_dls_high_torque_2dof.yaml",
             "configs/lab03_2dof/condition_aware_dls_slow_command_2dof.yaml",
             "configs/lab03_2dof/condition_aware_dls_fast_command_2dof.yaml",
+            "configs/lab03_2dof/condition_aware_dls_low_joint_speed_2dof.yaml",
+            "configs/lab03_2dof/condition_aware_dls_high_joint_speed_2dof.yaml",
         ):
             with self.subTest(config_path=config_path):
                 config = load_config(config_path)

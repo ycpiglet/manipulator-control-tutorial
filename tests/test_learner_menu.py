@@ -155,6 +155,8 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF high-torque DLS"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF slow-command DLS"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF fast-command DLS"), labels)
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF low-joint-speed DLS"), labels)
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF high-joint-speed DLS"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF interactive"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "Step profile"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "Minimum jerk"), labels)
@@ -994,6 +996,10 @@ class LearnerMenuTests(unittest.TestCase):
             "lab03_2dof_compare",
         )
         self.assertEqual(
+            action_compare_batch(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF low-joint-speed DLS")]).batch_name,
+            "lab03_2dof_compare",
+        )
+        self.assertEqual(
             action_compare_batch(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF upper-path DLS")]).batch_name,
             "lab03_2dof_compare",
         )
@@ -1060,6 +1066,10 @@ class LearnerMenuTests(unittest.TestCase):
         fast_command = config_value_preview(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF fast-command DLS")])
         self.assertIn("trajectory.duration=", fast_command)
         self.assertIn("tracking_controller.max_task_speed=", fast_command)
+        low_joint_speed = config_value_preview(
+            by_label[("Lab03 2DOF Arm and Trajectories", "2DOF low-joint-speed DLS")]
+        )
+        self.assertIn("tracking_controller.max_joint_speed=", low_joint_speed)
 
     def test_filter_menu_actions_matches_search_terms(self) -> None:
         labels = {action.label for action in filter_menu_actions("pid noise")}
@@ -1118,6 +1128,9 @@ class LearnerMenuTests(unittest.TestCase):
         command_labels = {(action.group, action.label) for action in filter_menu_actions("fast command speed")}
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF fast-command DLS"), command_labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF slow-command DLS"), command_labels)
+        joint_speed_labels = {(action.group, action.label) for action in filter_menu_actions("joint speed limit")}
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF low-joint-speed DLS"), joint_speed_labels)
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF high-joint-speed DLS"), joint_speed_labels)
         edge_target_labels = {(action.group, action.label) for action in filter_menu_actions("edge target dls")}
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF edge-target DLS"), edge_target_labels)
         path_branch_labels = {(action.group, action.label) for action in filter_menu_actions("elbow branch")}
@@ -1231,6 +1244,8 @@ class LearnerMenuTests(unittest.TestCase):
                 "2DOF high-torque DLS",
                 "2DOF slow-command DLS",
                 "2DOF fast-command DLS",
+                "2DOF low-joint-speed DLS",
+                "2DOF high-joint-speed DLS",
             },
         )
 
@@ -1294,6 +1309,10 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(
             "tracking_controller.max_task_speed",
             parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF fast-command DLS")]),
+        )
+        self.assertIn(
+            "tracking_controller.max_joint_speed",
+            parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF low-joint-speed DLS")]),
         )
         self.assertIn(
             "cartesian_target.gain",

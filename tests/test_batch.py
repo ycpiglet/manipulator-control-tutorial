@@ -38,6 +38,8 @@ class BatchTests(unittest.TestCase):
         self.assertIn("condition_aware_high_torque", lab03_labels)
         self.assertIn("condition_aware_slow_command", lab03_labels)
         self.assertIn("condition_aware_fast_command", lab03_labels)
+        self.assertIn("condition_aware_low_joint_speed", lab03_labels)
+        self.assertIn("condition_aware_high_joint_speed", lab03_labels)
         lab04_wall_labels = {scenario.label for scenario in batch.BATCH_SETS["lab04_wall_compare"]}
         self.assertIn("low_damping_wall", lab04_wall_labels)
         self.assertIn("high_damping_wall", lab04_wall_labels)
@@ -94,6 +96,9 @@ class BatchTests(unittest.TestCase):
             any("faster hand command" in question for question in lab03_guide.questions)
         )
         self.assertTrue(
+            any("joint-speed limit" in question for question in lab03_guide.questions)
+        )
+        self.assertTrue(
             any("inner workspace to the edge" in question for question in lab03_guide.questions)
         )
         self.assertTrue(
@@ -146,6 +151,21 @@ class BatchTests(unittest.TestCase):
                     config = load_config(scenario.config_path)
                     self.assertIn("model_path", config)
                     self.assertTrue(scenario.plots)
+
+    def test_lab03_joint_speed_configs_isolate_joint_speed_limit(self) -> None:
+        low = load_config("configs/lab03_2dof/condition_aware_dls_low_joint_speed_2dof.yaml")
+        high = load_config("configs/lab03_2dof/condition_aware_dls_high_joint_speed_2dof.yaml")
+
+        low_controller = dict(low["tracking_controller"])
+        high_controller = dict(high["tracking_controller"])
+        low_speed = low_controller.pop("max_joint_speed")
+        high_speed = high_controller.pop("max_joint_speed")
+
+        self.assertLess(low_speed, 0.5)
+        self.assertGreater(high_speed, low_speed)
+        self.assertEqual(low_controller, high_controller)
+        for key in ("mode", "sim_time", "dt", "initial_q", "target_xy", "trajectory"):
+            self.assertEqual(low[key], high[key])
 
     def test_run_batch_creates_child_runs_and_index(self) -> None:
         calls: list[dict[str, object]] = []

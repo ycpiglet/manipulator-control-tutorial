@@ -62,7 +62,8 @@ Implemented and verified:
 - Lab03 condition-aware DLS shoulder/elbow/staggered disturbance comparison configs for recovery lessons
 - Lab03 condition-aware DLS low/high torque-limit comparison configs for actuator-limit lessons
 - Lab03 condition-aware DLS slow/fast command-speed comparison configs for target-speed lessons
-- Learner menu exposes Lab03 upper/lower path, shoulder/elbow disturbance, low/high torque-limit, and slow/fast command-speed DLS scenario cards with compare/search/filter support
+- Lab03 condition-aware DLS low/high joint-speed-limit comparison configs for speed-clipping lessons
+- Learner menu exposes Lab03 upper/lower path, shoulder/elbow disturbance, low/high torque-limit, slow/fast command-speed, and low/high joint-speed-limit DLS scenario cards with compare/search/filter support
 - Lab04 Franka Emika Panda manipulator using MuJoCo Menagerie
 - Lab04 30-second neutral-hold stability check config and report checks
 - Lab04 Cartesian reach with damped-least-squares Jacobian target offsets
@@ -332,6 +333,7 @@ Implemented so far:
 - shoulder/elbow/staggered disturbance condition-aware DLS comparison configs for recovery lessons
 - low/high torque-limit condition-aware DLS comparison configs for Lab03
 - slow/fast command-speed condition-aware DLS comparison configs for Lab03
+- low/high joint-speed-limit condition-aware DLS comparison configs for Lab03
 - standard logs and plots for joint position, end-effector position, torque, current proxy, and error
 
 Remaining likely extension:

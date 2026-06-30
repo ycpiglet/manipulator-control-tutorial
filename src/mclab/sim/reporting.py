@@ -393,6 +393,11 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
             "Keep the target and schedule but command the motion faster.",
             "dls",
         ),
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_low_joint_speed_2dof.yaml",
+            "Keep the same command but tighten the joint-speed limit.",
+            "dls",
+        ),
         NextRunSuggestion("configs/lab03_2dof/dls_singularity_2dof.yaml", "Compare against fixed damping on the same target.", "dls"),
     ),
     "configs/lab03_2dof/condition_aware_dls_early_2dof.yaml": (
@@ -456,6 +461,11 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
         NextRunSuggestion(
             "configs/lab03_2dof/condition_aware_dls_fast_command_2dof.yaml",
             "Keep the edge target but command it faster.",
+            "dls",
+        ),
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_low_joint_speed_2dof.yaml",
+            "Keep the edge target and isolate the joint-speed limit.",
             "dls",
         ),
         NextRunSuggestion(
@@ -582,8 +592,37 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
             "dls",
         ),
         NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_low_joint_speed_2dof.yaml",
+            "Keep the timing but tighten joint-speed clipping.",
+            "dls",
+        ),
+        NextRunSuggestion(
             "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
             "Return to the default command speed.",
+            "dls",
+        ),
+    ),
+    "configs/lab03_2dof/condition_aware_dls_low_joint_speed_2dof.yaml": (
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_high_joint_speed_2dof.yaml",
+            "Relax only the joint-speed limit and compare hand error.",
+            "dls",
+        ),
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
+            "Return to the default joint-speed limit.",
+            "dls",
+        ),
+    ),
+    "configs/lab03_2dof/condition_aware_dls_high_joint_speed_2dof.yaml": (
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_low_joint_speed_2dof.yaml",
+            "Tighten only the joint-speed limit and compare clipping.",
+            "dls",
+        ),
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
+            "Return to the default joint-speed limit.",
             "dls",
         ),
     ),

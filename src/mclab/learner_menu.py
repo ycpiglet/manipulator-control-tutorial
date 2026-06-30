@@ -642,6 +642,26 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
     ),
     MenuAction(
         group="Lab03 2DOF Arm and Trajectories",
+        label="2DOF low-joint-speed DLS",
+        lab_name="lab03",
+        config_path="configs/lab03_2dof/condition_aware_dls_low_joint_speed_2dof.yaml",
+        plots="dls",
+        description="Keeps the same near-edge command but tightens the DLS joint-speed limit.",
+        try_this="Run before high-joint-speed DLS and compare dls_joint_speed clipping.",
+        watch="Lower joint-speed ceiling, larger hand error, and similar condition-aware damping.",
+    ),
+    MenuAction(
+        group="Lab03 2DOF Arm and Trajectories",
+        label="2DOF high-joint-speed DLS",
+        lab_name="lab03",
+        config_path="configs/lab03_2dof/condition_aware_dls_high_joint_speed_2dof.yaml",
+        plots="dls",
+        description="Relaxes the DLS joint-speed limit while keeping target and damping schedule fixed.",
+        try_this="Compare directly against low-joint-speed DLS.",
+        watch="Higher allowed joint speed, hand tracking, torque, and DLS damping.",
+    ),
+    MenuAction(
+        group="Lab03 2DOF Arm and Trajectories",
         label="2DOF interactive",
         lab_name="lab03",
         config_path="configs/lab03_2dof/interactive_2dof.yaml",
@@ -2247,6 +2267,8 @@ def parameter_hint(action: MenuAction) -> str:
             "2dof high-torque dls",
             "2dof slow-command dls",
             "2dof fast-command dls",
+            "2dof low-joint-speed dls",
+            "2dof high-joint-speed dls",
         }:
             if label == "2dof condition-aware dls":
                 return (
@@ -2283,6 +2305,11 @@ def parameter_hint(action: MenuAction) -> str:
             if label in {"2dof slow-command dls", "2dof fast-command dls"}:
                 return (
                     "trajectory.duration, tracking_controller.max_task_speed, target_xy, "
+                    "tracking_controller.condition_damping_threshold, tracking_controller.max_dls_damping"
+                )
+            if label in {"2dof low-joint-speed dls", "2dof high-joint-speed dls"}:
+                return (
+                    "tracking_controller.max_joint_speed, target_xy, tracking_controller.max_task_speed, "
                     "tracking_controller.condition_damping_threshold, tracking_controller.max_dls_damping"
                 )
             return (

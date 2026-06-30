@@ -133,6 +133,16 @@ python -m mclab batch lab03_2dof_compare --open-report
 
 These two configs keep the same near-edge target, damping schedule, torque limits, and gains while changing `trajectory.duration` and `tracking_controller.max_task_speed`. The slow-command case asks for the same motion more gently; the fast-command case should make task-speed clipping, DLS joint speed, and hand tracking error easier to see. Compare `dls.png`, `error.png`, `dls_task_speed_compare.png`, and `dls_joint_speed_compare.png`.
 
+Condition-aware joint-speed-limit comparison:
+
+```bash
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_low_joint_speed_2dof.yaml --headless --plot --plots dls
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_high_joint_speed_2dof.yaml --headless --plot --plots dls
+python -m mclab batch lab03_2dof_compare --open-report
+```
+
+These two configs keep the same near-edge target, timing, condition-aware damping schedule, torque limits, and gains while changing only `tracking_controller.max_joint_speed`. The low-joint-speed case clips the DLS joint command earlier, so it should leave more hand tracking error while keeping the same damping trigger. The high-joint-speed case lets the arm chase the target more aggressively. Compare `dls_joint_speed_compare.png`, `task_error_compare.png`, `dls_damping_compare.png`, and `torque.png`.
+
 Interactive 2DOF demo:
 
 ```powershell
