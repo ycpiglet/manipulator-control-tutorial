@@ -10,6 +10,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from mclab.sim.interaction import (  # noqa: E402
     ExperimentResetControl,
     InteractionLog,
+    JointTorquePulse,
     KeyForcePulse,
     LiveStatus,
     LiveTuning,
@@ -59,6 +60,39 @@ class KeyForcePulseTests(unittest.TestCase):
         pulse.update_time(1.0)
         pulse.key_callback(ord("D"))
         self.assertEqual(pulse.value(1.1), 0.0)
+
+    def test_joint_torque_pulse_applies_independent_shoulder_and_elbow_pulses(self) -> None:
+        log = InteractionLog()
+        pulse = JointTorquePulse(
+            {
+                "interaction": {
+                    "joint_disturbance": True,
+                    "joint_disturbance_torque": [0.14, 0.16],
+                    "joint_disturbance_duration": 0.3,
+                }
+            },
+            event_log=log,
+        )
+
+        pulse.update_time(1.0)
+        log.set_time(1.0)
+        pulse.trigger_left()
+        self.assertEqual(pulse.value(1.1), [0.14, 0.0])
+
+        pulse.update_time(1.2)
+        log.set_time(1.2)
+        pulse.key_callback(ord("D"))
+        self.assertEqual(pulse.value(1.25), [0.14, 0.16])
+        self.assertEqual(pulse.value(1.55), [0.0, 0.0])
+        self.assertEqual([event["name"] for event in log.events()], ["manual_joint_disturbance"] * 2)
+        self.assertEqual(log.events()[0]["value"]["joint"], "shoulder")
+        self.assertEqual(log.events()[1]["value"]["joint"], "elbow")
+
+    def test_joint_torque_pulse_can_be_disabled(self) -> None:
+        pulse = JointTorquePulse({})
+        pulse.update_time(1.0)
+        pulse.key_callback(ord("D"))
+        self.assertEqual(pulse.value(1.1), [0.0, 0.0])
 
     def test_target_offset_control_nudges_and_clips(self) -> None:
         log = InteractionLog()
@@ -700,6 +734,7 @@ class KeyForcePulseTests(unittest.TestCase):
                 "live_tuning": True,
                 "key_force": True,
                 "target_nudge": True,
+                "joint_disturbance": True,
                 "playback_speed": True,
             },
         }
@@ -715,6 +750,7 @@ class KeyForcePulseTests(unittest.TestCase):
         self.assertFalse(tuned["interaction"]["live_tuning"])
         self.assertFalse(tuned["interaction"]["key_force"])
         self.assertFalse(tuned["interaction"]["target_nudge"])
+        self.assertFalse(tuned["interaction"]["joint_disturbance"])
         self.assertFalse(tuned["interaction"]["playback_speed"])
         self.assertTrue(base_config["interaction"]["panel"])
 

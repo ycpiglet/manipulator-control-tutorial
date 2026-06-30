@@ -11,6 +11,7 @@ from mclab.learning_guides import guide_for_config
 from mclab.sim.interaction import (
     ExperimentResetControl,
     InteractionLog,
+    JointTorquePulse,
     KeyForcePulse,
     LiveStatus,
     LiveTuning,
@@ -312,7 +313,7 @@ def _run_two_link_arm(
     simulation_dt = float(model.opt.timestep)
 
     interaction_log = InteractionLog()
-    panel_control = KeyForcePulse(config, event_log=interaction_log)
+    panel_control = JointTorquePulse(config, event_log=interaction_log)
     reset_control = ExperimentResetControl(config, event_log=interaction_log)
     pause_control = SimulationPauseControl(config, event_log=interaction_log)
     playback_control = SimulationPlaybackControl(config, event_log=interaction_log)
@@ -326,6 +327,7 @@ def _run_two_link_arm(
             StatusSpec("ee_y", "Hand Y [m]"),
             StatusSpec("error", "Error norm"),
             StatusSpec("tau", "Max torque [N m]"),
+            StatusSpec("disturbance", "Disturbance [N m]"),
             StatusSpec("condition", "Jacobian cond."),
             StatusSpec("manipulability", "Manipulability"),
         ]
@@ -335,7 +337,7 @@ def _run_two_link_arm(
         model,
         data,
         enabled=viewer and not headless,
-        key_callback=None,
+        key_callback=panel_control.key_callback if panel_control.enabled else None,
         show_ui=show_viewer_ui,
     )
     interaction_panel = (
@@ -363,6 +365,7 @@ def _run_two_link_arm(
                 break
             interaction_log.set_time(float(data.time))
             if reset_control.consume():
+                panel_control.clear()
                 _set_two_link_state(data, handles, initial_q)
                 for actuator_id in handles["actuator_ids"]:
                     data.ctrl[actuator_id] = 0.0
@@ -375,6 +378,7 @@ def _run_two_link_arm(
             if playback_control.consume_change():
                 wall_start = realtime_wall_start(float(data.time), sim_start, playback_control.speed())
 
+            panel_control.update_time(float(data.time))
             q, qdot = _two_link_state(data, handles)
             target = trajectory.evaluate(float(data.time))
             alpha = target.position
@@ -433,7 +437,12 @@ def _run_two_link_arm(
                     torque_limit=torque_limit,
                 )
 
-            disturbance_tau = _two_link_disturbance_torque(config, float(data.time))
+            scripted_disturbance_tau = _two_link_disturbance_torque(config, float(data.time))
+            manual_disturbance_tau = panel_control.value(float(data.time))
+            disturbance_tau = [
+                scripted_disturbance_tau[index] + manual_disturbance_tau[index]
+                for index in range(2)
+            ]
             total_tau = [command["tau"][index] + disturbance_tau[index] for index in range(2)]
 
             for index, actuator_id in enumerate(handles["actuator_ids"]):
@@ -460,6 +469,7 @@ def _run_two_link_arm(
                 ee_y=x_ee[1],
                 error=task_error_norm if mode in TASK_SPACE_MODES | DLS_MODES else joint_error_norm,
                 tau=max_tau,
+                disturbance=max(abs(value) for value in disturbance_tau),
                 condition=condition_capped,
                 manipulability=manipulability_value,
             )
@@ -494,6 +504,8 @@ def _run_two_link_arm(
                 task_error=task_error,
                 task_error_norm=task_error_norm,
                 tau_cmd=command["tau"],
+                tau_scripted_disturbance=scripted_disturbance_tau,
+                tau_manual_disturbance=manual_disturbance_tau,
                 tau_disturbance=disturbance_tau,
                 tau_total=total_tau,
                 current_proxy=[value / kt for value in command["tau"]],
@@ -525,6 +537,7 @@ def _run_two_link_arm(
             tuning=live_tuning,
             status=live_status,
             playback_control=playback_control,
+            extra_controls={"joint_disturbance": panel_control.snapshot()} if panel_control.enabled else None,
         ),
         learner_tuned_config=learner_tuned_config(
             config,
@@ -1047,6 +1060,7 @@ def _save_two_link_plots(output_path: Path, rows: list[dict[str, Any]], selectio
         "essential": ["position", "end_effector", "torque", "error"],
         "joint": ["position", "torque", "error"],
         "task": ["end_effector", "torque", "error"],
+        "task_disturbance": ["end_effector", "torque", "disturbance", "error"],
         "singularity": ["position", "end_effector", "torque", "singularity", "error"],
         "dls": ["end_effector", "torque", "singularity", "dls", "error"],
         "dls_disturbance": ["end_effector", "torque", "disturbance", "singularity", "dls", "error"],

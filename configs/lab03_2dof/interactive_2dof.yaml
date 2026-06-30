@@ -7,6 +7,7 @@ link_lengths: [0.6, 0.45]
 initial_q: [0.25, -1.05]
 target_xy: [0.62, 0.42]
 torque_constant: 1.0
+plots: task_disturbance
 trajectory:
   type: minimum_jerk
   start: 0.0
@@ -21,6 +22,9 @@ tracking_controller:
 interaction:
   panel: true
   live_tuning: true
+  joint_disturbance: true
+  joint_disturbance_torque: [0.14, 0.16]
+  joint_disturbance_duration: 0.3
   tuning_presets:
     - label: Soft reach
       purpose: Lower effort and slower hand motion.

@@ -148,6 +148,9 @@ CONFIG_HIGHLIGHT_KEYS = (
     "interaction.target_nudge",
     "interaction.target_step",
     "interaction.target_limit",
+    "interaction.joint_disturbance",
+    "interaction.joint_disturbance_torque",
+    "interaction.joint_disturbance_duration",
     "interaction.live_tuning",
     "viewer_guides.enabled",
     "viewer_guides.condition_warning",
@@ -1869,6 +1872,8 @@ def _control_surface_items(config: dict[str, Any]) -> list[tuple[str, str]]:
         items.append(("Manual input", "Pull/Push buttons and A/D keys"))
     if bool(interaction.get("target_nudge", False)):
         items.append(("Manual input", "Target -/+ buttons and A/D keys"))
+    if bool(interaction.get("joint_disturbance", False)):
+        items.append(("Manual input", "Shoulder/Elbow pulse buttons and A/D keys"))
     if bool(interaction.get("live_tuning", False)):
         items.append(("Live tuning", "Sliders with Changed values summary"))
     presets = _configured_preset_labels(config)

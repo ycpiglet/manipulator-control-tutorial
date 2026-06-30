@@ -522,11 +522,11 @@ RUN_GUIDES: dict[str, RunGuide] = {
     ),
     "configs/lab03_2dof/interactive_2dof.yaml": RunGuide(
         "Lab03 2DOF Interactive",
-        "Tune hand target and task-space gains while the 2DOF arm runs.",
-        "Move Target X/Y sliders or use Quick presets for soft, default, and near-edge reach.",
-        "live sliders/presets: Target X/Y, task stiffness, task damping, torque limit; YAML: viewer_guides.*",
-        "Live hand position, error norm, and max torque.",
-        "Close the viewer and compare hand error against the chosen target.",
+        "Tune hand target and task-space gains, then disturb the shoulder or elbow while the 2DOF arm runs.",
+        "Move Target X/Y sliders, click a reach preset, then use Shoulder pulse or Elbow pulse to test recovery.",
+        "live sliders/presets: Target X/Y, task stiffness, task damping, torque limit; buttons: Shoulder/Elbow pulse; YAML: viewer_guides.*, interaction.joint_disturbance_torque",
+        "Live hand position, error norm, max torque, disturbance torque, and target/current markers.",
+        "Mark one observation comparing target/gain tuning with a shoulder or elbow disturbance.",
     ),
     "configs/lab04_panda/neutral_hold.yaml": RunGuide(
         "Lab04 Panda Neutral Hold",

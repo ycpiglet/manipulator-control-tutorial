@@ -375,7 +375,7 @@ def learner_tuned_config(base_config: dict[str, Any], updates: dict[str, Any]) -
     _deep_update(tuned, updates)
     interaction = tuned.get("interaction")
     if isinstance(interaction, dict):
-        for name in ("panel", "live_tuning", "key_force", "target_nudge", "playback_speed"):
+        for name in ("panel", "live_tuning", "key_force", "target_nudge", "joint_disturbance", "playback_speed"):
             if name in interaction:
                 interaction[name] = False
     return tuned
@@ -573,6 +573,92 @@ class KeyForcePulse:
             self._until = self._time + self.duration
         if self._event_log is not None:
             self._event_log.record("button", "manual_force", value, label=label)
+
+
+class JointTorquePulse:
+    """Keyboard-triggered shoulder/elbow torque pulse for 2DOF arm demos."""
+
+    def __init__(self, config: dict[str, Any], event_log: InteractionLog | None = None) -> None:
+        interaction = dict(config.get("interaction", {}))
+        self.enabled = bool(interaction.get("joint_disturbance", False))
+        self.panel_enabled = bool(interaction.get("panel", False))
+        default_torque = _pairish(interaction.get("joint_disturbance_torque", [0.14, 0.16]), [0.14, 0.16])
+        self.torque = [
+            float(interaction.get("shoulder_disturbance_torque", default_torque[0])),
+            float(interaction.get("elbow_disturbance_torque", default_torque[1])),
+        ]
+        self.duration = max(0.0, float(interaction.get("joint_disturbance_duration", 0.3)))
+        self.left_label = str(interaction.get("shoulder_disturbance_label", "Shoulder pulse  A / Left"))
+        self.right_label = str(interaction.get("elbow_disturbance_label", "Elbow pulse  D / Right"))
+        self.panel_description = str(
+            interaction.get(
+                "joint_disturbance_description",
+                (
+                    f"Torque pulse: shoulder {self.torque[0]:g} N m, "
+                    f"elbow {self.torque[1]:g} N m, duration {self.duration:g} s"
+                ),
+            )
+        )
+        self._values = [0.0, 0.0]
+        self._until = [-1.0, -1.0]
+        self._time = 0.0
+        self._event_log = event_log
+        self._lock = Lock()
+
+    def update_time(self, time: float) -> None:
+        with self._lock:
+            self._time = float(time)
+
+    def key_callback(self, key: int) -> None:
+        if not self.enabled:
+            return
+        if key in LEFT_KEYS:
+            self.trigger_left()
+        elif key in RIGHT_KEYS:
+            self.trigger_right()
+
+    def trigger_left(self) -> None:
+        if self.enabled:
+            self._start_pulse(0, self.torque[0], self.left_label)
+
+    def trigger_right(self) -> None:
+        if self.enabled:
+            self._start_pulse(1, self.torque[1], self.right_label)
+
+    def value(self, time: float) -> list[float]:
+        if not self.enabled:
+            return [0.0, 0.0]
+        with self._lock:
+            now = float(time)
+            return [
+                self._values[index] if now <= self._until[index] else 0.0
+                for index in range(2)
+            ]
+
+    def clear(self) -> None:
+        with self._lock:
+            self._values = [0.0, 0.0]
+            self._until = [-1.0, -1.0]
+
+    def snapshot(self) -> dict[str, Any]:
+        return {
+            "enabled": self.enabled,
+            "torque": list(self.torque),
+            "duration": self.duration,
+        }
+
+    def _start_pulse(self, joint_index: int, torque: float, label: str) -> None:
+        with self._lock:
+            self._values[joint_index] = float(torque)
+            self._until[joint_index] = self._time + self.duration
+        if self._event_log is not None:
+            joint_name = "shoulder" if joint_index == 0 else "elbow"
+            self._event_log.record(
+                "button",
+                "manual_joint_disturbance",
+                {"joint": joint_name, "torque": float(torque), "duration": self.duration},
+                label=label,
+            )
 
 
 class TargetOffsetControl:
@@ -1315,6 +1401,19 @@ def _preset_name(label: str, index: int) -> str:
 
 def _clamp(value: float, minimum: float, maximum: float) -> float:
     return max(float(minimum), min(float(maximum), float(value)))
+
+
+def _pairish(value: Any, default: list[float]) -> list[float]:
+    if isinstance(value, (list, tuple)) and len(value) >= 2:
+        try:
+            return [float(value[0]), float(value[1])]
+        except (TypeError, ValueError):
+            return list(default)
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return list(default)
+    return [number, number]
 
 
 def _event_value(value: Any) -> Any:

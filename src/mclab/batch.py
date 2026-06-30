@@ -1465,6 +1465,8 @@ def _control_surface_summary(config: Any) -> str:
         controls.append("Pull/Push buttons and A/D keys")
     if bool(interaction.get("target_nudge", False)):
         controls.append("Target -/+ buttons and A/D keys")
+    if bool(interaction.get("joint_disturbance", False)):
+        controls.append("Shoulder/Elbow pulse buttons and A/D keys")
     if bool(interaction.get("live_tuning", False)):
         controls.append("live sliders with Changed values")
     preset_labels = _configured_preset_labels(config)

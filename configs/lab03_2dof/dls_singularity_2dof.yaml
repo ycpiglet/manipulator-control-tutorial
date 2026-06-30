@@ -7,7 +7,7 @@ link_lengths: [0.6, 0.45]
 initial_q: [0.25, -0.75]
 target_xy: [1.049, 0.0]
 torque_constant: 1.0
-plots: dls
+plots: dls_disturbance
 trajectory:
   type: minimum_jerk
   start: 0.0
@@ -26,6 +26,9 @@ tracking_controller:
 interaction:
   panel: true
   live_tuning: true
+  joint_disturbance: true
+  joint_disturbance_torque: [0.14, 0.16]
+  joint_disturbance_duration: 0.3
   tuning_presets:
     - label: Low DLS damping
       purpose: Fast motion but higher joint speed.

@@ -483,20 +483,20 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
         label="2DOF DLS singularity",
         lab_name="lab03",
         config_path="configs/lab03_2dof/dls_singularity_2dof.yaml",
-        plots="dls",
+        plots="dls_disturbance",
         description="Damped least-squares limits inverse-Jacobian motion near the workspace edge.",
-        try_this="Open with the viewer, then try Low/Balanced/High DLS damping presets.",
-        watch="DLS joint speed, hand error, damping, condition number, and torque.",
+        try_this="Open with the viewer, try DLS damping presets, then press Shoulder pulse or Elbow pulse.",
+        watch="DLS joint speed, hand error, damping, condition number, disturbance, and torque.",
     ),
     MenuAction(
         group="Lab03 2DOF Arm and Trajectories",
         label="2DOF condition-aware DLS",
         lab_name="lab03",
         config_path="configs/lab03_2dof/condition_aware_dls_2dof.yaml",
-        plots="dls",
+        plots="dls_disturbance",
         description="Automatically increases DLS damping as Jacobian conditioning worsens.",
-        try_this="Open with the viewer, then try Early/Balanced/Late damping schedule presets.",
-        watch="Condition scale, DLS damping, joint speed, condition number, and task error.",
+        try_this="Open with the viewer, try damping schedule presets, then disturb the shoulder or elbow.",
+        watch="Condition scale, DLS damping, joint speed, condition number, disturbance, and task error.",
     ),
     MenuAction(
         group="Lab03 2DOF Arm and Trajectories",
@@ -623,10 +623,10 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
         label="2DOF interactive",
         lab_name="lab03",
         config_path="configs/lab03_2dof/interactive_2dof.yaml",
-        plots="task",
-        description="Tune the hand target, task stiffness, damping, and torque limit live.",
-        try_this="Move target X/Y sliders or click a reach preset.",
-        watch="Live status hand position, target marker, error norm, and max torque.",
+        plots="task_disturbance",
+        description="Tune the hand target and gains, then disturb the shoulder or elbow live.",
+        try_this="Move target X/Y sliders, click a reach preset, then press Shoulder pulse or Elbow pulse.",
+        watch="Live status hand position, target marker, error norm, max torque, and disturbance torque.",
     ),
     MenuAction(
         group="Lab03 2DOF Arm and Trajectories",
@@ -2031,8 +2031,8 @@ def parameter_hint(action: MenuAction) -> str:
         if label == "2dof interactive":
             return (
                 "live sliders/presets: Target X/Y, task stiffness, task damping, torque limit; "
-                "YAML: target_xy, tracking_controller.task_kp, tracking_controller.task_kd, "
-                "tracking_controller.torque_limit, viewer_guides.*"
+                "buttons: Shoulder/Elbow pulse; YAML: target_xy, interaction.joint_disturbance_torque, "
+                "tracking_controller.task_kp, tracking_controller.task_kd, tracking_controller.torque_limit"
             )
         if label == "2dof dls singularity":
             return (
@@ -2058,7 +2058,8 @@ def parameter_hint(action: MenuAction) -> str:
             if label == "2dof condition-aware dls":
                 return (
                     "live sliders/presets: Target X/Y, DLS task gain, DLS damping, condition threshold/full, "
-                    "max DLS damping, torque limit; YAML: target_xy, tracking_controller.condition_damping_threshold, "
+                    "max DLS damping, torque limit; buttons: Shoulder/Elbow pulse; "
+                    "YAML: target_xy, interaction.joint_disturbance_torque, tracking_controller.condition_damping_threshold, "
                     "tracking_controller.condition_damping_full, tracking_controller.max_dls_damping"
                 )
             if label in {"2dof low-torque dls", "2dof high-torque dls"}:
@@ -2190,6 +2191,8 @@ def _action_controls_text(config_path: str) -> str:
         controls.append("Pull/Push buttons and A/D keys")
     if bool(interaction.get("target_nudge", False)):
         controls.append("Target -/+ buttons and A/D keys")
+    if bool(interaction.get("joint_disturbance", False)):
+        controls.append("Shoulder/Elbow pulse buttons and A/D keys")
     if bool(interaction.get("live_tuning", False)):
         controls.append("live sliders with Changed values")
 

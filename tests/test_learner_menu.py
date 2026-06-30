@@ -629,6 +629,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(lab01_controls, lesson_text(lab01_interactive))
 
         dls_controls = action_controls_text(lab03_condition_dls)
+        self.assertIn("Shoulder/Elbow pulse buttons and A/D keys", dls_controls)
         self.assertIn("quick presets (Early damping, Balanced schedule, Late damping)", dls_controls)
         self.assertIn("live sliders with Changed values", dls_controls)
 
@@ -888,7 +889,7 @@ class LearnerMenuTests(unittest.TestCase):
 
         interactive = config_value_preview(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF interactive")])
         self.assertIn("target_xy=", interactive)
-        self.assertIn("tracking_controller.torque_limit=", interactive)
+        self.assertIn("interaction.joint_disturbance_torque=", interactive)
 
         low_torque = config_value_preview(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF low-torque DLS")])
         self.assertIn("tracking_controller.torque_limit=", low_torque)
@@ -1108,6 +1109,10 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(
             "condition_damping_threshold",
             parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS")]),
+        )
+        self.assertIn(
+            "Shoulder/Elbow pulse",
+            parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF interactive")]),
         )
         self.assertIn(
             "condition_damping_full",
