@@ -268,7 +268,12 @@ class KeyForcePulseTests(unittest.TestCase):
             ],
             event_log=log,
             presets=[
-                TuningPreset("aggressive", "Aggressive", {"kp": 180.0, "kd": 2.0, "unknown": 99.0}),
+                TuningPreset(
+                    "aggressive",
+                    "Aggressive",
+                    {"kp": 180.0, "kd": 2.0, "unknown": 99.0},
+                    purpose="Fast response with lower damping.",
+                ),
             ],
         )
 
@@ -279,8 +284,17 @@ class KeyForcePulseTests(unittest.TestCase):
         self.assertEqual(tuning.value("kd", 0.0), 2.0)
         self.assertEqual(log.events()[-1]["kind"], "preset")
         self.assertEqual(log.events()[-1]["label"], "Aggressive")
-        self.assertEqual(log.events()[-1]["value"], {"kp": 100.0, "kd": 2.0})
-        self.assertEqual(tuning.preset_summary("aggressive"), "Aggressive: Kp=100, Kd=2")
+        self.assertEqual(
+            log.events()[-1]["value"],
+            {
+                "purpose": "Fast response with lower damping.",
+                "values": {"kp": 100.0, "kd": 2.0},
+            },
+        )
+        self.assertEqual(
+            tuning.preset_summary("aggressive"),
+            "Aggressive: Fast response with lower damping.; Kp=100, Kd=2",
+        )
         self.assertEqual(tuning.preset_summary("missing"), "")
 
     def test_tuning_presets_from_config_filters_to_known_numeric_sliders(self) -> None:

@@ -71,7 +71,10 @@ class LoggingTests(unittest.TestCase):
                         "kind": "preset",
                         "name": "stiff_spring",
                         "label": "Stiff spring",
-                        "value": {"damping": 1.0, "stiffness": 90.0},
+                        "value": {
+                            "purpose": "Higher restoring force and frequency.",
+                            "values": {"damping": 1.0, "stiffness": 90.0},
+                        },
                     },
                     {
                         "time": 0.02,
@@ -161,6 +164,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Latest slider values", html)
             self.assertIn("Preset choices", html)
             self.assertIn("Stiff spring", html)
+            self.assertIn("Higher restoring force and frequency.", html)
             self.assertIn("90", html)
             self.assertIn("Learner Snapshot", html)
             self.assertIn("Changed slider values", html)

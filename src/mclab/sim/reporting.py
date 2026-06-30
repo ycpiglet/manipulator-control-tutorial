@@ -2286,13 +2286,33 @@ def _preset_choices_card(events: list[dict[str, Any]]) -> str:
 
 def _preset_choice_detail(event: dict[str, Any]) -> str:
     value = event.get("value")
-    items = value.items() if isinstance(value, dict) else (("value", value),)
+    purpose, items = _preset_choice_items(value)
+    purpose_text = (
+        f'<p class="empty"><strong>Purpose:</strong> {escape(purpose)}</p>'
+        if purpose
+        else ""
+    )
     return (
         '<div class="action-detail">'
         f"<strong>{escape(_event_label(event))}</strong>"
         f'<span class="marker-time">time {_format_value(event.get("time"))} s</span>'
+        f"{purpose_text}"
         f"{_action_value_list(items)}"
         "</div>"
+    )
+
+
+def _preset_choice_items(value: Any) -> tuple[str, Any]:
+    if not isinstance(value, dict):
+        return "", (("value", value),)
+    purpose = str(value.get("purpose") or value.get("description") or "").strip()
+    values = value.get("values")
+    if isinstance(values, dict):
+        return purpose, values.items()
+    return purpose, (
+        (key, item)
+        for key, item in value.items()
+        if key not in {"purpose", "description"}
     )
 
 

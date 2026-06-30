@@ -206,7 +206,10 @@ class LiveTuning:
                 applied[value_name] = number
             values = dict(self._values)
         if applied and self._event_log is not None:
-            self._event_log.record("preset", preset.name, applied, label=preset.label)
+            payload: dict[str, Any] = {"values": applied}
+            if preset.purpose:
+                payload["purpose"] = preset.purpose
+            self._event_log.record("preset", preset.name, payload, label=preset.label)
         return values
 
     def preset_summary(self, name: str) -> str:
