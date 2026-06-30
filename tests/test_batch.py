@@ -52,6 +52,9 @@ class BatchTests(unittest.TestCase):
         )
         self.assertTrue(any("approach speed" in question for question in lab04_guide.questions))
         self.assertIn("max_hand_x_speed", lab04_guide.metric_keys)
+        self.assertIn("first_target_wall_cross_time", lab04_guide.metric_keys)
+        self.assertIn("first_wall_release_time", lab04_guide.metric_keys)
+        self.assertIn("first_target_wall_return_time", lab04_guide.metric_keys)
         self.assertIn("peak_wall_force_time", lab04_guide.metric_keys)
         self.assertIn("peak_wall_damping_force_time", lab04_guide.metric_keys)
         self.assertIn(
@@ -64,7 +67,10 @@ class BatchTests(unittest.TestCase):
                 "Wall Key Moment Timing Comparison",
                 "time [s]",
                 (
+                    "first_target_wall_cross_time",
                     "first_wall_contact_time",
+                    "first_wall_release_time",
+                    "first_target_wall_return_time",
                     "peak_wall_penetration_time",
                     "peak_wall_force_time",
                     "peak_wall_damping_force_time",

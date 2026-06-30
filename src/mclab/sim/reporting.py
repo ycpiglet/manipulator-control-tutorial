@@ -56,8 +56,13 @@ INDEX_METRIC_KEYS = (
     "final_cartesian_error_cm",
     "max_wall_penetration_cm",
     "max_wall_retreat_cm",
+    "first_target_wall_cross_time",
     "first_wall_contact_time",
+    "first_wall_release_time",
+    "first_target_wall_return_time",
     "last_wall_contact_time",
+    "target_past_wall_duration",
+    "target_past_wall_fraction",
     "wall_contact_duration",
     "wall_contact_fraction",
     "max_abs_virtual_wall_force",
@@ -2151,22 +2156,33 @@ def _key_moment_rows(summary: dict[str, Any]) -> list[tuple[str, float, str, Any
         value_key: str,
         value_label: str,
         detail: str,
+        *,
+        include_zero: bool = False,
     ) -> None:
         time_value = _number(summary.get(time_key))
         if time_value is None:
             return
         value = summary.get(value_key)
         numeric_value = _number(value)
-        if numeric_value is not None and abs(numeric_value) <= 1e-12 and title != "First wall contact":
+        if numeric_value is not None and abs(numeric_value) <= 1e-12 and not include_zero:
             return
         rows.append((title, time_value, value_label, value, detail))
 
+    add(
+        "Target crosses wall",
+        "first_target_wall_cross_time",
+        "target_past_wall_duration",
+        "Target past-wall duration [s]",
+        "Start reading wall_target.png here; the commanded target has crossed the wall even before hand contact.",
+        include_zero=True,
+    )
     add(
         "First wall contact",
         "first_wall_contact_time",
         "wall_contact_duration",
         "Contact duration [s]",
         "Start reading virtual_wall.png here; this is where penetration and force first become meaningful.",
+        include_zero=True,
     )
     add(
         "Deepest target-wall command",
@@ -2195,6 +2211,22 @@ def _key_moment_rows(summary: dict[str, Any]) -> list[tuple[str, float, str, Any
         "max_abs_virtual_wall_damping_force",
         "Damping force",
         "Use this for slow/fast approach comparisons where velocity changes the wall response.",
+    )
+    add(
+        "Wall contact release",
+        "first_wall_release_time",
+        "final_wall_phase",
+        "Final phase",
+        "Use this timestamp to check whether backing away actually cleared the wall contact.",
+        include_zero=True,
+    )
+    add(
+        "Target backs away",
+        "first_target_wall_return_time",
+        "final_target_wall_gap_cm",
+        "Final target-wall [cm]",
+        "This marks the learner or replay command returning the target before the wall plane.",
+        include_zero=True,
     )
     add(
         "Peak hand speed",
@@ -2377,11 +2409,33 @@ def _result_checks(summary: dict[str, Any]) -> list[tuple[str, str, str]]:
     if target_wall_gap is not None and target_wall_gap > 0.0:
         final_phase = str(summary.get("final_wall_phase") or "").strip()
         phase_text = f"; final phase {final_phase}" if final_phase else ""
+        first_cross = _number(summary.get("first_target_wall_cross_time"))
+        cross_text = f" at {_format_value(first_cross)} s" if first_cross is not None else ""
         checks.append(
             (
                 "Target-wall command",
                 "Observed",
-                f"Target moved {_format_value(target_wall_gap)} cm past the wall{phase_text}.",
+                f"Target moved {_format_value(target_wall_gap)} cm past the wall{cross_text}{phase_text}.",
+            )
+        )
+
+    target_return = _number(summary.get("first_target_wall_return_time"))
+    if target_return is not None:
+        checks.append(
+            (
+                "Target backed away",
+                "Observed",
+                f"Target returned before the wall at {_format_value(target_return)} s.",
+            )
+        )
+
+    wall_release = _number(summary.get("first_wall_release_time"))
+    if wall_release is not None:
+        checks.append(
+            (
+                "Wall contact release",
+                "Observed",
+                f"Penetration returned to zero after contact at {_format_value(wall_release)} s.",
             )
         )
 

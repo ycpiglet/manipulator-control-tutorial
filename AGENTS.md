@@ -71,7 +71,7 @@ Implemented and verified:
 - Lab04 Cartesian/wall interactive demos use Target X nudge buttons; wall mode labels them as away/into-wall contact controls
 - Lab04 deterministic virtual wall with soft/stiff stiffness-damping comparison configs
 - Lab04 virtual wall interactive demo supports live hand target X/Y/Z tuning plus wall parameter tuning
-- Lab04 virtual wall live status and logs include Target-Wall gap and Wall phase for clearer wall-contact lessons
+- Lab04 virtual wall live status and logs include Target-Wall gap, Wall phase, target crossing, and contact release for clearer wall-contact lessons
 - Lab04 wall plot preset includes `wall_target.png` for target/wall/gap interpretation
 - Lab04 low/high damping virtual wall configs that isolate damping with fixed stiffness and retreat gains
 - Lab04 near/far virtual wall configs that isolate wall position with fixed stiffness, damping, and retreat gains

@@ -631,7 +631,10 @@ class LoggingTests(unittest.TestCase):
                         "duration": 30.0,
                         "max_wall_penetration_cm": 1.2,
                         "max_wall_retreat_cm": 0.5,
+                        "first_target_wall_cross_time": 1.2,
                         "first_wall_contact_time": 1.4,
+                        "first_wall_release_time": 2.8,
+                        "first_target_wall_return_time": 3.0,
                         "peak_target_wall_gap_time": 1.6,
                         "peak_wall_penetration_time": 2.1,
                         "peak_wall_force_time": 2.2,
@@ -640,9 +643,11 @@ class LoggingTests(unittest.TestCase):
                         "peak_hand_speed_time": 1.7,
                         "wall_contact_duration": 2.2,
                         "wall_contact_fraction": 0.44,
+                        "target_past_wall_duration": 1.8,
+                        "target_past_wall_fraction": 0.36,
                         "max_target_wall_gap_cm": 4.0,
-                        "final_target_wall_gap_cm": 2.5,
-                        "final_wall_phase": "Contact: wall pushing back",
+                        "final_target_wall_gap_cm": -0.5,
+                        "final_wall_phase": "Clear",
                         "max_abs_virtual_wall_force": 22.0,
                         "max_abs_virtual_wall_spring_force": 18.0,
                         "max_abs_virtual_wall_damping_force": 4.0,
@@ -673,12 +678,17 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("First contact at", html)
             self.assertIn("Target-wall command", html)
             self.assertIn("Target moved", html)
-            self.assertIn("final phase Contact: wall pushing back", html)
+            self.assertIn("at 1.2 s", html)
+            self.assertIn("final phase Clear", html)
+            self.assertIn("Target backed away", html)
+            self.assertIn("Wall contact release", html)
             self.assertIn("Wall force", html)
             self.assertIn("Wall force components", html)
             self.assertIn("Key Moments", html)
+            self.assertIn("Target crosses wall", html)
             self.assertIn("First wall contact", html)
             self.assertIn("Deepest target-wall command", html)
+            self.assertIn("Target backs away", html)
             self.assertIn("Peak wall penetration", html)
             self.assertIn("Peak wall force", html)
             self.assertIn("Peak damping force", html)
@@ -688,11 +698,14 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("check-observed", html)
             worksheet_text = (output / "worksheet.md").read_text(encoding="utf-8")
             self.assertIn("## Key Moments", worksheet_text)
+            self.assertIn("Target crosses wall: time 1.2 s; Target past-wall duration [s]: 1.8.", worksheet_text)
             self.assertIn("First wall contact: time 1.4 s; Contact duration [s]: 2.2.", worksheet_text)
             self.assertIn("Deepest target-wall command: time 1.6 s; Target past wall [cm]: 4.", worksheet_text)
             self.assertIn("Peak wall penetration: time 2.1 s; Penetration [cm]: 1.2.", worksheet_text)
             self.assertIn("Peak wall force: time 2.2 s; Wall force: 22.", worksheet_text)
             self.assertIn("Peak damping force: time 1.8 s; Damping force: 4.", worksheet_text)
+            self.assertIn("Wall contact release: time 2.8 s; Final phase: Clear.", worksheet_text)
+            self.assertIn("Target backs away: time 3 s; Final target-wall [cm]: -0.5.", worksheet_text)
             self.assertIn("Peak hand speed: time 1.7 s; Hand speed [m/s]: 0.34.", worksheet_text)
             self.assertIn("Peak Cartesian error: time 0.6 s; Error [cm]: 1.6.", worksheet_text)
 

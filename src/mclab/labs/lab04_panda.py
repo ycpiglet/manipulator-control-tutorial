@@ -825,6 +825,7 @@ def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
             q = [float(row.get(f"q_{index}", 0.0)) for index in range(len(first_q))]
             joint_drift_norms.append(_norm([q[index] - first_q[index] for index in range(len(first_q))]))
     wall_contact = _wall_contact_metrics(rows)
+    target_wall_crossing = _wall_target_crossing_metrics(rows)
     peak_wall_penetration = _peak_time_value(rows, lambda row: float(row.get("wall_penetration_cm", 0.0)))
     peak_wall_force = _peak_time_value(rows, lambda row: abs(float(row.get("force_virtual_0", 0.0))))
     peak_wall_damping = _peak_time_value(rows, lambda row: abs(float(row.get("force_virtual_damping_0", 0.0))))
@@ -862,6 +863,16 @@ def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "last_wall_contact_time": wall_contact["last_wall_contact_time"],
         "wall_contact_duration": wall_contact["wall_contact_duration"],
         "wall_contact_fraction": wall_contact["wall_contact_fraction"],
+        "wall_contact_episodes": wall_contact["wall_contact_episodes"],
+        "first_wall_release_time": wall_contact["first_wall_release_time"],
+        "wall_released_after_contact": wall_contact["wall_released_after_contact"],
+        "first_target_wall_cross_time": target_wall_crossing["first_target_wall_cross_time"],
+        "last_target_wall_cross_time": target_wall_crossing["last_target_wall_cross_time"],
+        "target_past_wall_duration": target_wall_crossing["target_past_wall_duration"],
+        "target_past_wall_fraction": target_wall_crossing["target_past_wall_fraction"],
+        "target_wall_cross_episodes": target_wall_crossing["target_wall_cross_episodes"],
+        "first_target_wall_return_time": target_wall_crossing["first_target_wall_return_time"],
+        "target_returned_before_wall": target_wall_crossing["target_returned_before_wall"],
         "max_target_wall_gap_cm": max(float(row.get("target_wall_gap_cm", 0.0)) for row in rows),
         "peak_target_wall_gap_time": peak_target_wall_gap[0] if peak_target_wall_gap[1] > 0.0 else None,
         "final_target_wall_gap_cm": rows[-1].get("target_wall_gap_cm", 0.0),
@@ -896,29 +907,76 @@ def _peak_time_value(rows: list[dict[str, Any]], value_fn: Callable[[dict[str, A
     return best_time, best_value if best_value > float("-inf") else 0.0
 
 
-def _wall_contact_metrics(rows: list[dict[str, Any]], threshold_cm: float = 1e-9) -> dict[str, float | None]:
+def _wall_contact_metrics(rows: list[dict[str, Any]], threshold_cm: float = 1e-9) -> dict[str, float | bool | int | None]:
     times = [float(row.get("time", 0.0)) for row in rows]
     contact = [float(row.get("wall_penetration_cm", 0.0)) > threshold_cm for row in rows]
-    contact_indices = [index for index, is_contact in enumerate(contact) if is_contact]
-    if not contact_indices:
+    metrics = _active_interval_metrics(times, contact)
+    return {
+        "first_wall_contact_time": metrics["first_active_time"],
+        "last_wall_contact_time": metrics["last_active_time"],
+        "wall_contact_duration": metrics["active_duration"],
+        "wall_contact_fraction": metrics["active_fraction"],
+        "wall_contact_episodes": metrics["active_episodes"],
+        "first_wall_release_time": metrics["first_release_time"],
+        "wall_released_after_contact": metrics["released_after_active"],
+    }
+
+
+def _wall_target_crossing_metrics(
+    rows: list[dict[str, Any]],
+    threshold_cm: float = 1e-9,
+) -> dict[str, float | bool | int | None]:
+    times = [float(row.get("time", 0.0)) for row in rows]
+    target_past_wall = [float(row.get("target_wall_gap_cm", 0.0)) > threshold_cm for row in rows]
+    metrics = _active_interval_metrics(times, target_past_wall)
+    return {
+        "first_target_wall_cross_time": metrics["first_active_time"],
+        "last_target_wall_cross_time": metrics["last_active_time"],
+        "target_past_wall_duration": metrics["active_duration"],
+        "target_past_wall_fraction": metrics["active_fraction"],
+        "target_wall_cross_episodes": metrics["active_episodes"],
+        "first_target_wall_return_time": metrics["first_release_time"],
+        "target_returned_before_wall": metrics["released_after_active"],
+    }
+
+
+def _active_interval_metrics(times: list[float], active: list[bool]) -> dict[str, float | bool | int | None]:
+    active_indices = [index for index, is_active in enumerate(active) if is_active]
+    if not active_indices:
         return {
-            "first_wall_contact_time": None,
-            "last_wall_contact_time": None,
-            "wall_contact_duration": 0.0,
-            "wall_contact_fraction": 0.0,
+            "first_active_time": None,
+            "last_active_time": None,
+            "active_duration": 0.0,
+            "active_fraction": 0.0,
+            "active_episodes": 0,
+            "first_release_time": None,
+            "released_after_active": False,
         }
 
     duration = 0.0
-    for index, is_contact in enumerate(contact[:-1]):
-        if is_contact:
+    for index, is_active in enumerate(active[:-1]):
+        if is_active:
             duration += max(0.0, times[index + 1] - times[index])
     total_duration = max(0.0, times[-1] - times[0])
     fraction = duration / total_duration if total_duration > 0.0 else 0.0
+    episodes = sum(
+        1
+        for index, is_active in enumerate(active)
+        if is_active and (index == 0 or not active[index - 1])
+    )
+    first_release_time = None
+    for index, is_active in enumerate(active[:-1]):
+        if is_active and not active[index + 1]:
+            first_release_time = times[index + 1]
+            break
     return {
-        "first_wall_contact_time": times[contact_indices[0]],
-        "last_wall_contact_time": times[contact_indices[-1]],
-        "wall_contact_duration": duration,
-        "wall_contact_fraction": fraction,
+        "first_active_time": times[active_indices[0]],
+        "last_active_time": times[active_indices[-1]],
+        "active_duration": duration,
+        "active_fraction": fraction,
+        "active_episodes": episodes,
+        "first_release_time": first_release_time,
+        "released_after_active": first_release_time is not None,
     }
 
 
@@ -990,12 +1048,15 @@ def _plot_event_markers(rows: list[dict[str, Any]]) -> PlotEventMarkers:
     summary = _summary(rows)
     virtual_wall_markers = _compact_plot_event_markers(
         (
+            (summary.get("first_target_wall_cross_time"), "target crosses wall"),
             (summary.get("first_wall_contact_time"), "first contact"),
             (summary.get("peak_target_wall_gap_time"), "deepest target"),
             (summary.get("peak_wall_penetration_time"), "peak penetration"),
             (summary.get("peak_wall_force_time"), "peak force"),
             (summary.get("peak_wall_damping_force_time"), "peak damping"),
             (summary.get("peak_hand_speed_time"), "peak speed"),
+            (summary.get("first_wall_release_time"), "contact release"),
+            (summary.get("first_target_wall_return_time"), "target backs away"),
         )
     )
     markers: dict[str, Sequence[PlotEventMarker]] = {}
@@ -1003,9 +1064,12 @@ def _plot_event_markers(rows: list[dict[str, Any]]) -> PlotEventMarkers:
         markers["virtual_wall"] = virtual_wall_markers
         wall_target_markers = _compact_plot_event_markers(
             (
+                (summary.get("first_target_wall_cross_time"), "target crosses wall"),
                 (summary.get("first_wall_contact_time"), "first contact"),
                 (summary.get("peak_target_wall_gap_time"), "deepest target"),
                 (summary.get("peak_wall_penetration_time"), "peak penetration"),
+                (summary.get("first_wall_release_time"), "contact release"),
+                (summary.get("first_target_wall_return_time"), "target backs away"),
             )
         )
         if wall_target_markers:

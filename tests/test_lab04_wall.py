@@ -23,6 +23,7 @@ from mclab.labs.lab04_panda import (  # noqa: E402
     _wall_contact_metrics,
     _wall_phase,
     _wall_retreat_distance,
+    _wall_target_crossing_metrics,
 )
 
 
@@ -233,7 +234,25 @@ class Lab04WallTests(unittest.TestCase):
         self.assertAlmostEqual(summary["peak_target_wall_gap_time"], 0.4)
         self.assertAlmostEqual(summary["final_target_wall_gap_cm"], 1.0)
         self.assertEqual(summary["final_wall_phase"], "Contact: wall pushing back")
-        self.assertIn((0.4, "deepest target"), markers["wall_target"])
+        self.assertIn((0.4, "target crosses wall / deepest target"), markers["wall_target"])
+
+    def test_wall_target_crossing_metrics_report_back_away_timing(self) -> None:
+        rows = [
+            {"time": 0.0, "target_wall_gap_cm": -1.0},
+            {"time": 0.2, "target_wall_gap_cm": 2.0},
+            {"time": 0.5, "target_wall_gap_cm": 3.0},
+            {"time": 0.8, "target_wall_gap_cm": -0.5},
+        ]
+
+        metrics = _wall_target_crossing_metrics(rows)
+
+        self.assertAlmostEqual(metrics["first_target_wall_cross_time"], 0.2)
+        self.assertAlmostEqual(metrics["last_target_wall_cross_time"], 0.5)
+        self.assertAlmostEqual(metrics["target_past_wall_duration"], 0.6)
+        self.assertAlmostEqual(metrics["target_past_wall_fraction"], 0.75)
+        self.assertEqual(metrics["target_wall_cross_episodes"], 1)
+        self.assertAlmostEqual(metrics["first_target_wall_return_time"], 0.8)
+        self.assertTrue(metrics["target_returned_before_wall"])
 
     def test_wall_contact_metrics_report_timing_and_duration(self) -> None:
         rows = [
@@ -249,6 +268,9 @@ class Lab04WallTests(unittest.TestCase):
         self.assertAlmostEqual(metrics["last_wall_contact_time"], 0.2)
         self.assertAlmostEqual(metrics["wall_contact_duration"], 0.2)
         self.assertAlmostEqual(metrics["wall_contact_fraction"], 2.0 / 3.0)
+        self.assertEqual(metrics["wall_contact_episodes"], 1)
+        self.assertAlmostEqual(metrics["first_wall_release_time"], 0.3)
+        self.assertTrue(metrics["wall_released_after_contact"])
 
     def test_lab04_summary_reports_key_moment_times(self) -> None:
         rows = [
