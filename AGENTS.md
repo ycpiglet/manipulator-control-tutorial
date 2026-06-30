@@ -68,6 +68,7 @@ Implemented and verified:
 - Lab04 Cartesian reach with damped-least-squares Jacobian target offsets
 - Lab04 soft/stiff Cartesian reach comparison configs and batch report
 - Lab04 Cartesian interactive one-line launcher for live XYZ target tuning
+- Lab04 Cartesian/wall interactive demos use Target X nudge buttons; wall mode labels them as away/into-wall contact controls
 - Lab04 deterministic virtual wall with soft/stiff stiffness-damping comparison configs
 - Lab04 virtual wall interactive demo supports live hand target X/Y/Z tuning plus wall parameter tuning
 - Lab04 virtual wall live status and logs include Target-Wall gap for clearer wall-contact lessons

@@ -98,7 +98,8 @@ def run(
     playback_control = SimulationPlaybackControl(config, event_log=interaction_log)
     run_guide = guide_for_config(config_path=str(config_path or ""), lab_name=lab_name)
     live_tuning = _live_tuning(config, interaction_log)
-    live_status = LiveStatus(_live_status_specs(mode))
+    cartesian_target_nudge = _target_nudge_is_cartesian(config, mode)
+    live_status = LiveStatus(_live_status_specs(mode, cartesian_target_nudge=cartesian_target_nudge))
     viewer_handle = maybe_launch_viewer(
         mujoco,
         model,
@@ -141,7 +142,9 @@ def run(
                 wall_start = realtime_wall_start(float(data.time), sim_start, playback_control.speed())
             target_q = home_q.copy()
             target = trajectory.evaluate(float(data.time))
-            button_joint_offset = target_offset.value()
+            button_offset = target_offset.value()
+            button_joint_offset = 0.0 if cartesian_target_nudge else button_offset
+            button_target_x_offset = button_offset if cartesian_target_nudge else 0.0
             tuned_joint_offset = live_tuning.value("joint_target_offset", 0.0)
             target_q[controlled_joint_index] = target.position + button_joint_offset + tuned_joint_offset
 
@@ -162,6 +165,7 @@ def run(
                     initial_ee_position,
                     float(target.position),
                 )
+                target_x_ee[0] += button_target_x_offset
                 cartesian_error = [target_x_ee[index] - ee_position[index] for index in range(3)]
                 target_q = _apply_cartesian_target_offset(
                     q_before,
@@ -179,6 +183,7 @@ def run(
                         initial_ee_position,
                         1.0,
                     )
+                    target_x_ee[0] += button_target_x_offset
                     cartesian_error = [target_x_ee[index] - ee_position[index] for index in range(3)]
                     target_q = _apply_cartesian_target_offset(
                         target_q,
@@ -225,6 +230,7 @@ def run(
             cartesian_error_norm = _norm(cartesian_error)
             live_status.set_values(
                 joint_offset=button_joint_offset + tuned_joint_offset,
+                target_x_nudge=button_target_x_offset,
                 error_norm=error_norm,
                 ee_x=ee_position[0],
                 target_x=target_x_ee[0],
@@ -262,6 +268,8 @@ def run(
                 tuned_target_z=live_tuning.value("target_z", target_x_ee[2]),
                 target_wall_gap_m=target_x_ee[0] - float(wall_config.get("wall_x", target_x_ee[0])),
                 target_wall_gap_cm=100.0 * (target_x_ee[0] - float(wall_config.get("wall_x", target_x_ee[0]))),
+                target_x_nudge=button_target_x_offset,
+                joint_target_nudge=button_joint_offset,
                 tuned_joint_target_offset=tuned_joint_offset,
                 tuned_wall_x=float(wall_config.get("wall_x", 10.0)),
                 tuned_wall_stiffness=float(wall_config.get("stiffness", 0.0)),
@@ -311,11 +319,11 @@ def run(
             tuning=live_tuning,
             status=live_status,
             playback_control=playback_control,
-            extra_controls={"joint_target_offset": target_offset.value()} if target_offset.enabled else None,
+            extra_controls=_target_nudge_snapshot(target_offset, cartesian_target_nudge=cartesian_target_nudge),
         ),
         learner_tuned_config=learner_tuned_config(
             config,
-            _learner_tuned_updates(config, live_tuning, target_offset),
+            _learner_tuned_updates(config, live_tuning, target_offset, cartesian_target_nudge=cartesian_target_nudge),
         ),
     )
     if plot:
@@ -335,9 +343,14 @@ def _viewer_guides(config: dict[str, Any], mode: str) -> dict[str, bool]:
     }
 
 
-def _live_status_specs(mode: str) -> list[StatusSpec]:
+def _live_status_specs(mode: str, *, cartesian_target_nudge: bool = False) -> list[StatusSpec]:
+    offset_spec = (
+        StatusSpec("target_x_nudge", "Target X nudge [m]")
+        if cartesian_target_nudge
+        else StatusSpec("joint_offset", "Joint target [rad]")
+    )
     specs = [
-        StatusSpec("joint_offset", "Joint target [rad]"),
+        offset_spec,
         StatusSpec("error_norm", "Joint error norm"),
         StatusSpec("ee_x", "Hand X [m]"),
     ]
@@ -358,6 +371,25 @@ def _live_status_specs(mode: str) -> list[StatusSpec]:
             ]
         )
     return specs
+
+
+def _target_nudge_is_cartesian(config: dict[str, Any], mode: str) -> bool:
+    if not bool(dict(config.get("interaction", {})).get("target_nudge", False)):
+        return False
+    if not _wall_cartesian_target_enabled(config):
+        return False
+    return mode in {"cartesian_reach", "task_space", "ee_reach", "impedance_wall", "virtual_wall", "wall"}
+
+
+def _target_nudge_snapshot(
+    target_offset: TargetOffsetControl,
+    *,
+    cartesian_target_nudge: bool,
+) -> dict[str, float] | None:
+    if not target_offset.enabled:
+        return None
+    key = "target_x_nudge" if cartesian_target_nudge else "joint_target_offset"
+    return {key: target_offset.value()}
 
 
 def _update_viewer_guides(
@@ -543,6 +575,8 @@ def _learner_tuned_updates(
     config: dict[str, Any],
     live_tuning: LiveTuning,
     target_offset: TargetOffsetControl,
+    *,
+    cartesian_target_nudge: bool = False,
 ) -> dict[str, Any]:
     values = live_tuning.snapshot() if live_tuning.enabled else {}
     updates: dict[str, Any] = {}
@@ -553,6 +587,14 @@ def _learner_tuned_updates(
         }
     if "cartesian_gain" in values:
         updates.setdefault("cartesian_target", {})["gain"] = values["cartesian_gain"]
+    if cartesian_target_nudge and target_offset.enabled:
+        target_config = dict(config.get("cartesian_target", {}))
+        if "cartesian_target" in updates and "position" in updates["cartesian_target"]:
+            position = list(updates["cartesian_target"]["position"])
+        else:
+            position = _float_list(target_config.get("position", [0.60, 0.10, 0.59]), 3)
+        position[0] += target_offset.value()
+        updates.setdefault("cartesian_target", {})["position"] = position
 
     wall_updates: dict[str, Any] = {}
     if "wall_x" in values:
@@ -566,10 +608,11 @@ def _learner_tuned_updates(
     if wall_updates:
         updates["virtual_wall"] = wall_updates
 
+    has_joint_offset_slider = "joint_target_offset" in values
     joint_offset = values.get("joint_target_offset", 0.0)
-    if target_offset.enabled:
+    if target_offset.enabled and not cartesian_target_nudge:
         joint_offset += target_offset.value()
-    if live_tuning.enabled or target_offset.enabled:
+    if has_joint_offset_slider or (target_offset.enabled and not cartesian_target_nudge):
         trajectory = dict(config.get("trajectory", {}))
         start = float(trajectory.get("start", 0.0))
         end = float(trajectory.get("end", start))

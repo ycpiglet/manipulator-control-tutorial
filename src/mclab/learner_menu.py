@@ -764,9 +764,9 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
         lab_name="lab04",
         config_path="configs/lab04_panda/interactive_cartesian_reach.yaml",
         plots="cartesian_reach",
-        description="Tune hand target X/Y/Z and Cartesian gain live.",
-        try_this="Move Target X/Y/Z sliders or click a reach preset.",
-        watch="Live hand error and end-effector plot after the run.",
+        description="Tune hand target X/Y/Z and nudge Target X live.",
+        try_this="Move sliders, click a reach preset, or use Target X -/+ buttons.",
+        watch="Live target X nudge, hand error, and end-effector plot after the run.",
     ),
     MenuAction(
         group="Lab04 Panda Manipulator",
@@ -885,8 +885,8 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
         config_path="configs/lab04_panda/interactive_virtual_wall.yaml",
         plots="wall",
         description="Tune hand target and virtual wall response live.",
-        try_this="Move Target X through the wall, then try Soft/Stiff/Close wall presets.",
-        watch="Target-Wall gap, green target, blue/orange hand marker, wall penetration, wall force, and hand X.",
+        try_this="Use Target X + into wall, Target X - away, then try Soft/Stiff/Close wall presets.",
+        watch="Target X nudge, Target-Wall gap, green target, blue/orange hand marker, wall penetration, wall force, and hand X.",
     ),
 )
 
@@ -2110,12 +2110,16 @@ def parameter_hint(action: MenuAction) -> str:
         if config_name == "neutral_hold_30s.yaml":
             return "sim_time, dt, home_q"
         if label == "cartesian interactive":
-            return "live sliders/presets: Target X/Y/Z, Cartesian gain; YAML: cartesian_target.*"
+            return (
+                "live sliders/presets: Target X/Y/Z, Cartesian gain; buttons: Target X -/+; "
+                "YAML: cartesian_target.*, interaction.target_step, interaction.target_limit"
+            )
         if config_name == "interactive_virtual_wall.yaml":
             return (
                 "live sliders/presets: Target X/Y/Z, Cartesian gain, wall X, stiffness, damping, retreat gain; "
-                "YAML: cartesian_target.position, cartesian_target.gain, virtual_wall.wall_x, "
-                "virtual_wall.stiffness, virtual_wall.damping, virtual_wall.force_retreat_gain"
+                "buttons: Target X into/away from wall; YAML: cartesian_target.position, "
+                "cartesian_target.gain, virtual_wall.wall_x, virtual_wall.stiffness, "
+                "virtual_wall.damping, interaction.target_step, virtual_wall.force_retreat_gain"
             )
         if "cartesian" in label:
             return "cartesian_target.position, cartesian_target.gain, cartesian_target.max_step"
@@ -2190,7 +2194,7 @@ def _action_controls_text(config_path: str) -> str:
     if bool(interaction.get("key_force", False)):
         controls.append("Pull/Push buttons and A/D keys")
     if bool(interaction.get("target_nudge", False)):
-        controls.append("Target -/+ buttons and A/D keys")
+        controls.append(_target_nudge_control_label(interaction))
     if bool(interaction.get("joint_disturbance", False)):
         controls.append("Shoulder/Elbow pulse buttons and A/D keys")
     if bool(interaction.get("live_tuning", False)):
@@ -2212,6 +2216,14 @@ def _action_controls_text(config_path: str) -> str:
     if not controls:
         return "Controls: Auto run; edit YAML before running"
     return f"Controls: {', '.join(dict.fromkeys(controls))}"
+
+
+def _target_nudge_control_label(interaction: dict[str, Any]) -> str:
+    left = str(interaction.get("target_left_label", "")).strip()
+    right = str(interaction.get("target_right_label", "")).strip()
+    if left and right:
+        return f"{left} / {right}"
+    return "Target -/+ buttons and A/D keys"
 
 
 def _action_level(action: MenuAction) -> str:

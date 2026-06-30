@@ -21,6 +21,14 @@ cartesian_target:
   damped_least_squares: 0.08
 interaction:
   panel: true
+  target_nudge: true
+  target_step: 0.025
+  target_limit: 0.10
+  target_unit: m
+  target_event_name: target_x_nudge
+  target_left_label: Target X -  A / Left
+  target_right_label: Target X +  D / Right
+  target_description: 'Target X nudge step: 0.025 m, limit: +/-0.10 m'
   live_tuning: true
   tuning_presets:
     - label: Soft reach

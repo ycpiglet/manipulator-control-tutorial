@@ -148,6 +148,9 @@ CONFIG_HIGHLIGHT_KEYS = (
     "interaction.target_nudge",
     "interaction.target_step",
     "interaction.target_limit",
+    "interaction.target_left_label",
+    "interaction.target_right_label",
+    "interaction.target_event_name",
     "interaction.joint_disturbance",
     "interaction.joint_disturbance_torque",
     "interaction.joint_disturbance_duration",
@@ -1871,7 +1874,7 @@ def _control_surface_items(config: dict[str, Any]) -> list[tuple[str, str]]:
     if bool(interaction.get("key_force", False)):
         items.append(("Manual input", "Pull/Push buttons and A/D keys"))
     if bool(interaction.get("target_nudge", False)):
-        items.append(("Manual input", "Target -/+ buttons and A/D keys"))
+        items.append(("Manual input", _target_nudge_control_label(interaction)))
     if bool(interaction.get("joint_disturbance", False)):
         items.append(("Manual input", "Shoulder/Elbow pulse buttons and A/D keys"))
     if bool(interaction.get("live_tuning", False)):
@@ -1893,6 +1896,14 @@ def _control_surface_items(config: dict[str, Any]) -> list[tuple[str, str]]:
             ("Change values", "Edit YAML or use Config Highlights before rerunning"),
         ]
     return items
+
+
+def _target_nudge_control_label(interaction: dict[str, Any]) -> str:
+    left = str(interaction.get("target_left_label", "")).strip()
+    right = str(interaction.get("target_right_label", "")).strip()
+    if left and right:
+        return f"{left} / {right}"
+    return "Target -/+ buttons and A/D keys"
 
 
 def _suggested_config_changes(current_config: dict[str, Any], suggested_config_path: str) -> str:

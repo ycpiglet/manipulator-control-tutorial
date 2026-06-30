@@ -668,9 +668,16 @@ class TargetOffsetControl:
         self.panel_enabled = bool(interaction.get("panel", False))
         self.step = float(interaction.get("target_step", 0.05))
         self.limit = abs(float(interaction.get("target_limit", 0.4)))
-        self.left_label = "Joint Target -  A / Left"
-        self.right_label = "Joint Target +  D / Right"
-        self.panel_description = f"Target offset step: {self.step:g} rad, limit: +/-{self.limit:g} rad"
+        self.left_label = str(interaction.get("target_left_label", "Joint Target -  A / Left"))
+        self.right_label = str(interaction.get("target_right_label", "Joint Target +  D / Right"))
+        self.event_name = str(interaction.get("target_event_name", "joint_target_offset"))
+        unit = str(interaction.get("target_unit", "rad"))
+        self.panel_description = str(
+            interaction.get(
+                "target_description",
+                f"Target offset step: {self.step:g} {unit}, limit: +/-{self.limit:g} {unit}",
+            )
+        )
         self._offset = 0.0
         self._event_log = event_log
         self._lock = Lock()
@@ -703,7 +710,7 @@ class TargetOffsetControl:
             offset = self._offset
         if self._event_log is not None:
             label = self.left_label if delta < 0.0 else self.right_label
-            self._event_log.record("button", "joint_target_offset", offset, label=label)
+            self._event_log.record("button", self.event_name, offset, label=label)
 
 
 class InteractionPanel:

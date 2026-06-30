@@ -109,6 +109,31 @@ class KeyForcePulseTests(unittest.TestCase):
         self.assertEqual([event["name"] for event in log.events()], ["joint_target_offset"] * 3)
         self.assertAlmostEqual(log.events()[-1]["value"], 0.1)
 
+    def test_target_offset_control_uses_custom_labels_and_event_name(self) -> None:
+        log = InteractionLog()
+        log.set_time(0.5)
+        control = TargetOffsetControl(
+            {
+                "interaction": {
+                    "target_nudge": True,
+                    "target_step": 0.04,
+                    "target_unit": "m",
+                    "target_event_name": "target_x_nudge",
+                    "target_left_label": "Target X - away",
+                    "target_right_label": "Target X + into wall",
+                }
+            },
+            event_log=log,
+        )
+
+        control.trigger_right()
+
+        self.assertEqual(control.value(), 0.04)
+        self.assertEqual(control.right_label, "Target X + into wall")
+        self.assertIn("0.04 m", control.panel_description)
+        self.assertEqual(log.events()[0]["name"], "target_x_nudge")
+        self.assertEqual(log.events()[0]["label"], "Target X + into wall")
+
     def test_experiment_reset_control_records_and_consumes_one_request(self) -> None:
         log = InteractionLog()
         log.set_time(1.25)
@@ -529,6 +554,22 @@ class KeyForcePulseTests(unittest.TestCase):
                 self.assertTrue(control.panel_enabled)
                 self.assertTrue(control.enabled)
                 self.assertEqual(control.speed(), 1.0)
+
+    def test_lab04_cartesian_target_nudge_replays_as_cartesian_target_x(self) -> None:
+        config = load_config("configs/lab04_panda/interactive_cartesian_reach.yaml")
+        tuning = lab04_panda._live_tuning(config)
+        target_offset = TargetOffsetControl(config)
+
+        target_offset.trigger_right()
+        updates = lab04_panda._learner_tuned_updates(
+            config,
+            tuning,
+            target_offset,
+            cartesian_target_nudge=True,
+        )
+
+        self.assertAlmostEqual(updates["cartesian_target"]["position"][0], 0.625)
+        self.assertNotIn("trajectory", updates)
 
     def test_condition_aware_dls_live_tuning_exposes_schedule_sliders(self) -> None:
         config = load_config("configs/lab03_2dof/condition_aware_dls_2dof.yaml")

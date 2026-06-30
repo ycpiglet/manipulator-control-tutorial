@@ -34,6 +34,11 @@ interaction:
   target_nudge: true
   target_step: 0.04
   target_limit: 0.25
+  target_unit: m
+  target_event_name: target_x_nudge
+  target_left_label: Target X - away  A / Left
+  target_right_label: Target X + into wall  D / Right
+  target_description: 'Target X nudge step: 0.04 m, left moves away from the wall, right moves deeper into the wall.'
   live_tuning: true
   tuning_presets:
     - label: Soft wall

@@ -612,6 +612,7 @@ class LearnerMenuTests(unittest.TestCase):
         auto_demo = by_label[("Lab01 Mass-Spring-Damper", "Auto demo")]
         lab01_interactive = by_label[("Lab01 Mass-Spring-Damper", "Interactive")]
         lab03_condition_dls = by_label[("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS")]
+        lab04_cartesian = by_label[("Lab04 Panda Manipulator", "Cartesian interactive")]
         lab04_wall = by_label[("Lab04 Panda Manipulator", "Virtual wall")]
 
         self.assertEqual(
@@ -633,8 +634,12 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("quick presets (Early damping, Balanced schedule, Late damping)", dls_controls)
         self.assertIn("live sliders with Changed values", dls_controls)
 
+        cartesian_controls = action_controls_text(lab04_cartesian)
+        self.assertIn("Target X +", cartesian_controls)
+        self.assertIn("quick presets (Soft reach, Default reach, Far target)", cartesian_controls)
+
         wall_controls = action_controls_text(lab04_wall)
-        self.assertIn("Target -/+ buttons and A/D keys", wall_controls)
+        self.assertIn("Target X + into wall", wall_controls)
         self.assertIn("quick presets (Soft wall, Stiff wall, Close wall)", wall_controls)
 
     def test_menu_cards_show_viewer_marker_legend(self) -> None:
@@ -1137,6 +1142,10 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(
             "cartesian_target.gain",
             parameter_hint(by_label[("Lab04 Panda Manipulator", "Soft Cartesian")]),
+        )
+        self.assertIn(
+            "interaction.target_step",
+            parameter_hint(by_label[("Lab04 Panda Manipulator", "Cartesian interactive")]),
         )
         self.assertIn("sim_time", parameter_hint(by_label[("Lab04 Panda Manipulator", "30s stability hold")]))
         self.assertIn("virtual_wall.stiffness", parameter_hint(by_label[("Lab04 Panda Manipulator", "Virtual wall")]))

@@ -1464,7 +1464,7 @@ def _control_surface_summary(config: Any) -> str:
     if bool(interaction.get("key_force", False)):
         controls.append("Pull/Push buttons and A/D keys")
     if bool(interaction.get("target_nudge", False)):
-        controls.append("Target -/+ buttons and A/D keys")
+        controls.append(_target_nudge_control_label(interaction))
     if bool(interaction.get("joint_disturbance", False)):
         controls.append("Shoulder/Elbow pulse buttons and A/D keys")
     if bool(interaction.get("live_tuning", False)):
@@ -1483,6 +1483,14 @@ def _control_surface_summary(config: Any) -> str:
     if not controls:
         return "Auto run; edit YAML before rerunning."
     return "; ".join(dict.fromkeys(controls)) + "."
+
+
+def _target_nudge_control_label(interaction: dict[str, Any]) -> str:
+    left = str(interaction.get("target_left_label", "")).strip()
+    right = str(interaction.get("target_right_label", "")).strip()
+    if left and right:
+        return f"{left} / {right}"
+    return "Target -/+ buttons and A/D keys"
 
 
 def _configured_preset_labels(config: dict[str, Any]) -> list[str]:

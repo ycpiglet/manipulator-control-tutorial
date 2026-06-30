@@ -595,9 +595,9 @@ RUN_GUIDES: dict[str, RunGuide] = {
     "configs/lab04_panda/interactive_cartesian_reach.yaml": RunGuide(
         "Lab04 Cartesian Interactive",
         "Tune hand target and Cartesian gain while the viewer runs.",
-        "Move Target X/Y/Z sliders or use Quick presets for soft, default, and farther reach.",
-        "live sliders/presets: Target X/Y/Z, Cartesian gain; YAML: cartesian_target.*",
-        "Live hand error and end-effector position.",
+        "Move Target X/Y/Z sliders, use Quick presets, or nudge Target X with A/D.",
+        "live sliders/presets: Target X/Y/Z, Cartesian gain; buttons: Target X -/+; YAML: cartesian_target.*, interaction.target_step",
+        "Live hand error, Target X nudge, and end-effector position.",
         "Use the saved report to compare target and actual hand motion.",
     ),
     "configs/lab04_panda/interactive_joint_hold.yaml": RunGuide(
@@ -691,10 +691,10 @@ RUN_GUIDES: dict[str, RunGuide] = {
     "configs/lab04_panda/interactive_virtual_wall.yaml": RunGuide(
         "Lab04 Virtual Wall Interactive",
         "Tune the hand target and virtual wall parameters while the Panda moves toward the wall.",
-        "Move Target X through the wall, then use Quick presets for soft wall, stiff wall, and close wall cases.",
-        "live sliders/presets: Target X/Y/Z, Cartesian gain, wall X, stiffness, damping, retreat gain",
-        "Target-Wall gap, Wall penetration, wall force, hand X, green target marker, and orange contact hand marker.",
-        "Close the viewer and compare virtual_wall.png with the live settings.",
+        "Use Target X + into wall, Target X - away, sliders, or Quick presets to compare contact and release.",
+        "live sliders/presets: Target X/Y/Z, Cartesian gain, wall X, stiffness, damping, retreat gain; buttons: Target X into/away from wall; YAML: virtual_wall.*, interaction.target_step",
+        "Target X nudge, Target-Wall gap, Wall penetration, wall force, hand X, green target marker, and orange contact hand marker.",
+        "Mark observations after pushing into the wall and backing away with at least two wall presets.",
     ),
     "configs/lab04_panda/impedance_wall.yaml": RunGuide(
         "Lab04 Impedance Wall",
