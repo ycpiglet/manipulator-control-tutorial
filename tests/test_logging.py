@@ -578,6 +578,17 @@ class LoggingTests(unittest.TestCase):
                             "label": "Close wall",
                             "value": {"required": True, "values": {"target_x": 0.64}},
                         },
+                        {
+                            "time": 1.5,
+                            "kind": "marker",
+                            "name": "observation",
+                            "label": "Mark observation",
+                            "value": {
+                                "prediction": "Back away should release contact.",
+                                "outcome": "Matched",
+                                "note": "Contact remained until backing away.",
+                            },
+                        },
                     ]
                 ),
                 encoding="utf-8",
@@ -593,9 +604,14 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("<strong>1/2</strong>", html)
             self.assertIn("Try required preset Back away", html)
             self.assertIn("Needs required preset", html)
+            self.assertIn("<span>Status</span><strong>Needs required preset Back away</strong>", html)
+            self.assertIn("<span>Next proof step</span><strong>Try required preset Back away", html)
             self.assertIn("<span>Required evidence</span>", html)
             self.assertIn("<strong>yes</strong>", html)
             worksheet_text = (output / "worksheet.md").read_text(encoding="utf-8")
+            self.assertIn("- Status: Needs required preset Back away", worksheet_text)
+            self.assertIn("- Required presets tried: 1/2", worksheet_text)
+            self.assertIn("- [ ] Try required preset Back away, watch live status, then mark one observation.", worksheet_text)
             self.assertIn("Required presets: Close wall -> Back away", worksheet_text)
             self.assertIn("Required presets tried: 1/2", worksheet_text)
             self.assertIn(

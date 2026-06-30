@@ -718,13 +718,13 @@ def _render_worksheet(
         "",
     ]
     lines.extend(_worksheet_learning_guide_lines(guide, summary))
-    lines.extend(_worksheet_mission_evidence_lines(summary, interaction_events, plots))
+    lines.extend(_worksheet_mission_evidence_lines(summary, interaction_events, plots, config))
     lines.extend(_worksheet_pairs_section("Key Parameters", _config_highlight_pairs(config)))
     lines.extend(_worksheet_key_moments_lines(summary))
     lines.extend(_worksheet_pairs_section("Summary Values", list(summary.items())))
     lines.extend(_worksheet_plot_review_lines(output, plots))
     lines.extend(_worksheet_observation_lines(interaction_events))
-    lines.extend(_worksheet_review_checklist(interaction_events))
+    lines.extend(_worksheet_review_checklist(interaction_events, config))
     lines.extend(_worksheet_preset_comparison_lines(interaction_events, config))
     lines.extend(_worksheet_next_experiment_lines(summary, config))
     lines.extend(_worksheet_notes_lines(notes))
@@ -763,9 +763,10 @@ def _worksheet_mission_evidence_lines(
     summary: dict[str, Any],
     events: list[dict[str, Any]],
     plots: list[Path],
+    config: dict[str, Any],
 ) -> list[str]:
     lines = ["## Mission Evidence", ""]
-    lines.extend(_worksheet_mapping_lines(dict(_mission_evidence_items(summary, events, plots))))
+    lines.extend(_worksheet_mapping_lines(dict(_mission_evidence_items(summary, events, plots, config))))
     lines.append("")
     return lines
 
@@ -844,9 +845,10 @@ def _worksheet_observation_lines(events: list[dict[str, Any]]) -> list[str]:
     return lines
 
 
-def _worksheet_review_checklist(events: list[dict[str, Any]]) -> list[str]:
+def _worksheet_review_checklist(events: list[dict[str, Any]], config: dict[str, Any]) -> list[str]:
     markers, predictions, notes, outcomes = _observation_evidence_counts_from_events(events)
     pending_outcomes = max(0, predictions - outcomes)
+    required_labels, required_tried, next_required = _required_preset_progress(config, events)
     lines = [
         "## Review Checklist",
         "",
@@ -855,6 +857,8 @@ def _worksheet_review_checklist(events: list[dict[str, Any]]) -> list[str]:
         f"- Prediction outcomes: {_markdown_inline(outcomes)}",
         f"- Learner notes: {_markdown_inline(notes)}",
     ]
+    if required_labels:
+        lines.append(f"- Required presets tried: {_markdown_inline(f'{len(required_tried)}/{len(required_labels)}')}")
     if pending_outcomes:
         lines.append(
             f"- Outcome review pending: {_markdown_inline(pending_outcomes)} "
@@ -865,6 +869,13 @@ def _worksheet_review_checklist(events: list[dict[str, Any]]) -> list[str]:
             [
                 "- [ ] Save one observation marker with a prediction.",
                 "- [ ] Capture one live status or note before moving to the next scenario.",
+            ]
+        )
+    elif next_required:
+        lines.extend(
+            [
+                f"- [ ] Try required preset {_markdown_inline(next_required)}, watch live status, then mark one observation.",
+                "- [ ] Compare the required preset response with the plots in report.html.",
             ]
         )
     else:
@@ -894,6 +905,17 @@ def _worksheet_preset_comparison_lines(events: list[dict[str, Any]], config: dic
     )
     lines.append("")
     return lines
+
+
+def _required_preset_progress(config: dict[str, Any], events: list[dict[str, Any]]) -> tuple[list[str], list[str], str]:
+    required_labels = _configured_required_preset_labels(config)
+    if not required_labels:
+        return [], [], ""
+    configured_labels = _configured_preset_labels(config)
+    tried_labels = _distinct_preset_labels(events, configured_labels)
+    required_tried = [label for label in required_labels if label in tried_labels]
+    next_required = next((label for label in required_labels if label not in tried_labels), "")
+    return required_labels, required_tried, next_required
 
 
 def _worksheet_plot_review_lines(output: Path, plots: list[Path]) -> list[str]:
@@ -1066,7 +1088,7 @@ def _render_report(
     configured_presets = _configured_presets_section(config)
     result_check = _result_check_section(summary)
     key_moments = _key_moments_section(summary)
-    mission_evidence = _mission_evidence_section(summary, interaction_events, plots)
+    mission_evidence = _mission_evidence_section(summary, interaction_events, plots, config)
     hands_on_evidence = _hands_on_evidence_section(summary, interaction_events)
     learner_action_summary = _learner_action_summary_section(interaction_events, config)
     learner_snapshot_section = _learner_snapshot_section(learner_snapshot)
@@ -2499,10 +2521,12 @@ def _mission_evidence_items(
     summary: dict[str, Any],
     events: list[dict[str, Any]],
     plots: list[Any],
+    config: dict[str, Any] | None = None,
 ) -> list[tuple[str, Any]]:
     markers, predictions, notes, outcomes = _observation_evidence_counts_from_events(events)
     pending_outcomes = max(0, predictions - outcomes)
     plot_count = len(plots)
+    required_labels, required_tried, next_required = _required_preset_progress(config or {}, events)
 
     requires_hands_on = _summary_requires_hands_on_evidence(summary)
     evidence_type = "Hands-on observation" if requires_hands_on else "Plot and worksheet artifacts"
@@ -2517,6 +2541,13 @@ def _mission_evidence_items(
         elif predictions <= 0:
             status = "Needs prediction"
             next_step = "Repeat or continue the demo and save a Mark observation with a prediction."
+        elif required_labels and len(required_tried) < len(required_labels):
+            status = f"Needs required preset {next_required}" if next_required else "Needs required preset"
+            next_step = (
+                f"Try required preset {next_required}, watch live status, then mark one observation."
+                if next_required
+                else "Try the remaining required preset, watch live status, then mark one observation."
+            )
         elif notes <= 0:
             status = "Ready, add note next"
             next_step = "Compare the prediction with the plots and add a short learner note next time."
@@ -2532,7 +2563,7 @@ def _mission_evidence_items(
             status = "Needs plot"
             next_step = "Rerun with --plot so the mission can be checked visually."
 
-    return [
+    items: list[tuple[str, Any]] = [
         ("Evidence type", evidence_type),
         ("Status", status),
         ("Observation markers", markers),
@@ -2542,12 +2573,17 @@ def _mission_evidence_items(
         ("Saved plots", plot_count),
         ("Next proof step", next_step),
     ]
+    if required_labels:
+        items.insert(6, ("Required presets", " -> ".join(required_labels)))
+        items.insert(7, ("Required presets tried", f"{len(required_tried)}/{len(required_labels)}"))
+    return items
 
 
 def _mission_evidence_section(
     summary: dict[str, Any],
     events: list[dict[str, Any]],
     plots: list[Path],
+    config: dict[str, Any],
 ) -> str:
     return (
         "<section>"
@@ -2556,7 +2592,7 @@ def _mission_evidence_section(
         '<article class="action-card action-wide">'
         "<strong>Mission proof status</strong>"
         '<p class="empty">Use this before moving on: it tells whether the mission has enough saved evidence.</p>'
-        f"{_action_value_list(_mission_evidence_items(summary, events, plots))}"
+        f"{_action_value_list(_mission_evidence_items(summary, events, plots, config))}"
         "</article>"
         "</div>"
         "</section>"
