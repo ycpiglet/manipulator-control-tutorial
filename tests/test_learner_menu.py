@@ -97,6 +97,7 @@ from mclab.learner_menu import (  # noqa: E402
     launch_learning_path_latest_output,
     launch_learning_path_latest_worksheet,
     launch_next_review_output,
+    launch_latest_folder,
     launch_latest_plot,
     launch_latest_worksheet,
     launch_latest_tuned_replay,
@@ -2834,6 +2835,23 @@ class LearnerMenuTests(unittest.TestCase):
 
             opener.assert_called_once_with(worksheet)
 
+    def test_launch_latest_folder_opens_output_folder_when_available(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_path = Path(tmp) / "run"
+            run_path.mkdir()
+
+            with patch("mclab.learner_menu.open_path") as opener:
+                launch_latest_folder({"path": run_path})
+
+            opener.assert_called_once_with(run_path)
+
+    def test_launch_latest_folder_returns_none_without_output(self) -> None:
+        with patch("mclab.learner_menu.open_path") as opener:
+            result = launch_latest_folder({"path": None})
+
+        opener.assert_not_called()
+        self.assertIsNone(result)
+
     def test_launch_latest_plot_returns_none_when_no_plot_exists(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             run_path = Path(tmp) / "run"
@@ -3017,6 +3035,7 @@ class LearnerMenuTests(unittest.TestCase):
             report_button = FakeButton()
             plot_button = FakeButton()
             worksheet_button = FakeButton()
+            folder_button = FakeButton()
             replay_button = FakeButton()
 
             selected = initialize_latest_output_state(
@@ -3025,6 +3044,7 @@ class LearnerMenuTests(unittest.TestCase):
                 latest_button=report_button,
                 latest_plot_button=plot_button,
                 latest_worksheet_button=worksheet_button,
+                latest_folder_button=folder_button,
                 latest_replay_button=replay_button,
             )
 
@@ -3033,10 +3053,12 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(report_button.config["text"], "Open report")
         self.assertEqual(plot_button.config["text"], "Open plot: position")
         self.assertEqual(worksheet_button.config["text"], "Open worksheet")
+        self.assertEqual(folder_button.config["text"], "Open folder")
         self.assertEqual(replay_button.config["text"], "Replay latest")
         self.assertEqual(report_button.state_calls[-1], ["!disabled"])
         self.assertEqual(plot_button.state_calls[-1], ["!disabled"])
         self.assertEqual(worksheet_button.state_calls[-1], ["!disabled"])
+        self.assertEqual(folder_button.state_calls[-1], ["!disabled"])
         self.assertEqual(replay_button.state_calls[-1], ["disabled"])
 
     def test_initialize_latest_output_state_enables_latest_replay_when_tuned_config_exists(self) -> None:
@@ -3106,6 +3128,7 @@ class LearnerMenuTests(unittest.TestCase):
             report_button = FakeButton()
             plot_button = FakeButton()
             worksheet_button = FakeButton()
+            folder_button = FakeButton()
             replay_button = FakeButton()
 
             selected = refresh_latest_output_state(
@@ -3115,6 +3138,7 @@ class LearnerMenuTests(unittest.TestCase):
                 latest_button=report_button,
                 latest_plot_button=plot_button,
                 latest_worksheet_button=worksheet_button,
+                latest_folder_button=folder_button,
                 latest_replay_button=replay_button,
             )
 
@@ -3126,6 +3150,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(report_button.state_calls[-1], ["!disabled"])
         self.assertEqual(plot_button.state_calls[-1], ["!disabled"])
         self.assertEqual(worksheet_button.state_calls[-1], ["!disabled"])
+        self.assertEqual(folder_button.state_calls[-1], ["!disabled"])
         self.assertEqual(replay_button.state_calls[-1], ["disabled"])
 
     def test_latest_replay_stays_disabled_when_tuned_config_has_no_matching_action(self) -> None:
@@ -3211,6 +3236,7 @@ class LearnerMenuTests(unittest.TestCase):
             report_button = FakeButton()
             plot_button = FakeButton()
             worksheet_button = FakeButton()
+            folder_button = FakeButton()
             replay_button = FakeButton()
 
             selected = initialize_latest_output_state(
@@ -3219,6 +3245,7 @@ class LearnerMenuTests(unittest.TestCase):
                 latest_button=report_button,
                 latest_plot_button=plot_button,
                 latest_worksheet_button=worksheet_button,
+                latest_folder_button=folder_button,
                 latest_replay_button=replay_button,
             )
 
@@ -3227,10 +3254,12 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(report_button.config["text"], "Open latest report")
         self.assertEqual(plot_button.config["text"], "Open latest plot")
         self.assertEqual(worksheet_button.config["text"], "Open latest worksheet")
+        self.assertEqual(folder_button.config["text"], "Open latest folder")
         self.assertEqual(replay_button.config["text"], "Replay latest")
         self.assertEqual(report_button.state_calls[-1], ["disabled"])
         self.assertEqual(plot_button.state_calls[-1], ["disabled"])
         self.assertEqual(worksheet_button.state_calls[-1], ["disabled"])
+        self.assertEqual(folder_button.state_calls[-1], ["disabled"])
         self.assertEqual(replay_button.state_calls[-1], ["disabled"])
 
     def test_parse_run_output_path_detects_completed_run(self) -> None:
