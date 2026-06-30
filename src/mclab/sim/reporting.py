@@ -979,6 +979,8 @@ def _worksheet_observation_timeline_lines(events: list[dict[str, Any]]) -> list[
         ]
         if item["note"]:
             details.append(f"Note evidence: {_markdown_inline(item['note'])}")
+        if item["challenge_proof"]:
+            details.append(f"Challenge proof: {_markdown_inline(item['challenge_proof'])}")
         if item["status"]:
             details.append(f"Status: {_markdown_inline(item['status'])}")
         lines.append(f"- Observation {item['index']} at {_markdown_inline(item['time'])} s: " + "; ".join(details))
@@ -1014,6 +1016,7 @@ def _worksheet_observation_lines(events: list[dict[str, Any]]) -> list[str]:
             "Prediction": value.get("prediction"),
             "Prediction outcome": value.get("outcome"),
             "Evidence prompt": value.get("evidence_prompt"),
+            "Challenge proof": value.get("challenge_proof"),
             "Learner note": value.get("note"),
         }
         for label, text in scalar_rows.items():
@@ -3606,6 +3609,7 @@ def _observation_timeline_section(events: list[dict[str, Any]]) -> str:
             f"<td>{escape(item['time'])}</td>"
             f"<td>{escape(item['prediction'] or 'missing')}</td>"
             f"<td>{escape(item['outcome'] or 'missing')}</td>"
+            f"<td>{escape(item['challenge_proof'] or 'missing')}</td>"
             f"<td>{escape(item['note'] or 'missing')}</td>"
             f"<td>{escape(item['status'] or 'n/a')}</td>"
             "</tr>"
@@ -3623,7 +3627,7 @@ def _observation_timeline_section(events: list[dict[str, Any]]) -> str:
         f'<p class="empty">{escape(count_text)}</p>'
         "<table>"
         "<thead><tr><th>Marker</th><th>Time [s]</th><th>Prediction</th><th>Outcome</th>"
-        "<th>Note evidence</th><th>Live status</th></tr></thead>"
+        "<th>Challenge proof</th><th>Note evidence</th><th>Live status</th></tr></thead>"
         f"<tbody>{rows}</tbody>"
         "</table>"
         "</section>"
@@ -3643,6 +3647,7 @@ def _observation_timeline_items(events: list[dict[str, Any]], *, limit: int | No
         value = payload if isinstance(payload, dict) else {}
         prediction = _short_evidence_text(str(value.get("prediction") or ""), max_length=88)
         outcome = _short_evidence_text(str(value.get("outcome") or ""), max_length=40)
+        challenge_proof = _short_evidence_text(str(value.get("challenge_proof") or ""), max_length=96)
         note = str(value.get("note") or "").strip()
         note_evidence = _note_evidence_summary(note) or _short_evidence_text(note, max_length=88)
         status = value.get("status")
@@ -3653,6 +3658,7 @@ def _observation_timeline_items(events: list[dict[str, Any]], *, limit: int | No
                 "time": _format_value(marker.get("time")),
                 "prediction": prediction,
                 "outcome": outcome,
+                "challenge_proof": challenge_proof,
                 "note": note_evidence,
                 "status": status_evidence,
             }
@@ -3911,11 +3917,12 @@ def _observation_marker_card(event: dict[str, Any], marker_index: int) -> str:
     prediction = _marker_text_group("Prediction", value.get("prediction"))
     outcome = _marker_text_group("Prediction outcome", value.get("outcome"))
     evidence_prompt = _marker_text_group("Evidence prompt", value.get("evidence_prompt"))
+    challenge_proof = _marker_text_group("Challenge proof", value.get("challenge_proof"))
     note = _marker_note_group(value.get("note"))
     changed_sliders = _marker_value_group("Changed sliders", value.get("changed_sliders"))
     sliders = _marker_value_group("Sliders", value.get("sliders"))
     status = _marker_value_group("Live status", value.get("status"))
-    body = question + prediction + outcome + evidence_prompt + note + changed_sliders + sliders + status
+    body = question + prediction + outcome + evidence_prompt + challenge_proof + note + changed_sliders + sliders + status
     if not body:
         body = '<p class="empty">No slider or status snapshot was saved for this marker.</p>'
     return (

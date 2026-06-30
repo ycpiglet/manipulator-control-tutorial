@@ -140,6 +140,7 @@ class LoggingTests(unittest.TestCase):
                             "prediction": "Higher stiffness should create a sharper force peak.",
                             "outcome": "Matched",
                             "evidence_prompt": "Evidence to capture: position, force, and total energy.",
+                            "challenge_proof": "review-ready; compare the saved observation with plots after the run.",
                             "note": (
                                 "Higher stiffness made the force spike easier to see.; "
                                 "Energy: 0.125; Changed values: Stiffness=80"
@@ -269,6 +270,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("1 observation shown in time order.", html)
             self.assertIn("<td>Observation 1</td>", html)
             self.assertIn("<td>0.02</td>", html)
+            self.assertIn("<th>Challenge proof</th>", html)
             self.assertIn("<th>Note evidence</th>", html)
             self.assertIn("Observation Markers", html)
             self.assertIn("1 marked observation saved.", html)
@@ -295,6 +297,8 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Higher stiffness should create a sharper force peak.", html)
             self.assertIn("Evidence prompt", html)
             self.assertIn("position, force, and total energy", html)
+            self.assertIn("Challenge proof", html)
+            self.assertIn("review-ready; compare the saved observation with plots after the run.", html)
             self.assertIn("Higher stiffness made the force spike easier to see.", html)
             self.assertIn("Learner note evidence", html)
             self.assertIn("<li>Energy: 0.125</li>", html)
@@ -340,12 +344,17 @@ class LoggingTests(unittest.TestCase):
                 "- Observation 1 at 0.02 s: Prediction: Higher stiffness should create a sharper force peak.; "
                 "Outcome: Matched; Note evidence: Higher stiffness made the force spike easier to see. "
                 "\\| Energy: 0.125 \\| Changed values: Stiffness=80; "
+                "Challenge proof: review-ready; compare the saved observation with plots after the run.; "
                 "Status: energy=0.125",
                 worksheet_text,
             )
             self.assertIn("## Observation Markers", worksheet_text)
             self.assertIn("Higher stiffness should create a sharper force peak.", worksheet_text)
             self.assertIn("Prediction outcome: Matched", worksheet_text)
+            self.assertIn(
+                "- Challenge proof: review-ready; compare the saved observation with plots after the run.",
+                worksheet_text,
+            )
             self.assertIn("- Learner note evidence:", worksheet_text)
             self.assertIn("  - Energy: 0.125", worksheet_text)
             self.assertIn("  - Changed values: Stiffness=80", worksheet_text)

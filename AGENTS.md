@@ -145,7 +145,7 @@ Implemented and verified:
 - Interactive `Reset plant` button restores mass/arm/robot state while preserving current slider and preset values for repeated observations
 - Interactive `Use live status` button appends current live dashboard values to the observation note before `Mark observation`
 - Interactive `Use changed values` button appends slider changes from run start to the observation note before `Mark observation`
-- Interactive `Mark observation` saves an optional prediction outcome such as Matched, Partly matched, or Surprised
+- Interactive `Mark observation` saves the current challenge-proof status plus an optional prediction outcome such as Matched, Partly matched, or Surprised
 - Interactive runs save `learner_snapshot.json` and a report `Learner Snapshot` section with final slider, live status, playback, and nudge state
 - Interactive runs save replayable `learner_tuned_config.yaml` files and a report `Replay Tuned Config` section
 - Learner menu scenario cards enable `Replay` only when the latest run has `learner_tuned_config.yaml`
@@ -195,7 +195,7 @@ Implemented and verified:
 - Run reports summarize observation marker questions, predictions, prediction outcomes, learner notes, and prediction-review prompts
 - Run report review prompts surface the latest `Learner note evidence` items before the individual marker cards
 - Run reports and worksheets split semicolon-separated learner notes into `Learner note evidence` items for easier review
-- Run reports and worksheets include an `Observation Timeline` that compares marker time, prediction, outcome, note evidence, and live status in order
+- Run reports and worksheets include an `Observation Timeline` that compares marker time, prediction, outcome, challenge proof, note evidence, and live status in order
 - Run reports show an evidence review cue that counts review-ready prediction-observation pairs and incomplete markers
 - Run reports and generated `worksheet.md` artifacts show run-level `Done when` completion criteria plus prediction outcomes, pending outcome review, notes, live status, key parameters, priority plot review prompts, checklist prompts, suggested next experiments, and comparison batch commands
 - Outputs index learning path cards include evidence status, latest evidence summaries, latest report/worksheet/priority-plot/replay links, and ready-to-run or repeat commands for each course step

@@ -763,6 +763,7 @@ class KeyForcePulseTests(unittest.TestCase):
             prediction="Kp 35 should reduce error without making force noisy.",
             outcome="Matched",
             note="Kp 35 reduced error without visible jitter.",
+            challenge_proof="Challenge proof: review-ready; compare the saved observation with plots after the run.",
         )
 
         self.assertEqual(
@@ -771,6 +772,7 @@ class KeyForcePulseTests(unittest.TestCase):
                 "question": "Question: Which gain gives the cleanest response?",
                 "prediction": "Kp 35 should reduce error without making force noisy.",
                 "outcome": "Matched",
+                "challenge_proof": "review-ready; compare the saved observation with plots after the run.",
                 "note": "Kp 35 reduced error without visible jitter.",
                 "changed_sliders": {"kp": 35.0},
                 "sliders": {"kp": 35.0},

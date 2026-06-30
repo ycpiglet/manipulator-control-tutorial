@@ -112,6 +112,7 @@ class InteractionLog:
         outcome: str = "",
         note: str = "",
         evidence_prompt: str = "",
+        challenge_proof: str = "",
     ) -> dict[str, Any]:
         value: dict[str, Any] = {}
         if question.strip():
@@ -122,6 +123,9 @@ class InteractionLog:
             value["outcome"] = outcome.strip()
         if evidence_prompt.strip():
             value["evidence_prompt"] = evidence_prompt.strip()
+        cleaned_challenge_proof = _clean_challenge_proof_text(challenge_proof)
+        if cleaned_challenge_proof:
+            value["challenge_proof"] = cleaned_challenge_proof
         if note.strip():
             value["note"] = note.strip()
         if changed_sliders:
@@ -1260,17 +1264,28 @@ def maybe_start_interaction_panel(
 
                 def mark_observation() -> None:
                     prediction = marker_prediction.get()
+                    outcome = _prediction_outcome_value(marker_outcome.get())
                     note = marker_note.get()
                     preset_state = tuning.preset_checklist_state() if tuning is not None else ""
+                    learner_controls = _learner_control_event_count(event_log.events())
+                    challenge_proof = _observation_challenge_proof_status(
+                        prediction,
+                        marker_outcome.get(),
+                        note,
+                        preset_state=preset_state,
+                        learner_controls=learner_controls,
+                        controls_available=controls_available,
+                    )
                     event_log.mark_observation(
                         changed_sliders=tuning.changed_values() if tuning is not None else None,
                         sliders=tuning.snapshot() if tuning is not None else None,
                         status=status.snapshot() if status is not None else None,
                         question=question_for_guide(guide),
                         prediction=prediction,
-                        outcome=_prediction_outcome_value(marker_outcome.get()),
+                        outcome=outcome,
                         note=note,
                         evidence_prompt=marker_prompt,
+                        challenge_proof=challenge_proof,
                     )
                     marker_prediction.set("")
                     marker_outcome.set(PREDICTION_OUTCOME_UNJUDGED)
@@ -1785,6 +1800,14 @@ def _observation_challenge_proof_status(
     if not _prediction_outcome_value(outcome):
         return "Challenge proof: ready to mark; outcome can be added now or during review."
     return "Challenge proof: review-ready; compare the saved observation with plots after the run."
+
+
+def _clean_challenge_proof_text(value: str) -> str:
+    text = str(value or "").strip()
+    prefix = "Challenge proof:"
+    if text.lower().startswith(prefix.lower()):
+        return text[len(prefix) :].strip()
+    return text
 
 
 def _observation_next_action(
