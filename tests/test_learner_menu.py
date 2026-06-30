@@ -55,6 +55,7 @@ from mclab.learner_menu import (  # noqa: E402
     action_worksheet_text,
     action_doc_path,
     action_viewer_text,
+    batch_prediction_check_text,
     batch_readiness,
     batch_plan_text,
     build_batch_args,
@@ -294,7 +295,7 @@ class LearnerMenuTests(unittest.TestCase):
         )
         self.assertEqual(
             learning_path_completion_text(LEARNING_PATH[-1]),
-            "Done when: the comparison report, plots, and worksheet are saved.",
+            "Done when: the comparison report, plots, worksheet, and Prediction Check are saved.",
         )
 
     def test_recommended_learning_path_reads_saved_progress(self) -> None:
@@ -2224,6 +2225,10 @@ class LearnerMenuTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)
+            self.assertEqual(
+                batch_prediction_check_text(lab01_batch, outputs),
+                "Prediction check: Write a prediction before running the batch.",
+            )
             batch_path = outputs / "batch_lab01"
             batch_path.mkdir()
             (batch_path / "summary.json").write_text(
@@ -2239,7 +2244,7 @@ class LearnerMenuTests(unittest.TestCase):
             report = batch_path / "report.html"
             report.write_text("<html></html>", encoding="utf-8")
             worksheet = batch_path / "worksheet.md"
-            worksheet.write_text("# Worksheet\n", encoding="utf-8")
+            worksheet.write_text("# Worksheet\n\n## Prediction Check\n", encoding="utf-8")
             (batch_path / "comparison_plots").mkdir()
             batch_plot = batch_path / "comparison_plots" / "error_compare.png"
             batch_plot.write_bytes(b"fake-png")
@@ -2255,6 +2260,10 @@ class LearnerMenuTests(unittest.TestCase):
             self.assertIn(batch_plan_text(lab01_batch), lesson_text_for_batch(lab01_batch, outputs))
             self.assertIn("Plot review: Error - Check how quickly error shrinks", lesson_text_for_batch(lab01_batch, outputs))
             self.assertIn("Worksheet: Latest worksheet.md", lesson_text_for_batch(lab01_batch, outputs))
+            self.assertIn(
+                "Prediction check: Ready in worksheet; mark Matched, Partly matched, or Surprised.",
+                lesson_text_for_batch(lab01_batch, outputs),
+            )
             self.assertEqual(action_history_text(lab02_batch, outputs), "History: Not run yet")
 
             with patch("mclab.learner_menu.open_path") as opener:
@@ -2327,6 +2336,7 @@ class LearnerMenuTests(unittest.TestCase):
             self.assertIn("Plots: Not saved yet", text_variable.value)
             self.assertIn("Plot review: Not available until a plot is saved", text_variable.value)
             self.assertIn("Worksheet: Not saved yet", text_variable.value)
+            self.assertIn("Prediction check: Write a prediction before running the batch.", text_variable.value)
             self.assertEqual(report_button.state_calls[-1], ["disabled"])
             self.assertEqual(plot_button.state_calls[-1], ["disabled"])
             self.assertEqual(worksheet_button.state_calls[-1], ["disabled"])
@@ -2354,6 +2364,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Plots: Latest position_compare.png", text_variable.value)
         self.assertIn("Plot review: Position - Compare actual motion", text_variable.value)
         self.assertIn("Worksheet: Latest worksheet.md", text_variable.value)
+        self.assertIn("Prediction check: Worksheet saved; use the comparison notes", text_variable.value)
         self.assertEqual(report_button.state_calls[-1], ["!disabled"])
         self.assertEqual(plot_button.state_calls[-1], ["!disabled"])
         self.assertEqual(worksheet_button.state_calls[-1], ["!disabled"])

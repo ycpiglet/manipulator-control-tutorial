@@ -1078,7 +1078,7 @@ def learning_path_target(step: LearningPathStep) -> MenuAction | BatchMenuAction
 def learning_path_completion_text(step: LearningPathStep) -> str:
     action = learning_path_target(step)
     if isinstance(action, BatchMenuAction):
-        return "Done when: the comparison report, plots, and worksheet are saved."
+        return "Done when: the comparison report, plots, worksheet, and Prediction Check are saved."
     if "hands-on" in action_tags(action):
         required_labels = configured_required_preset_labels(action.config_path)
         if required_labels:
@@ -1763,6 +1763,25 @@ def action_worksheet_text(
     if worksheet is None:
         return "Worksheet: Not saved yet"
     return f"Worksheet: Latest {worksheet.name}"
+
+
+def batch_prediction_check_text(
+    action: BatchMenuAction,
+    outputs_root: Path | None = None,
+) -> str:
+    latest = action_latest_output(action, outputs_root)
+    if latest is None:
+        return "Prediction check: Write a prediction before running the batch."
+    worksheet = action_latest_worksheet(action, outputs_root)
+    if worksheet is None:
+        return "Prediction check: Not saved yet; rerun or regenerate the worksheet."
+    try:
+        text = worksheet.read_text(encoding="utf-8")
+    except OSError:
+        return "Prediction check: Worksheet unreadable; open the batch report instead."
+    if "## Prediction Check" in text:
+        return "Prediction check: Ready in worksheet; mark Matched, Partly matched, or Surprised."
+    return "Prediction check: Worksheet saved; use the comparison notes to judge your prediction."
 
 
 def action_replay_text(action: MenuAction, outputs_root: Path | None = None) -> str:
@@ -3777,6 +3796,7 @@ def lesson_text_for_batch(action: BatchMenuAction, outputs_root: Path | None = N
         f"{action_plot_text(action, outputs_root)}\n"
         f"{action_plot_review_text(action, outputs_root)}\n"
         f"{action_worksheet_text(action, outputs_root)}\n"
+        f"{batch_prediction_check_text(action, outputs_root)}\n"
         f"Try: {action.try_this}\n"
         f"Watch: {action.watch}\n"
         f"Runs: {scenario_count} scenarios"

@@ -122,6 +122,7 @@ Implemented and verified:
 - Learner menu scenario and batch cards include a `Plan` line with level, mode, run length, and saved artifacts
 - Learner menu scenario, batch, and learning-path cards include a `Mission` line that turns Try/Change/Watch guidance into one evidence-focused task
 - Learner menu scenario and batch cards include `Mission evidence` proof status from the latest run before opening the report
+- Learner menu batch cards include a `Prediction check` cue that points learners to the saved worksheet outcome table
 - Learner menu scenario cards include a `Latest evidence` summary from the latest observation marker prediction, outcome, note, and live status
 - Learner menu scenario cards include an `Activity mix` summary from the latest hands-on run's button, slider, preset, and observation-marker events
 - Learner menu scenario cards include a `Next cue` that points learners toward the next best action: run, try another preset, mark observation, review outcome, replay, or compare
