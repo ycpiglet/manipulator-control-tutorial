@@ -45,6 +45,7 @@ from mclab.learner_menu import (  # noqa: E402
     action_next_cue_text,
     action_observation_flow_text,
     action_observation_next_step_text,
+    action_playbook_text,
     action_plan_text,
     action_plot_review_text,
     action_plot_text,
@@ -238,6 +239,8 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertIn("Setup:", text)
                 self.assertIn("Mission:", text)
                 self.assertIn(action_mission_text(action), text)
+                self.assertIn("Playbook:", text)
+                self.assertIn(action_playbook_text(action), text)
                 self.assertIn("Mission evidence:", text)
                 self.assertIn("History:", text)
                 self.assertIn("Try:", text)
@@ -746,6 +749,8 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertIn(action_plan_text(action), text)
                 self.assertIn("Mission:", text)
                 self.assertIn(action_mission_text(action), text)
+                self.assertIn("Playbook:", text)
+                self.assertIn(action_playbook_text(action), text)
                 self.assertIn("History:", text)
                 self.assertIn("Evidence:", text)
                 self.assertIn("Latest evidence:", text)
@@ -772,8 +777,10 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Plan: Intro; baseline demo", action_plan_text(auto_demo))
         self.assertIn("saves report/plots/worksheet", action_plan_text(auto_demo))
         self.assertIn("Mission: Run the demo", action_mission_text(auto_demo))
+        self.assertIn("review the saved plot and worksheet", action_playbook_text(auto_demo))
         self.assertIn("Plan: Deep dive; hands-on viewer", action_plan_text(lab03_dls))
         self.assertIn("Mission: Change", action_mission_text(lab03_dls))
+        self.assertIn("mark one observation", action_playbook_text(lab03_dls))
 
     def test_menu_cards_show_actual_control_affordances(self) -> None:
         by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
@@ -1189,6 +1196,9 @@ class LearnerMenuTests(unittest.TestCase):
         retarget_labels = {(action.group, action.label) for action in filter_menu_actions("retarget dls")}
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF direct-retarget DLS"), retarget_labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF inward-retarget DLS"), retarget_labels)
+        playbook_labels = {(action.group, action.label) for action in filter_menu_actions("playbook mark observation")}
+        self.assertIn(("Lab01 Mass-Spring-Damper", "Interactive"), playbook_labels)
+        self.assertIn(("Lab04 Panda Manipulator", "Virtual wall"), playbook_labels)
         edge_target_labels = {(action.group, action.label) for action in filter_menu_actions("edge target dls")}
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF edge-target DLS"), edge_target_labels)
         path_branch_labels = {(action.group, action.label) for action in filter_menu_actions("elbow branch")}

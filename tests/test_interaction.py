@@ -1220,6 +1220,11 @@ class KeyForcePulseTests(unittest.TestCase):
             _panel_guide_rows(guide),
             [
                 ("Mission", "Move the slider; prove it with Tracking error."),
+                (
+                    "Playbook",
+                    "1. predict how Tracking error will change; 2. change controller.kp; "
+                    "3. mark one observation with Tracking error.",
+                ),
                 ("Try", "Move the slider."),
                 ("Change", "controller.kp"),
                 (

@@ -66,6 +66,32 @@ def prediction_prompt_for_guide(guide: RunGuide | None) -> str:
     return ""
 
 
+def playbook_for_guide(guide: RunGuide | None) -> str:
+    if guide is None:
+        return ""
+    watch = _short_sentence(guide.watch, 72)
+    change = _short_sentence(guide.change, 72)
+    try_this = _short_sentence(guide.try_this, 72)
+    context = " ".join((guide.title, guide.try_this, guide.change, guide.next_step)).lower()
+    hands_on = any(term in context for term in ("interactive", "live", "slider", "preset", "button", "pulse", "nudge"))
+
+    predict = f"predict how {watch} will change" if watch else "predict the visible response"
+    if hands_on and change:
+        action = f"change {change}"
+    elif try_this:
+        action = try_this
+    elif change:
+        action = f"isolate {change}"
+    else:
+        action = "run the scenario"
+
+    if hands_on:
+        evidence = f"mark one observation with {watch}" if watch else "mark one observation with live evidence"
+    else:
+        evidence = f"review the saved plot and worksheet for {watch}" if watch else "review the saved plot and worksheet"
+    return f"Playbook: 1. {predict}; 2. {action}; 3. {evidence}."
+
+
 def viewer_legend_for_guide(guide: RunGuide | None) -> list[tuple[str, str]]:
     if guide is None:
         return []

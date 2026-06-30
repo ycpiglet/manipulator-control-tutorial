@@ -18,6 +18,7 @@ from mclab.config import PROJECT_ROOT, load_config
 from mclab.course_progress import course_milestone_summary
 from mclab.learning_guides import (
     guide_for_config,
+    playbook_for_guide,
     prediction_prompt_for_guide,
     reflection_question_for_context,
     viewer_legend_for_guide,
@@ -2544,6 +2545,19 @@ def action_mission_text(action: MenuAction | BatchMenuAction) -> str:
     return f"Mission: Run the demo; {_short_sentence(action.try_this, 88)}; prove it with {watch}."
 
 
+def action_playbook_text(action: MenuAction | BatchMenuAction) -> str:
+    if isinstance(action, BatchMenuAction):
+        return (
+            f"Playbook: 1. predict the comparison outcome; 2. run {_batch_scenario_count(action)} scenarios; "
+            "3. review the report, plots, worksheet, and Prediction Check table."
+        )
+    guide = guide_for_config(config_path=action.config_path, lab_name=action.lab_name)
+    playbook = playbook_for_guide(guide)
+    if playbook:
+        return playbook
+    return "Playbook: 1. predict the response; 2. run the scenario; 3. review the saved plot and worksheet."
+
+
 def _batch_scenario_count(action: BatchMenuAction) -> int:
     if action.batch_name == ALL_BATCH_NAME:
         return sum(len(scenarios) for scenarios in BATCH_SETS.values())
@@ -2809,6 +2823,7 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
         f"Badges: {', '.join(action_badges(action))}\n"
         f"{action_plan_text(action)}\n"
         f"{action_mission_text(action)}\n"
+        f"{action_playbook_text(action)}\n"
         f"{action_history_text(action, outputs_root)}\n"
         f"{action_evidence_text(action, outputs_root)}\n"
         f"{action_latest_evidence_text(action, outputs_root)}\n"
@@ -3069,7 +3084,9 @@ def _action_matches_terms(action: MenuAction, terms: list[str]) -> bool:
         action_viewer_text(action),
         action_plan_text(action),
         action_mission_text(action),
+        action_playbook_text(action),
         "mission evidence artifact observation prediction outcome note proof",
+        "playbook predict change mark review worksheet",
         "next cue run preset observation outcome replay compare",
         " ".join(configured_preset_labels(action.config_path)),
         " ".join(configured_preset_purposes(action.config_path)),
@@ -3932,6 +3949,7 @@ def lesson_text_for_batch(action: BatchMenuAction, outputs_root: Path | None = N
         f"Setup: {readiness.label}{setup_detail}{setup_fix}\n"
         f"{batch_plan_text(action)}\n"
         f"{action_mission_text(action)}\n"
+        f"{action_playbook_text(action)}\n"
         f"{action_history_text(action, outputs_root)}\n"
         f"{action_mission_evidence_text(action, outputs_root)}\n"
         f"{action_plot_text(action, outputs_root)}\n"

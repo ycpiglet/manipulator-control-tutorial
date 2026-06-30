@@ -11,6 +11,7 @@ from typing import Any
 from mclab.learning_guides import (
     mission_prompt_for_guide,
     observation_prompt_for_guide,
+    playbook_for_guide,
     prediction_prompt_for_guide,
     question_for_guide,
     viewer_legend_for_guide,
@@ -1452,6 +1453,7 @@ def _panel_guide_rows(guide: Any | None) -> list[tuple[str, str]]:
         return []
     rows = [
         ("Mission", mission_prompt_for_guide(guide).removeprefix("Mission:").strip()),
+        ("Playbook", playbook_for_guide(guide).removeprefix("Playbook:").strip()),
         ("Try", str(getattr(guide, "try_this", "") or "").strip()),
         ("Change", str(getattr(guide, "change", "") or "").strip()),
         ("Done when", _panel_completion_text()),
