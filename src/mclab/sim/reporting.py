@@ -865,6 +865,10 @@ def _worksheet_review_checklist(events: list[dict[str, Any]], config: dict[str, 
             "prediction(s) still need Matched, Partly matched, or Surprised."
         )
     if markers <= 0:
+        if next_required:
+            lines.append(
+                f"- [ ] Try required preset {_markdown_inline(next_required)}, watch live status, then mark one observation."
+            )
         lines.extend(
             [
                 "- [ ] Save one observation marker with a prediction.",

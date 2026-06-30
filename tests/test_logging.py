@@ -619,6 +619,45 @@ class LoggingTests(unittest.TestCase):
                 worksheet_text,
             )
 
+    def test_worksheet_checklist_names_required_preset_before_observation(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "run"
+            output.mkdir()
+            (output / "summary.json").write_text(
+                '{"lab_name": "lab04_panda", "config_name": "interactive_virtual_wall"}',
+                encoding="utf-8",
+            )
+            (output / "notes.md").write_text("# Demo\n", encoding="utf-8")
+            (output / "config.yaml").write_text(
+                (
+                    "model_path: third_party/mujoco_menagerie/franka_emika_panda/scene.xml\n"
+                    "interaction:\n"
+                    "  panel: true\n"
+                    "  live_tuning: true\n"
+                    "  tuning_presets:\n"
+                    "    - label: Close wall\n"
+                    "      required: true\n"
+                    "      values:\n"
+                    "        target_x: 0.64\n"
+                    "    - label: Back away\n"
+                    "      required: true\n"
+                    "      values:\n"
+                    "        target_x: 0.52\n"
+                ),
+                encoding="utf-8",
+            )
+            (output / "interaction_events.json").write_text("[]", encoding="utf-8")
+
+            write_run_report(output)
+
+            worksheet_text = (output / "worksheet.md").read_text(encoding="utf-8")
+            self.assertIn("- Required presets tried: 0/2", worksheet_text)
+            self.assertIn(
+                "- [ ] Try required preset Close wall, watch live status, then mark one observation.",
+                worksheet_text,
+            )
+            self.assertIn("- [ ] Save one observation marker with a prediction.", worksheet_text)
+
     def test_run_report_suggests_next_runs(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "run"
