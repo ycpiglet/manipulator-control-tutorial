@@ -1145,6 +1145,7 @@ def maybe_start_interaction_panel(
                         has_presets=activity_has_presets,
                     )
                 )
+                recent_action_status = tk.StringVar(value=_recent_action_status_message(event_log))
                 marker_prompt = observation_prompt_for_guide(guide)
 
                 def update_marker_checklist(*_args: Any) -> None:
@@ -1175,6 +1176,7 @@ def maybe_start_interaction_panel(
                             has_presets=activity_has_presets,
                         )
                     )
+                    recent_action_status.set(_recent_action_status_message(event_log))
                     root.after(300, refresh_activity_mix_status)
 
                 refresh_marker_checklist_callback = update_marker_checklist
@@ -1276,6 +1278,14 @@ def maybe_start_interaction_panel(
                 tk.Label(
                     marker_frame,
                     textvariable=activity_mix_status,
+                    anchor="w",
+                    justify="left",
+                    wraplength=430,
+                ).grid(row=marker_row, column=0, columnspan=2, sticky="ew", pady=(2, 0))
+                marker_row += 1
+                tk.Label(
+                    marker_frame,
+                    textvariable=recent_action_status,
                     anchor="w",
                     justify="left",
                     wraplength=430,
@@ -1456,6 +1466,23 @@ def _activity_mix_next_step(
     if observation_markers <= 0:
         return "Save one Mark observation with prediction and live-status evidence."
     return "Ready: compare this interaction mix against plots and the worksheet."
+
+
+def _recent_action_status_message(event_log: InteractionLog) -> str:
+    summary = event_log.summary()
+    event_count = int(summary.get("interaction_events") or 0)
+    if event_count <= 0:
+        return "Action log: no learner actions yet."
+    label = str(summary.get("last_interaction") or "learner action").strip()
+    event_word = "event" if event_count == 1 else "events"
+    raw_time = summary.get("last_interaction_time")
+    try:
+        time = float(raw_time)
+    except (TypeError, ValueError):
+        time = None
+    if time is None:
+        return f"Action log: {event_count} {event_word}; last {label}."
+    return f"Action log: {event_count} {event_word}; last {label} at t={time:.3f}s."
 
 
 def _observation_marker_count(event_log: InteractionLog) -> int:

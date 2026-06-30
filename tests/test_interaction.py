@@ -34,6 +34,7 @@ from mclab.sim.interaction import (  # noqa: E402
     _ordered_required_prefix,
     _preset_button_label,
     _preset_panel_status,
+    _recent_action_status_message,
     learner_snapshot,
     learner_tuned_config,
     tuning_presets_from_config,
@@ -962,6 +963,18 @@ class KeyForcePulseTests(unittest.TestCase):
             "Activity mix: 1/1 control families; buttons 1, sliders 0, presets 0, markers 0. "
             "Next: Save one Mark observation with prediction and live-status evidence.",
         )
+
+    def test_recent_action_status_confirms_latest_logged_control(self) -> None:
+        log = InteractionLog()
+
+        self.assertEqual(_recent_action_status_message(log), "Action log: no learner actions yet.")
+
+        log.record("button", "manual_force", 12.0, label="Push Right")
+        self.assertEqual(_recent_action_status_message(log), "Action log: 1 event; last Push Right.")
+
+        log.set_time(1.25)
+        log.record("slider", "kp", 40.0, label="Kp")
+        self.assertEqual(_recent_action_status_message(log), "Action log: 2 events; last Kp at t=1.250s.")
 
     def test_live_status_formats_dashboard_values(self) -> None:
         status = LiveStatus([StatusSpec("position", "Position [m]"), StatusSpec("mode", "Mode")])
