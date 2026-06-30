@@ -1264,6 +1264,44 @@ def action_preset_evidence_text(action: MenuAction, outputs_root: Path | None = 
     return f"Preset evidence: {count} presets tried; try one more preset"
 
 
+def action_next_cue_text(action: MenuAction, outputs_root: Path | None = None) -> str:
+    readiness = action_readiness(action)
+    if readiness.status != "ok":
+        fix = f" {readiness.fix}" if readiness.fix else ""
+        return f"Next cue: Fix setup first - {readiness.label}.{fix}"
+
+    latest = action_latest_output(action, outputs_root)
+    if latest is None:
+        return "Next cue: Run this scenario, then review the saved plot and worksheet."
+
+    markers, predictions, _notes, outcomes = _observation_evidence_counts(latest)
+    if predictions > outcomes:
+        return "Next cue: Review latest evidence and choose the missing prediction outcome."
+
+    labels = list(configured_preset_labels(action.config_path))
+    if len(labels) >= 2:
+        tried = _distinct_preset_labels(latest, labels)
+        if len(tried) < 2:
+            next_label = next((label for label in labels if label not in tried), "")
+            preset_text = f"preset {next_label}" if next_label else "one more preset"
+            return f"Next cue: Try {preset_text}, then mark a comparison observation."
+
+    hands_on = "hands-on" in action_tags(action)
+    if hands_on and markers == 0:
+        return "Next cue: Change one control and Mark observation with a prediction."
+    if hands_on and predictions == 0:
+        return "Next cue: Add a prediction before marking the next observation."
+
+    if action_latest_tuned_config(action, outputs_root) is not None:
+        return "Next cue: Replay the tuned config, then run Compare for the broader tradeoff."
+
+    if action_latest_plot(action, outputs_root) is None:
+        return "Next cue: Re-run with plots, then inspect the priority graph."
+    if action_latest_worksheet(action, outputs_root) is None:
+        return "Next cue: Re-run or regenerate the worksheet before moving on."
+    return "Next cue: Review the latest plot and worksheet, then run Next or Compare."
+
+
 def action_plot_text(
     action: MenuAction | BatchMenuAction,
     outputs_root: Path | None = None,
@@ -2072,6 +2110,7 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
         f"{action_evidence_text(action, outputs_root)}\n"
         f"{action_latest_evidence_text(action, outputs_root)}\n"
         f"{preset_evidence_text}"
+        f"{action_next_cue_text(action, outputs_root)}\n"
         f"{action_plot_text(action, outputs_root)}\n"
         f"{action_plot_review_text(action, outputs_root)}\n"
         f"{action_worksheet_text(action, outputs_root)}\n"
@@ -2273,6 +2312,7 @@ def _action_matches_terms(action: MenuAction, terms: list[str]) -> bool:
         action_controls_text(action),
         action_viewer_text(action),
         action_plan_text(action),
+        "next cue run preset observation outcome replay compare",
         " ".join(configured_preset_labels(action.config_path)),
         " ".join(configured_preset_purposes(action.config_path)),
         configured_preset_comparison(action.config_path),
