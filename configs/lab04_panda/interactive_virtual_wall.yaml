@@ -77,5 +77,17 @@ interaction:
         wall_stiffness: 320.0
         wall_damping: 14.0
         wall_retreat_gain: 0.55
+    - label: Back away
+      purpose: Move the target before the wall so learners can observe contact release.
+      values:
+        target_x: 0.52
+        target_y: 0.00
+        target_z: 0.58
+        cartesian_gain: 0.85
+        joint_target_offset: 0.00
+        wall_x: 0.58
+        wall_stiffness: 260.0
+        wall_damping: 12.0
+        wall_retreat_gain: 0.40
 viewer_guides:
   enabled: true

@@ -885,8 +885,8 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
         config_path="configs/lab04_panda/interactive_virtual_wall.yaml",
         plots="wall",
         description="Tune hand target and virtual wall response live.",
-        try_this="Use Target X + into wall, Target X - away, then try Soft/Stiff/Close wall presets.",
-        watch="Target X nudge, Target-Wall gap, green target, blue/orange hand marker, wall penetration, wall force, and hand X.",
+        try_this="Use Target X + into wall, then try Soft/Stiff/Close wall and Back away presets.",
+        watch="Target X nudge, Target-Wall gap, Wall phase, green target, blue/orange hand marker, wall penetration, wall force, and hand X.",
     ),
 )
 

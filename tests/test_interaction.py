@@ -488,7 +488,7 @@ class KeyForcePulseTests(unittest.TestCase):
             ),
             (
                 lab04_panda._live_tuning(lab04_wall_config),
-                ["Soft wall", "Stiff wall", "Close wall"],
+                ["Soft wall", "Stiff wall", "Close wall", "Back away"],
             ),
         ]
         for tuning, expected_labels in cases:
@@ -600,6 +600,9 @@ class KeyForcePulseTests(unittest.TestCase):
         self.assertIn("wall_x", slider_names)
         self.assertIn("wall_stiffness", slider_names)
         self.assertTrue(all("target_x" in preset.values for preset in tuning.presets))
+        back_away = next(preset for preset in tuning.presets if preset.label == "Back away")
+        self.assertLess(back_away.values["target_x"], back_away.values["wall_x"])
+        self.assertIn("contact release", back_away.purpose)
 
     def test_mark_observation_records_slider_and_status_snapshot(self) -> None:
         log = InteractionLog()

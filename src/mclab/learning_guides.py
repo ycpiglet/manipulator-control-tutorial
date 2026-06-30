@@ -691,10 +691,10 @@ RUN_GUIDES: dict[str, RunGuide] = {
     "configs/lab04_panda/interactive_virtual_wall.yaml": RunGuide(
         "Lab04 Virtual Wall Interactive",
         "Tune the hand target and virtual wall parameters while the Panda moves toward the wall.",
-        "Use Target X + into wall, Target X - away, sliders, or Quick presets to compare contact and release.",
-        "live sliders/presets: Target X/Y/Z, Cartesian gain, wall X, stiffness, damping, retreat gain; buttons: Target X into/away from wall; YAML: virtual_wall.*, interaction.target_step",
+        "Use Target X + into wall, sliders, or Quick presets including Back away to compare contact and release.",
+        "live sliders/presets: Target X/Y/Z, Cartesian gain, wall X, stiffness, damping, retreat gain; presets: Soft/Stiff/Close wall and Back away; buttons: Target X into/away from wall; YAML: virtual_wall.*, interaction.target_step",
         "Target X nudge, Target-Wall gap, Wall phase, Wall penetration, wall force, hand X, green target marker, and orange contact hand marker.",
-        "Mark observations after pushing into the wall and backing away with at least two wall presets.",
+        "Mark observations after pushing into the wall and using Back away to release contact.",
     ),
     "configs/lab04_panda/impedance_wall.yaml": RunGuide(
         "Lab04 Impedance Wall",

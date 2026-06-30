@@ -640,7 +640,7 @@ class LearnerMenuTests(unittest.TestCase):
 
         wall_controls = action_controls_text(lab04_wall)
         self.assertIn("Target X + into wall", wall_controls)
-        self.assertIn("quick presets (Soft wall, Stiff wall, Close wall)", wall_controls)
+        self.assertIn("quick presets (Soft wall, Stiff wall, Close wall, Back away)", wall_controls)
 
     def test_menu_cards_show_viewer_marker_legend(self) -> None:
         by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
