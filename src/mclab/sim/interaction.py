@@ -1190,18 +1190,18 @@ def maybe_start_interaction_panel(
                     if not note:
                         marker_status.set("No live status values are available yet.")
                         return
-                    marker_note.set(note)
+                    marker_note.set(_append_observation_note(marker_note.get(), note))
                     event_log.record("button", "use_live_status_note", note, label="Use live status")
-                    marker_status.set("Copied live status into the observation note.")
+                    marker_status.set("Added live status to the observation note.")
 
                 def use_changed_values_note() -> None:
                     note = _changed_tuning_observation_note(tuning)
                     if not note:
                         marker_status.set("No changed slider values yet.")
                         return
-                    marker_note.set(note)
+                    marker_note.set(_append_observation_note(marker_note.get(), note))
                     event_log.record("button", "use_changed_values_note", note, label="Use changed values")
-                    marker_status.set("Copied changed slider values into the observation note.")
+                    marker_status.set("Added changed slider values to the observation note.")
 
                 def mark_observation() -> None:
                     prediction = marker_prediction.get()
@@ -1657,6 +1657,19 @@ def _changed_tuning_observation_note(tuning: LiveTuning | None) -> str:
     if changed == "Changed values: none yet":
         return ""
     return changed
+
+
+def _append_observation_note(current: str, addition: str) -> str:
+    current_text = str(current or "").strip()
+    addition_text = str(addition or "").strip()
+    if not addition_text:
+        return current_text
+    if not current_text:
+        return addition_text
+    parts = [part.strip() for part in current_text.split(";") if part.strip()]
+    if addition_text in parts or addition_text == current_text or current_text.endswith(f"; {addition_text}"):
+        return current_text
+    return f"{current_text}; {addition_text}"
 
 
 def _changed_tuning_summary(tuning: LiveTuning | None) -> str:

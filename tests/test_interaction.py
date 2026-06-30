@@ -21,6 +21,7 @@ from mclab.sim.interaction import (  # noqa: E402
     TargetOffsetControl,
     TuningPreset,
     _activity_mix_status_message,
+    _append_observation_note,
     _bounded_panel_dimension,
     _changed_tuning_observation_note,
     _changed_tuning_summary,
@@ -1021,6 +1022,25 @@ class KeyForcePulseTests(unittest.TestCase):
         tuning.set_value("kp", 35.0)
 
         self.assertEqual(_changed_tuning_observation_note(tuning), "Changed values: Kp=35")
+
+    def test_append_observation_note_preserves_existing_evidence(self) -> None:
+        self.assertEqual(_append_observation_note("", "Position [m]: 0.100"), "Position [m]: 0.100")
+        self.assertEqual(_append_observation_note("Manual note", ""), "Manual note")
+        self.assertEqual(
+            _append_observation_note("Manual note", "Changed values: Kp=35"),
+            "Manual note; Changed values: Kp=35",
+        )
+        self.assertEqual(
+            _append_observation_note("Manual note; Changed values: Kp=35", "Changed values: Kp=35"),
+            "Manual note; Changed values: Kp=35",
+        )
+        self.assertEqual(
+            _append_observation_note(
+                "Manual note; Position [m]: 0.100; Force [N]: 2.000",
+                "Position [m]: 0.100; Force [N]: 2.000",
+            ),
+            "Manual note; Position [m]: 0.100; Force [N]: 2.000",
+        )
 
     def test_learner_snapshot_collects_final_interactive_state(self) -> None:
         log = InteractionLog()
