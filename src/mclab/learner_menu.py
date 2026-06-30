@@ -1499,7 +1499,7 @@ def latest_output_button_labels(output_path: Path | None) -> dict[str, str]:
         else f"Open plot: {_short_artifact_button_name(latest_plot, max_length=12)}"
     )
     worksheet_label = "Open latest worksheet" if latest_output_worksheet(output_path) is None else "Open worksheet"
-    replay_label = "Replay tuned" if latest_output_tuned_config(output_path) is not None else "Replay latest"
+    replay_label = "Replay tuned" if latest_output_replay_context(output_path) is not None else "Replay latest"
     return {
         "report": "Open report",
         "plot": plot_label,
@@ -1513,12 +1513,12 @@ def latest_output_status_text(output_path: Path | None) -> str:
         return "Ready."
     latest_plot = latest_output_plot(output_path)
     latest_worksheet = latest_output_worksheet(output_path)
-    latest_tuned_config = latest_output_tuned_config(output_path)
+    replay_context = latest_output_replay_context(output_path)
     plot_text = f"Plot: {latest_plot.name}." if latest_plot is not None else "No plot yet."
     worksheet_text = (
         f"Worksheet: {latest_worksheet.name}." if latest_worksheet is not None else "No worksheet yet."
     )
-    replay_text = f"Replay: {latest_tuned_config.name}." if latest_tuned_config is not None else "No replay yet."
+    replay_text = f"Replay: {replay_context[1].name}." if replay_context is not None else "No replay yet."
     return f"Ready. Latest saved output: {output_path.name}. {plot_text} {worksheet_text} {replay_text}"
 
 
@@ -2537,11 +2537,11 @@ def launch_latest_tuned_replay(
     progress_callback: Callable[[], None] | None = None,
 ) -> subprocess.Popen[str] | None:
     output_path = latest_output.get("path")
-    tuned_config = latest_output_tuned_config(output_path)
-    action = latest_output_menu_action(output_path)
-    if output_path is None or tuned_config is None or action is None:
+    replay_context = latest_output_replay_context(output_path)
+    if replay_context is None:
         status.set("Cannot replay latest output: no replayable learner_tuned_config.yaml is available.")
         return None
+    action, tuned_config = replay_context
     process = launch_tuned_replay(action, tuned_config)
     status.set(
         f"Started latest tuned replay for {action.group} - {action.label} "
@@ -2644,6 +2644,14 @@ def latest_output_menu_action(path: Path | None) -> MenuAction | None:
     return None
 
 
+def latest_output_replay_context(path: Path | None) -> tuple[MenuAction, Path] | None:
+    tuned_config = latest_output_tuned_config(path)
+    action = latest_output_menu_action(path)
+    if tuned_config is None or action is None:
+        return None
+    return action, tuned_config
+
+
 def _configure_latest_output_buttons(
     output_path: Path | None,
     *,
@@ -2664,9 +2672,9 @@ def _configure_latest_output_buttons(
         latest_worksheet_button.state(["!disabled"] if latest_output_worksheet(output_path) is not None else ["disabled"])
     if latest_replay_button is not None:
         latest_replay_button.configure(text=labels["replay"])
-        replayable = latest_output_tuned_config(output_path) is not None and latest_output_menu_action(output_path) is not None
-        latest_replay_button.state(["!disabled"] if replayable else ["disabled"])
-
+        latest_replay_button.state(
+            ["!disabled"] if latest_output_replay_context(output_path) is not None else ["disabled"]
+        )
 
 
 def _action_plot_priorities(action: MenuAction | BatchMenuAction) -> tuple[str, ...]:

@@ -104,6 +104,7 @@ from mclab.learner_menu import (  # noqa: E402
     launch_latest_output,
     latest_output_button_labels,
     latest_output_menu_action,
+    latest_output_replay_context,
     latest_saved_output,
     latest_output_status_text,
     latest_output_tuned_config,
@@ -3064,11 +3065,42 @@ class LearnerMenuTests(unittest.TestCase):
             )
             self.assertEqual(latest_output_tuned_config(output_path), tuned_config)
             self.assertEqual(latest_output_menu_action(output_path), action)
+            self.assertEqual(latest_output_replay_context(output_path), (action, tuned_config))
 
         self.assertEqual(selected, output_path)
         self.assertEqual(latest_output["path"], output_path)
         self.assertEqual(replay_button.config["text"], "Replay tuned")
         self.assertEqual(replay_button.state_calls[-1], ["!disabled"])
+
+    def test_latest_replay_stays_disabled_when_tuned_config_has_no_matching_action(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            output_path = outputs / "unknown_run"
+            output_path.mkdir(parents=True)
+            tuned_config = output_path / "learner_tuned_config.yaml"
+            tuned_config.write_text("interaction:\n  panel: false\n", encoding="utf-8")
+            (output_path / "summary.json").write_text(
+                json.dumps({"lab_name": "unknown", "config_path": "configs/unknown.yaml"}),
+                encoding="utf-8",
+            )
+            (output_path / "report.html").write_text("<html></html>", encoding="utf-8")
+            latest_output: dict[str, Path | None] = {"path": None}
+            replay_button = FakeButton()
+
+            selected = initialize_latest_output_state(
+                latest_output,
+                outputs_root=outputs,
+                latest_replay_button=replay_button,
+            )
+            status_text = latest_output_status_text(output_path)
+            self.assertIsNone(latest_output_menu_action(output_path))
+            self.assertEqual(latest_output_tuned_config(output_path), tuned_config)
+            self.assertIsNone(latest_output_replay_context(output_path))
+
+        self.assertEqual(selected, output_path)
+        self.assertEqual(replay_button.config["text"], "Replay latest")
+        self.assertEqual(replay_button.state_calls[-1], ["disabled"])
+        self.assertIn("No replay yet.", status_text)
 
     def test_latest_output_status_text_summarizes_restored_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
