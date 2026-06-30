@@ -666,6 +666,65 @@ class LoggingTests(unittest.TestCase):
             )
             self.assertIn("- [ ] Save one observation marker with a prediction and note.", worksheet_text)
 
+    def test_run_report_requires_preset_order(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "run"
+            output.mkdir()
+            (output / "summary.json").write_text(
+                '{"lab_name": "lab04_panda", "config_name": "interactive_virtual_wall"}',
+                encoding="utf-8",
+            )
+            (output / "notes.md").write_text("# Demo\n", encoding="utf-8")
+            (output / "config.yaml").write_text(
+                (
+                    "interaction:\n"
+                    "  panel: true\n"
+                    "  live_tuning: true\n"
+                    "  tuning_presets:\n"
+                    "    - label: Close wall\n"
+                    "      required: true\n"
+                    "      values:\n"
+                    "        target_x: 0.64\n"
+                    "    - label: Back away\n"
+                    "      required: true\n"
+                    "      values:\n"
+                    "        target_x: 0.52\n"
+                    "    - label: Re-enter wall\n"
+                    "      required: true\n"
+                    "      values:\n"
+                    "        target_x: 0.65\n"
+                ),
+                encoding="utf-8",
+            )
+            (output / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {"kind": "preset", "name": "re-enter_wall", "label": "Re-enter wall"},
+                        {"kind": "preset", "name": "close_wall", "label": "Close wall"},
+                        {"kind": "preset", "name": "back_away", "label": "Back away"},
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "prediction": "Re-entering should create a second contact.",
+                                "outcome": "Matched",
+                                "note": "The first Re-enter click was out of order.",
+                            },
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            html = write_run_report(output).read_text(encoding="utf-8")
+            worksheet_text = (output / "worksheet.md").read_text(encoding="utf-8")
+
+            self.assertIn("<span>Status</span><strong>Needs required preset Re-enter wall</strong>", html)
+            self.assertIn("<span>Required presets tried</span><strong>2/3</strong>", html)
+            self.assertIn("Try required preset Re-enter wall", html)
+            self.assertIn("- Status: Needs required preset Re-enter wall", worksheet_text)
+            self.assertIn("- Required presets tried: 2/3", worksheet_text)
+
     def test_run_report_suggests_next_runs(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "run"

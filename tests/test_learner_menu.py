@@ -575,6 +575,9 @@ class LearnerMenuTests(unittest.TestCase):
             missing_reenter = learning_path_progress(wall_step, outputs)
             missing_reenter_text = learning_path_progress_text(wall_step, missing_reenter)
 
+            write_events(run_path, ["Re-enter wall", "Close wall", "Back away"])
+            out_of_order = learning_path_progress(wall_step, outputs)
+
             write_events(run_path, ["Close wall", "Back away", "Re-enter wall"])
             complete = learning_path_progress(wall_step, outputs)
 
@@ -598,6 +601,9 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(missing_reenter.required_presets_tried, 2)
         self.assertEqual(missing_reenter.next_required_preset, "Re-enter wall")
         self.assertIn("Try required preset Re-enter wall", missing_reenter_text)
+        self.assertFalse(out_of_order.completed)
+        self.assertEqual(out_of_order.required_presets_tried, 2)
+        self.assertEqual(out_of_order.next_required_preset, "Re-enter wall")
         self.assertTrue(complete.completed)
         self.assertEqual(complete.required_presets_tried, 3)
 
@@ -1912,7 +1918,10 @@ class LearnerMenuTests(unittest.TestCase):
 
             self.assertEqual(
                 action_preset_evidence_text(lab04_wall, outputs),
-                "Preset evidence: 2/5 presets tried; required next Close wall",
+                (
+                    "Preset evidence: 2/5 presets tried; required next Close wall; "
+                    "remaining Close wall -> Back away -> Re-enter wall"
+                ),
             )
             self.assertEqual(
                 action_next_cue_text(lab04_wall, outputs),
@@ -1930,7 +1939,22 @@ class LearnerMenuTests(unittest.TestCase):
             )
             self.assertEqual(
                 action_preset_evidence_text(lab04_wall, outputs),
-                "Preset evidence: 2/5 presets tried; required next Re-enter wall",
+                "Preset evidence: 2/5 presets tried; required next Re-enter wall; remaining Re-enter wall",
+            )
+
+            (run_path / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {"kind": "preset", "name": "re-enter_wall", "label": "Re-enter wall"},
+                        {"kind": "preset", "name": "close_wall", "label": "Close wall"},
+                        {"kind": "preset", "name": "back_away", "label": "Back away"},
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                action_preset_evidence_text(lab04_wall, outputs),
+                "Preset evidence: 3/5 presets tried; required next Re-enter wall; remaining Re-enter wall",
             )
 
             (run_path / "interaction_events.json").write_text(

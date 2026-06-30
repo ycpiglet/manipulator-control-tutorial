@@ -29,6 +29,7 @@ from mclab.sim.interaction import (  # noqa: E402
     _panel_viewer_legend_rows,
     _observation_marker_count,
     _observation_marker_status_message,
+    _ordered_required_prefix,
     _preset_button_label,
     _preset_panel_status,
     learner_snapshot,
@@ -506,7 +507,49 @@ class KeyForcePulseTests(unittest.TestCase):
             comparison.preset_progress_summary(),
             (
                 "Preset progress: 3/3 tried; 2/2 required; required path complete; "
-                "ready to Mark observation comparing Soft, Close, Back."
+                "ready to Mark observation comparing Close -> Back."
+            ),
+        )
+        self.assertEqual(comparison.preset_checklist_state(), "ready")
+
+    def test_required_tuning_presets_must_follow_order(self) -> None:
+        specs = [SliderSpec("kp", "Kp", 0.0, 100.0, 20.0, 1.0)]
+        comparison = LiveTuning(
+            specs,
+            presets=[
+                TuningPreset("soft", "Soft", {"kp": 20.0}),
+                TuningPreset("close", "Close", {"kp": 80.0}, required=True),
+                TuningPreset("back", "Back", {"kp": 35.0}, required=True),
+            ],
+        )
+
+        self.assertEqual(_ordered_required_prefix(("close", "back"), ("back", "close")), ["close"])
+        comparison.apply_preset("back")
+        self.assertEqual(
+            comparison.preset_progress_summary(),
+            (
+                "Preset progress: 1/3 tried; 0/2 required; next required: Close; "
+                "remaining required: Close -> Back. Try required presets before Mark observation."
+            ),
+        )
+        self.assertEqual(comparison.preset_checklist_state(), "needs required preset Close")
+
+        comparison.apply_preset("close")
+        self.assertEqual(
+            comparison.preset_progress_summary(),
+            (
+                "Preset progress: 2/3 tried; 1/2 required; next required: Back; "
+                "remaining required: Back. Try required presets before Mark observation."
+            ),
+        )
+        self.assertEqual(comparison.preset_checklist_state(), "needs required preset Back")
+
+        comparison.apply_preset("back")
+        self.assertEqual(
+            comparison.preset_progress_summary(),
+            (
+                "Preset progress: 2/3 tried; 2/2 required; required path complete; "
+                "ready to Mark observation comparing Close -> Back."
             ),
         )
         self.assertEqual(comparison.preset_checklist_state(), "ready")

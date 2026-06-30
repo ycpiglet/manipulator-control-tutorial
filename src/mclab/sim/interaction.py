@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from threading import Lock
 from typing import Any
@@ -147,6 +147,7 @@ class LiveTuning:
         self._specs = {spec.name: spec for spec in specs}
         self._event_log = event_log
         self._tried_presets: list[str] = []
+        self._preset_attempts: list[str] = []
         self._lock = Lock()
 
     def value(self, name: str, default: float) -> float:
@@ -208,6 +209,8 @@ class LiveTuning:
                 self._values[value_name] = number
                 applied[value_name] = number
             values = dict(self._values)
+            if applied:
+                self._preset_attempts.append(preset.name)
             if applied and preset.name not in self._tried_presets:
                 self._tried_presets.append(preset.name)
         if applied and self._event_log is not None:
@@ -259,6 +262,7 @@ class LiveTuning:
         preset_by_name = {preset.name: preset for preset in self.presets}
         with self._lock:
             tried_names = tuple(self._tried_presets)
+            attempted_names = tuple(self._preset_attempts)
         tried_name_set = set(tried_names)
         tried_presets = [
             preset_by_name[name]
@@ -269,20 +273,18 @@ class LiveTuning:
         next_preset = next((preset for preset in self.presets if preset.name not in tried_name_set), None)
         count_text = f"{len(tried_presets)}/{len(self.presets)} tried"
         if required_presets:
-            required_tried = [preset for preset in required_presets if preset.name in tried_name_set]
+            required_names = [preset.name for preset in required_presets]
+            required_tried_names = _ordered_required_prefix(required_names, attempted_names)
+            required_tried = [preset_by_name[name] for name in required_tried_names if name in preset_by_name]
             required_text = f"{len(required_tried)}/{len(required_presets)} required"
-            next_required = next((preset for preset in required_presets if preset.name not in tried_name_set), None)
+            next_required = required_presets[len(required_tried)] if len(required_tried) < len(required_presets) else None
             if next_required is None:
-                tried_labels = ", ".join(preset.label for preset in tried_presets)
+                tried_labels = " -> ".join(preset.label for preset in required_presets)
                 return (
                     f"Preset progress: {count_text}; {required_text}; "
                     f"required path complete; ready to Mark observation comparing {tried_labels}."
                 )
-            remaining_required = [
-                preset.label
-                for preset in required_presets
-                if preset.name not in tried_name_set
-            ]
+            remaining_required = [preset.label for preset in required_presets[len(required_tried) :]]
             remaining_text = " -> ".join(remaining_required)
             return (
                 f"Preset progress: {count_text}; {required_text}; next required: {next_required.label}; "
@@ -301,9 +303,12 @@ class LiveTuning:
             return ""
         required_presets = [preset for preset in self.presets if preset.required]
         with self._lock:
-            tried_names = set(self._tried_presets)
+            tried_names = tuple(self._tried_presets)
+            attempted_names = tuple(self._preset_attempts)
         if required_presets:
-            next_required = next((preset for preset in required_presets if preset.name not in tried_names), None)
+            required_names = [preset.name for preset in required_presets]
+            completed = _ordered_required_prefix(required_names, attempted_names)
+            next_required = required_presets[len(completed)] if len(completed) < len(required_presets) else None
             return "ready" if next_required is None else f"needs required preset {next_required.label}"
         tried_count = len(tried_names)
         return "ready" if tried_count >= 2 else "needs another preset"
@@ -1343,6 +1348,18 @@ def _preset_display_label(preset: TuningPreset) -> str:
 
 def _preset_button_label(preset: TuningPreset) -> str:
     return _preset_display_label(preset)
+
+
+def _ordered_required_prefix(required_names: Sequence[str], attempted_names: Sequence[str]) -> list[str]:
+    matched: list[str] = []
+    index = 0
+    for name in attempted_names:
+        if index >= len(required_names):
+            break
+        if name == required_names[index]:
+            matched.append(name)
+            index += 1
+    return matched
 
 
 def _preset_panel_status(

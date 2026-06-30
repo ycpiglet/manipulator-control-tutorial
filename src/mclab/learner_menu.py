@@ -6,7 +6,7 @@ import json
 import subprocess
 import shutil
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -1517,9 +1517,10 @@ def _required_preset_progress_for_summary(summary: dict[str, Any], output_path: 
     if not required_labels:
         return 0, 0, ""
     labels = list(configured_preset_labels(config_path))
-    tried = _distinct_preset_labels(output_path, labels)
-    tried_required = [label for label in required_labels if label in tried]
-    next_required = next((label for label in required_labels if label not in tried), "")
+    tried_required, next_required = _ordered_required_preset_progress(
+        required_labels,
+        _preset_event_labels(output_path, labels),
+    )
     return len(required_labels), len(tried_required), next_required
 
 
@@ -1572,10 +1573,14 @@ def action_preset_evidence_text(action: MenuAction, outputs_root: Path | None = 
     tried = _distinct_preset_labels(latest, labels)
     count = f"{len(tried)}/{len(labels)}"
     if required_labels:
-        missing_required = [label for label in required_labels if label not in tried]
-        if not missing_required:
+        required_tried, next_required = _ordered_required_preset_progress(
+            required_labels,
+            _preset_event_labels(latest, labels),
+        )
+        if not next_required:
             return f"Preset evidence: {count} presets tried; required presets ready"
-        return f"Preset evidence: {count} presets tried; required next {missing_required[0]}"
+        remaining = " -> ".join(required_labels[len(required_tried) :])
+        return f"Preset evidence: {count} presets tried; required next {next_required}; remaining {remaining}"
     next_label = next((label for label in labels if label not in tried), "")
     if len(tried) >= 2:
         return f"Preset evidence: {count} presets tried; ready to review comparison"
@@ -1594,9 +1599,10 @@ def _required_preset_progress_for_action(
     if not required_labels:
         return 0, 0, ""
     labels = list(configured_preset_labels(action.config_path))
-    tried = _distinct_preset_labels(output_path, labels)
-    tried_required = [label for label in required_labels if label in tried]
-    next_required = next((label for label in required_labels if label not in tried), "")
+    tried_required, next_required = _ordered_required_preset_progress(
+        required_labels,
+        _preset_event_labels(output_path, labels),
+    )
     return len(required_labels), len(tried_required), next_required
 
 
@@ -1619,9 +1625,12 @@ def action_next_cue_text(action: MenuAction, outputs_root: Path | None = None) -
         tried = _distinct_preset_labels(latest, labels)
         required_labels = list(configured_required_preset_labels(action.config_path))
         if required_labels:
-            missing_required = [label for label in required_labels if label not in tried]
-            if missing_required:
-                return f"Next cue: Try required preset {missing_required[0]}, then mark a comparison observation."
+            _required_tried, next_required = _ordered_required_preset_progress(
+                required_labels,
+                _preset_event_labels(latest, labels),
+            )
+            if next_required:
+                return f"Next cue: Try required preset {next_required}, then mark a comparison observation."
         elif len(tried) < 2:
             next_label = next((label for label in labels if label not in tried), "")
             preset_text = f"preset {next_label}" if next_label else "one more preset"
@@ -1847,16 +1856,40 @@ def _latest_observation_marker(output_path: Path) -> dict[str, Any] | None:
 
 
 def _distinct_preset_labels(output_path: Path, configured_labels: list[str]) -> list[str]:
-    configured_lookup = {label.lower(): label for label in configured_labels}
     seen: list[str] = []
+    for canonical in _preset_event_labels(output_path, configured_labels):
+        if canonical and canonical not in seen:
+            seen.append(canonical)
+    return seen
+
+
+def _preset_event_labels(output_path: Path, configured_labels: list[str]) -> list[str]:
+    configured_lookup = {label.lower(): label for label in configured_labels}
+    labels: list[str] = []
     for event in _read_json_list(output_path / "interaction_events.json"):
         if str(event.get("kind", "")).lower() != "preset":
             continue
         label = str(event.get("label") or event.get("name") or "").strip()
         canonical = configured_lookup.get(label.lower())
-        if canonical and canonical not in seen:
-            seen.append(canonical)
-    return seen
+        if canonical:
+            labels.append(canonical)
+    return labels
+
+
+def _ordered_required_preset_progress(
+    required_labels: Sequence[str],
+    attempted_labels: Sequence[str],
+) -> tuple[list[str], str]:
+    tried: list[str] = []
+    index = 0
+    for label in attempted_labels:
+        if index >= len(required_labels):
+            break
+        if label == required_labels[index]:
+            tried.append(label)
+            index += 1
+    next_required = required_labels[index] if index < len(required_labels) else ""
+    return tried, next_required
 
 
 def _is_observation_marker_event(event: dict[str, Any]) -> bool:

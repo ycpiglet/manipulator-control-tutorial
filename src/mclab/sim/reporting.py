@@ -950,10 +950,14 @@ def _worksheet_preset_comparison_lines(events: list[dict[str, Any]], config: dic
         return []
     tried_labels = _distinct_preset_labels(events, configured_labels)
     required_labels = _configured_required_preset_labels(config)
+    required_tried, next_required = _ordered_required_preset_progress(
+        required_labels,
+        _preset_event_labels(events, configured_labels),
+    )
     lines = ["## Preset Comparison", ""]
     lines.extend(
         _worksheet_mapping_lines(
-            dict(_preset_comparison_progress_items(configured_labels, tried_labels, required_labels))
+            dict(_preset_comparison_progress_items(configured_labels, tried_labels, required_labels, required_tried, next_required))
         )
     )
     lines.append("")
@@ -965,9 +969,10 @@ def _required_preset_progress(config: dict[str, Any], events: list[dict[str, Any
     if not required_labels:
         return [], [], ""
     configured_labels = _configured_preset_labels(config)
-    tried_labels = _distinct_preset_labels(events, configured_labels)
-    required_tried = [label for label in required_labels if label in tried_labels]
-    next_required = next((label for label in required_labels if label not in tried_labels), "")
+    required_tried, next_required = _ordered_required_preset_progress(
+        required_labels,
+        _preset_event_labels(events, configured_labels),
+    )
     return required_labels, required_tried, next_required
 
 
@@ -2853,7 +2858,17 @@ def _preset_comparison_progress_card(events: list[dict[str, Any]], config: dict[
         return ""
     tried_labels = _distinct_preset_labels(events, configured_labels)
     required_labels = _configured_required_preset_labels(config)
-    items = _preset_comparison_progress_items(configured_labels, tried_labels, required_labels)
+    required_tried, next_required = _ordered_required_preset_progress(
+        required_labels,
+        _preset_event_labels(events, configured_labels),
+    )
+    items = _preset_comparison_progress_items(
+        configured_labels,
+        tried_labels,
+        required_labels,
+        required_tried,
+        next_required,
+    )
     return _action_card(
         "Preset comparison progress",
         "Checks whether this hands-on run sampled more than one preset regime.",
@@ -2865,14 +2880,16 @@ def _preset_comparison_progress_items(
     configured_labels: list[str],
     tried_labels: list[str],
     required_labels: list[str] | None = None,
+    required_tried: list[str] | None = None,
+    next_required: str = "",
 ) -> list[tuple[str, Any]]:
     required_labels = required_labels or []
+    required_tried = required_tried or []
     next_label = next((label for label in configured_labels if label not in tried_labels), "")
     if required_labels:
-        missing_required = [label for label in required_labels if label not in tried_labels]
-        if missing_required:
+        if next_required:
             status = "Needs required preset"
-            next_step = f"Try required preset {missing_required[0]}, watch live status, then mark one observation."
+            next_step = f"Try required preset {next_required}, watch live status, then mark one observation."
         else:
             status = "Ready for comparison review"
             next_step = "Mark or review an observation comparing the required presets."
@@ -2894,23 +2911,46 @@ def _preset_comparison_progress_items(
         ("Status", status),
     ]
     if required_labels:
-        required_tried = [label for label in required_labels if label in tried_labels]
         items.insert(2, ("Required presets", " -> ".join(required_labels)))
         items.insert(4, ("Required presets tried", f"{len(required_tried)}/{len(required_labels)}"))
     return items
 
 
 def _distinct_preset_labels(events: list[dict[str, Any]], configured_labels: list[str]) -> list[str]:
-    configured_lookup = {label.lower(): label for label in configured_labels}
     seen: list[str] = []
+    for canonical in _preset_event_labels(events, configured_labels):
+        if canonical and canonical not in seen:
+            seen.append(canonical)
+    return seen
+
+
+def _preset_event_labels(events: list[dict[str, Any]], configured_labels: list[str]) -> list[str]:
+    configured_lookup = {label.lower(): label for label in configured_labels}
+    labels: list[str] = []
     for event in events:
         if str(event.get("kind", "")).lower() != "preset":
             continue
         label = _event_label(event)
         canonical = configured_lookup.get(label.lower())
-        if canonical and canonical not in seen:
-            seen.append(canonical)
-    return seen
+        if canonical:
+            labels.append(canonical)
+    return labels
+
+
+def _ordered_required_preset_progress(
+    required_labels: list[str],
+    attempted_labels: list[str],
+) -> tuple[list[str], str]:
+    tried: list[str] = []
+    index = 0
+    for label in attempted_labels:
+        if index >= len(required_labels):
+            break
+        if label == required_labels[index]:
+            tried.append(label)
+            index += 1
+    next_required = required_labels[index] if index < len(required_labels) else ""
+    return tried, next_required
 
 
 def _preset_choices_card(events: list[dict[str, Any]]) -> str:
