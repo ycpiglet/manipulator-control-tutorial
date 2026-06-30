@@ -881,7 +881,7 @@ def _render_report(
     configured_presets = _configured_presets_section(config)
     result_check = _result_check_section(summary)
     hands_on_evidence = _hands_on_evidence_section(summary, interaction_events)
-    learner_action_summary = _learner_action_summary_section(interaction_events)
+    learner_action_summary = _learner_action_summary_section(interaction_events, config)
     learner_snapshot_section = _learner_snapshot_section(learner_snapshot)
     observation_markers = _observation_markers_section(interaction_events)
     interaction_section = _interaction_section(interaction_events)
@@ -2175,7 +2175,7 @@ def _add_abs_limit_check(
     checks.append((title, state, f"{_format_value(value)} {unit}; suggested limit {_format_value(limit)}."))
 
 
-def _learner_action_summary_section(events: list[dict[str, Any]]) -> str:
+def _learner_action_summary_section(events: list[dict[str, Any]], config: dict[str, Any] | None = None) -> str:
     if not events:
         return ""
     cards = [
@@ -2195,6 +2195,9 @@ def _learner_action_summary_section(events: list[dict[str, Any]]) -> str:
                 _action_value_list(latest_sliders),
             )
         )
+    preset_progress = _preset_comparison_progress_card(events, config)
+    if preset_progress:
+        cards.append(preset_progress)
     preset_card = _preset_choices_card(events)
     if preset_card:
         cards.append(preset_card)
@@ -2277,6 +2280,50 @@ def _latest_action_card(event: dict[str, Any]) -> str:
         ("Time [s]", _format_value(event.get("time"))),
     ]
     return _action_card("Latest action", "Last recorded learner interaction.", _action_value_list(items))
+
+
+def _preset_comparison_progress_card(events: list[dict[str, Any]], config: dict[str, Any] | None) -> str:
+    if not config:
+        return ""
+    configured_labels = _configured_preset_labels(config)
+    if len(configured_labels) < 2:
+        return ""
+    tried_labels = _distinct_preset_labels(events, configured_labels)
+    next_label = next((label for label in configured_labels if label not in tried_labels), "")
+    if len(tried_labels) >= 2:
+        status = "Ready for comparison review"
+        next_step = "Mark or review an observation comparing the tried presets."
+    elif next_label:
+        status = "Needs another preset"
+        next_step = f"Try {next_label}, watch live status, then mark one observation."
+    else:
+        status = "Needs another preset"
+        next_step = "Try at least one more preset, then mark one observation."
+    items = [
+        ("Configured presets", len(configured_labels)),
+        ("Distinct presets tried", f"{len(tried_labels)}/{len(configured_labels)}"),
+        ("Tried", ", ".join(tried_labels) if tried_labels else "none yet"),
+        ("Next", next_step),
+        ("Status", status),
+    ]
+    return _action_card(
+        "Preset comparison progress",
+        "Checks whether this hands-on run sampled more than one preset regime.",
+        _action_value_list(items),
+    )
+
+
+def _distinct_preset_labels(events: list[dict[str, Any]], configured_labels: list[str]) -> list[str]:
+    configured_lookup = {label.lower(): label for label in configured_labels}
+    seen: list[str] = []
+    for event in events:
+        if str(event.get("kind", "")).lower() != "preset":
+            continue
+        label = _event_label(event)
+        canonical = configured_lookup.get(label.lower())
+        if canonical and canonical not in seen:
+            seen.append(canonical)
+    return seen
 
 
 def _preset_choices_card(events: list[dict[str, Any]]) -> str:

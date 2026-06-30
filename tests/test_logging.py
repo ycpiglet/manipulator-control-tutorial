@@ -478,6 +478,23 @@ class LoggingTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            (output / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "time": 0.5,
+                            "kind": "preset",
+                            "name": "aggressive_pid",
+                            "label": "Aggressive PID",
+                            "value": {
+                                "purpose": "Faster target chase with more effort.",
+                                "values": {"kp": 120.0, "output_limit": 120.0},
+                            },
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
 
             report = write_run_report(output)
 
@@ -491,6 +508,11 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Show damping reducing overshoot.", html)
             self.assertIn("Aggressive PID", html)
             self.assertIn("Compare presets in order: Damped PD -&gt; Aggressive PID.", html)
+            self.assertIn("Preset comparison progress", html)
+            self.assertIn("Distinct presets tried", html)
+            self.assertIn("<strong>1/2</strong>", html)
+            self.assertIn("Try Damped PD", html)
+            self.assertIn("Needs another preset", html)
             self.assertIn("<span>kp</span>", html)
             self.assertIn("<strong>60</strong>", html)
             self.assertNotIn("interaction.tuning_presets", html)
