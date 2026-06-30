@@ -2938,8 +2938,20 @@ def _observation_evidence_counts_from_events(events: list[dict[str, Any]]) -> tu
     return markers, predictions, notes, outcomes
 
 
+EVIDENCE_HELPER_BUTTON_NAMES = {"use_live_status_note", "use_changed_values_note"}
+
+
 def _learner_control_event_count(events: list[dict[str, Any]]) -> int:
-    return sum(1 for event in events if str(event.get("kind") or "").strip().lower() in {"button", "slider", "preset"})
+    return sum(1 for event in events if _is_learner_control_event(event))
+
+
+def _is_learner_control_event(event: dict[str, Any]) -> bool:
+    kind = str(event.get("kind") or "").strip().lower()
+    if kind in {"slider", "preset"}:
+        return True
+    if kind != "button":
+        return False
+    return str(event.get("name") or "").strip().lower() not in EVIDENCE_HELPER_BUTTON_NAMES
 
 
 def _check_state_class(state: str) -> str:
@@ -3353,6 +3365,8 @@ def _activity_path(events: list[dict[str, Any]], *, limit: int = 6) -> str:
         kind = str(event.get("kind", "") or "unknown").lower()
         if kind not in {"button", "slider", "preset", "marker"}:
             continue
+        if kind in {"button", "slider", "preset"} and not _is_learner_control_event(event):
+            continue
         label = _event_label(event)
         if kind == "marker" and not _is_observation_marker(event):
             continue
@@ -3372,6 +3386,8 @@ def _event_kind_counts(events: list[dict[str, Any]]) -> dict[str, int]:
     counts: dict[str, int] = {}
     for event in events:
         kind = str(event.get("kind", "") or "unknown").lower()
+        if kind in {"button", "slider", "preset"} and not _is_learner_control_event(event):
+            continue
         counts[kind] = counts.get(kind, 0) + 1
     return counts
 

@@ -120,6 +120,7 @@ Implemented and verified:
 - Interactive `MCLab Interaction` observation area shows a live `Action log` cue confirming the latest learner button, slider, preset, or marker event
 - Interactive `MCLab Interaction` observation area shows a wrapped `Note preview` so accumulated evidence is readable before `Mark observation`
 - Hands-on mission evidence and learning-path completion require at least one learner control event (`button`, `slider`, or `preset`) plus a prediction-and-note observation marker
+- Evidence helper buttons such as `Use live status` and `Use changed values` do not satisfy the learner-control requirement by themselves
 - Run reports and worksheets include `Mission Evidence` status with observation, prediction, outcome, note, learner-control, plot counts, and the next proof step
 - Learner menu scenario cards include a `Viewer` marker legend and marker-name search support
 - Learner menu scenario cards include a `Controls` summary of actual buttons, sliders, presets, pause/step, reset, and observation controls

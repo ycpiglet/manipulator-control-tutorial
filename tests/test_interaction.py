@@ -1035,6 +1035,26 @@ class KeyForcePulseTests(unittest.TestCase):
             "Next: Save one Mark observation with prediction and live-status evidence.",
         )
 
+    def test_activity_mix_status_ignores_evidence_helper_buttons_as_controls(self) -> None:
+        log = InteractionLog()
+
+        log.record("button", "use_live_status_note", "position=0.1", label="Use live status")
+        log.record("button", "use_changed_values_note", "Kp=40", label="Use changed values")
+        self.assertEqual(
+            _activity_mix_status_message(log, has_buttons=True, has_sliders=False, has_presets=False),
+            "Activity mix: 0/1 control families; buttons 0, sliders 0, presets 0, markers 0. "
+            "Next: Use one button control such as pulse, nudge, pause, step, or reset.",
+        )
+        self.assertEqual(
+            _observation_evidence_quality(
+                "Stiffer control should react faster.",
+                "Matched",
+                "Live status: position=0.1",
+                learner_controls=0,
+            ),
+            "Evidence quality: incomplete - add learner control.",
+        )
+
     def test_recent_action_status_confirms_latest_logged_control(self) -> None:
         log = InteractionLog()
 

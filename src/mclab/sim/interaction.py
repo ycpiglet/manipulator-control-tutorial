@@ -1517,12 +1517,26 @@ def _activity_event_kind_counts(events: list[dict[str, Any]]) -> dict[str, int]:
     counts: dict[str, int] = {}
     for event in events:
         kind = str(event.get("kind", "") or "unknown").lower()
+        if kind in {"button", "slider", "preset"} and not _is_learner_control_event(event):
+            continue
         counts[kind] = counts.get(kind, 0) + 1
     return counts
 
 
+EVIDENCE_HELPER_BUTTON_NAMES = {"use_live_status_note", "use_changed_values_note"}
+
+
 def _learner_control_event_count(events: list[dict[str, Any]]) -> int:
-    return sum(1 for event in events if str(event.get("kind") or "").strip().lower() in {"button", "slider", "preset"})
+    return sum(1 for event in events if _is_learner_control_event(event))
+
+
+def _is_learner_control_event(event: dict[str, Any]) -> bool:
+    kind = str(event.get("kind") or "").strip().lower()
+    if kind in {"slider", "preset"}:
+        return True
+    if kind != "button":
+        return False
+    return str(event.get("name") or "").strip().lower() not in EVIDENCE_HELPER_BUTTON_NAMES
 
 
 def _activity_mix_next_step(

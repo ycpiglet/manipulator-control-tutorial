@@ -1506,7 +1506,10 @@ def action_mission_evidence_text(
         else:
             status = "Ready for review"
         preset_text = _required_preset_progress_text(required_total, required_tried)
-        return f"Mission evidence: {status}; {_mission_evidence_counts(markers, predictions, outcomes, notes)}{preset_text}"
+        return (
+            f"Mission evidence: {status}; "
+            f"{_mission_evidence_counts(markers, predictions, outcomes, notes, learner_controls)}{preset_text}"
+        )
 
     if predictions > outcomes:
         return f"Mission evidence: Outcome review pending; {_mission_evidence_counts(markers, predictions, outcomes, notes)}"
@@ -1526,12 +1529,24 @@ def action_mission_evidence_text(
     return f"Mission evidence: Artifacts ready; plot {plot.name}; worksheet {worksheet.name}"
 
 
-def _mission_evidence_counts(markers: int, predictions: int, outcomes: int, notes: int) -> str:
+def _mission_evidence_counts(
+    markers: int,
+    predictions: int,
+    outcomes: int,
+    notes: int,
+    learner_controls: int | None = None,
+) -> str:
+    control_text = (
+        f", {learner_controls} control{'s' if learner_controls != 1 else ''}"
+        if learner_controls is not None
+        else ""
+    )
     return (
         f"{markers} observation{'s' if markers != 1 else ''}, "
         f"{predictions} prediction{'s' if predictions != 1 else ''}, "
         f"{outcomes} outcome{'s' if outcomes != 1 else ''}, "
         f"{notes} note{'s' if notes != 1 else ''}"
+        f"{control_text}"
     )
 
 

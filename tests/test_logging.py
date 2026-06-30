@@ -57,6 +57,23 @@ class LoggingTests(unittest.TestCase):
             "Ready: compare this interaction mix against plots and the worksheet.",
         )
 
+    def test_activity_mix_ignores_evidence_helper_buttons_as_controls(self) -> None:
+        items = dict(
+            _activity_mix_items(
+                [
+                    {"kind": "button", "name": "use_live_status_note", "label": "Use live status"},
+                    {"kind": "button", "name": "use_changed_values_note", "label": "Use changed values"},
+                    {"kind": "marker", "name": "observation", "label": "Mark observation"},
+                ]
+            )
+        )
+
+        self.assertEqual(items["Control types used"], "marker")
+        self.assertEqual(items["Activity path"], "observation: Mark observation")
+        self.assertEqual(items["Button actions"], 0)
+        self.assertEqual(items["Hands-on controls before review"], 0)
+        self.assertEqual(items["Interaction variety"], "0/3 control families")
+
     def test_guided_configs_have_suggested_next_runs(self) -> None:
         missing: list[str] = []
         for config_path in sorted((ROOT / "configs").glob("**/*.yaml")):

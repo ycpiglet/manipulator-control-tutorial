@@ -642,7 +642,8 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("required presets 1/3", missing_back_text)
         self.assertIn("Try required preset Back away", missing_back_text)
         self.assertIn(
-            "Mission evidence: Needs required preset Back away; 1 observation, 1 prediction, 1 outcome, 1 note; required presets 1/3",
+            "Mission evidence: Needs required preset Back away; "
+            "1 observation, 1 prediction, 1 outcome, 1 note, 1 control; required presets 1/3",
             missing_back_mission,
         )
         self.assertFalse(missing_reenter.completed)
@@ -1757,7 +1758,7 @@ class LearnerMenuTests(unittest.TestCase):
             )
             self.assertEqual(
                 action_mission_evidence_text(lab02_interactive, outputs),
-                "Mission evidence: Needs observation; 0 observations, 0 predictions, 0 outcomes, 0 notes",
+                "Mission evidence: Needs observation; 0 observations, 0 predictions, 0 outcomes, 0 notes, 0 controls",
             )
 
             (interactive_path / "interaction_events.json").write_text(
@@ -1775,12 +1776,13 @@ class LearnerMenuTests(unittest.TestCase):
             )
             self.assertEqual(
                 action_mission_evidence_text(lab02_interactive, outputs),
-                "Mission evidence: Outcome review pending; 1 observation, 1 prediction, 0 outcomes, 1 note",
+                "Mission evidence: Outcome review pending; 1 observation, 1 prediction, 0 outcomes, 1 note, 1 control",
             )
 
             (interactive_path / "interaction_events.json").write_text(
                 json.dumps(
                     [
+                        {"kind": "button", "name": "use_live_status_note", "label": "Use live status"},
                         {
                             "kind": "marker",
                             "name": "observation",
@@ -1796,7 +1798,7 @@ class LearnerMenuTests(unittest.TestCase):
             )
             self.assertEqual(
                 action_mission_evidence_text(lab02_interactive, outputs),
-                "Mission evidence: Needs learner control; 1 observation, 1 prediction, 1 outcome, 1 note",
+                "Mission evidence: Needs learner control; 1 observation, 1 prediction, 1 outcome, 1 note, 0 controls",
             )
 
             (interactive_path / "interaction_events.json").write_text(
@@ -1818,7 +1820,7 @@ class LearnerMenuTests(unittest.TestCase):
             )
             self.assertEqual(
                 action_mission_evidence_text(lab02_interactive, outputs),
-                "Mission evidence: Ready for review; 1 observation, 1 prediction, 1 outcome, 1 note",
+                "Mission evidence: Ready for review; 1 observation, 1 prediction, 1 outcome, 1 note, 1 control",
             )
             self.assertIn("Mission evidence: Ready for review", lesson_text(lab02_interactive, outputs))
 
