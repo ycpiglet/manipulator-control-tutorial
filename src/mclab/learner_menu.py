@@ -1078,6 +1078,8 @@ def learning_path_target(step: LearningPathStep) -> MenuAction | BatchMenuAction
 def learning_path_completion_text(step: LearningPathStep) -> str:
     action = learning_path_target(step)
     if isinstance(action, BatchMenuAction):
+        if action.batch_name == ALL_BATCH_NAME:
+            return "Done when: the course comparison report, worksheet, and linked batch Prediction Checks are saved."
         return "Done when: the comparison report, plots, worksheet, and Prediction Check are saved."
     if "hands-on" in action_tags(action):
         required_labels = configured_required_preset_labels(action.config_path)
@@ -1115,9 +1117,14 @@ def learning_path_progress(
         _required_preset_progress_for_action(action, latest) if latest is not None else (0, 0, "")
     )
     required_ready = required_total == 0 or required_tried >= required_total
-    completed = latest is not None and (
-        not evidence_required or (markers > 0 and predictions > 0 and notes > 0 and required_ready)
-    )
+    if isinstance(action, BatchMenuAction):
+        has_worksheet = action_latest_worksheet(action, outputs_root) is not None
+        has_plot = action.batch_name == ALL_BATCH_NAME or action_latest_plot(action, outputs_root) is not None
+        completed = latest is not None and has_worksheet and has_plot
+    else:
+        completed = latest is not None and (
+            not evidence_required or (markers > 0 and predictions > 0 and notes > 0 and required_ready)
+        )
     return LearningPathProgress(
         completed=completed,
         latest_output=latest,
@@ -1475,6 +1482,12 @@ def action_mission_evidence_text(
         preset_text = _required_preset_progress_text(required_total, required_tried)
         return f"Mission evidence: {status}; {_mission_evidence_counts(markers, predictions, outcomes, notes)}{preset_text}"
 
+    if isinstance(action, BatchMenuAction) and action.batch_name == ALL_BATCH_NAME:
+        worksheet = action_latest_worksheet(action, outputs_root)
+        if worksheet is None:
+            return "Mission evidence: Needs worksheet; rerun all batches to regenerate course review artifacts"
+        return f"Mission evidence: Course artifacts ready; worksheet {worksheet.name}"
+
     plot = action_latest_plot(action, outputs_root)
     worksheet = action_latest_worksheet(action, outputs_root)
     if plot is None:
@@ -1557,11 +1570,19 @@ def _review_queue_status(output_path: Path, summary: dict[str, Any]) -> str:
             return "Ready; add note next"
         return "Ready for review"
 
+    if _summary_is_all_batch(summary):
+        return "Artifacts ready" if (output_path / "worksheet.md").exists() else "Needs worksheet"
+
     if latest_output_plot(output_path) is None:
         return "Needs plot"
     if latest_output_worksheet(output_path) is None:
         return "Needs worksheet"
     return "Artifacts ready"
+
+
+def _summary_is_all_batch(summary: dict[str, Any]) -> bool:
+    batch_name = str(summary.get("batch_name") or summary.get("config_name") or "").strip()
+    return batch_name == ALL_BATCH_NAME
 
 
 def _summary_requires_hands_on_evidence(summary: dict[str, Any]) -> bool:

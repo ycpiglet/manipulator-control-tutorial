@@ -1165,6 +1165,7 @@ class LoggingTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (output / "report.html").write_text("<html>all batches</html>", encoding="utf-8")
+            (output / "worksheet.md").write_text("# Course worksheet\n", encoding="utf-8")
 
             index = write_outputs_index(temp_dir)
 
@@ -1173,10 +1174,19 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("1/11 steps complete", html)
             self.assertIn("11. Compare the course", html)
             self.assertIn(
-                "<strong>Done when:</strong> the comparison report, plots, and worksheet are saved.",
+                "<strong>Done when:</strong> the course comparison report, worksheet, and linked batch Prediction Checks are saved.",
                 html,
             )
             self.assertIn("<strong>Compare:</strong> Generate the course batch report set.", html)
+            self.assertIn(
+                "<strong>Prediction check:</strong> Mark Matched, Partly matched, or Surprised in the worksheet.",
+                html,
+            )
+            self.assertIn("Mission evidence: Course artifacts ready; Open the course worksheet", html)
+            self.assertNotIn("Mission evidence: Needs plot", html)
+            self.assertIn("Mission Review Queue", html)
+            self.assertIn("1 ready, 0 pending", html)
+            self.assertIn("No pending mission evidence.", html)
             self.assertIn("Next action: run lab01", html)
             self.assertIn("20260627_151000_all_batches/report.html", html)
             self.assertIn("python -m mclab batch all --open-report", html)

@@ -3895,6 +3895,7 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
             evidence_required=_summary_requires_hands_on_evidence(summary),
         )
         plots = _discover_run_plots(child)
+        worksheet = _discover_worksheet(child)
         runs.append(
             {
                 "name": child.name,
@@ -3904,7 +3905,7 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
                 "samples": summary.get("samples", ""),
                 "duration": summary.get("duration", ""),
                 "report": _run_link(child, report_path, index_path),
-                "worksheet": _discover_worksheet(child),
+                "worksheet": worksheet,
                 "plots": plots,
                 "replay": _discover_replay_config(child),
                 "modified": modified,
@@ -3920,7 +3921,13 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
                 "observation_flow": observation_flow,
                 "observation_next_step": observation_next_step,
                 "activity_mix": _activity_mix_index_text(interaction_events),
-                "mission_evidence": _mission_evidence_index_text(summary, interaction_events, plots, config),
+                "mission_evidence": _mission_evidence_index_text(
+                    summary,
+                    interaction_events,
+                    plots,
+                    config,
+                    worksheet=worksheet,
+                ),
                 "config": config,
                 "interaction_events": interaction_events,
             }
@@ -4149,9 +4156,14 @@ def _learning_path_item(step: IndexPathStep, runs: list[dict[str, Any]]) -> dict
     outcomes = int(run.get("learner_outcomes", 0)) if run is not None else 0
     required_total, required_tried, next_required = _learning_path_required_preset_progress(step, run)
     required_ready = required_total == 0 or required_tried >= required_total
-    completed = run is not None and (
-        not evidence_required or (markers > 0 and predictions > 0 and notes > 0 and required_ready)
-    )
+    if step.batch_name:
+        has_worksheet = run is not None and isinstance(run.get("worksheet"), dict)
+        has_plot = step.batch_name == "all" or (run is not None and bool(run.get("plots")))
+        completed = run is not None and has_worksheet and has_plot
+    else:
+        completed = run is not None and (
+            not evidence_required or (markers > 0 and predictions > 0 and notes > 0 and required_ready)
+        )
     return {
         "step": step,
         "run": run,
@@ -4412,7 +4424,9 @@ def _index_step_config(step: IndexPathStep) -> dict[str, Any]:
 
 def _learning_path_completion_text(step: IndexPathStep) -> str:
     if step.batch_name:
-        return "Done when: the comparison report, plots, and worksheet are saved."
+        if step.batch_name == "all":
+            return "Done when: the course comparison report, worksheet, and linked batch Prediction Checks are saved."
+        return "Done when: the comparison report, plots, worksheet, and Prediction Check are saved."
     if _learning_path_requires_evidence(step):
         required_labels = _index_step_required_preset_labels(step)
         if required_labels:
@@ -4428,6 +4442,7 @@ def _learning_path_learning_cue(step: IndexPathStep) -> str:
     if step.batch_name:
         return (
             '<p class="muted"><strong>Compare:</strong> Generate the course batch report set. '
+            "<strong>Prediction check:</strong> Mark Matched, Partly matched, or Surprised in the worksheet. "
             "<strong>Watch:</strong> How the same control ideas scale from 1D plants to Panda wall behavior.</p>"
         )
     if not step.config_path:
@@ -4617,7 +4632,7 @@ def _mission_review_status(run: dict[str, Any]) -> str:
 
 def _mission_review_bucket(status: str) -> str:
     normalized = status.strip().lower()
-    if normalized in {"ready for review", "artifacts ready"}:
+    if normalized in {"ready for review", "artifacts ready", "course artifacts ready"}:
         return "ready"
     if normalized == "outcome review pending":
         return "outcome"
@@ -4736,13 +4751,24 @@ def _mission_evidence_index_text(
     events: list[dict[str, Any]],
     plots: list[dict[str, str]],
     config: dict[str, Any] | None = None,
+    *,
+    worksheet: dict[str, str] | None = None,
 ) -> str:
+    if _summary_is_all_batch(summary):
+        if isinstance(worksheet, dict):
+            return "Course artifacts ready; Open the course worksheet, then follow each linked batch Prediction Check."
+        return "Needs worksheet; Rerun all batches to regenerate course review artifacts."
     items = dict(_mission_evidence_items(summary, events, plots, config))
     status = str(items.get("Status") or "").strip()
     next_step = str(items.get("Next proof step") or "").strip()
     if status and next_step:
         return f"{status}; {_short_evidence_text(next_step, max_length=96)}"
     return status or next_step
+
+
+def _summary_is_all_batch(summary: dict[str, Any]) -> bool:
+    batch_name = str(summary.get("batch_name") or summary.get("config_name") or "").strip()
+    return batch_name == "all"
 
 
 def _run_replay_cell(run: dict[str, Any]) -> str:

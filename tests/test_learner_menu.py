@@ -295,7 +295,7 @@ class LearnerMenuTests(unittest.TestCase):
         )
         self.assertEqual(
             learning_path_completion_text(LEARNING_PATH[-1]),
-            "Done when: the comparison report, plots, worksheet, and Prediction Check are saved.",
+            "Done when: the course comparison report, worksheet, and linked batch Prediction Checks are saved.",
         )
 
     def test_recommended_learning_path_reads_saved_progress(self) -> None:
@@ -328,6 +328,8 @@ class LearnerMenuTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (batch_dir / "report.html").write_text("<html></html>", encoding="utf-8")
+            batch_worksheet = batch_dir / "worksheet.md"
+            batch_worksheet.write_text("# Course worksheet\n", encoding="utf-8")
 
             first_progress = learning_path_progress(first_step, outputs)
             last_progress = learning_path_progress(last_step, outputs)
@@ -351,7 +353,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(last_progress.latest_output.name, "all_batches")
         assert last_latest is not None
         self.assertEqual(last_latest.name, "all_batches")
-        self.assertIsNone(last_worksheet)
+        self.assertEqual(last_worksheet, batch_worksheet)
         self.assertIsNone(last_tuned)
         self.assertFalse(second_progress.completed)
         self.assertIn("Status: Not run yet", learning_path_progress_text(LEARNING_PATH[1], second_progress))
@@ -1686,6 +1688,23 @@ class LearnerMenuTests(unittest.TestCase):
             self.assertEqual(
                 action_mission_evidence_text(MENU_ACTIONS[0], outputs),
                 "Mission evidence: Artifacts ready; plot position.png; worksheet worksheet.md",
+            )
+
+            all_batch = next(action for action in BATCH_ACTIONS if action.batch_name == "all")
+            all_batch_path = outputs / "run_all_batches"
+            all_batch_path.mkdir()
+            (all_batch_path / "summary.json").write_text(
+                json.dumps({"lab_name": "batch_group", "batch_name": "all", "config_name": "all"}),
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                action_mission_evidence_text(all_batch, outputs),
+                "Mission evidence: Needs worksheet; rerun all batches to regenerate course review artifacts",
+            )
+            (all_batch_path / "worksheet.md").write_text("# Course worksheet\n", encoding="utf-8")
+            self.assertEqual(
+                action_mission_evidence_text(all_batch, outputs),
+                "Mission evidence: Course artifacts ready; worksheet worksheet.md",
             )
 
             interactive_path = outputs / "run_lab02_interactive"
