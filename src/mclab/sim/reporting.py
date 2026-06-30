@@ -19,6 +19,7 @@ from mclab.learning_guides import (
     playbook_for_guide,
     prediction_prompt_for_guide,
     question_for_guide,
+    start_steps_for_guide,
     viewer_legend_for_guide,
 )
 
@@ -879,6 +880,7 @@ def _worksheet_learning_guide_lines(guide: RunGuide | None, summary: dict[str, A
         ("Done when", completion_text.removeprefix("Done when:").strip()),
         ("Mission", mission_prompt_for_guide(guide).removeprefix("Mission:").strip()),
         ("Playbook", playbook_for_guide(guide).removeprefix("Playbook:").strip()),
+        ("Start steps", start_steps_for_guide(guide).removeprefix("Start steps:").strip()),
         ("Challenge", challenge_prompt_for_guide(guide).removeprefix("Challenge:").strip()),
         ("Try", guide.try_this),
         ("Change", guide.change),
@@ -1797,6 +1799,7 @@ def _learning_guide_section(guide: RunGuide | None, summary: dict[str, Any]) -> 
         ("Done when", _run_completion_text(summary).removeprefix("Done when:").strip()),
         ("Mission", mission_prompt_for_guide(guide).removeprefix("Mission:").strip()),
         ("Playbook", playbook_for_guide(guide).removeprefix("Playbook:").strip()),
+        ("Start steps", start_steps_for_guide(guide).removeprefix("Start steps:").strip()),
         ("Challenge", challenge_prompt_for_guide(guide).removeprefix("Challenge:").strip()),
         ("Try", guide.try_this),
         ("Change", guide.change),

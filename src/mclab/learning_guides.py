@@ -99,6 +99,19 @@ def playbook_for_guide(guide: RunGuide | None) -> str:
     return f"Playbook: 1. {predict}; 2. {action}; 3. {evidence}."
 
 
+def start_steps_for_guide(guide: RunGuide | None) -> str:
+    if guide is None:
+        return ""
+    context = " ".join((guide.title, guide.try_this, guide.change, guide.next_step)).lower()
+    hands_on = any(term in context for term in ("interactive", "live", "slider", "preset", "button", "pulse", "nudge"))
+    if hands_on:
+        control_step = _start_control_step(guide)
+        return f"Start steps: Predict -> Run viewer -> {control_step} -> Mark observation."
+    if _is_compare_hint(guide):
+        return "Start steps: Predict -> Run scenario -> Compare priority plot and worksheet."
+    return "Start steps: Predict -> Run scenario -> Review priority plot and worksheet."
+
+
 def challenge_prompt_for_guide(guide: RunGuide | None) -> str:
     if guide is None:
         return ""
@@ -143,6 +156,39 @@ def _playbook_watch_reference(watch: str) -> str:
     if lowered.startswith(("how ", "what ", "which ", "whether ")):
         return f"{watch[:1].lower()}{watch[1:]}"
     return watch
+
+
+def _start_control_step(guide: RunGuide) -> str:
+    text = " ".join((guide.try_this, guide.change, guide.next_step)).lower()
+    if "required preset" in text:
+        return "try the required presets"
+    if "preset" in text:
+        return "try the named presets"
+    if "pull" in text or "push" in text:
+        return "use Pull/Push"
+    if "target x" in text or "nudge" in text:
+        return "use Target X buttons"
+    if "shoulder" in text or "elbow" in text or "pulse" in text:
+        return "use Shoulder/Elbow pulse"
+    if "slider" in text or "live" in text:
+        return "move one live slider"
+    return "use one button, slider, or preset"
+
+
+def _is_compare_hint(guide: RunGuide) -> bool:
+    text = " ".join((guide.title, guide.focus, guide.try_this, guide.next_step)).lower()
+    return any(
+        term in text
+        for term in (
+            "compare against",
+            "compare directly",
+            "directly against",
+            " against ",
+            "against the",
+            "before the",
+            "run before",
+        )
+    )
 
 
 def viewer_legend_for_guide(guide: RunGuide | None) -> list[tuple[str, str]]:

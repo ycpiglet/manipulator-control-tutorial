@@ -22,6 +22,7 @@ from mclab.learning_guides import (
     playbook_for_guide,
     prediction_prompt_for_guide,
     reflection_question_for_context,
+    start_steps_for_guide,
     viewer_legend_for_guide,
 )
 from mclab.sim.reporting import (
@@ -2643,9 +2644,11 @@ def action_start_steps_text(action: MenuAction | BatchMenuAction) -> str:
         return f"Start steps: Predict -> Run viewer -> {control_step} -> Mark observation."
 
     if _is_compare_action(action):
-        return "Start steps: Predict -> Run scenario -> Compare priority plot and worksheet."
+        guide = guide_for_config(config_path=action.config_path, lab_name=action.lab_name)
+        return start_steps_for_guide(guide) or "Start steps: Predict -> Run scenario -> Compare priority plot and worksheet."
 
-    return "Start steps: Predict -> Run scenario -> Review priority plot and worksheet."
+    guide = guide_for_config(config_path=action.config_path, lab_name=action.lab_name)
+    return start_steps_for_guide(guide) or "Start steps: Predict -> Run scenario -> Review priority plot and worksheet."
 
 
 def _hands_on_start_control_step(action: MenuAction) -> str:

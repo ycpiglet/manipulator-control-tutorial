@@ -17,6 +17,7 @@ from mclab.learning_guides import (  # noqa: E402
     playbook_for_guide,
     prediction_prompt_for_guide,
     question_for_guide,
+    start_steps_for_guide,
     viewer_legend_for_guide,
 )
 
@@ -39,6 +40,7 @@ class LearningGuideTests(unittest.TestCase):
                 self.assertTrue(guide.next_step)
                 self.assertTrue(mission_prompt_for_guide(guide).startswith("Mission: "))
                 self.assertTrue(playbook_for_guide(guide).startswith("Playbook: "))
+                self.assertTrue(start_steps_for_guide(guide).startswith("Start steps: "))
                 self.assertTrue(challenge_prompt_for_guide(guide).startswith("Challenge: "))
                 self.assertTrue(question_for_guide(guide).startswith("Question: "))
                 self.assertTrue(observation_prompt_for_guide(guide).startswith("Evidence to capture: "))
@@ -92,6 +94,7 @@ class LearningGuideTests(unittest.TestCase):
         self.assertIn("Live target", prompt)
         self.assertEqual(mission_prompt_for_guide(None), "")
         self.assertEqual(playbook_for_guide(None), "")
+        self.assertEqual(start_steps_for_guide(None), "")
         self.assertEqual(challenge_prompt_for_guide(None), "")
         self.assertEqual(prediction_prompt_for_guide(None), "")
 
@@ -106,6 +109,24 @@ class LearningGuideTests(unittest.TestCase):
         self.assertIn("predict how", playbook)
         self.assertIn("change live sliders/presets", playbook)
         self.assertIn("mark one observation", playbook)
+
+    def test_start_steps_give_short_first_run_sequence(self) -> None:
+        auto_guide = guide_for_config(config_path="configs/lab01_msd/default.yaml")
+        wall_guide = guide_for_config(config_path="configs/lab04_panda/interactive_virtual_wall.yaml")
+        compare_guide = guide_for_config(config_path="configs/lab02_pid/p_high_gain.yaml")
+
+        self.assertEqual(
+            start_steps_for_guide(auto_guide),
+            "Start steps: Predict -> Run scenario -> Review priority plot and worksheet.",
+        )
+        self.assertEqual(
+            start_steps_for_guide(wall_guide),
+            "Start steps: Predict -> Run viewer -> try the named presets -> Mark observation.",
+        )
+        self.assertEqual(
+            start_steps_for_guide(compare_guide),
+            "Start steps: Predict -> Run scenario -> Compare priority plot and worksheet.",
+        )
 
     def test_challenge_guides_visible_evidence_goal(self) -> None:
         guide = guide_for_config(config_path="configs/lab04_panda/interactive_virtual_wall.yaml")
