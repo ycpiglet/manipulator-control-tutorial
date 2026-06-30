@@ -58,9 +58,10 @@ Implemented and verified:
 - Lab03 DLS singularity has a one-line `run_lab03_dls_interactive.cmd` launcher
 - Lab03 condition-aware DLS supports live schedule presets and a one-line `run_lab03_condition_dls_interactive.cmd` launcher
 - Lab03 condition-aware DLS inner/edge target comparison configs for target-position conditioning lessons
+- Lab03 condition-aware DLS upper/lower path comparison configs for mirrored IK-branch lessons
 - Lab03 condition-aware DLS low/high torque-limit comparison configs for actuator-limit lessons
 - Lab03 condition-aware DLS slow/fast command-speed comparison configs for target-speed lessons
-- Learner menu exposes Lab03 low/high torque-limit and slow/fast command-speed DLS scenario cards with compare/search/filter support
+- Learner menu exposes Lab03 upper/lower path, low/high torque-limit, and slow/fast command-speed DLS scenario cards with compare/search/filter support
 - Lab04 Franka Emika Panda manipulator using MuJoCo Menagerie
 - Lab04 30-second neutral-hold stability check config and report checks
 - Lab04 Cartesian reach with damped-least-squares Jacobian target offsets
@@ -303,13 +304,14 @@ Implemented so far:
 - condition-aware DLS singularity comparison with automatic damping schedule logging/plotting
 - early/default/late condition-aware DLS schedule comparison configs for Lab03
 - inner/edge target-position condition-aware DLS comparison configs for Lab03
+- upper/lower path condition-aware DLS comparison configs for mirrored IK-branch lessons
 - low/high torque-limit condition-aware DLS comparison configs for Lab03
 - slow/fast command-speed condition-aware DLS comparison configs for Lab03
 - standard logs and plots for joint position, end-effector position, torque, current proxy, and error
 
 Remaining likely extension:
 
-- richer singularity comparison lessons, such as condition-aware task control with alternate paths or disturbance cases
+- richer singularity comparison lessons, such as condition-aware task control with disturbance cases
 
 ### Phase 6 - Lab04 Advanced Control
 

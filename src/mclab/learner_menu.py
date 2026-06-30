@@ -540,6 +540,26 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
     ),
     MenuAction(
         group="Lab03 2DOF Arm and Trajectories",
+        label="2DOF upper-path DLS",
+        lab_name="lab03",
+        config_path="configs/lab03_2dof/condition_aware_dls_upper_path_2dof.yaml",
+        plots="dls",
+        description="Reaches the same near-edge target from the upper hand path and mirrored elbow branch.",
+        try_this="Run before lower-path DLS and compare the viewer arm branch.",
+        watch="Hand Y motion, elbow torque sign, DLS damping, and task error.",
+    ),
+    MenuAction(
+        group="Lab03 2DOF Arm and Trajectories",
+        label="2DOF lower-path DLS",
+        lab_name="lab03",
+        config_path="configs/lab03_2dof/condition_aware_dls_lower_path_2dof.yaml",
+        plots="dls",
+        description="Reaches the same near-edge target from the lower hand path and mirrored elbow branch.",
+        try_this="Compare directly against upper-path DLS with the same target and damping schedule.",
+        watch="Hand Y motion, elbow torque sign, DLS damping, and task error.",
+    ),
+    MenuAction(
+        group="Lab03 2DOF Arm and Trajectories",
         label="2DOF low-torque DLS",
         lab_name="lab03",
         config_path="configs/lab03_2dof/condition_aware_dls_low_torque_2dof.yaml",
@@ -2006,6 +2026,8 @@ def parameter_hint(action: MenuAction) -> str:
             "2dof late dls damping",
             "2dof inner-target dls",
             "2dof edge-target dls",
+            "2dof upper-path dls",
+            "2dof lower-path dls",
             "2dof low-torque dls",
             "2dof high-torque dls",
             "2dof slow-command dls",
@@ -2025,6 +2047,11 @@ def parameter_hint(action: MenuAction) -> str:
             if label in {"2dof inner-target dls", "2dof edge-target dls"}:
                 return (
                     "target_xy, tracking_controller.condition_damping_threshold, "
+                    "tracking_controller.condition_damping_full, tracking_controller.max_dls_damping"
+                )
+            if label in {"2dof upper-path dls", "2dof lower-path dls"}:
+                return (
+                    "initial_q, target_xy, tracking_controller.condition_damping_threshold, "
                     "tracking_controller.condition_damping_full, tracking_controller.max_dls_damping"
                 )
             if label in {"2dof slow-command dls", "2dof fast-command dls"}:
@@ -2479,6 +2506,8 @@ def _is_compare_action(action: MenuAction) -> bool:
         "2dof late dls damping",
         "2dof inner-target dls",
         "2dof edge-target dls",
+        "2dof upper-path dls",
+        "2dof lower-path dls",
         "2dof low-torque dls",
         "2dof high-torque dls",
         "2dof slow-command dls",

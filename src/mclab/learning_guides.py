@@ -456,6 +456,22 @@ RUN_GUIDES: dict[str, RunGuide] = {
         "Higher condition scale, increased DLS damping, task error, and joint-speed limiting.",
         "Move target_xy slightly inward and compare how quickly DLS damping disappears.",
     ),
+    "configs/lab03_2dof/condition_aware_dls_upper_path_2dof.yaml": RunGuide(
+        "Lab03 2DOF Upper-Path Condition-Aware DLS",
+        "The arm reaches the same near-edge target from an elbow-down posture, so the hand approaches from above.",
+        "Compare directly against the lower-path case and watch the arm branch in the viewer.",
+        "initial_q with the same target_xy and condition-aware damping schedule",
+        "Hand Y motion, torque sign changes, DLS damping, condition number, and task error.",
+        "Run the lower-path condition-aware DLS case to compare the mirrored branch.",
+    ),
+    "configs/lab03_2dof/condition_aware_dls_lower_path_2dof.yaml": RunGuide(
+        "Lab03 2DOF Lower-Path Condition-Aware DLS",
+        "The arm reaches the same near-edge target from an elbow-up posture, so the hand approaches from below.",
+        "Compare directly against the upper-path case with the same target and damping schedule.",
+        "initial_q with the same target_xy and condition-aware damping schedule",
+        "Hand Y motion, torque sign changes, DLS damping, condition number, and task error.",
+        "Run the upper-path condition-aware DLS case, then compare hand_y and elbow torque plots.",
+    ),
     "configs/lab03_2dof/condition_aware_dls_low_torque_2dof.yaml": RunGuide(
         "Lab03 2DOF Low-Torque Condition-Aware DLS",
         "The same condition-aware DLS target is constrained by a lower shoulder and elbow torque limit.",

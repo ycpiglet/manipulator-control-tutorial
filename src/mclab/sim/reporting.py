@@ -348,6 +348,11 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
             "dls",
         ),
         NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_upper_path_2dof.yaml",
+            "Keep the edge target but approach it from a mirrored arm branch.",
+            "dls",
+        ),
+        NextRunSuggestion(
             "configs/lab03_2dof/condition_aware_dls_fast_command_2dof.yaml",
             "Keep the target and schedule but command the motion faster.",
             "dls",
@@ -408,8 +413,37 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
             "dls",
         ),
         NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_upper_path_2dof.yaml",
+            "Keep the edge target and compare a different elbow branch.",
+            "dls",
+        ),
+        NextRunSuggestion(
             "configs/lab03_2dof/condition_aware_dls_fast_command_2dof.yaml",
             "Keep the edge target but command it faster.",
+            "dls",
+        ),
+    ),
+    "configs/lab03_2dof/condition_aware_dls_upper_path_2dof.yaml": (
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_lower_path_2dof.yaml",
+            "Mirror the initial posture and compare the lower hand path.",
+            "dls",
+        ),
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
+            "Return to the default condition-aware DLS branch.",
+            "dls",
+        ),
+    ),
+    "configs/lab03_2dof/condition_aware_dls_lower_path_2dof.yaml": (
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_upper_path_2dof.yaml",
+            "Mirror the initial posture and compare the upper hand path.",
+            "dls",
+        ),
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
+            "Return to the default condition-aware DLS branch.",
             "dls",
         ),
     ),
@@ -3018,7 +3052,12 @@ def _plot_guidance(filename: str) -> tuple[str, str] | None:
     if "hand_x" in name:
         return (
             "Hand X Position",
-            "Compare how far the hand moves toward or away from the wall across scenarios.",
+            "Compare horizontal hand motion across scenarios. For wall demos, this also shows approach and retreat along the wall normal.",
+        )
+    if "hand_y" in name:
+        return (
+            "Hand Y Position",
+            "Compare vertical hand motion across scenarios. Mirrored 2DOF paths should separate most clearly in this plot.",
         )
     if "end_effector" in name:
         return (

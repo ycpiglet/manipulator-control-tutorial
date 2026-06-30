@@ -100,6 +100,18 @@ BATCH_SETS: dict[str, tuple[BatchScenario, ...]] = {
             "dls",
         ),
         BatchScenario(
+            "condition_aware_upper_path",
+            "lab03",
+            "configs/lab03_2dof/condition_aware_dls_upper_path_2dof.yaml",
+            "dls",
+        ),
+        BatchScenario(
+            "condition_aware_lower_path",
+            "lab03",
+            "configs/lab03_2dof/condition_aware_dls_lower_path_2dof.yaml",
+            "dls",
+        ),
+        BatchScenario(
             "condition_aware_low_torque",
             "lab03",
             "configs/lab03_2dof/condition_aware_dls_low_torque_2dof.yaml",
@@ -211,6 +223,7 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             "When does condition-aware damping start increasing, and what does it trade for lower joint speed?",
             "How do early and late damping schedules change task error near the same workspace edge?",
             "How does moving the target from the inner workspace to the edge change DLS damping and task error?",
+            "How do mirrored elbow-up and elbow-down paths change hand Y motion and torque signs for the same target?",
             "How much does a lower torque limit increase task error when the damping schedule is unchanged?",
             "How does a faster hand command change DLS joint speed, task speed clipping, and task error?",
             "How do the torque plots change when the task is expressed in end-effector space?",
@@ -221,6 +234,7 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             "Copy `configs/lab03_2dof/dls_singularity_2dof.yaml` and vary `tracking_controller.dls_damping`.",
             "Compare `condition_aware_dls_early_2dof.yaml` and `condition_aware_dls_late_2dof.yaml`.",
             "Compare `condition_aware_dls_inner_target_2dof.yaml` and `condition_aware_dls_edge_target_2dof.yaml`.",
+            "Compare `condition_aware_dls_upper_path_2dof.yaml` and `condition_aware_dls_lower_path_2dof.yaml`.",
             "Compare `condition_aware_dls_low_torque_2dof.yaml` and `condition_aware_dls_high_torque_2dof.yaml`.",
             "Compare `condition_aware_dls_slow_command_2dof.yaml` and `condition_aware_dls_fast_command_2dof.yaml`.",
             "Copy `configs/lab03_2dof/condition_aware_dls_2dof.yaml` and change `condition_damping_threshold`.",
@@ -244,11 +258,13 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             ("joint_error_compare.png", "Joint Error Norm Comparison", "error norm", "joint_error_norm"),
             ("task_error_compare.png", "Task Error Norm Comparison", "error norm", "task_error_norm"),
             ("hand_x_compare.png", "End-Effector X Comparison", "x [m]", "x_ee_0"),
+            ("hand_y_compare.png", "End-Effector Y Comparison", "y [m]", "x_ee_1"),
             ("manipulability_compare.png", "Manipulability Comparison", "manipulability", "manipulability"),
             ("dls_task_speed_compare.png", "DLS Task Speed Comparison", "task speed", "dls_task_speed"),
             ("dls_joint_speed_compare.png", "DLS Joint Speed Comparison", "joint speed", "dls_joint_speed"),
             ("dls_damping_compare.png", "DLS Damping Schedule Comparison", "damping / scale", "dls_damping"),
             ("shoulder_torque_compare.png", "Shoulder Torque Comparison", "torque [N m]", "tau_cmd_0"),
+            ("elbow_torque_compare.png", "Elbow Torque Comparison", "torque [N m]", "tau_cmd_1"),
         ),
     ),
     "lab04_wall_compare": BatchGuide(
@@ -1835,8 +1851,10 @@ def _plot_checkpoint(filename: str, title: str) -> str:
         return "Name which scenario retreats most and identify whether force-to-retreat gain or wall force drove it."
     if "hand_x_speed" in name:
         return "Name the fastest approach scenario and connect it to the damping-force comparison."
+    if "hand_y" in name:
+        return "Name which scenario takes the upper or lower hand path and connect it to the arm posture."
     if "hand_x" in name:
-        return "Name which scenario moves the hand closest to the wall and compare it with penetration."
+        return "Name which scenario moves the hand farthest along X and cite the target or wall setting that caused it."
     if "error" in name:
         return "Name which scenario leaves the largest error and cite the matching metric table value."
     if "force" in name or "torque" in name or "effort" in normalized_title:

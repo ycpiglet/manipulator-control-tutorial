@@ -849,6 +849,10 @@ class LearnerMenuTests(unittest.TestCase):
             action_compare_batch(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF fast-command DLS")]).batch_name,
             "lab03_2dof_compare",
         )
+        self.assertEqual(
+            action_compare_batch(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF upper-path DLS")]).batch_name,
+            "lab03_2dof_compare",
+        )
         self.assertEqual(action_compare_batch(by_label[("Lab04 Panda Manipulator", "Virtual wall")]).batch_name, "lab04_wall_compare")
         self.assertEqual(
             action_compare_batch(by_label[("Lab04 Panda Manipulator", "Cartesian reach")]).batch_name,
@@ -883,6 +887,10 @@ class LearnerMenuTests(unittest.TestCase):
         edge_target = config_value_preview(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF edge-target DLS")])
         self.assertIn("target_xy=", edge_target)
         self.assertIn("tracking_controller.condition_damping_threshold=", edge_target)
+        upper_path = config_value_preview(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF upper-path DLS")])
+        self.assertIn("initial_q=", upper_path)
+        self.assertIn("target_xy=", upper_path)
+        self.assertIn("tracking_controller.condition_damping_threshold=", upper_path)
         fast_command = config_value_preview(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF fast-command DLS")])
         self.assertIn("trajectory.duration=", fast_command)
         self.assertIn("tracking_controller.max_task_speed=", fast_command)
@@ -944,6 +952,9 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF slow-command DLS"), command_labels)
         edge_target_labels = {(action.group, action.label) for action in filter_menu_actions("edge target dls")}
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF edge-target DLS"), edge_target_labels)
+        path_branch_labels = {(action.group, action.label) for action in filter_menu_actions("elbow branch")}
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF upper-path DLS"), path_branch_labels)
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF lower-path DLS"), path_branch_labels)
 
         controls_labels = {(action.group, action.label) for action in filter_menu_actions("pull push")}
         self.assertIn(("Lab01 Mass-Spring-Damper", "Interactive"), controls_labels)
@@ -1038,6 +1049,8 @@ class LearnerMenuTests(unittest.TestCase):
                 "2DOF late DLS damping",
                 "2DOF inner-target DLS",
                 "2DOF edge-target DLS",
+                "2DOF upper-path DLS",
+                "2DOF lower-path DLS",
                 "2DOF low-torque DLS",
                 "2DOF high-torque DLS",
                 "2DOF slow-command DLS",

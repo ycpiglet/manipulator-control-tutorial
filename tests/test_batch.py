@@ -29,6 +29,8 @@ class BatchTests(unittest.TestCase):
         self.assertIn("condition_aware_late", lab03_labels)
         self.assertIn("condition_aware_inner_target", lab03_labels)
         self.assertIn("condition_aware_edge_target", lab03_labels)
+        self.assertIn("condition_aware_upper_path", lab03_labels)
+        self.assertIn("condition_aware_lower_path", lab03_labels)
         self.assertIn("condition_aware_low_torque", lab03_labels)
         self.assertIn("condition_aware_high_torque", lab03_labels)
         self.assertIn("condition_aware_slow_command", lab03_labels)
@@ -81,12 +83,23 @@ class BatchTests(unittest.TestCase):
         self.assertTrue(
             any("inner workspace to the edge" in question for question in lab03_guide.questions)
         )
+        self.assertTrue(
+            any("elbow-up and elbow-down paths" in question for question in lab03_guide.questions)
+        )
         self.assertIn(
             ("dls_task_speed_compare.png", "DLS Task Speed Comparison", "task speed", "dls_task_speed"),
             lab03_guide.comparison_specs,
         )
         self.assertIn(
+            ("hand_y_compare.png", "End-Effector Y Comparison", "y [m]", "x_ee_1"),
+            lab03_guide.comparison_specs,
+        )
+        self.assertIn(
             ("shoulder_torque_compare.png", "Shoulder Torque Comparison", "torque [N m]", "tau_cmd_0"),
+            lab03_guide.comparison_specs,
+        )
+        self.assertIn(
+            ("elbow_torque_compare.png", "Elbow Torque Comparison", "torque [N m]", "tau_cmd_1"),
             lab03_guide.comparison_specs,
         )
 

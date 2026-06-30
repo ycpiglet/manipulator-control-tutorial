@@ -92,6 +92,16 @@ python -m mclab batch lab03_2dof_compare --open-report
 
 These two configs keep the same condition-aware damping schedule, torque limits, gains, and trajectory timing while changing only `target_xy`. The inner target stays away from the workspace edge, so `dls_condition_scale` should remain low and the effective damping should stay near the base value. The edge target should raise condition number, increase `dls_damping`, and expose the task-error tradeoff. Compare `dls_damping_compare.png`, `dls_joint_speed_compare.png`, `task_error_compare.png`, and `manipulability_compare.png`.
 
+Condition-aware path-branch comparison:
+
+```bash
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_upper_path_2dof.yaml --headless --plot --plots dls
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_lower_path_2dof.yaml --headless --plot --plots dls
+python -m mclab batch lab03_2dof_compare --open-report
+```
+
+These two configs keep the same near-edge target, condition-aware damping schedule, torque limits, gains, and timing while mirroring only `initial_q`. In the viewer, the arm approaches the same green target from different elbow branches. In the batch report, compare `hand_y_compare.png`, `elbow_torque_compare.png`, `dls_damping_compare.png`, and `task_error_compare.png` to separate geometric branch choice from controller damping behavior.
+
 Condition-aware torque-limit comparison:
 
 ```bash
