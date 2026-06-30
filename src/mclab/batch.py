@@ -666,6 +666,7 @@ def _render_batch_worksheet(output: Path, batch_name: str, guide: BatchGuide, ro
     for question in guide.questions:
         lines.append(f"- Question: {question}")
     lines.append("")
+    lines.extend(_batch_worksheet_prediction_check_lines(rows, metric_keys))
     lines.extend(_batch_worksheet_scenario_lines(rows, metric_keys))
     lines.extend(_batch_worksheet_comparison_lines(rows, metric_keys))
     lines.extend(_batch_worksheet_comparison_plot_lines(output))
@@ -725,6 +726,22 @@ def _batch_worksheet_comparison_lines(rows: list[dict[str, Any]], metric_keys: l
             f"max {max_label} ({_format_value(max_value)})"
         )
     lines.extend(_batch_worksheet_checklist_lines())
+    return lines
+
+
+def _batch_worksheet_prediction_check_lines(rows: list[dict[str, Any]], metric_keys: list[str]) -> list[str]:
+    items = _prediction_check_items(rows, metric_keys)
+    if not items:
+        return []
+    lines = [
+        "## Prediction Check",
+        "",
+        "- Use this after writing a prediction: mark each item as Matched, Partly matched, or Surprised.",
+    ]
+    for metric, evidence, outcome_prompt in items:
+        lines.append(f"- {_label(metric)}: {evidence}")
+        lines.append(f"  - [ ] {outcome_prompt}")
+    lines.append("")
     return lines
 
 
@@ -849,6 +866,7 @@ def _render_batch_report(output: Path, batch_name: str, guide: BatchGuide, rows:
         for row in rows
     )
     comparison_takeaways = _comparison_takeaways(rows, metric_keys)
+    prediction_check = _prediction_check(rows, metric_keys)
     metric_highlights = _metric_highlights(rows, metric_keys)
     baseline_changes = _baseline_metric_changes(rows, metric_keys)
     parameter_differences = _parameter_differences(rows)
@@ -1048,6 +1066,7 @@ def _render_batch_report(output: Path, batch_name: str, guide: BatchGuide, rows:
     </section>
     {next_experiments}
     {reproduce_commands}
+    {prediction_check}
     <section>
       <h2>Scenario Cards</h2>
       <div class="scenario-grid">{scenario_cards}</div>
@@ -1591,6 +1610,81 @@ def _comparison_takeaways(rows: list[dict[str, Any]], metric_keys: list[str]) ->
         + "</div>"
         "</section>"
     )
+
+
+def _prediction_check(rows: list[dict[str, Any]], metric_keys: list[str]) -> str:
+    items = _prediction_check_items(rows, metric_keys)
+    if not items:
+        return ""
+    rows_html = "\n".join(
+        (
+            "<tr>"
+            f"<td>{escape(_label(metric))}</td>"
+            f"<td>{escape(evidence)}</td>"
+            f"<td>{escape(outcome_prompt)}</td>"
+            "</tr>"
+        )
+        for metric, evidence, outcome_prompt in items
+    )
+    return (
+        "<section>"
+        "<h2>Prediction Check</h2>"
+        '<p class="muted">After making a prediction, use this table to decide whether the saved evidence '
+        "matched, partly matched, or surprised you.</p>"
+        '<div class="table-wrap">'
+        "<table>"
+        "<thead><tr><th>Metric</th><th>Saved evidence</th><th>Outcome prompt</th></tr></thead>"
+        f"<tbody>{rows_html}</tbody>"
+        "</table>"
+        "</div>"
+        "</section>"
+    )
+
+
+def _prediction_check_items(
+    rows: list[dict[str, Any]],
+    metric_keys: list[str],
+    *,
+    max_items: int = 5,
+) -> list[tuple[str, str, str]]:
+    items: list[tuple[str, str, str]] = []
+    for key in metric_keys:
+        values = [
+            (str(row["label"]), numeric, _takeaway_rank_value(key, numeric))
+            for row in rows
+            if (numeric := _as_finite_float(row.get("summary", {}).get(key))) is not None
+        ]
+        if len(values) < 2:
+            continue
+        low_label, low_value, low_rank = min(values, key=lambda item: item[2])
+        high_label, high_value, high_rank = max(values, key=lambda item: item[2])
+        if abs(high_rank - low_rank) < 1e-12:
+            continue
+        evidence = _prediction_check_evidence(key, low_label, low_value, high_label, high_value)
+        outcome_prompt = (
+            f"Mark your prediction outcome for {_label(key)}: Matched / Partly matched / Surprised."
+        )
+        items.append((key, evidence, outcome_prompt))
+        if len(items) >= max_items:
+            break
+    return items
+
+
+def _prediction_check_evidence(
+    key: str,
+    low_label: str,
+    low_value: float,
+    high_label: str,
+    high_value: float,
+) -> str:
+    direction = _metric_direction(key)
+    low = f"{low_label} ({_format_value(low_value)})"
+    high = f"{high_label} ({_format_value(high_value)})"
+    if direction == "higher":
+        return f"strongest capability signal: {high}; weakest: {low}."
+    if direction == "lower":
+        return f"lowest calmer/better value: {low}; largest cost/error value: {high}."
+    return f"lowest observed value: {low}; highest observed value: {high}."
 
 
 def _takeaway_card(

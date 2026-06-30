@@ -389,6 +389,23 @@ class BatchTests(unittest.TestCase):
         self.assertIn("near_zero</strong> has the smallest error magnitude", html)
         self.assertIn("far_negative</strong> has the largest", html)
 
+    def test_prediction_check_ranks_error_metrics_by_magnitude(self) -> None:
+        rows = [
+            {"label": "near_zero", "summary": {"steady_state_error": -0.01}},
+            {"label": "far_negative", "summary": {"steady_state_error": -0.5}},
+            {"label": "positive", "summary": {"steady_state_error": 0.2}},
+        ]
+
+        items = batch._prediction_check_items(rows, ["steady_state_error"])
+        html = batch._prediction_check(rows, ["steady_state_error"])
+        worksheet_lines = batch._batch_worksheet_prediction_check_lines(rows, ["steady_state_error"])
+
+        self.assertEqual(len(items), 1)
+        self.assertIn("near_zero (", items[0][1])
+        self.assertIn("far_negative (", items[0][1])
+        self.assertIn("Matched / Partly matched / Surprised", html)
+        self.assertTrue(any("## Prediction Check" in line for line in worksheet_lines))
+
     def test_comparison_plots_are_written_from_run_logs(self) -> None:
         scenarios = (
             batch.BatchScenario("baseline", "lab02", "configs/lab02_pid/default.yaml"),
@@ -427,6 +444,12 @@ class BatchTests(unittest.TestCase):
             self.assertTrue((output / "comparison_plots" / "error_compare.png").exists())
             report_html = (output / "report.html").read_text(encoding="utf-8")
             self.assertIn("Comparison Takeaways", report_html)
+            self.assertIn("Prediction Check", report_html)
+            self.assertIn("Outcome prompt", report_html)
+            self.assertIn(
+                "Mark your prediction outcome for overshoot percent: Matched / Partly matched / Surprised.",
+                report_html,
+            )
             self.assertIn("Predict", report_html)
             self.assertIn("Which controller reaches the target fastest", report_html)
             self.assertIn("python -m mclab batch lab02_pid_compare --open-report", report_html)
@@ -456,6 +479,11 @@ class BatchTests(unittest.TestCase):
             self.assertIn("comparison_plots/position_compare.png", report_html)
             worksheet = (output / "worksheet.md").read_text(encoding="utf-8")
             self.assertIn("# MCLab Batch Worksheet", worksheet)
+            self.assertIn("## Prediction Check", worksheet)
+            self.assertIn(
+                "- [ ] Mark your prediction outcome for overshoot percent: Matched / Partly matched / Surprised.",
+                worksheet,
+            )
             self.assertIn("Comparison Notes", worksheet)
             self.assertIn("overshoot percent", worksheet)
             self.assertIn("## Comparison Plot Guide", worksheet)
