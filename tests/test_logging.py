@@ -423,6 +423,47 @@ class LoggingTests(unittest.TestCase):
                 worksheet_text,
             )
 
+    def test_worksheet_control_coverage_requires_prediction_and_note_on_same_marker(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "run"
+            output.mkdir()
+            (output / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab01_msd",
+                        "config_path": "configs/lab01_msd/interactive_pull.yaml",
+                        "config_name": "interactive_pull",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (output / "config.yaml").write_text("interaction:\n  panel: true\n", encoding="utf-8")
+            (output / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {"prediction": "More damping should settle faster."},
+                        },
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {"note": "The trace settled faster after the slider moved."},
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            write_run_report(output)
+
+            worksheet_text = (output / "worksheet.md").read_text(encoding="utf-8")
+            self.assertIn("- Observation markers: 2", worksheet_text)
+            self.assertIn("- Predictions: 1", worksheet_text)
+            self.assertIn("- Learner notes: 1", worksheet_text)
+            self.assertIn("- [ ] Save one Mark observation with prediction and note. (0 recorded)", worksheet_text)
+
     def test_worksheet_review_checklist_flags_missing_prediction_outcomes(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "run"

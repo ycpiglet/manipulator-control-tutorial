@@ -1078,7 +1078,7 @@ def _worksheet_activity_mix_lines(events: list[dict[str, Any]]) -> list[str]:
 
 def _worksheet_control_coverage_lines(events: list[dict[str, Any]]) -> list[str]:
     counts = _event_kind_counts(events)
-    observation_markers = sum(1 for event in events if _is_observation_marker(event))
+    complete_observation_markers = _complete_observation_evidence_count(events)
     checks = [
         (
             "Try one Quick preset to compare a named parameter regime.",
@@ -1094,7 +1094,7 @@ def _worksheet_control_coverage_lines(events: list[dict[str, Any]]) -> list[str]
         ),
         (
             "Save one Mark observation with prediction and note.",
-            observation_markers,
+            complete_observation_markers,
         ),
     ]
     lines = ["", "Control coverage checklist:"]
@@ -1102,6 +1102,21 @@ def _worksheet_control_coverage_lines(events: list[dict[str, Any]]) -> list[str]
         mark = "x" if count > 0 else " "
         lines.append(f"- [{mark}] {label} ({count} recorded)")
     return lines
+
+
+def _complete_observation_evidence_count(events: list[dict[str, Any]]) -> int:
+    count = 0
+    for event in events:
+        if not _is_observation_marker(event):
+            continue
+        value = event.get("value")
+        if not isinstance(value, dict):
+            continue
+        has_prediction = bool(str(value.get("prediction") or "").strip())
+        has_note = bool(str(value.get("note") or "").strip())
+        if has_prediction and has_note:
+            count += 1
+    return count
 
 
 def _required_preset_progress(config: dict[str, Any], events: list[dict[str, Any]]) -> tuple[list[str], list[str], str]:
