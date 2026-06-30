@@ -841,7 +841,9 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Add one Mark observation entry before moving on.", html)
             self.assertIn("20260627_150100_lab01_interactive/report.html", html)
             self.assertIn("<th>Evidence</th>", html)
+            self.assertIn("<th>Mission evidence</th>", html)
             self.assertIn("No markers", html)
+            self.assertIn("Needs observation; Run the demo, write a prediction, then press Mark observation.", html)
 
             (interactive / "interaction_events.json").write_text(
                 json.dumps(
@@ -865,6 +867,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Needs prediction (1 observation, 1 note)", html)
             self.assertIn("Add one Prediction in Mark observation before moving on.", html)
             self.assertIn("1 observation, 0 predictions, 1 note", html)
+            self.assertIn("Needs prediction; Repeat or continue the demo and save a Mark observation with a prediction.", html)
             self.assertIn(
                 "Latest evidence: Note: The mass settled faster after damping changed.",
                 html,
@@ -894,6 +897,11 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Done (1 observation, 1 prediction, 1 note)", html)
             self.assertIn("Add one Prediction outcome while reviewing.", html)
             self.assertIn(
+                "Mission evidence: Outcome review pending; "
+                "Choose Matched, Partly matched, or Surprised for each saved prediction.",
+                html,
+            )
+            self.assertIn(
                 "Latest evidence: Prediction: More damping should settle faster.; "
                 "Outcome: missing review; "
                 "Note: The mass settled faster after damping changed.",
@@ -922,6 +930,11 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("2/11 steps complete. Next: 3. Close the loop", html)
             self.assertIn("Done (1 observation, 1 prediction, 1 outcome, 1 note)", html)
             self.assertIn("1 observation, 1 prediction, 1 outcome, 1 note", html)
+            self.assertIn(
+                "Mission evidence: Ready for review; "
+                "Compare mission evidence with the priority plot, then run Next or Compare.",
+                html,
+            )
             self.assertIn(
                 "Latest evidence: Prediction: More damping should settle faster.; "
                 "Outcome: Matched; "

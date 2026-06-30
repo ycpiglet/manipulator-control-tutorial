@@ -2121,7 +2121,7 @@ def _result_checks(summary: dict[str, Any]) -> list[tuple[str, str, str]]:
 def _mission_evidence_items(
     summary: dict[str, Any],
     events: list[dict[str, Any]],
-    plots: list[Path],
+    plots: list[Any],
 ) -> list[tuple[str, Any]]:
     markers, predictions, notes, outcomes = _observation_evidence_counts_from_events(events)
     pending_outcomes = max(0, predictions - outcomes)
@@ -2929,9 +2929,13 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
             ),
             default=child.stat().st_mtime,
         )
-        observation_markers, learner_predictions, learner_notes, learner_outcomes = _observation_evidence_counts(child)
-        outcome_counts = _observation_outcome_counts(child)
-        latest_evidence = _latest_observation_evidence(child)
+        interaction_events = _read_json_list(child / "interaction_events.json")
+        observation_markers, learner_predictions, learner_notes, learner_outcomes = (
+            _observation_evidence_counts_from_events(interaction_events)
+        )
+        outcome_counts = _observation_outcome_counts_from_events(interaction_events)
+        latest_evidence = _latest_observation_evidence_from_events(interaction_events)
+        plots = _discover_run_plots(child)
         runs.append(
             {
                 "name": child.name,
@@ -2942,7 +2946,7 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
                 "duration": summary.get("duration", ""),
                 "report": _run_link(child, report_path, index_path),
                 "worksheet": _discover_worksheet(child),
-                "plots": _discover_run_plots(child),
+                "plots": plots,
                 "replay": _discover_replay_config(child),
                 "modified": modified,
                 "summary": summary,
@@ -2954,6 +2958,7 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
                 "learner_outcomes": learner_outcomes,
                 "outcome_counts": outcome_counts,
                 "latest_evidence": latest_evidence,
+                "mission_evidence": _mission_evidence_index_text(summary, interaction_events, plots),
             }
         )
     return sorted(runs, key=lambda run: float(run["modified"]), reverse=True)
@@ -2973,6 +2978,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
             f"<td>{escape(str(run.get('lesson_title', '')))}</td>"
             f"<td>{escape(str(run.get('next_step', '')))}</td>"
             f"<td>{escape(_run_evidence_cell(run))}</td>"
+            f"<td>{escape(str(run.get('mission_evidence', '')))}</td>"
             f"<td>{_run_worksheet_cell(run)}</td>"
             f"<td>{_run_replay_cell(run)}</td>"
             f"<td>{_run_plots_cell(run)}</td>"
@@ -2987,7 +2993,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
         for run in runs
     )
     if not rows:
-        rows = f'<tr><td colspan="{11 + len(metric_keys)}">No run reports were found yet.</td></tr>'
+        rows = f'<tr><td colspan="{12 + len(metric_keys)}">No run reports were found yet.</td></tr>'
 
     return f"""<!doctype html>
 <html lang="en">
@@ -3128,7 +3134,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
     <section>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Run</th><th>Lab</th><th>Config</th><th>Lesson</th><th>Next</th><th>Evidence</th><th>Worksheet</th><th>Replay</th><th>Plots</th><th>Duration [s]</th><th>Samples</th>{metric_headers}</tr></thead>
+          <thead><tr><th>Run</th><th>Lab</th><th>Config</th><th>Lesson</th><th>Next</th><th>Evidence</th><th>Mission evidence</th><th>Worksheet</th><th>Replay</th><th>Plots</th><th>Duration [s]</th><th>Samples</th>{metric_headers}</tr></thead>
           <tbody>{rows}</tbody>
         </table>
       </div>
@@ -3212,6 +3218,7 @@ def _learning_path_card(item: dict[str, Any]) -> str:
     run = item["run"]
     quick_links = _learning_path_quick_links(run)
     latest_evidence = _learning_path_latest_evidence(run)
+    mission_evidence = _learning_path_mission_evidence(run)
     learning_cue = _learning_path_learning_cue(step)
     completion_text = _learning_path_completion_text(step)
     command_label = "Run this step" if run is None else "Repeat this step"
@@ -3255,6 +3262,7 @@ def _learning_path_card(item: dict[str, Any]) -> str:
         f"{learning_cue}"
         f"{status}"
         f"{latest_evidence}"
+        f"{mission_evidence}"
         f"{quick_links}"
         f"{command_block}"
         "</article>"
@@ -3268,6 +3276,15 @@ def _learning_path_latest_evidence(run: dict[str, Any] | None) -> str:
     if not latest:
         return ""
     return f'<p class="muted">Latest evidence: {escape(latest)}</p>'
+
+
+def _learning_path_mission_evidence(run: dict[str, Any] | None) -> str:
+    if run is None:
+        return ""
+    mission = str(run.get("mission_evidence") or "").strip()
+    if not mission:
+        return ""
+    return f'<p class="muted">Mission evidence: {escape(mission)}</p>'
 
 
 def _learning_path_quick_links(run: dict[str, Any] | None) -> str:
@@ -3543,6 +3560,19 @@ def _run_evidence_cell(run: dict[str, Any]) -> str:
     return ", ".join(parts)
 
 
+def _mission_evidence_index_text(
+    summary: dict[str, Any],
+    events: list[dict[str, Any]],
+    plots: list[dict[str, str]],
+) -> str:
+    items = dict(_mission_evidence_items(summary, events, plots))
+    status = str(items.get("Status") or "").strip()
+    next_step = str(items.get("Next proof step") or "").strip()
+    if status and next_step:
+        return f"{status}; {_short_evidence_text(next_step, max_length=96)}"
+    return status or next_step
+
+
 def _run_replay_cell(run: dict[str, Any]) -> str:
     replay = run.get("replay")
     if not isinstance(replay, dict):
@@ -3675,8 +3705,12 @@ def _observation_evidence_counts(output_path: Path) -> tuple[int, int, int, int]
 
 
 def _observation_outcome_counts(output_path: Path) -> dict[str, int]:
+    return _observation_outcome_counts_from_events(_read_json_list(output_path / "interaction_events.json"))
+
+
+def _observation_outcome_counts_from_events(events: list[dict[str, Any]]) -> dict[str, int]:
     counts: dict[str, int] = {}
-    for event in _read_json_list(output_path / "interaction_events.json"):
+    for event in events:
         if not _is_observation_marker(event):
             continue
         value = event.get("value")
