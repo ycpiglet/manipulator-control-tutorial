@@ -902,6 +902,26 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
     ),
     MenuAction(
         group="Lab04 Panda Manipulator",
+        label="Shallow push wall",
+        lab_name="lab04",
+        config_path="configs/lab04_panda/wall_shallow_push.yaml",
+        plots="wall_compare",
+        description="Moves the green hand target just past the same virtual wall for a shallow target-depth test.",
+        try_this="Run before Deep push wall and compare target depth, target-wall gap, and penetration.",
+        watch="Small target-wall gap, wall contact timing, penetration, force, and retreat.",
+    ),
+    MenuAction(
+        group="Lab04 Panda Manipulator",
+        label="Deep push wall",
+        lab_name="lab04",
+        config_path="configs/lab04_panda/wall_deep_push.yaml",
+        plots="wall_compare",
+        description="Moves the green hand target deeper through the same virtual wall for a target-depth test.",
+        try_this="Compare target depth against Shallow push wall with wall stiffness and damping fixed.",
+        watch="Larger target-wall gap, hand penetration, wall force, retreat, and hand X response.",
+    ),
+    MenuAction(
+        group="Lab04 Panda Manipulator",
         label="Contact cycle wall",
         lab_name="lab04",
         config_path="configs/lab04_panda/wall_contact_cycle.yaml",
@@ -2350,6 +2370,11 @@ def parameter_hint(action: MenuAction) -> str:
             return "cartesian_target.position, cartesian_target.gain, cartesian_target.max_step"
         if label in {"slow approach wall", "fast approach wall"}:
             return "trajectory.duration, trajectory.start_time, virtual_wall.wall_x, virtual_wall.damping"
+        if label in {"shallow push wall", "deep push wall"}:
+            return (
+                "cartesian_target.waypoints.2.position.0, cartesian_target.waypoints.3.position.0, "
+                "virtual_wall.wall_x, virtual_wall.stiffness, virtual_wall.damping"
+            )
         if label == "contact cycle wall":
             return "cartesian_target.waypoints, virtual_wall.wall_x, virtual_wall.stiffness, virtual_wall.damping"
         if "wall" in label:
@@ -2576,9 +2601,18 @@ def _resolve_preview_values(config: dict[str, Any], path: str) -> tuple[tuple[st
 def _get_config_value(config: dict[str, Any], path: str) -> Any:
     current: Any = config
     for part in path.split("."):
-        if not isinstance(current, dict) or part not in current:
-            return None
-        current = current[part]
+        if isinstance(current, dict):
+            if part not in current:
+                return None
+            current = current[part]
+            continue
+        if isinstance(current, list) and part.isdigit():
+            index = int(part)
+            if not 0 <= index < len(current):
+                return None
+            current = current[index]
+            continue
+        return None
     return current
 
 

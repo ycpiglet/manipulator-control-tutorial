@@ -696,6 +696,22 @@ RUN_GUIDES: dict[str, RunGuide] = {
         "Higher hand X speed, damping force, retreat, and actuator effort.",
         "Slow trajectory.duration down until the damping-force spike becomes easier to control.",
     ),
+    "configs/lab04_panda/wall_shallow_push.yaml": RunGuide(
+        "Lab04 Shallow-Push Virtual Wall",
+        "The Cartesian hand target moves just past the virtual wall while wall settings stay fixed.",
+        "Run before the deep-push wall and compare target-wall gap against actual penetration.",
+        "cartesian_target.waypoints with fixed virtual_wall.wall_x, stiffness, damping, and retreat gains",
+        "Small target-wall gap, wall contact timing, penetration, wall force, and retreat.",
+        "Run the deep-push wall next to separate commanded target depth from actual hand penetration.",
+    ),
+    "configs/lab04_panda/wall_deep_push.yaml": RunGuide(
+        "Lab04 Deep-Push Virtual Wall",
+        "The Cartesian hand target moves deeper through the same virtual wall.",
+        "Compare directly against shallow-push wall with the same wall settings.",
+        "cartesian_target.waypoints with fixed virtual_wall.wall_x, stiffness, damping, and retreat gains",
+        "Larger target-wall gap, hand penetration, wall force, retreat, and hand X response.",
+        "Reduce target waypoint X until wall force and penetration become comfortable for live demos.",
+    ),
     "configs/lab04_panda/wall_contact_cycle.yaml": RunGuide(
         "Lab04 Contact-Cycle Virtual Wall",
         "The hand target crosses the same virtual wall, backs away, then crosses again.",

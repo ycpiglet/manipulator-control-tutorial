@@ -177,6 +177,8 @@ BATCH_SETS: dict[str, tuple[BatchScenario, ...]] = {
         BatchScenario("high_retreat_wall", "lab04", "configs/lab04_panda/wall_high_retreat.yaml", "wall_compare"),
         BatchScenario("slow_approach_wall", "lab04", "configs/lab04_panda/wall_slow_approach.yaml", "wall_compare"),
         BatchScenario("fast_approach_wall", "lab04", "configs/lab04_panda/wall_fast_approach.yaml", "wall_compare"),
+        BatchScenario("shallow_push_wall", "lab04", "configs/lab04_panda/wall_shallow_push.yaml", "wall_compare"),
+        BatchScenario("deep_push_wall", "lab04", "configs/lab04_panda/wall_deep_push.yaml", "wall_compare"),
         BatchScenario("contact_cycle_wall", "lab04", "configs/lab04_panda/wall_contact_cycle.yaml", "wall_compare"),
     ),
     "lab04_cartesian_compare": (
@@ -331,6 +333,7 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             "With stiffness fixed, how does damping change penetration, force, and retreat?",
             "With stiffness and damping fixed, how does wall position change contact timing and penetration?",
             "With wall gains fixed, how does approach speed change damping force and contact duration?",
+            "With wall settings fixed, how does target push depth change commanded target gap, hand penetration, and force?",
             "With wall force fixed, how does force-to-retreat gain change hand retreat and penetration?",
             "How do repeated target crossings change contact and release episodes over one run?",
         ),
@@ -340,12 +343,14 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             "Compare `wall_low_damping.yaml` and `wall_high_damping.yaml` to isolate damping.",
             "Compare `wall_near.yaml` and `wall_far.yaml` to isolate wall position.",
             "Compare `wall_slow_approach.yaml` and `wall_fast_approach.yaml` to isolate approach speed.",
+            "Compare `wall_shallow_push.yaml` and `wall_deep_push.yaml` to isolate target push depth.",
             "Compare `wall_low_retreat.yaml` and `wall_high_retreat.yaml` to isolate force-to-retreat gain.",
             "Run `wall_contact_cycle.yaml` to inspect repeated contact and release timing.",
         ),
         metric_keys=(
             "max_wall_penetration_cm",
             "max_wall_retreat_cm",
+            "max_target_wall_gap_cm",
             "first_target_wall_cross_time",
             "first_wall_contact_time",
             "first_wall_release_time",
@@ -372,6 +377,7 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
         preview_plots=("virtual_wall.png", "end_effector.png", "error.png"),
         comparison_specs=(
             ("hand_x_compare.png", "Panda Hand X Comparison", "x [m]", "x_ee_0"),
+            ("target_wall_gap_compare.png", "Target-Wall Gap Comparison", "gap [cm]", "target_wall_gap_cm"),
             ("wall_penetration_compare.png", "Wall Penetration Comparison", "penetration [cm]", "wall_penetration_cm"),
             ("wall_force_compare.png", "Virtual Wall Force Comparison", "force", "force_virtual_0"),
             ("wall_spring_force_compare.png", "Virtual Wall Spring Force Comparison", "force", "force_virtual_spring_0"),
@@ -1918,6 +1924,8 @@ def _plot_checkpoint(filename: str, title: str) -> str:
     normalized_title = title.lower()
     if "wall_key_moment_timing" in name or normalized_title == "wall timing":
         return "Name which scenario contacts first, which reaches peak damping earliest, and what parameter caused it."
+    if "target_wall_gap" in name:
+        return "Name which scenario commands the deepest target past the wall and compare whether the hand actually penetrates as deeply."
     if "wall_penetration" in name:
         return "Name which scenario penetrates deepest and whether stiffness, wall position, or approach speed explains it."
     if "wall_retreat" in name:

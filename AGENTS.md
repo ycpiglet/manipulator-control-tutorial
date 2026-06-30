@@ -79,6 +79,7 @@ Implemented and verified:
 - Lab04 low/high damping virtual wall configs that isolate damping with fixed stiffness and retreat gains
 - Lab04 near/far virtual wall configs that isolate wall position with fixed stiffness, damping, and retreat gains
 - Lab04 slow/fast approach virtual wall configs that isolate velocity-dependent damping force with fixed wall gains
+- Lab04 shallow/deep target-push virtual wall configs that isolate commanded target depth with fixed wall gains
 - Lab04 contact-cycle virtual wall config that uses Cartesian waypoints for repeated target crossing, contact, and release lessons
 - Lab04 low/high retreat-gain virtual wall configs that isolate force-to-retreat mapping with fixed wall force settings
 - Lab04 viewer visual guides for Cartesian target, current hand position, contact state, wall-force direction, and virtual wall
@@ -364,6 +365,7 @@ Implemented so far:
 - soft/stiff wall comparison using wall force, penetration, and retreat metrics
 - low/high damping wall comparison using fixed stiffness to isolate damping effects
 - slow/fast approach wall comparison using hand speed and damping-force metrics
+- shallow/deep target-push wall comparison using target-wall gap, penetration, and force metrics
 - contact-cycle wall comparison using Cartesian waypoints and contact/release episode metrics
 - low/high retreat-gain wall comparison using fixed wall force settings to isolate target retreat
 - interactive wall position/stiffness/damping/retreat tuning

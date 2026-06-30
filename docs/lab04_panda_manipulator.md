@@ -123,6 +123,16 @@ python -m mclab batch lab04_wall_compare --open-report
 
 These two configs keep wall stiffness, damping, position, and retreat gains fixed while changing only `trajectory.duration`. Use this after the damping-only comparison to show that the damping term depends on approach velocity, not just penetration. Compare `hand_x_speed_compare.png`, `wall_damping_force_compare.png`, `wall_force_compare.png`, `wall_key_moment_timing_compare.png`, `wall_contact_duration`, `max_hand_x_speed`, `peak_hand_speed_time`, and `max_abs_virtual_wall_damping_force`.
 
+Target-depth wall comparison:
+
+```bash
+python -m mclab run lab04 --config configs/lab04_panda/wall_shallow_push.yaml --headless --plot --plots wall_compare
+python -m mclab run lab04 --config configs/lab04_panda/wall_deep_push.yaml --headless --plot --plots wall_compare
+python -m mclab batch lab04_wall_compare --open-report
+```
+
+These two configs keep wall stiffness, damping, wall position, retreat gains, and waypoint timing fixed while changing only how far the commanded green hand target moves past the virtual wall. Use this before the contact-cycle run to separate commanded target depth from actual hand penetration. Compare `target_wall_gap_compare.png`, `wall_target.png`, `wall_penetration_compare.png`, `wall_force_compare.png`, `max_target_wall_gap_cm`, and `max_wall_penetration_cm`.
+
 Contact-cycle comparison:
 
 ```bash

@@ -49,14 +49,18 @@ class BatchTests(unittest.TestCase):
         self.assertIn("high_retreat_wall", lab04_wall_labels)
         self.assertIn("slow_approach_wall", lab04_wall_labels)
         self.assertIn("fast_approach_wall", lab04_wall_labels)
+        self.assertIn("shallow_push_wall", lab04_wall_labels)
+        self.assertIn("deep_push_wall", lab04_wall_labels)
         self.assertIn("contact_cycle_wall", lab04_wall_labels)
         lab04_guide = batch.BATCH_GUIDES["lab04_wall_compare"]
         self.assertTrue(
             any("force-to-retreat gain" in question for question in lab04_guide.questions)
         )
         self.assertTrue(any("approach speed" in question for question in lab04_guide.questions))
+        self.assertTrue(any("target push depth" in question for question in lab04_guide.questions))
         self.assertTrue(any("repeated target crossings" in question for question in lab04_guide.questions))
         self.assertIn("max_hand_x_speed", lab04_guide.metric_keys)
+        self.assertIn("max_target_wall_gap_cm", lab04_guide.metric_keys)
         self.assertIn("first_target_wall_cross_time", lab04_guide.metric_keys)
         self.assertIn("first_wall_release_time", lab04_guide.metric_keys)
         self.assertIn("first_target_wall_return_time", lab04_guide.metric_keys)
@@ -66,6 +70,10 @@ class BatchTests(unittest.TestCase):
         self.assertIn("wall_contact_episodes", lab04_guide.metric_keys)
         self.assertIn(
             ("hand_x_speed_compare.png", "Panda Hand X Speed Comparison", "x speed [m/s]", "xdot_ee_0"),
+            lab04_guide.comparison_specs,
+        )
+        self.assertIn(
+            ("target_wall_gap_compare.png", "Target-Wall Gap Comparison", "gap [cm]", "target_wall_gap_cm"),
             lab04_guide.comparison_specs,
         )
         self.assertIn(
@@ -166,6 +174,20 @@ class BatchTests(unittest.TestCase):
         self.assertEqual(low_controller, high_controller)
         for key in ("mode", "sim_time", "dt", "initial_q", "target_xy", "trajectory"):
             self.assertEqual(low[key], high[key])
+
+    def test_lab04_push_depth_configs_isolate_target_waypoint_depth(self) -> None:
+        shallow = load_config("configs/lab04_panda/wall_shallow_push.yaml")
+        deep = load_config("configs/lab04_panda/wall_deep_push.yaml")
+
+        shallow_waypoints = shallow["cartesian_target"].pop("waypoints")
+        deep_waypoints = deep["cartesian_target"].pop("waypoints")
+
+        self.assertEqual(shallow["cartesian_target"], deep["cartesian_target"])
+        for key in ("mode", "sim_time", "dt", "home_q", "trajectory", "virtual_wall"):
+            self.assertEqual(shallow[key], deep[key])
+        self.assertEqual([point["time"] for point in shallow_waypoints], [point["time"] for point in deep_waypoints])
+        self.assertLess(shallow_waypoints[2]["position"][0], deep_waypoints[2]["position"][0])
+        self.assertLess(shallow_waypoints[-1]["position"][0], deep_waypoints[-1]["position"][0])
 
     def test_run_batch_creates_child_runs_and_index(self) -> None:
         calls: list[dict[str, object]] = []

@@ -177,6 +177,8 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(("Lab04 Panda Manipulator", "Far wall"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Slow approach wall"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Fast approach wall"), labels)
+        self.assertIn(("Lab04 Panda Manipulator", "Shallow push wall"), labels)
+        self.assertIn(("Lab04 Panda Manipulator", "Deep push wall"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Contact cycle wall"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Low retreat wall"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "High retreat wall"), labels)
@@ -1070,6 +1072,9 @@ class LearnerMenuTests(unittest.TestCase):
             by_label[("Lab03 2DOF Arm and Trajectories", "2DOF low-joint-speed DLS")]
         )
         self.assertIn("tracking_controller.max_joint_speed=", low_joint_speed)
+        deep_push_wall = config_value_preview(by_label[("Lab04 Panda Manipulator", "Deep push wall")])
+        self.assertIn("cartesian_target.waypoints", deep_push_wall)
+        self.assertIn("virtual_wall.wall_x=", deep_push_wall)
 
     def test_filter_menu_actions_matches_search_terms(self) -> None:
         labels = {action.label for action in filter_menu_actions("pid noise")}
@@ -1082,6 +1087,9 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Virtual wall", wall_labels)
         contact_labels = {action.label for action in filter_menu_actions("contact release")}
         self.assertIn("Contact cycle wall", contact_labels)
+        target_depth_labels = {action.label for action in filter_menu_actions("target depth wall")}
+        self.assertIn("Shallow push wall", target_depth_labels)
+        self.assertIn("Deep push wall", target_depth_labels)
         retreat_labels = {action.label for action in filter_menu_actions("retreat gain")}
         self.assertIn("Low retreat wall", retreat_labels)
         self.assertIn("High retreat wall", retreat_labels)
@@ -1217,6 +1225,8 @@ class LearnerMenuTests(unittest.TestCase):
                 "Far wall",
                 "Slow approach wall",
                 "Fast approach wall",
+                "Shallow push wall",
+                "Deep push wall",
                 "Contact cycle wall",
                 "Low retreat wall",
                 "High retreat wall",
@@ -1327,6 +1337,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("virtual_wall.damping", parameter_hint(by_label[("Lab04 Panda Manipulator", "Low damping wall")]))
         self.assertIn("virtual_wall.wall_x", parameter_hint(by_label[("Lab04 Panda Manipulator", "Near wall")]))
         self.assertIn("trajectory.duration", parameter_hint(by_label[("Lab04 Panda Manipulator", "Fast approach wall")]))
+        self.assertIn("cartesian_target.waypoints", parameter_hint(by_label[("Lab04 Panda Manipulator", "Deep push wall")]))
         self.assertIn("cartesian_target.waypoints", parameter_hint(by_label[("Lab04 Panda Manipulator", "Contact cycle wall")]))
         self.assertIn(
             "virtual_wall.force_retreat_gain",

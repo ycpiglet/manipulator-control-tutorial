@@ -118,6 +118,8 @@ class LabSmokeTests(unittest.TestCase):
             "configs/lab04_panda/wall_far.yaml",
             "configs/lab04_panda/wall_slow_approach.yaml",
             "configs/lab04_panda/wall_fast_approach.yaml",
+            "configs/lab04_panda/wall_shallow_push.yaml",
+            "configs/lab04_panda/wall_deep_push.yaml",
             "configs/lab04_panda/wall_contact_cycle.yaml",
             "configs/lab04_panda/wall_low_retreat.yaml",
             "configs/lab04_panda/wall_high_retreat.yaml",

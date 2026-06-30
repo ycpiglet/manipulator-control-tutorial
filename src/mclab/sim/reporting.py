@@ -57,6 +57,7 @@ INDEX_METRIC_KEYS = (
     "final_cartesian_error_cm",
     "max_wall_penetration_cm",
     "max_wall_retreat_cm",
+    "max_target_wall_gap_cm",
     "first_target_wall_cross_time",
     "first_wall_contact_time",
     "first_wall_release_time",
@@ -684,6 +685,7 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
         NextRunSuggestion("configs/lab04_panda/wall_low_damping.yaml", "Isolate damping with fixed stiffness.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_near.yaml", "Move the wall closer to isolate contact timing.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_slow_approach.yaml", "Slow the same wall approach to isolate damping force.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/wall_shallow_push.yaml", "Command a shallow target push through the wall.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_low_retreat.yaml", "Isolate force-to-retreat gain.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_contact_cycle.yaml", "Cycle the target through and back out of the wall.", "wall_compare"),
     ),
@@ -725,11 +727,24 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
     ),
     "configs/lab04_panda/wall_fast_approach.yaml": (
         NextRunSuggestion("configs/lab04_panda/wall_slow_approach.yaml", "Compare the same wall with a slower approach.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/wall_deep_push.yaml", "Keep wall settings fixed and command a deeper target push.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_contact_cycle.yaml", "Repeat contact and release with waypoint targets.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_high_retreat.yaml", "Increase retreat gain to counter the fast contact.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/interactive_virtual_wall.yaml", "Tune the target and wall live.", "wall"),
     ),
+    "configs/lab04_panda/wall_shallow_push.yaml": (
+        NextRunSuggestion("configs/lab04_panda/wall_deep_push.yaml", "Command the same wall much deeper past the wall.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/wall_contact_cycle.yaml", "Add target release and re-entry after the push.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/interactive_virtual_wall.yaml", "Recreate target depth manually with Target X buttons.", "wall"),
+    ),
+    "configs/lab04_panda/wall_deep_push.yaml": (
+        NextRunSuggestion("configs/lab04_panda/wall_shallow_push.yaml", "Return to the shallow target push baseline.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/wall_high_retreat.yaml", "Increase retreat gain to resist the deeper push.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/interactive_virtual_wall.yaml", "Tune target depth and retreat gain live.", "wall"),
+    ),
     "configs/lab04_panda/wall_contact_cycle.yaml": (
+        NextRunSuggestion("configs/lab04_panda/wall_shallow_push.yaml", "Simplify to one shallow target push.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/wall_deep_push.yaml", "Simplify to one deep target push.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_slow_approach.yaml", "Return to a single slow approach for a simpler baseline.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_fast_approach.yaml", "Compare against a single fast approach.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/interactive_virtual_wall.yaml", "Recreate contact and release manually with Target X buttons.", "wall"),
@@ -750,6 +765,7 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
         NextRunSuggestion("configs/lab04_panda/wall_high_damping.yaml", "Save a deterministic damping comparison.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_near.yaml", "Save a deterministic wall-position comparison.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_fast_approach.yaml", "Save a deterministic approach-speed comparison.", "wall_compare"),
+        NextRunSuggestion("configs/lab04_panda/wall_deep_push.yaml", "Save a deterministic target-depth comparison.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_contact_cycle.yaml", "Save repeated contact and release as a deterministic comparison.", "wall_compare"),
         NextRunSuggestion("configs/lab04_panda/wall_high_retreat.yaml", "Save a deterministic retreat-gain comparison.", "wall_compare"),
     ),
@@ -3723,6 +3739,11 @@ def _plot_guidance(filename: str) -> tuple[str, str] | None:
         return (
             "Wall Timing",
             "Compare when contact, peak penetration, peak force, peak damping, and peak hand speed occur across wall scenarios.",
+        )
+    if "target_wall_gap" in name:
+        return (
+            "Target-Wall Gap",
+            "Compare how far the commanded target moves past the wall. Use this before penetration and force plots to separate command depth from actual contact.",
         )
     if "virtual_wall" in name:
         return (
