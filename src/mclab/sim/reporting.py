@@ -772,6 +772,7 @@ def _render_worksheet(
     lines.extend(_worksheet_key_moments_lines(summary))
     lines.extend(_worksheet_pairs_section("Summary Values", list(summary.items())))
     lines.extend(_worksheet_plot_review_lines(output, plots))
+    lines.extend(_worksheet_observation_timeline_lines(interaction_events))
     lines.extend(_worksheet_observation_lines(interaction_events))
     lines.extend(_worksheet_review_checklist(interaction_events, config))
     lines.extend(_worksheet_activity_mix_lines(interaction_events))
@@ -845,6 +846,25 @@ def _worksheet_key_moments_lines(summary: dict[str, Any]) -> list[str]:
             f"- {_markdown_inline(title)}: time {_markdown_inline(time_value)} s; "
             f"{_markdown_inline(value_label)}: {_markdown_inline(value)}. {_markdown_inline(detail)}"
         )
+    lines.append("")
+    return lines
+
+
+def _worksheet_observation_timeline_lines(events: list[dict[str, Any]]) -> list[str]:
+    items = _observation_timeline_items(events)
+    if not items:
+        return []
+    lines = ["## Observation Timeline", ""]
+    for item in items:
+        details = [
+            f"Prediction: {_markdown_inline(item['prediction'])}" if item["prediction"] else "Prediction: missing",
+            f"Outcome: {_markdown_inline(item['outcome'])}" if item["outcome"] else "Outcome: missing",
+        ]
+        if item["note"]:
+            details.append(f"Note evidence: {_markdown_inline(item['note'])}")
+        if item["status"]:
+            details.append(f"Status: {_markdown_inline(item['status'])}")
+        lines.append(f"- Observation {item['index']} at {_markdown_inline(item['time'])} s: " + "; ".join(details))
     lines.append("")
     return lines
 
@@ -1166,6 +1186,7 @@ def _render_report(
     hands_on_evidence = _hands_on_evidence_section(summary, interaction_events)
     learner_action_summary = _learner_action_summary_section(interaction_events, config)
     learner_snapshot_section = _learner_snapshot_section(learner_snapshot)
+    observation_timeline = _observation_timeline_section(interaction_events)
     observation_markers = _observation_markers_section(interaction_events)
     interaction_section = _interaction_section(interaction_events)
     plot_guide = _plot_guide_section(plots)
@@ -1263,6 +1284,13 @@ def _render_report(
       width: 260px;
       color: #3f4752;
       font-weight: 600;
+    }}
+    .timeline-table th {{
+      width: auto;
+    }}
+    .timeline-table th,
+    .timeline-table td {{
+      min-width: 112px;
     }}
     .plots {{
       display: grid;
@@ -1526,6 +1554,7 @@ def _render_report(
     {hands_on_evidence}
     {learner_action_summary}
     {learner_snapshot_section}
+    {observation_timeline}
     {observation_markers}
     {interaction_section}
     <section>
@@ -3154,12 +3183,78 @@ def _interaction_section(events: list[dict[str, Any]]) -> str:
         "<section>"
         "<h2>Interaction Log</h2>"
         f'<p class="empty">{escape(count_text)}</p>'
-        "<table>"
+        '<table class="timeline-table">'
         "<thead><tr><th>Time [s]</th><th>Type</th><th>Control</th><th>Name</th><th>Value</th></tr></thead>"
         f"<tbody>{rows}</tbody>"
         "</table>"
         "</section>"
     )
+
+
+def _observation_timeline_section(events: list[dict[str, Any]]) -> str:
+    markers = [event for event in events if _is_observation_marker(event)]
+    items = _observation_timeline_items(events, limit=12)
+    if not items:
+        return ""
+    rows = "\n".join(
+        (
+            "<tr>"
+            f"<td>Observation {escape(item['index'])}</td>"
+            f"<td>{escape(item['time'])}</td>"
+            f"<td>{escape(item['prediction'] or 'missing')}</td>"
+            f"<td>{escape(item['outcome'] or 'missing')}</td>"
+            f"<td>{escape(item['note'] or 'missing')}</td>"
+            f"<td>{escape(item['status'] or 'n/a')}</td>"
+            "</tr>"
+        )
+        for item in items
+    )
+    count_text = (
+        f"Showing the latest {len(items)} of {len(markers)} observations in time order."
+        if len(markers) > len(items)
+        else f"{len(items)} observation{'s' if len(items) != 1 else ''} shown in time order."
+    )
+    return (
+        "<section>"
+        "<h2>Observation Timeline</h2>"
+        f'<p class="empty">{escape(count_text)}</p>'
+        "<table>"
+        "<thead><tr><th>Marker</th><th>Time [s]</th><th>Prediction</th><th>Outcome</th>"
+        "<th>Note evidence</th><th>Live status</th></tr></thead>"
+        f"<tbody>{rows}</tbody>"
+        "</table>"
+        "</section>"
+    )
+
+
+def _observation_timeline_items(events: list[dict[str, Any]], *, limit: int | None = None) -> list[dict[str, str]]:
+    markers = [
+        (index, event)
+        for index, event in enumerate((event for event in events if _is_observation_marker(event)), start=1)
+    ]
+    if limit is not None and len(markers) > limit:
+        markers = markers[-limit:]
+    items: list[dict[str, str]] = []
+    for index, marker in markers:
+        payload = marker.get("value")
+        value = payload if isinstance(payload, dict) else {}
+        prediction = _short_evidence_text(str(value.get("prediction") or ""), max_length=88)
+        outcome = _short_evidence_text(str(value.get("outcome") or ""), max_length=40)
+        note = str(value.get("note") or "").strip()
+        note_evidence = _note_evidence_summary(note) or _short_evidence_text(note, max_length=88)
+        status = value.get("status")
+        status_evidence = _latest_status_evidence(status, limit=3) if isinstance(status, dict) else ""
+        items.append(
+            {
+                "index": str(index),
+                "time": _format_value(marker.get("time")),
+                "prediction": prediction,
+                "outcome": outcome,
+                "note": note_evidence,
+                "status": status_evidence,
+            }
+        )
+    return items
 
 
 def _observation_markers_section(events: list[dict[str, Any]]) -> str:

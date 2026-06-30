@@ -174,6 +174,7 @@ Implemented and verified:
 - Run reports summarize observation marker questions, predictions, prediction outcomes, learner notes, and prediction-review prompts
 - Run report review prompts surface the latest `Learner note evidence` items before the individual marker cards
 - Run reports and worksheets split semicolon-separated learner notes into `Learner note evidence` items for easier review
+- Run reports and worksheets include an `Observation Timeline` that compares marker time, prediction, outcome, note evidence, and live status in order
 - Run reports show an evidence review cue that counts review-ready prediction-observation pairs and incomplete markers
 - Run reports and generated `worksheet.md` artifacts show run-level `Done when` completion criteria plus prediction outcomes, pending outcome review, notes, live status, key parameters, priority plot review prompts, checklist prompts, suggested next experiments, and comparison batch commands
 - Outputs index learning path cards include evidence status, latest evidence summaries, latest report/worksheet/priority-plot/replay links, and ready-to-run or repeat commands for each course step

@@ -221,6 +221,11 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Watch tuned replay", html)
             self.assertIn("Learner Worksheet", html)
             self.assertIn("Open worksheet.md", html)
+            self.assertIn("Observation Timeline", html)
+            self.assertIn("1 observation shown in time order.", html)
+            self.assertIn("<td>Observation 1</td>", html)
+            self.assertIn("<td>0.02</td>", html)
+            self.assertIn("<th>Note evidence</th>", html)
             self.assertIn("Observation Markers", html)
             self.assertIn("1 marked observation saved.", html)
             self.assertIn("Review prompt", html)
@@ -273,6 +278,14 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("## Mission Evidence", worksheet_text)
             self.assertIn("- Next proof step:", worksheet_text)
             self.assertIn("## Key Parameters", worksheet_text)
+            self.assertIn("## Observation Timeline", worksheet_text)
+            self.assertIn(
+                "- Observation 1 at 0.02 s: Prediction: Higher stiffness should create a sharper force peak.; "
+                "Outcome: Matched; Note evidence: Higher stiffness made the force spike easier to see. "
+                "\\| Energy: 0.125 \\| Changed values: Stiffness=80; "
+                "Status: energy=0.125",
+                worksheet_text,
+            )
             self.assertIn("## Observation Markers", worksheet_text)
             self.assertIn("Higher stiffness should create a sharper force peak.", worksheet_text)
             self.assertIn("Prediction outcome: Matched", worksheet_text)
@@ -308,6 +321,70 @@ class LoggingTests(unittest.TestCase):
             summary = json.loads((output / "summary.json").read_text(encoding="utf-8"))
             self.assertEqual(summary["config_path"], "configs/lab01_msd/default.yaml")
             self.assertEqual(summary["config_name"], "default")
+
+    def test_run_report_renders_observation_timeline_in_time_order(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "run"
+            output.mkdir()
+            (output / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab01_msd",
+                        "config_path": "configs/lab01_msd/interactive_pull.yaml",
+                        "config_name": "interactive_pull",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (output / "config.yaml").write_text("interaction:\n  panel: true\n", encoding="utf-8")
+            (output / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "time": 0.4,
+                            "value": {
+                                "prediction": "First push should move right.",
+                                "note": "Live: position=0.1; Changed values: damping=2",
+                            },
+                        },
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "time": 1.2,
+                            "value": {
+                                "prediction": "Higher damping should settle sooner.",
+                                "outcome": "Partly matched",
+                                "note": "The second response was smaller.",
+                                "status": {"Position [m]": "0.200", "Energy [J]": "0.030"},
+                            },
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            html = write_run_report(output).read_text(encoding="utf-8")
+            worksheet_text = (output / "worksheet.md").read_text(encoding="utf-8")
+
+            self.assertIn("Observation Timeline", html)
+            self.assertIn("2 observations shown in time order.", html)
+            self.assertLess(html.index("<td>Observation 1</td>"), html.index("<td>Observation 2</td>"))
+            self.assertIn("Live: position=0.1 | Changed values: damping=2", html)
+            self.assertIn("Position [m]=0.200, Energy [J]=0.030", html)
+            self.assertIn("## Observation Timeline", worksheet_text)
+            self.assertIn(
+                "- Observation 1 at 0.4 s: Prediction: First push should move right.; "
+                "Outcome: missing; Note evidence: Live: position=0.1 \\| Changed values: damping=2",
+                worksheet_text,
+            )
+            self.assertIn(
+                "- Observation 2 at 1.2 s: Prediction: Higher damping should settle sooner.; "
+                "Outcome: Partly matched; Note evidence: The second response was smaller.; "
+                "Status: Position [m]=0.200, Energy [J]=0.030",
+                worksheet_text,
+            )
 
     def test_worksheet_review_checklist_flags_missing_prediction_outcomes(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
