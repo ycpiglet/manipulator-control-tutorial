@@ -55,6 +55,7 @@ from mclab.learner_menu import (  # noqa: E402
     action_readiness,
     action_replay_text,
     action_tags,
+    action_start_steps_text,
     action_worksheet_text,
     action_doc_path,
     action_viewer_text,
@@ -243,6 +244,8 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertIn(action_mission_text(action), text)
                 self.assertIn("Playbook:", text)
                 self.assertIn(action_playbook_text(action), text)
+                self.assertIn("Start steps:", text)
+                self.assertIn(action_start_steps_text(action), text)
                 self.assertIn("Challenge:", text)
                 self.assertIn(action_challenge_text(action), text)
                 self.assertIn("Mission evidence:", text)
@@ -756,6 +759,8 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertIn(action_mission_text(action), text)
                 self.assertIn("Playbook:", text)
                 self.assertIn(action_playbook_text(action), text)
+                self.assertIn("Start steps:", text)
+                self.assertIn(action_start_steps_text(action), text)
                 self.assertIn("Challenge:", text)
                 self.assertIn(action_challenge_text(action), text)
                 self.assertIn("History:", text)
@@ -786,10 +791,16 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("saves report/plots/worksheet", action_plan_text(auto_demo))
         self.assertIn("Mission: Run the demo", action_mission_text(auto_demo))
         self.assertIn("review the saved plot and worksheet", action_playbook_text(auto_demo))
+        self.assertEqual(
+            action_start_steps_text(auto_demo),
+            "Start steps: Predict -> Run scenario -> Review priority plot and worksheet.",
+        )
         self.assertIn("verify it in the saved plot and worksheet", action_challenge_text(auto_demo))
         self.assertIn("Plan: Deep dive; hands-on viewer", action_plan_text(lab03_dls))
         self.assertIn("Mission: Change", action_mission_text(lab03_dls))
         self.assertIn("mark one observation", action_playbook_text(lab03_dls))
+        self.assertIn("Run viewer", action_start_steps_text(lab03_dls))
+        self.assertIn("try presets Early damping -> Balanced schedule -> Late damping", action_start_steps_text(lab03_dls))
         self.assertIn("prediction-backed observation", action_challenge_text(lab03_dls))
 
     def test_menu_cards_show_actual_control_affordances(self) -> None:
@@ -826,6 +837,10 @@ class LearnerMenuTests(unittest.TestCase):
         wall_controls = action_controls_text(lab04_wall)
         self.assertIn("Target X + into wall", wall_controls)
         self.assertIn("quick presets (Soft wall, Stiff wall, Close wall, Back away, Re-enter wall)", wall_controls)
+        self.assertIn(
+            "try required presets Close wall -> Back away -> Re-enter wall",
+            action_start_steps_text(lab04_wall),
+        )
 
     def test_menu_cards_show_viewer_marker_legend(self) -> None:
         by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
@@ -1209,6 +1224,8 @@ class LearnerMenuTests(unittest.TestCase):
         playbook_labels = {(action.group, action.label) for action in filter_menu_actions("playbook mark observation")}
         self.assertIn(("Lab01 Mass-Spring-Damper", "Interactive"), playbook_labels)
         self.assertIn(("Lab04 Panda Manipulator", "Virtual wall"), playbook_labels)
+        start_steps_labels = {(action.group, action.label) for action in filter_menu_actions("start steps run viewer")}
+        self.assertIn(("Lab04 Panda Manipulator", "Virtual wall"), start_steps_labels)
         challenge_labels = {(action.group, action.label) for action in filter_menu_actions("challenge visible effect")}
         self.assertIn(("Lab01 Mass-Spring-Damper", "Auto demo"), challenge_labels)
         self.assertIn(("Lab04 Panda Manipulator", "Virtual wall"), challenge_labels)

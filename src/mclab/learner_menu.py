@@ -2630,6 +2630,47 @@ def action_playbook_text(action: MenuAction | BatchMenuAction) -> str:
     return "Playbook: 1. predict the response; 2. run the scenario; 3. review the saved plot and worksheet."
 
 
+def action_start_steps_text(action: MenuAction | BatchMenuAction) -> str:
+    if isinstance(action, BatchMenuAction):
+        return (
+            "Start steps: Predict the strongest effect -> "
+            f"Run {_batch_scenario_count(action)} scenarios -> "
+            "Open the worksheet Prediction Check."
+        )
+
+    if "hands-on" in action_tags(action):
+        control_step = _hands_on_start_control_step(action)
+        return f"Start steps: Predict -> Run viewer -> {control_step} -> Mark observation."
+
+    if _is_compare_action(action):
+        return "Start steps: Predict -> Run scenario -> Compare priority plot and worksheet."
+
+    return "Start steps: Predict -> Run scenario -> Review priority plot and worksheet."
+
+
+def _hands_on_start_control_step(action: MenuAction) -> str:
+    required_labels = configured_required_preset_labels(action.config_path)
+    if required_labels:
+        return f"try required presets {' -> '.join(required_labels)}"
+
+    preset_labels = configured_preset_labels(action.config_path)
+    if len(preset_labels) >= 2:
+        return f"try presets {' -> '.join(preset_labels[:3])}"
+
+    interaction = _loaded_action_config(action.config_path).get("interaction", {})
+    if not isinstance(interaction, dict):
+        interaction = {}
+    if bool(interaction.get("key_force", False)):
+        return "use Pull/Push"
+    if bool(interaction.get("target_nudge", False)):
+        return "use Target X buttons"
+    if bool(interaction.get("joint_disturbance", False)):
+        return "use Shoulder/Elbow pulse"
+    if bool(interaction.get("live_tuning", False)):
+        return "move one live slider"
+    return "use one button, slider, or preset"
+
+
 def action_challenge_text(action: MenuAction | BatchMenuAction) -> str:
     if isinstance(action, BatchMenuAction):
         return (
@@ -2909,6 +2950,7 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
         f"{action_plan_text(action)}\n"
         f"{action_mission_text(action)}\n"
         f"{action_playbook_text(action)}\n"
+        f"{action_start_steps_text(action)}\n"
         f"{action_challenge_text(action)}\n"
         f"{action_history_text(action, outputs_root)}\n"
         f"{action_evidence_text(action, outputs_root)}\n"
@@ -3172,9 +3214,11 @@ def _action_matches_terms(action: MenuAction, terms: list[str]) -> bool:
         action_plan_text(action),
         action_mission_text(action),
         action_playbook_text(action),
+        action_start_steps_text(action),
         action_challenge_text(action),
         "mission evidence challenge evidence artifact observation prediction outcome note proof",
         "playbook predict change mark review worksheet",
+        "start steps first action run viewer priority plot",
         "challenge visible effect prove strongest effect proof source",
         "next cue run preset observation outcome replay compare",
         " ".join(configured_preset_labels(action.config_path)),
@@ -4039,6 +4083,7 @@ def lesson_text_for_batch(action: BatchMenuAction, outputs_root: Path | None = N
         f"{batch_plan_text(action)}\n"
         f"{action_mission_text(action)}\n"
         f"{action_playbook_text(action)}\n"
+        f"{action_start_steps_text(action)}\n"
         f"{action_challenge_text(action)}\n"
         f"{action_history_text(action, outputs_root)}\n"
         f"{action_mission_evidence_text(action, outputs_root)}\n"
