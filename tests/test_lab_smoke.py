@@ -86,6 +86,8 @@ class LabSmokeTests(unittest.TestCase):
             "configs/lab03_2dof/condition_aware_dls_high_joint_speed_2dof.yaml",
             "configs/lab03_2dof/condition_aware_dls_direct_retarget_2dof.yaml",
             "configs/lab03_2dof/condition_aware_dls_inward_retarget_2dof.yaml",
+            "configs/lab03_2dof/condition_aware_dls_fixed_speed_retarget_2dof.yaml",
+            "configs/lab03_2dof/condition_aware_dls_adaptive_speed_retarget_2dof.yaml",
         ):
             with self.subTest(config_path=config_path):
                 config = load_config(config_path)

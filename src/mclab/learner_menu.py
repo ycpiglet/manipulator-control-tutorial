@@ -692,6 +692,26 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
     ),
     MenuAction(
         group="Lab03 2DOF Arm and Trajectories",
+        label="2DOF fixed-speed retarget DLS",
+        lab_name="lab03",
+        config_path="configs/lab03_2dof/condition_aware_dls_fixed_speed_retarget_2dof.yaml",
+        plots="dls",
+        description="Retargets to the edge with one fixed DLS task-speed limit.",
+        try_this="Run before adaptive-speed retarget DLS and compare the speed-limit trace.",
+        watch="DLS task-speed limit, task speed, joint speed, damping, and task error.",
+    ),
+    MenuAction(
+        group="Lab03 2DOF Arm and Trajectories",
+        label="2DOF adaptive-speed retarget DLS",
+        lab_name="lab03",
+        config_path="configs/lab03_2dof/condition_aware_dls_adaptive_speed_retarget_2dof.yaml",
+        plots="dls",
+        description="Retargets to the edge while lowering the task-speed limit near the edge.",
+        try_this="Compare directly against fixed-speed retarget DLS with the same target path.",
+        watch="Whether a lower speed cap reduces DLS joint speed or leaves more tracking error.",
+    ),
+    MenuAction(
+        group="Lab03 2DOF Arm and Trajectories",
         label="2DOF interactive",
         lab_name="lab03",
         config_path="configs/lab03_2dof/interactive_2dof.yaml",
@@ -2521,6 +2541,8 @@ def parameter_hint(action: MenuAction) -> str:
             "2dof high-joint-speed dls",
             "2dof direct-retarget dls",
             "2dof inward-retarget dls",
+            "2dof fixed-speed retarget dls",
+            "2dof adaptive-speed retarget dls",
         }:
             if label == "2dof condition-aware dls":
                 return (
@@ -2567,6 +2589,16 @@ def parameter_hint(action: MenuAction) -> str:
             if label in {"2dof direct-retarget dls", "2dof inward-retarget dls"}:
                 return (
                     "target_xy_waypoints, target_xy, tracking_controller.max_task_speed, "
+                    "tracking_controller.condition_damping_threshold, tracking_controller.max_dls_damping"
+                )
+            if label == "2dof fixed-speed retarget dls":
+                return (
+                    "target_xy_waypoints, target_xy, tracking_controller.max_task_speed, "
+                    "tracking_controller.condition_damping_threshold, tracking_controller.max_dls_damping"
+                )
+            if label == "2dof adaptive-speed retarget dls":
+                return (
+                    "target_xy_waypoints, target_xy, tracking_controller.max_task_speed_schedule, "
                     "tracking_controller.condition_damping_threshold, tracking_controller.max_dls_damping"
                 )
             return (
@@ -2914,6 +2946,8 @@ def _resolve_preview_values(config: dict[str, Any], path: str) -> tuple[tuple[st
     value = _get_config_value(config, path)
     if path.endswith("waypoints") and _is_preview_waypoint_list(value):
         return ((path, value),)
+    if path.endswith("schedule") and _is_preview_schedule_list(value):
+        return ((path, value),)
     if not _is_preview_value(value):
         return ()
     return ((path, value),)
@@ -2949,6 +2983,14 @@ def _is_preview_waypoint_list(value: Any) -> bool:
     return isinstance(value, list) and bool(value) and all(isinstance(item, dict) for item in value)
 
 
+def _is_preview_schedule_list(value: Any) -> bool:
+    return (
+        isinstance(value, list)
+        and bool(value)
+        and all(isinstance(item, dict) and ("value" in item or "speed" in item) for item in value)
+    )
+
+
 def _format_config_value(value: Any) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
@@ -2956,6 +2998,8 @@ def _format_config_value(value: Any) -> str:
         return f"{value:g}"
     if isinstance(value, str):
         return value if len(value) <= 32 else f"{value[:29]}..."
+    if _is_preview_schedule_list(value):
+        return _format_schedule_preview(value)
     if _is_preview_waypoint_list(value):
         return _format_waypoint_preview(value)
     if isinstance(value, list | tuple):
@@ -2969,6 +3013,13 @@ def _format_waypoint_preview(waypoints: list[dict[str, Any]]) -> str:
     first = _waypoint_position_preview(waypoints[0])
     last = _waypoint_position_preview(waypoints[-1])
     return f"{len(waypoints)} waypoints: {first} -> {last}"
+
+
+def _format_schedule_preview(points: list[dict[str, Any]]) -> str:
+    def point_value(point: dict[str, Any]) -> str:
+        return _format_config_value(point.get("value", point.get("speed", "?")))
+
+    return f"{len(points)} points: {point_value(points[0])} -> {point_value(points[-1])}"
 
 
 def _waypoint_position_preview(waypoint: dict[str, Any]) -> str:

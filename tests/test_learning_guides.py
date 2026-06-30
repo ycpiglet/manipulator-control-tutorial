@@ -212,6 +212,9 @@ class LearningGuideTests(unittest.TestCase):
         lab03_retarget_guide = guide_for_config(
             config_path="configs/lab03_2dof/condition_aware_dls_inward_retarget_2dof.yaml"
         )
+        lab03_adaptive_speed_guide = guide_for_config(
+            config_path="configs/lab03_2dof/condition_aware_dls_adaptive_speed_retarget_2dof.yaml"
+        )
         lab04_wall_guide = guide_for_config(config_path="configs/lab04_panda/interactive_virtual_wall.yaml")
         lab04_joint_guide = guide_for_config(config_path="configs/lab04_panda/joint_pd.yaml")
 
@@ -223,6 +226,12 @@ class LearningGuideTests(unittest.TestCase):
         self.assertIn(
             ("Small green spheres", "Planned target waypoint path."),
             viewer_legend_for_guide(lab03_retarget_guide),
+        )
+        assert lab03_adaptive_speed_guide is not None
+        self.assertIn("max_task_speed_schedule", lab03_adaptive_speed_guide.change)
+        self.assertIn(
+            ("Small green spheres", "Planned target waypoint path."),
+            viewer_legend_for_guide(lab03_adaptive_speed_guide),
         )
         self.assertIn(("Red plane", "Virtual wall location."), viewer_legend_for_guide(lab04_wall_guide))
         self.assertIn(

@@ -56,6 +56,8 @@ INDEX_METRIC_KEYS = (
     "disturbance_recovery_duration",
     "disturbance_recovery_time",
     "max_dls_task_speed",
+    "min_dls_task_speed_limit",
+    "max_dls_task_speed_limit",
     "max_dls_joint_speed",
     "max_dls_damping",
     "max_dls_condition_scale",
@@ -141,6 +143,7 @@ CONFIG_HIGHLIGHT_KEYS = (
     "tracking_controller.condition_damping_full",
     "tracking_controller.max_dls_damping",
     "tracking_controller.max_task_speed",
+    "tracking_controller.max_task_speed_schedule",
     "tracking_controller.max_joint_speed",
     "tracking_controller.force_limit",
     "tracking_controller.torque_limit",
@@ -641,6 +644,11 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
             "dls",
         ),
         NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_fixed_speed_retarget_2dof.yaml",
+            "Hold one fixed task-speed limit for the same direct retarget path.",
+            "dls",
+        ),
+        NextRunSuggestion(
             "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
             "Return to the single near-edge target.",
             "dls",
@@ -655,6 +663,30 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
         NextRunSuggestion(
             "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
             "Return to the single near-edge target.",
+            "dls",
+        ),
+    ),
+    "configs/lab03_2dof/condition_aware_dls_fixed_speed_retarget_2dof.yaml": (
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_adaptive_speed_retarget_2dof.yaml",
+            "Lower the task-speed limit near the edge and compare tracking error.",
+            "dls",
+        ),
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_direct_retarget_2dof.yaml",
+            "Return to the direct retarget reference.",
+            "dls",
+        ),
+    ),
+    "configs/lab03_2dof/condition_aware_dls_adaptive_speed_retarget_2dof.yaml": (
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_fixed_speed_retarget_2dof.yaml",
+            "Remove the speed schedule and compare against one fixed task-speed limit.",
+            "dls",
+        ),
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_inward_retarget_2dof.yaml",
+            "Compare speed scheduling against changing the target path itself.",
             "dls",
         ),
     ),
@@ -4266,6 +4298,11 @@ def _plot_guidance(filename: str) -> tuple[str, str] | None:
         return (
             "PID Terms",
             "Compare P, I, and D contributions. Large integral buildup or noisy derivative terms explain many controller surprises.",
+        )
+    if "dls_task_speed_limit" in name:
+        return (
+            "DLS Speed Limit",
+            "Check whether the adaptive schedule actually lowers the task-speed cap before comparing task error and joint speed.",
         )
     if "dls" in name:
         return (

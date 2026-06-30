@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from mclab.labs.lab03_2dof import (  # noqa: E402
     _condition_aware_dls_damping,
     _interpolate_two_link_target_xy_waypoints,
+    _scheduled_controller_scalar,
     _smooth_pulse_scale,
     _two_link_target_xy_command,
     _two_link_target_xy_waypoints,
@@ -138,6 +139,33 @@ class TwoLinkKinematicsTests(unittest.TestCase):
         self.assertAlmostEqual(position[1], 0.15)
         self.assertGreater(velocity[0], 0.0)
         self.assertLess(velocity[1], 0.0)
+
+    def test_scheduled_controller_scalar_interpolates_speed_limits(self) -> None:
+        config = {
+            "max_task_speed": 0.45,
+            "max_task_speed_schedule": [
+                {"time": 1.0, "speed": 0.20},
+                {"time": 0.0, "value": 0.60},
+                {"time": 2.0, "value": 0.40},
+            ],
+        }
+
+        self.assertAlmostEqual(
+            _scheduled_controller_scalar(config, "max_task_speed_schedule", "max_task_speed", 0.55, -0.1),
+            0.60,
+        )
+        self.assertAlmostEqual(
+            _scheduled_controller_scalar(config, "max_task_speed_schedule", "max_task_speed", 0.55, 0.5),
+            0.40,
+        )
+        self.assertAlmostEqual(
+            _scheduled_controller_scalar(config, "max_task_speed_schedule", "max_task_speed", 0.55, 3.0),
+            0.40,
+        )
+        self.assertAlmostEqual(
+            _scheduled_controller_scalar({"max_task_speed": 0.33}, "max_task_speed_schedule", "max_task_speed", 0.55, 1.0),
+            0.33,
+        )
 
     def test_two_link_target_xy_command_preserves_existing_single_goal_behavior(self) -> None:
         class DummyLiveTuning:

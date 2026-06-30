@@ -761,6 +761,22 @@ RUN_GUIDES: dict[str, RunGuide] = {
         "DLS task speed, joint speed, torque, condition scale, and final hand error.",
         "Move the inner waypoint or timing to see when retargeting helps versus simply asking for faster motion.",
     ),
+    "configs/lab03_2dof/condition_aware_dls_fixed_speed_retarget_2dof.yaml": RunGuide(
+        "Lab03 2DOF Fixed-Speed Retarget Condition-Aware DLS",
+        "The same direct near-edge retarget path uses one fixed DLS task-speed limit.",
+        "Run before adaptive-speed retarget DLS and compare the speed-limit trace.",
+        "target_xy_waypoints, tracking_controller.max_task_speed",
+        "DLS task-speed limit, task speed, joint speed, damping, and task error.",
+        "Run adaptive-speed retarget DLS next and compare whether lower speed near the edge changes tracking error.",
+    ),
+    "configs/lab03_2dof/condition_aware_dls_adaptive_speed_retarget_2dof.yaml": RunGuide(
+        "Lab03 2DOF Adaptive-Speed Retarget Condition-Aware DLS",
+        "The same direct near-edge retarget path lowers the DLS task-speed limit near the workspace edge.",
+        "Compare directly against fixed-speed retarget DLS with the same target path and gains.",
+        "tracking_controller.max_task_speed_schedule with the same target_xy_waypoints",
+        "DLS task-speed limit, task speed, joint speed, damping, and task error.",
+        "Tune the schedule times or speeds to find the earliest visible reduction in joint speed.",
+    ),
     "configs/lab03_2dof/interactive_2dof.yaml": RunGuide(
         "Lab03 2DOF Interactive",
         "Tune hand target and task-space gains, then disturb the shoulder or elbow while the 2DOF arm runs.",

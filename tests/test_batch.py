@@ -42,6 +42,8 @@ class BatchTests(unittest.TestCase):
         self.assertIn("condition_aware_high_joint_speed", lab03_labels)
         self.assertIn("condition_aware_direct_retarget", lab03_labels)
         self.assertIn("condition_aware_inward_retarget", lab03_labels)
+        self.assertIn("condition_aware_fixed_speed_retarget", lab03_labels)
+        self.assertIn("condition_aware_adaptive_speed_retarget", lab03_labels)
         lab04_wall_labels = {scenario.label for scenario in batch.BATCH_SETS["lab04_wall_compare"]}
         self.assertIn("low_damping_wall", lab04_wall_labels)
         self.assertIn("high_damping_wall", lab04_wall_labels)
@@ -98,6 +100,8 @@ class BatchTests(unittest.TestCase):
         )
         self.assertIn("max_dls_condition_scale", batch.BATCH_GUIDES["lab03_2dof_compare"].metric_keys)
         self.assertIn("max_dls_task_speed", batch.BATCH_GUIDES["lab03_2dof_compare"].metric_keys)
+        self.assertIn("min_dls_task_speed_limit", batch.BATCH_GUIDES["lab03_2dof_compare"].metric_keys)
+        self.assertIn("max_dls_task_speed_limit", batch.BATCH_GUIDES["lab03_2dof_compare"].metric_keys)
         lab03_guide = batch.BATCH_GUIDES["lab03_2dof_compare"]
         self.assertTrue(
             any("lower torque limit increase task error" in question for question in lab03_guide.questions)
@@ -110,6 +114,9 @@ class BatchTests(unittest.TestCase):
         )
         self.assertTrue(
             any("retargeting through an inner waypoint" in question for question in lab03_guide.questions)
+        )
+        self.assertTrue(
+            any("slowing the task-speed limit" in question for question in lab03_guide.questions)
         )
         self.assertTrue(
             any("inner workspace to the edge" in question for question in lab03_guide.questions)
@@ -125,6 +132,15 @@ class BatchTests(unittest.TestCase):
         self.assertIn("disturbance_recovery_duration", lab03_guide.metric_keys)
         self.assertIn(
             ("dls_task_speed_compare.png", "DLS Task Speed Comparison", "task speed", "dls_task_speed"),
+            lab03_guide.comparison_specs,
+        )
+        self.assertIn(
+            (
+                "dls_task_speed_limit_compare.png",
+                "DLS Task Speed Limit Comparison",
+                "task speed limit",
+                "dls_task_speed_limit",
+            ),
             lab03_guide.comparison_specs,
         )
         self.assertIn(
@@ -179,6 +195,21 @@ class BatchTests(unittest.TestCase):
         self.assertEqual(low_controller, high_controller)
         for key in ("mode", "sim_time", "dt", "initial_q", "target_xy", "trajectory"):
             self.assertEqual(low[key], high[key])
+
+    def test_lab03_adaptive_speed_schedule_configs_isolate_speed_schedule(self) -> None:
+        fixed = load_config("configs/lab03_2dof/condition_aware_dls_fixed_speed_retarget_2dof.yaml")
+        adaptive = load_config("configs/lab03_2dof/condition_aware_dls_adaptive_speed_retarget_2dof.yaml")
+
+        fixed_controller = dict(fixed["tracking_controller"])
+        adaptive_controller = dict(adaptive["tracking_controller"])
+        schedule = adaptive_controller.pop("max_task_speed_schedule")
+
+        self.assertNotIn("max_task_speed_schedule", fixed_controller)
+        self.assertEqual(fixed_controller, adaptive_controller)
+        self.assertEqual(fixed["target_xy_waypoints"], adaptive["target_xy_waypoints"])
+        self.assertLess(min(point["speed"] for point in schedule), adaptive_controller["max_task_speed"])
+        for key in ("mode", "sim_time", "dt", "initial_q", "target_xy", "trajectory"):
+            self.assertEqual(fixed[key], adaptive[key])
 
     def test_lab04_push_depth_configs_isolate_target_waypoint_depth(self) -> None:
         shallow = load_config("configs/lab04_panda/wall_shallow_push.yaml")

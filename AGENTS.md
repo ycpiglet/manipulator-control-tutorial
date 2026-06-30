@@ -64,8 +64,9 @@ Implemented and verified:
 - Lab03 condition-aware DLS slow/fast command-speed comparison configs for target-speed lessons
 - Lab03 condition-aware DLS low/high joint-speed-limit comparison configs for speed-clipping lessons
 - Lab03 condition-aware DLS direct/inward retargeting comparison configs for target-path lessons
+- Lab03 condition-aware DLS fixed/adaptive speed-retarget comparison configs for adaptive target-speed scheduling lessons
 - Lab03 retargeting DLS viewer guides show small green waypoint path markers for target-path lessons
-- Learner menu exposes Lab03 upper/lower path, shoulder/elbow disturbance, low/high torque-limit, slow/fast command-speed, low/high joint-speed-limit, and direct/inward retargeting DLS scenario cards with compare/search/filter support
+- Learner menu exposes Lab03 upper/lower path, shoulder/elbow disturbance, low/high torque-limit, slow/fast command-speed, low/high joint-speed-limit, direct/inward retargeting, and fixed/adaptive speed-retarget DLS scenario cards with compare/search/filter support
 - Lab04 Franka Emika Panda manipulator using MuJoCo Menagerie
 - Lab04 30-second neutral-hold stability check config and report checks
 - Lab04 Cartesian reach with damped-least-squares Jacobian target offsets
@@ -383,11 +384,12 @@ Implemented so far:
 - slow/fast command-speed condition-aware DLS comparison configs for Lab03
 - low/high joint-speed-limit condition-aware DLS comparison configs for Lab03
 - direct/inward retargeting-path condition-aware DLS comparison configs for Lab03
+- fixed/adaptive speed-retarget condition-aware DLS comparison configs for Lab03
 - standard logs and plots for joint position, end-effector position, torque, current proxy, and error
 
 Remaining likely extension:
 
-- richer condition-aware task-control comparisons, such as adaptive speed schedules under changing targets
+- richer condition-aware task-control comparisons, such as combined adaptive speed and disturbance schedules under changing targets
 
 ### Phase 6 - Lab04 Advanced Control
 

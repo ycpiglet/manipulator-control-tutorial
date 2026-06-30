@@ -394,6 +394,7 @@ def _run_two_link_arm(
                     target_q_state=dls_target_q,
                     target_xy=target_xy,
                     target_xdot=target_xdot,
+                    time=float(data.time),
                     dt=simulation_dt,
                     geometry=geometry,
                     controller_config=controller_config,
@@ -978,6 +979,47 @@ def _interpolate_two_link_target_xy_waypoints(
     return list(waypoints[-1][1]), [0.0, 0.0]
 
 
+def _scheduled_controller_scalar(
+    controller_config: dict[str, Any],
+    schedule_key: str,
+    fallback_key: str,
+    default: float,
+    time: float,
+) -> float:
+    fallback = abs(float(controller_config.get(fallback_key, default)))
+    raw_schedule = controller_config.get(schedule_key)
+    if not isinstance(raw_schedule, list):
+        return fallback
+
+    points: list[tuple[float, float]] = []
+    for index, raw in enumerate(raw_schedule):
+        if not isinstance(raw, dict):
+            raise ValueError(f"{schedule_key}[{index}] must be a mapping")
+        point_time = float(raw.get("time", raw.get("t", 0.0)))
+        if "value" in raw:
+            value = float(raw["value"])
+        elif "speed" in raw:
+            value = float(raw["speed"])
+        else:
+            value = float(raw.get(fallback_key, fallback))
+        points.append((point_time, abs(value)))
+    if not points:
+        return fallback
+
+    points.sort(key=lambda item: item[0])
+    if len(points) == 1 or time <= points[0][0]:
+        return points[0][1]
+    if time >= points[-1][0]:
+        return points[-1][1]
+
+    for (start_time, start_value), (end_time, end_value) in zip(points, points[1:]):
+        if start_time <= time <= end_time:
+            duration = max(1e-9, end_time - start_time)
+            phase = max(0.0, min(1.0, (time - start_time) / duration))
+            return start_value + phase * (end_value - start_value)
+    return points[-1][1]
+
+
 def _joint_space_command(
     *,
     q: list[float],
@@ -1061,6 +1103,7 @@ def _dls_task_space_command(
     target_q_state: list[float],
     target_xy: list[float],
     target_xdot: list[float],
+    time: float,
     dt: float,
     geometry: TwoLinkGeometry,
     controller_config: dict[str, Any],
@@ -1098,7 +1141,13 @@ def _dls_task_space_command(
         damping_config,
         enabled=condition_aware,
     )
-    max_task_speed = abs(float(controller_config.get("max_task_speed", 0.55)))
+    max_task_speed = _scheduled_controller_scalar(
+        controller_config,
+        "max_task_speed_schedule",
+        "max_task_speed",
+        0.55,
+        time,
+    )
     max_joint_speed = abs(float(controller_config.get("max_joint_speed", 2.8)))
     max_joint_error = abs(float(controller_config.get("max_joint_error", 0.35)))
 
@@ -1143,6 +1192,7 @@ def _dls_task_space_command(
         "dls_condition_number": condition,
         "dls_gain": dls_gain,
         "dls_task_speed": _norm(task_velocity),
+        "dls_task_speed_limit": max_task_speed,
         "dls_joint_speed": _norm(qdot_dls),
         "dls_condition_threshold": damping_config.get("condition_damping_threshold"),
         "dls_condition_full": damping_config.get("condition_damping_full"),
@@ -1168,7 +1218,7 @@ def _save_two_link_plots(output_path: Path, rows: list[dict[str, Any]], selectio
             "dls.png",
             "2DOF Damped Least-Squares Command",
             "speed / damping",
-            ["dls_task_speed", "dls_joint_speed", "dls_damping", "dls_condition_scale"],
+            ["dls_task_speed", "dls_task_speed_limit", "dls_joint_speed", "dls_damping", "dls_condition_scale"],
         ),
     ]
     presets = {
@@ -1222,6 +1272,7 @@ def _two_link_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
         summary.update(_two_link_disturbance_recovery_metrics(rows))
     dls_joint_speeds = _finite_row_values(rows, "dls_joint_speed")
     if dls_joint_speeds:
+        dls_task_speed_limits = _finite_row_values(rows, "dls_task_speed_limit")
         summary.update(
             {
                 "max_dls_joint_speed": max(dls_joint_speeds),
@@ -1229,6 +1280,9 @@ def _two_link_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
                 "dls_damping": rows[-1].get("dls_damping"),
             }
         )
+        if dls_task_speed_limits:
+            summary["min_dls_task_speed_limit"] = min(dls_task_speed_limits)
+            summary["max_dls_task_speed_limit"] = max(dls_task_speed_limits)
         condition_scales = _finite_row_values(rows, "dls_condition_scale")
         if condition_scales:
             summary["max_dls_condition_scale"] = max(condition_scales)
@@ -1369,6 +1423,7 @@ def _dls_log_fields(command: dict[str, Any]) -> dict[str, Any]:
         "dls_condition_number",
         "dls_gain",
         "dls_task_speed",
+        "dls_task_speed_limit",
         "dls_joint_speed",
         "dls_condition_threshold",
         "dls_condition_full",

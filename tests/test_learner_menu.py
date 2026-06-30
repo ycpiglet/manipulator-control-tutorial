@@ -1177,6 +1177,11 @@ class LearnerMenuTests(unittest.TestCase):
         )
         self.assertIn("target_xy_waypoints", direct_retarget)
         self.assertIn("tracking_controller.max_task_speed=", direct_retarget)
+        adaptive_speed_retarget = config_value_preview(
+            by_label[("Lab03 2DOF Arm and Trajectories", "2DOF adaptive-speed retarget DLS")]
+        )
+        self.assertIn("target_xy_waypoints", adaptive_speed_retarget)
+        self.assertIn("tracking_controller.max_task_speed_schedule", adaptive_speed_retarget)
         deep_push_wall = config_value_preview(by_label[("Lab04 Panda Manipulator", "Deep push wall")])
         self.assertIn("cartesian_target.waypoints", deep_push_wall)
         self.assertIn("virtual_wall.wall_x=", deep_push_wall)
@@ -1247,6 +1252,17 @@ class LearnerMenuTests(unittest.TestCase):
         retarget_labels = {(action.group, action.label) for action in filter_menu_actions("retarget dls")}
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF direct-retarget DLS"), retarget_labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF inward-retarget DLS"), retarget_labels)
+        speed_retarget_labels = {
+            (action.group, action.label) for action in filter_menu_actions("adaptive speed retarget")
+        }
+        self.assertIn(
+            ("Lab03 2DOF Arm and Trajectories", "2DOF adaptive-speed retarget DLS"),
+            speed_retarget_labels,
+        )
+        self.assertIn(
+            ("Lab03 2DOF Arm and Trajectories", "2DOF fixed-speed retarget DLS"),
+            speed_retarget_labels,
+        )
         playbook_labels = {(action.group, action.label) for action in filter_menu_actions("playbook mark observation")}
         self.assertIn(("Lab01 Mass-Spring-Damper", "Interactive"), playbook_labels)
         self.assertIn(("Lab04 Panda Manipulator", "Virtual wall"), playbook_labels)
@@ -1377,6 +1393,8 @@ class LearnerMenuTests(unittest.TestCase):
                 "2DOF high-joint-speed DLS",
                 "2DOF direct-retarget DLS",
                 "2DOF inward-retarget DLS",
+                "2DOF fixed-speed retarget DLS",
+                "2DOF adaptive-speed retarget DLS",
             },
         )
 
@@ -1448,6 +1466,10 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(
             "target_xy_waypoints",
             parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF inward-retarget DLS")]),
+        )
+        self.assertIn(
+            "tracking_controller.max_task_speed_schedule",
+            parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF adaptive-speed retarget DLS")]),
         )
         self.assertIn(
             "cartesian_target.gain",
