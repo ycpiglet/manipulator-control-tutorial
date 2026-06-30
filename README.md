@@ -358,7 +358,7 @@ python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless 
 .\.venv\Scripts\python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless --plot
 ```
 
-Viewer를 띄우고 움직임을 실제 시간에 가깝게 보려면 `--headless` 대신 `--viewer --realtime`을 사용합니다. 실행이 끝난 뒤 창을 유지하려면 `--pause-at-end`를 함께 붙입니다. Viewer 사이드 패널은 항상 숨겨지며, 실험 조작은 YAML config나 `MCLab Interaction` 창에서 합니다.
+Viewer를 띄우고 움직임을 실제 시간에 가깝게 보려면 `--headless` 대신 `--viewer --realtime`을 사용합니다. `--viewer`와 `--headless`는 동시에 쓸 수 없으며, 함께 넣으면 CLI가 바로 사용법 오류를 냅니다. 실행이 끝난 뒤 창을 유지하려면 `--pause-at-end`를 함께 붙입니다. Viewer 사이드 패널은 항상 숨겨지며, 실험 조작은 YAML config나 `MCLab Interaction` 창에서 합니다.
 
 ```bash
 python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --viewer --realtime --pause-at-end --plot
@@ -378,7 +378,7 @@ MuJoCo viewer 양옆 패널은 이 프로젝트의 주 제어 UI가 아닙니다
 CLI 형식:
 
 ```bash
-python -m mclab run <lab_name> --config <config_path> [--headless] [--viewer] [--realtime] [--pause-at-end] [--plot] [--plots <preset_or_names>] [--output-dir <path>]
+python -m mclab run <lab_name> --config <config_path> [--headless | --viewer] [--realtime] [--pause-at-end] [--plot] [--plots <preset_or_names>] [--output-dir <path>]
 ```
 
 사용 가능한 lab 이름 확인:
@@ -754,7 +754,7 @@ Without activating the virtual environment on Windows:
 .\.venv\Scripts\python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless --plot
 ```
 
-Use `--viewer --realtime` instead of `--headless` to open the MuJoCo viewer and pace motion close to wall-clock time. Add `--pause-at-end` to keep the window open after the simulation finishes. Viewer side panels are always hidden; change experiments through YAML configs or the `MCLab Interaction` window.
+Use `--viewer --realtime` instead of `--headless` to open the MuJoCo viewer and pace motion close to wall-clock time. `--viewer` and `--headless` are mutually exclusive; using both makes the CLI stop with a usage error. Add `--pause-at-end` to keep the window open after the simulation finishes. Viewer side panels are always hidden; change experiments through YAML configs or the `MCLab Interaction` window.
 
 ```bash
 python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --viewer --realtime --pause-at-end --plot
@@ -774,7 +774,7 @@ The MuJoCo viewer side panels are not the main control UI for this project. The 
 CLI shape:
 
 ```bash
-python -m mclab run <lab_name> --config <config_path> [--headless] [--viewer] [--realtime] [--pause-at-end] [--plot] [--plots <preset_or_names>] [--output-dir <path>]
+python -m mclab run <lab_name> --config <config_path> [--headless | --viewer] [--realtime] [--pause-at-end] [--plot] [--plots <preset_or_names>] [--output-dir <path>]
 ```
 
 List available labs:

@@ -158,6 +158,19 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("Open MuJoCo viewer without side panels.", help_text)
         self.assertNotIn("--show-viewer-ui", help_text)
 
+    def test_cli_rejects_conflicting_viewer_modes(self) -> None:
+        with self.assertRaises(SystemExit):
+            build_parser().parse_args(
+                [
+                    "run",
+                    "lab04",
+                    "--config",
+                    "configs/lab04_panda/joint_pd.yaml",
+                    "--viewer",
+                    "--headless",
+                ]
+            )
+
     def test_cli_opens_run_report_when_requested(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "run"
