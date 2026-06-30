@@ -571,7 +571,13 @@ class LoggingTests(unittest.TestCase):
                 json.dumps(
                     [
                         {"time": 0.5, "kind": "preset", "name": "soft_wall", "label": "Soft wall"},
-                        {"time": 1.0, "kind": "preset", "name": "stiff_wall", "label": "Stiff wall"},
+                        {
+                            "time": 1.0,
+                            "kind": "preset",
+                            "name": "close_wall",
+                            "label": "Close wall",
+                            "value": {"required": True, "values": {"target_x": 0.64}},
+                        },
                     ]
                 ),
                 encoding="utf-8",
@@ -584,14 +590,16 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Required evidence preset.", html)
             self.assertIn("Required presets", html)
             self.assertIn("Required presets tried", html)
-            self.assertIn("<strong>0/2</strong>", html)
-            self.assertIn("Try required preset Close wall", html)
+            self.assertIn("<strong>1/2</strong>", html)
+            self.assertIn("Try required preset Back away", html)
             self.assertIn("Needs required preset", html)
+            self.assertIn("<span>Required evidence</span>", html)
+            self.assertIn("<strong>yes</strong>", html)
             worksheet_text = (output / "worksheet.md").read_text(encoding="utf-8")
             self.assertIn("Required presets: Close wall -> Back away", worksheet_text)
-            self.assertIn("Required presets tried: 0/2", worksheet_text)
+            self.assertIn("Required presets tried: 1/2", worksheet_text)
             self.assertIn(
-                "Next: Try required preset Close wall, watch live status, then mark one observation.",
+                "Next: Try required preset Back away, watch live status, then mark one observation.",
                 worksheet_text,
             )
 

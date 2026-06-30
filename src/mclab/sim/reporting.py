@@ -2865,14 +2865,19 @@ def _preset_choice_items(value: Any) -> tuple[str, Any]:
     if not isinstance(value, dict):
         return "", (("value", value),)
     purpose = str(value.get("purpose") or value.get("description") or "").strip()
+    items: list[tuple[str, Any]] = []
+    if value.get("required"):
+        items.append(("Required evidence", "yes"))
     values = value.get("values")
     if isinstance(values, dict):
-        return purpose, values.items()
-    return purpose, (
+        items.extend(values.items())
+        return purpose, items
+    items.extend(
         (key, item)
         for key, item in value.items()
-        if key not in {"purpose", "description"}
+        if key not in {"purpose", "description", "required"}
     )
+    return purpose, items
 
 
 def _action_card(title: str, description: str, body: str) -> str:

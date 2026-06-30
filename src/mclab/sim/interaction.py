@@ -214,6 +214,8 @@ class LiveTuning:
             payload: dict[str, Any] = {"values": applied}
             if preset.purpose:
                 payload["purpose"] = preset.purpose
+            if preset.required:
+                payload["required"] = True
             self._event_log.record("preset", preset.name, payload, label=preset.label)
         return values
 
@@ -229,11 +231,11 @@ class LiveTuning:
             number = _clamp(float(value), spec.minimum, spec.maximum)
             parts.append(f"{spec.label}={_format_tuning_value(number)}")
         if not parts:
-            return preset.label
+            return _preset_display_label(preset)
         value_text = ", ".join(parts)
         if preset.purpose:
-            return f"{preset.label}: {preset.purpose}; {value_text}"
-        return f"{preset.label}: {value_text}"
+            return f"{_preset_display_label(preset)}: {preset.purpose}; {value_text}"
+        return f"{_preset_display_label(preset)}: {value_text}"
 
     def preset_comparison_hint(self) -> str:
         labels = [preset.label for preset in self.presets if preset.label]
@@ -1041,8 +1043,8 @@ def maybe_start_interaction_panel(
                     for index, preset in enumerate(tuning.presets):
                         button = tk.Button(
                             preset_frame,
-                            text=preset.label,
-                            width=20,
+                            text=_preset_button_label(preset),
+                            width=24,
                             command=lambda preset_name=preset.name: apply_preset(preset_name),
                         )
                         button.grid(row=index // 2, column=index % 2, padx=4, pady=3, sticky="ew")
@@ -1325,6 +1327,14 @@ def _observation_marker_count(event_log: InteractionLog) -> int:
         if str(event.get("kind", "")).lower() == "marker"
         and str(event.get("name", "")).lower() == "observation"
     )
+
+
+def _preset_display_label(preset: TuningPreset) -> str:
+    return f"{preset.label} (required)" if preset.required else preset.label
+
+
+def _preset_button_label(preset: TuningPreset) -> str:
+    return _preset_display_label(preset)
 
 
 def _observation_marker_status_message(event_log: InteractionLog, prediction: str) -> str:

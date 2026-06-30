@@ -252,7 +252,7 @@ Interactive launcher는 사이드 패널 없는 MuJoCo viewer와 함께 작은 `
 | `.\run_lab03_condition_dls_interactive.cmd` | 2DOF condition-aware DLS의 damping threshold/full/max damping 슬라이더, schedule preset | 자동 damping schedule이 joint speed와 hand error를 바꾸는 시점 |
 | `.\run_lab04_interactive.cmd` | Panda 관절 목표 nudge | 목표 관절 위치 변화와 tracking error |
 | `.\run_lab04_cartesian_interactive.cmd` | Panda 손끝 `target X/Y/Z`, `Cartesian gain` 슬라이더, reach preset | 초록 목표점, 파란 손끝, Cartesian tracking error |
-| `.\run_lab04_wall_interactive.cmd` | Panda 손끝 `target X/Y/Z`, `wall X/stiffness/damping/retreat gain` 슬라이더, wall/Back away preset | 목표를 벽 안쪽으로 밀거나 다시 빼낼 때 Wall phase, penetration, force, release가 바뀌는 과정 |
+| `.\run_lab04_wall_interactive.cmd` | Panda 손끝 `target X/Y/Z`, `wall X/stiffness/damping/retreat gain` 슬라이더, required `Close wall`/`Back away` preset | 목표를 벽 안쪽으로 밀거나 다시 빼낼 때 Wall phase, penetration, force, release가 바뀌는 과정 |
 
 전체 검증을 한 번에 돌리려면:
 
@@ -621,7 +621,7 @@ What to observe:
 | `.\run_lab03_condition_dls_interactive.cmd` | 2DOF condition-aware DLS damping threshold/full/max damping sliders, schedule presets | when automatic damping changes joint speed and hand error |
 | `.\run_lab04_interactive.cmd` | Panda joint target nudge | target position changes and tracking error |
 | `.\run_lab04_cartesian_interactive.cmd` | Panda hand `target X/Y/Z`, `Cartesian gain` sliders, reach presets | green target point, blue hand point, Cartesian tracking error |
-| `.\run_lab04_wall_interactive.cmd` | Panda hand `target X/Y/Z`, `wall X/stiffness/damping/retreat gain` sliders, wall/Back away presets | how Wall phase, penetration, force, and release change when the target moves through or back out of the wall |
+| `.\run_lab04_wall_interactive.cmd` | Panda hand `target X/Y/Z`, `wall X/stiffness/damping/retreat gain` sliders, required `Close wall`/`Back away` presets | how Wall phase, penetration, force, and release change when the target moves through or back out of the wall |
 
 To run the full verification suite:
 

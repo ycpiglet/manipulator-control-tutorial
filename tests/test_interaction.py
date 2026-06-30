@@ -29,6 +29,7 @@ from mclab.sim.interaction import (  # noqa: E402
     _panel_viewer_legend_rows,
     _observation_marker_count,
     _observation_marker_status_message,
+    _preset_button_label,
     learner_snapshot,
     learner_tuned_config,
     tuning_presets_from_config,
@@ -389,8 +390,11 @@ class KeyForcePulseTests(unittest.TestCase):
         tuning = LiveTuning(specs, presets=presets)
         self.assertEqual(
             tuning.preset_summary("calm"),
-            "Calm: Slow the response for inspection.; Kp=20, Kd=10",
+            "Calm (required): Slow the response for inspection.; Kp=20, Kd=10",
         )
+
+        self.assertEqual(_preset_button_label(presets[0]), "Calm (required)")
+        self.assertEqual(_preset_button_label(TuningPreset("soft", "Soft", {"kp": 20.0})), "Soft")
 
         comparison = LiveTuning(
             specs,
@@ -428,8 +432,10 @@ class KeyForcePulseTests(unittest.TestCase):
 
     def test_required_tuning_presets_gate_progress_readiness(self) -> None:
         specs = [SliderSpec("kp", "Kp", 0.0, 100.0, 20.0, 1.0)]
+        log = InteractionLog()
         comparison = LiveTuning(
             specs,
+            event_log=log,
             presets=[
                 TuningPreset("soft", "Soft", {"kp": 20.0}),
                 TuningPreset("close", "Close", {"kp": 80.0}, required=True),
@@ -453,6 +459,8 @@ class KeyForcePulseTests(unittest.TestCase):
         )
         self.assertEqual(comparison.preset_checklist_state(), "needs another preset")
         comparison.apply_preset("close")
+        self.assertEqual(log.events()[-1]["label"], "Close")
+        self.assertEqual(log.events()[-1]["value"]["required"], True)
         self.assertEqual(
             comparison.preset_progress_summary(),
             "Preset progress: 2/3 tried; 1/2 required; next required: Back. Try required presets before Mark observation.",
