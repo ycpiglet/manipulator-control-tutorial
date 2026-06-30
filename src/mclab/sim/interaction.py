@@ -863,6 +863,7 @@ def maybe_start_interaction_panel(
                 has_buttons=activity_has_buttons,
                 has_sliders=activity_has_sliders,
                 has_presets=activity_has_presets,
+                button_next_step=activity_button_next_step,
             )
             viewer_legend_rows = _panel_viewer_legend_rows(guide)
             if guide_title or guide_rows or viewer_legend_rows:
@@ -1586,6 +1587,7 @@ def _panel_guide_rows(
     has_buttons: bool = False,
     has_sliders: bool = False,
     has_presets: bool = False,
+    button_next_step: str = "",
 ) -> list[tuple[str, str]]:
     if guide is None:
         return []
@@ -1596,8 +1598,24 @@ def _panel_guide_rows(
         ("Challenge", challenge_prompt_for_guide(guide).removeprefix("Challenge:").strip()),
         ("Try", str(getattr(guide, "try_this", "") or "").strip()),
         ("Change", str(getattr(guide, "change", "") or "").strip()),
-        ("Done when", _panel_completion_text(has_buttons, has_sliders, has_presets)),
-        ("Counts as control", _panel_control_credit_text(has_buttons, has_sliders, has_presets)),
+        (
+            "Done when",
+            _panel_completion_text(
+                has_buttons,
+                has_sliders,
+                has_presets,
+                button_next_step=button_next_step,
+            ),
+        ),
+        (
+            "Counts as control",
+            _panel_control_credit_text(
+                has_buttons,
+                has_sliders,
+                has_presets,
+                button_next_step=button_next_step,
+            ),
+        ),
         ("Prediction", prediction_prompt_for_guide(guide).removeprefix("Prediction:").strip()),
         ("Question", question_for_guide(guide).removeprefix("Question:").strip()),
         ("Watch", str(getattr(guide, "watch", "") or "").strip()),
@@ -1616,8 +1634,19 @@ def _panel_start_steps_text(guide: Any | None, tuning: LiveTuning | None = None)
     return start_steps_for_guide(guide).removeprefix("Start steps:").strip()
 
 
-def _panel_completion_text(has_buttons: bool = False, has_sliders: bool = False, has_presets: bool = False) -> str:
-    control_text = _learner_control_followup_text(has_buttons, has_sliders, has_presets)
+def _panel_completion_text(
+    has_buttons: bool = False,
+    has_sliders: bool = False,
+    has_presets: bool = False,
+    *,
+    button_next_step: str = "",
+) -> str:
+    control_text = _learner_control_followup_text(
+        has_buttons,
+        has_sliders,
+        has_presets,
+        button_next_step=button_next_step,
+    )
     if control_text == "use one button, slider, or preset":
         control_text = "use at least one button, slider, or preset"
     else:
@@ -1628,8 +1657,26 @@ def _panel_completion_text(has_buttons: bool = False, has_sliders: bool = False,
     )
 
 
-def _panel_control_credit_text(has_buttons: bool, has_sliders: bool, has_presets: bool) -> str:
-    return control_credit_text(has_buttons, has_sliders, has_presets)
+def _panel_control_credit_text(
+    has_buttons: bool,
+    has_sliders: bool,
+    has_presets: bool,
+    *,
+    button_next_step: str = "",
+) -> str:
+    button_label = _button_control_label(button_next_step)
+    if not button_label:
+        return control_credit_text(has_buttons, has_sliders, has_presets)
+    controls: list[str] = []
+    if has_buttons:
+        controls.append(f"experiment buttons ({button_label})")
+    if has_sliders:
+        controls.append("live sliders")
+    if has_presets:
+        controls.append("Quick presets")
+    if not controls:
+        return ""
+    return f"{', '.join(controls)}; view/evidence helpers such as Pause, Playback speed, and Use live status do not count."
 
 
 def _panel_viewer_legend_rows(guide: Any | None) -> list[tuple[str, str]]:

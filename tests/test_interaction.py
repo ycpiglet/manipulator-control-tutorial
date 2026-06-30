@@ -1510,10 +1510,42 @@ class KeyForcePulseTests(unittest.TestCase):
             ),
             _panel_guide_rows(guide, has_buttons=True, has_sliders=True, has_presets=True),
         )
+        labeled_rows = _panel_guide_rows(
+            guide,
+            has_buttons=True,
+            has_sliders=True,
+            has_presets=True,
+            button_next_step="Use Target X - away or Target X + into wall.",
+        )
+        self.assertIn(
+            (
+                "Counts as control",
+                "experiment buttons (Target X - away or Target X + into wall), live sliders, Quick presets; "
+                "view/evidence helpers such as Pause, Playback speed, and Use live status do not count.",
+            ),
+            labeled_rows,
+        )
+        self.assertIn(
+            (
+                "Done when",
+                "use experiment buttons (Target X - away or Target X + into wall), live sliders, "
+                "or Quick presets at least once, then write a Prediction and note, "
+                "choose an outcome if known, and press Mark observation.",
+            ),
+            labeled_rows,
+        )
         self.assertEqual(
             _panel_completion_text(has_sliders=True),
             "use live sliders at least once, then write a Prediction and note, "
             "choose an outcome if known, and press Mark observation.",
+        )
+        self.assertEqual(
+            _panel_completion_text(
+                has_buttons=True,
+                button_next_step="Use Pull Left A / Left or Push Right D / Right.",
+            ),
+            "use Pull Left A / Left or Push Right D / Right at least once, "
+            "then write a Prediction and note, choose an outcome if known, and press Mark observation.",
         )
         self.assertEqual(_panel_control_credit_text(False, False, False), "")
 

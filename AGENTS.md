@@ -116,6 +116,7 @@ Implemented and verified:
 - Interactive `MCLab Interaction` panel, run reports, and worksheets show a shared `Mission` prompt so the learner sees the same evidence-focused task during launch, live tuning, and review
 - Interactive `MCLab Interaction` panel shows a `Done when` evidence criterion before Prediction and Mark observation controls, naming available learner-control families when possible
 - Interactive `MCLab Interaction` panel shows a `Counts as control` cue that separates learner-control actions from view/evidence helpers such as Pause, Playback speed, and Use live status
+- Interactive `MCLab Interaction` panel `Done when` and `Counts as control` cues name actual panel button labels when available, plus live sliders and Quick presets
 - Interactive `MCLab Interaction` observation area shows a live `Evidence checklist` for learner-control, prediction, preset comparison, outcome, and note readiness before marking
 - Interactive `MCLab Interaction` observation area shows a live `Evidence quality` cue for incomplete, control-missing, ready-to-mark, and review-ready observations
 - Interactive `MCLab Interaction` observation area shows a live `Challenge proof` cue that tells whether the visible-effect challenge still needs prediction, learner control, preset evidence, note/live-status evidence, or outcome review
