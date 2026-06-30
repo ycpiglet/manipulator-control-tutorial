@@ -799,6 +799,7 @@ def maybe_start_interaction_panel(
         reset_enabled=reset_enabled,
         tuning=tuning,
     )
+    activity_button_next_step = _activity_mix_button_next_step_for_panel(control, reset_control)
     if not panel_enabled or not (
         control_enabled or reset_enabled or pause_enabled or playback_enabled or tuning_enabled or status_enabled
     ):
@@ -1181,6 +1182,7 @@ def maybe_start_interaction_panel(
                         has_buttons=activity_has_buttons,
                         has_sliders=activity_has_sliders,
                         has_presets=activity_has_presets,
+                        button_next_step=activity_button_next_step,
                     )
                 )
                 activity_mix_status = tk.StringVar(
@@ -1238,6 +1240,7 @@ def maybe_start_interaction_panel(
                             has_buttons=activity_has_buttons,
                             has_sliders=activity_has_sliders,
                             has_presets=activity_has_presets,
+                            button_next_step=activity_button_next_step,
                         )
                     )
                     marker_note_preview.set(_observation_note_preview(marker_note.get()))
@@ -1525,6 +1528,28 @@ def _available_learner_control_families(
     return has_buttons, has_sliders, has_presets
 
 
+def _activity_mix_button_next_step_for_panel(
+    control: Any,
+    reset_control: ExperimentResetControl | None = None,
+) -> str:
+    if bool(getattr(control, "enabled", False)):
+        left_label = _compact_label(getattr(control, "left_label", ""))
+        right_label = _compact_label(getattr(control, "right_label", ""))
+        if left_label and right_label:
+            return f"Use {left_label} or {right_label}."
+        label = _compact_label(getattr(control, "label", ""))
+        if label:
+            return f"Use {label}."
+    if reset_control is not None and reset_control.enabled and reset_control.panel_enabled:
+        label = _compact_label(reset_control.label) or "Reset plant"
+        return f"Use {label} after changing a control to repeat the observation."
+    return ""
+
+
+def _compact_label(value: Any) -> str:
+    return " ".join(str(value or "").split())
+
+
 def _panel_guide_rows(
     guide: Any | None,
     *,
@@ -1588,6 +1613,7 @@ def _activity_mix_status_message(
     has_buttons: bool = False,
     has_sliders: bool = False,
     has_presets: bool = False,
+    button_next_step: str = "",
 ) -> str:
     events = event_log.events()
     counts = _activity_event_kind_counts(events)
@@ -1614,6 +1640,7 @@ def _activity_mix_status_message(
         has_buttons=available_buttons,
         has_sliders=available_sliders,
         has_presets=available_presets,
+        button_next_step=button_next_step,
     )
     return (
         f"Activity mix: {used_families}/{available_families} control families; "
@@ -1665,6 +1692,7 @@ def _activity_mix_next_step(
     has_buttons: bool = False,
     has_sliders: bool = False,
     has_presets: bool = False,
+    button_next_step: str = "",
 ) -> str:
     if has_presets and counts.get("preset", 0) <= 0:
         return "Try a Quick preset to compare a named parameter regime."
@@ -1673,7 +1701,7 @@ def _activity_mix_next_step(
             return "Move one slider after a preset to test a smaller parameter change."
         return "Move one slider to test a smaller parameter change."
     if has_buttons and counts.get("button", 0) <= 0:
-        return "Use one experiment button such as pulse, nudge, or reset."
+        return button_next_step or "Use one experiment button such as pulse, nudge, or reset."
     if observation_markers <= 0:
         return "Save one Mark observation with prediction and live-status evidence."
     return "Ready: compare this interaction mix against plots and the worksheet."

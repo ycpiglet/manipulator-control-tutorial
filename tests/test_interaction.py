@@ -20,6 +20,7 @@ from mclab.sim.interaction import (  # noqa: E402
     StatusSpec,
     TargetOffsetControl,
     TuningPreset,
+    _activity_mix_button_next_step_for_panel,
     _activity_mix_status_message,
     _append_observation_note,
     _available_learner_control_families,
@@ -1099,6 +1100,17 @@ class KeyForcePulseTests(unittest.TestCase):
             "Activity mix: 2/3 control families; buttons 0, sliders 1, presets 1, markers 0. "
             "Next: Use one experiment button such as pulse, nudge, or reset.",
         )
+        self.assertEqual(
+            _activity_mix_status_message(
+                log,
+                has_buttons=True,
+                has_sliders=True,
+                has_presets=True,
+                button_next_step="Use Pull Left A / Left or Push Right D / Right.",
+            ),
+            "Activity mix: 2/3 control families; buttons 0, sliders 1, presets 1, markers 0. "
+            "Next: Use Pull Left A / Left or Push Right D / Right.",
+        )
 
         log.record("button", "manual_force", 12.0, label="Push Right")
         self.assertEqual(
@@ -1161,6 +1173,35 @@ class KeyForcePulseTests(unittest.TestCase):
         self.assertEqual(
             _available_learner_control_families(control_enabled=False, reset_enabled=False, tuning=preset_tuning),
             (False, True, True),
+        )
+
+    def test_activity_mix_button_next_step_names_live_panel_buttons(self) -> None:
+        pulse = KeyForcePulse({"interaction": {"key_force": True, "panel": True}})
+        self.assertEqual(
+            _activity_mix_button_next_step_for_panel(pulse),
+            "Use Pull Left A / Left or Push Right D / Right.",
+        )
+
+        target = TargetOffsetControl(
+            {
+                "interaction": {
+                    "target_nudge": True,
+                    "panel": True,
+                    "target_left_label": "Target X - away",
+                    "target_right_label": "Target X + into wall",
+                }
+            }
+        )
+        self.assertEqual(
+            _activity_mix_button_next_step_for_panel(target),
+            "Use Target X - away or Target X + into wall.",
+        )
+
+        reset = ExperimentResetControl({"interaction": {"panel": True, "reset_plant": True}})
+        disabled_control = TargetOffsetControl({"interaction": {"target_nudge": False}})
+        self.assertEqual(
+            _activity_mix_button_next_step_for_panel(disabled_control, reset),
+            "Use Reset plant after changing a control to repeat the observation.",
         )
 
     def test_activity_mix_status_ignores_helper_and_view_buttons_as_controls(self) -> None:

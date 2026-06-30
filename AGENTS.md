@@ -122,6 +122,7 @@ Implemented and verified:
 - Interactive `MCLab Interaction` observation area shows a live `Next action` cue so learners know whether to write a prediction, use a button/slider/preset, try a required preset, use live status, choose an outcome, or mark the observation
 - Interactive `MCLab Interaction` observation status and `Next action` cues name the available learner-control families when a scenario exposes experiment buttons, live sliders, or Quick presets
 - Interactive `MCLab Interaction` observation area shows a live `Activity mix` cue that counts button, slider, preset, and marker use and recommends the next missing control family
+- Interactive `MCLab Interaction` live `Activity mix` next-step text names the actual panel button labels such as Pull/Push, Shoulder/Elbow pulse, Target X nudge, or Reset plant when button evidence is still missing
 - Interactive `MCLab Interaction` observation area shows a live `Action log` cue confirming the latest learner button, slider, preset, or marker event
 - Interactive `MCLab Interaction` observation area shows a wrapped `Note preview` so accumulated evidence is readable before `Mark observation`
 - Hands-on mission evidence and learning-path completion require at least one learner control event (`button`, `slider`, or `preset`) plus a prediction-and-note observation marker
