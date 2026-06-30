@@ -1313,6 +1313,12 @@ def review_queue_summary_text(outputs_root: Path | None = None) -> str:
     return f"Review queue: {ready} ready, {pending} pending. {gap_text} {next_text}"
 
 
+def next_review_output(outputs_root: Path | None = None) -> Path | None:
+    root = outputs_root if outputs_root is not None else PROJECT_ROOT / "outputs"
+    next_item = _next_review_queue_item(_review_queue_items(root))
+    return next_item[0] if next_item is not None else None
+
+
 def _review_queue_items(outputs_root: Path) -> list[tuple[Path, str, str, float]]:
     if not outputs_root.exists():
         return []
@@ -1793,6 +1799,13 @@ def launch_outputs_index() -> subprocess.Popen[Any] | None:
     index = outputs / "index.html"
     write_outputs_index(outputs)
     return open_path(index)
+
+
+def launch_next_review_output(outputs_root: Path | None = None) -> subprocess.Popen[Any] | None:
+    output_path = next_review_output(outputs_root)
+    if output_path is None:
+        return None
+    return open_path(_preferred_output_entry(output_path))
 
 
 def launch_latest_output(latest_output: dict[str, Path | None]) -> subprocess.Popen[Any] | None:
@@ -2528,6 +2541,7 @@ def main() -> int:
     path_summary = tk.StringVar(value=learning_path_summary_text())
     next_step_ref: dict[str, LearningPathStep | None] = {"step": next_learning_path_step()}
     next_button_ref: dict[str, Any | None] = {"button": None}
+    next_review_button_ref: dict[str, Any | None] = {"button": None}
     batch_state_items: list[BatchMenuStateItem | BatchMenuStateItemWithWorksheet] = []
     post_run_refresh_ref: dict[str, Callable[[], None]] = {}
     review_queue = tk.StringVar(value=review_queue_summary_text())
@@ -2557,6 +2571,9 @@ def main() -> int:
         next_button = next_button_ref["button"]
         if next_button is not None:
             next_button.state(["disabled"] if next_step is None else ["!disabled"])
+        next_review_button = next_review_button_ref["button"]
+        if next_review_button is not None:
+            next_review_button.state(["!disabled"] if next_review_output() is not None else ["disabled"])
 
     def refresh_after_run() -> None:
         refresh_callback = post_run_refresh_ref.get("callback", refresh_learning_path_progress)
@@ -2580,6 +2597,12 @@ def main() -> int:
             latest_worksheet_button=latest_worksheet_button,
             progress_callback=refresh_after_run,
         )
+
+    def launch_next_review_from_menu() -> None:
+        if launch_next_review_output() is None:
+            status.set("Review queue has no pending run to open.")
+            return
+        status.set("Opened the next review run.")
 
     search_bar = ttk.Frame(outer)
     search_bar.pack(fill="x", pady=(0, 10))
@@ -2635,8 +2658,15 @@ def main() -> int:
     ttk.Label(review_header, textvariable=review_queue, wraplength=760, justify="left").grid(
         row=0, column=0, sticky="w"
     )
+    next_review_button = ttk.Button(
+        review_header,
+        text="Open next review",
+        command=launch_next_review_from_menu,
+    )
+    next_review_button.grid(row=0, column=1, sticky="e", padx=(12, 0))
+    next_review_button_ref["button"] = next_review_button
     ttk.Button(review_header, text="Open review queue", command=launch_outputs_index).grid(
-        row=0, column=1, sticky="e", padx=(12, 0)
+        row=0, column=2, sticky="e", padx=(8, 0)
     )
     for step_index, step in enumerate(LEARNING_PATH):
         row_index, column_index = divmod(step_index, 3)

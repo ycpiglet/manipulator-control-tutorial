@@ -82,10 +82,12 @@ from mclab.learner_menu import (  # noqa: E402
     launch_action_latest_worksheet,
     launch_learning_path_latest_output,
     launch_learning_path_latest_worksheet,
+    launch_next_review_output,
     launch_latest_plot,
     launch_latest_worksheet,
     launch_outputs_index,
     launch_latest_output,
+    next_review_output,
     next_learning_path_step,
     open_editable_path,
     parameter_hint,
@@ -1492,6 +1494,75 @@ class LearnerMenuTests(unittest.TestCase):
                     "Next review: run_lab03_outcome_pending - Outcome review pending."
                 ),
             )
+            self.assertEqual(next_review_output(outputs), outcome_pending)
+
+    def test_launch_next_review_output_opens_the_pending_run_report(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            ready = outputs / "run_ready"
+            ready.mkdir()
+            (ready / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab01_msd",
+                        "config_path": "configs/lab01_msd/default.yaml",
+                        "config_name": "default",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (ready / "plots").mkdir()
+            (ready / "plots" / "position.png").write_bytes(b"fake-png")
+            (ready / "worksheet.md").write_text("# Worksheet\n", encoding="utf-8")
+
+            pending = outputs / "run_pending"
+            pending.mkdir()
+            (pending / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab02_pid",
+                        "config_path": "configs/lab02_pid/interactive_disturbance.yaml",
+                        "config_name": "interactive_disturbance",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (pending / "report.html").write_text("<html>pending</html>", encoding="utf-8")
+            (pending / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {"prediction": "More gain should overshoot.", "note": "It did."},
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with patch("mclab.learner_menu.open_path") as opener:
+                launch_next_review_output(outputs)
+
+            opener.assert_called_once_with(pending / "report.html")
+
+            (pending / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "prediction": "More gain should overshoot.",
+                                "outcome": "Matched",
+                                "note": "It did.",
+                            },
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            self.assertIsNone(next_review_output(outputs))
 
     def test_action_preset_evidence_summarizes_latest_preset_progress(self) -> None:
         lab02_interactive = next(
