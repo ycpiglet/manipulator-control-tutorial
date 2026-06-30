@@ -346,11 +346,13 @@ class KeyForcePulseTests(unittest.TestCase):
             comparison.preset_progress_summary(),
             "Preset progress: 0/2 tried; next: Soft. Try at least two presets before Mark observation.",
         )
+        self.assertEqual(comparison.preset_checklist_state(), "needs another preset")
         comparison.apply_preset("soft")
         self.assertEqual(
             comparison.preset_progress_summary(),
             "Preset progress: 1/2 tried; next: Stiff. Try at least two presets before Mark observation.",
         )
+        self.assertEqual(comparison.preset_checklist_state(), "needs another preset")
         comparison.apply_preset("soft")
         self.assertEqual(
             comparison.preset_progress_summary(),
@@ -361,6 +363,7 @@ class KeyForcePulseTests(unittest.TestCase):
             comparison.preset_progress_summary(),
             "Preset progress: 2/2 tried; ready to Mark observation comparing Soft, Stiff.",
         )
+        self.assertEqual(comparison.preset_checklist_state(), "ready")
 
     def test_interactive_configs_expose_quick_presets(self) -> None:
         lab01_config = load_config("configs/lab01_msd/interactive_pull.yaml")
@@ -610,6 +613,24 @@ class KeyForcePulseTests(unittest.TestCase):
         self.assertEqual(
             _observation_checklist_status("More damping should settle faster.", "Matched", "Energy dropped."),
             "Evidence checklist: Prediction ready; Outcome selected; Note ready.",
+        )
+        self.assertEqual(
+            _observation_checklist_status(
+                "More damping should settle faster.",
+                "Matched",
+                "Energy dropped.",
+                preset_state="needs another preset",
+            ),
+            "Evidence checklist: Prediction ready; Preset comparison needs another preset; Outcome selected; Note ready.",
+        )
+        self.assertEqual(
+            _observation_checklist_status(
+                "More damping should settle faster.",
+                "Matched",
+                "Energy dropped.",
+                preset_state="ready",
+            ),
+            "Evidence checklist: Prediction ready; Preset comparison ready; Outcome selected; Note ready.",
         )
 
     def test_live_status_formats_dashboard_values(self) -> None:

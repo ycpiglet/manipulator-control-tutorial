@@ -263,6 +263,13 @@ class LiveTuning:
             return f"Preset progress: {count_text}; next: {next_preset.label}. Try at least two presets before Mark observation."
         return f"Preset progress: {count_text}; try at least two presets before Mark observation."
 
+    def preset_checklist_state(self) -> str:
+        if len(self.presets) < 2:
+            return ""
+        with self._lock:
+            tried_count = len(set(self._tried_presets))
+        return "ready" if tried_count >= 2 else "needs another preset"
+
     def reset(self) -> dict[str, float]:
         with self._lock:
             changed = any(
@@ -841,6 +848,11 @@ def maybe_start_interaction_panel(
                 ).grid(row=row + 1, column=0, columnspan=2, sticky="w", pady=(0, 4))
                 row += 2
 
+            def noop_marker_checklist() -> None:
+                pass
+
+            refresh_marker_checklist_callback: Any = noop_marker_checklist
+
             if tuning_enabled and tuning is not None:
                 tuning_header = tk.Frame(frame)
                 tuning_header.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(12, 4))
@@ -875,6 +887,7 @@ def maybe_start_interaction_panel(
                         progress = tuning.preset_progress_summary()
                         progress_text = f"\n{progress}" if progress else ""
                         preset_status.set(f"Applied {tuning.preset_summary(preset_name)}{progress_text}")
+                    refresh_marker_checklist_callback()
 
                 def preview_preset(preset_name: str) -> None:
                     if preset_status is not None:
@@ -971,22 +984,29 @@ def maybe_start_interaction_panel(
                 marker_outcome = tk.StringVar(value=PREDICTION_OUTCOME_UNJUDGED)
                 marker_note = tk.StringVar(value="")
                 marker_checklist = tk.StringVar(
-                    value=_observation_checklist_status("", PREDICTION_OUTCOME_UNJUDGED, "")
+                    value=_observation_checklist_status(
+                        "",
+                        PREDICTION_OUTCOME_UNJUDGED,
+                        "",
+                        preset_state=tuning.preset_checklist_state() if tuning is not None else "",
+                    )
                 )
                 marker_prompt = observation_prompt_for_guide(guide)
 
-                def refresh_marker_checklist(*_args: Any) -> None:
+                def update_marker_checklist(*_args: Any) -> None:
                     marker_checklist.set(
                         _observation_checklist_status(
                             marker_prediction.get(),
                             marker_outcome.get(),
                             marker_note.get(),
+                            preset_state=tuning.preset_checklist_state() if tuning is not None else "",
                         )
                     )
 
-                marker_prediction.trace_add("write", refresh_marker_checklist)
-                marker_outcome.trace_add("write", refresh_marker_checklist)
-                marker_note.trace_add("write", refresh_marker_checklist)
+                refresh_marker_checklist_callback = update_marker_checklist
+                marker_prediction.trace_add("write", update_marker_checklist)
+                marker_outcome.trace_add("write", update_marker_checklist)
+                marker_note.trace_add("write", update_marker_checklist)
 
                 def use_live_status_note() -> None:
                     note = _live_status_observation_note(status)
@@ -1191,13 +1211,21 @@ def _observation_marker_status_message(event_log: InteractionLog, prediction: st
     return f"Marked observation {count} - add a prediction next time to complete the learning path."
 
 
-def _observation_checklist_status(prediction: str, outcome: str, note: str) -> str:
+def _observation_checklist_status(
+    prediction: str,
+    outcome: str,
+    note: str,
+    *,
+    preset_state: str = "",
+) -> str:
     prediction_state = "ready" if prediction.strip() else "missing"
     outcome_state = "selected" if _prediction_outcome_value(outcome) else "optional"
     note_state = "ready" if note.strip() else "optional"
+    preset_text = f"Preset comparison {preset_state}; " if preset_state else ""
     return (
         "Evidence checklist: "
         f"Prediction {prediction_state}; "
+        f"{preset_text}"
         f"Outcome {outcome_state}; "
         f"Note {note_state}."
     )
