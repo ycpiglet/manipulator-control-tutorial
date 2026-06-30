@@ -1121,6 +1121,7 @@ def maybe_start_interaction_panel(
                 marker_prediction = tk.StringVar(value="")
                 marker_outcome = tk.StringVar(value=PREDICTION_OUTCOME_UNJUDGED)
                 marker_note = tk.StringVar(value="")
+                marker_note_preview = tk.StringVar(value=_observation_note_preview(marker_note.get()))
                 marker_checklist = tk.StringVar(
                     value=_observation_checklist_status(
                         "",
@@ -1166,6 +1167,7 @@ def maybe_start_interaction_panel(
                             preset_state=preset_state,
                         )
                     )
+                    marker_note_preview.set(_observation_note_preview(marker_note.get()))
 
                 def refresh_activity_mix_status() -> None:
                     activity_mix_status.set(
@@ -1267,6 +1269,14 @@ def maybe_start_interaction_panel(
                     sticky="ew",
                     padx=(12, 0),
                 )
+                marker_row += 1
+                tk.Label(
+                    marker_frame,
+                    textvariable=marker_note_preview,
+                    anchor="w",
+                    justify="left",
+                    wraplength=430,
+                ).grid(row=marker_row, column=0, columnspan=2, sticky="ew", pady=(4, 0))
                 marker_row += 1
                 tk.Label(
                     marker_frame,
@@ -1670,6 +1680,13 @@ def _append_observation_note(current: str, addition: str) -> str:
     if addition_text in parts or addition_text == current_text or current_text.endswith(f"; {addition_text}"):
         return current_text
     return f"{current_text}; {addition_text}"
+
+
+def _observation_note_preview(note: str) -> str:
+    text = " ".join(str(note or "").split())
+    if not text:
+        return "Note preview: empty"
+    return f"Note preview: {text}"
 
 
 def _changed_tuning_summary(tuning: LiveTuning | None) -> str:

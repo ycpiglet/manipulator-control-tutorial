@@ -32,6 +32,7 @@ from mclab.sim.interaction import (  # noqa: E402
     _panel_viewer_legend_rows,
     _observation_marker_count,
     _observation_marker_status_message,
+    _observation_note_preview,
     _observation_next_action,
     _ordered_required_prefix,
     _preset_button_label,
@@ -1040,6 +1041,19 @@ class KeyForcePulseTests(unittest.TestCase):
                 "Position [m]: 0.100; Force [N]: 2.000",
             ),
             "Manual note; Position [m]: 0.100; Force [N]: 2.000",
+        )
+
+    def test_observation_note_preview_shows_current_saved_text(self) -> None:
+        self.assertEqual(_observation_note_preview(""), "Note preview: empty")
+        self.assertEqual(
+            _observation_note_preview(
+                "Manual note; Position [m]: 0.100; Force [N]: 2.000; Changed values: Kp=35"
+            ),
+            "Note preview: Manual note; Position [m]: 0.100; Force [N]: 2.000; Changed values: Kp=35",
+        )
+        self.assertEqual(
+            _observation_note_preview("Manual note\nChanged values: Kp=35"),
+            "Note preview: Manual note Changed values: Kp=35",
         )
 
     def test_learner_snapshot_collects_final_interactive_state(self) -> None:
