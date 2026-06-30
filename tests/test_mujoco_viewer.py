@@ -19,11 +19,11 @@ class MujocoViewerLaunchTests(unittest.TestCase):
         self.assertFalse(launched_kwargs["show_left_ui"])
         self.assertFalse(launched_kwargs["show_right_ui"])
 
-    def test_viewer_side_panels_can_be_shown_for_debugging(self) -> None:
+    def test_viewer_side_panels_stay_hidden_even_if_requested(self) -> None:
         launched_kwargs = self._launch_kwargs(show_ui=True)
 
-        self.assertTrue(launched_kwargs["show_left_ui"])
-        self.assertTrue(launched_kwargs["show_right_ui"])
+        self.assertFalse(launched_kwargs["show_left_ui"])
+        self.assertFalse(launched_kwargs["show_right_ui"])
 
     def _launch_kwargs(self, *, show_ui: bool) -> dict[str, object]:
         def fake_launch_passive(*_args: object, **kwargs: object) -> dict[str, object]:

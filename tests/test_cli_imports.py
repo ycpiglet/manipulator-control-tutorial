@@ -110,7 +110,7 @@ class CliImportTests(unittest.TestCase):
             ]
         )
         self.assertTrue(default_args.viewer)
-        self.assertFalse(default_args.show_viewer_ui)
+        self.assertFalse(hasattr(default_args, "show_viewer_ui"))
 
         args = build_parser().parse_args(
             [
@@ -119,7 +119,6 @@ class CliImportTests(unittest.TestCase):
                 "--config",
                 "configs/lab04_panda/joint_pd.yaml",
                 "--viewer",
-                "--show-viewer-ui",
                 "--realtime",
                 "--pause-at-end",
                 "--plots",
@@ -128,11 +127,22 @@ class CliImportTests(unittest.TestCase):
             ]
         )
         self.assertTrue(args.viewer)
-        self.assertTrue(args.show_viewer_ui)
         self.assertTrue(args.realtime)
         self.assertTrue(args.pause_at_end)
         self.assertEqual(args.plots, "essential")
         self.assertTrue(args.open_report)
+
+        with self.assertRaises(SystemExit):
+            build_parser().parse_args(
+                [
+                    "run",
+                    "lab04",
+                    "--config",
+                    "configs/lab04_panda/joint_pd.yaml",
+                    "--viewer",
+                    "--show-viewer-ui",
+                ]
+            )
 
     def test_cli_opens_run_report_when_requested(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

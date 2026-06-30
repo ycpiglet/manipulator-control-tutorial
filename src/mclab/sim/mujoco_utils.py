@@ -44,12 +44,13 @@ def maybe_launch_viewer(
         from mujoco import viewer as mujoco_viewer  # type: ignore
     except Exception as exc:  # pragma: no cover - depends on local GUI support.
         raise RuntimeError("MuJoCo viewer could not be launched in this environment.") from exc
+    _ = show_ui  # Kept for compatibility with older lab call sites.
     return mujoco_viewer.launch_passive(
         model,
         data,
         key_callback=key_callback,
-        show_left_ui=show_ui,
-        show_right_ui=show_ui,
+        show_left_ui=False,
+        show_right_ui=False,
     )
 
 

@@ -95,7 +95,7 @@ Implemented and verified:
 - Batch scenario cards summarize the first few YAML changes from the baseline scenario
 - Batch scenario cards summarize the largest metric changes from the baseline scenario
 - Batch scenario cards include a `Control surface` cue for available live controls when the scenario is rerun interactively
-- MuJoCo viewer side panels are hidden by default for learner demos and only shown with `--show-viewer-ui` for raw model debugging
+- MuJoCo viewer side panels are always hidden for learner demos; use the `MCLab Interaction` panel and YAML configs as the control surface
 - Interactive `MCLab Interaction` quick presets, purpose/value previews, and per-slider step buttons for representative damping, PID, 2DOF reach, Panda reach, and virtual wall parameter sets
 - Lab03 2DOF interactive viewer demos include Shoulder/Elbow pulse buttons for live joint-disturbance recovery observations
 - Interactive preset groups show a compare-in-order hint so learners try multiple parameter regimes before marking an observation
