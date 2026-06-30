@@ -4546,10 +4546,17 @@ def _learning_path_evidence_suffix(item: dict[str, Any]) -> str:
     prediction_text = f", {predictions} prediction{'s' if predictions != 1 else ''}" if predictions else ""
     outcome_text = f", {outcomes} outcome{'s' if outcomes != 1 else ''}" if outcomes else ""
     note_text = f", {notes} note{'s' if notes != 1 else ''}" if notes else ""
+    control_text = ""
+    if item.get("evidence_required"):
+        controls = int(item.get("learner_controls", 0))
+        control_text = f", {controls} control{'s' if controls != 1 else ''}"
     required_total = int(item.get("required_presets", 0))
     required_tried = int(item.get("required_presets_tried", 0))
     preset_text = f", required presets {required_tried}/{required_total}" if required_total else ""
-    return f" ({markers} observation{'s' if markers != 1 else ''}{prediction_text}{outcome_text}{note_text}{preset_text})"
+    return (
+        f" ({markers} observation{'s' if markers != 1 else ''}{prediction_text}{outcome_text}{note_text}"
+        f"{control_text}{preset_text})"
+    )
 
 
 def _learning_path_action_label(step: IndexPathStep) -> str:

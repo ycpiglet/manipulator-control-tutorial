@@ -1397,7 +1397,7 @@ class LoggingTests(unittest.TestCase):
             html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
             self.assertIn("1/11 steps complete. Evidence pending: 1 hands-on step(s).", html)
             self.assertIn("Next: 2. Disturb and tune", html)
-            self.assertIn("Needs prediction (1 observation, 1 note)", html)
+            self.assertIn("Needs prediction (1 observation, 1 note, 0 controls)", html)
             self.assertIn("Add one Prediction in Mark observation before moving on.", html)
             self.assertIn("1 observation, 0 predictions, 1 note", html)
             self.assertIn("Needs prediction; Repeat or continue the demo and save a Mark observation with a prediction.", html)
@@ -1431,7 +1431,7 @@ class LoggingTests(unittest.TestCase):
             html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
             self.assertIn("2/11 steps complete. Outcome review pending: 1 hands-on step(s).", html)
             self.assertIn("Next: 3. Close the loop", html)
-            self.assertIn("Done (1 observation, 1 prediction, 1 note)", html)
+            self.assertIn("Done (1 observation, 1 prediction, 1 note, 3 controls)", html)
             self.assertIn("Add one Prediction outcome while reviewing.", html)
             self.assertIn(
                 "Mission evidence: Outcome review pending; "
@@ -1465,7 +1465,7 @@ class LoggingTests(unittest.TestCase):
             html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
             self.assertIn("1/11 steps complete. Evidence pending: 1 hands-on step(s).", html)
             self.assertIn("Next: 2. Disturb and tune", html)
-            self.assertIn("Needs note (1 observation, 1 prediction, 1 outcome)", html)
+            self.assertIn("Needs note (1 observation, 1 prediction, 1 outcome, 0 controls)", html)
             self.assertIn("Add a short note or Use live status before moving on.", html)
 
             (interactive / "interaction_events.json").write_text(
@@ -1491,7 +1491,7 @@ class LoggingTests(unittest.TestCase):
 
             html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
             self.assertIn("2/11 steps complete. Next: 3. Close the loop", html)
-            self.assertIn("Done (1 observation, 1 prediction, 1 outcome, 1 note)", html)
+            self.assertIn("Done (1 observation, 1 prediction, 1 outcome, 1 note, 3 controls)", html)
             self.assertIn("1 observation, 1 prediction, 1 outcome, 1 note", html)
             self.assertIn(
                 "Mission evidence: Ready for review; "
@@ -1560,7 +1560,7 @@ class LoggingTests(unittest.TestCase):
                 html,
             )
             self.assertIn(
-                "Needs required preset (1 observation, 1 prediction, 1 outcome, 1 note, required presets 1/3)",
+                "Needs required preset (1 observation, 1 prediction, 1 outcome, 1 note, 1 control, required presets 1/3)",
                 html,
             )
             self.assertIn("Try required preset Back away before moving on.", html)
@@ -1841,7 +1841,7 @@ class LoggingTests(unittest.TestCase):
 
             html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
 
-            self.assertIn("Done (1 observation, 1 prediction, 1 note)", html)
+            self.assertIn("Done (1 observation, 1 prediction, 1 note, 1 control)", html)
             self.assertIn("1 observation, 1 prediction, 1 note", html)
 
     def test_outputs_index_handles_empty_outputs_folder(self) -> None:

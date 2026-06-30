@@ -516,7 +516,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(needs_prediction.learner_predictions, 0)
         self.assertEqual(needs_prediction.learner_notes, 1)
         self.assertIn(
-            "Status: Needs prediction - latest run_lab01_interactive (1 observation, 1 note)",
+            "Status: Needs prediction - latest run_lab01_interactive (1 observation, 1 note, 0 controls)",
             learning_path_progress_text(second_step, needs_prediction),
         )
         self.assertIn("Add one Prediction in Mark observation", learning_path_progress_text(second_step, needs_prediction))
@@ -534,7 +534,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Progress: 1/11 complete", needs_note_summary)
         self.assertIn("Evidence pending: 1 hands-on step(s).", needs_note_summary)
         self.assertIn(
-            "Status: Needs note - latest run_lab01_interactive (1 observation, 1 prediction, 1 outcome)",
+            "Status: Needs note - latest run_lab01_interactive (1 observation, 1 prediction, 1 outcome, 0 controls)",
             learning_path_progress_text(second_step, needs_note),
         )
         self.assertIn(
@@ -546,7 +546,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(needs_control.learner_controls, 0)
         self.assertIn(
             "Status: Needs learner control - latest run_lab01_interactive "
-            "(1 observation, 1 prediction, 1 outcome, 1 note)",
+            "(1 observation, 1 prediction, 1 outcome, 1 note, 0 controls)",
             learning_path_progress_text(second_step, needs_control),
         )
         self.assertIn("Use one button, slider, or preset before moving on.", learning_path_progress_text(second_step, needs_control))
@@ -558,7 +558,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(complete_progress.learner_outcomes, 1)
         self.assertEqual(complete_progress.learner_notes, 1)
         self.assertIn(
-            "Status: Done - latest run_lab01_interactive (1 observation, 1 prediction, 1 outcome, 1 note)",
+            "Status: Done - latest run_lab01_interactive (1 observation, 1 prediction, 1 outcome, 1 note, 1 control)",
             learning_path_progress_text(second_step, complete_progress),
         )
         self.assertNotIn("Outcome review pending", complete_summary)

@@ -1214,6 +1214,11 @@ def _learning_path_evidence_suffix(progress: LearningPathProgress) -> str:
         if progress.learner_outcomes
         else ""
     )
+    control_text = (
+        f", {progress.learner_controls} control{'s' if progress.learner_controls != 1 else ''}"
+        if progress.evidence_required
+        else ""
+    )
     preset_text = (
         f", required presets {progress.required_presets_tried}/{progress.required_presets}"
         if progress.required_presets
@@ -1221,7 +1226,8 @@ def _learning_path_evidence_suffix(progress: LearningPathProgress) -> str:
     )
     return (
         f" ({progress.observation_markers} observation"
-        f"{'s' if progress.observation_markers != 1 else ''}{prediction_text}{outcome_text}{note_text}{preset_text})"
+        f"{'s' if progress.observation_markers != 1 else ''}{prediction_text}{outcome_text}{note_text}"
+        f"{control_text}{preset_text})"
     )
 
 
