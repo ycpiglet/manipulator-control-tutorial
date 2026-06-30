@@ -937,6 +937,7 @@ def learning_path_text(step: LearningPathStep) -> str:
     return (
         f"{step.description}\n"
         f"Run: {action.group} - {action.label}\n"
+        f"{action_mission_text(action)}\n"
         f"{learning_path_completion_text(step)}\n"
         f"Watch: {action.watch}"
     )
@@ -1527,6 +1528,13 @@ def _short_text(value: str, limit: int = 96) -> str:
     return f"{text[: max(0, limit - 3)].rstrip()}..."
 
 
+def _short_sentence(value: str, limit: int = 96) -> str:
+    text = _short_text(value, limit)
+    if text.endswith("..."):
+        return text
+    return text.removesuffix(".")
+
+
 def parse_run_output_path(line: str) -> Path | None:
     stripped = line.strip()
     for prefix in COMPLETE_PREFIXES:
@@ -1890,12 +1898,28 @@ def action_plan_text(action: MenuAction) -> str:
 
 
 def batch_plan_text(action: BatchMenuAction) -> str:
-    scenario_count = (
-        sum(len(scenarios) for scenarios in BATCH_SETS.values())
-        if action.batch_name == ALL_BATCH_NAME
-        else len(BATCH_SETS[action.batch_name])
-    )
-    return f"Plan: Batch compare; {scenario_count} headless scenarios; saves combined report/worksheet"
+    return f"Plan: Batch compare; {_batch_scenario_count(action)} headless scenarios; saves combined report/worksheet"
+
+
+def action_mission_text(action: MenuAction | BatchMenuAction) -> str:
+    if isinstance(action, BatchMenuAction):
+        return (
+            f"Mission: Run {_batch_scenario_count(action)} scenarios; compare "
+            f"{_short_sentence(action.try_this, 88)}; prove it with {_short_sentence(action.watch, 88)}."
+        )
+
+    watch = _short_sentence(action.watch, 96)
+    if "hands-on" in action_tags(action):
+        return f"Mission: Change {_short_sentence(parameter_hint(action), 88)}; prove it with {watch}."
+    if _is_compare_action(action):
+        return f"Mission: Isolate {_short_sentence(parameter_hint(action), 88)}; prove it with {watch}."
+    return f"Mission: Run the demo; {_short_sentence(action.try_this, 88)}; prove it with {watch}."
+
+
+def _batch_scenario_count(action: BatchMenuAction) -> int:
+    if action.batch_name == ALL_BATCH_NAME:
+        return sum(len(scenarios) for scenarios in BATCH_SETS.values())
+    return len(BATCH_SETS[action.batch_name])
 
 
 @lru_cache(maxsize=256)
@@ -2106,6 +2130,7 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
         f"Setup: {readiness.label}{setup_detail}{setup_fix}\n"
         f"Badges: {', '.join(action_badges(action))}\n"
         f"{action_plan_text(action)}\n"
+        f"{action_mission_text(action)}\n"
         f"{action_history_text(action, outputs_root)}\n"
         f"{action_evidence_text(action, outputs_root)}\n"
         f"{action_latest_evidence_text(action, outputs_root)}\n"
@@ -2312,6 +2337,7 @@ def _action_matches_terms(action: MenuAction, terms: list[str]) -> bool:
         action_controls_text(action),
         action_viewer_text(action),
         action_plan_text(action),
+        action_mission_text(action),
         "next cue run preset observation outcome replay compare",
         " ".join(configured_preset_labels(action.config_path)),
         " ".join(configured_preset_purposes(action.config_path)),
@@ -3132,11 +3158,7 @@ def _set_status_after_run(
 
 
 def lesson_text_for_batch(action: BatchMenuAction, outputs_root: Path | None = None) -> str:
-    scenario_count = (
-        sum(len(scenarios) for scenarios in BATCH_SETS.values())
-        if action.batch_name == ALL_BATCH_NAME
-        else len(BATCH_SETS[action.batch_name])
-    )
+    scenario_count = _batch_scenario_count(action)
     readiness = batch_readiness(action)
     setup_detail = f" - {readiness.detail}" if readiness.status != "ok" and readiness.detail else ""
     setup_fix = f" Fix: {readiness.fix}" if readiness.status != "ok" and readiness.fix else ""
@@ -3144,6 +3166,7 @@ def lesson_text_for_batch(action: BatchMenuAction, outputs_root: Path | None = N
         f"{action.description}\n"
         f"Setup: {readiness.label}{setup_detail}{setup_fix}\n"
         f"{batch_plan_text(action)}\n"
+        f"{action_mission_text(action)}\n"
         f"{action_history_text(action, outputs_root)}\n"
         f"{action_plot_text(action, outputs_root)}\n"
         f"{action_plot_review_text(action, outputs_root)}\n"

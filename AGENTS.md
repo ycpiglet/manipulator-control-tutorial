@@ -99,6 +99,7 @@ Implemented and verified:
 - Learner menu scenario cards include a `Viewer` marker legend and marker-name search support
 - Learner menu scenario cards include a `Controls` summary of actual buttons, sliders, presets, pause/step, reset, and observation controls
 - Learner menu scenario and batch cards include a `Plan` line with level, mode, run length, and saved artifacts
+- Learner menu scenario, batch, and learning-path cards include a `Mission` line that turns Try/Change/Watch guidance into one evidence-focused task
 - Learner menu scenario cards include a `Latest evidence` summary from the latest observation marker prediction, outcome, note, and live status
 - Learner menu scenario cards include a `Next cue` that points learners toward the next best action: run, try another preset, mark observation, review outcome, replay, or compare
 - Interactive `Playback speed` slider controls realtime viewer pacing from slow-motion to faster skim

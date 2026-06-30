@@ -39,6 +39,7 @@ from mclab.learner_menu import (  # noqa: E402
     action_latest_plot,
     action_latest_tuned_config,
     action_latest_worksheet,
+    action_mission_text,
     action_next_cue_text,
     action_plan_text,
     action_plot_review_text,
@@ -213,6 +214,8 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertNotIn("--show-viewer-ui", args)
                 text = lesson_text_for_batch(action)
                 self.assertIn("Setup:", text)
+                self.assertIn("Mission:", text)
+                self.assertIn(action_mission_text(action), text)
                 self.assertIn("History:", text)
                 self.assertIn("Try:", text)
                 self.assertIn("Watch:", text)
@@ -243,6 +246,8 @@ class LearnerMenuTests(unittest.TestCase):
                 action = learning_path_target(step)
                 text = learning_path_text(step)
                 self.assertIn("Run:", text)
+                self.assertIn("Mission:", text)
+                self.assertIn(action_mission_text(action), text)
                 self.assertIn("Done when:", text)
                 self.assertIn(learning_path_completion_text(step), text)
                 self.assertIn("Watch:", text)
@@ -560,6 +565,8 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertIn("Badges:", text)
                 self.assertIn("Plan:", text)
                 self.assertIn(action_plan_text(action), text)
+                self.assertIn("Mission:", text)
+                self.assertIn(action_mission_text(action), text)
                 self.assertIn("History:", text)
                 self.assertIn("Evidence:", text)
                 self.assertIn("Latest evidence:", text)
@@ -584,7 +591,9 @@ class LearnerMenuTests(unittest.TestCase):
         lab03_dls = by_label[("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS")]
         self.assertIn("Plan: Intro; baseline demo", action_plan_text(auto_demo))
         self.assertIn("saves report/plots/worksheet", action_plan_text(auto_demo))
+        self.assertIn("Mission: Run the demo", action_mission_text(auto_demo))
         self.assertIn("Plan: Deep dive; hands-on viewer", action_plan_text(lab03_dls))
+        self.assertIn("Mission: Change", action_mission_text(lab03_dls))
 
     def test_menu_cards_show_actual_control_affordances(self) -> None:
         by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
