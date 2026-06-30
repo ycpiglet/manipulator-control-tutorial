@@ -44,3 +44,15 @@ def course_milestone_summary(completed_steps: Sequence[bool]) -> str:
             next_label = "Extra"
     suffix = f" Next milestone: {next_label}." if next_label else " All milestones ready for review."
     return f"Milestones: {'; '.join(parts)}.{suffix}"
+
+
+def course_milestone_label_for_step_index(step_index: int) -> str:
+    """Return the conceptual milestone label for a zero-based learning-path step index."""
+    if step_index < 0:
+        return ""
+    cursor = 0
+    for milestone in COURSE_MILESTONES:
+        if cursor <= step_index < cursor + milestone.step_count:
+            return milestone.label
+        cursor += milestone.step_count
+    return "Extra"

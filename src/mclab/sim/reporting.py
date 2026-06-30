@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from mclab.config import load_config
-from mclab.course_progress import course_milestone_summary
+from mclab.course_progress import course_milestone_label_for_step_index, course_milestone_summary
 from mclab.learning_guides import (
     RunGuide,
     guide_for_config,
@@ -768,6 +768,7 @@ def _render_worksheet(
         "",
     ]
     lines.extend(_worksheet_learning_guide_lines(guide, summary))
+    lines.extend(_worksheet_course_position_lines(summary))
     lines.extend(_worksheet_mission_evidence_lines(summary, interaction_events, plots, config))
     lines.extend(_worksheet_pairs_section("Key Parameters", _config_highlight_pairs(config)))
     lines.extend(_worksheet_key_moments_lines(summary))
@@ -807,6 +808,24 @@ def _worksheet_learning_guide_lines(guide: RunGuide | None, summary: dict[str, A
         lines.append("- Viewer legend:")
         for label, description in legend:
             lines.append(f"  - {_markdown_inline(label)}: {_markdown_inline(description)}")
+    lines.append("")
+    return lines
+
+
+def _worksheet_course_position_lines(summary: dict[str, Any]) -> list[str]:
+    position = _course_position_for_summary(summary)
+    if position is None:
+        return []
+    step, _step_number, milestone = position
+    rows: list[tuple[str, Any]] = [
+        ("Milestone", milestone),
+        ("Learning path step", step.title),
+        ("Step focus", step.description),
+        ("Done when", _learning_path_completion_text(step).removeprefix("Done when:").strip()),
+        ("Repeat command", _learning_path_command(step)),
+    ]
+    lines = ["## Course Position", ""]
+    lines.extend(_worksheet_mapping_lines(dict(rows)))
     lines.append("")
     return lines
 
@@ -1172,6 +1191,7 @@ def _render_report(
 ) -> str:
     title = _report_title(output, summary)
     learning_guide = _learning_guide_section(guide_for_run_summary(summary), summary)
+    course_position = _course_position_section(summary)
     worksheet = _worksheet_section(output)
     next_actions = _next_actions_section(output, summary, config, plots, interaction_events)
     reproduce_section = _reproduce_section(summary)
@@ -1540,6 +1560,7 @@ def _render_report(
   <main>
     <h1>{escape(title)} report</h1>
     {learning_guide}
+    {course_position}
     {worksheet}
     {next_actions}
     {reproduce_section}
@@ -1590,6 +1611,45 @@ def _worksheet_section(output: Path) -> str:
         "Open the printable Markdown worksheet to review prediction, outcome, notes, and next-run decisions.",
         '<p class="empty"><a href="worksheet.md">Open worksheet.md</a></p>',
     )
+
+
+def _course_position_section(summary: dict[str, Any]) -> str:
+    position = _course_position_for_summary(summary)
+    if position is None:
+        return ""
+    step, _step_number, milestone = position
+    body = _action_value_list(
+        (
+            ("Milestone", milestone),
+            ("Learning path step", step.title),
+            ("Step focus", step.description),
+            ("Done when", _learning_path_completion_text(step).removeprefix("Done when:").strip()),
+        )
+    )
+    command = _learning_path_command(step)
+    if command:
+        body += f"<pre>{escape(command)}</pre>"
+    return (
+        "<section>"
+        "<h2>Course Position</h2>"
+        '<div class="action-grid">'
+        f"{_action_card('Learning path role', 'Where this saved run fits in the guided course.', body)}"
+        "</div>"
+        "</section>"
+    )
+
+
+def _course_position_for_summary(summary: dict[str, Any]) -> tuple[IndexPathStep, int, str] | None:
+    config_path = _normalize_path(str(summary.get("config_path") or ""))
+    batch_name = str(summary.get("batch_name") or summary.get("config_name") or "").strip()
+    for step_index, step in enumerate(INDEX_LEARNING_PATH):
+        if step.batch_name:
+            if batch_name == step.batch_name:
+                return step, step_index + 1, course_milestone_label_for_step_index(step_index)
+            continue
+        if config_path and _normalize_path(step.config_path) == config_path:
+            return step, step_index + 1, course_milestone_label_for_step_index(step_index)
+    return None
 
 
 def _learning_guide_section(guide: RunGuide | None, summary: dict[str, Any]) -> str:

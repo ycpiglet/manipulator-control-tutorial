@@ -169,6 +169,7 @@ Implemented and verified:
 - Learner menu learning-path step `Replay` buttons for latest replayable `learner_tuned_config.yaml` runs
 - `python -m mclab doctor` checks learner menu scenario and comparison-batch readiness
 - Run reports include suggested next-run cards with reflection questions, key parameter changes, and ready-to-run commands for every guided config
+- Run reports and worksheets show `Course Position` with the matching milestone, learning-path step, focus, completion rule, and repeat command
 - Run reports include a top-level `Next Actions` shortcut section for evidence review, priority plot opening, tuned replay, suggested next run, and comparison batch
 - Run reports include a `Control Surface` section and suggested-run control summaries for available buttons, sliders, presets, and evidence controls
 - Run reports include a relevant comparison batch command for the current lab or Panda wall/reach mode
