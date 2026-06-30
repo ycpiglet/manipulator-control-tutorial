@@ -1497,6 +1497,28 @@ class LoggingTests(unittest.TestCase):
             (interactive / "interaction_events.json").write_text(
                 json.dumps(
                     [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "question": "Question: demo?",
+                                "prediction": "More damping should settle faster.",
+                                "outcome": "Matched",
+                                "note": "The mass settled faster after damping changed.",
+                            },
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
+            self.assertIn("Needs learner control (1 observation, 1 prediction, 1 outcome, 1 note, 0 controls)", html)
+            self.assertIn("Use experiment buttons, live sliders, or Quick presets before moving on.", html)
+
+            (interactive / "interaction_events.json").write_text(
+                json.dumps(
+                    [
                         {"kind": "button", "name": "manual_force", "label": "Push Right", "value": 12.0},
                         {"kind": "preset", "name": "heavy_damping", "label": "Heavy damping"},
                         {"kind": "slider", "name": "damping", "label": "Damping", "value": 5.0},

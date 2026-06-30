@@ -17,6 +17,7 @@ from mclab.learning_guides import (
     control_credit_text_for_config,
     guide_for_config,
     guide_for_run_summary,
+    learner_control_action_text_for_config,
     learner_control_families_from_config,
     mission_prompt_for_guide,
     playbook_for_guide,
@@ -4624,10 +4625,14 @@ def _learning_path_card(item: dict[str, Any]) -> str:
         and int(item["observation_markers"]) > 0
         and int(item.get("learner_controls", 0)) <= 0
     ):
+        control_action = ""
+        step_config = _index_step_config(step)
+        if step_config:
+            control_action = learner_control_action_text_for_config(step_config)
         status = (
             f'<span class="status">Needs learner control{escape(_learning_path_evidence_suffix(item))}</span>'
             f'<p class="muted">Latest: <a href="{escape(str(run["report"]))}">{escape(str(run["name"]))}</a></p>'
-            '<p class="muted">Use one button, slider, or preset before moving on.</p>'
+            f'<p class="muted">{escape(control_action or "Use one button, slider, or preset before moving on.")}</p>'
         )
     else:
         status = (

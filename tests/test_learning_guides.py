@@ -15,6 +15,8 @@ from mclab.learning_guides import (  # noqa: E402
     control_credit_text_for_config,
     guide_for_config,
     guide_for_run_summary,
+    learner_control_action_text,
+    learner_control_action_text_for_config,
     mission_prompt_for_guide,
     observation_prompt_for_guide,
     playbook_for_guide,
@@ -166,6 +168,30 @@ class LearningGuideTests(unittest.TestCase):
             ),
             "experiment buttons, live sliders, Quick presets; "
             "view/evidence helpers such as Pause, Playback speed, and Use live status do not count.",
+        )
+
+    def test_learner_control_action_text_names_available_controls(self) -> None:
+        self.assertEqual(
+            learner_control_action_text(True, True, True),
+            "Use experiment buttons, live sliders, or Quick presets before moving on.",
+        )
+        self.assertEqual(
+            learner_control_action_text(False, True, False),
+            "Use live sliders before moving on.",
+        )
+        self.assertEqual(
+            learner_control_action_text_for_config(
+                {
+                    "interaction": {
+                        "panel": True,
+                        "live_tuning": True,
+                        "playback_speed": True,
+                        "pause_resume": True,
+                        "tuning_presets": [{"label": "Soft"}],
+                    }
+                }
+            ),
+            "Use experiment buttons, live sliders, or Quick presets before moving on.",
         )
 
     def test_challenge_guides_visible_evidence_goal(self) -> None:

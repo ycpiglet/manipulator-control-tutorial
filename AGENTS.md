@@ -131,6 +131,7 @@ Implemented and verified:
 - Learner menu scenario cards include a `Viewer` marker legend and marker-name search support
 - Learner menu scenario cards include a `Controls` summary of actual buttons, sliders, presets, pause/step, reset, and observation controls
 - Learner menu scenario cards include a `Counts as control` cue matching the live panel so learners know which controls satisfy hands-on evidence before launch
+- Learner menu and outputs index `Needs learner control` states name the available learner-control families, such as experiment buttons, live sliders, and Quick presets
 - Learner menu scenario and batch cards include a `Plan` line with level, mode, run length, and saved artifacts
 - Learner menu scenario, batch, and learning-path cards include a `Mission` line that turns Try/Change/Watch guidance into one evidence-focused task
 - Learner menu scenario and batch cards, the live interaction panel, run reports, and worksheets include a `Playbook` line that turns each demo into predict, manipulate, and evidence-review steps

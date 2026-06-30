@@ -141,7 +141,7 @@ def learner_control_families_from_config(config: dict[str, Any] | None) -> tuple
     return has_buttons, has_sliders, has_presets
 
 
-def control_credit_text(has_buttons: bool, has_sliders: bool, has_presets: bool) -> str:
+def learner_control_family_names(has_buttons: bool, has_sliders: bool, has_presets: bool) -> list[str]:
     controls: list[str] = []
     if has_buttons:
         controls.append("experiment buttons")
@@ -149,6 +149,28 @@ def control_credit_text(has_buttons: bool, has_sliders: bool, has_presets: bool)
         controls.append("live sliders")
     if has_presets:
         controls.append("Quick presets")
+    return controls
+
+
+def learner_control_action_text(has_buttons: bool, has_sliders: bool, has_presets: bool) -> str:
+    controls = learner_control_family_names(has_buttons, has_sliders, has_presets)
+    if not controls:
+        return "Use one learner control before moving on."
+    if len(controls) == 1:
+        control_text = controls[0]
+    elif len(controls) == 2:
+        control_text = f"{controls[0]} or {controls[1]}"
+    else:
+        control_text = f"{', '.join(controls[:-1])}, or {controls[-1]}"
+    return f"Use {control_text} before moving on."
+
+
+def learner_control_action_text_for_config(config: dict[str, Any] | None) -> str:
+    return learner_control_action_text(*learner_control_families_from_config(config))
+
+
+def control_credit_text(has_buttons: bool, has_sliders: bool, has_presets: bool) -> str:
+    controls = learner_control_family_names(has_buttons, has_sliders, has_presets)
     if not controls:
         return ""
     return f"{', '.join(controls)}; view/evidence helpers such as Pause, Playback speed, and Use live status do not count."

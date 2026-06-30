@@ -19,6 +19,7 @@ from mclab.course_progress import course_milestone_summary
 from mclab.learning_guides import (
     batch_start_steps_text,
     challenge_prompt_for_guide,
+    learner_control_action_text_for_config,
     control_credit_text_for_config,
     guide_for_config,
     playbook_for_guide,
@@ -1210,10 +1211,17 @@ def learning_path_progress_text(
             "Add a short note or Use live status before moving on."
         )
     elif current.evidence_required and current.observation_markers > 0 and current.learner_controls <= 0:
+        action = learning_path_target(step)
+        control_action = ""
+        if isinstance(action, MenuAction):
+            try:
+                control_action = learner_control_action_text_for_config(load_config(action.config_path))
+            except (OSError, ValueError):
+                control_action = ""
         status = (
             f"Status: Needs learner control - latest {current.latest_output.name}"
             f"{_learning_path_evidence_suffix(current)}. "
-            "Use one button, slider, or preset before moving on."
+            f"{control_action or 'Use one button, slider, or preset before moving on.'}"
         )
     else:
         status = (

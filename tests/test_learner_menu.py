@@ -561,7 +561,10 @@ class LearnerMenuTests(unittest.TestCase):
             "(1 observation, 1 prediction, 1 outcome, 1 note, 0 controls)",
             learning_path_progress_text(second_step, needs_control),
         )
-        self.assertIn("Use one button, slider, or preset before moving on.", learning_path_progress_text(second_step, needs_control))
+        self.assertIn(
+            "Use experiment buttons, live sliders, or Quick presets before moving on.",
+            learning_path_progress_text(second_step, needs_control),
+        )
 
         self.assertTrue(complete_progress.completed)
         self.assertEqual(complete_progress.learner_controls, 1)
