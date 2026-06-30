@@ -3594,12 +3594,12 @@ def main() -> int:
         cell.grid(row=row_index + 2, column=column_index, sticky="ew", padx=(0, 12), pady=(0, 8))
         progress_text = tk.StringVar(value=learning_path_progress_text(step))
         path_status_vars.append((step, progress_text))
-        step_buttons = ttk.Frame(cell)
-        step_buttons.pack(anchor="w")
+        launch_row = ttk.Frame(cell)
+        launch_row.pack(anchor="w")
         ttk.Button(
-            step_buttons,
+            launch_row,
             text=step.title,
-            width=22,
+            width=28,
             command=lambda selected=step: _launch_learning_path_from_menu(
                 selected,
                 status,
@@ -3611,18 +3611,20 @@ def main() -> int:
                 progress_callback=refresh_after_run,
             ),
         ).pack(side="left")
+        artifact_row = ttk.Frame(cell)
+        artifact_row.pack(anchor="w", pady=(4, 0))
         step_report_button = ttk.Button(
-            step_buttons,
+            artifact_row,
             text="Report",
             width=8,
             command=lambda selected=step: launch_learning_path_latest_output(selected),
         )
         if learning_path_latest_output(step) is None:
             step_report_button.state(["disabled"])
-        step_report_button.pack(side="left", padx=(6, 0))
+        step_report_button.pack(side="left")
         path_report_buttons.append((step, step_report_button))
         step_plot_button = ttk.Button(
-            step_buttons,
+            artifact_row,
             text="Plot",
             width=8,
             command=lambda selected=step: launch_learning_path_latest_plot(selected),
@@ -3632,7 +3634,7 @@ def main() -> int:
         step_plot_button.pack(side="left", padx=(6, 0))
         path_plot_buttons.append((step, step_plot_button))
         step_worksheet_button = ttk.Button(
-            step_buttons,
+            artifact_row,
             text="Worksheet",
             width=10,
             command=lambda selected=step: launch_learning_path_latest_worksheet(selected),
@@ -3642,7 +3644,7 @@ def main() -> int:
         step_worksheet_button.pack(side="left", padx=(6, 0))
         path_worksheet_buttons.append((step, step_worksheet_button))
         step_replay_button = ttk.Button(
-            step_buttons,
+            artifact_row,
             text="Replay",
             width=8,
             command=lambda selected=step: _launch_learning_path_tuned_replay_from_menu(

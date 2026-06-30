@@ -229,6 +229,7 @@ Implemented and verified:
 - Outputs index learning path cards include evidence status, latest evidence summaries, latest report/worksheet/priority-plot/replay links, and ready-to-run or repeat commands for each course step
 - Outputs index learning path cards show the priority plot review cue directly under the latest artifact links so learners know what to inspect before opening the plot
 - Learner menu learning-path cards show the latest worksheet/replay artifacts, latest priority plot filename, and the same plot review cue in the progress text
+- Learner menu learning-path cards separate the scenario launch button from Report/Plot/Worksheet/Replay artifact buttons so the 3-column path layout stays readable
 - Outputs index learning path cards show `Done when` completion criteria matching the learner menu
 - Outputs index learning path cards show `Start steps` launch sequences matching the learner menu, including concrete required-preset order when configured
 - Outputs index learning path cards show `Counts as control` learner-control criteria with concrete configured button labels for hands-on configs
