@@ -1144,6 +1144,7 @@ def maybe_start_interaction_panel(
 
                 def mark_observation() -> None:
                     prediction = marker_prediction.get()
+                    note = marker_note.get()
                     preset_state = tuning.preset_checklist_state() if tuning is not None else ""
                     event_log.mark_observation(
                         changed_sliders=tuning.changed_values() if tuning is not None else None,
@@ -1152,13 +1153,13 @@ def maybe_start_interaction_panel(
                         question=question_for_guide(guide),
                         prediction=prediction,
                         outcome=_prediction_outcome_value(marker_outcome.get()),
-                        note=marker_note.get(),
+                        note=note,
                         evidence_prompt=marker_prompt,
                     )
                     marker_prediction.set("")
                     marker_outcome.set(PREDICTION_OUTCOME_UNJUDGED)
                     marker_note.set("")
-                    marker_status.set(_observation_marker_status_message(event_log, prediction, preset_state))
+                    marker_status.set(_observation_marker_status_message(event_log, prediction, note, preset_state))
 
                 marker_row = 0
                 if marker_prompt:
@@ -1342,12 +1343,15 @@ def _preset_button_label(preset: TuningPreset) -> str:
 def _observation_marker_status_message(
     event_log: InteractionLog,
     prediction: str,
+    note: str = "",
     preset_state: str = "",
 ) -> str:
     count = _observation_marker_count(event_log)
     missing: list[str] = []
     if not prediction.strip():
         missing.append("add a prediction next time")
+    if not note.strip():
+        missing.append("add a short note or Use live status")
     preset_followup = _preset_state_followup(preset_state)
     if preset_followup:
         missing.append(preset_followup)
@@ -1380,7 +1384,7 @@ def _observation_checklist_status(
 ) -> str:
     prediction_state = "ready" if prediction.strip() else "missing"
     outcome_state = "selected" if _prediction_outcome_value(outcome) else "optional"
-    note_state = "ready" if note.strip() else "optional"
+    note_state = "ready" if note.strip() else "recommended"
     preset_text = f"Preset comparison {preset_state}; " if preset_state else ""
     return (
         "Evidence checklist: "
