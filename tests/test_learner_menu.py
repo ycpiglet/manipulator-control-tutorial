@@ -77,6 +77,7 @@ from mclab.learner_menu import (  # noqa: E402
     configured_preset_comparison,
     configured_preset_labels,
     configured_preset_purposes,
+    configured_required_preset_labels,
     launch_action_latest_output,
     launch_action_latest_plot,
     launch_action_latest_worksheet,
@@ -776,6 +777,7 @@ class LearnerMenuTests(unittest.TestCase):
         lab03_dls = by_label[("Lab03 2DOF Arm and Trajectories", "2DOF DLS singularity")]
         lab03_condition_dls = by_label[("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS")]
         lab04_cartesian = by_label[("Lab04 Panda Manipulator", "Cartesian interactive")]
+        lab04_wall = by_label[("Lab04 Panda Manipulator", "Virtual wall")]
 
         self.assertEqual(
             configured_preset_labels(lab02_interactive.config_path),
@@ -798,6 +800,13 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Presets: Low DLS damping, Balanced DLS, High DLS damping", lesson_text(lab03_dls))
         self.assertIn("Presets: Early damping, Balanced schedule, Late damping", lesson_text(lab03_condition_dls))
         self.assertIn("Presets: Soft reach, Default reach, Far target", lesson_text(lab04_cartesian))
+        self.assertEqual(configured_required_preset_labels(lab04_wall.config_path), ("Close wall", "Back away"))
+        self.assertIn(
+            "required evidence: Close wall -> Back away",
+            configured_preset_comparison(lab04_wall.config_path),
+        )
+        self.assertIn("Presets: Soft wall, Stiff wall, Close wall, Back away", lesson_text(lab04_wall))
+        self.assertIn("required evidence: Close wall -> Back away", lesson_text(lab04_wall))
 
     def test_menu_cards_show_readable_experience_badges(self) -> None:
         by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
@@ -1691,6 +1700,59 @@ class LearnerMenuTests(unittest.TestCase):
             self.assertEqual(
                 action_preset_evidence_text(lab02_interactive, outputs),
                 "Preset evidence: 2/3 presets tried; ready to review comparison",
+            )
+
+    def test_required_preset_evidence_keeps_wall_flow_honest(self) -> None:
+        lab04_wall = next(
+            action
+            for action in MENU_ACTIONS
+            if action.config_path == "configs/lab04_panda/interactive_virtual_wall.yaml"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            run_path = outputs / "run_lab04_wall"
+            run_path.mkdir()
+            (run_path / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": lab04_wall.lab_name,
+                        "config_path": lab04_wall.config_path,
+                        "config_name": Path(lab04_wall.config_path).stem,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (run_path / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {"kind": "preset", "name": "soft_wall", "label": "Soft wall"},
+                        {"kind": "preset", "name": "stiff_wall", "label": "Stiff wall"},
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            self.assertEqual(
+                action_preset_evidence_text(lab04_wall, outputs),
+                "Preset evidence: 2/4 presets tried; required next Close wall",
+            )
+            self.assertEqual(
+                action_next_cue_text(lab04_wall, outputs),
+                "Next cue: Try required preset Close wall, then mark a comparison observation.",
+            )
+
+            (run_path / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {"kind": "preset", "name": "close_wall", "label": "Close wall"},
+                        {"kind": "preset", "name": "back_away", "label": "Back away"},
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                action_preset_evidence_text(lab04_wall, outputs),
+                "Preset evidence: 2/4 presets tried; required presets ready",
             )
 
     def test_action_next_cue_guides_the_next_best_learner_step(self) -> None:

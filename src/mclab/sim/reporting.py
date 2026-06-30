@@ -885,8 +885,13 @@ def _worksheet_preset_comparison_lines(events: list[dict[str, Any]], config: dic
     if len(configured_labels) < 2:
         return []
     tried_labels = _distinct_preset_labels(events, configured_labels)
+    required_labels = _configured_required_preset_labels(config)
     lines = ["## Preset Comparison", ""]
-    lines.extend(_worksheet_mapping_lines(dict(_preset_comparison_progress_items(configured_labels, tried_labels))))
+    lines.extend(
+        _worksheet_mapping_lines(
+            dict(_preset_comparison_progress_items(configured_labels, tried_labels, required_labels))
+        )
+    )
     lines.append("")
     return lines
 
@@ -2049,10 +2054,12 @@ def _configured_preset_card(preset: dict[str, Any]) -> str:
     items = values.items() if isinstance(values, dict) else ()
     body = _action_value_list(items) or '<p class="empty">No slider values were configured.</p>'
     purpose_text = f'<p class="empty">{escape(purpose)}</p>' if purpose else ""
+    required_text = '<p class="empty"><strong>Required evidence preset.</strong></p>' if preset.get("required") else ""
     return (
         '<article class="action-card">'
         f"<strong>{escape(label)}</strong>"
         f"{purpose_text}"
+        f"{required_text}"
         f"{body}"
         "</article>"
     )
@@ -2076,12 +2083,35 @@ def _configured_preset_comparison_text(presets: list[dict[str, Any]]) -> str:
     labels = [label for label in labels if label]
     if len(labels) < 2:
         return ""
+    required_labels = [
+        str(preset.get("label") or preset.get("name") or f"Preset {index}").strip()
+        for index, preset in enumerate(presets, start=1)
+        if bool(preset.get("required", False))
+    ]
+    required_labels = [label for label in required_labels if label]
+    if required_labels:
+        return (
+            f"Compare presets in order: {' -> '.join(labels)}. "
+            f"Required evidence: {' -> '.join(required_labels)}. "
+            "Watch live status, then mark one observation."
+        )
     return f"Compare presets in order: {' -> '.join(labels)}. Watch live status, then mark one observation."
 
 
 def _configured_preset_labels(config: dict[str, Any]) -> list[str]:
     labels: list[str] = []
     for index, preset in enumerate(_configured_presets(config), start=1):
+        label = str(preset.get("label") or preset.get("name") or f"Preset {index}").strip()
+        if label:
+            labels.append(label)
+    return labels
+
+
+def _configured_required_preset_labels(config: dict[str, Any]) -> list[str]:
+    labels: list[str] = []
+    for index, preset in enumerate(_configured_presets(config), start=1):
+        if not bool(preset.get("required", False)):
+            continue
         label = str(preset.get("label") or preset.get("name") or f"Preset {index}").strip()
         if label:
             labels.append(label)
@@ -2733,7 +2763,8 @@ def _preset_comparison_progress_card(events: list[dict[str, Any]], config: dict[
     if len(configured_labels) < 2:
         return ""
     tried_labels = _distinct_preset_labels(events, configured_labels)
-    items = _preset_comparison_progress_items(configured_labels, tried_labels)
+    required_labels = _configured_required_preset_labels(config)
+    items = _preset_comparison_progress_items(configured_labels, tried_labels, required_labels)
     return _action_card(
         "Preset comparison progress",
         "Checks whether this hands-on run sampled more than one preset regime.",
@@ -2744,9 +2775,19 @@ def _preset_comparison_progress_card(events: list[dict[str, Any]], config: dict[
 def _preset_comparison_progress_items(
     configured_labels: list[str],
     tried_labels: list[str],
+    required_labels: list[str] | None = None,
 ) -> list[tuple[str, Any]]:
+    required_labels = required_labels or []
     next_label = next((label for label in configured_labels if label not in tried_labels), "")
-    if len(tried_labels) >= 2:
+    if required_labels:
+        missing_required = [label for label in required_labels if label not in tried_labels]
+        if missing_required:
+            status = "Needs required preset"
+            next_step = f"Try required preset {missing_required[0]}, watch live status, then mark one observation."
+        else:
+            status = "Ready for comparison review"
+            next_step = "Mark or review an observation comparing the required presets."
+    elif len(tried_labels) >= 2:
         status = "Ready for comparison review"
         next_step = "Mark or review an observation comparing the tried presets."
     elif next_label:
@@ -2755,7 +2796,7 @@ def _preset_comparison_progress_items(
     else:
         status = "Needs another preset"
         next_step = "Try at least one more preset, then mark one observation."
-    return [
+    items: list[tuple[str, Any]] = [
         ("Configured presets", len(configured_labels)),
         ("Preset order", " -> ".join(configured_labels)),
         ("Distinct presets tried", f"{len(tried_labels)}/{len(configured_labels)}"),
@@ -2763,6 +2804,11 @@ def _preset_comparison_progress_items(
         ("Next", next_step),
         ("Status", status),
     ]
+    if required_labels:
+        required_tried = [label for label in required_labels if label in tried_labels]
+        items.insert(2, ("Required presets", " -> ".join(required_labels)))
+        items.insert(4, ("Required presets tried", f"{len(required_tried)}/{len(required_labels)}"))
+    return items
 
 
 def _distinct_preset_labels(events: list[dict[str, Any]], configured_labels: list[str]) -> list[str]:

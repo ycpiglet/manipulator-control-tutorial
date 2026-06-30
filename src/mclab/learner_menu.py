@@ -1472,12 +1472,18 @@ def action_preset_evidence_text(action: MenuAction, outputs_root: Path | None = 
     labels = list(configured_preset_labels(action.config_path))
     if len(labels) < 2:
         return ""
+    required_labels = list(configured_required_preset_labels(action.config_path))
     latest = action_latest_output(action, outputs_root)
     if latest is None:
         return "Preset evidence: Not run yet"
     tried = _distinct_preset_labels(latest, labels)
-    next_label = next((label for label in labels if label not in tried), "")
     count = f"{len(tried)}/{len(labels)}"
+    if required_labels:
+        missing_required = [label for label in required_labels if label not in tried]
+        if not missing_required:
+            return f"Preset evidence: {count} presets tried; required presets ready"
+        return f"Preset evidence: {count} presets tried; required next {missing_required[0]}"
+    next_label = next((label for label in labels if label not in tried), "")
     if len(tried) >= 2:
         return f"Preset evidence: {count} presets tried; ready to review comparison"
     if next_label:
@@ -1502,7 +1508,12 @@ def action_next_cue_text(action: MenuAction, outputs_root: Path | None = None) -
     labels = list(configured_preset_labels(action.config_path))
     if len(labels) >= 2:
         tried = _distinct_preset_labels(latest, labels)
-        if len(tried) < 2:
+        required_labels = list(configured_required_preset_labels(action.config_path))
+        if required_labels:
+            missing_required = [label for label in required_labels if label not in tried]
+            if missing_required:
+                return f"Next cue: Try required preset {missing_required[0]}, then mark a comparison observation."
+        elif len(tried) < 2:
             next_label = next((label for label in labels if label not in tried), "")
             preset_text = f"preset {next_label}" if next_label else "one more preset"
             return f"Next cue: Try {preset_text}, then mark a comparison observation."
@@ -2444,6 +2455,28 @@ def configured_preset_labels(config_path: str) -> tuple[str, ...]:
 
 
 @lru_cache(maxsize=128)
+def configured_required_preset_labels(config_path: str) -> tuple[str, ...]:
+    try:
+        config = load_config(config_path)
+    except (OSError, ValueError):
+        return ()
+    interaction = config.get("interaction")
+    if not isinstance(interaction, dict):
+        return ()
+    presets = interaction.get("tuning_presets")
+    if not isinstance(presets, list):
+        return ()
+    labels: list[str] = []
+    for index, preset in enumerate(presets, start=1):
+        if not isinstance(preset, dict) or not bool(preset.get("required", False)):
+            continue
+        label = str(preset.get("label") or preset.get("name") or f"Preset {index}").strip()
+        if label:
+            labels.append(label)
+    return tuple(labels)
+
+
+@lru_cache(maxsize=128)
 def configured_preset_purposes(config_path: str) -> tuple[str, ...]:
     try:
         config = load_config(config_path)
@@ -2472,6 +2505,12 @@ def configured_preset_comparison(config_path: str) -> str:
     labels = configured_preset_labels(config_path)
     if len(labels) < 2:
         return ""
+    required_labels = configured_required_preset_labels(config_path)
+    if required_labels:
+        return (
+            f"{' -> '.join(labels)}; required evidence: {' -> '.join(required_labels)}; "
+            "watch live status, then mark one observation."
+        )
     return f"{' -> '.join(labels)}; watch live status, then mark one observation."
 
 

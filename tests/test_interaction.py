@@ -370,6 +370,7 @@ class KeyForcePulseTests(unittest.TestCase):
                         {
                             "label": "Calm",
                             "purpose": "Slow the response for inspection.",
+                            "required": True,
                             "values": {"kp": 20, "kd": 10, "missing": 1, "bad": "nope"},
                         },
                         {"label": "Empty", "values": {"missing": 2}},
@@ -383,6 +384,7 @@ class KeyForcePulseTests(unittest.TestCase):
         self.assertEqual(presets[0].name, "calm")
         self.assertEqual(presets[0].label, "Calm")
         self.assertEqual(presets[0].purpose, "Slow the response for inspection.")
+        self.assertTrue(presets[0].required)
         self.assertEqual(presets[0].values, {"kp": 20.0, "kd": 10.0})
         tuning = LiveTuning(specs, presets=presets)
         self.assertEqual(
@@ -421,6 +423,45 @@ class KeyForcePulseTests(unittest.TestCase):
         self.assertEqual(
             comparison.preset_progress_summary(),
             "Preset progress: 2/2 tried; ready to Mark observation comparing Soft, Stiff.",
+        )
+        self.assertEqual(comparison.preset_checklist_state(), "ready")
+
+    def test_required_tuning_presets_gate_progress_readiness(self) -> None:
+        specs = [SliderSpec("kp", "Kp", 0.0, 100.0, 20.0, 1.0)]
+        comparison = LiveTuning(
+            specs,
+            presets=[
+                TuningPreset("soft", "Soft", {"kp": 20.0}),
+                TuningPreset("close", "Close", {"kp": 80.0}, required=True),
+                TuningPreset("back", "Back", {"kp": 35.0}, required=True),
+            ],
+        )
+
+        self.assertEqual(
+            comparison.preset_comparison_hint(),
+            "Compare presets: Soft -> Close -> Back. Required evidence: Close -> Back. Watch live status, then save one Mark observation.",
+        )
+        self.assertEqual(
+            comparison.preset_progress_summary(),
+            "Preset progress: 0/3 tried; 0/2 required; next required: Close. Try required presets before Mark observation.",
+        )
+        self.assertEqual(comparison.preset_checklist_state(), "needs another preset")
+        comparison.apply_preset("soft")
+        self.assertEqual(
+            comparison.preset_progress_summary(),
+            "Preset progress: 1/3 tried; 0/2 required; next required: Close. Try required presets before Mark observation.",
+        )
+        self.assertEqual(comparison.preset_checklist_state(), "needs another preset")
+        comparison.apply_preset("close")
+        self.assertEqual(
+            comparison.preset_progress_summary(),
+            "Preset progress: 2/3 tried; 1/2 required; next required: Back. Try required presets before Mark observation.",
+        )
+        self.assertEqual(comparison.preset_checklist_state(), "needs another preset")
+        comparison.apply_preset("back")
+        self.assertEqual(
+            comparison.preset_progress_summary(),
+            "Preset progress: 3/3 tried; 2/2 required; ready to Mark observation comparing Soft, Close, Back.",
         )
         self.assertEqual(comparison.preset_checklist_state(), "ready")
 
@@ -496,6 +537,11 @@ class KeyForcePulseTests(unittest.TestCase):
                 self.assertEqual([preset.label for preset in tuning.presets], expected_labels)
                 self.assertTrue(all(preset.purpose for preset in tuning.presets))
                 self.assertTrue(all(preset.values for preset in tuning.presets))
+        wall_tuning = lab04_panda._live_tuning(lab04_wall_config)
+        self.assertEqual(
+            [preset.label for preset in wall_tuning.presets if preset.required],
+            ["Close wall", "Back away"],
+        )
 
     def test_interactive_configs_enable_plant_reset_by_default(self) -> None:
         paths = [

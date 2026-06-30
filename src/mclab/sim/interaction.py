@@ -49,6 +49,7 @@ class TuningPreset:
     label: str
     values: dict[str, float]
     purpose: str = ""
+    required: bool = False
 
 
 @dataclass(frozen=True)
@@ -238,6 +239,13 @@ class LiveTuning:
         labels = [preset.label for preset in self.presets if preset.label]
         if len(labels) < 2:
             return ""
+        required_labels = [preset.label for preset in self.presets if preset.required and preset.label]
+        if required_labels:
+            return (
+                f"Compare presets: {' -> '.join(labels)}. "
+                f"Required evidence: {' -> '.join(required_labels)}. "
+                "Watch live status, then save one Mark observation."
+            )
         return (
             f"Compare presets: {' -> '.join(labels)}. "
             "Watch live status, then save one Mark observation."
@@ -255,8 +263,23 @@ class LiveTuning:
             for name in tried_names
             if name in preset_by_name
         ]
+        required_presets = [preset for preset in self.presets if preset.required]
         next_preset = next((preset for preset in self.presets if preset.name not in tried_name_set), None)
         count_text = f"{len(tried_presets)}/{len(self.presets)} tried"
+        if required_presets:
+            required_tried = [preset for preset in required_presets if preset.name in tried_name_set]
+            required_text = f"{len(required_tried)}/{len(required_presets)} required"
+            next_required = next((preset for preset in required_presets if preset.name not in tried_name_set), None)
+            if next_required is None:
+                tried_labels = ", ".join(preset.label for preset in tried_presets)
+                return (
+                    f"Preset progress: {count_text}; {required_text}; "
+                    f"ready to Mark observation comparing {tried_labels}."
+                )
+            return (
+                f"Preset progress: {count_text}; {required_text}; next required: {next_required.label}. "
+                "Try required presets before Mark observation."
+            )
         if len(tried_presets) >= 2:
             tried_labels = ", ".join(preset.label for preset in tried_presets)
             return f"Preset progress: {count_text}; ready to Mark observation comparing {tried_labels}."
@@ -267,8 +290,12 @@ class LiveTuning:
     def preset_checklist_state(self) -> str:
         if len(self.presets) < 2:
             return ""
+        required_names = {preset.name for preset in self.presets if preset.required}
         with self._lock:
-            tried_count = len(set(self._tried_presets))
+            tried_names = set(self._tried_presets)
+        if required_names:
+            return "ready" if required_names.issubset(tried_names) else "needs another preset"
+        tried_count = len(tried_names)
         return "ready" if tried_count >= 2 else "needs another preset"
 
     def reset(self) -> dict[str, float]:
@@ -311,7 +338,8 @@ def tuning_presets_from_config(config: dict[str, Any], specs: list[SliderSpec]) 
         label = str(raw_preset.get("label") or raw_preset.get("name") or f"Preset {index}")
         name = str(raw_preset.get("name") or _preset_name(label, index))
         purpose = str(raw_preset.get("purpose") or raw_preset.get("description") or "").strip()
-        presets.append(TuningPreset(name=name, label=label, values=values, purpose=purpose))
+        required = bool(raw_preset.get("required", False))
+        presets.append(TuningPreset(name=name, label=label, values=values, purpose=purpose, required=required))
     return presets
 
 

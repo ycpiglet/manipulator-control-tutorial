@@ -534,6 +534,67 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("<strong>60</strong>", html)
             self.assertNotIn("interaction.tuning_presets", html)
 
+    def test_run_report_renders_required_preset_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "run"
+            output.mkdir()
+            (output / "summary.json").write_text(
+                '{"lab_name": "lab04_panda", "config_name": "interactive_virtual_wall"}',
+                encoding="utf-8",
+            )
+            (output / "notes.md").write_text("# Demo\n", encoding="utf-8")
+            (output / "config.yaml").write_text(
+                (
+                    "model_path: third_party/mujoco_menagerie/franka_emika_panda/scene.xml\n"
+                    "interaction:\n"
+                    "  panel: true\n"
+                    "  live_tuning: true\n"
+                    "  tuning_presets:\n"
+                    "    - label: Soft wall\n"
+                    "      values:\n"
+                    "        target_x: 0.59\n"
+                    "    - label: Stiff wall\n"
+                    "      values:\n"
+                    "        target_x: 0.62\n"
+                    "    - label: Close wall\n"
+                    "      required: true\n"
+                    "      values:\n"
+                    "        target_x: 0.64\n"
+                    "    - label: Back away\n"
+                    "      required: true\n"
+                    "      values:\n"
+                    "        target_x: 0.52\n"
+                ),
+                encoding="utf-8",
+            )
+            (output / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {"time": 0.5, "kind": "preset", "name": "soft_wall", "label": "Soft wall"},
+                        {"time": 1.0, "kind": "preset", "name": "stiff_wall", "label": "Stiff wall"},
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            report = write_run_report(output)
+
+            html = report.read_text(encoding="utf-8")
+            self.assertIn("Required evidence: Close wall -&gt; Back away.", html)
+            self.assertIn("Required evidence preset.", html)
+            self.assertIn("Required presets", html)
+            self.assertIn("Required presets tried", html)
+            self.assertIn("<strong>0/2</strong>", html)
+            self.assertIn("Try required preset Close wall", html)
+            self.assertIn("Needs required preset", html)
+            worksheet_text = (output / "worksheet.md").read_text(encoding="utf-8")
+            self.assertIn("Required presets: Close wall -> Back away", worksheet_text)
+            self.assertIn("Required presets tried: 0/2", worksheet_text)
+            self.assertIn(
+                "Next: Try required preset Close wall, watch live status, then mark one observation.",
+                worksheet_text,
+            )
+
     def test_run_report_suggests_next_runs(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "run"

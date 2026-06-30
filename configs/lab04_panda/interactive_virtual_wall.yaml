@@ -67,6 +67,7 @@ interaction:
         wall_retreat_gain: 0.70
     - label: Close wall
       purpose: Put target deeper into the wall.
+      required: true
       values:
         target_x: 0.64
         target_y: 0.00
@@ -79,6 +80,7 @@ interaction:
         wall_retreat_gain: 0.55
     - label: Back away
       purpose: Move the target before the wall so learners can observe contact release.
+      required: true
       values:
         target_x: 0.52
         target_y: 0.00
