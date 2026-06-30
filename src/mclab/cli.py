@@ -50,7 +50,7 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser = subparsers.add_parser("run", help="Run a lab.")
     run_parser.add_argument("lab_name", choices=sorted(LABS), help="Lab to run.")
     run_parser.add_argument("--config", required=True, help="YAML config path.")
-    run_parser.add_argument("--viewer", action="store_true", help="Open MuJoCo viewer.")
+    run_parser.add_argument("--viewer", action="store_true", help="Open MuJoCo viewer without side panels.")
     run_parser.add_argument("--headless", action="store_true", help="Run without viewer.")
     run_parser.add_argument("--realtime", action="store_true", help="Pace viewer runs near wall-clock time.")
     run_parser.add_argument("--pause-at-end", action="store_true", help="Keep viewer open after the run completes.")

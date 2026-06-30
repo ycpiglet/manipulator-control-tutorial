@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from contextlib import redirect_stdout
+from io import StringIO
 import sys
 import tempfile
 import unittest
@@ -143,6 +145,18 @@ class CliImportTests(unittest.TestCase):
                     "--show-viewer-ui",
                 ]
             )
+
+    def test_run_help_explains_side_panel_free_viewer(self) -> None:
+        output = StringIO()
+
+        with self.assertRaises(SystemExit) as context, redirect_stdout(output):
+            build_parser().parse_args(["run", "--help"])
+
+        self.assertEqual(context.exception.code, 0)
+        help_text = output.getvalue()
+        self.assertIn("--viewer", help_text)
+        self.assertIn("Open MuJoCo viewer without side panels.", help_text)
+        self.assertNotIn("--show-viewer-ui", help_text)
 
     def test_cli_opens_run_report_when_requested(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
