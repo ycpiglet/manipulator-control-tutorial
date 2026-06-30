@@ -1130,6 +1130,14 @@ def maybe_start_interaction_panel(
                         preset_state=tuning.preset_checklist_state() if tuning is not None else "",
                     )
                 )
+                marker_quality = tk.StringVar(
+                    value=_observation_evidence_quality(
+                        "",
+                        PREDICTION_OUTCOME_UNJUDGED,
+                        "",
+                        preset_state=tuning.preset_checklist_state() if tuning is not None else "",
+                    )
+                )
                 marker_next_action = tk.StringVar(
                     value=_observation_next_action(
                         "",
@@ -1153,6 +1161,14 @@ def maybe_start_interaction_panel(
                     preset_state = tuning.preset_checklist_state() if tuning is not None else ""
                     marker_checklist.set(
                         _observation_checklist_status(
+                            marker_prediction.get(),
+                            marker_outcome.get(),
+                            marker_note.get(),
+                            preset_state=preset_state,
+                        )
+                    )
+                    marker_quality.set(
+                        _observation_evidence_quality(
                             marker_prediction.get(),
                             marker_outcome.get(),
                             marker_note.get(),
@@ -1285,6 +1301,14 @@ def maybe_start_interaction_panel(
                     justify="left",
                     wraplength=430,
                 ).grid(row=marker_row, column=0, columnspan=2, sticky="ew", pady=(4, 0))
+                marker_row += 1
+                tk.Label(
+                    marker_frame,
+                    textvariable=marker_quality,
+                    anchor="w",
+                    justify="left",
+                    wraplength=430,
+                ).grid(row=marker_row, column=0, columnspan=2, sticky="ew", pady=(2, 0))
                 marker_row += 1
                 tk.Label(
                     marker_frame,
@@ -1611,6 +1635,27 @@ def _observation_checklist_status(
         f"Outcome {outcome_state}; "
         f"Note {note_state}."
     )
+
+
+def _observation_evidence_quality(
+    prediction: str,
+    outcome: str,
+    note: str,
+    *,
+    preset_state: str = "",
+) -> str:
+    missing: list[str] = []
+    if not prediction.strip():
+        missing.append("prediction")
+    if _preset_state_followup(preset_state):
+        missing.append("preset comparison")
+    if not note.strip():
+        missing.append("note")
+    if missing:
+        return f"Evidence quality: incomplete - add {', '.join(missing)}."
+    if _prediction_outcome_value(outcome):
+        return "Evidence quality: review-ready - prediction, outcome, note, and required controls are ready."
+    return "Evidence quality: ready to mark - add outcome now or during review."
 
 
 def _observation_next_action(

@@ -27,6 +27,7 @@ from mclab.sim.interaction import (  # noqa: E402
     _changed_tuning_summary,
     _live_status_observation_note,
     _observation_checklist_status,
+    _observation_evidence_quality,
     _panel_guide_rows,
     _panel_guide_title,
     _panel_viewer_legend_rows,
@@ -881,6 +882,29 @@ class KeyForcePulseTests(unittest.TestCase):
                 preset_state="ready",
             ),
             "Evidence checklist: Prediction ready; Preset comparison ready; Outcome selected; Note ready.",
+        )
+
+    def test_observation_evidence_quality_summarizes_review_readiness(self) -> None:
+        self.assertEqual(
+            _observation_evidence_quality("", "Not judged yet", ""),
+            "Evidence quality: incomplete - add prediction, note.",
+        )
+        self.assertEqual(
+            _observation_evidence_quality(
+                "Stiffer wall should push harder.",
+                "Not judged yet",
+                "Force increased.",
+                preset_state="needs required preset Back away",
+            ),
+            "Evidence quality: incomplete - add preset comparison.",
+        )
+        self.assertEqual(
+            _observation_evidence_quality("More damping should settle faster.", "Not judged yet", "Energy dropped."),
+            "Evidence quality: ready to mark - add outcome now or during review.",
+        )
+        self.assertEqual(
+            _observation_evidence_quality("More damping should settle faster.", "Matched", "Energy dropped."),
+            "Evidence quality: review-ready - prediction, outcome, note, and required controls are ready.",
         )
 
     def test_observation_next_action_names_the_next_learner_step(self) -> None:

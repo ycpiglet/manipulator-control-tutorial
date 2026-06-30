@@ -241,6 +241,8 @@ Lab04 wall live status는 total wall force뿐 아니라 spring force, damping fo
 
 Observation 영역의 `Next action` 줄은 현재 상태에서 바로 해야 할 일을 한 문장으로 보여줍니다. 예측이 비어 있으면 prediction 입력을 먼저 안내하고, required preset이 남아 있으면 다음 preset을 이름으로 알려주며, note가 없으면 `Use live status`나 짧은 observation note를 권장한 뒤 `Mark observation`으로 넘어가게 합니다.
 
+`Evidence quality` 줄은 observation이 incomplete인지, outcome 없이도 mark 가능한 상태인지, review-ready 상태인지 저장 전에 바로 알려줍니다.
+
 Observation 영역의 live `Activity mix` 줄은 현재 실행에서 버튼, 슬라이더, preset, observation marker를 몇 번 썼는지 계속 갱신하고, 아직 빠진 조작군이 있으면 다음에 시도할 행동을 바로 제안합니다.
 
 Observation 영역의 live `Action log` 줄은 방금 누른 버튼, 바꾼 슬라이더, 적용한 preset, 저장한 marker가 실제로 기록됐는지 이벤트 수와 마지막 조작 이름으로 확인해줍니다.
@@ -623,6 +625,8 @@ Each interactive launcher opens the MuJoCo viewer without side panels plus a sma
 Lab04 wall live status separates total wall force, spring force, damping force, and wall retreat so learners can tell what stiffness and damping are changing while the run is still moving.
 
 The observation area's `Next action` line names the immediate learner step from the current state. It asks for a prediction first, names the next required preset when one is missing, recommends `Use live status` or a short note when evidence is thin, and then moves the learner toward `Mark observation`.
+
+The `Evidence quality` line tells learners before saving whether the observation is incomplete, ready to mark without an outcome, or review-ready.
 
 The observation area's live `Activity mix` line continuously counts button, slider, preset, and observation-marker use during the current run, then recommends the next missing control family to try.
 
