@@ -102,6 +102,16 @@ python -m mclab batch lab03_2dof_compare --open-report
 
 These two configs keep the same near-edge hand target and condition-aware damping schedule while changing only `tracking_controller.torque_limit`. The low-torque case should make actuator clipping and larger task error easier to see. The high-torque case should track the same hand command more closely if the damping schedule and joint-speed limits allow it. Compare `torque.png`, `error.png`, `task_error_compare.png`, and `shoulder_torque_compare.png` in the batch report.
 
+Condition-aware command-speed comparison:
+
+```bash
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_slow_command_2dof.yaml --headless --plot --plots dls
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_fast_command_2dof.yaml --headless --plot --plots dls
+python -m mclab batch lab03_2dof_compare --open-report
+```
+
+These two configs keep the same near-edge target, damping schedule, torque limits, and gains while changing `trajectory.duration` and `tracking_controller.max_task_speed`. The slow-command case asks for the same motion more gently; the fast-command case should make task-speed clipping, DLS joint speed, and hand tracking error easier to see. Compare `dls.png`, `error.png`, `dls_task_speed_compare.png`, and `dls_joint_speed_compare.png`.
+
 Interactive 2DOF demo:
 
 ```powershell

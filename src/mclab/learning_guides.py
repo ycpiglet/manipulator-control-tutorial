@@ -471,6 +471,22 @@ RUN_GUIDES: dict[str, RunGuide] = {
         "Whether task error shrinks, torque peaks grow, and DLS damping timing stays the same.",
         "Lower the torque limit gradually and find where the hand can no longer follow the target well.",
     ),
+    "configs/lab03_2dof/condition_aware_dls_slow_command_2dof.yaml": RunGuide(
+        "Lab03 2DOF Slow-Command Condition-Aware DLS",
+        "The same near-edge hand target is commanded slowly so task-speed demand stays modest.",
+        "Run before fast-command DLS and compare dls_task_speed and task error.",
+        "trajectory.duration, tracking_controller.max_task_speed",
+        "Lower task speed, DLS joint speed, damping schedule, and final hand error.",
+        "Run fast-command DLS next to see how the same target becomes harder when rushed.",
+    ),
+    "configs/lab03_2dof/condition_aware_dls_fast_command_2dof.yaml": RunGuide(
+        "Lab03 2DOF Fast-Command Condition-Aware DLS",
+        "The same near-edge hand target is commanded quickly to expose speed limits and task lag.",
+        "Compare directly against slow-command DLS with the same target and damping schedule.",
+        "trajectory.duration, tracking_controller.max_task_speed",
+        "Task-speed clipping, DLS joint speed, task error, condition scale, and torque peaks.",
+        "Slow the command down until task error drops without changing the target.",
+    ),
     "configs/lab03_2dof/interactive_2dof.yaml": RunGuide(
         "Lab03 2DOF Interactive",
         "Tune hand target and task-space gains while the 2DOF arm runs.",

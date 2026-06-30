@@ -41,6 +41,7 @@ INDEX_METRIC_KEYS = (
     "min_manipulability",
     "max_jacobian_condition",
     "max_abs_tau_cmd",
+    "max_dls_task_speed",
     "max_dls_joint_speed",
     "max_dls_damping",
     "max_dls_condition_scale",
@@ -343,6 +344,11 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
             "Move the target inward to compare conditioning with the same schedule.",
             "dls",
         ),
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_fast_command_2dof.yaml",
+            "Keep the target and schedule but command the motion faster.",
+            "dls",
+        ),
         NextRunSuggestion("configs/lab03_2dof/dls_singularity_2dof.yaml", "Compare against fixed damping on the same target.", "dls"),
     ),
     "configs/lab03_2dof/condition_aware_dls_early_2dof.yaml": (
@@ -398,6 +404,11 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
             "Keep the edge target and constrain actuator effort.",
             "dls",
         ),
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_fast_command_2dof.yaml",
+            "Keep the edge target but command it faster.",
+            "dls",
+        ),
     ),
     "configs/lab03_2dof/condition_aware_dls_low_torque_2dof.yaml": (
         NextRunSuggestion(
@@ -420,6 +431,30 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
         NextRunSuggestion(
             "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
             "Return to the default torque limits.",
+            "dls",
+        ),
+    ),
+    "configs/lab03_2dof/condition_aware_dls_slow_command_2dof.yaml": (
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_fast_command_2dof.yaml",
+            "Use the same target with a faster hand command.",
+            "dls",
+        ),
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
+            "Return to the default command speed.",
+            "dls",
+        ),
+    ),
+    "configs/lab03_2dof/condition_aware_dls_fast_command_2dof.yaml": (
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_slow_command_2dof.yaml",
+            "Slow the same target down and compare task error.",
+            "dls",
+        ),
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
+            "Return to the default command speed.",
             "dls",
         ),
     ),

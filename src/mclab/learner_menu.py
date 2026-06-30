@@ -560,6 +560,26 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
     ),
     MenuAction(
         group="Lab03 2DOF Arm and Trajectories",
+        label="2DOF slow-command DLS",
+        lab_name="lab03",
+        config_path="configs/lab03_2dof/condition_aware_dls_slow_command_2dof.yaml",
+        plots="dls",
+        description="Moves the same near-edge DLS target slowly to reduce task-speed demand.",
+        try_this="Run before fast-command DLS and compare dls_task_speed and task error.",
+        watch="Lower task speed, DLS joint speed, damping schedule, and final hand error.",
+    ),
+    MenuAction(
+        group="Lab03 2DOF Arm and Trajectories",
+        label="2DOF fast-command DLS",
+        lab_name="lab03",
+        config_path="configs/lab03_2dof/condition_aware_dls_fast_command_2dof.yaml",
+        plots="dls",
+        description="Commands the same near-edge DLS target quickly to expose speed limits.",
+        try_this="Compare against slow-command DLS with the same target and damping schedule.",
+        watch="Task-speed clipping, DLS joint speed, task error, and torque peaks.",
+    ),
+    MenuAction(
+        group="Lab03 2DOF Arm and Trajectories",
         label="2DOF interactive",
         lab_name="lab03",
         config_path="configs/lab03_2dof/interactive_2dof.yaml",
@@ -1968,6 +1988,8 @@ def parameter_hint(action: MenuAction) -> str:
             "2dof edge-target dls",
             "2dof low-torque dls",
             "2dof high-torque dls",
+            "2dof slow-command dls",
+            "2dof fast-command dls",
         }:
             if label == "2dof condition-aware dls":
                 return (
@@ -1984,6 +2006,11 @@ def parameter_hint(action: MenuAction) -> str:
                 return (
                     "target_xy, tracking_controller.condition_damping_threshold, "
                     "tracking_controller.condition_damping_full, tracking_controller.max_dls_damping"
+                )
+            if label in {"2dof slow-command dls", "2dof fast-command dls"}:
+                return (
+                    "trajectory.duration, tracking_controller.max_task_speed, target_xy, "
+                    "tracking_controller.condition_damping_threshold, tracking_controller.max_dls_damping"
                 )
             return (
                 "target_xy, tracking_controller.dls_damping, tracking_controller.condition_damping_threshold, "
@@ -2432,6 +2459,8 @@ def _is_compare_action(action: MenuAction) -> bool:
         "2dof edge-target dls",
         "2dof low-torque dls",
         "2dof high-torque dls",
+        "2dof slow-command dls",
+        "2dof fast-command dls",
         "step profile",
         "trapezoid",
         "minimum jerk",

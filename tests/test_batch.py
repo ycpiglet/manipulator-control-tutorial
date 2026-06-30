@@ -31,6 +31,8 @@ class BatchTests(unittest.TestCase):
         self.assertIn("condition_aware_edge_target", lab03_labels)
         self.assertIn("condition_aware_low_torque", lab03_labels)
         self.assertIn("condition_aware_high_torque", lab03_labels)
+        self.assertIn("condition_aware_slow_command", lab03_labels)
+        self.assertIn("condition_aware_fast_command", lab03_labels)
         lab04_wall_labels = {scenario.label for scenario in batch.BATCH_SETS["lab04_wall_compare"]}
         self.assertIn("low_damping_wall", lab04_wall_labels)
         self.assertIn("high_damping_wall", lab04_wall_labels)
@@ -43,12 +45,20 @@ class BatchTests(unittest.TestCase):
             any("force-to-retreat gain" in question for question in lab04_guide.questions)
         )
         self.assertIn("max_dls_condition_scale", batch.BATCH_GUIDES["lab03_2dof_compare"].metric_keys)
+        self.assertIn("max_dls_task_speed", batch.BATCH_GUIDES["lab03_2dof_compare"].metric_keys)
         lab03_guide = batch.BATCH_GUIDES["lab03_2dof_compare"]
         self.assertTrue(
             any("lower torque limit increase task error" in question for question in lab03_guide.questions)
         )
         self.assertTrue(
+            any("faster hand command" in question for question in lab03_guide.questions)
+        )
+        self.assertTrue(
             any("inner workspace to the edge" in question for question in lab03_guide.questions)
+        )
+        self.assertIn(
+            ("dls_task_speed_compare.png", "DLS Task Speed Comparison", "task speed", "dls_task_speed"),
+            lab03_guide.comparison_specs,
         )
         self.assertIn(
             ("shoulder_torque_compare.png", "Shoulder Torque Comparison", "torque [N m]", "tau_cmd_0"),
