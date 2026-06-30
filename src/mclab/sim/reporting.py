@@ -3792,6 +3792,12 @@ def _observation_next_step_text_from_events(
             f"{missing} prediction outcome{'s' if missing != 1 else ''} "
             "(Matched, Partly matched, or Surprised)."
         )
+    if evidence_required and _learner_control_event_count(events) <= 0:
+        control_phrase = learner_control_phrase.strip() or "at least one learner control"
+        return (
+            f"Observation next step: use {control_phrase}, then mark another observation "
+            "with a prediction and note."
+        )
     return "Observation next step: ready for review; compare the saved markers with plots and worksheet."
 
 

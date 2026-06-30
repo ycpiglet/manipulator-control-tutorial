@@ -1528,6 +1528,11 @@ class LoggingTests(unittest.TestCase):
             html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
             self.assertIn("Needs learner control (1 observation, 1 prediction, 1 outcome, 1 note, 0 controls)", html)
             self.assertIn("Use experiment buttons, live sliders, or Quick presets before moving on.", html)
+            self.assertIn(
+                "Observation next step: use experiment buttons, live sliders, or Quick presets, "
+                "then mark another observation with a prediction and note.",
+                html,
+            )
 
             (interactive / "interaction_events.json").write_text(
                 json.dumps(

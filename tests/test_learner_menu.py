@@ -1729,6 +1729,41 @@ class LearnerMenuTests(unittest.TestCase):
                 lesson_text(lab01_interactive, outputs),
             )
 
+            run_path = outputs / "run_lab01_interactive"
+            run_path.mkdir()
+            (run_path / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": lab01_interactive.lab_name,
+                        "config_path": lab01_interactive.config_path,
+                        "config_name": Path(lab01_interactive.config_path).stem,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (run_path / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "prediction": "Higher damping should settle faster.",
+                                "outcome": "Matched",
+                                "note": "The plotted response settled faster.",
+                            },
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            self.assertEqual(
+                action_observation_next_step_text(lab01_interactive, outputs),
+                "Observation next step: use experiment buttons, live sliders, or Quick presets, "
+                "then mark another observation with a prediction and note.",
+            )
+
     def test_action_activity_mix_summarizes_latest_hands_on_controls(self) -> None:
         lab02_interactive = next(
             action
