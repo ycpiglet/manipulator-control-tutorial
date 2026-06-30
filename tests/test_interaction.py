@@ -342,6 +342,25 @@ class KeyForcePulseTests(unittest.TestCase):
             comparison.preset_comparison_hint(),
             "Compare presets: Soft -> Stiff. Watch live status, then save one Mark observation.",
         )
+        self.assertEqual(
+            comparison.preset_progress_summary(),
+            "Preset progress: 0/2 tried; next: Soft. Try at least two presets before Mark observation.",
+        )
+        comparison.apply_preset("soft")
+        self.assertEqual(
+            comparison.preset_progress_summary(),
+            "Preset progress: 1/2 tried; next: Stiff. Try at least two presets before Mark observation.",
+        )
+        comparison.apply_preset("soft")
+        self.assertEqual(
+            comparison.preset_progress_summary(),
+            "Preset progress: 1/2 tried; next: Stiff. Try at least two presets before Mark observation.",
+        )
+        comparison.apply_preset("stiff")
+        self.assertEqual(
+            comparison.preset_progress_summary(),
+            "Preset progress: 2/2 tried; ready to Mark observation comparing Soft, Stiff.",
+        )
 
     def test_interactive_configs_expose_quick_presets(self) -> None:
         lab01_config = load_config("configs/lab01_msd/interactive_pull.yaml")

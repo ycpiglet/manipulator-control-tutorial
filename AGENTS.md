@@ -87,6 +87,7 @@ Implemented and verified:
 - MuJoCo viewer side panels are hidden by default for learner demos and only shown with `--show-viewer-ui` for raw model debugging
 - Interactive `MCLab Interaction` quick presets, purpose/value previews, and per-slider step buttons for representative damping, PID, 2DOF reach, Panda reach, and virtual wall parameter sets
 - Interactive preset groups show a compare-in-order hint so learners try multiple parameter regimes before marking an observation
+- Interactive preset status shows live preset comparison progress and the next preset to try
 - Interactive preset choices save purpose text into `interaction_events.json` and the run report `Preset choices` card
 - Run reports show `Preset comparison progress` for interactive runs so learners know whether they tried enough preset regimes
 - Interactive `MCLab Interaction` changed-values summary shows slider parameters changed from run start

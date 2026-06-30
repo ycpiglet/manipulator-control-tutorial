@@ -144,6 +144,7 @@ class LiveTuning:
         self._initial_values = dict(self._values)
         self._specs = {spec.name: spec for spec in specs}
         self._event_log = event_log
+        self._tried_presets: list[str] = []
         self._lock = Lock()
 
     def value(self, name: str, default: float) -> float:
@@ -205,6 +206,8 @@ class LiveTuning:
                 self._values[value_name] = number
                 applied[value_name] = number
             values = dict(self._values)
+            if applied and preset.name not in self._tried_presets:
+                self._tried_presets.append(preset.name)
         if applied and self._event_log is not None:
             payload: dict[str, Any] = {"values": applied}
             if preset.purpose:
@@ -238,6 +241,27 @@ class LiveTuning:
             f"Compare presets: {' -> '.join(labels)}. "
             "Watch live status, then save one Mark observation."
         )
+
+    def preset_progress_summary(self) -> str:
+        if len(self.presets) < 2:
+            return ""
+        preset_by_name = {preset.name: preset for preset in self.presets}
+        with self._lock:
+            tried_names = tuple(self._tried_presets)
+        tried_name_set = set(tried_names)
+        tried_presets = [
+            preset_by_name[name]
+            for name in tried_names
+            if name in preset_by_name
+        ]
+        next_preset = next((preset for preset in self.presets if preset.name not in tried_name_set), None)
+        count_text = f"{len(tried_presets)}/{len(self.presets)} tried"
+        if len(tried_presets) >= 2:
+            tried_labels = ", ".join(preset.label for preset in tried_presets)
+            return f"Preset progress: {count_text}; ready to Mark observation comparing {tried_labels}."
+        if next_preset is not None:
+            return f"Preset progress: {count_text}; next: {next_preset.label}. Try at least two presets before Mark observation."
+        return f"Preset progress: {count_text}; try at least two presets before Mark observation."
 
     def reset(self) -> dict[str, float]:
         with self._lock:
@@ -848,7 +872,9 @@ def maybe_start_interaction_panel(
                 def apply_preset(preset_name: str) -> None:
                     set_scale_values(tuning.apply_preset(preset_name))
                     if preset_status is not None:
-                        preset_status.set(f"Applied {tuning.preset_summary(preset_name)}")
+                        progress = tuning.preset_progress_summary()
+                        progress_text = f"\n{progress}" if progress else ""
+                        preset_status.set(f"Applied {tuning.preset_summary(preset_name)}{progress_text}")
 
                 def preview_preset(preset_name: str) -> None:
                     if preset_status is not None:
