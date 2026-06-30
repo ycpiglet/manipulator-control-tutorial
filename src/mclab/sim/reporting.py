@@ -587,6 +587,7 @@ def _render_worksheet(
     lines.extend(_worksheet_plot_review_lines(output, plots))
     lines.extend(_worksheet_observation_lines(interaction_events))
     lines.extend(_worksheet_review_checklist(interaction_events))
+    lines.extend(_worksheet_preset_comparison_lines(interaction_events, config))
     lines.extend(_worksheet_next_experiment_lines(summary, config))
     lines.extend(_worksheet_notes_lines(notes))
     lines.extend(_worksheet_artifact_lines(output, plots))
@@ -707,6 +708,17 @@ def _worksheet_review_checklist(events: list[dict[str, Any]]) -> list[str]:
                 "- [ ] Decide which suggested next run should be compared against this one.",
             ]
         )
+    lines.append("")
+    return lines
+
+
+def _worksheet_preset_comparison_lines(events: list[dict[str, Any]], config: dict[str, Any]) -> list[str]:
+    configured_labels = _configured_preset_labels(config)
+    if len(configured_labels) < 2:
+        return []
+    tried_labels = _distinct_preset_labels(events, configured_labels)
+    lines = ["## Preset Comparison", ""]
+    lines.extend(_worksheet_mapping_lines(dict(_preset_comparison_progress_items(configured_labels, tried_labels))))
     lines.append("")
     return lines
 
@@ -2289,6 +2301,18 @@ def _preset_comparison_progress_card(events: list[dict[str, Any]], config: dict[
     if len(configured_labels) < 2:
         return ""
     tried_labels = _distinct_preset_labels(events, configured_labels)
+    items = _preset_comparison_progress_items(configured_labels, tried_labels)
+    return _action_card(
+        "Preset comparison progress",
+        "Checks whether this hands-on run sampled more than one preset regime.",
+        _action_value_list(items),
+    )
+
+
+def _preset_comparison_progress_items(
+    configured_labels: list[str],
+    tried_labels: list[str],
+) -> list[tuple[str, Any]]:
     next_label = next((label for label in configured_labels if label not in tried_labels), "")
     if len(tried_labels) >= 2:
         status = "Ready for comparison review"
@@ -2299,18 +2323,14 @@ def _preset_comparison_progress_card(events: list[dict[str, Any]], config: dict[
     else:
         status = "Needs another preset"
         next_step = "Try at least one more preset, then mark one observation."
-    items = [
+    return [
         ("Configured presets", len(configured_labels)),
+        ("Preset order", " -> ".join(configured_labels)),
         ("Distinct presets tried", f"{len(tried_labels)}/{len(configured_labels)}"),
         ("Tried", ", ".join(tried_labels) if tried_labels else "none yet"),
         ("Next", next_step),
         ("Status", status),
     ]
-    return _action_card(
-        "Preset comparison progress",
-        "Checks whether this hands-on run sampled more than one preset regime.",
-        _action_value_list(items),
-    )
 
 
 def _distinct_preset_labels(events: list[dict[str, Any]], configured_labels: list[str]) -> list[str]:
