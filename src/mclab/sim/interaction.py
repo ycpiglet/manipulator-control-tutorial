@@ -11,6 +11,7 @@ from typing import Any
 from mclab.learning_guides import (
     challenge_prompt_for_guide,
     control_credit_text,
+    learner_control_action_text,
     mission_prompt_for_guide,
     observation_prompt_for_guide,
     playbook_for_guide,
@@ -1177,6 +1178,9 @@ def maybe_start_interaction_panel(
                         preset_state=tuning.preset_checklist_state() if tuning is not None else "",
                         learner_controls=_learner_control_event_count(event_log.events()),
                         controls_available=controls_available,
+                        has_buttons=activity_has_buttons,
+                        has_sliders=activity_has_sliders,
+                        has_presets=activity_has_presets,
                     )
                 )
                 activity_mix_status = tk.StringVar(
@@ -1231,6 +1235,9 @@ def maybe_start_interaction_panel(
                             preset_state=preset_state,
                             learner_controls=learner_controls,
                             controls_available=controls_available,
+                            has_buttons=activity_has_buttons,
+                            has_sliders=activity_has_sliders,
+                            has_presets=activity_has_presets,
                         )
                     )
                     marker_note_preview.set(_observation_note_preview(marker_note.get()))
@@ -1307,6 +1314,9 @@ def maybe_start_interaction_panel(
                             note,
                             preset_state,
                             controls_available=controls_available,
+                            has_buttons=activity_has_buttons,
+                            has_sliders=activity_has_sliders,
+                            has_presets=activity_has_presets,
                         )
                     )
 
@@ -1737,13 +1747,16 @@ def _observation_marker_status_message(
     preset_state: str = "",
     *,
     controls_available: bool = True,
+    has_buttons: bool = False,
+    has_sliders: bool = False,
+    has_presets: bool = False,
 ) -> str:
     count = _observation_marker_count(event_log)
     missing: list[str] = []
     if not prediction.strip():
         missing.append("add a prediction next time")
     if controls_available and _learner_control_event_count(event_log.events()) <= 0:
-        missing.append("use one button, slider, or preset")
+        missing.append(_learner_control_followup_text(has_buttons, has_sliders, has_presets))
     if not note.strip():
         missing.append("add a short note or Use live status")
     preset_followup = _preset_state_followup(preset_state)
@@ -1865,9 +1878,16 @@ def _observation_next_action(
     preset_state: str = "",
     learner_controls: int = 0,
     controls_available: bool = True,
+    has_buttons: bool = False,
+    has_sliders: bool = False,
+    has_presets: bool = False,
 ) -> str:
     preset_followup = _preset_state_followup(preset_state)
-    control_followup = "use one button, slider, or preset" if controls_available and learner_controls <= 0 else ""
+    control_followup = (
+        _learner_control_followup_text(has_buttons, has_sliders, has_presets)
+        if controls_available and learner_controls <= 0
+        else ""
+    )
     if not prediction.strip() and preset_followup:
         return f"Next action: Write a prediction, then {preset_followup}."
     if not prediction.strip() and control_followup:
@@ -1877,12 +1897,20 @@ def _observation_next_action(
     if preset_followup:
         return f"Next action: {_sentence_start(preset_followup)}, then capture the result."
     if control_followup:
-        return "Next action: Use one button, slider, or preset, then capture the result."
+        return f"Next action: {_sentence_start(control_followup)}, then capture the result."
     if not note.strip():
         return "Next action: Use live status or write a short observation note."
     if not _prediction_outcome_value(outcome):
         return "Next action: Optional: choose a prediction outcome, then press Mark observation."
     return "Next action: Press Mark observation."
+
+
+def _learner_control_followup_text(has_buttons: bool, has_sliders: bool, has_presets: bool) -> str:
+    if not any((has_buttons, has_sliders, has_presets)):
+        return "use one button, slider, or preset"
+    action = learner_control_action_text(has_buttons, has_sliders, has_presets)
+    action = action.removesuffix(" before moving on.").removeprefix("Use ")
+    return f"use {action}"
 
 
 def _sentence_start(text: str) -> str:

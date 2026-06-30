@@ -120,6 +120,7 @@ Implemented and verified:
 - Interactive `MCLab Interaction` observation area shows a live `Evidence quality` cue for incomplete, control-missing, ready-to-mark, and review-ready observations
 - Interactive `MCLab Interaction` observation area shows a live `Challenge proof` cue that tells whether the visible-effect challenge still needs prediction, learner control, preset evidence, note/live-status evidence, or outcome review
 - Interactive `MCLab Interaction` observation area shows a live `Next action` cue so learners know whether to write a prediction, use a button/slider/preset, try a required preset, use live status, choose an outcome, or mark the observation
+- Interactive `MCLab Interaction` observation status and `Next action` cues name the available learner-control families when a scenario exposes experiment buttons, live sliders, or Quick presets
 - Interactive `MCLab Interaction` observation area shows a live `Activity mix` cue that counts button, slider, preset, and marker use and recommends the next missing control family
 - Interactive `MCLab Interaction` observation area shows a live `Action log` cue confirming the latest learner button, slider, preset, or marker event
 - Interactive `MCLab Interaction` observation area shows a wrapped `Note preview` so accumulated evidence is readable before `Mark observation`

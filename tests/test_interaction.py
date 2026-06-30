@@ -823,6 +823,18 @@ class KeyForcePulseTests(unittest.TestCase):
             _observation_marker_status_message(log, "", "The response settled."),
             "Marked observation 1 - add a prediction next time; use one button, slider, or preset to complete the learning path.",
         )
+        self.assertEqual(
+            _observation_marker_status_message(
+                log,
+                "",
+                "The response settled.",
+                has_buttons=True,
+                has_sliders=True,
+                has_presets=True,
+            ),
+            "Marked observation 1 - add a prediction next time; "
+            "use experiment buttons, live sliders, or Quick presets to complete the learning path.",
+        )
 
         log.mark_observation(prediction="A softer preset should reduce force.")
         self.assertEqual(
@@ -999,6 +1011,17 @@ class KeyForcePulseTests(unittest.TestCase):
             "Next action: Write a prediction, then use one button, slider, or preset.",
         )
         self.assertEqual(
+            _observation_next_action(
+                "",
+                "Not judged yet",
+                "",
+                has_buttons=True,
+                has_sliders=True,
+                has_presets=True,
+            ),
+            "Next action: Write a prediction, then use experiment buttons, live sliders, or Quick presets.",
+        )
+        self.assertEqual(
             _observation_next_action("", "Not judged yet", "", preset_state="needs required preset Close wall"),
             "Next action: Write a prediction, then try required preset Close wall.",
         )
@@ -1015,6 +1038,15 @@ class KeyForcePulseTests(unittest.TestCase):
         self.assertEqual(
             _observation_next_action("Stiff wall should push harder.", "Not judged yet", ""),
             "Next action: Use one button, slider, or preset, then capture the result.",
+        )
+        self.assertEqual(
+            _observation_next_action(
+                "Stiff wall should push harder.",
+                "Not judged yet",
+                "",
+                has_sliders=True,
+            ),
+            "Next action: Use live sliders, then capture the result.",
         )
         self.assertEqual(
             _observation_next_action(
