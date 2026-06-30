@@ -1594,7 +1594,17 @@ def _panel_guide_rows(
     rows = [
         ("Mission", mission_prompt_for_guide(guide).removeprefix("Mission:").strip()),
         ("Playbook", playbook_for_guide(guide).removeprefix("Playbook:").strip()),
-        ("Start steps", _panel_start_steps_text(guide, tuning)),
+        (
+            "Start steps",
+            _panel_start_steps_text(
+                guide,
+                tuning,
+                has_buttons=has_buttons,
+                has_sliders=has_sliders,
+                has_presets=has_presets,
+                button_next_step=button_next_step,
+            ),
+        ),
         ("Challenge", challenge_prompt_for_guide(guide).removeprefix("Challenge:").strip()),
         ("Try", str(getattr(guide, "try_this", "") or "").strip()),
         ("Change", str(getattr(guide, "change", "") or "").strip()),
@@ -1623,7 +1633,15 @@ def _panel_guide_rows(
     return [(label, text) for label, text in rows if text]
 
 
-def _panel_start_steps_text(guide: Any | None, tuning: LiveTuning | None = None) -> str:
+def _panel_start_steps_text(
+    guide: Any | None,
+    tuning: LiveTuning | None = None,
+    *,
+    has_buttons: bool = False,
+    has_sliders: bool = False,
+    has_presets: bool = False,
+    button_next_step: str = "",
+) -> str:
     if tuning is not None and tuning.presets:
         required_labels = [preset.label for preset in tuning.presets if preset.required and preset.label]
         if required_labels:
@@ -1631,6 +1649,14 @@ def _panel_start_steps_text(guide: Any | None, tuning: LiveTuning | None = None)
         preset_labels = [preset.label for preset in tuning.presets if preset.label]
         if len(preset_labels) >= 2:
             return f"Predict -> Run viewer -> try presets {' -> '.join(preset_labels[:3])} -> Mark observation."
+    if any((has_buttons, has_sliders, has_presets)) or button_next_step:
+        control_step = _learner_control_followup_text(
+            has_buttons,
+            has_sliders,
+            has_presets,
+            button_next_step=button_next_step,
+        )
+        return f"Predict -> Run viewer -> {control_step} -> Mark observation."
     return start_steps_for_guide(guide).removeprefix("Start steps:").strip()
 
 

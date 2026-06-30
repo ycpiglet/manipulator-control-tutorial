@@ -1519,6 +1519,14 @@ class KeyForcePulseTests(unittest.TestCase):
         )
         self.assertIn(
             (
+                "Start steps",
+                "Predict -> Run viewer -> use experiment buttons "
+                "(Target X - away or Target X + into wall), live sliders, or Quick presets -> Mark observation.",
+            ),
+            labeled_rows,
+        )
+        self.assertIn(
+            (
                 "Counts as control",
                 "experiment buttons (Target X - away or Target X + into wall), live sliders, Quick presets; "
                 "view/evidence helpers such as Pause, Playback speed, and Use live status do not count.",
@@ -1546,6 +1554,17 @@ class KeyForcePulseTests(unittest.TestCase):
             ),
             "use Pull Left A / Left or Push Right D / Right at least once, "
             "then write a Prediction and note, choose an outcome if known, and press Mark observation.",
+        )
+        self.assertIn(
+            (
+                "Start steps",
+                "Predict -> Run viewer -> use Pull Left A / Left or Push Right D / Right -> Mark observation.",
+            ),
+            _panel_guide_rows(
+                guide,
+                has_buttons=True,
+                button_next_step="Use Pull Left A / Left or Push Right D / Right.",
+            ),
         )
         self.assertEqual(_panel_control_credit_text(False, False, False), "")
 
@@ -1575,6 +1594,18 @@ class KeyForcePulseTests(unittest.TestCase):
                 "Predict -> Run viewer -> try required presets Close wall -> Back away -> Re-enter wall -> Mark observation.",
             ),
             _panel_guide_rows(guide, tuning=tuning),
+        )
+        self.assertIn(
+            (
+                "Start steps",
+                "Predict -> Run viewer -> try required presets Close wall -> Back away -> Re-enter wall -> Mark observation.",
+            ),
+            _panel_guide_rows(
+                guide,
+                tuning=tuning,
+                has_buttons=True,
+                button_next_step="Use Target X - away or Target X + into wall.",
+            ),
         )
 
     def test_panel_guidance_exposes_viewer_legend(self) -> None:
