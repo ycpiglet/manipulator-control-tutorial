@@ -99,11 +99,14 @@ from mclab.learner_menu import (  # noqa: E402
     launch_next_review_output,
     launch_latest_plot,
     launch_latest_worksheet,
+    launch_latest_tuned_replay,
     launch_outputs_index,
     launch_latest_output,
     latest_output_button_labels,
+    latest_output_menu_action,
     latest_saved_output,
     latest_output_status_text,
+    latest_output_tuned_config,
     initialize_latest_output_state,
     next_review_output,
     next_learning_path_step,
@@ -2838,6 +2841,49 @@ class LearnerMenuTests(unittest.TestCase):
             opener.assert_not_called()
             self.assertIsNone(result)
 
+    def test_launch_latest_tuned_replay_uses_restored_output_action(self) -> None:
+        action = MENU_ACTIONS[0]
+        status = FakeStatus()
+        process = Mock(pid=456)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            run_path = Path(tmp) / "run"
+            run_path.mkdir()
+            tuned_config = run_path / "learner_tuned_config.yaml"
+            tuned_config.write_text("interaction:\n  panel: false\n", encoding="utf-8")
+            (run_path / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": action.lab_name,
+                        "config_path": action.config_path,
+                        "config_name": Path(action.config_path).stem,
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with (
+                patch("mclab.learner_menu.launch_tuned_replay", return_value=process) as launcher,
+                patch("mclab.learner_menu.Thread") as thread,
+            ):
+                result = launch_latest_tuned_replay({"path": run_path}, status)
+
+        self.assertEqual(result, process)
+        launcher.assert_called_once_with(action, tuned_config)
+        thread.assert_called_once()
+        self.assertIn("Started latest tuned replay", status.value)
+        self.assertIn("pid 456", status.value)
+
+    def test_launch_latest_tuned_replay_reports_missing_replayable_config(self) -> None:
+        status = FakeStatus()
+
+        with patch("mclab.learner_menu.launch_tuned_replay") as launcher:
+            result = launch_latest_tuned_replay({"path": None}, status)
+
+        self.assertIsNone(result)
+        launcher.assert_not_called()
+        self.assertIn("Cannot replay latest output", status.value)
+
     def test_launch_tuned_replay_starts_from_latest_tuned_config(self) -> None:
         action = MENU_ACTIONS[0]
         tuned_config = ROOT / "outputs" / "run" / "learner_tuned_config.yaml"
@@ -2967,6 +3013,7 @@ class LearnerMenuTests(unittest.TestCase):
             report_button = FakeButton()
             plot_button = FakeButton()
             worksheet_button = FakeButton()
+            replay_button = FakeButton()
 
             selected = initialize_latest_output_state(
                 latest_output,
@@ -2974,6 +3021,7 @@ class LearnerMenuTests(unittest.TestCase):
                 latest_button=report_button,
                 latest_plot_button=plot_button,
                 latest_worksheet_button=worksheet_button,
+                latest_replay_button=replay_button,
             )
 
         self.assertEqual(selected, output_path)
@@ -2981,9 +3029,46 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(report_button.config["text"], "Open report")
         self.assertEqual(plot_button.config["text"], "Open plot: position")
         self.assertEqual(worksheet_button.config["text"], "Open worksheet")
+        self.assertEqual(replay_button.config["text"], "Replay latest")
         self.assertEqual(report_button.state_calls[-1], ["!disabled"])
         self.assertEqual(plot_button.state_calls[-1], ["!disabled"])
         self.assertEqual(worksheet_button.state_calls[-1], ["!disabled"])
+        self.assertEqual(replay_button.state_calls[-1], ["disabled"])
+
+    def test_initialize_latest_output_state_enables_latest_replay_when_tuned_config_exists(self) -> None:
+        action = MENU_ACTIONS[0]
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            output_path = outputs / "run_lab01"
+            output_path.mkdir(parents=True)
+            tuned_config = output_path / "learner_tuned_config.yaml"
+            tuned_config.write_text("interaction:\n  panel: false\n", encoding="utf-8")
+            (output_path / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": action.lab_name,
+                        "config_path": action.config_path,
+                        "config_name": Path(action.config_path).stem,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (output_path / "report.html").write_text("<html></html>", encoding="utf-8")
+            latest_output: dict[str, Path | None] = {"path": None}
+            replay_button = FakeButton()
+
+            selected = initialize_latest_output_state(
+                latest_output,
+                outputs_root=outputs,
+                latest_replay_button=replay_button,
+            )
+            self.assertEqual(latest_output_tuned_config(output_path), tuned_config)
+            self.assertEqual(latest_output_menu_action(output_path), action)
+
+        self.assertEqual(selected, output_path)
+        self.assertEqual(latest_output["path"], output_path)
+        self.assertEqual(replay_button.config["text"], "Replay tuned")
+        self.assertEqual(replay_button.state_calls[-1], ["!disabled"])
 
     def test_latest_output_status_text_summarizes_restored_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -3002,7 +3087,7 @@ class LearnerMenuTests(unittest.TestCase):
 
         self.assertEqual(
             text,
-            "Ready. Latest saved output: run_lab01. Plot: position.png. Worksheet: worksheet.md.",
+            "Ready. Latest saved output: run_lab01. Plot: position.png. Worksheet: worksheet.md. No replay yet.",
         )
 
     def test_latest_output_status_text_reports_empty_startup_state(self) -> None:
@@ -3015,6 +3100,7 @@ class LearnerMenuTests(unittest.TestCase):
             report_button = FakeButton()
             plot_button = FakeButton()
             worksheet_button = FakeButton()
+            replay_button = FakeButton()
 
             selected = initialize_latest_output_state(
                 latest_output,
@@ -3022,6 +3108,7 @@ class LearnerMenuTests(unittest.TestCase):
                 latest_button=report_button,
                 latest_plot_button=plot_button,
                 latest_worksheet_button=worksheet_button,
+                latest_replay_button=replay_button,
             )
 
         self.assertIsNone(selected)
@@ -3029,9 +3116,11 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(report_button.config["text"], "Open latest report")
         self.assertEqual(plot_button.config["text"], "Open latest plot")
         self.assertEqual(worksheet_button.config["text"], "Open latest worksheet")
+        self.assertEqual(replay_button.config["text"], "Replay latest")
         self.assertEqual(report_button.state_calls[-1], ["disabled"])
         self.assertEqual(plot_button.state_calls[-1], ["disabled"])
         self.assertEqual(worksheet_button.state_calls[-1], ["disabled"])
+        self.assertEqual(replay_button.state_calls[-1], ["disabled"])
 
     def test_parse_run_output_path_detects_completed_run(self) -> None:
         parsed = parse_run_output_path(r"Run complete: C:\tmp\outputs\20260627_150117_lab04_panda")

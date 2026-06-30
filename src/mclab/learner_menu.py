@@ -1490,6 +1490,7 @@ def latest_output_button_labels(output_path: Path | None) -> dict[str, str]:
             "report": "Open latest report",
             "plot": "Open latest plot",
             "worksheet": "Open latest worksheet",
+            "replay": "Replay latest",
         }
     latest_plot = latest_output_plot(output_path)
     plot_label = (
@@ -1498,10 +1499,12 @@ def latest_output_button_labels(output_path: Path | None) -> dict[str, str]:
         else f"Open plot: {_short_artifact_button_name(latest_plot, max_length=12)}"
     )
     worksheet_label = "Open latest worksheet" if latest_output_worksheet(output_path) is None else "Open worksheet"
+    replay_label = "Replay tuned" if latest_output_tuned_config(output_path) is not None else "Replay latest"
     return {
         "report": "Open report",
         "plot": plot_label,
         "worksheet": worksheet_label,
+        "replay": replay_label,
     }
 
 
@@ -1510,11 +1513,13 @@ def latest_output_status_text(output_path: Path | None) -> str:
         return "Ready."
     latest_plot = latest_output_plot(output_path)
     latest_worksheet = latest_output_worksheet(output_path)
+    latest_tuned_config = latest_output_tuned_config(output_path)
     plot_text = f"Plot: {latest_plot.name}." if latest_plot is not None else "No plot yet."
     worksheet_text = (
         f"Worksheet: {latest_worksheet.name}." if latest_worksheet is not None else "No worksheet yet."
     )
-    return f"Ready. Latest saved output: {output_path.name}. {plot_text} {worksheet_text}"
+    replay_text = f"Replay: {latest_tuned_config.name}." if latest_tuned_config is not None else "No replay yet."
+    return f"Ready. Latest saved output: {output_path.name}. {plot_text} {worksheet_text} {replay_text}"
 
 
 def latest_saved_output(outputs_root: Path | None = None) -> Path | None:
@@ -1534,6 +1539,7 @@ def initialize_latest_output_state(
     latest_button: Any | None = None,
     latest_plot_button: Any | None = None,
     latest_worksheet_button: Any | None = None,
+    latest_replay_button: Any | None = None,
 ) -> Path | None:
     output_path = latest_saved_output(outputs_root)
     latest_output["path"] = output_path
@@ -1542,6 +1548,7 @@ def initialize_latest_output_state(
         latest_button=latest_button,
         latest_plot_button=latest_plot_button,
         latest_worksheet_button=latest_worksheet_button,
+        latest_replay_button=latest_replay_button,
     )
     return output_path
 
@@ -2518,6 +2525,45 @@ def launch_latest_worksheet(latest_output: dict[str, Path | None]) -> subprocess
     return open_path(path)
 
 
+def launch_latest_tuned_replay(
+    latest_output: dict[str, Path | None],
+    status: Any,
+    *,
+    root: Any | None = None,
+    latest_button: Any | None = None,
+    latest_plot_button: Any | None = None,
+    latest_worksheet_button: Any | None = None,
+    latest_replay_button: Any | None = None,
+    progress_callback: Callable[[], None] | None = None,
+) -> subprocess.Popen[str] | None:
+    output_path = latest_output.get("path")
+    tuned_config = latest_output_tuned_config(output_path)
+    action = latest_output_menu_action(output_path)
+    if output_path is None or tuned_config is None or action is None:
+        status.set("Cannot replay latest output: no replayable learner_tuned_config.yaml is available.")
+        return None
+    process = launch_tuned_replay(action, tuned_config)
+    status.set(
+        f"Started latest tuned replay for {action.group} - {action.label} "
+        f"(pid {process.pid}). Close the viewer to finish."
+    )
+    Thread(
+        target=_watch_process,
+        args=(process, action, status),
+        kwargs={
+            "root": root,
+            "latest_output": latest_output,
+            "latest_button": latest_button,
+            "latest_plot_button": latest_plot_button,
+            "latest_worksheet_button": latest_worksheet_button,
+            "latest_replay_button": latest_replay_button,
+            "progress_callback": progress_callback,
+        },
+        daemon=True,
+    ).start()
+    return process
+
+
 def launch_action_latest_output(
     action: MenuAction | BatchMenuAction,
     outputs_root: Path | None = None,
@@ -2579,12 +2625,32 @@ def latest_output_worksheet(path: Path | None) -> Path | None:
     return worksheet if worksheet.exists() else None
 
 
+def latest_output_tuned_config(path: Path | None) -> Path | None:
+    if path is None:
+        return None
+    tuned_config = path / "learner_tuned_config.yaml"
+    return tuned_config if tuned_config.exists() else None
+
+
+def latest_output_menu_action(path: Path | None) -> MenuAction | None:
+    if path is None:
+        return None
+    summary = _read_json(path / "summary.json")
+    if not summary:
+        return None
+    for action in MENU_ACTIONS:
+        if _summary_matches_action(summary, action):
+            return action
+    return None
+
+
 def _configure_latest_output_buttons(
     output_path: Path | None,
     *,
     latest_button: Any | None = None,
     latest_plot_button: Any | None = None,
     latest_worksheet_button: Any | None = None,
+    latest_replay_button: Any | None = None,
 ) -> None:
     labels = latest_output_button_labels(output_path)
     if latest_button is not None:
@@ -2596,6 +2662,11 @@ def _configure_latest_output_buttons(
     if latest_worksheet_button is not None:
         latest_worksheet_button.configure(text=labels["worksheet"])
         latest_worksheet_button.state(["!disabled"] if latest_output_worksheet(output_path) is not None else ["disabled"])
+    if latest_replay_button is not None:
+        latest_replay_button.configure(text=labels["replay"])
+        replayable = latest_output_tuned_config(output_path) is not None and latest_output_menu_action(output_path) is not None
+        latest_replay_button.state(["!disabled"] if replayable else ["disabled"])
+
 
 
 def _action_plot_priorities(action: MenuAction | BatchMenuAction) -> tuple[str, ...]:
@@ -3622,6 +3693,7 @@ def main() -> int:
             latest_button=latest_button,
             latest_plot_button=latest_plot_button,
             latest_worksheet_button=latest_worksheet_button,
+            latest_replay_button=latest_replay_button,
             progress_callback=refresh_after_run,
         )
 
@@ -3719,6 +3791,7 @@ def main() -> int:
                 latest_button=latest_button,
                 latest_plot_button=latest_plot_button,
                 latest_worksheet_button=latest_worksheet_button,
+                latest_replay_button=latest_replay_button,
                 progress_callback=refresh_after_run,
             ),
         ).pack(side="left")
@@ -3766,6 +3839,7 @@ def main() -> int:
                 latest_button=latest_button,
                 latest_plot_button=latest_plot_button,
                 latest_worksheet_button=latest_worksheet_button,
+                latest_replay_button=latest_replay_button,
                 progress_callback=refresh_after_run,
             ),
         )
@@ -3799,6 +3873,7 @@ def main() -> int:
                 latest_button=latest_button,
                 latest_plot_button=latest_plot_button,
                 latest_worksheet_button=latest_worksheet_button,
+                latest_replay_button=latest_replay_button,
                 progress_callback=refresh_after_run,
             ),
         )
@@ -3872,11 +3947,28 @@ def main() -> int:
     )
     latest_worksheet_button.pack(side="left", padx=(8, 0))
     latest_worksheet_button.state(["disabled"])
+    latest_replay_button = ttk.Button(
+        bottom,
+        text=latest_labels["replay"],
+        command=lambda: launch_latest_tuned_replay(
+            latest_output,
+            status,
+            root=root,
+            latest_button=latest_button,
+            latest_plot_button=latest_plot_button,
+            latest_worksheet_button=latest_worksheet_button,
+            latest_replay_button=latest_replay_button,
+            progress_callback=refresh_after_run,
+        ),
+    )
+    latest_replay_button.pack(side="left", padx=(8, 0))
+    latest_replay_button.state(["disabled"])
     restored_latest_output = initialize_latest_output_state(
         latest_output,
         latest_button=latest_button,
         latest_plot_button=latest_plot_button,
         latest_worksheet_button=latest_worksheet_button,
+        latest_replay_button=latest_replay_button,
     )
     status.set(latest_output_status_text(restored_latest_output))
     ttk.Label(bottom, textvariable=status).pack(side="left", padx=12)
@@ -3934,6 +4026,7 @@ def main() -> int:
                         latest_button=latest_button,
                         latest_plot_button=latest_plot_button,
                         latest_worksheet_button=latest_worksheet_button,
+                        latest_replay_button=latest_replay_button,
                         progress_callback=refresh_after_run,
                     ),
                 )
@@ -3991,6 +4084,7 @@ def main() -> int:
                         latest_button=latest_button,
                         latest_plot_button=latest_plot_button,
                         latest_worksheet_button=latest_worksheet_button,
+                        latest_replay_button=latest_replay_button,
                         progress_callback=refresh_after_run,
                     ),
                 )
@@ -4009,6 +4103,7 @@ def main() -> int:
                         latest_button=latest_button,
                         latest_plot_button=latest_plot_button,
                         latest_worksheet_button=latest_worksheet_button,
+                        latest_replay_button=latest_replay_button,
                         progress_callback=refresh_after_run,
                     ),
                 )
@@ -4029,6 +4124,7 @@ def main() -> int:
                         latest_button=latest_button,
                         latest_plot_button=latest_plot_button,
                         latest_worksheet_button=latest_worksheet_button,
+                        latest_replay_button=latest_replay_button,
                         progress_callback=refresh_after_run,
                     ),
                 )
@@ -4063,6 +4159,7 @@ def _launch_learning_path_from_menu(
     latest_button: Any | None = None,
     latest_plot_button: Any | None = None,
     latest_worksheet_button: Any | None = None,
+    latest_replay_button: Any | None = None,
     progress_callback: Callable[[], None] | None = None,
 ) -> None:
     action = learning_path_target(step)
@@ -4074,6 +4171,7 @@ def _launch_learning_path_from_menu(
         latest_button=latest_button,
         latest_plot_button=latest_plot_button,
         latest_worksheet_button=latest_worksheet_button,
+        latest_replay_button=latest_replay_button,
         progress_callback=progress_callback,
     )
 
@@ -4087,6 +4185,7 @@ def _launch_target_from_menu(
     latest_button: Any | None = None,
     latest_plot_button: Any | None = None,
     latest_worksheet_button: Any | None = None,
+    latest_replay_button: Any | None = None,
     progress_callback: Callable[[], None] | None = None,
 ) -> None:
     if isinstance(target, BatchMenuAction):
@@ -4098,6 +4197,7 @@ def _launch_target_from_menu(
             latest_button=latest_button,
             latest_plot_button=latest_plot_button,
             latest_worksheet_button=latest_worksheet_button,
+            latest_replay_button=latest_replay_button,
             progress_callback=progress_callback,
         )
         return
@@ -4109,6 +4209,7 @@ def _launch_target_from_menu(
         latest_button=latest_button,
         latest_plot_button=latest_plot_button,
         latest_worksheet_button=latest_worksheet_button,
+        latest_replay_button=latest_replay_button,
         progress_callback=progress_callback,
     )
 
@@ -4122,6 +4223,7 @@ def _launch_from_menu(
     latest_button: Any | None = None,
     latest_plot_button: Any | None = None,
     latest_worksheet_button: Any | None = None,
+    latest_replay_button: Any | None = None,
     progress_callback: Callable[[], None] | None = None,
 ) -> None:
     readiness = action_readiness(action)
@@ -4141,6 +4243,7 @@ def _launch_from_menu(
             "latest_button": latest_button,
             "latest_plot_button": latest_plot_button,
             "latest_worksheet_button": latest_worksheet_button,
+            "latest_replay_button": latest_replay_button,
             "progress_callback": progress_callback,
         },
         daemon=True,
@@ -4156,6 +4259,7 @@ def _launch_tuned_replay_from_menu(
     latest_button: Any | None = None,
     latest_plot_button: Any | None = None,
     latest_worksheet_button: Any | None = None,
+    latest_replay_button: Any | None = None,
     progress_callback: Callable[[], None] | None = None,
 ) -> None:
     tuned_config = action_latest_tuned_config(action)
@@ -4176,6 +4280,7 @@ def _launch_tuned_replay_from_menu(
             "latest_button": latest_button,
             "latest_plot_button": latest_plot_button,
             "latest_worksheet_button": latest_worksheet_button,
+            "latest_replay_button": latest_replay_button,
             "progress_callback": progress_callback,
         },
         daemon=True,
@@ -4191,6 +4296,7 @@ def _launch_learning_path_tuned_replay_from_menu(
     latest_button: Any | None = None,
     latest_plot_button: Any | None = None,
     latest_worksheet_button: Any | None = None,
+    latest_replay_button: Any | None = None,
     progress_callback: Callable[[], None] | None = None,
 ) -> None:
     target = learning_path_target(step)
@@ -4205,6 +4311,7 @@ def _launch_learning_path_tuned_replay_from_menu(
         latest_button=latest_button,
         latest_plot_button=latest_plot_button,
         latest_worksheet_button=latest_worksheet_button,
+        latest_replay_button=latest_replay_button,
         progress_callback=progress_callback,
     )
 
@@ -4218,6 +4325,7 @@ def _launch_batch_from_menu(
     latest_button: Any | None = None,
     latest_plot_button: Any | None = None,
     latest_worksheet_button: Any | None = None,
+    latest_replay_button: Any | None = None,
     progress_callback: Callable[[], None] | None = None,
 ) -> None:
     readiness = batch_readiness(action)
@@ -4237,6 +4345,7 @@ def _launch_batch_from_menu(
             "latest_button": latest_button,
             "latest_plot_button": latest_plot_button,
             "latest_worksheet_button": latest_worksheet_button,
+            "latest_replay_button": latest_replay_button,
             "progress_callback": progress_callback,
         },
         daemon=True,
@@ -4301,6 +4410,7 @@ def _watch_process(
     latest_button: Any | None = None,
     latest_plot_button: Any | None = None,
     latest_worksheet_button: Any | None = None,
+    latest_replay_button: Any | None = None,
     progress_callback: Callable[[], None] | None = None,
 ) -> None:
     output_path: Path | None = None
@@ -4320,6 +4430,7 @@ def _watch_process(
         latest_button=latest_button,
         latest_plot_button=latest_plot_button,
         latest_worksheet_button=latest_worksheet_button,
+        latest_replay_button=latest_replay_button,
         progress_callback=progress_callback,
     )
 
@@ -4335,6 +4446,7 @@ def _set_status_after_run(
     latest_button: Any | None = None,
     latest_plot_button: Any | None = None,
     latest_worksheet_button: Any | None = None,
+    latest_replay_button: Any | None = None,
     progress_callback: Callable[[], None] | None = None,
 ) -> None:
     def update_ui() -> None:
@@ -4349,6 +4461,7 @@ def _set_status_after_run(
                     latest_button=latest_button,
                     latest_plot_button=latest_plot_button,
                     latest_worksheet_button=latest_worksheet_button,
+                    latest_replay_button=latest_replay_button,
                 )
                 latest = _preferred_output_entry(output_path)
                 plot_suffix = f" Latest plot: {latest_plot}" if latest_plot is not None else " No plot saved yet."
