@@ -3443,7 +3443,7 @@ def _progress_cards(runs: list[dict[str, Any]]) -> str:
         ("Lab04", "lab04"),
         ("Batches", "batch"),
     )
-    cards = [_evidence_quality_card(runs)]
+    cards = [_evidence_quality_card(runs), _mission_review_queue_card(runs)]
     for label, key in categories:
         matches = [_run for _run in runs if _run_matches_category(_run, key)]
         latest = matches[0] if matches else None
@@ -3481,6 +3481,74 @@ def _evidence_quality_card(runs: list[dict[str, Any]]) -> str:
         f'<p class="muted">Outcome mix: {escape(mix)}</p>'
         "</div>"
     )
+
+
+def _mission_review_queue_card(runs: list[dict[str, Any]]) -> str:
+    counts = _mission_review_queue_counts(runs)
+    ready = counts.get("ready", 0)
+    pending = len(runs) - ready
+    next_review = _mission_review_next_run(runs)
+    next_review_text = "No pending mission evidence."
+    if next_review is not None:
+        status = _mission_review_status(next_review)
+        next_review_text = (
+            f'<a href="{escape(str(next_review["report"]))}">{escape(str(next_review["name"]))}</a>'
+            f" - {escape(status)}"
+        )
+
+    return (
+        '<div class="progress-card">'
+        "<strong>Mission Review Queue</strong>"
+        f'<span class="muted">{ready} ready, {pending} pending</span>'
+        '<p class="muted">'
+        f"Needs observation: {counts.get('observation', 0)}; "
+        f"prediction: {counts.get('prediction', 0)}; "
+        f"outcome: {counts.get('outcome', 0)}; "
+        f"note: {counts.get('note', 0)}; "
+        f"artifact: {counts.get('artifact', 0)}"
+        "</p>"
+        f'<p class="muted">Next review: {next_review_text}</p>'
+        "</div>"
+    )
+
+
+def _mission_review_queue_counts(runs: list[dict[str, Any]]) -> dict[str, int]:
+    counts = {key: 0 for key in ("ready", "observation", "prediction", "outcome", "note", "artifact", "other")}
+    for run in runs:
+        bucket = _mission_review_bucket(_mission_review_status(run))
+        counts[bucket] = counts.get(bucket, 0) + 1
+    return counts
+
+
+def _mission_review_next_run(runs: list[dict[str, Any]]) -> dict[str, Any] | None:
+    priority = ("outcome", "observation", "prediction", "note", "artifact", "other")
+    for bucket in priority:
+        for run in runs:
+            if _mission_review_bucket(_mission_review_status(run)) == bucket:
+                return run
+    return None
+
+
+def _mission_review_status(run: dict[str, Any]) -> str:
+    text = str(run.get("mission_evidence") or "").strip()
+    return text.split(";", 1)[0].strip() if text else "Unknown"
+
+
+def _mission_review_bucket(status: str) -> str:
+    normalized = status.strip().lower()
+    if normalized in {"ready for review", "artifacts ready"}:
+        return "ready"
+    if normalized == "outcome review pending":
+        return "outcome"
+    if normalized == "needs observation":
+        return "observation"
+    if normalized == "needs prediction":
+        return "prediction"
+    if normalized == "ready, add note next":
+        return "note"
+    if normalized in {"needs plot", "needs worksheet"}:
+        return "artifact"
+    return "other"
 
 
 def _merge_outcome_counts(runs: list[dict[str, Any]]) -> dict[str, int]:

@@ -1010,6 +1010,147 @@ class LoggingTests(unittest.TestCase):
             )
             self.assertNotIn("Old prediction should not be summarized.", html)
 
+    def test_outputs_index_shows_mission_review_queue(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            ready = Path(temp_dir) / "20260627_150000_lab01_ready"
+            ready.mkdir()
+            (ready / "plots").mkdir()
+            (ready / "plots" / "position.png").write_bytes(b"fake-png")
+            (ready / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab01_msd",
+                        "config_path": "configs/lab01_msd/default.yaml",
+                        "config_name": "default",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (ready / "report.html").write_text("<html>ready</html>", encoding="utf-8")
+
+            artifact = Path(temp_dir) / "20260627_150100_lab01_needs_plot"
+            artifact.mkdir()
+            (artifact / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab01_msd",
+                        "config_path": "configs/lab01_msd/default.yaml",
+                        "config_name": "default",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (artifact / "report.html").write_text("<html>artifact</html>", encoding="utf-8")
+
+            needs_observation = Path(temp_dir) / "20260627_150200_lab01_interactive_empty"
+            needs_observation.mkdir()
+            (needs_observation / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab01_msd",
+                        "config_path": "configs/lab01_msd/interactive_pull.yaml",
+                        "config_name": "interactive_pull",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (needs_observation / "report.html").write_text("<html>observation</html>", encoding="utf-8")
+
+            needs_prediction = Path(temp_dir) / "20260627_150300_lab02_interactive_note"
+            needs_prediction.mkdir()
+            (needs_prediction / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab02_pid",
+                        "config_path": "configs/lab02_pid/interactive_disturbance.yaml",
+                        "config_name": "interactive_disturbance",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (needs_prediction / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {"note": "The response changed."},
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            (needs_prediction / "report.html").write_text("<html>prediction</html>", encoding="utf-8")
+
+            outcome_pending = Path(temp_dir) / "20260627_150400_lab03_interactive_outcome"
+            outcome_pending.mkdir()
+            (outcome_pending / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab03_2dof",
+                        "config_path": "configs/lab03_2dof/interactive_2dof.yaml",
+                        "config_name": "interactive_2dof",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (outcome_pending / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "prediction": "A farther target should need more torque.",
+                                "note": "Torque rose after the preset.",
+                            },
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            (outcome_pending / "report.html").write_text("<html>outcome</html>", encoding="utf-8")
+
+            note_pending = Path(temp_dir) / "20260627_150500_lab04_interactive_note"
+            note_pending.mkdir()
+            (note_pending / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab04_panda",
+                        "config_path": "configs/lab04_panda/interactive_virtual_wall.yaml",
+                        "config_name": "interactive_virtual_wall",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (note_pending / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "prediction": "A stiff wall should retreat more.",
+                                "outcome": "Matched",
+                            },
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            (note_pending / "report.html").write_text("<html>note</html>", encoding="utf-8")
+
+            html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
+
+            self.assertIn("Mission Review Queue", html)
+            self.assertIn("1 ready, 5 pending", html)
+            self.assertIn("Needs observation: 1; prediction: 1; outcome: 1; note: 1; artifact: 1", html)
+            self.assertIn(
+                'Next review: <a href="20260627_150400_lab03_interactive_outcome/report.html">'
+                "20260627_150400_lab03_interactive_outcome</a> - Outcome review pending",
+                html,
+            )
+
     def test_outputs_index_requires_evidence_for_live_tuning_learning_path_configs(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             dls_run = Path(temp_dir) / "20260627_150200_lab03_dls"
