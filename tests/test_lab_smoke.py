@@ -75,6 +75,8 @@ class LabSmokeTests(unittest.TestCase):
             "configs/lab03_2dof/condition_aware_dls_edge_target_2dof.yaml",
             "configs/lab03_2dof/condition_aware_dls_upper_path_2dof.yaml",
             "configs/lab03_2dof/condition_aware_dls_lower_path_2dof.yaml",
+            "configs/lab03_2dof/condition_aware_dls_shoulder_disturbance_2dof.yaml",
+            "configs/lab03_2dof/condition_aware_dls_elbow_disturbance_2dof.yaml",
             "configs/lab03_2dof/condition_aware_dls_low_torque_2dof.yaml",
             "configs/lab03_2dof/condition_aware_dls_high_torque_2dof.yaml",
             "configs/lab03_2dof/condition_aware_dls_slow_command_2dof.yaml",

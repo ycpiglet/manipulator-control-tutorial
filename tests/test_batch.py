@@ -31,6 +31,8 @@ class BatchTests(unittest.TestCase):
         self.assertIn("condition_aware_edge_target", lab03_labels)
         self.assertIn("condition_aware_upper_path", lab03_labels)
         self.assertIn("condition_aware_lower_path", lab03_labels)
+        self.assertIn("condition_aware_shoulder_disturbance", lab03_labels)
+        self.assertIn("condition_aware_elbow_disturbance", lab03_labels)
         self.assertIn("condition_aware_low_torque", lab03_labels)
         self.assertIn("condition_aware_high_torque", lab03_labels)
         self.assertIn("condition_aware_slow_command", lab03_labels)
@@ -86,6 +88,11 @@ class BatchTests(unittest.TestCase):
         self.assertTrue(
             any("elbow-up and elbow-down paths" in question for question in lab03_guide.questions)
         )
+        self.assertTrue(
+            any("shoulder or elbow disturbance" in question for question in lab03_guide.questions)
+        )
+        self.assertIn("max_abs_tau_disturbance", lab03_guide.metric_keys)
+        self.assertIn("max_task_error_during_disturbance", lab03_guide.metric_keys)
         self.assertIn(
             ("dls_task_speed_compare.png", "DLS Task Speed Comparison", "task speed", "dls_task_speed"),
             lab03_guide.comparison_specs,
@@ -100,6 +107,10 @@ class BatchTests(unittest.TestCase):
         )
         self.assertIn(
             ("elbow_torque_compare.png", "Elbow Torque Comparison", "torque [N m]", "tau_cmd_1"),
+            lab03_guide.comparison_specs,
+        )
+        self.assertIn(
+            ("elbow_disturbance_compare.png", "Elbow Disturbance Comparison", "torque [N m]", "tau_disturbance_1"),
             lab03_guide.comparison_specs,
         )
 

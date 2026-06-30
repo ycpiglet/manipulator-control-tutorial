@@ -143,6 +143,8 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF late DLS damping"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF inner-target DLS"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF edge-target DLS"), labels)
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF shoulder-disturbance DLS"), labels)
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF elbow-disturbance DLS"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF low-torque DLS"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF high-torque DLS"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF slow-command DLS"), labels)
@@ -853,6 +855,12 @@ class LearnerMenuTests(unittest.TestCase):
             action_compare_batch(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF upper-path DLS")]).batch_name,
             "lab03_2dof_compare",
         )
+        self.assertEqual(
+            action_compare_batch(
+                by_label[("Lab03 2DOF Arm and Trajectories", "2DOF shoulder-disturbance DLS")]
+            ).batch_name,
+            "lab03_2dof_compare",
+        )
         self.assertEqual(action_compare_batch(by_label[("Lab04 Panda Manipulator", "Virtual wall")]).batch_name, "lab04_wall_compare")
         self.assertEqual(
             action_compare_batch(by_label[("Lab04 Panda Manipulator", "Cartesian reach")]).batch_name,
@@ -891,6 +899,11 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("initial_q=", upper_path)
         self.assertIn("target_xy=", upper_path)
         self.assertIn("tracking_controller.condition_damping_threshold=", upper_path)
+        shoulder_disturbance = config_value_preview(
+            by_label[("Lab03 2DOF Arm and Trajectories", "2DOF shoulder-disturbance DLS")]
+        )
+        self.assertIn("disturbance_torque.start_time=", shoulder_disturbance)
+        self.assertIn("disturbance_torque.torque=", shoulder_disturbance)
         fast_command = config_value_preview(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF fast-command DLS")])
         self.assertIn("trajectory.duration=", fast_command)
         self.assertIn("tracking_controller.max_task_speed=", fast_command)
@@ -955,6 +968,9 @@ class LearnerMenuTests(unittest.TestCase):
         path_branch_labels = {(action.group, action.label) for action in filter_menu_actions("elbow branch")}
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF upper-path DLS"), path_branch_labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF lower-path DLS"), path_branch_labels)
+        disturbance_labels = {(action.group, action.label) for action in filter_menu_actions("disturbance pulse")}
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF shoulder-disturbance DLS"), disturbance_labels)
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF elbow-disturbance DLS"), disturbance_labels)
 
         controls_labels = {(action.group, action.label) for action in filter_menu_actions("pull push")}
         self.assertIn(("Lab01 Mass-Spring-Damper", "Interactive"), controls_labels)
@@ -1051,6 +1067,8 @@ class LearnerMenuTests(unittest.TestCase):
                 "2DOF edge-target DLS",
                 "2DOF upper-path DLS",
                 "2DOF lower-path DLS",
+                "2DOF shoulder-disturbance DLS",
+                "2DOF elbow-disturbance DLS",
                 "2DOF low-torque DLS",
                 "2DOF high-torque DLS",
                 "2DOF slow-command DLS",
@@ -1102,6 +1120,10 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(
             "tracking_controller.torque_limit",
             parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF low-torque DLS")]),
+        )
+        self.assertIn(
+            "disturbance_torque.torque",
+            parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF shoulder-disturbance DLS")]),
         )
         self.assertIn(
             "tracking_controller.max_task_speed",

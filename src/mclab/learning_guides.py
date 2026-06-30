@@ -472,6 +472,22 @@ RUN_GUIDES: dict[str, RunGuide] = {
         "Hand Y motion, torque sign changes, DLS damping, condition number, and task error.",
         "Run the upper-path condition-aware DLS case, then compare hand_y and elbow torque plots.",
     ),
+    "configs/lab03_2dof/condition_aware_dls_shoulder_disturbance_2dof.yaml": RunGuide(
+        "Lab03 2DOF Shoulder-Disturbance Condition-Aware DLS",
+        "A short shoulder torque pulse disturbs the same near-edge DLS reach.",
+        "Compare against the elbow-disturbance case and the undisturbed condition-aware DLS run.",
+        "disturbance_torque.start_time, disturbance_torque.duration, disturbance_torque.torque",
+        "Disturbance torque, total torque, task error during the pulse, DLS damping, and recovery.",
+        "Run the elbow-disturbance case to compare which joint disturbance is easier to reject.",
+    ),
+    "configs/lab03_2dof/condition_aware_dls_elbow_disturbance_2dof.yaml": RunGuide(
+        "Lab03 2DOF Elbow-Disturbance Condition-Aware DLS",
+        "A short elbow torque pulse disturbs the same near-edge DLS reach.",
+        "Compare against the shoulder-disturbance case and the undisturbed condition-aware DLS run.",
+        "disturbance_torque.start_time, disturbance_torque.duration, disturbance_torque.torque",
+        "Disturbance torque, total torque, task error during the pulse, DLS damping, and recovery.",
+        "Run the shoulder-disturbance case, then compare disturbance and task-error plots.",
+    ),
     "configs/lab03_2dof/condition_aware_dls_low_torque_2dof.yaml": RunGuide(
         "Lab03 2DOF Low-Torque Condition-Aware DLS",
         "The same condition-aware DLS target is constrained by a lower shoulder and elbow torque limit.",

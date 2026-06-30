@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from pathlib import Path
 from typing import Any
 
@@ -432,8 +433,11 @@ def _run_two_link_arm(
                     torque_limit=torque_limit,
                 )
 
+            disturbance_tau = _two_link_disturbance_torque(config, float(data.time))
+            total_tau = [command["tau"][index] + disturbance_tau[index] for index in range(2)]
+
             for index, actuator_id in enumerate(handles["actuator_ids"]):
-                data.ctrl[actuator_id] = command["tau"][index]
+                data.ctrl[actuator_id] = total_tau[index]
 
             mujoco.mj_step(model, data)
 
@@ -444,7 +448,7 @@ def _run_two_link_arm(
             task_error = [command["target_xy"][index] - x_ee[index] for index in range(2)]
             joint_error_norm = _norm(joint_error)
             task_error_norm = _norm(task_error)
-            max_tau = max(abs(value) for value in command["tau"])
+            max_tau = max(abs(value) for value in total_tau)
             condition = jacobian_condition_number(q, geometry)
             condition_capped = _cap_infinite(condition)
             manipulability_value = manipulability(q, geometry)
@@ -490,10 +494,13 @@ def _run_two_link_arm(
                 task_error=task_error,
                 task_error_norm=task_error_norm,
                 tau_cmd=command["tau"],
+                tau_disturbance=disturbance_tau,
+                tau_total=total_tau,
                 current_proxy=[value / kt for value in command["tau"]],
                 jacobian_determinant=determinant,
                 manipulability=manipulability_value,
                 jacobian_condition=condition_capped,
+                disturbance_active=1.0 if any(abs(value) > 1e-12 for value in disturbance_tau) else 0.0,
                 tuned_kp=command["kp"],
                 tuned_kd=command["kd"],
                 tuned_torque_limit=command["torque_limit"],
@@ -586,6 +593,33 @@ def _update_two_link_viewer_guides(
 
 def _two_link_guide_position(xy: tuple[float, float] | list[float]) -> list[float]:
     return [float(xy[0]), float(xy[1]), 0.11]
+
+
+def _two_link_disturbance_torque(config: dict[str, Any], time: float) -> list[float]:
+    pulse = dict(config.get("disturbance_torque", {}))
+    if not pulse or not bool(pulse.get("enabled", True)):
+        return [0.0, 0.0]
+
+    start_time = float(pulse.get("start_time", 1.5))
+    duration = max(0.0, float(pulse.get("duration", 0.2)))
+    elapsed = float(time) - start_time
+    if duration <= 0.0 or elapsed < 0.0 or elapsed > duration:
+        return [0.0, 0.0]
+
+    torque = _pair(pulse.get("torque", [0.0, 0.0]), "disturbance_torque.torque")
+    ramp_time = max(0.0, min(duration * 0.5, float(pulse.get("ramp_time", 0.0))))
+    scale = _smooth_pulse_scale(elapsed, duration, ramp_time)
+    return [scale * torque[0], scale * torque[1]]
+
+
+def _smooth_pulse_scale(elapsed: float, duration: float, ramp_time: float) -> float:
+    if ramp_time <= 0.0:
+        return 1.0
+    if elapsed < ramp_time:
+        return 0.5 - 0.5 * math.cos(math.pi * elapsed / ramp_time)
+    if elapsed > duration - ramp_time:
+        return 0.5 - 0.5 * math.cos(math.pi * (duration - elapsed) / ramp_time)
+    return 1.0
 
 
 def _live_tuning(
@@ -992,7 +1026,8 @@ def _save_two_link_plots(output_path: Path, rows: list[dict[str, Any]], selectio
     specs = [
         ("position.png", "2DOF Joint Position Tracking", "joint position [rad]", ["q_0", "q_1", "target_q_0", "target_q_1"]),
         ("end_effector.png", "2DOF End-Effector Tracking", "position [m]", ["x_ee_0", "x_ee_1", "target_x_ee_0", "target_x_ee_1"]),
-        ("torque.png", "2DOF Joint Torques", "torque [N m]", ["tau_cmd_0", "tau_cmd_1"]),
+        ("torque.png", "2DOF Joint Torques", "torque [N m]", ["tau_cmd_0", "tau_cmd_1", "tau_total_0", "tau_total_1"]),
+        ("disturbance.png", "2DOF Disturbance Torque", "torque [N m]", ["tau_disturbance_0", "tau_disturbance_1"]),
         ("current_proxy.png", "2DOF Current Proxy", "current proxy", ["current_proxy_0", "current_proxy_1"]),
         ("error.png", "2DOF Tracking Error", "error norm", ["joint_error_norm", "task_error_norm"]),
         (
@@ -1014,6 +1049,7 @@ def _save_two_link_plots(output_path: Path, rows: list[dict[str, Any]], selectio
         "task": ["end_effector", "torque", "error"],
         "singularity": ["position", "end_effector", "torque", "singularity", "error"],
         "dls": ["end_effector", "torque", "singularity", "dls", "error"],
+        "dls_disturbance": ["end_effector", "torque", "disturbance", "singularity", "dls", "error"],
         "control": ["position", "end_effector", "torque", "current_proxy", "singularity", "error"],
     }
     save_time_series_plots(output_path, rows, select_plot_specs(specs, selection, presets=presets))
@@ -1035,7 +1071,25 @@ def _two_link_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
             for key, value in row.items()
             if key.startswith("tau_cmd_")
         ),
+        "max_abs_tau_total": max(
+            abs(float(value))
+            for row in rows
+            for key, value in row.items()
+            if key.startswith("tau_total_")
+        ),
     }
+    disturbance_values = [
+        abs(float(value))
+        for row in rows
+        for key, value in row.items()
+        if key.startswith("tau_disturbance_")
+    ]
+    if disturbance_values and max(disturbance_values) > 0.0:
+        disturbed_rows = [row for row in rows if float(row.get("disturbance_active", 0.0)) > 0.5]
+        summary["max_abs_tau_disturbance"] = max(disturbance_values)
+        if disturbed_rows:
+            summary["max_task_error_during_disturbance"] = max(float(row["task_error_norm"]) for row in disturbed_rows)
+            summary["max_joint_error_during_disturbance"] = max(float(row["joint_error_norm"]) for row in disturbed_rows)
     dls_joint_speeds = _finite_row_values(rows, "dls_joint_speed")
     if dls_joint_speeds:
         summary.update(

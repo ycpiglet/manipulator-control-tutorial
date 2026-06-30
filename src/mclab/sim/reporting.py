@@ -43,6 +43,9 @@ INDEX_METRIC_KEYS = (
     "min_manipulability",
     "max_jacobian_condition",
     "max_abs_tau_cmd",
+    "max_abs_tau_disturbance",
+    "max_abs_tau_total",
+    "max_task_error_during_disturbance",
     "max_dls_task_speed",
     "max_dls_joint_speed",
     "max_dls_damping",
@@ -70,6 +73,7 @@ INDEX_PLOT_PRIORITY = (
     "virtual_wall",
     "singularity",
     "dls",
+    "disturbance",
     "torque",
     "control_force",
     "force",
@@ -353,6 +357,11 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
             "dls",
         ),
         NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_shoulder_disturbance_2dof.yaml",
+            "Keep the target but add a short shoulder disturbance pulse.",
+            "dls_disturbance",
+        ),
+        NextRunSuggestion(
             "configs/lab03_2dof/condition_aware_dls_fast_command_2dof.yaml",
             "Keep the target and schedule but command the motion faster.",
             "dls",
@@ -422,6 +431,11 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
             "Keep the edge target but command it faster.",
             "dls",
         ),
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_elbow_disturbance_2dof.yaml",
+            "Keep the edge target and add a joint disturbance pulse.",
+            "dls_disturbance",
+        ),
     ),
     "configs/lab03_2dof/condition_aware_dls_upper_path_2dof.yaml": (
         NextRunSuggestion(
@@ -444,6 +458,30 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
         NextRunSuggestion(
             "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
             "Return to the default condition-aware DLS branch.",
+            "dls",
+        ),
+    ),
+    "configs/lab03_2dof/condition_aware_dls_shoulder_disturbance_2dof.yaml": (
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_elbow_disturbance_2dof.yaml",
+            "Move the same pulse to the elbow and compare recovery.",
+            "dls_disturbance",
+        ),
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
+            "Return to the undisturbed condition-aware DLS case.",
+            "dls",
+        ),
+    ),
+    "configs/lab03_2dof/condition_aware_dls_elbow_disturbance_2dof.yaml": (
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_shoulder_disturbance_2dof.yaml",
+            "Move the same pulse to the shoulder and compare recovery.",
+            "dls_disturbance",
+        ),
+        NextRunSuggestion(
+            "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
+            "Return to the undisturbed condition-aware DLS case.",
             "dls",
         ),
     ),
@@ -2166,6 +2204,15 @@ def _result_checks(summary: dict[str, Any]) -> list[tuple[str, str, str]]:
     _add_abs_limit_check(checks, summary, "final_task_error_norm", "Final hand error", 0.05, "m norm")
     _add_abs_limit_check(checks, summary, "final_cartesian_error_cm", "Final Cartesian error", 2.0, "cm")
     _add_abs_limit_check(checks, summary, "max_abs_tau_cmd", "Actuator effort", 60.0, "force / torque proxy")
+    disturbance = _number(summary.get("max_abs_tau_disturbance"))
+    if disturbance is not None and disturbance > 0.0:
+        checks.append(
+            (
+                "Disturbance pulse",
+                "Review",
+                f"External torque pulse reached {_format_value(disturbance)} N m; compare disturbance and error plots.",
+            )
+        )
 
     qdot = _number(summary.get("max_settled_abs_qdot"))
     drift = _number(summary.get("max_joint_drift_norm"))
@@ -3078,6 +3125,11 @@ def _plot_guidance(filename: str) -> tuple[str, str] | None:
         return (
             "Damped Least Squares",
             "Compare task speed, joint speed, and damping. More damping usually calms joint motion near singularity but leaves more task error.",
+        )
+    if "disturbance" in name:
+        return (
+            "Disturbance Torque",
+            "Check when the external torque pulse is applied and how quickly the controller recovers task error afterward.",
         )
     if "current_proxy" in name:
         return (

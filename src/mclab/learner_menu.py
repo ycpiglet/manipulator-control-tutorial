@@ -560,6 +560,26 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
     ),
     MenuAction(
         group="Lab03 2DOF Arm and Trajectories",
+        label="2DOF shoulder-disturbance DLS",
+        lab_name="lab03",
+        config_path="configs/lab03_2dof/condition_aware_dls_shoulder_disturbance_2dof.yaml",
+        plots="dls_disturbance",
+        description="Applies a short shoulder torque pulse during the condition-aware DLS reach.",
+        try_this="Run before elbow-disturbance DLS and compare disturbance recovery.",
+        watch="Shoulder disturbance torque, total torque, task error during the pulse, and DLS damping.",
+    ),
+    MenuAction(
+        group="Lab03 2DOF Arm and Trajectories",
+        label="2DOF elbow-disturbance DLS",
+        lab_name="lab03",
+        config_path="configs/lab03_2dof/condition_aware_dls_elbow_disturbance_2dof.yaml",
+        plots="dls_disturbance",
+        description="Applies a short elbow torque pulse during the condition-aware DLS reach.",
+        try_this="Compare directly against shoulder-disturbance DLS and the undisturbed reach.",
+        watch="Elbow disturbance torque, total torque, task error during the pulse, and DLS damping.",
+    ),
+    MenuAction(
+        group="Lab03 2DOF Arm and Trajectories",
         label="2DOF low-torque DLS",
         lab_name="lab03",
         config_path="configs/lab03_2dof/condition_aware_dls_low_torque_2dof.yaml",
@@ -2028,6 +2048,8 @@ def parameter_hint(action: MenuAction) -> str:
             "2dof edge-target dls",
             "2dof upper-path dls",
             "2dof lower-path dls",
+            "2dof shoulder-disturbance dls",
+            "2dof elbow-disturbance dls",
             "2dof low-torque dls",
             "2dof high-torque dls",
             "2dof slow-command dls",
@@ -2053,6 +2075,11 @@ def parameter_hint(action: MenuAction) -> str:
                 return (
                     "initial_q, target_xy, tracking_controller.condition_damping_threshold, "
                     "tracking_controller.condition_damping_full, tracking_controller.max_dls_damping"
+                )
+            if label in {"2dof shoulder-disturbance dls", "2dof elbow-disturbance dls"}:
+                return (
+                    "disturbance_torque.start_time, disturbance_torque.duration, disturbance_torque.torque, "
+                    "target_xy, tracking_controller.condition_damping_threshold"
                 )
             if label in {"2dof slow-command dls", "2dof fast-command dls"}:
                 return (
@@ -2508,6 +2535,8 @@ def _is_compare_action(action: MenuAction) -> bool:
         "2dof edge-target dls",
         "2dof upper-path dls",
         "2dof lower-path dls",
+        "2dof shoulder-disturbance dls",
+        "2dof elbow-disturbance dls",
         "2dof low-torque dls",
         "2dof high-torque dls",
         "2dof slow-command dls",

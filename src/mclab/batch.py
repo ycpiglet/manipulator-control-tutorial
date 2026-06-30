@@ -112,6 +112,18 @@ BATCH_SETS: dict[str, tuple[BatchScenario, ...]] = {
             "dls",
         ),
         BatchScenario(
+            "condition_aware_shoulder_disturbance",
+            "lab03",
+            "configs/lab03_2dof/condition_aware_dls_shoulder_disturbance_2dof.yaml",
+            "dls_disturbance",
+        ),
+        BatchScenario(
+            "condition_aware_elbow_disturbance",
+            "lab03",
+            "configs/lab03_2dof/condition_aware_dls_elbow_disturbance_2dof.yaml",
+            "dls_disturbance",
+        ),
+        BatchScenario(
             "condition_aware_low_torque",
             "lab03",
             "configs/lab03_2dof/condition_aware_dls_low_torque_2dof.yaml",
@@ -224,6 +236,7 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             "How do early and late damping schedules change task error near the same workspace edge?",
             "How does moving the target from the inner workspace to the edge change DLS damping and task error?",
             "How do mirrored elbow-up and elbow-down paths change hand Y motion and torque signs for the same target?",
+            "How does a short shoulder or elbow disturbance change task error and total torque during recovery?",
             "How much does a lower torque limit increase task error when the damping schedule is unchanged?",
             "How does a faster hand command change DLS joint speed, task speed clipping, and task error?",
             "How do the torque plots change when the task is expressed in end-effector space?",
@@ -235,6 +248,7 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             "Compare `condition_aware_dls_early_2dof.yaml` and `condition_aware_dls_late_2dof.yaml`.",
             "Compare `condition_aware_dls_inner_target_2dof.yaml` and `condition_aware_dls_edge_target_2dof.yaml`.",
             "Compare `condition_aware_dls_upper_path_2dof.yaml` and `condition_aware_dls_lower_path_2dof.yaml`.",
+            "Compare `condition_aware_dls_shoulder_disturbance_2dof.yaml` and `condition_aware_dls_elbow_disturbance_2dof.yaml`.",
             "Compare `condition_aware_dls_low_torque_2dof.yaml` and `condition_aware_dls_high_torque_2dof.yaml`.",
             "Compare `condition_aware_dls_slow_command_2dof.yaml` and `condition_aware_dls_fast_command_2dof.yaml`.",
             "Copy `configs/lab03_2dof/condition_aware_dls_2dof.yaml` and change `condition_damping_threshold`.",
@@ -252,6 +266,9 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             "max_dls_joint_speed",
             "max_dls_damping",
             "max_dls_condition_scale",
+            "max_abs_tau_disturbance",
+            "max_abs_tau_total",
+            "max_task_error_during_disturbance",
         ),
         preview_plots=("dls.png", "end_effector.png", "singularity.png", "error.png"),
         comparison_specs=(
@@ -265,6 +282,9 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
             ("dls_damping_compare.png", "DLS Damping Schedule Comparison", "damping / scale", "dls_damping"),
             ("shoulder_torque_compare.png", "Shoulder Torque Comparison", "torque [N m]", "tau_cmd_0"),
             ("elbow_torque_compare.png", "Elbow Torque Comparison", "torque [N m]", "tau_cmd_1"),
+            ("shoulder_disturbance_compare.png", "Shoulder Disturbance Comparison", "torque [N m]", "tau_disturbance_0"),
+            ("elbow_disturbance_compare.png", "Elbow Disturbance Comparison", "torque [N m]", "tau_disturbance_1"),
+            ("total_elbow_torque_compare.png", "Total Elbow Torque Comparison", "torque [N m]", "tau_total_1"),
         ),
     ),
     "lab04_wall_compare": BatchGuide(
@@ -1855,6 +1875,8 @@ def _plot_checkpoint(filename: str, title: str) -> str:
         return "Name which scenario takes the upper or lower hand path and connect it to the arm posture."
     if "hand_x" in name:
         return "Name which scenario moves the hand farthest along X and cite the target or wall setting that caused it."
+    if "disturbance" in name:
+        return "Name which scenario receives the larger disturbance pulse and compare the recovery error."
     if "error" in name:
         return "Name which scenario leaves the largest error and cite the matching metric table value."
     if "force" in name or "torque" in name or "effort" in normalized_title:
