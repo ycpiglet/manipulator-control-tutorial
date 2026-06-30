@@ -21,7 +21,7 @@ from mclab.learning_guides import (
     reflection_question_for_context,
     viewer_legend_for_guide,
 )
-from mclab.sim.reporting import INDEX_PLOT_PRIORITY, plot_guidance, write_outputs_index
+from mclab.sim.reporting import INDEX_PLOT_PRIORITY, _activity_mix_items, plot_guidance, write_outputs_index
 
 RUN_COMPLETE_PREFIX = "Run complete:"
 BATCH_COMPLETE_PREFIX = "Batch complete:"
@@ -1589,6 +1589,23 @@ def action_preset_evidence_text(action: MenuAction, outputs_root: Path | None = 
     return f"Preset evidence: {count} presets tried; try one more preset"
 
 
+def action_activity_mix_text(action: MenuAction, outputs_root: Path | None = None) -> str:
+    if "hands-on" not in action_tags(action):
+        return ""
+    latest = action_latest_output(action, outputs_root)
+    if latest is None:
+        return "Activity mix: Not run yet"
+    items = dict(_activity_mix_items(_read_json_list(latest / "interaction_events.json")))
+    if not items:
+        return "Activity mix: No learner controls yet"
+    return (
+        f"Activity mix: {items.get('Interaction variety')}; "
+        f"buttons {items.get('Button actions')}, sliders {items.get('Slider changes')}, "
+        f"presets {items.get('Preset choices')}, markers {items.get('Observation markers')}; "
+        f"next {_short_text(str(items.get('Next activity step') or ''), 80)}"
+    )
+
+
 def _required_preset_progress_for_action(
     action: MenuAction | BatchMenuAction,
     output_path: Path | None,
@@ -2549,6 +2566,8 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
     preset_compare_text = f"\nPreset compare: {preset_compare}" if preset_compare else ""
     preset_evidence = action_preset_evidence_text(action, outputs_root)
     preset_evidence_text = f"{preset_evidence}\n" if preset_evidence else ""
+    activity_mix = action_activity_mix_text(action, outputs_root)
+    activity_mix_text = f"{activity_mix}\n" if activity_mix else ""
     readiness = action_readiness(action)
     setup_detail = f" - {readiness.detail}" if readiness.status != "ok" and readiness.detail else ""
     setup_fix = f" Fix: {readiness.fix}" if readiness.status != "ok" and readiness.fix else ""
@@ -2563,6 +2582,7 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
         f"{action_latest_evidence_text(action, outputs_root)}\n"
         f"{action_mission_evidence_text(action, outputs_root)}\n"
         f"{preset_evidence_text}"
+        f"{activity_mix_text}"
         f"{action_next_cue_text(action, outputs_root)}\n"
         f"{action_plot_text(action, outputs_root)}\n"
         f"{action_plot_review_text(action, outputs_root)}\n"

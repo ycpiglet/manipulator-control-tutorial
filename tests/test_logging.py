@@ -1115,8 +1115,10 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Add one Mark observation entry before moving on.", html)
             self.assertIn("20260627_150100_lab01_interactive/report.html", html)
             self.assertIn("<th>Evidence</th>", html)
+            self.assertIn("<th>Activity</th>", html)
             self.assertIn("<th>Mission evidence</th>", html)
             self.assertIn("No markers", html)
+            self.assertIn("No learner controls", html)
             self.assertIn("Needs observation; Run the demo, write a prediction, then press Mark observation.", html)
 
             (interactive / "interaction_events.json").write_text(
@@ -1146,11 +1148,15 @@ class LoggingTests(unittest.TestCase):
                 "Latest evidence: Note: The mass settled faster after damping changed.",
                 html,
             )
+            self.assertIn("Activity mix: 0/3 control families; buttons 0, sliders 0, presets 0, markers 1", html)
             self.assertIn("Latest: Note: The mass settled faster after damping changed.", html)
 
             (interactive / "interaction_events.json").write_text(
                 json.dumps(
                     [
+                        {"kind": "button", "name": "manual_force", "label": "Push Right", "value": 12.0},
+                        {"kind": "preset", "name": "heavy_damping", "label": "Heavy damping"},
+                        {"kind": "slider", "name": "damping", "label": "Damping", "value": 5.0},
                         {
                             "kind": "marker",
                             "name": "observation",
@@ -1208,6 +1214,9 @@ class LoggingTests(unittest.TestCase):
             (interactive / "interaction_events.json").write_text(
                 json.dumps(
                     [
+                        {"kind": "button", "name": "manual_force", "label": "Push Right", "value": 12.0},
+                        {"kind": "preset", "name": "heavy_damping", "label": "Heavy damping"},
+                        {"kind": "slider", "name": "damping", "label": "Damping", "value": 5.0},
                         {
                             "kind": "marker",
                             "name": "observation",
@@ -1236,6 +1245,11 @@ class LoggingTests(unittest.TestCase):
                 "Latest evidence: Prediction: More damping should settle faster.; "
                 "Outcome: Matched; "
                 "Note: The mass settled faster after damping changed.",
+                html,
+            )
+            self.assertIn(
+                "Activity mix: 3/3 control families; buttons 1, sliders 1, presets 1, markers 1; "
+                "next: Ready: compare this interaction mix against plots and the worksheet.",
                 html,
             )
             self.assertIn(

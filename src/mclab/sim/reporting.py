@@ -3597,6 +3597,7 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
                 "learner_outcomes": learner_outcomes,
                 "outcome_counts": outcome_counts,
                 "latest_evidence": latest_evidence,
+                "activity_mix": _activity_mix_index_text(interaction_events),
                 "mission_evidence": _mission_evidence_index_text(summary, interaction_events, plots, config),
                 "config": config,
                 "interaction_events": interaction_events,
@@ -3632,6 +3633,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
             f"<td>{escape(str(run.get('lesson_title', '')))}</td>"
             f"<td>{escape(str(run.get('next_step', '')))}</td>"
             f"<td>{escape(_run_evidence_cell(run))}</td>"
+            f"<td>{escape(str(run.get('activity_mix', '')))}</td>"
             f"<td>{escape(str(run.get('mission_evidence', '')))}</td>"
             f"<td>{_run_worksheet_cell(run)}</td>"
             f"<td>{_run_replay_cell(run)}</td>"
@@ -3647,7 +3649,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
         for run in runs
     )
     if not rows:
-        rows = f'<tr><td colspan="{12 + len(metric_keys)}">No run reports were found yet.</td></tr>'
+        rows = f'<tr><td colspan="{13 + len(metric_keys)}">No run reports were found yet.</td></tr>'
 
     return f"""<!doctype html>
 <html lang="en">
@@ -3788,7 +3790,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
     <section>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Run</th><th>Lab</th><th>Config</th><th>Lesson</th><th>Next</th><th>Evidence</th><th>Mission evidence</th><th>Worksheet</th><th>Replay</th><th>Plots</th><th>Duration [s]</th><th>Samples</th>{metric_headers}</tr></thead>
+          <thead><tr><th>Run</th><th>Lab</th><th>Config</th><th>Lesson</th><th>Next</th><th>Evidence</th><th>Activity</th><th>Mission evidence</th><th>Worksheet</th><th>Replay</th><th>Plots</th><th>Duration [s]</th><th>Samples</th>{metric_headers}</tr></thead>
           <tbody>{rows}</tbody>
         </table>
       </div>
@@ -3892,6 +3894,7 @@ def _learning_path_card(item: dict[str, Any]) -> str:
     run = item["run"]
     quick_links = _learning_path_quick_links(run)
     latest_evidence = _learning_path_latest_evidence(run)
+    activity_mix = _learning_path_activity_mix(run)
     mission_evidence = _learning_path_mission_evidence(run)
     learning_cue = _learning_path_learning_cue(step)
     completion_text = _learning_path_completion_text(step)
@@ -3954,6 +3957,7 @@ def _learning_path_card(item: dict[str, Any]) -> str:
         f"{learning_cue}"
         f"{status}"
         f"{latest_evidence}"
+        f"{activity_mix}"
         f"{mission_evidence}"
         f"{quick_links}"
         f"{command_block}"
@@ -3968,6 +3972,15 @@ def _learning_path_latest_evidence(run: dict[str, Any] | None) -> str:
     if not latest:
         return ""
     return f'<p class="muted">Latest evidence: {escape(latest)}</p>'
+
+
+def _learning_path_activity_mix(run: dict[str, Any] | None) -> str:
+    if run is None:
+        return ""
+    activity = str(run.get("activity_mix") or "").strip()
+    if not activity or activity == "No learner controls":
+        return ""
+    return f'<p class="muted">Activity mix: {escape(activity)}</p>'
 
 
 def _learning_path_mission_evidence(run: dict[str, Any] | None) -> str:
@@ -4346,6 +4359,20 @@ def _run_evidence_cell(run: dict[str, Any]) -> str:
     if latest:
         parts.append(f"Latest: {latest}")
     return ", ".join(parts)
+
+
+def _activity_mix_index_text(events: list[dict[str, Any]]) -> str:
+    items = dict(_activity_mix_items(events))
+    if not items:
+        return "No learner controls"
+    next_step = str(items.get("Next activity step") or "").strip()
+    next_text = f"; next: {_short_evidence_text(next_step, max_length=72)}" if next_step else ""
+    return (
+        f"{items.get('Interaction variety')}; "
+        f"buttons {items.get('Button actions')}, sliders {items.get('Slider changes')}, "
+        f"presets {items.get('Preset choices')}, markers {items.get('Observation markers')}"
+        f"{next_text}"
+    )
 
 
 def _mission_evidence_index_text(

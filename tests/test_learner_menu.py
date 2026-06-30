@@ -29,6 +29,7 @@ from mclab.learner_menu import (  # noqa: E402
     action_compare_batch,
     action_compare_text,
     action_controls_text,
+    action_activity_mix_text,
     action_evidence_text,
     action_followup,
     action_followup_text,
@@ -1527,6 +1528,51 @@ class LearnerMenuTests(unittest.TestCase):
             missing_outcome_text = action_latest_evidence_text(MENU_ACTIONS[0], outputs)
             self.assertIn("Outcome: missing review", missing_outcome_text)
             self.assertIn("Outcome: missing review", lesson_text(MENU_ACTIONS[0], outputs))
+
+    def test_action_activity_mix_summarizes_latest_hands_on_controls(self) -> None:
+        lab02_interactive = next(
+            action
+            for action in MENU_ACTIONS
+            if action.config_path == "configs/lab02_pid/interactive_disturbance.yaml"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+
+            self.assertEqual(action_activity_mix_text(MENU_ACTIONS[0], outputs), "")
+            self.assertEqual(action_activity_mix_text(lab02_interactive, outputs), "Activity mix: Not run yet")
+
+            run_path = outputs / "run_lab02_interactive"
+            run_path.mkdir()
+            (run_path / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": lab02_interactive.lab_name,
+                        "config_path": lab02_interactive.config_path,
+                        "config_name": Path(lab02_interactive.config_path).stem,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (run_path / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {"kind": "preset", "name": "gentle_p", "label": "Gentle P"},
+                        {"kind": "slider", "name": "kp", "label": "Kp", "value": 40.0},
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {"prediction": "More gain should overshoot.", "note": "Overshoot increased."},
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            text = action_activity_mix_text(lab02_interactive, outputs)
+            self.assertIn("Activity mix: 2/3 control families", text)
+            self.assertIn("buttons 0, sliders 1, presets 1, markers 1", text)
+            self.assertIn("Use one button control such as pulse, nudge, pause", text)
+            self.assertIn(text, lesson_text(lab02_interactive, outputs))
 
     def test_action_mission_evidence_summarizes_latest_proof_status(self) -> None:
         lab02_interactive = next(
