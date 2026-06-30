@@ -1142,7 +1142,7 @@ def _worksheet_control_coverage_lines(events: list[dict[str, Any]], config: dict
     if has_sliders:
         checks.append(("Move one live slider to test a smaller parameter change.", counts.get("slider", 0)))
     if has_buttons:
-        checks.append(("Use one experiment button such as pulse, nudge, or reset.", counts.get("button", 0)))
+        checks.append((_activity_button_next_step(config), counts.get("button", 0)))
     checks.append(("Save one Mark observation with prediction and note.", complete_observation_markers))
     lines = ["", "Control coverage checklist:"]
     for label, count in checks:
@@ -3522,6 +3522,7 @@ def _activity_mix_items(events: list[dict[str, Any]], config: dict[str, Any] | N
     next_step = _activity_mix_next_step(
         counts,
         observation_markers,
+        config=config,
         has_buttons=has_buttons,
         has_sliders=has_sliders,
         has_presets=has_presets,
@@ -3598,6 +3599,7 @@ def _activity_mix_next_step(
     counts: dict[str, int],
     observation_markers: int,
     *,
+    config: dict[str, Any] | None = None,
     has_buttons: bool = True,
     has_sliders: bool = True,
     has_presets: bool = True,
@@ -3609,10 +3611,29 @@ def _activity_mix_next_step(
             return "Move one slider after a preset to test a smaller parameter change."
         return "Move one live slider to test a smaller parameter change."
     if has_buttons and counts.get("button", 0) <= 0:
-        return "Use one experiment button such as pulse, nudge, or reset."
+        return _activity_button_next_step(config)
     if observation_markers <= 0:
         return "Save one Mark observation with prediction and live-status evidence."
     return "Ready: compare this interaction mix against plots and the worksheet."
+
+
+def _activity_button_next_step(config: dict[str, Any] | None = None) -> str:
+    interaction = config.get("interaction") if isinstance(config, dict) else None
+    if not isinstance(interaction, dict):
+        return "Use one experiment button such as pulse, nudge, or reset."
+    if bool(interaction.get("key_force", False)):
+        return "Use Pull/Push buttons to apply a force pulse."
+    if bool(interaction.get("joint_disturbance", False)):
+        return "Use Shoulder/Elbow pulse buttons to disturb a joint."
+    if bool(interaction.get("target_nudge", False)):
+        left = str(interaction.get("target_left_label") or "").strip()
+        right = str(interaction.get("target_right_label") or "").strip()
+        if left and right:
+            return f"Use {left} / {right} target buttons."
+        return "Use target nudge buttons to move the commanded target."
+    if bool(interaction.get("reset_plant", interaction.get("reset_experiment", False))):
+        return "Use Reset plant after changing a control to repeat the observation."
+    return "Use one experiment button such as pulse, nudge, or reset."
 
 
 def _latest_named_event_values(events: list[dict[str, Any]], kind: str) -> list[tuple[str, Any]]:

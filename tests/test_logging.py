@@ -560,7 +560,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("- Interaction variety: 1/1 control families", worksheet_text)
             self.assertNotIn("- [ ] Move one live slider", worksheet_text)
             self.assertIn(
-                "- [x] Use one experiment button such as pulse, nudge, or reset. (1 recorded)",
+                "- [x] Use target nudge buttons to move the commanded target. (1 recorded)",
                 worksheet_text,
             )
             self.assertIn("- [x] Save one Mark observation with prediction and note. (1 recorded)", worksheet_text)

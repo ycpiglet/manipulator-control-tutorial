@@ -1806,7 +1806,7 @@ class LearnerMenuTests(unittest.TestCase):
             text = action_activity_mix_text(lab02_interactive, outputs)
             self.assertIn("Activity mix: 2/3 control families", text)
             self.assertIn("buttons 0, sliders 1, presets 1, markers 1", text)
-            self.assertIn("Use one experiment button such as pulse, nudge, or reset", text)
+            self.assertIn("Use Pull/Push buttons to apply a force pulse", text)
             self.assertIn(
                 "path preset: Gentle P -> slider: Kp -> observation: Mark observation",
                 text,
