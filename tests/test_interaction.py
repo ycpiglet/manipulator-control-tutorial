@@ -1225,6 +1225,11 @@ class KeyForcePulseTests(unittest.TestCase):
                     "1. predict how Tracking error will change; 2. change controller.kp; "
                     "3. mark one observation with Tracking error.",
                 ),
+                (
+                    "Challenge",
+                    "Use controller.kp to create a visible change in Tracking error, "
+                    "then save one prediction-backed observation.",
+                ),
                 ("Try", "Move the slider."),
                 ("Change", "controller.kp"),
                 (

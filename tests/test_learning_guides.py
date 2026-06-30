@@ -9,6 +9,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from mclab.learning_guides import (  # noqa: E402
     RUN_GUIDES,
+    challenge_prompt_for_guide,
     guide_for_config,
     guide_for_run_summary,
     mission_prompt_for_guide,
@@ -38,6 +39,7 @@ class LearningGuideTests(unittest.TestCase):
                 self.assertTrue(guide.next_step)
                 self.assertTrue(mission_prompt_for_guide(guide).startswith("Mission: "))
                 self.assertTrue(playbook_for_guide(guide).startswith("Playbook: "))
+                self.assertTrue(challenge_prompt_for_guide(guide).startswith("Challenge: "))
                 self.assertTrue(question_for_guide(guide).startswith("Question: "))
                 self.assertTrue(observation_prompt_for_guide(guide).startswith("Evidence to capture: "))
                 self.assertTrue(prediction_prompt_for_guide(guide).startswith("Prediction: "))
@@ -90,6 +92,7 @@ class LearningGuideTests(unittest.TestCase):
         self.assertIn("Live target", prompt)
         self.assertEqual(mission_prompt_for_guide(None), "")
         self.assertEqual(playbook_for_guide(None), "")
+        self.assertEqual(challenge_prompt_for_guide(None), "")
         self.assertEqual(prediction_prompt_for_guide(None), "")
 
     def test_playbook_guides_predict_action_and_evidence(self) -> None:
@@ -103,6 +106,18 @@ class LearningGuideTests(unittest.TestCase):
         self.assertIn("predict how", playbook)
         self.assertIn("change live sliders/presets", playbook)
         self.assertIn("mark one observation", playbook)
+
+    def test_challenge_guides_visible_evidence_goal(self) -> None:
+        guide = guide_for_config(config_path="configs/lab04_panda/interactive_virtual_wall.yaml")
+
+        self.assertIsNotNone(guide)
+        assert guide is not None
+        challenge = challenge_prompt_for_guide(guide)
+
+        self.assertIn("Challenge:", challenge)
+        self.assertIn("Use live sliders/presets", challenge)
+        self.assertIn("visible change", challenge)
+        self.assertIn("prediction-backed observation", challenge)
 
     def test_viewer_legend_matches_visible_guides(self) -> None:
         lab01_guide = guide_for_config(config_path="configs/lab01_msd/interactive_pull.yaml")

@@ -12,6 +12,7 @@ from mclab.config import load_config
 from mclab.course_progress import course_milestone_label_for_step_index, course_milestone_summary
 from mclab.learning_guides import (
     RunGuide,
+    challenge_prompt_for_guide,
     guide_for_config,
     guide_for_run_summary,
     mission_prompt_for_guide,
@@ -877,6 +878,7 @@ def _worksheet_learning_guide_lines(guide: RunGuide | None, summary: dict[str, A
         ("Done when", completion_text.removeprefix("Done when:").strip()),
         ("Mission", mission_prompt_for_guide(guide).removeprefix("Mission:").strip()),
         ("Playbook", playbook_for_guide(guide).removeprefix("Playbook:").strip()),
+        ("Challenge", challenge_prompt_for_guide(guide).removeprefix("Challenge:").strip()),
         ("Try", guide.try_this),
         ("Change", guide.change),
         ("Prediction", prediction_prompt_for_guide(guide).removeprefix("Prediction:").strip()),
@@ -1777,6 +1779,7 @@ def _learning_guide_section(guide: RunGuide | None, summary: dict[str, Any]) -> 
         ("Done when", _run_completion_text(summary).removeprefix("Done when:").strip()),
         ("Mission", mission_prompt_for_guide(guide).removeprefix("Mission:").strip()),
         ("Playbook", playbook_for_guide(guide).removeprefix("Playbook:").strip()),
+        ("Challenge", challenge_prompt_for_guide(guide).removeprefix("Challenge:").strip()),
         ("Try", guide.try_this),
         ("Change", guide.change),
         ("Prediction", prediction_prompt_for_guide(guide).removeprefix("Prediction:").strip()),

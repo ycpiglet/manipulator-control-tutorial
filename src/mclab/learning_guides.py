@@ -99,6 +99,34 @@ def playbook_for_guide(guide: RunGuide | None) -> str:
     return f"Playbook: 1. {predict}; 2. {action}; 3. {evidence}."
 
 
+def challenge_prompt_for_guide(guide: RunGuide | None) -> str:
+    if guide is None:
+        return ""
+    watch = _playbook_watch_reference(_short_sentence(guide.watch, 72))
+    change = _short_sentence(guide.change, 72)
+    try_this = _short_sentence(guide.try_this, 72)
+    context = " ".join((guide.title, guide.try_this, guide.change, guide.next_step)).lower()
+    hands_on = any(term in context for term in ("interactive", "live", "slider", "preset", "button", "pulse", "nudge"))
+
+    if hands_on and change and watch:
+        return (
+            f"Challenge: Use {change} to create a visible change in {watch}, "
+            "then save one prediction-backed observation."
+        )
+    if hands_on and watch:
+        return (
+            f"Challenge: Use the available controls to make {watch} change visibly, "
+            "then save one prediction-backed observation."
+        )
+    if change and watch:
+        return f"Challenge: Explain how {change} should change {watch}, then verify it in the saved plot and worksheet."
+    if try_this and watch:
+        return f"Challenge: Run the demo and find the first plot segment that proves {watch}."
+    if try_this:
+        return "Challenge: Run the demo and write one thing that changed."
+    return ""
+
+
 def _playbook_prediction_step(watch: str) -> str:
     if not watch:
         return "predict the visible response"

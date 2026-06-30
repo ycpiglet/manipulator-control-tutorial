@@ -17,6 +17,7 @@ from mclab.batch import ALL_BATCH_NAME, BATCH_SETS
 from mclab.config import PROJECT_ROOT, load_config
 from mclab.course_progress import course_milestone_summary
 from mclab.learning_guides import (
+    challenge_prompt_for_guide,
     guide_for_config,
     playbook_for_guide,
     prediction_prompt_for_guide,
@@ -2558,6 +2559,19 @@ def action_playbook_text(action: MenuAction | BatchMenuAction) -> str:
     return "Playbook: 1. predict the response; 2. run the scenario; 3. review the saved plot and worksheet."
 
 
+def action_challenge_text(action: MenuAction | BatchMenuAction) -> str:
+    if isinstance(action, BatchMenuAction):
+        return (
+            "Challenge: Choose the scenario you expect to show the strongest effect before running, "
+            "then mark the Prediction Check outcome in the worksheet."
+        )
+    guide = guide_for_config(config_path=action.config_path, lab_name=action.lab_name)
+    challenge = challenge_prompt_for_guide(guide)
+    if challenge:
+        return challenge
+    return "Challenge: Run the scenario, name one visible change, and point to the plot or observation that proves it."
+
+
 def _batch_scenario_count(action: BatchMenuAction) -> int:
     if action.batch_name == ALL_BATCH_NAME:
         return sum(len(scenarios) for scenarios in BATCH_SETS.values())
@@ -2824,6 +2838,7 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
         f"{action_plan_text(action)}\n"
         f"{action_mission_text(action)}\n"
         f"{action_playbook_text(action)}\n"
+        f"{action_challenge_text(action)}\n"
         f"{action_history_text(action, outputs_root)}\n"
         f"{action_evidence_text(action, outputs_root)}\n"
         f"{action_latest_evidence_text(action, outputs_root)}\n"
@@ -3085,8 +3100,10 @@ def _action_matches_terms(action: MenuAction, terms: list[str]) -> bool:
         action_plan_text(action),
         action_mission_text(action),
         action_playbook_text(action),
+        action_challenge_text(action),
         "mission evidence artifact observation prediction outcome note proof",
         "playbook predict change mark review worksheet",
+        "challenge visible effect prove strongest effect",
         "next cue run preset observation outcome replay compare",
         " ".join(configured_preset_labels(action.config_path)),
         " ".join(configured_preset_purposes(action.config_path)),
@@ -3950,6 +3967,7 @@ def lesson_text_for_batch(action: BatchMenuAction, outputs_root: Path | None = N
         f"{batch_plan_text(action)}\n"
         f"{action_mission_text(action)}\n"
         f"{action_playbook_text(action)}\n"
+        f"{action_challenge_text(action)}\n"
         f"{action_history_text(action, outputs_root)}\n"
         f"{action_mission_evidence_text(action, outputs_root)}\n"
         f"{action_plot_text(action, outputs_root)}\n"
