@@ -634,6 +634,7 @@ def _render_worksheet(
     lines.extend(_worksheet_learning_guide_lines(guide, summary))
     lines.extend(_worksheet_mission_evidence_lines(summary, interaction_events, plots))
     lines.extend(_worksheet_pairs_section("Key Parameters", _config_highlight_pairs(config)))
+    lines.extend(_worksheet_key_moments_lines(summary))
     lines.extend(_worksheet_pairs_section("Summary Values", list(summary.items())))
     lines.extend(_worksheet_plot_review_lines(output, plots))
     lines.extend(_worksheet_observation_lines(interaction_events))
@@ -689,6 +690,24 @@ def _worksheet_pairs_section(title: str, pairs: list[tuple[str, Any]]) -> list[s
         lines.extend(["- No values saved.", ""])
         return lines
     lines.extend(_worksheet_mapping_lines(dict(pairs)))
+    lines.append("")
+    return lines
+
+
+def _worksheet_key_moments_lines(summary: dict[str, Any]) -> list[str]:
+    moments = _key_moment_rows(summary)
+    if not moments:
+        return []
+    lines = [
+        "## Key Moments",
+        "",
+        "- Use these timestamps with the saved plots before reading every trace.",
+    ]
+    for title, time_value, value_label, value, detail in moments:
+        lines.append(
+            f"- {_markdown_inline(title)}: time {_markdown_inline(time_value)} s; "
+            f"{_markdown_inline(value_label)}: {_markdown_inline(value)}. {_markdown_inline(detail)}"
+        )
     lines.append("")
     return lines
 

@@ -21,7 +21,7 @@ Read the plots in this order:
 4. `end_effector.png`: check how the joint motion moved the hand in Cartesian space.
 5. `cartesian_error.png`: for Cartesian reach, check whether the hand reached the XYZ target.
 
-For the virtual wall demos, also check `virtual_wall.png` for wall force, penetration, and retreat distance. The report's `Key Moments` section lists first contact, peak penetration, peak force, peak damping force, peak hand speed, and peak Cartesian error timestamps so learners can jump directly to the important parts of the plots. The same wall moments are drawn as dashed vertical markers on the saved wall plots.
+For the virtual wall demos, also check `virtual_wall.png` for wall force, penetration, and retreat distance. The report and `worksheet.md` `Key Moments` sections list first contact, peak penetration, peak force, peak damping force, peak hand speed, and peak Cartesian error timestamps so learners can jump directly to the important parts of the plots. The same wall moments are drawn as dashed vertical markers on the saved wall plots.
 
 The MuJoCo viewer side panels are not the main control interface for this lab. The Python simulation loop writes actuator `ctrl` values from the YAML target at every step. If you edit actuator controls in the viewer, the loop overwrites them during the run; after `--pause-at-end`, physics stepping has stopped. Viewer side panels are hidden by default, and learner-facing interaction uses the `MCLab Interaction` window instead.
 

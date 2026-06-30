@@ -678,6 +678,14 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Peak Cartesian error", html)
             self.assertIn("check-inspect", html)
             self.assertIn("check-observed", html)
+            worksheet_text = (output / "worksheet.md").read_text(encoding="utf-8")
+            self.assertIn("## Key Moments", worksheet_text)
+            self.assertIn("First wall contact: time 1.4 s; Contact duration [s]: 2.2.", worksheet_text)
+            self.assertIn("Peak wall penetration: time 2.1 s; Penetration [cm]: 1.2.", worksheet_text)
+            self.assertIn("Peak wall force: time 2.2 s; Wall force: 22.", worksheet_text)
+            self.assertIn("Peak damping force: time 1.8 s; Damping force: 4.", worksheet_text)
+            self.assertIn("Peak hand speed: time 1.7 s; Hand speed [m/s]: 0.34.", worksheet_text)
+            self.assertIn("Peak Cartesian error: time 0.6 s; Error [cm]: 1.6.", worksheet_text)
 
     def test_run_report_updates_parent_outputs_index(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
