@@ -103,6 +103,7 @@ from mclab.learner_menu import (  # noqa: E402
     launch_latest_output,
     latest_output_button_labels,
     latest_saved_output,
+    latest_output_status_text,
     initialize_latest_output_state,
     next_review_output,
     next_learning_path_step,
@@ -2983,6 +2984,29 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(report_button.state_calls[-1], ["!disabled"])
         self.assertEqual(plot_button.state_calls[-1], ["!disabled"])
         self.assertEqual(worksheet_button.state_calls[-1], ["!disabled"])
+
+    def test_latest_output_status_text_summarizes_restored_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output_path = Path(tmp) / "run_lab01"
+            plot_dir = output_path / "plots"
+            plot_dir.mkdir(parents=True)
+            (output_path / "summary.json").write_text(
+                json.dumps({"lab_name": "lab01_msd", "config_path": "configs/lab01_msd/default.yaml"}),
+                encoding="utf-8",
+            )
+            (plot_dir / "energy.png").write_bytes(b"fake-png")
+            (plot_dir / "position.png").write_bytes(b"fake-png")
+            (output_path / "worksheet.md").write_text("# Worksheet\n", encoding="utf-8")
+
+            text = latest_output_status_text(output_path)
+
+        self.assertEqual(
+            text,
+            "Ready. Latest saved output: run_lab01. Plot: position.png. Worksheet: worksheet.md.",
+        )
+
+    def test_latest_output_status_text_reports_empty_startup_state(self) -> None:
+        self.assertEqual(latest_output_status_text(None), "Ready.")
 
     def test_initialize_latest_output_state_keeps_buttons_disabled_without_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

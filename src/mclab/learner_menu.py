@@ -1505,6 +1505,18 @@ def latest_output_button_labels(output_path: Path | None) -> dict[str, str]:
     }
 
 
+def latest_output_status_text(output_path: Path | None) -> str:
+    if output_path is None:
+        return "Ready."
+    latest_plot = latest_output_plot(output_path)
+    latest_worksheet = latest_output_worksheet(output_path)
+    plot_text = f"Plot: {latest_plot.name}." if latest_plot is not None else "No plot yet."
+    worksheet_text = (
+        f"Worksheet: {latest_worksheet.name}." if latest_worksheet is not None else "No worksheet yet."
+    )
+    return f"Ready. Latest saved output: {output_path.name}. {plot_text} {worksheet_text}"
+
+
 def latest_saved_output(outputs_root: Path | None = None) -> Path | None:
     root = outputs_root if outputs_root is not None else PROJECT_ROOT / "outputs"
     if not root.exists():
@@ -3860,12 +3872,13 @@ def main() -> int:
     )
     latest_worksheet_button.pack(side="left", padx=(8, 0))
     latest_worksheet_button.state(["disabled"])
-    initialize_latest_output_state(
+    restored_latest_output = initialize_latest_output_state(
         latest_output,
         latest_button=latest_button,
         latest_plot_button=latest_plot_button,
         latest_worksheet_button=latest_worksheet_button,
     )
+    status.set(latest_output_status_text(restored_latest_output))
     ttk.Label(bottom, textvariable=status).pack(side="left", padx=12)
 
     def render_actions(*_args: Any) -> None:
