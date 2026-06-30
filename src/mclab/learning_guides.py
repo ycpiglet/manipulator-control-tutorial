@@ -75,7 +75,7 @@ def playbook_for_guide(guide: RunGuide | None) -> str:
     context = " ".join((guide.title, guide.try_this, guide.change, guide.next_step)).lower()
     hands_on = any(term in context for term in ("interactive", "live", "slider", "preset", "button", "pulse", "nudge"))
 
-    predict = f"predict how {watch} will change" if watch else "predict the visible response"
+    predict = _playbook_prediction_step(watch)
     if hands_on and change:
         action = f"change {change}"
     elif try_this:
@@ -85,11 +85,36 @@ def playbook_for_guide(guide: RunGuide | None) -> str:
     else:
         action = "run the scenario"
 
+    watch_reference = _playbook_watch_reference(watch)
     if hands_on:
-        evidence = f"mark one observation with {watch}" if watch else "mark one observation with live evidence"
+        evidence = (
+            f"mark one observation with {watch_reference}" if watch_reference else "mark one observation with live evidence"
+        )
     else:
-        evidence = f"review the saved plot and worksheet for {watch}" if watch else "review the saved plot and worksheet"
+        evidence = (
+            f"review the saved plot and worksheet for {watch_reference}"
+            if watch_reference
+            else "review the saved plot and worksheet"
+        )
     return f"Playbook: 1. {predict}; 2. {action}; 3. {evidence}."
+
+
+def _playbook_prediction_step(watch: str) -> str:
+    if not watch:
+        return "predict the visible response"
+    lowered = watch.lower()
+    if lowered.startswith(("how ", "what ", "which ", "whether ")):
+        return f"predict {_playbook_watch_reference(watch)}"
+    return f"predict how {watch} will change"
+
+
+def _playbook_watch_reference(watch: str) -> str:
+    if not watch:
+        return ""
+    lowered = watch.lower()
+    if lowered.startswith(("how ", "what ", "which ", "whether ")):
+        return f"{watch[:1].lower()}{watch[1:]}"
+    return watch
 
 
 def viewer_legend_for_guide(guide: RunGuide | None) -> list[tuple[str, str]]:

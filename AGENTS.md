@@ -128,7 +128,7 @@ Implemented and verified:
 - Learner menu scenario cards include a `Controls` summary of actual buttons, sliders, presets, pause/step, reset, and observation controls
 - Learner menu scenario and batch cards include a `Plan` line with level, mode, run length, and saved artifacts
 - Learner menu scenario, batch, and learning-path cards include a `Mission` line that turns Try/Change/Watch guidance into one evidence-focused task
-- Learner menu scenario and batch cards plus the live interaction panel include a `Playbook` line that turns each demo into predict, manipulate, and evidence-review steps
+- Learner menu scenario and batch cards, the live interaction panel, run reports, and worksheets include a `Playbook` line that turns each demo into predict, manipulate, and evidence-review steps
 - Learner menu scenario and batch cards include `Mission evidence` proof status from the latest run before opening the report
 - Learner menu batch cards include a `Prediction check` cue that points learners to the saved worksheet outcome table
 - Learner menu scenario cards include a `Latest evidence` summary from the latest observation marker prediction, outcome, note, and live status
