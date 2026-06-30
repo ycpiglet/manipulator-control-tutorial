@@ -816,7 +816,7 @@ class KeyForcePulseTests(unittest.TestCase):
         log.mark_observation(note="The response settled.")
         self.assertEqual(
             _observation_marker_status_message(log, "", "The response settled."),
-            "Marked observation 1 - add a prediction next time to complete the learning path.",
+            "Marked observation 1 - add a prediction next time; use one button, slider, or preset to complete the learning path.",
         )
 
         log.mark_observation(prediction="A softer preset should reduce force.")
@@ -827,7 +827,8 @@ class KeyForcePulseTests(unittest.TestCase):
                 "",
                 "needs another preset",
             ),
-            "Marked observation 2 - add a short note or Use live status; try another preset to complete the learning path.",
+            "Marked observation 2 - use one button, slider, or preset; add a short note or Use live status; "
+            "try another preset to complete the learning path.",
         )
 
         log.mark_observation(prediction="Backing away should release contact.")
@@ -838,9 +839,11 @@ class KeyForcePulseTests(unittest.TestCase):
                 "",
                 "needs required preset Back away",
             ),
-            "Marked observation 3 - add a short note or Use live status; try required preset Back away to complete the learning path.",
+            "Marked observation 3 - use one button, slider, or preset; add a short note or Use live status; "
+            "try required preset Back away to complete the learning path.",
         )
 
+        log.record("slider", "damping", 4.0, label="Damping")
         log.mark_observation(prediction="More damping should settle faster.", note="Energy dropped.")
         self.assertEqual(
             _observation_marker_status_message(log, "More damping should settle faster.", "Energy dropped."),
@@ -850,11 +853,16 @@ class KeyForcePulseTests(unittest.TestCase):
     def test_observation_checklist_status_guides_before_marking(self) -> None:
         self.assertEqual(
             _observation_checklist_status("", "Not judged yet", ""),
-            "Evidence checklist: Prediction missing; Outcome optional; Note recommended.",
+            "Evidence checklist: Prediction missing; Control needed; Outcome optional; Note recommended.",
         )
         self.assertEqual(
-            _observation_checklist_status("More damping should settle faster.", "Matched", "Energy dropped."),
-            "Evidence checklist: Prediction ready; Outcome selected; Note ready.",
+            _observation_checklist_status(
+                "More damping should settle faster.",
+                "Matched",
+                "Energy dropped.",
+                learner_controls=1,
+            ),
+            "Evidence checklist: Prediction ready; Control tried; Outcome selected; Note ready.",
         )
         self.assertEqual(
             _observation_checklist_status(
@@ -862,8 +870,10 @@ class KeyForcePulseTests(unittest.TestCase):
                 "Matched",
                 "Energy dropped.",
                 preset_state="needs another preset",
+                learner_controls=1,
             ),
-            "Evidence checklist: Prediction ready; Preset comparison needs another preset; Outcome selected; Note ready.",
+            "Evidence checklist: Prediction ready; Control tried; Preset comparison needs another preset; "
+            "Outcome selected; Note ready.",
         )
         self.assertEqual(
             _observation_checklist_status(
@@ -871,8 +881,10 @@ class KeyForcePulseTests(unittest.TestCase):
                 "Matched",
                 "Wall phase returned before contact.",
                 preset_state="needs required preset Back away",
+                learner_controls=1,
             ),
-            "Evidence checklist: Prediction ready; Preset comparison needs required preset Back away; Outcome selected; Note ready.",
+            "Evidence checklist: Prediction ready; Control tried; Preset comparison needs required preset Back away; "
+            "Outcome selected; Note ready.",
         )
         self.assertEqual(
             _observation_checklist_status(
@@ -880,14 +892,15 @@ class KeyForcePulseTests(unittest.TestCase):
                 "Matched",
                 "Energy dropped.",
                 preset_state="ready",
+                learner_controls=1,
             ),
-            "Evidence checklist: Prediction ready; Preset comparison ready; Outcome selected; Note ready.",
+            "Evidence checklist: Prediction ready; Control tried; Preset comparison ready; Outcome selected; Note ready.",
         )
 
     def test_observation_evidence_quality_summarizes_review_readiness(self) -> None:
         self.assertEqual(
             _observation_evidence_quality("", "Not judged yet", ""),
-            "Evidence quality: incomplete - add prediction, note.",
+            "Evidence quality: incomplete - add prediction, learner control, note.",
         )
         self.assertEqual(
             _observation_evidence_quality(
@@ -895,22 +908,33 @@ class KeyForcePulseTests(unittest.TestCase):
                 "Not judged yet",
                 "Force increased.",
                 preset_state="needs required preset Back away",
+                learner_controls=1,
             ),
             "Evidence quality: incomplete - add preset comparison.",
         )
         self.assertEqual(
-            _observation_evidence_quality("More damping should settle faster.", "Not judged yet", "Energy dropped."),
+            _observation_evidence_quality(
+                "More damping should settle faster.",
+                "Not judged yet",
+                "Energy dropped.",
+                learner_controls=1,
+            ),
             "Evidence quality: ready to mark - add outcome now or during review.",
         )
         self.assertEqual(
-            _observation_evidence_quality("More damping should settle faster.", "Matched", "Energy dropped."),
+            _observation_evidence_quality(
+                "More damping should settle faster.",
+                "Matched",
+                "Energy dropped.",
+                learner_controls=1,
+            ),
             "Evidence quality: review-ready - prediction, outcome, note, and required controls are ready.",
         )
 
     def test_observation_next_action_names_the_next_learner_step(self) -> None:
         self.assertEqual(
             _observation_next_action("", "Not judged yet", ""),
-            "Next action: Write a prediction before pressing Mark observation.",
+            "Next action: Write a prediction, then use one button, slider, or preset.",
         )
         self.assertEqual(
             _observation_next_action("", "Not judged yet", "", preset_state="needs required preset Close wall"),
@@ -922,19 +946,39 @@ class KeyForcePulseTests(unittest.TestCase):
                 "Not judged yet",
                 "",
                 preset_state="needs required preset Back away",
+                learner_controls=1,
             ),
             "Next action: Try required preset Back away, then capture the result.",
         )
         self.assertEqual(
             _observation_next_action("Stiff wall should push harder.", "Not judged yet", ""),
+            "Next action: Use one button, slider, or preset, then capture the result.",
+        )
+        self.assertEqual(
+            _observation_next_action(
+                "Stiff wall should push harder.",
+                "Not judged yet",
+                "",
+                learner_controls=1,
+            ),
             "Next action: Use live status or write a short observation note.",
         )
         self.assertEqual(
-            _observation_next_action("Stiff wall should push harder.", "Not judged yet", "Force increased."),
+            _observation_next_action(
+                "Stiff wall should push harder.",
+                "Not judged yet",
+                "Force increased.",
+                learner_controls=1,
+            ),
             "Next action: Optional: choose a prediction outcome, then press Mark observation.",
         )
         self.assertEqual(
-            _observation_next_action("Stiff wall should push harder.", "Matched", "Force increased."),
+            _observation_next_action(
+                "Stiff wall should push harder.",
+                "Matched",
+                "Force increased.",
+                learner_controls=1,
+            ),
             "Next action: Press Mark observation.",
         )
 
@@ -1155,7 +1199,11 @@ class KeyForcePulseTests(unittest.TestCase):
                 ("Mission", "Move the slider; prove it with Tracking error."),
                 ("Try", "Move the slider."),
                 ("Change", "controller.kp"),
-                ("Done when", "write a Prediction and note, choose an outcome if known, then press Mark observation."),
+                (
+                    "Done when",
+                    "use at least one button, slider, or preset, then write a Prediction and note, "
+                    "choose an outcome if known, and press Mark observation.",
+                ),
                 ("Prediction", "Before changing controller.kp, predict how Tracking error will change."),
                 ("Question", "Which gain gives the cleanest response?"),
                 ("Watch", "Tracking error."),

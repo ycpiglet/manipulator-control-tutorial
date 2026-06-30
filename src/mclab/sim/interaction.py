@@ -1122,12 +1122,15 @@ def maybe_start_interaction_panel(
                 marker_outcome = tk.StringVar(value=PREDICTION_OUTCOME_UNJUDGED)
                 marker_note = tk.StringVar(value="")
                 marker_note_preview = tk.StringVar(value=_observation_note_preview(marker_note.get()))
+                controls_available = activity_has_buttons or activity_has_sliders or activity_has_presets
                 marker_checklist = tk.StringVar(
                     value=_observation_checklist_status(
                         "",
                         PREDICTION_OUTCOME_UNJUDGED,
                         "",
                         preset_state=tuning.preset_checklist_state() if tuning is not None else "",
+                        learner_controls=_learner_control_event_count(event_log.events()),
+                        controls_available=controls_available,
                     )
                 )
                 marker_quality = tk.StringVar(
@@ -1136,6 +1139,8 @@ def maybe_start_interaction_panel(
                         PREDICTION_OUTCOME_UNJUDGED,
                         "",
                         preset_state=tuning.preset_checklist_state() if tuning is not None else "",
+                        learner_controls=_learner_control_event_count(event_log.events()),
+                        controls_available=controls_available,
                     )
                 )
                 marker_next_action = tk.StringVar(
@@ -1144,6 +1149,8 @@ def maybe_start_interaction_panel(
                         PREDICTION_OUTCOME_UNJUDGED,
                         "",
                         preset_state=tuning.preset_checklist_state() if tuning is not None else "",
+                        learner_controls=_learner_control_event_count(event_log.events()),
+                        controls_available=controls_available,
                     )
                 )
                 activity_mix_status = tk.StringVar(
@@ -1159,12 +1166,15 @@ def maybe_start_interaction_panel(
 
                 def update_marker_checklist(*_args: Any) -> None:
                     preset_state = tuning.preset_checklist_state() if tuning is not None else ""
+                    learner_controls = _learner_control_event_count(event_log.events())
                     marker_checklist.set(
                         _observation_checklist_status(
                             marker_prediction.get(),
                             marker_outcome.get(),
                             marker_note.get(),
                             preset_state=preset_state,
+                            learner_controls=learner_controls,
+                            controls_available=controls_available,
                         )
                     )
                     marker_quality.set(
@@ -1173,6 +1183,8 @@ def maybe_start_interaction_panel(
                             marker_outcome.get(),
                             marker_note.get(),
                             preset_state=preset_state,
+                            learner_controls=learner_controls,
+                            controls_available=controls_available,
                         )
                     )
                     marker_next_action.set(
@@ -1181,6 +1193,8 @@ def maybe_start_interaction_panel(
                             marker_outcome.get(),
                             marker_note.get(),
                             preset_state=preset_state,
+                            learner_controls=learner_controls,
+                            controls_available=controls_available,
                         )
                     )
                     marker_note_preview.set(_observation_note_preview(marker_note.get()))
@@ -1195,6 +1209,7 @@ def maybe_start_interaction_panel(
                         )
                     )
                     recent_action_status.set(_recent_action_status_message(event_log))
+                    update_marker_checklist()
                     root.after(300, refresh_activity_mix_status)
 
                 refresh_marker_checklist_callback = update_marker_checklist
@@ -1238,7 +1253,15 @@ def maybe_start_interaction_panel(
                     marker_prediction.set("")
                     marker_outcome.set(PREDICTION_OUTCOME_UNJUDGED)
                     marker_note.set("")
-                    marker_status.set(_observation_marker_status_message(event_log, prediction, note, preset_state))
+                    marker_status.set(
+                        _observation_marker_status_message(
+                            event_log,
+                            prediction,
+                            note,
+                            preset_state,
+                            controls_available=controls_available,
+                        )
+                    )
 
                 marker_row = 0
                 if marker_prompt:
@@ -1440,7 +1463,10 @@ def _panel_guide_rows(guide: Any | None) -> list[tuple[str, str]]:
 
 
 def _panel_completion_text() -> str:
-    return "write a Prediction and note, choose an outcome if known, then press Mark observation."
+    return (
+        "use at least one button, slider, or preset, then write a Prediction and note, "
+        "choose an outcome if known, and press Mark observation."
+    )
 
 
 def _panel_viewer_legend_rows(guide: Any | None) -> list[tuple[str, str]]:
@@ -1493,6 +1519,10 @@ def _activity_event_kind_counts(events: list[dict[str, Any]]) -> dict[str, int]:
         kind = str(event.get("kind", "") or "unknown").lower()
         counts[kind] = counts.get(kind, 0) + 1
     return counts
+
+
+def _learner_control_event_count(events: list[dict[str, Any]]) -> int:
+    return sum(1 for event in events if str(event.get("kind") or "").strip().lower() in {"button", "slider", "preset"})
 
 
 def _activity_mix_next_step(
@@ -1587,11 +1617,15 @@ def _observation_marker_status_message(
     prediction: str,
     note: str = "",
     preset_state: str = "",
+    *,
+    controls_available: bool = True,
 ) -> str:
     count = _observation_marker_count(event_log)
     missing: list[str] = []
     if not prediction.strip():
         missing.append("add a prediction next time")
+    if controls_available and _learner_control_event_count(event_log.events()) <= 0:
+        missing.append("use one button, slider, or preset")
     if not note.strip():
         missing.append("add a short note or Use live status")
     preset_followup = _preset_state_followup(preset_state)
@@ -1623,14 +1657,21 @@ def _observation_checklist_status(
     note: str,
     *,
     preset_state: str = "",
+    learner_controls: int = 0,
+    controls_available: bool = True,
 ) -> str:
     prediction_state = "ready" if prediction.strip() else "missing"
+    control_text = ""
+    if controls_available:
+        control_state = "tried" if learner_controls > 0 else "needed"
+        control_text = f"Control {control_state}; "
     outcome_state = "selected" if _prediction_outcome_value(outcome) else "optional"
     note_state = "ready" if note.strip() else "recommended"
     preset_text = f"Preset comparison {preset_state}; " if preset_state else ""
     return (
         "Evidence checklist: "
         f"Prediction {prediction_state}; "
+        f"{control_text}"
         f"{preset_text}"
         f"Outcome {outcome_state}; "
         f"Note {note_state}."
@@ -1643,10 +1684,14 @@ def _observation_evidence_quality(
     note: str,
     *,
     preset_state: str = "",
+    learner_controls: int = 0,
+    controls_available: bool = True,
 ) -> str:
     missing: list[str] = []
     if not prediction.strip():
         missing.append("prediction")
+    if controls_available and learner_controls <= 0:
+        missing.append("learner control")
     if _preset_state_followup(preset_state):
         missing.append("preset comparison")
     if not note.strip():
@@ -1664,14 +1709,21 @@ def _observation_next_action(
     note: str,
     *,
     preset_state: str = "",
+    learner_controls: int = 0,
+    controls_available: bool = True,
 ) -> str:
     preset_followup = _preset_state_followup(preset_state)
+    control_followup = "use one button, slider, or preset" if controls_available and learner_controls <= 0 else ""
     if not prediction.strip() and preset_followup:
         return f"Next action: Write a prediction, then {preset_followup}."
+    if not prediction.strip() and control_followup:
+        return f"Next action: Write a prediction, then {control_followup}."
     if not prediction.strip():
         return "Next action: Write a prediction before pressing Mark observation."
     if preset_followup:
         return f"Next action: {_sentence_start(preset_followup)}, then capture the result."
+    if control_followup:
+        return "Next action: Use one button, slider, or preset, then capture the result."
     if not note.strip():
         return "Next action: Use live status or write a short observation note."
     if not _prediction_outcome_value(outcome):
