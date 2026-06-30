@@ -4877,6 +4877,7 @@ def _learning_path_card(item: dict[str, Any]) -> str:
     step: IndexPathStep = item["step"]
     run = item["run"]
     quick_links = _learning_path_quick_links(run)
+    plot_review = _learning_path_plot_review(run)
     latest_evidence = _learning_path_latest_evidence(run)
     observation_flow = _learning_path_observation_flow(run)
     observation_next_step = _learning_path_observation_next_step(run)
@@ -4972,6 +4973,7 @@ def _learning_path_card(item: dict[str, Any]) -> str:
         f"{mission_evidence}"
         f"{challenge_evidence}"
         f"{quick_links}"
+        f"{plot_review}"
         f"{command_block}"
         "</article>"
     )
@@ -5059,6 +5061,15 @@ def _learning_path_quick_links(run: dict[str, Any] | None) -> str:
     if not chips:
         return ""
     return '<p class="muted">Latest artifacts</p><div class="plot-links path-links">' + "".join(chips) + "</div>"
+
+
+def _learning_path_plot_review(run: dict[str, Any] | None) -> str:
+    if run is None:
+        return ""
+    review = _run_plot_review_cell(run)
+    if not review or review == "Plot review: Not available until a plot is saved.":
+        return ""
+    return f'<p class="muted">{escape(review)}</p>'
 
 
 def _learning_path_evidence_suffix(item: dict[str, Any]) -> str:

@@ -1381,6 +1381,12 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Latest artifacts", html)
             self.assertIn(">Report</a>", html)
             self.assertIn(">Plot: Position</a>", html)
+            self.assertIn(
+                ">Plot: Position</a><a class=\"plot-chip\" "
+                'href="20260627_150117_lab01_msd/learner_tuned_config.yaml">Replay tuned</a></div>'
+                '<p class="muted">Plot review: Position - Compare actual motion against target',
+                html,
+            )
             self.assertIn(">Replay tuned</a>", html)
             self.assertIn("No markers", html)
             self.assertIn("max abs position", html)
@@ -1419,6 +1425,11 @@ class LoggingTests(unittest.TestCase):
                 html,
             )
             self.assertNotIn(f'href="{output.name}/plots/error.png">Plot: Error</a>', html)
+            self.assertIn(
+                f'href="{output.name}/plots/dls.png">Plot: Damped Least Squares</a></div>'
+                '<p class="muted">Plot review: Damped Least Squares - Compare task speed',
+                html,
+            )
             self.assertLess(
                 html.index(f'href="{output.name}/plots/dls.png">Damped Least Squares</a>'),
                 html.index(f'href="{output.name}/plots/error.png">Error</a>'),
