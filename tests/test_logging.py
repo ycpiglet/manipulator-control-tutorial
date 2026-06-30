@@ -672,6 +672,10 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("use at least one button, slider, or preset", html)
             self.assertIn("Needs observation", html)
             self.assertIn("write a prediction and note", html)
+            self.assertIn(
+                "Repeat this hands-on step, use experiment buttons, live sliders, or Quick presets at least once",
+                html,
+            )
 
             (output / "interaction_events.json").write_text(
                 json.dumps(
@@ -714,7 +718,11 @@ class LoggingTests(unittest.TestCase):
 
             html = write_run_report(output).read_text(encoding="utf-8")
             self.assertIn("Needs learner control", html)
-            self.assertIn("Use at least one button, slider, or preset control", html)
+            self.assertIn("Use experiment buttons, live sliders, or Quick presets, then mark the observation.", html)
+            self.assertIn(
+                "Repeat this hands-on step and use experiment buttons, live sliders, or Quick presets at least once",
+                html,
+            )
 
             (output / "interaction_events.json").write_text(
                 json.dumps(

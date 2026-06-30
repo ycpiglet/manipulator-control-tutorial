@@ -1351,7 +1351,7 @@ def _render_report(
     key_moments = _key_moments_section(summary)
     mission_evidence = _mission_evidence_section(summary, interaction_events, plots, config)
     challenge_evidence = _challenge_evidence_section(summary, interaction_events, plots, config)
-    hands_on_evidence = _hands_on_evidence_section(summary, interaction_events)
+    hands_on_evidence = _hands_on_evidence_section(summary, interaction_events, config)
     learner_action_summary = _learner_action_summary_section(interaction_events, config)
     learner_snapshot_section = _learner_snapshot_section(learner_snapshot)
     observation_timeline = _observation_timeline_section(interaction_events)
@@ -2886,7 +2886,7 @@ def _mission_evidence_items(
             next_step = "Compare the prediction with the plots and add a short learner note next time."
         elif learner_controls <= 0:
             status = "Needs learner control"
-            next_step = "Use at least one button, slider, or preset control, then mark the observation."
+            next_step = f"Use {_report_learner_control_phrase(config, summary)}, then mark the observation."
         elif predictions > 0 and pending_outcomes > 0:
             status = "Outcome review pending"
             next_step = "Choose Matched, Partly matched, or Surprised for each saved prediction."
@@ -3021,17 +3021,54 @@ def _challenge_evidence_section(
     )
 
 
-def _hands_on_evidence_section(summary: dict[str, Any], events: list[dict[str, Any]]) -> str:
+def _report_learner_control_phrase(config: dict[str, Any] | None, summary: dict[str, Any] | None = None) -> str:
+    text = learner_control_action_text_for_config(_report_control_config(config, summary)).strip()
+    prefix = "Use "
+    suffix = " before moving on."
+    if text.startswith(prefix) and text.endswith(suffix):
+        phrase = text[len(prefix) : -len(suffix)].strip()
+        if phrase and phrase != "one learner control":
+            return phrase
+    return "at least one button, slider, or preset"
+
+
+def _report_control_config(config: dict[str, Any] | None, summary: dict[str, Any] | None = None) -> dict[str, Any]:
+    if config:
+        return config
+    if not isinstance(summary, dict):
+        return {}
+    config_path = str(summary.get("config_path") or "").strip()
+    if not config_path:
+        return {}
+    try:
+        return load_config(config_path)
+    except (OSError, ValueError):
+        return {}
+
+
+def _report_learner_control_once_phrase(config: dict[str, Any] | None, summary: dict[str, Any] | None = None) -> str:
+    phrase = _report_learner_control_phrase(config, summary)
+    if phrase.startswith("at least one "):
+        return phrase
+    return f"{phrase} at least once"
+
+
+def _hands_on_evidence_section(
+    summary: dict[str, Any],
+    events: list[dict[str, Any]],
+    config: dict[str, Any] | None = None,
+) -> str:
     if not _summary_requires_hands_on_evidence(summary):
         return ""
     markers, predictions, notes, outcomes = _observation_evidence_counts_from_events(events)
     learner_controls = _learner_control_event_count(events)
+    control_once = _report_learner_control_once_phrase(config, summary)
     if markers > 0 and predictions > 0 and notes > 0 and learner_controls > 0:
         status = "Done for learning path"
         detail = "This hands-on run has one learner control plus a Mark observation with prediction and note."
     elif markers > 0 and predictions > 0 and notes > 0:
         status = "Needs learner control"
-        detail = "Repeat this hands-on step and use at least one button, slider, or preset before review."
+        detail = f"Repeat this hands-on step and use {control_once} before review."
     elif markers > 0 and predictions > 0:
         status = "Needs note"
         detail = "Add a learner note or Use live status before moving on."
@@ -3040,7 +3077,10 @@ def _hands_on_evidence_section(summary: dict[str, Any], events: list[dict[str, A
         detail = "Repeat this hands-on step and fill the Prediction field before pressing Mark observation."
     else:
         status = "Needs observation"
-        detail = "Repeat this hands-on step, use a learner control, write a prediction and note, then press Mark observation."
+        detail = (
+            f"Repeat this hands-on step, use {control_once}, write a prediction and note, "
+            "then press Mark observation."
+        )
     items: list[tuple[str, Any]] = [
         ("Status", status),
         ("Observation markers", markers),
