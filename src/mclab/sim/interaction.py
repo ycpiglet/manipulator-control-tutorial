@@ -1542,7 +1542,7 @@ def _panel_guide_rows(
         ("Challenge", challenge_prompt_for_guide(guide).removeprefix("Challenge:").strip()),
         ("Try", str(getattr(guide, "try_this", "") or "").strip()),
         ("Change", str(getattr(guide, "change", "") or "").strip()),
-        ("Done when", _panel_completion_text()),
+        ("Done when", _panel_completion_text(has_buttons, has_sliders, has_presets)),
         ("Counts as control", _panel_control_credit_text(has_buttons, has_sliders, has_presets)),
         ("Prediction", prediction_prompt_for_guide(guide).removeprefix("Prediction:").strip()),
         ("Question", question_for_guide(guide).removeprefix("Question:").strip()),
@@ -1562,9 +1562,14 @@ def _panel_start_steps_text(guide: Any | None, tuning: LiveTuning | None = None)
     return start_steps_for_guide(guide).removeprefix("Start steps:").strip()
 
 
-def _panel_completion_text() -> str:
+def _panel_completion_text(has_buttons: bool = False, has_sliders: bool = False, has_presets: bool = False) -> str:
+    control_text = _learner_control_followup_text(has_buttons, has_sliders, has_presets)
+    if control_text == "use one button, slider, or preset":
+        control_text = "use at least one button, slider, or preset"
+    else:
+        control_text = f"{control_text} at least once"
     return (
-        "use at least one button, slider, or preset, then write a Prediction and note, "
+        f"{control_text}, then write a Prediction and note, "
         "choose an outcome if known, and press Mark observation."
     )
 

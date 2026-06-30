@@ -39,6 +39,7 @@ from mclab.sim.interaction import (  # noqa: E402
     _observation_note_preview,
     _observation_next_action,
     _ordered_required_prefix,
+    _panel_completion_text,
     _preset_button_label,
     _preset_panel_status,
     _recent_action_status_message,
@@ -1390,6 +1391,19 @@ class KeyForcePulseTests(unittest.TestCase):
                 "view/evidence helpers such as Pause, Playback speed, and Use live status do not count.",
             ),
             _panel_guide_rows(guide, has_buttons=True, has_sliders=True, has_presets=True),
+        )
+        self.assertIn(
+            (
+                "Done when",
+                "use experiment buttons, live sliders, or Quick presets at least once, "
+                "then write a Prediction and note, choose an outcome if known, and press Mark observation.",
+            ),
+            _panel_guide_rows(guide, has_buttons=True, has_sliders=True, has_presets=True),
+        )
+        self.assertEqual(
+            _panel_completion_text(has_sliders=True),
+            "use live sliders at least once, then write a Prediction and note, "
+            "choose an outcome if known, and press Mark observation.",
         )
         self.assertEqual(_panel_control_credit_text(False, False, False), "")
 
