@@ -91,5 +91,18 @@ interaction:
         wall_stiffness: 260.0
         wall_damping: 12.0
         wall_retreat_gain: 0.40
+    - label: Re-enter wall
+      purpose: Push the target through the wall again after release to create a second contact episode.
+      required: true
+      values:
+        target_x: 0.65
+        target_y: 0.00
+        target_z: 0.57
+        cartesian_gain: 1.00
+        joint_target_offset: 0.06
+        wall_x: 0.56
+        wall_stiffness: 320.0
+        wall_damping: 14.0
+        wall_retreat_gain: 0.55
 viewer_guides:
   enabled: true

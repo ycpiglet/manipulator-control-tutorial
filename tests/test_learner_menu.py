@@ -572,26 +572,34 @@ class LearnerMenuTests(unittest.TestCase):
             missing_back_mission = action_mission_evidence_text(action, outputs)
 
             write_events(run_path, ["Close wall", "Back away"])
+            missing_reenter = learning_path_progress(wall_step, outputs)
+            missing_reenter_text = learning_path_progress_text(wall_step, missing_reenter)
+
+            write_events(run_path, ["Close wall", "Back away", "Re-enter wall"])
             complete = learning_path_progress(wall_step, outputs)
 
         self.assertEqual(wall_step.title, "10. Touch virtual wall")
-        self.assertIn("required presets: Close wall -> Back away", learning_path_completion_text(wall_step))
+        self.assertIn("required presets: Close wall -> Back away -> Re-enter wall", learning_path_completion_text(wall_step))
         self.assertFalse(missing_close.completed)
-        self.assertEqual(missing_close.required_presets, 2)
+        self.assertEqual(missing_close.required_presets, 3)
         self.assertEqual(missing_close.required_presets_tried, 0)
         self.assertEqual(missing_close.next_required_preset, "Close wall")
         self.assertFalse(missing_back.completed)
         self.assertEqual(missing_back.required_presets_tried, 1)
         self.assertEqual(missing_back.next_required_preset, "Back away")
         self.assertIn("Status: Needs required preset", missing_back_text)
-        self.assertIn("required presets 1/2", missing_back_text)
+        self.assertIn("required presets 1/3", missing_back_text)
         self.assertIn("Try required preset Back away", missing_back_text)
         self.assertIn(
-            "Mission evidence: Needs required preset Back away; 1 observation, 1 prediction, 1 outcome, 1 note; required presets 1/2",
+            "Mission evidence: Needs required preset Back away; 1 observation, 1 prediction, 1 outcome, 1 note; required presets 1/3",
             missing_back_mission,
         )
+        self.assertFalse(missing_reenter.completed)
+        self.assertEqual(missing_reenter.required_presets_tried, 2)
+        self.assertEqual(missing_reenter.next_required_preset, "Re-enter wall")
+        self.assertIn("Try required preset Re-enter wall", missing_reenter_text)
         self.assertTrue(complete.completed)
-        self.assertEqual(complete.required_presets_tried, 2)
+        self.assertEqual(complete.required_presets_tried, 3)
 
     def test_recommended_learning_path_report_opens_latest_output(self) -> None:
         first_step = LEARNING_PATH[0]
@@ -744,7 +752,7 @@ class LearnerMenuTests(unittest.TestCase):
 
         wall_controls = action_controls_text(lab04_wall)
         self.assertIn("Target X + into wall", wall_controls)
-        self.assertIn("quick presets (Soft wall, Stiff wall, Close wall, Back away)", wall_controls)
+        self.assertIn("quick presets (Soft wall, Stiff wall, Close wall, Back away, Re-enter wall)", wall_controls)
 
     def test_menu_cards_show_viewer_marker_legend(self) -> None:
         by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
@@ -903,13 +911,13 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Presets: Low DLS damping, Balanced DLS, High DLS damping", lesson_text(lab03_dls))
         self.assertIn("Presets: Early damping, Balanced schedule, Late damping", lesson_text(lab03_condition_dls))
         self.assertIn("Presets: Soft reach, Default reach, Far target", lesson_text(lab04_cartesian))
-        self.assertEqual(configured_required_preset_labels(lab04_wall.config_path), ("Close wall", "Back away"))
+        self.assertEqual(configured_required_preset_labels(lab04_wall.config_path), ("Close wall", "Back away", "Re-enter wall"))
         self.assertIn(
-            "required evidence: Close wall -> Back away",
+            "required evidence: Close wall -> Back away -> Re-enter wall",
             configured_preset_comparison(lab04_wall.config_path),
         )
-        self.assertIn("Presets: Soft wall, Stiff wall, Close wall, Back away", lesson_text(lab04_wall))
-        self.assertIn("required evidence: Close wall -> Back away", lesson_text(lab04_wall))
+        self.assertIn("Presets: Soft wall, Stiff wall, Close wall, Back away, Re-enter wall", lesson_text(lab04_wall))
+        self.assertIn("required evidence: Close wall -> Back away -> Re-enter wall", lesson_text(lab04_wall))
 
     def test_menu_cards_show_readable_experience_badges(self) -> None:
         by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
@@ -1904,7 +1912,7 @@ class LearnerMenuTests(unittest.TestCase):
 
             self.assertEqual(
                 action_preset_evidence_text(lab04_wall, outputs),
-                "Preset evidence: 2/4 presets tried; required next Close wall",
+                "Preset evidence: 2/5 presets tried; required next Close wall",
             )
             self.assertEqual(
                 action_next_cue_text(lab04_wall, outputs),
@@ -1922,7 +1930,22 @@ class LearnerMenuTests(unittest.TestCase):
             )
             self.assertEqual(
                 action_preset_evidence_text(lab04_wall, outputs),
-                "Preset evidence: 2/4 presets tried; required presets ready",
+                "Preset evidence: 2/5 presets tried; required next Re-enter wall",
+            )
+
+            (run_path / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {"kind": "preset", "name": "close_wall", "label": "Close wall"},
+                        {"kind": "preset", "name": "back_away", "label": "Back away"},
+                        {"kind": "preset", "name": "re-enter_wall", "label": "Re-enter wall"},
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                action_preset_evidence_text(lab04_wall, outputs),
+                "Preset evidence: 3/5 presets tried; required presets ready",
             )
 
     def test_action_next_cue_guides_the_next_best_learner_step(self) -> None:

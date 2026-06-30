@@ -564,6 +564,10 @@ class LoggingTests(unittest.TestCase):
                     "      required: true\n"
                     "      values:\n"
                     "        target_x: 0.52\n"
+                    "    - label: Re-enter wall\n"
+                    "      required: true\n"
+                    "      values:\n"
+                    "        target_x: 0.65\n"
                 ),
                 encoding="utf-8",
             )
@@ -597,11 +601,11 @@ class LoggingTests(unittest.TestCase):
             report = write_run_report(output)
 
             html = report.read_text(encoding="utf-8")
-            self.assertIn("Required evidence: Close wall -&gt; Back away.", html)
+            self.assertIn("Required evidence: Close wall -&gt; Back away -&gt; Re-enter wall.", html)
             self.assertIn("Required evidence preset.", html)
             self.assertIn("Required presets", html)
             self.assertIn("Required presets tried", html)
-            self.assertIn("<strong>1/2</strong>", html)
+            self.assertIn("<strong>1/3</strong>", html)
             self.assertIn("Try required preset Back away", html)
             self.assertIn("Needs required preset", html)
             self.assertIn("<span>Status</span><strong>Needs required preset Back away</strong>", html)
@@ -610,10 +614,10 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("<strong>yes</strong>", html)
             worksheet_text = (output / "worksheet.md").read_text(encoding="utf-8")
             self.assertIn("- Status: Needs required preset Back away", worksheet_text)
-            self.assertIn("- Required presets tried: 1/2", worksheet_text)
+            self.assertIn("- Required presets tried: 1/3", worksheet_text)
             self.assertIn("- [ ] Try required preset Back away, watch live status, then mark one observation.", worksheet_text)
-            self.assertIn("Required presets: Close wall -> Back away", worksheet_text)
-            self.assertIn("Required presets tried: 1/2", worksheet_text)
+            self.assertIn("Required presets: Close wall -> Back away -> Re-enter wall", worksheet_text)
+            self.assertIn("Required presets tried: 1/3", worksheet_text)
             self.assertIn(
                 "Next: Try required preset Back away, watch live status, then mark one observation.",
                 worksheet_text,
@@ -643,6 +647,10 @@ class LoggingTests(unittest.TestCase):
                     "      required: true\n"
                     "      values:\n"
                     "        target_x: 0.52\n"
+                    "    - label: Re-enter wall\n"
+                    "      required: true\n"
+                    "      values:\n"
+                    "        target_x: 0.65\n"
                 ),
                 encoding="utf-8",
             )
@@ -651,7 +659,7 @@ class LoggingTests(unittest.TestCase):
             write_run_report(output)
 
             worksheet_text = (output / "worksheet.md").read_text(encoding="utf-8")
-            self.assertIn("- Required presets tried: 0/2", worksheet_text)
+            self.assertIn("- Required presets tried: 0/3", worksheet_text)
             self.assertIn(
                 "- [ ] Try required preset Close wall, watch live status, then mark one observation.",
                 worksheet_text,
@@ -1177,11 +1185,11 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("10. Touch virtual wall", html)
             self.assertIn(
                 "<strong>Done when:</strong> save one Mark observation with a Prediction and note after required presets: "
-                "Close wall -&gt; Back away; add the outcome during review.",
+                "Close wall -&gt; Back away -&gt; Re-enter wall; add the outcome during review.",
                 html,
             )
             self.assertIn(
-                "Needs required preset (1 observation, 1 prediction, 1 outcome, 1 note, required presets 1/2)",
+                "Needs required preset (1 observation, 1 prediction, 1 outcome, 1 note, required presets 1/3)",
                 html,
             )
             self.assertIn("Try required preset Back away before moving on.", html)

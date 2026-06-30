@@ -537,7 +537,7 @@ class KeyForcePulseTests(unittest.TestCase):
             ),
             (
                 lab04_panda._live_tuning(lab04_wall_config),
-                ["Soft wall", "Stiff wall", "Close wall", "Back away"],
+                ["Soft wall", "Stiff wall", "Close wall", "Back away", "Re-enter wall"],
             ),
         ]
         for tuning, expected_labels in cases:
@@ -548,7 +548,7 @@ class KeyForcePulseTests(unittest.TestCase):
         wall_tuning = lab04_panda._live_tuning(lab04_wall_config)
         self.assertEqual(
             [preset.label for preset in wall_tuning.presets if preset.required],
-            ["Close wall", "Back away"],
+            ["Close wall", "Back away", "Re-enter wall"],
         )
 
     def test_interactive_configs_enable_plant_reset_by_default(self) -> None:
