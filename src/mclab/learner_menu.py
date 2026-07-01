@@ -791,7 +791,7 @@ MENU_ACTIONS: tuple[MenuAction, ...] = (
     ),
     MenuAction(
         group="Lab03 2DOF Arm and Trajectories",
-        label="1D interactive",
+        label="1D trajectory tracking",
         lab_name="lab03",
         config_path="configs/lab03_2dof/interactive_tracking.yaml",
         plots="essential",
@@ -3903,7 +3903,7 @@ def filter_menu_actions(
     return tuple(sorted(matches, key=lambda action: _action_match_sort_key(action, terms)))
 
 
-def _action_match_sort_key(action: MenuAction, terms: list[str]) -> tuple[int, int, int, int, str]:
+def _action_match_sort_key(action: MenuAction, terms: list[str]) -> tuple[int, int, int, int, int, str]:
     tags = set(action_tags(action))
     primary = " ".join((action.label, Path(action.config_path).stem, action.plots)).lower()
     secondary = " ".join((action.description, action.try_this, action.watch)).lower()
@@ -3912,7 +3912,18 @@ def _action_match_sort_key(action: MenuAction, terms: list[str]) -> tuple[int, i
     primary_hits = sum(term in primary for term in terms)
     secondary_hits = sum(term in secondary for term in terms)
     hands_on_hits = int("hands-on" in tags and _query_prefers_hands_on(terms))
-    return (-phrase_hits, -primary_hits, -hands_on_hits, -secondary_hits, action.label)
+    path_index = _action_learning_path_sort_index(action) if hands_on_hits else len(LEARNING_PATH) + len(MENU_ACTIONS)
+    return (-phrase_hits, -primary_hits, -hands_on_hits, path_index, -secondary_hits, action.label)
+
+
+def _action_learning_path_sort_index(action: MenuAction) -> int:
+    for index, step in enumerate(LEARNING_PATH):
+        if step.action_kind == "run" and step.group == action.group and step.label == action.label:
+            return index
+    try:
+        return len(LEARNING_PATH) + MENU_ACTIONS.index(action)
+    except ValueError:
+        return len(LEARNING_PATH) + len(MENU_ACTIONS)
 
 
 def _query_prefers_hands_on(terms: list[str]) -> bool:

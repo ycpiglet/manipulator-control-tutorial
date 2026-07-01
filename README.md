@@ -92,7 +92,7 @@ python -m mclab run lab03 --config configs/lab03_2dof/joint_space_2dof.yaml --he
 python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless --plot
 ```
 
-현재 `lab03`은 실제 2DOF planar arm을 포함합니다. `joint_space_2dof.yaml`은 어깨/팔꿈치 joint-space PD trajectory tracking을 보여주고, `task_space_2dof.yaml`은 FK/Jacobian 기반 end-effector task-space 제어를 보여줍니다. 기존 1D step, trapezoidal, minimum-jerk, S-curve trajectory 비교 config도 profile 학습용으로 유지됩니다.
+현재 `lab03`은 실제 2DOF planar arm을 포함합니다. `joint_space_2dof.yaml`은 어깨/팔꿈치 joint-space PD trajectory tracking을 보여주고, `task_space_2dof.yaml`은 FK/Jacobian 기반 end-effector task-space 제어를 보여줍니다. 기존 1D step, trapezoidal, minimum-jerk, S-curve trajectory 비교 config와 `1D trajectory tracking` interactive 데모도 profile/추종 학습용으로 유지됩니다.
 
 목표 실행 방식:
 
@@ -161,7 +161,7 @@ python -m mclab doctor
 |---|---|
 | Lab01 | underdamped, overdamped, high/low stiffness, interactive pull |
 | Lab02 | low/high P gain, PD damping, saturation, windup vs anti-windup, sensor noise, control delay, interactive disturbance |
-| Lab03 | 2DOF joint-space, 2DOF task-space, singularity, DLS singularity with live damping presets, early/default/late, inner/edge-target, upper/lower-path, shoulder/elbow/staggered-disturbance recovery-time, low/high-torque, slow/fast-command, low/high-joint-speed, direct/inward-retarget, and fixed/adaptive-speed-retarget condition-aware DLS, interactive XY target tuning, step/trapezoidal/minimum-jerk/S-curve profiles |
+| Lab03 | 2DOF joint-space, 2DOF task-space, singularity, DLS singularity with live damping presets, early/default/late, inner/edge-target, upper/lower-path, shoulder/elbow/staggered-disturbance recovery-time, low/high-torque, slow/fast-command, low/high-joint-speed, direct/inward-retarget, and fixed/adaptive-speed-retarget condition-aware DLS, interactive XY target tuning, 1D trajectory tracking, step/trapezoidal/minimum-jerk/S-curve profiles |
 | Lab04 | neutral hold, 30s stability hold, joint trajectories, hand X motion, Cartesian reach, soft/stiff Cartesian reach, soft/stiff, low/high damping, near/far, slow/fast approach, shallow/deep target push, contact-cycle, and low/high retreat virtual wall, joint target nudge, virtual wall |
 
 처음 학습자는 메뉴 상단의 `Recommended learning path`를 순서대로 따라가면 됩니다.
@@ -574,7 +574,7 @@ Main comparison scenarios in the menu:
 |---|---|
 | Lab01 | underdamped, overdamped, high/low stiffness, interactive pull |
 | Lab02 | low/high P gain, PD damping, saturation, windup vs anti-windup, sensor noise, control delay, interactive disturbance |
-| Lab03 | 2DOF joint-space, 2DOF task-space, singularity, DLS singularity with live damping presets, early/default/late, inner/edge-target, upper/lower-path, shoulder/elbow/staggered-disturbance recovery-time, low/high-torque, slow/fast-command, low/high-joint-speed, direct/inward-retarget, and fixed/adaptive-speed-retarget condition-aware DLS, interactive XY target tuning, step/trapezoidal/minimum-jerk/S-curve profiles |
+| Lab03 | 2DOF joint-space, 2DOF task-space, singularity, DLS singularity with live damping presets, early/default/late, inner/edge-target, upper/lower-path, shoulder/elbow/staggered-disturbance recovery-time, low/high-torque, slow/fast-command, low/high-joint-speed, direct/inward-retarget, and fixed/adaptive-speed-retarget condition-aware DLS, interactive XY target tuning, 1D trajectory tracking, step/trapezoidal/minimum-jerk/S-curve profiles |
 | Lab04 | neutral hold, 30s stability hold, joint trajectories, hand X motion, Cartesian reach, soft/stiff Cartesian reach, soft/stiff, low/high damping, near/far, slow/fast approach, shallow/deep target push, contact-cycle, and low/high retreat virtual wall, joint target nudge, virtual wall |
 
 First-time learners can follow the `Recommended learning path` at the top of the menu.
@@ -1103,7 +1103,7 @@ python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --viewer
 - singularity demo with Jacobian determinant, manipulability, condition number plots, and condition-aware DLS damping comparison
 - joint position, end-effector, torque, current proxy, error plots
 - step, trapezoidal, quintic/minimum-jerk, S-curve trajectory generators
-- legacy 1D trajectory profile configs for comparing target position/velocity/acceleration/jerk
+- legacy 1D trajectory profile configs plus a live 1D trajectory tracking demo for comparing target position/velocity/acceleration/jerk and tracking error
 
 ### Phase 5 — 6/7DOF advanced control
 

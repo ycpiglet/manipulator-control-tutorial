@@ -197,7 +197,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF interactive"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "Step profile"), labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "Minimum jerk"), labels)
-        self.assertIn(("Lab03 2DOF Arm and Trajectories", "1D interactive"), labels)
+        self.assertIn(("Lab03 2DOF Arm and Trajectories", "1D trajectory tracking"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Neutral hold"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "30s stability hold"), labels)
         self.assertIn(("Lab04 Panda Manipulator", "Reach X"), labels)
@@ -1670,6 +1670,11 @@ class LearnerMenuTests(unittest.TestCase):
 
         hands_on_search = {(action.group, action.label) for action in filter_menu_actions("hands on")}
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF interactive"), hands_on_search)
+        hands_on_ranked = filter_menu_actions("hands-on")
+        self.assertEqual(
+            (hands_on_ranked[0].group, hands_on_ranked[0].label),
+            ("Lab01 Mass-Spring-Damper", "Interactive"),
+        )
 
     def test_filter_menu_actions_empty_query_returns_all_actions(self) -> None:
         self.assertEqual(filter_menu_actions(""), MENU_ACTIONS)

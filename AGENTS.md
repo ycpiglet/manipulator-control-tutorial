@@ -53,6 +53,7 @@ Implemented and verified:
 - Lab01/Lab02 viewer visual guides for equilibrium, target, and applied force direction
 - Lab03 trajectory planning plus a torque-actuated 2DOF planar arm
 - Lab03 FK, IK helper, analytic Jacobian, joint-space tracking, and task-space Jacobian-transpose PD
+- Lab03 1D trajectory tracking interactive demo is labeled separately from Lab01 1D dynamics demos
 - Lab03 viewer visual guides for 2DOF hand target, current hand position, and singularity warning state
 - Lab03 DLS singularity viewer supports live Low/Balanced/High DLS damping presets
 - Lab03 DLS singularity has a one-line `run_lab03_dls_interactive.cmd` launcher
