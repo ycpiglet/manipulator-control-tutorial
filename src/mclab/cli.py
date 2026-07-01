@@ -11,7 +11,13 @@ from pathlib import Path
 from .batch import ALL_BATCH_NAME, BATCH_SETS, run_all_batches, run_batch
 from .config import load_config
 from .doctor import doctor_exit_code, format_doctor_report, run_doctor_checks
-from .learner_menu import main as learner_menu_main
+from .learner_menu import (
+    experience_coverage_next_command,
+    experience_coverage_next_label,
+    experience_coverage_status_text,
+    experience_coverage_summary_text,
+    main as learner_menu_main,
+)
 from .labs import lab01_msd, lab02_pid, lab03_2dof, lab04_panda
 from .sim.reporting import write_outputs_index
 
@@ -47,6 +53,12 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("list", help="List available labs.")
     subparsers.add_parser("menu", help="Open the learner launcher menu.")
     subparsers.add_parser("doctor", help="Check local setup, packages, configs, assets, and outputs.")
+
+    coverage_parser = subparsers.add_parser(
+        "coverage",
+        help="Show course experience coverage and the next learner command.",
+    )
+    coverage_parser.add_argument("--output-dir", default="outputs", help="Outputs root directory.")
 
     index_parser = subparsers.add_parser("index", help="Generate the outputs review index.")
     index_parser.add_argument("--output-dir", default="outputs", help="Outputs root directory.")
@@ -103,6 +115,10 @@ def main(argv: list[str] | None = None) -> int:
         checks = run_doctor_checks()
         print(format_doctor_report(checks))
         return doctor_exit_code(checks)
+
+    if args.command == "coverage":
+        _print_experience_coverage(Path(args.output_dir))
+        return 0
 
     if args.command == "index":
         index_path = write_outputs_index(Path(args.output_dir))
@@ -179,6 +195,18 @@ def _print_output_summary(kind: str, output_path: Path) -> None:
     print(f"{kind} complete: {output_path}")
     for line in _output_artifact_lines(output_path):
         print(f"  {line}")
+
+
+def _print_experience_coverage(outputs_root: Path) -> None:
+    print(experience_coverage_summary_text(outputs_root))
+    print(experience_coverage_status_text(outputs_root))
+    next_command = experience_coverage_next_command(outputs_root)
+    if next_command:
+        print(f"Next experience: {experience_coverage_next_label(outputs_root)}")
+        print(f"Next command: {next_command}")
+    else:
+        print("Next experience: Coverage complete")
+        print("Next command: replay one saved scenario or run a comparison batch more deeply.")
 
 
 def _output_artifact_lines(output_path: Path) -> list[str]:

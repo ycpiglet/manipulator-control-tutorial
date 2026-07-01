@@ -1390,6 +1390,16 @@ def experience_coverage_next_button_label(outputs_root: Path | None = None) -> s
     return f"Run next: {target.label}"
 
 
+def experience_coverage_next_label(outputs_root: Path | None = None) -> str:
+    item = next_experience_coverage_item(_experience_coverage_records(outputs_root))
+    return item.label if item is not None else "Coverage complete"
+
+
+def experience_coverage_next_command(outputs_root: Path | None = None) -> str:
+    item = next_experience_coverage_item(_experience_coverage_records(outputs_root))
+    return item.command if item is not None else ""
+
+
 def _experience_coverage_target_for_key(key: str) -> MenuAction | BatchMenuAction:
     kind, group, label = EXPERIENCE_COVERAGE_TARGETS[key]
     actions: Sequence[MenuAction | BatchMenuAction] = BATCH_ACTIONS if kind == "batch" else MENU_ACTIONS

@@ -87,6 +87,27 @@ class CliImportTests(unittest.TestCase):
             opener.assert_called_once_with(index_path)
             printer.assert_called_once_with(f"Outputs index: {index_path}")
 
+    def test_cli_prints_experience_coverage_and_next_command(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp) / "outputs"
+
+            args = build_parser().parse_args(["coverage", "--output-dir", str(output_dir)])
+            self.assertEqual(args.command, "coverage")
+            self.assertEqual(args.output_dir, str(output_dir))
+
+            with patch("builtins.print") as printer:
+                self.assertEqual(main(["coverage", "--output-dir", str(output_dir)]), 0)
+
+        printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
+        self.assertIn("Experience coverage: 0/7 types tried", printed)
+        self.assertIn("Coverage map: Intro basics: Next", printed)
+        self.assertIn("Next experience: Intro basics", printed)
+        self.assertIn(
+            "Next command: python -m mclab run lab01 --config configs/lab01_msd/default.yaml "
+            "--headless --plot --open-report",
+            printed,
+        )
+
     def test_cli_opens_batch_report_when_requested(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "batch"
