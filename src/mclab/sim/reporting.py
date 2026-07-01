@@ -1334,6 +1334,11 @@ def _worksheet_next_experiment_lines(summary: dict[str, Any], current_config: di
             question = question_for_guide(guide).removeprefix("Question:").strip()
             lines.append(f"- Prediction: {_markdown_inline(prediction)}")
             lines.append(f"- Question: {_markdown_inline(question)}")
+            start_steps, challenge = _suggested_guide_action_text(guide, suggestion.config_path)
+            if start_steps:
+                lines.append(f"- Start steps: {_markdown_inline(start_steps)}")
+            if challenge:
+                lines.append(f"- Challenge: {_markdown_inline(challenge)}")
         controls = _suggested_control_surface_sentence(suggestion.config_path)
         if controls:
             lines.append(f"- Controls: {_markdown_inline(controls)}")
@@ -2159,9 +2164,11 @@ def _next_action_suggestion_card(summary: dict[str, Any], current_config: dict[s
         f"--viewer --realtime --pause-at-end --plot --plots {suggestion.plots} --open-report"
     )
     key_changes = _suggested_config_changes(current_config, suggestion.config_path)
+    guide_action = _suggested_guide_action_html(guide, suggestion.config_path)
     control_summary = _suggested_control_surface_summary(suggestion.config_path)
     body = (
         _action_value_list((("Config", suggestion.config_path), ("Plots", suggestion.plots)))
+        + guide_action
         + control_summary
         + key_changes
         + f"<pre>{escape(command)}</pre>"
@@ -2207,11 +2214,13 @@ def _suggested_next_run_card(suggestion: NextRunSuggestion, current_config: dict
     guide_focus = f'<p class="empty">{escape(guide.focus)}</p>' if guide is not None else ""
     guide_prediction = ""
     guide_question = ""
+    guide_action = ""
     if guide is not None:
         prediction = prediction_prompt_for_guide(guide).removeprefix("Prediction:").strip()
         guide_prediction = f'<p class="empty"><strong>Prediction:</strong> {escape(prediction)}</p>'
         question = question_for_guide(guide).removeprefix("Question:").strip()
         guide_question = f'<p class="empty"><strong>Question:</strong> {escape(question)}</p>'
+        guide_action = _suggested_guide_action_html(guide, suggestion.config_path)
     key_changes = _suggested_config_changes(current_config, suggestion.config_path)
     control_summary = _suggested_control_surface_summary(suggestion.config_path)
     return (
@@ -2221,6 +2230,7 @@ def _suggested_next_run_card(suggestion: NextRunSuggestion, current_config: dict
         f"{guide_focus}"
         f"{guide_prediction}"
         f"{guide_question}"
+        f"{guide_action}"
         f"{control_summary}"
         f"{key_changes}"
         '<ul class="action-list">'
@@ -2236,6 +2246,34 @@ def _suggested_next_run_card(suggestion: NextRunSuggestion, current_config: dict
         f"<pre>{escape(command)}</pre>"
         "</article>"
     )
+
+
+def _suggested_guide_action_html(guide: RunGuide | None, config_path: str) -> str:
+    start_steps, challenge = _suggested_guide_action_text(guide, config_path)
+    if not start_steps and not challenge:
+        return ""
+    parts: list[str] = []
+    if start_steps:
+        parts.append(f'<p class="empty"><strong>Start steps:</strong> {escape(start_steps)}</p>')
+    if challenge:
+        parts.append(f'<p class="empty"><strong>Challenge:</strong> {escape(challenge)}</p>')
+    return "".join(parts)
+
+
+def _suggested_guide_action_text(guide: RunGuide | None, config_path: str) -> tuple[str, str]:
+    if guide is None:
+        return "", ""
+    start_steps = _start_steps_text(guide, _safe_load_config(config_path)).strip()
+    challenge = challenge_prompt_for_guide(guide).removeprefix("Challenge:").strip()
+    return start_steps, challenge
+
+
+def _safe_load_config(config_path: str) -> dict[str, Any]:
+    try:
+        config = load_config(config_path)
+    except Exception:
+        return {}
+    return config if isinstance(config, dict) else {}
 
 
 def _comparison_batch_section(summary: dict[str, Any]) -> str:

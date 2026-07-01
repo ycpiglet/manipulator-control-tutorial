@@ -415,6 +415,8 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("## Suggested Next Experiments", worksheet_text)
             self.assertIn("### Lab01 Underdamped", worksheet_text)
             self.assertIn("Reason: See what changes when damping is too low.", worksheet_text)
+            self.assertIn("- Start steps: Predict -> Run scenario -> Compare priority plot and worksheet.", worksheet_text)
+            self.assertIn("- Challenge: Explain how damping, stiffness, initial_position", worksheet_text)
             self.assertIn(
                 "Command: python -m mclab run lab01 --config configs/lab01_msd/underdamped.yaml",
                 worksheet_text,
@@ -1143,6 +1145,10 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Before changing controller.kp, controller.kd", html)
             self.assertIn("Question:", html)
             self.assertIn("Which gain change trades speed for overshoot or smoother force?", html)
+            self.assertIn("Start steps:", html)
+            self.assertIn("Predict -&gt; Run scenario -&gt; Compare priority plot and worksheet.", html)
+            self.assertIn("Challenge:", html)
+            self.assertIn("Explain how controller.kp, controller.kd should change Reduced overshoot", html)
             self.assertIn("Key changes:", html)
             self.assertIn("controller.kd", html)
             self.assertIn("0 -&gt; 18", html)
