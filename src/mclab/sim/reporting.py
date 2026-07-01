@@ -1446,6 +1446,7 @@ def _render_report(
     title = _report_title(output, summary)
     learning_guide = _learning_guide_section(guide_for_run_summary(summary), summary, config)
     course_position = _course_position_section(summary)
+    course_coverage = _course_experience_coverage_section(output)
     worksheet = _worksheet_section(output)
     next_actions = _next_actions_section(output, summary, config, plots, interaction_events)
     reproduce_section = _reproduce_section(summary)
@@ -1806,6 +1807,7 @@ def _render_report(
     <h1>{escape(title)} report</h1>
     {learning_guide}
     {course_position}
+    {course_coverage}
     {worksheet}
     {next_actions}
     {reproduce_section}
@@ -1884,6 +1886,55 @@ def _course_position_section(summary: dict[str, Any]) -> str:
         "</div>"
         "</section>"
     )
+
+
+def _course_experience_coverage_section(output: Path) -> str:
+    runs = _discover_runs(output.parent)
+    records = _experience_coverage_records_for_index(runs)
+    summary = experience_coverage_summary_text(records)
+    next_item = next_experience_coverage_item(records)
+    status_cards = "\n".join(
+        _course_experience_status_card(status)
+        for status in experience_coverage_statuses(records)
+    )
+    if next_item is None:
+        next_body = (
+            '<p class="empty">'
+            "All core experience types are represented. Replay a tuned run or open a comparison batch to go deeper."
+            "</p>"
+        )
+    else:
+        next_body = (
+            _action_value_list((("Next experience", next_item.label), ("Next step", next_item.next_step)))
+            + f"<pre>{escape(next_item.command)}</pre>"
+        )
+    return (
+        "<section>"
+        "<h2>Course Experience Coverage</h2>"
+        f'<p class="empty">{escape(summary)}</p>'
+        '<div class="action-grid">'
+        f"{_action_card('Run next experience', 'Continue toward a varied hands-on course path.', next_body)}"
+        f"{status_cards}"
+        "</div>"
+        '<p class="empty"><a href="../index.html">Open all reports index</a></p>'
+        "</section>"
+    )
+
+
+def _course_experience_status_card(status: ExperienceCoverageStatus) -> str:
+    if status.next_missing:
+        state = "Next"
+    elif status.covered:
+        state = "Done"
+    else:
+        state = "Missing"
+    body = _action_value_list(
+        (
+            ("Status", state),
+            ("Goal", status.item.next_step),
+        )
+    )
+    return _action_card(status.item.label, "Core learner experience type.", body)
 
 
 def _course_position_for_summary(summary: dict[str, Any]) -> tuple[IndexPathStep, int, str] | None:
