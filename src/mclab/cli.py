@@ -500,6 +500,11 @@ def _print_scenarios(query: str, *, experience_filter: str = "all", limit: int =
     if not matches:
         print("No guided scenarios matched. Try: intro, hands-on, wall, PID, 2DOF, singularity, or compare.")
         return
+    print(
+        "Discovery tips: try `python -m mclab scenarios wall --filter hands-on --details`, "
+        "`python -m mclab scenarios singularity --details`, or "
+        "`python -m mclab scenarios prediction live target --details`."
+    )
     if limit > 0 and len(matches) > len(shown):
         print("Tip: use --limit 0 to print all matches.")
     for index, action in enumerate(shown, start=1):
@@ -613,6 +618,11 @@ def _print_batches(query: str, *, limit: int = 8, details: bool = False) -> None
     if not matches:
         print("No comparison batches matched. Try: all, lab01, PID, 2DOF, Panda, wall, Cartesian, or compare.")
         return
+    print(
+        "Discovery tips: try `python -m mclab batches wall --details`, "
+        "`python -m mclab batches 2DOF --details`, or "
+        "`python -m mclab batches all --details`."
+    )
     if limit > 0 and len(matches) > len(shown):
         print("Tip: use --limit 0 to print all matches.")
     for index, action in enumerate(shown, start=1):

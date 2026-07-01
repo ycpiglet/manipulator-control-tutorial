@@ -362,6 +362,7 @@ class CliImportTests(unittest.TestCase):
 
         printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
         self.assertIn("Scenarios: showing", printed)
+        self.assertIn("Discovery tips: try `python -m mclab scenarios wall --filter hands-on --details`", printed)
         self.assertIn("Lab04 Panda Manipulator - Virtual wall", printed)
         self.assertIn("Challenge:", printed)
         self.assertIn("Course step: 11/12 - Touch virtual wall", printed)
@@ -491,6 +492,7 @@ class CliImportTests(unittest.TestCase):
 
         printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
         self.assertIn("Batches: showing", printed)
+        self.assertIn("Discovery tips: try `python -m mclab batches wall --details`", printed)
         self.assertIn("Comparison Batches - Lab04 wall compare", printed)
         self.assertIn("Mission: Run", printed)
         self.assertIn("Setup: Ready", printed)
