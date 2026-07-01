@@ -824,10 +824,8 @@ def _batch_worksheet_comparison_plot_lines(output: Path) -> list[str]:
 def _batch_worksheet_followup_lines(batch_name: str, guide: BatchGuide, rows: list[dict[str, Any]]) -> list[str]:
     lines = ["## Reproduce And Extend", "", f"- Batch command: python -m mclab batch {batch_name} --open-report"]
     for row in rows:
-        lines.append(
-            f"- Scenario command: python -m mclab run {row['lab_name']} "
-            f"--config {row['config_path']} --headless --plot --plots {row.get('plot_selection', 'essential')}"
-        )
+        lines.append(f"- Scenario command: {_scenario_run_command(row)}")
+        lines.append(f"  - Viewer rerun: {_scenario_viewer_command(row)}")
     if guide.followups:
         lines.append("")
         lines.append("## Suggested Next Experiments")
@@ -1361,6 +1359,7 @@ def _scenario_card(
     learning_cues = _scenario_learning_cues(row)
     control_surface = _scenario_control_surface(row)
     command = _scenario_run_command(row)
+    viewer_command = _scenario_viewer_command(row)
     quick_links = _scenario_quick_links(row)
     plot_review = _scenario_plot_review(row)
     changes = _scenario_change_summary(row, baseline_config)
@@ -1376,6 +1375,7 @@ def _scenario_card(
         f"{learning_cues}"
         f"{control_surface}"
         f'<code class="command">{escape(command)}</code>'
+        f'<code class="command">{escape(viewer_command)}</code>'
         f"{metrics}"
         "</article>"
     )
@@ -1539,12 +1539,13 @@ def _reproduce_commands(batch_name: str, rows: list[dict[str, Any]]) -> str:
             "<tr>"
             f"<td>{escape(str(row['label']))}</td>"
             f'<td><code class="command">{escape(_scenario_run_command(row))}</code></td>'
+            f'<td><code class="command">{escape(_scenario_viewer_command(row))}</code></td>'
             "</tr>"
         )
         for row in rows
     )
     if not scenario_commands:
-        scenario_commands = '<tr><td colspan="2">No scenario commands are available.</td></tr>'
+        scenario_commands = '<tr><td colspan="3">No scenario commands are available.</td></tr>'
     return (
         "<section>"
         "<h2>Reproduce Commands</h2>"
@@ -1552,7 +1553,7 @@ def _reproduce_commands(batch_name: str, rows: list[dict[str, Any]]) -> str:
         f'<code class="command">{escape(batch_command)}</code>'
         '<div class="table-wrap">'
         "<table>"
-        "<thead><tr><th>Scenario</th><th>Headless run command</th></tr></thead>"
+        "<thead><tr><th>Scenario</th><th>Headless run command</th><th>Viewer rerun command</th></tr></thead>"
         f"<tbody>{scenario_commands}</tbody>"
         "</table>"
         "</div>"
@@ -1564,6 +1565,17 @@ def _scenario_run_command(row: dict[str, Any]) -> str:
     command = (
         f"python -m mclab run {row.get('lab_name', '')} "
         f"--config {row.get('config_path', '')} --headless --plot"
+    )
+    plot_selection = str(row.get("plot_selection") or "").strip()
+    if plot_selection:
+        command += f" --plots {plot_selection}"
+    return command
+
+
+def _scenario_viewer_command(row: dict[str, Any]) -> str:
+    command = (
+        f"python -m mclab run {row.get('lab_name', '')} "
+        f"--config {row.get('config_path', '')} --viewer --realtime --pause-at-end --plot"
     )
     plot_selection = str(row.get("plot_selection") or "").strip()
     if plot_selection:

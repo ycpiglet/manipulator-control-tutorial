@@ -293,6 +293,12 @@ class BatchTests(unittest.TestCase):
                 "python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot --plots essential",
                 report_html,
             )
+            self.assertIn("Viewer rerun command", report_html)
+            self.assertIn(
+                "python -m mclab run lab01 --config configs/lab01_msd/default.yaml "
+                "--viewer --realtime --pause-at-end --plot --plots essential",
+                report_html,
+            )
             self.assertIn("demo scenario", report_html)
             self.assertIn("Start steps", report_html)
             self.assertIn("Predict -&gt; Run scenario -&gt; Review priority plot and worksheet.", report_html)
@@ -334,6 +340,11 @@ class BatchTests(unittest.TestCase):
             self.assertIn("Plot review: Position - Compare actual motion against target", worksheet)
             self.assertIn("Batch command: python -m mclab batch unit_compare --open-report", worksheet)
             self.assertIn("Scenario command: python -m mclab run lab01 --config configs/lab01_msd/default.yaml", worksheet)
+            self.assertIn(
+                "Viewer rerun: python -m mclab run lab01 --config configs/lab01_msd/default.yaml "
+                "--viewer --realtime --pause-at-end --plot --plots essential",
+                worksheet,
+            )
             self.assertIn("- [ ] Write which scenario best supports your prediction.", worksheet)
             parent_index = output.parent / "index.html"
             self.assertIn("batch_output/report.html", parent_index.read_text(encoding="utf-8"))
