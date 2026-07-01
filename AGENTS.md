@@ -92,7 +92,7 @@ Implemented and verified:
 - Batch comparison runs generate `worksheet.md` review artifacts with scenario metrics, priority plot guidance, scenario worksheet links, reproduce commands, and comparison checklists
 - Batch comparison reports and worksheets include `Prediction Check` outcome prompts so learners can mark whether evidence matched, partly matched, or surprised their prediction
 - The full `all` batch run generates a course-level report and `worksheet.md` that show each batch focus/question and link batch reports and batch worksheets
-- Batch scenario cards include per-config prediction, reflection question, and watch cues from the run guides
+- Batch scenario cards include per-config start steps, challenge, prediction, reflection question, and watch cues from the run guides
 - Batch reports include whole-batch and per-scenario reproduce commands for learner handoff
 - Batch scenario cards include run-report, priority-plot, scenario-folder, and scenario-worksheet quick links when artifacts are available
 - The full `all` batch report includes per-batch folder links beside report and worksheet links

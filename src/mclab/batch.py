@@ -16,10 +16,12 @@ from typing import Any
 from mclab.config import PROJECT_ROOT, load_config, resolve_project_path
 from mclab.labs import lab01_msd, lab02_pid, lab03_2dof, lab04_panda
 from mclab.learning_guides import (
+    challenge_prompt_for_guide,
     control_credit_text_for_config,
     guide_for_config,
     prediction_prompt_for_guide,
     question_for_guide,
+    start_steps_for_guide,
 )
 from mclab.sim.reporting import (
     INDEX_METRIC_KEYS,
@@ -737,6 +739,11 @@ def _batch_worksheet_scenario_lines(rows: list[dict[str, Any]], metric_keys: lis
                 f"- Worksheet: {row.get('worksheet') or 'n/a'}",
             ]
         )
+        start_steps, challenge = _scenario_action_cues(row)
+        if start_steps:
+            lines.append(f"- Start steps: {start_steps}")
+        if challenge:
+            lines.append(f"- Challenge: {challenge}")
         plot = _priority_plot_link(row.get("plots", {}), row)
         lines.append(f"- Priority plot: {plot[1] if plot else 'n/a'}")
         if plot is not None:
@@ -1568,7 +1575,10 @@ def _scenario_learning_cues(row: dict[str, Any]) -> str:
     guide = guide_for_config(config_path=str(row.get("config_path", "")), lab_name=str(row.get("lab_name", "")))
     if guide is None:
         return ""
+    start_steps, challenge = _scenario_action_cues(row)
     cues = [
+        ("Start steps", start_steps),
+        ("Challenge", challenge),
         ("Predict", prediction_prompt_for_guide(guide).removeprefix("Prediction:").strip()),
         ("Question", question_for_guide(guide).removeprefix("Question:").strip()),
         ("Watch", str(getattr(guide, "watch", "") or "").strip()),
@@ -1583,6 +1593,15 @@ def _scenario_learning_cues(row: dict[str, Any]) -> str:
         for label, text in cues
         if text
     )
+
+
+def _scenario_action_cues(row: dict[str, Any]) -> tuple[str, str]:
+    guide = guide_for_config(config_path=str(row.get("config_path", "")), lab_name=str(row.get("lab_name", "")))
+    if guide is None:
+        return "", ""
+    start_steps = start_steps_for_guide(guide).removeprefix("Start steps:").strip()
+    challenge = challenge_prompt_for_guide(guide).removeprefix("Challenge:").strip()
+    return start_steps, challenge
 
 
 def _scenario_control_surface(row: dict[str, Any]) -> str:

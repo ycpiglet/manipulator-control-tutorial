@@ -61,7 +61,7 @@ def prediction_prompt_for_guide(guide: RunGuide | None) -> str:
     change = guide.change.strip()
     watch = guide.watch.strip().rstrip(".")
     if change and watch:
-        return f"Prediction: Before changing {change}, predict how {watch} will change."
+        return f"Prediction: Before changing {change}, predict {_prediction_watch_change_clause(watch)}."
     if watch:
         return f"Prediction: Before the run, predict what you expect to see in {watch}."
     if change:
@@ -218,6 +218,13 @@ def _playbook_prediction_step(watch: str) -> str:
     if lowered.startswith(("how ", "what ", "which ", "whether ")):
         return f"predict {_playbook_watch_reference(watch)}"
     return f"predict how {watch} will change"
+
+
+def _prediction_watch_change_clause(watch: str) -> str:
+    lowered = watch.lower()
+    if lowered.startswith(("how ", "what ", "which ", "whether ")):
+        return _playbook_watch_reference(watch)
+    return f"how {watch} will change"
 
 
 def _playbook_watch_reference(watch: str) -> str:

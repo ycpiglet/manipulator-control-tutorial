@@ -103,6 +103,13 @@ class LearningGuideTests(unittest.TestCase):
         self.assertEqual(challenge_prompt_for_guide(None), "")
         self.assertEqual(prediction_prompt_for_guide(None), "")
 
+        baseline = guide_for_config(config_path="configs/lab01_msd/default.yaml")
+        self.assertIsNotNone(baseline)
+        assert baseline is not None
+        baseline_prompt = prediction_prompt_for_guide(baseline)
+        self.assertIn("predict how quickly the mass returns", baseline_prompt)
+        self.assertNotIn("predict how How", baseline_prompt)
+
     def test_playbook_guides_predict_action_and_evidence(self) -> None:
         guide = guide_for_config(config_path="configs/lab04_panda/interactive_virtual_wall.yaml")
 
