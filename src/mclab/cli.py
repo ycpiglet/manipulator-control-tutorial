@@ -12,6 +12,9 @@ from .batch import ALL_BATCH_NAME, BATCH_SETS, run_all_batches, run_batch
 from .config import load_config
 from .doctor import doctor_exit_code, format_doctor_report, run_doctor_checks
 from .learner_menu import (
+    BatchMenuAction,
+    MenuAction,
+    command_for_target,
     experience_coverage_next_command,
     experience_coverage_next_label,
     experience_coverage_status_text,
@@ -22,6 +25,7 @@ from .learner_menu import (
     learning_path_progress_items,
     learning_path_progress_text,
     learning_path_summary_text,
+    learning_path_target,
     main as learner_menu_main,
     next_learning_path_step,
 )
@@ -73,6 +77,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     path_parser.add_argument("--output-dir", default="outputs", help="Outputs root directory.")
     path_parser.add_argument("--all", action="store_true", help="Print one status line for every path step.")
+
+    next_parser = subparsers.add_parser(
+        "next",
+        help="Run the next recommended learning path step.",
+    )
+    next_parser.add_argument("--output-dir", default="outputs", help="Outputs root directory used to choose the step.")
+    next_parser.add_argument("--preview", action="store_true", help="Print the next step without running it.")
+    next_parser.add_argument("--seed", type=int, help="Random seed for noisy experiments.")
 
     index_parser = subparsers.add_parser("index", help="Generate the outputs review index.")
     index_parser.add_argument("--output-dir", default="outputs", help="Outputs root directory.")
@@ -137,6 +149,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "path":
         _print_learning_path(Path(args.output_dir), show_all=args.all)
         return 0
+
+    if args.command == "next":
+        return _run_next_learning_path(Path(args.output_dir), preview=args.preview, seed=args.seed)
 
     if args.command == "index":
         index_path = write_outputs_index(Path(args.output_dir))
@@ -250,6 +265,56 @@ def _learning_path_status_line(step: object, progress: object) -> str:
         if line.startswith("Status: "):
             return line.removeprefix("Status: ")
     return "Status unavailable"
+
+
+def _run_next_learning_path(outputs_root: Path, *, preview: bool = False, seed: int | None = None) -> int:
+    progress_items = learning_path_progress_items(outputs_root)
+    next_step = next_learning_path_step(progress_items)
+    print(learning_path_summary_text(progress_items))
+    print(learning_path_milestone_text(progress_items))
+    if next_step is None:
+        print("Next step: Course path complete")
+        print("Next command: open outputs/index.html or rerun a comparison batch for deeper review.")
+        return 0
+
+    target = learning_path_target(next_step)
+    print(f"Next step: {next_step.title}")
+    print(f"Next command: {command_for_target(target)}")
+    if preview:
+        return 0
+
+    print(f"Running next step: {target.group} - {target.label}")
+    if isinstance(target, BatchMenuAction):
+        output_path = _run_next_batch_target(target, seed=seed)
+        _print_output_summary("Batch", output_path)
+    else:
+        output_path = _run_next_menu_target(target, seed=seed)
+        _print_output_summary("Run", output_path)
+    _open_path(_preferred_output_entry(output_path))
+    return 0
+
+
+def _run_next_menu_target(target: MenuAction, *, seed: int | None = None) -> Path:
+    config = load_config(target.config_path)
+    runner = LABS[target.lab_name]
+    return runner(
+        config,
+        config_path=Path(target.config_path),
+        output_dir=None,
+        plot=True,
+        viewer=True,
+        headless=False,
+        realtime=True,
+        pause_at_end=True,
+        plot_selection=target.plots,
+        seed=seed,
+    )
+
+
+def _run_next_batch_target(target: BatchMenuAction, *, seed: int | None = None) -> Path:
+    if target.batch_name == ALL_BATCH_NAME:
+        return run_all_batches(seed=seed)
+    return run_batch(target.batch_name, seed=seed)
 
 
 def _output_artifact_lines(output_path: Path) -> list[str]:

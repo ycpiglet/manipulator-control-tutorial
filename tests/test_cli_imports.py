@@ -132,6 +132,69 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("Path map:", printed)
         self.assertIn("1. Feel 1D physics: Not run yet", printed)
 
+    def test_cli_previews_next_learning_path_step_without_running(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp) / "outputs"
+
+            args = build_parser().parse_args(["next", "--output-dir", str(output_dir), "--preview"])
+            self.assertEqual(args.command, "next")
+            self.assertEqual(args.output_dir, str(output_dir))
+            self.assertTrue(args.preview)
+
+            with (
+                patch("mclab.cli.load_config") as loader,
+                patch("mclab.cli._open_path") as opener,
+                patch("builtins.print") as printer,
+            ):
+                self.assertEqual(main(["next", "--output-dir", str(output_dir), "--preview"]), 0)
+
+        loader.assert_not_called()
+        opener.assert_not_called()
+        printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
+        self.assertIn("Next step: 1. Feel 1D physics", printed)
+        self.assertIn("Next command: python -m mclab run lab01", printed)
+        self.assertNotIn("Running next step:", printed)
+
+    def test_cli_runs_next_learning_path_step(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp) / "outputs"
+            output = Path(tmp) / "next_run"
+            output.mkdir()
+            report = output / "report.html"
+            report.write_text("<html></html>", encoding="utf-8")
+            (output / "worksheet.md").write_text("# Worksheet\n", encoding="utf-8")
+            (output / "plots").mkdir()
+            (output / "plots" / "position.png").write_bytes(b"fake-png")
+            calls: list[dict[str, object]] = []
+
+            def fake_runner(_config: dict[str, object], **kwargs: object) -> Path:
+                calls.append(kwargs)
+                return output
+
+            with (
+                patch.dict("mclab.cli.LABS", {"lab01": fake_runner}, clear=False),
+                patch("mclab.cli.load_config", return_value={"model_path": "demo.xml"}) as loader,
+                patch("mclab.cli._open_path") as opener,
+                patch("builtins.print") as printer,
+            ):
+                self.assertEqual(main(["next", "--output-dir", str(output_dir), "--seed", "11"]), 0)
+
+        loader.assert_called_once_with("configs/lab01_msd/default.yaml")
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0]["config_path"], Path("configs/lab01_msd/default.yaml"))
+        self.assertTrue(calls[0]["viewer"])
+        self.assertFalse(calls[0]["headless"])
+        self.assertTrue(calls[0]["realtime"])
+        self.assertTrue(calls[0]["pause_at_end"])
+        self.assertTrue(calls[0]["plot"])
+        self.assertEqual(calls[0]["plot_selection"], "essential")
+        self.assertEqual(calls[0]["seed"], 11)
+        opener.assert_called_once_with(report)
+        printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
+        self.assertIn("Running next step: Lab01 Mass-Spring-Damper - Auto demo", printed)
+        self.assertIn(f"Run complete: {output}", printed)
+        self.assertIn(f"Plots: {output / 'plots'} (1 PNG; first: position.png)", printed)
+
     def test_cli_opens_batch_report_when_requested(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "batch"
