@@ -811,11 +811,13 @@ python -m mclab run <lab_name> --config <config_path> [--headless | --viewer] [-
 
 `--plots` selects which plot preset or plot names to save, so it must be used with `--plot`.
 
-List available labs:
+List learner entry points plus available labs and batches:
 
 ```bash
 python -m mclab list
 ```
+
+Running `python -m mclab` with no subcommand prints the same entry points for `doctor`, `menu`, `coverage`, `next --preview`, and `next`.
 
 ### Changing Parameters
 

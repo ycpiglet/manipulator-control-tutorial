@@ -106,6 +106,7 @@ Implemented and verified:
 - CLI `--viewer` and `--headless` are mutually exclusive so contradictory learner commands fail early with a usage error
 - CLI `--realtime` and `--pause-at-end` require `--viewer` so viewer-only options are never silently ignored in headless runs
 - CLI `--plots` requires `--plot` so plot preset selections are never silently ignored
+- CLI `python -m mclab` and `python -m mclab list` print learner entry points for doctor, menu, coverage, next preview, and launching the next guided viewer before the low-level lab/batch names
 - CLI run and batch completion output lists key artifact paths such as report, worksheet, the cumulative outputs index, plots, comparison plots, plus the next experience and command when course coverage is available
 - CLI run and batch completion output also surfaces worksheet review guidance: priority plot, review focus, next proof step, and the first checklist item
 - CLI batch completion output also surfaces the worksheet `Prediction Check` cue and the recommended `Viewer Handoff` rerun command for side-panel-free hands-on inspection

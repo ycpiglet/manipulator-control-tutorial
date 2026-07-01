@@ -31,9 +31,26 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("lab02", LABS)
         self.assertIn("lab03", LABS)
         self.assertIn("lab04", LABS)
-        self.assertEqual(main(["list"]), 0)
+        output = StringIO()
+        with redirect_stdout(output):
+            self.assertEqual(main(["list"]), 0)
+        printed = output.getvalue()
+        self.assertIn("Learner entry points:", printed)
+        self.assertIn("python -m mclab doctor", printed)
+        self.assertIn("python -m mclab menu", printed)
+        self.assertIn("python -m mclab coverage", printed)
+        self.assertIn("python -m mclab next --preview", printed)
+        self.assertIn("python -m mclab next", printed)
+        self.assertIn("Available labs:", printed)
+        self.assertIn("Available batches:", printed)
+        self.assertIn("lab01", printed)
         self.assertIn("lab01_msd_compare", BATCH_SETS)
         self.assertIn("lab02_pid_compare", BATCH_SETS)
+
+        default_output = StringIO()
+        with redirect_stdout(default_output):
+            self.assertEqual(main([]), 0)
+        self.assertIn("Learner entry points:", default_output.getvalue())
 
     def test_cli_accepts_batch_comparison_options(self) -> None:
         args = build_parser().parse_args(

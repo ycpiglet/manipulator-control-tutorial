@@ -193,6 +193,12 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command in {None, "list"}:
+        print("Learner entry points:")
+        print("  python -m mclab doctor          # check setup and see next learner steps")
+        print("  python -m mclab menu            # open the guided launcher")
+        print("  python -m mclab coverage        # see missing experience types and next command")
+        print("  python -m mclab next --preview  # preview the next recommended step")
+        print("  python -m mclab next            # launch the next guided viewer")
         print("Available labs:")
         for name in sorted(LABS):
             print(f"  {name}")
