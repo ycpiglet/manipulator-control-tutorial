@@ -18,9 +18,11 @@ from .learner_menu import (
     action_activity_mix_text,
     action_challenge_text,
     action_challenge_evidence_text,
+    action_compare_batch,
     action_control_credit_text,
     action_controls_text,
     action_evidence_text,
+    action_followup,
     action_history_text,
     action_latest_output,
     action_latest_evidence_text,
@@ -461,6 +463,8 @@ def _print_scenario_card(index: int, action: MenuAction, *, details: bool = Fals
         if activity_mix:
             print(f"   {activity_mix}")
         print(f"   {action_next_cue_text(action)}")
+        for command_line in _scenario_next_command_lines(action):
+            print(f"   {command_line}")
         print(f"   {action_plot_text(action)}")
         print(f"   {action_plot_review_text(action)}")
         print(f"   {action_worksheet_text(action)}")
@@ -503,6 +507,18 @@ def _scenario_replay_command_line(action: MenuAction) -> str:
         parts.extend(["--plots", action.plots])
     parts.append("--open-report")
     return f"Replay command: {' '.join(parts)}"
+
+
+def _scenario_next_command_lines(action: MenuAction) -> list[str]:
+    followup = action_followup(action)
+    followup_command = command_for_target(followup)
+    lines = [f"Next command: {followup.group} - {followup.label} -> {followup_command}"]
+
+    compare = action_compare_batch(action)
+    compare_command = command_for_target(compare)
+    if compare_command != followup_command:
+        lines.append(f"Compare command: {compare.group} - {compare.label} -> {compare_command}")
+    return lines
 
 
 def _print_batches(query: str, *, limit: int = 8, details: bool = False) -> None:

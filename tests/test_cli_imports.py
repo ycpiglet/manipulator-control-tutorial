@@ -12,7 +12,13 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from mclab.batch import BATCH_SETS  # noqa: E402
-from mclab.cli import LABS, _batch_handoff_detail_text, _scenario_replay_command_line, main  # noqa: E402
+from mclab.cli import (  # noqa: E402
+    LABS,
+    _batch_handoff_detail_text,
+    _scenario_next_command_lines,
+    _scenario_replay_command_line,
+    main,
+)
 from mclab.cli import build_parser  # noqa: E402
 from mclab.doctor import DoctorCheck  # noqa: E402
 from mclab.learner_menu import BATCH_ACTIONS, MENU_ACTIONS  # noqa: E402
@@ -299,6 +305,9 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("Preset evidence: 3 presets tried; required presets ready", printed)
         self.assertIn("Activity mix: 3/3 control families", printed)
         self.assertIn("Next cue: Replay the tuned config, then run Compare.", printed)
+        self.assertIn("Next command:", printed)
+        self.assertIn("Compare command:", printed)
+        self.assertIn("python -m mclab batch lab04_wall_compare --open-report", printed)
         self.assertIn("Plots: Latest virtual_wall.png", printed)
         self.assertIn("Plot review: Virtual Wall - Compare force and gap", printed)
         self.assertIn("Worksheet: Latest worksheet.md", printed)
@@ -334,6 +343,22 @@ class CliImportTests(unittest.TestCase):
             command,
             "Replay command: python -m mclab run lab04 --config "
             f"{tuned_config} --viewer --realtime --pause-at-end --plot --plots wall --open-report",
+        )
+
+    def test_cli_scenario_next_command_lines_include_followup_and_compare(self) -> None:
+        action = next(
+            action
+            for action in MENU_ACTIONS
+            if action.config_path == "configs/lab04_panda/interactive_virtual_wall.yaml"
+        )
+
+        lines = _scenario_next_command_lines(action)
+
+        self.assertTrue(any(line.startswith("Next command:") for line in lines))
+        self.assertIn(
+            "Compare command: Comparison Batches - Lab04 wall compare -> "
+            "python -m mclab batch lab04_wall_compare --open-report",
+            lines,
         )
 
     def test_cli_searches_comparison_batches(self) -> None:
