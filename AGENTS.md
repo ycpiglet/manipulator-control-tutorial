@@ -107,7 +107,9 @@ Implemented and verified:
 - CLI `--realtime` and `--pause-at-end` require `--viewer` so viewer-only options are never silently ignored in headless runs
 - CLI `--plots` requires `--plot` so plot preset selections are never silently ignored
 - CLI run and batch completion output lists key artifact paths such as report, worksheet, the cumulative outputs index, plots, comparison plots, plus the next experience and command when course coverage is available
-- CLI `python -m mclab scenarios <terms> --filter <type>` searches guided learner scenarios using the same terms as the GUI menu and prints mission, start steps, controls, and ready-to-run commands
+- CLI `python -m mclab scenarios <terms> --filter <type>` searches guided learner scenarios using the same terms as the GUI menu and prints mission, start steps, challenge, controls, and ready-to-run commands; `--details` also prints playbook, viewer legend, readiness, and control-credit cues
+- Scenario search ranking prioritizes direct label/config matches and broad hands-on searches, so `wall` or `virtual wall` surfaces the interactive Virtual wall card before comparison-only wall cards while `soft wall` still surfaces the Soft wall comparison
+- Guide text does not classify a non-interactive scenario as hands-on only because a follow-up mentions a live demo, avoiding fake Pull/Push or Mark observation steps on auto-run wall comparisons
 - CLI `python -m mclab batches <terms>` searches comparison batches and prints mission, start steps, challenge, readiness, and ready-to-run batch commands
 - Learner menu and CLI batch cards normalize mission text so `open...` and `compare...` actions read naturally without duplicated verbs
 - CLI `python -m mclab coverage` prints the saved Experience Coverage summary, seven-item coverage map, next missing experience, and ready-to-run command for VS Code terminal-only learners

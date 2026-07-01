@@ -3865,7 +3865,47 @@ def filter_menu_actions(
     terms = [term for term in query.lower().split() if term]
     if not terms:
         return actions
-    return tuple(action for action in actions if _action_matches_terms(action, terms))
+    matches = [action for action in actions if _action_matches_terms(action, terms)]
+    return tuple(sorted(matches, key=lambda action: _action_match_sort_key(action, terms)))
+
+
+def _action_match_sort_key(action: MenuAction, terms: list[str]) -> tuple[int, int, int, int, str]:
+    tags = set(action_tags(action))
+    primary = " ".join((action.label, Path(action.config_path).stem, action.plots)).lower()
+    secondary = " ".join((action.description, action.try_this, action.watch)).lower()
+    query_phrase = " ".join(terms)
+    phrase_hits = int(bool(query_phrase and query_phrase in primary))
+    primary_hits = sum(term in primary for term in terms)
+    secondary_hits = sum(term in secondary for term in terms)
+    hands_on_hits = int("hands-on" in tags and _query_prefers_hands_on(terms))
+    return (-phrase_hits, -primary_hits, -hands_on_hits, -secondary_hits, action.label)
+
+
+def _query_prefers_hands_on(terms: list[str]) -> bool:
+    comparison_terms = {
+        "compare",
+        "comparison",
+        "soft",
+        "stiff",
+        "low",
+        "high",
+        "near",
+        "far",
+        "slow",
+        "fast",
+        "shallow",
+        "deep",
+        "contact",
+        "cycle",
+        "retreat",
+        "damping",
+        "gain",
+        "torque",
+        "limit",
+        "noise",
+        "delay",
+    }
+    return not any(term in comparison_terms for term in terms)
 
 
 def _action_matches_terms(action: MenuAction, terms: list[str]) -> bool:

@@ -75,7 +75,7 @@ def playbook_for_guide(guide: RunGuide | None) -> str:
     watch = _short_sentence(guide.watch, 72)
     change = _short_sentence(guide.change, 72)
     try_this = _short_sentence(guide.try_this, 72)
-    context = " ".join((guide.title, guide.try_this, guide.change, guide.next_step)).lower()
+    context = " ".join((guide.title, guide.try_this, guide.change)).lower()
     hands_on = any(term in context for term in ("interactive", "live", "slider", "preset", "button", "pulse", "nudge"))
 
     predict = _playbook_prediction_step(watch)
@@ -105,7 +105,7 @@ def playbook_for_guide(guide: RunGuide | None) -> str:
 def start_steps_for_guide(guide: RunGuide | None) -> str:
     if guide is None:
         return ""
-    context = " ".join((guide.title, guide.try_this, guide.change, guide.next_step)).lower()
+    context = " ".join((guide.title, guide.try_this, guide.change)).lower()
     hands_on = any(term in context for term in ("interactive", "live", "slider", "preset", "button", "pulse", "nudge"))
     if hands_on:
         control_step = _start_control_step(guide)
@@ -189,7 +189,7 @@ def challenge_prompt_for_guide(guide: RunGuide | None) -> str:
     watch = _playbook_watch_reference(_short_sentence(guide.watch, 72))
     change = _short_sentence(guide.change, 72)
     try_this = _short_sentence(guide.try_this, 72)
-    context = " ".join((guide.title, guide.try_this, guide.change, guide.next_step)).lower()
+    context = " ".join((guide.title, guide.try_this, guide.change)).lower()
     hands_on = any(term in context for term in ("interactive", "live", "slider", "preset", "button", "pulse", "nudge"))
 
     if hands_on and change and watch:

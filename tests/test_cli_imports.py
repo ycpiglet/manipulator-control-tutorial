@@ -248,12 +248,21 @@ class CliImportTests(unittest.TestCase):
         self.assertEqual(args.limit, 0)
 
         with patch("builtins.print") as printer:
-            self.assertEqual(main(["scenarios", "virtual", "wall", "--filter", "wall", "--limit", "0"]), 0)
+            self.assertEqual(
+                main(["scenarios", "virtual", "wall", "--filter", "wall", "--limit", "0", "--details"]),
+                0,
+            )
 
         printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
         self.assertIn("Scenarios: showing", printed)
         self.assertIn("Lab04 Panda Manipulator - Virtual wall", printed)
+        self.assertIn("Challenge:", printed)
+        self.assertIn("Playbook:", printed)
         self.assertIn("Controls:", printed)
+        self.assertIn("Counts as control:", printed)
+        self.assertIn("Viewer: MuJoCo side panels are hidden", printed)
+        self.assertIn("Red plane = Virtual wall location.", printed)
+        self.assertIn("Setup: Ready", printed)
         self.assertIn(
             "Command: python -m mclab run lab04 --config configs/lab04_panda/interactive_virtual_wall.yaml "
             "--viewer --realtime --pause-at-end --plot --plots wall --open-report",

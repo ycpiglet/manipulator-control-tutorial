@@ -16,12 +16,14 @@ from .learner_menu import (
     BatchMenuAction,
     MenuAction,
     action_challenge_text,
+    action_control_credit_text,
     action_controls_text,
     action_mission_text,
     action_playbook_text,
     action_plan_text,
     action_readiness,
     action_start_steps_text,
+    action_viewer_text,
     batch_plan_text,
     batch_readiness,
     command_for_target,
@@ -114,7 +116,11 @@ def build_parser() -> argparse.ArgumentParser:
     scenarios_parser.add_argument("query", nargs="*", help="Search terms, for example: wall stiffness.")
     scenarios_parser.add_argument("--filter", default="all", help="Experience filter such as hands-on, compare, wall.")
     scenarios_parser.add_argument("--limit", type=int, default=8, help="Maximum matches to print; 0 prints all.")
-    scenarios_parser.add_argument("--details", action="store_true", help="Include readiness and full control-credit cues.")
+    scenarios_parser.add_argument(
+        "--details",
+        action="store_true",
+        help="Include playbook, viewer, readiness, and full control-credit cues.",
+    )
 
     batches_parser = subparsers.add_parser(
         "batches",
@@ -407,10 +413,16 @@ def _print_scenario_card(index: int, action: MenuAction, *, details: bool = Fals
     print(f"   {action_plan_text(action)}")
     print(f"   {action_mission_text(action)}")
     print(f"   {action_start_steps_text(action)}")
+    print(f"   {action_challenge_text(action)}")
     controls = action_controls_text(action)
     if controls:
         print(f"   {controls}")
     if details:
+        print(f"   {action_playbook_text(action)}")
+        print(f"   {action_viewer_text(action)}")
+        control_credit = action_control_credit_text(action)
+        if control_credit:
+            print(f"   {control_credit}")
         readiness = action_readiness(action)
         print(f"   Setup: {readiness.label}{f' - {readiness.detail}' if readiness.detail else ''}")
     print(f"   Command: {command_for_target(action)}")

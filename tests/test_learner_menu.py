@@ -1001,6 +1001,17 @@ class LearnerMenuTests(unittest.TestCase):
             "use Joint Target -  A / Left / Joint Target +  D / Right",
             action_start_steps_text(lab04_joint),
         )
+        deep_push_wall = by_label[("Lab04 Panda Manipulator", "Deep push wall")]
+        self.assertEqual(
+            action_start_steps_text(deep_push_wall),
+            "Start steps: Predict -> Run scenario -> Compare priority plot and worksheet.",
+        )
+        self.assertNotIn("Pull/Push", action_start_steps_text(deep_push_wall))
+        self.assertNotIn("Mark observation", action_start_steps_text(deep_push_wall))
+        self.assertIn("review the saved plot and worksheet", action_playbook_text(deep_push_wall))
+        self.assertNotIn("mark one observation", action_playbook_text(deep_push_wall))
+        self.assertIn("verify it in the saved plot and worksheet", action_challenge_text(deep_push_wall))
+        self.assertNotIn("prediction-backed observation", action_challenge_text(deep_push_wall))
 
         batch_by_label = {(action.group, action.label): action for action in BATCH_ACTIONS}
         all_compare = batch_by_label[("Comparison Batches", "All compare")]
@@ -1390,6 +1401,9 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Soft wall", wall_labels)
         self.assertIn("Stiff wall", wall_labels)
         self.assertIn("Virtual wall", wall_labels)
+        self.assertEqual(filter_menu_actions("wall", experience_filter="wall")[0].label, "Virtual wall")
+        self.assertEqual(filter_menu_actions("virtual wall", experience_filter="wall")[0].label, "Virtual wall")
+        self.assertEqual(filter_menu_actions("soft wall", experience_filter="wall")[0].label, "Soft wall")
         contact_labels = {action.label for action in filter_menu_actions("contact release")}
         self.assertIn("Contact cycle wall", contact_labels)
         target_depth_labels = {action.label for action in filter_menu_actions("target depth wall")}
