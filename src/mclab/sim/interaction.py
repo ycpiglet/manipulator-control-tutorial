@@ -2276,10 +2276,16 @@ def _append_observation_note(current: str, addition: str) -> str:
 
 
 def _observation_note_preview(note: str) -> str:
-    text = " ".join(str(note or "").split())
-    if not text:
+    parts = _observation_note_preview_parts(note)
+    if not parts:
         return "Note preview: empty"
-    return f"Note preview: {text}"
+    item_word = "item" if len(parts) == 1 else "items"
+    return f"Note preview ({len(parts)} {item_word}): {' | '.join(parts)}"
+
+
+def _observation_note_preview_parts(note: str) -> list[str]:
+    text = str(note or "").replace("\n", ";")
+    return [" ".join(part.split()) for part in text.split(";") if part.strip()]
 
 
 def _changed_tuning_summary(tuning: LiveTuning | None) -> str:

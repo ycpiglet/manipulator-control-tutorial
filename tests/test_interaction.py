@@ -1430,11 +1430,12 @@ class KeyForcePulseTests(unittest.TestCase):
             _observation_note_preview(
                 "Manual note; Position [m]: 0.100; Force [N]: 2.000; Changed values: Kp=35"
             ),
-            "Note preview: Manual note; Position [m]: 0.100; Force [N]: 2.000; Changed values: Kp=35",
+            "Note preview (4 items): Manual note | Position [m]: 0.100 | Force [N]: 2.000 | "
+            "Changed values: Kp=35",
         )
         self.assertEqual(
             _observation_note_preview("Manual note\nChanged values: Kp=35"),
-            "Note preview: Manual note Changed values: Kp=35",
+            "Note preview (2 items): Manual note | Changed values: Kp=35",
         )
 
     def test_learner_snapshot_collects_final_interactive_state(self) -> None:
