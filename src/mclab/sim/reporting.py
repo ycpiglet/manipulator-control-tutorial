@@ -1369,17 +1369,7 @@ def _worksheet_notes_lines(notes: str) -> list[str]:
 
 
 def _worksheet_artifact_lines(output: Path, plots: list[Path]) -> list[str]:
-    artifact_names = [
-        "report.html",
-        "config.yaml",
-        "summary.json",
-        "notes.md",
-        "log.csv",
-        "states.npz",
-        "interaction_events.json",
-        "learner_snapshot.json",
-        "learner_tuned_config.yaml",
-    ]
+    artifact_names = ["report.html", *_standard_artifact_names()]
     lines = ["## Artifacts", ""]
     for name in artifact_names:
         if name == "report.html" or (output / name).exists():
@@ -1390,6 +1380,28 @@ def _worksheet_artifact_lines(output: Path, plots: list[Path]) -> list[str]:
             lines.append(f"  - {_relative(output, plot)}")
     lines.append("")
     return lines
+
+
+def _standard_artifact_names() -> tuple[str, ...]:
+    return (
+        "config.yaml",
+        "summary.json",
+        "notes.md",
+        "worksheet.md",
+        "log.csv",
+        "states.npz",
+        "interaction_events.json",
+        "learner_snapshot.json",
+        "learner_tuned_config.yaml",
+    )
+
+
+def _raw_artifact_names_for_report(output: Path) -> list[str]:
+    names = [
+        "report.html",
+        *_standard_artifact_names(),
+    ]
+    return [name for name in names if name == "report.html" or (output / name).exists()]
 
 
 def _worksheet_mapping_lines(values: dict[str, Any], *, indent: int = 0) -> list[str]:
@@ -1462,17 +1474,7 @@ def _render_report(
 
     file_links = "\n".join(
         f'<li><a href="{escape(name)}">{escape(name)}</a></li>'
-        for name in (
-            "config.yaml",
-            "summary.json",
-            "notes.md",
-            "worksheet.md",
-            "log.csv",
-            "states.npz",
-            "interaction_events.json",
-            "learner_snapshot.json",
-            "learner_tuned_config.yaml",
-        )
+        for name in _standard_artifact_names()
         if (output / name).exists()
     )
     if not file_links:
@@ -1825,6 +1827,7 @@ def _render_report(
     </section>
     <section>
       <h2>Files</h2>
+      <p class="empty"><a href="./">Open output folder</a></p>
       <ul>{file_links}</ul>
     </section>
   </main>
@@ -2033,6 +2036,9 @@ def _next_actions_section(
     plot_card = _next_action_plot_card(output, plots)
     if plot_card:
         cards.append(plot_card)
+    artifact_card = _next_action_artifacts_card(output)
+    if artifact_card:
+        cards.append(artifact_card)
     replay_card = _next_action_replay_card(output, summary)
     if replay_card:
         cards.append(replay_card)
@@ -2049,7 +2055,7 @@ def _next_actions_section(
         "<h2>Next Actions</h2>"
         '<p class="empty">Use these shortcuts right after reading this report.</p>'
         '<div class="action-grid">'
-        f"{''.join(cards[:5])}"
+        f"{''.join(cards[:6])}"
         "</div>"
         "</section>"
     )
@@ -2096,6 +2102,33 @@ def _next_action_plot_card(output: Path, plots: list[Path]) -> str:
         + f'<p class="empty"><a href="{escape(href)}">Open {escape(plot.name)}</a></p>'
     )
     return _action_card("Open the key plot", "Start with the highest-priority plot for this run.", body)
+
+
+def _next_action_artifacts_card(output: Path) -> str:
+    names = _raw_artifact_names_for_report(output)
+    if not names:
+        return ""
+    visible_names = [name for name in names if name != "report.html"]
+    if not visible_names:
+        visible_names = ["report.html"]
+    links = "".join(
+        f'<li><a href="{escape(name)}">{escape(name)}</a></li>'
+        for name in visible_names[:4]
+        if (output / name).exists()
+    )
+    if not links:
+        links = "<li>report.html</li>"
+    body = (
+        '<p class="empty"><a href="./">Open output folder</a></p>'
+        "<ul>"
+        f"{links}"
+        "</ul>"
+    )
+    return _action_card(
+        "Open raw artifacts",
+        "Inspect the saved config, logs, states, snapshots, and learner events behind this report.",
+        body,
+    )
 
 
 def _next_action_replay_card(output: Path, summary: dict[str, Any]) -> str:

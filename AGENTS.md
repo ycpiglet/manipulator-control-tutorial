@@ -221,7 +221,7 @@ Implemented and verified:
 - `python -m mclab doctor` checks learner menu scenario and comparison-batch readiness
 - Run reports include suggested next-run cards with reflection questions, key parameter changes, and ready-to-run commands for every guided config
 - Run reports and worksheets show `Course Position` with the matching milestone, learning-path step, focus, completion rule, and repeat command
-- Run reports include a top-level `Next Actions` shortcut section for evidence review, priority plot opening, tuned replay, suggested next run, and comparison batch
+- Run reports include a top-level `Next Actions` shortcut section for evidence review, priority plot opening, output folder/raw artifact review, tuned replay, suggested next run, and comparison batch
 - Run reports include a `Control Surface` section and suggested-run control summaries for available buttons, sliders, presets, learner-control credit, and evidence controls
 - Run reports include a relevant comparison batch command for the current lab or Panda wall/reach mode
 - Observation markers capture the active learning question, learner predictions, evidence prompt, learner notes, changed sliders, full slider snapshots, and live status snapshots

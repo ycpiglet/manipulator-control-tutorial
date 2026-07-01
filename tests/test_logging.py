@@ -233,6 +233,8 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Next Actions", html)
             self.assertIn("Use these shortcuts right after reading this report.", html)
             self.assertIn("Review saved evidence", html)
+            self.assertIn("Open raw artifacts", html)
+            self.assertIn("Open output folder", html)
             self.assertIn("Replay tuned values", html)
             self.assertIn("Try next: Lab01 Underdamped", html)
             self.assertIn("Done when", html)
@@ -339,6 +341,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("interaction_events.json", html)
             self.assertIn("learner_snapshot.json", html)
             self.assertIn("learner_tuned_config.yaml", html)
+            self.assertIn('<a href="./">Open output folder</a>', html)
 
             worksheet = (output / "worksheet.md").read_text(encoding="utf-8")
             self.assertIn("## Course Position", worksheet)
