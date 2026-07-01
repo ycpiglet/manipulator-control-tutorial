@@ -161,6 +161,7 @@ Implemented and verified:
 - Learner menu scenario and batch cards, the live interaction panel, run reports, and worksheets include a `Challenge` line that gives learners an active visible-effect task to prove with plots or observation evidence
 - Learner menu scenario and batch cards include `Mission evidence` proof status from the latest run before opening the report
 - Learner menu batch cards include a `Prediction check` cue that points learners to the saved worksheet outcome table
+- Learner menu comparison-batch cards include a `Handoff` button that opens the latest batch report at the `Viewer Handoff` section
 - Learner menu, outputs index, and batch scenario cards choose context-aware priority plots so DLS lessons open `dls.png`, Lab04 wall comparisons open wall timing, and Cartesian/wall demos open the most relevant evidence plot first
 - Learner menu scenario cards include a `Latest evidence` summary from the latest observation marker prediction, outcome, note, and live status
 - Learner menu scenario cards include an `Activity mix` summary from the latest hands-on run's button, slider, preset, and observation-marker events

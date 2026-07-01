@@ -45,6 +45,7 @@ from mclab.learner_menu import (  # noqa: E402
     action_latest_plot,
     action_latest_tuned_config,
     action_latest_worksheet,
+    action_latest_viewer_handoff_uri,
     action_mission_text,
     action_mission_evidence_text,
     action_next_cue_text,
@@ -94,6 +95,7 @@ from mclab.learner_menu import (  # noqa: E402
     launch_action_latest_output,
     launch_action_latest_folder,
     launch_action_latest_plot,
+    launch_action_latest_viewer_handoff,
     launch_action_latest_worksheet,
     launch_learning_path_latest_folder,
     launch_learning_path_latest_output,
@@ -2699,6 +2701,7 @@ class LearnerMenuTests(unittest.TestCase):
             self.assertEqual(action_latest_output(lab01_batch, outputs), batch_path)
             self.assertEqual(action_latest_plot(lab01_batch, outputs), batch_plot)
             self.assertEqual(action_latest_worksheet(lab01_batch, outputs), worksheet)
+            self.assertTrue(action_latest_viewer_handoff_uri(lab01_batch, outputs).endswith("batch_lab01/report.html#viewer-handoff"))
             self.assertIn("History: Latest batch_lab01", action_history_text(lab01_batch, outputs))
             self.assertEqual(action_plot_text(lab01_batch, outputs), "Plots: Latest error_compare.png")
             self.assertIn("Plot review: Error - Check how quickly error shrinks", action_plot_review_text(lab01_batch, outputs))
@@ -2746,6 +2749,13 @@ class LearnerMenuTests(unittest.TestCase):
             opener.assert_called_once_with(worksheet)
             self.assertIsNone(missing_worksheet)
 
+            with patch("mclab.learner_menu.open_uri") as opener:
+                launch_action_latest_viewer_handoff(lab01_batch, outputs)
+                missing_handoff = launch_action_latest_viewer_handoff(lab02_batch, outputs)
+
+            self.assertTrue(opener.call_args.args[0].endswith("batch_lab01/report.html#viewer-handoff"))
+            self.assertIsNone(missing_handoff)
+
     def test_lab04_wall_batch_prioritizes_timing_comparison_plot(self) -> None:
         lab04_wall_batch = next(action for action in BATCH_ACTIONS if action.batch_name == "lab04_wall_compare")
 
@@ -2787,11 +2797,12 @@ class LearnerMenuTests(unittest.TestCase):
         plot_button = FakeButton()
         worksheet_button = FakeButton()
         folder_button = FakeButton()
+        handoff_button = FakeButton()
 
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)
             refresh_batch_menu_state(
-                ((lab01_batch, text_variable, report_button, plot_button, worksheet_button, folder_button),),
+                ((lab01_batch, text_variable, report_button, plot_button, worksheet_button, folder_button, handoff_button),),
                 outputs,
             )
 
@@ -2804,6 +2815,7 @@ class LearnerMenuTests(unittest.TestCase):
             self.assertEqual(plot_button.state_calls[-1], ["disabled"])
             self.assertEqual(worksheet_button.state_calls[-1], ["disabled"])
             self.assertEqual(folder_button.state_calls[-1], ["disabled"])
+            self.assertEqual(handoff_button.state_calls[-1], ["disabled"])
 
             batch_path = outputs / "batch_lab01"
             batch_path.mkdir()
@@ -2823,7 +2835,7 @@ class LearnerMenuTests(unittest.TestCase):
             (batch_path / "comparison_plots" / "position_compare.png").write_bytes(b"fake-png")
 
             refresh_batch_menu_state(
-                ((lab01_batch, text_variable, report_button, plot_button, worksheet_button, folder_button),),
+                ((lab01_batch, text_variable, report_button, plot_button, worksheet_button, folder_button, handoff_button),),
                 outputs,
             )
 
@@ -2836,6 +2848,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(plot_button.state_calls[-1], ["!disabled"])
         self.assertEqual(worksheet_button.state_calls[-1], ["!disabled"])
         self.assertEqual(folder_button.state_calls[-1], ["!disabled"])
+        self.assertEqual(handoff_button.state_calls[-1], ["!disabled"])
 
     def test_launch_latest_output_opens_report_when_available(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -6,6 +6,7 @@ import json
 import subprocess
 import shutil
 import sys
+import webbrowser
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from functools import lru_cache
@@ -121,6 +122,8 @@ class ExperienceFilter:
 BatchMenuStateItem = tuple[BatchMenuAction, Any, Any, Any]
 BatchMenuStateItemWithWorksheet = tuple[BatchMenuAction, Any, Any, Any, Any]
 BatchMenuStateItemWithFolder = tuple[BatchMenuAction, Any, Any, Any, Any, Any]
+BatchMenuStateItemWithHandoff = tuple[BatchMenuAction, Any, Any, Any, Any, Any, Any]
+VIEWER_HANDOFF_FRAGMENT = "viewer-handoff"
 
 
 EXPERIENCE_FILTERS: tuple[ExperienceFilter, ...] = (
@@ -2209,13 +2212,17 @@ def action_replay_text(action: MenuAction, outputs_root: Path | None = None) -> 
 
 
 def refresh_batch_menu_state(
-    items: tuple[BatchMenuStateItem | BatchMenuStateItemWithWorksheet | BatchMenuStateItemWithFolder, ...],
+    items: tuple[
+        BatchMenuStateItem | BatchMenuStateItemWithWorksheet | BatchMenuStateItemWithFolder | BatchMenuStateItemWithHandoff,
+        ...,
+    ],
     outputs_root: Path | None = None,
 ) -> None:
     for item in items:
         action, text_variable, report_button, plot_button = item[:4]
         worksheet_button = item[4] if len(item) > 4 else None
         folder_button = item[5] if len(item) > 5 else None
+        handoff_button = item[6] if len(item) > 6 else None
         latest_output = action_latest_output(action, outputs_root)
         text_variable.set(lesson_text_for_batch(action, outputs_root))
         report_button.state(["!disabled"] if latest_output is not None else ["disabled"])
@@ -2226,6 +2233,10 @@ def refresh_batch_menu_state(
             )
         if folder_button is not None:
             folder_button.state(["!disabled"] if latest_output is not None else ["disabled"])
+        if handoff_button is not None:
+            handoff_button.state(
+                ["!disabled"] if action_latest_viewer_handoff_uri(action, outputs_root) else ["disabled"]
+            )
 
 
 def action_followup(action: MenuAction) -> MenuAction | BatchMenuAction:
@@ -2657,6 +2668,31 @@ def launch_action_latest_worksheet(
     return open_path(worksheet)
 
 
+def action_latest_viewer_handoff_uri(
+    action: MenuAction | BatchMenuAction,
+    outputs_root: Path | None = None,
+) -> str:
+    if not isinstance(action, BatchMenuAction):
+        return ""
+    latest = action_latest_output(action, outputs_root)
+    if latest is None:
+        return ""
+    report = latest / "report.html"
+    if not report.exists():
+        return ""
+    return f"{report.resolve().as_uri()}#{VIEWER_HANDOFF_FRAGMENT}"
+
+
+def launch_action_latest_viewer_handoff(
+    action: MenuAction | BatchMenuAction,
+    outputs_root: Path | None = None,
+) -> bool | None:
+    uri = action_latest_viewer_handoff_uri(action, outputs_root)
+    if not uri:
+        return None
+    return open_uri(uri)
+
+
 def launch_action_latest_folder(
     action: MenuAction | BatchMenuAction,
     outputs_root: Path | None = None,
@@ -2814,6 +2850,10 @@ def open_path(path: Path) -> subprocess.Popen[Any] | None:
     if sys.platform == "darwin":
         return subprocess.Popen(["open", str(path)])
     return subprocess.Popen(["xdg-open", str(path)])
+
+
+def open_uri(uri: str) -> bool:
+    return bool(webbrowser.open(uri))
 
 
 def open_editable_path(path: Path) -> subprocess.Popen[Any] | None:
@@ -3734,7 +3774,9 @@ def main() -> int:
     next_step_ref: dict[str, LearningPathStep | None] = {"step": next_learning_path_step()}
     next_button_ref: dict[str, Any | None] = {"button": None}
     next_review_button_ref: dict[str, Any | None] = {"button": None}
-    batch_state_items: list[BatchMenuStateItem | BatchMenuStateItemWithWorksheet | BatchMenuStateItemWithFolder] = []
+    batch_state_items: list[
+        BatchMenuStateItem | BatchMenuStateItemWithWorksheet | BatchMenuStateItemWithFolder | BatchMenuStateItemWithHandoff
+    ] = []
     post_run_refresh_ref: dict[str, Callable[[], None]] = {}
     review_queue = tk.StringVar(value=review_queue_summary_text())
 
@@ -4024,6 +4066,15 @@ def main() -> int:
         if batch_latest is None:
             report_button.state(["disabled"])
         report_button.pack(anchor="w", pady=(4, 0))
+        handoff_button = ttk.Button(
+            cell,
+            text="Handoff",
+            width=10,
+            command=lambda selected=action: launch_action_latest_viewer_handoff(selected),
+        )
+        if not action_latest_viewer_handoff_uri(action):
+            handoff_button.state(["disabled"])
+        handoff_button.pack(anchor="w", pady=(4, 0))
         batch_plot = action_latest_plot(action)
         plot_button = ttk.Button(
             cell,
@@ -4057,7 +4108,9 @@ def main() -> int:
         ttk.Label(cell, textvariable=batch_text, wraplength=360, justify="left").pack(
             anchor="w", pady=(4, 0)
         )
-        batch_state_items.append((action, batch_text, report_button, plot_button, worksheet_button, folder_button))
+        batch_state_items.append(
+            (action, batch_text, report_button, plot_button, worksheet_button, folder_button, handoff_button)
+        )
 
     canvas = tk.Canvas(outer, highlightthickness=0)
     scrollbar = ttk.Scrollbar(outer, orient="vertical", command=canvas.yview)
