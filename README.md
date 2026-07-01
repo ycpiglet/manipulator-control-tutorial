@@ -143,7 +143,7 @@ Windows PowerShell에서 가장 쉬운 방법:
 
 각 scenario, comparison batch, learning path 카드의 `Folder` 버튼은 해당 항목의 최신 output 디렉토리를 직접 엽니다. `Report`는 HTML 리포트, comparison batch의 `Handoff`는 최신 report의 `Viewer Handoff` 섹션, `Plot`은 우선순위 그래프, `Worksheet`는 복습지, `Replay`는 튜닝된 YAML 재실행용이며, `Folder`는 `log.csv`, `states.npz`, `config.yaml`, `summary.json`, `interaction_events.json`, `learner_snapshot.json`, `learner_tuned_config.yaml` 같은 원본 산출물을 확인할 때 사용합니다.
 
-`Experience coverage`는 메뉴와 `outputs/index.html`에서 저장된 실행 기록을 읽어 Intro basics, Hands-on controls, Comparison batch, 2DOF/Jacobian, Singularity/DLS, Panda manipulator, Virtual wall 체험군 중 무엇을 이미 해봤는지 보여줍니다. interactive run은 실제 버튼, 슬라이더, preset 중 하나를 사용해야 hands-on 체험으로 인정되며, 아직 비어 있는 체험군의 다음 추천도 함께 표시합니다.
+`Experience coverage`는 메뉴와 `outputs/index.html`에서 저장된 실행 기록을 읽어 Intro basics, Hands-on controls, Comparison batch, 2DOF/Jacobian, Singularity/DLS, Panda manipulator, Virtual wall 체험군 중 무엇을 이미 해봤는지 보여줍니다. interactive run은 실제 버튼, 슬라이더, preset 중 하나를 사용해야 hands-on 체험으로 인정되며, 메뉴의 `Run next` 버튼은 아직 비어 있는 다음 체험군을 바로 실행합니다.
 
 `MCLab Interaction` 창의 `Viewer legend`는 현재 데모에서 보이는 초록 목표, 작은 초록 waypoint 경로, 파란 현재 위치, 주황 힘/경고/접촉, 붉은 wall 가이드의 의미를 설명합니다.
 메뉴 카드에도 같은 내용이 `Viewer:` 줄로 표시되며, `red plane`, `orange sphere`, `green marker` 같은 검색어로 해당 시나리오를 찾을 수 있습니다.
@@ -547,7 +547,7 @@ This opens the learner menu. From the menu, learners can launch Lab01-04 auto de
 
 The `Folder` button on each scenario, comparison batch, and learning-path card opens that item's latest output directory. Use `Report` for the HTML report, comparison-batch `Handoff` for the latest report's `Viewer Handoff` section, `Plot` for the prioritized graph, `Worksheet` for the review sheet, `Replay` for tuned YAML reruns, and `Folder` for raw artifacts such as `log.csv`, `states.npz`, `config.yaml`, `summary.json`, `interaction_events.json`, `learner_snapshot.json`, and `learner_tuned_config.yaml`.
 
-`Experience coverage` appears in the menu and `outputs/index.html`. It reads saved outputs and shows which core experience types have evidence: Intro basics, Hands-on controls, Comparison batch, 2DOF/Jacobian, Singularity/DLS, Panda manipulator, and Virtual wall. Interactive runs count as hands-on only after the learner uses at least one button, slider, or preset, and the line names the next missing experience to try.
+`Experience coverage` appears in the menu and `outputs/index.html`. It reads saved outputs and shows which core experience types have evidence: Intro basics, Hands-on controls, Comparison batch, 2DOF/Jacobian, Singularity/DLS, Panda manipulator, and Virtual wall. Interactive runs count as hands-on only after the learner uses at least one button, slider, or preset, and the menu `Run next` button launches the next missing experience directly.
 
 The `Viewer legend` in the `MCLab Interaction` window explains the green target, small green waypoint path, blue current position, orange force/warning/contact, and red wall markers used by the current demo.
 Menu cards show the same information in a `Viewer:` line, and searches such as `red plane`, `orange sphere`, or `green marker` find matching scenarios.

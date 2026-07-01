@@ -72,6 +72,8 @@ from mclab.learner_menu import (  # noqa: E402
     build_tuned_replay_args,
     config_value_preview,
     experience_filter_description,
+    experience_coverage_next_button_label,
+    experience_coverage_next_target,
     experience_coverage_summary_text,
     filter_menu_actions,
     learning_path_artifact_button_labels,
@@ -306,6 +308,8 @@ class LearnerMenuTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)
             text = experience_coverage_summary_text(outputs)
+            first_target = experience_coverage_next_target(outputs)
+            first_button = experience_coverage_next_button_label(outputs)
 
             interactive = outputs / "run_lab01_interactive"
             interactive.mkdir()
@@ -320,21 +324,37 @@ class LearnerMenuTests(unittest.TestCase):
                 encoding="utf-8",
             )
             no_control_text = experience_coverage_summary_text(outputs)
+            no_control_target = experience_coverage_next_target(outputs)
+            no_control_button = experience_coverage_next_button_label(outputs)
 
             (interactive / "interaction_events.json").write_text(
                 json.dumps([{"kind": "slider", "name": "damping", "label": "Damping", "value": 4.0}]),
                 encoding="utf-8",
             )
             with_control_text = experience_coverage_summary_text(outputs)
+            with_control_target = experience_coverage_next_target(outputs)
+            with_control_button = experience_coverage_next_button_label(outputs)
 
         self.assertIn("Experience coverage: 0/7 types tried", text)
         self.assertIn("Next: Run Lab01 Mass-Spring-Damper - Auto demo.", text)
+        self.assertIsNotNone(first_target)
+        self.assertEqual(first_target.group, "Lab01 Mass-Spring-Damper")
+        self.assertEqual(first_target.label, "Auto demo")
+        self.assertEqual(first_button, "Run next: Auto demo")
         self.assertIn("Experience coverage: 1/7 types tried", no_control_text)
         self.assertIn("Done: Intro basics.", no_control_text)
         self.assertIn("Missing: Hands-on controls", no_control_text)
         self.assertIn("Next: Run an interactive viewer and use one button, slider, or preset.", no_control_text)
+        self.assertIsNotNone(no_control_target)
+        self.assertEqual(no_control_target.group, "Lab01 Mass-Spring-Damper")
+        self.assertEqual(no_control_target.label, "Interactive")
+        self.assertEqual(no_control_button, "Run next: Interactive")
         self.assertIn("Experience coverage: 2/7 types tried", with_control_text)
         self.assertIn("Done: Intro basics, Hands-on controls.", with_control_text)
+        self.assertIsNotNone(with_control_target)
+        self.assertEqual(with_control_target.group, "Comparison Batches")
+        self.assertEqual(with_control_target.label, "Lab01 compare")
+        self.assertEqual(with_control_button, "Run next: Lab01 compare")
 
     def test_experience_coverage_reaches_all_core_experiences(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -387,10 +407,14 @@ class LearnerMenuTests(unittest.TestCase):
             )
 
             text = experience_coverage_summary_text(outputs)
+            target = experience_coverage_next_target(outputs)
+            button = experience_coverage_next_button_label(outputs)
 
         self.assertIn("Experience coverage: 7/7 types tried", text)
         self.assertIn("Missing: none", text)
         self.assertIn("All core experience types have saved evidence", text)
+        self.assertIsNone(target)
+        self.assertEqual(button, "Coverage complete")
 
     def test_recommended_learning_path_targets_real_actions(self) -> None:
         self.assertGreaterEqual(len(LEARNING_PATH), 12)

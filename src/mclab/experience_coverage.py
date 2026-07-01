@@ -85,6 +85,14 @@ def experience_coverage_summary_text(records: Iterable[ExperienceCoverageRecord]
     )
 
 
+def next_experience_coverage_item(records: Iterable[ExperienceCoverageRecord]) -> ExperienceCoverageItem | None:
+    covered = experience_coverage_keys(records)
+    for item in EXPERIENCE_COVERAGE_ITEMS:
+        if item.key not in covered:
+            return item
+    return None
+
+
 def experience_coverage_keys(records: Iterable[ExperienceCoverageRecord]) -> set[str]:
     covered: set[str] = set()
     for record in records:

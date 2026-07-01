@@ -20,6 +20,7 @@ from mclab.course_progress import course_milestone_summary
 from mclab.experience_coverage import (
     ExperienceCoverageRecord,
     experience_coverage_summary_text as format_experience_coverage_summary,
+    next_experience_coverage_item,
 )
 from mclab.learning_guides import (
     VIEWER_CONTROL_SURFACE_TEXT,
@@ -128,6 +129,16 @@ BatchMenuStateItemWithWorksheet = tuple[BatchMenuAction, Any, Any, Any, Any]
 BatchMenuStateItemWithFolder = tuple[BatchMenuAction, Any, Any, Any, Any, Any]
 BatchMenuStateItemWithHandoff = tuple[BatchMenuAction, Any, Any, Any, Any, Any, Any]
 VIEWER_HANDOFF_FRAGMENT = "viewer-handoff"
+
+EXPERIENCE_COVERAGE_TARGETS: dict[str, tuple[str, str, str]] = {
+    "intro": ("run", "Lab01 Mass-Spring-Damper", "Auto demo"),
+    "hands-on": ("run", "Lab01 Mass-Spring-Damper", "Interactive"),
+    "compare": ("batch", "Comparison Batches", "Lab01 compare"),
+    "2dof": ("run", "Lab03 2DOF Arm and Trajectories", "2DOF task-space"),
+    "singularity": ("run", "Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS"),
+    "panda": ("run", "Lab04 Panda Manipulator", "Cartesian reach"),
+    "wall": ("run", "Lab04 Panda Manipulator", "Virtual wall"),
+}
 
 
 EXPERIENCE_FILTERS: tuple[ExperienceFilter, ...] = (
@@ -1354,6 +1365,29 @@ def next_learning_path_step(
 
 def experience_coverage_summary_text(outputs_root: Path | None = None) -> str:
     return format_experience_coverage_summary(_experience_coverage_records(outputs_root))
+
+
+def experience_coverage_next_target(outputs_root: Path | None = None) -> MenuAction | BatchMenuAction | None:
+    item = next_experience_coverage_item(_experience_coverage_records(outputs_root))
+    if item is None:
+        return None
+    return _experience_coverage_target_for_key(item.key)
+
+
+def experience_coverage_next_button_label(outputs_root: Path | None = None) -> str:
+    target = experience_coverage_next_target(outputs_root)
+    if target is None:
+        return "Coverage complete"
+    return f"Run next: {target.label}"
+
+
+def _experience_coverage_target_for_key(key: str) -> MenuAction | BatchMenuAction:
+    kind, group, label = EXPERIENCE_COVERAGE_TARGETS[key]
+    actions: Sequence[MenuAction | BatchMenuAction] = BATCH_ACTIONS if kind == "batch" else MENU_ACTIONS
+    for action in actions:
+        if action.group == group and action.label == label:
+            return action
+    raise ValueError(f"Experience coverage target was not found: {group} - {label}")
 
 
 def _experience_coverage_records(outputs_root: Path | None = None) -> list[ExperienceCoverageRecord]:
@@ -3849,12 +3883,14 @@ def main() -> int:
     next_step_ref: dict[str, LearningPathStep | None] = {"step": next_learning_path_step()}
     next_button_ref: dict[str, Any | None] = {"button": None}
     next_review_button_ref: dict[str, Any | None] = {"button": None}
+    coverage_next_button_ref: dict[str, Any | None] = {"button": None}
     batch_state_items: list[
         BatchMenuStateItem | BatchMenuStateItemWithWorksheet | BatchMenuStateItemWithFolder | BatchMenuStateItemWithHandoff
     ] = []
     post_run_refresh_ref: dict[str, Callable[[], None]] = {}
     review_queue = tk.StringVar(value=review_queue_summary_text())
     experience_coverage = tk.StringVar(value=experience_coverage_summary_text())
+    experience_coverage_next = tk.StringVar(value=experience_coverage_next_button_label())
 
     def update_learning_path_button_text(step: LearningPathStep, button: Any, key: str) -> None:
         labels = learning_path_artifact_button_labels(step)
@@ -3891,6 +3927,20 @@ def main() -> int:
         path_milestones.set(learning_path_milestone_text(items))
         review_queue.set(review_queue_summary_text())
         experience_coverage.set(experience_coverage_summary_text())
+        coverage_target = experience_coverage_next_target()
+        experience_coverage_next.set(experience_coverage_next_button_label())
+        coverage_next_button = coverage_next_button_ref["button"]
+        if coverage_next_button is not None:
+            if coverage_target is None:
+                coverage_next_button.state(["disabled"])
+            elif isinstance(coverage_target, BatchMenuAction):
+                coverage_next_button.state(
+                    ["!disabled"] if batch_readiness(coverage_target).status == "ok" else ["disabled"]
+                )
+            else:
+                coverage_next_button.state(
+                    ["!disabled"] if action_readiness(coverage_target).status == "ok" else ["disabled"]
+                )
         next_button = next_button_ref["button"]
         if next_button is not None:
             next_button.state(["disabled"] if next_step is None else ["!disabled"])
@@ -3942,6 +3992,24 @@ def main() -> int:
             return
         status.set("Opened the next review run.")
 
+    def launch_next_experience_coverage_from_menu() -> None:
+        target = experience_coverage_next_target()
+        if target is None:
+            status.set("Experience coverage is complete. Replay or compare one topic more deeply.")
+            return
+        _launch_target_from_menu(
+            target,
+            status,
+            root=root,
+            latest_output=latest_output,
+            latest_button=latest_button,
+            latest_plot_button=latest_plot_button,
+            latest_worksheet_button=latest_worksheet_button,
+            latest_folder_button=latest_folder_button,
+            latest_replay_button=latest_replay_button,
+            progress_callback=refresh_after_run,
+        )
+
     search_bar = ttk.Frame(outer)
     search_bar.pack(fill="x", pady=(0, 10))
     ttk.Label(search_bar, text="Search").pack(side="left")
@@ -3979,7 +4047,19 @@ def main() -> int:
 
     coverage_frame = ttk.LabelFrame(outer, text="Experience coverage", padding=10)
     coverage_frame.pack(fill="x", pady=(0, 10))
-    ttk.Label(coverage_frame, textvariable=experience_coverage, wraplength=900, justify="left").pack(anchor="w")
+    coverage_frame.columnconfigure(0, weight=1)
+    ttk.Label(coverage_frame, textvariable=experience_coverage, wraplength=820, justify="left").grid(
+        row=0,
+        column=0,
+        sticky="w",
+    )
+    coverage_next_button = ttk.Button(
+        coverage_frame,
+        textvariable=experience_coverage_next,
+        command=launch_next_experience_coverage_from_menu,
+    )
+    coverage_next_button.grid(row=0, column=1, sticky="e", padx=(12, 0))
+    coverage_next_button_ref["button"] = coverage_next_button
 
     path_frame = ttk.LabelFrame(outer, text="Recommended learning path", padding=10)
     path_frame.pack(fill="x", pady=(0, 10))
