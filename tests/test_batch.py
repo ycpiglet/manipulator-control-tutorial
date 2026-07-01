@@ -304,6 +304,7 @@ class BatchTests(unittest.TestCase):
             self.assertIn("Viewer Handoff", report_html)
             self.assertIn("Start with demo scenario", report_html)
             self.assertIn("only saved scenario; inspect the motion before editing YAML", report_html)
+            self.assertIn("Open the scenario report, priority plot, worksheet, or folder first", report_html)
             self.assertIn("demo scenario", report_html)
             self.assertIn("Start steps", report_html)
             self.assertIn("Predict -&gt; Run scenario -&gt; Review priority plot and worksheet.", report_html)
@@ -353,6 +354,10 @@ class BatchTests(unittest.TestCase):
             self.assertIn("## Viewer Handoff", worksheet)
             self.assertIn("Start with: demo scenario", worksheet)
             self.assertIn("Why: only saved scenario; inspect the motion before editing YAML", worksheet)
+            self.assertIn("Report: demo_scenario/report.html", worksheet)
+            self.assertIn("Priority plot: demo_scenario/plots/position.png", worksheet)
+            self.assertIn("Worksheet: demo_scenario/worksheet.md", worksheet)
+            self.assertIn("Folder: demo_scenario/", worksheet)
             self.assertIn("- [ ] Write which scenario best supports your prediction.", worksheet)
             parent_index = output.parent / "index.html"
             self.assertIn("batch_output/report.html", parent_index.read_text(encoding="utf-8"))
@@ -460,6 +465,26 @@ class BatchTests(unittest.TestCase):
 
         self.assertEqual(picked["label"], "large_change")
         self.assertIn("largest tracking error change from baseline", reason)
+
+    def test_viewer_handoff_section_includes_artifact_links(self) -> None:
+        row = {
+            "label": "demo",
+            "lab_name": "lab01",
+            "config_path": "configs/lab01_msd/default.yaml",
+            "plot_selection": "essential",
+            "report": "demo/report.html",
+            "worksheet": "demo/worksheet.md",
+            "folder": "demo/",
+            "plots": {"position.png": "demo/plots/position.png"},
+            "summary": {"max_abs_position": 0.1},
+        }
+
+        html = batch._viewer_handoff_section([row], ["max_abs_position"], row["summary"])
+
+        self.assertIn('href="demo/report.html">Open report</a>', html)
+        self.assertIn('href="demo/plots/position.png">Open position.png</a>', html)
+        self.assertIn('href="demo/worksheet.md">Open worksheet</a>', html)
+        self.assertIn('href="demo/">Open folder</a>', html)
 
     def test_comparison_takeaways_rank_error_metrics_by_magnitude(self) -> None:
         rows = [

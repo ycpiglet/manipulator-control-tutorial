@@ -807,11 +807,16 @@ def _batch_worksheet_viewer_handoff_lines(rows: list[dict[str, Any]], metric_key
     if pick is None:
         return []
     row, reason = pick
+    plot = _priority_plot_link(row.get("plots", {}), row)
     return [
         "## Viewer Handoff",
         "",
         f"- Start with: {row['label']}",
         f"- Why: {reason}",
+        f"- Report: {row.get('report') or 'n/a'}",
+        f"- Priority plot: {plot[1] if plot else 'n/a'}",
+        f"- Worksheet: {row.get('worksheet') or 'n/a'}",
+        f"- Folder: {row.get('folder') or row.get('run_dir') or 'n/a'}",
         f"- Viewer rerun: {_scenario_viewer_command(row)}",
         "- [ ] Open this scenario in the side-panel-free viewer before editing another YAML parameter.",
         "",
@@ -1605,6 +1610,8 @@ def _viewer_handoff_section(
         "<h2>Viewer Handoff</h2>"
         "<p>After comparing plots, reopen one scenario in the side-panel-free viewer and inspect the motion live.</p>"
         f"<p><strong>Start with {escape(label)}</strong>: {escape(reason)}.</p>"
+        "<p class=\"muted\">Open the scenario report, priority plot, worksheet, or folder first, then run the viewer command.</p>"
+        f"{_scenario_quick_links(row)}"
         f'<code class="command">{escape(_scenario_viewer_command(row))}</code>'
         "</section>"
     )
