@@ -2284,6 +2284,10 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Check setup", html)
             self.assertIn("python -m mclab doctor", html)
             self.assertIn(r".\run_mclab.cmd", html)
+            self.assertIn("See next experience", html)
+            self.assertIn("python -m mclab coverage", html)
+            self.assertIn("Preview next path step", html)
+            self.assertIn("python -m mclab next --preview", html)
             self.assertIn(
                 "python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot --open-report",
                 html,

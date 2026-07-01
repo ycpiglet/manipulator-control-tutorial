@@ -4989,6 +4989,16 @@ def _starter_commands_section() -> str:
             r".\run_mclab.cmd",
         ),
         (
+            "See next experience",
+            "Print the coverage map plus the next missing experience and its compact guide in the terminal.",
+            "python -m mclab coverage",
+        ),
+        (
+            "Preview next path step",
+            "Read the next recommended step, mission, start steps, viewer/control guide, and command without running it.",
+            "python -m mclab next --preview",
+        ),
+        (
             "Generate first artifacts",
             "Run the baseline 1D physics demo headless and save the first report, worksheet, and plots.",
             "python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot --open-report",
