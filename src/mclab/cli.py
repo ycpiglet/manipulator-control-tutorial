@@ -24,6 +24,7 @@ from .learner_menu import (
     action_history_text,
     action_latest_output,
     action_latest_evidence_text,
+    action_latest_tuned_config,
     action_mission_text,
     action_mission_evidence_text,
     action_next_cue_text,
@@ -464,6 +465,9 @@ def _print_scenario_card(index: int, action: MenuAction, *, details: bool = Fals
         print(f"   {action_plot_review_text(action)}")
         print(f"   {action_worksheet_text(action)}")
         print(f"   {action_replay_text(action)}")
+        replay_command = _scenario_replay_command_line(action)
+        if replay_command:
+            print(f"   {replay_command}")
         readiness = action_readiness(action)
         print(f"   Setup: {readiness.label}{f' - {readiness.detail}' if readiness.detail else ''}")
     print(f"   Command: {command_for_target(action)}")
@@ -476,6 +480,29 @@ def _scenario_latest_artifact_lines(action: MenuAction) -> list[str]:
     entry = _preferred_output_entry(latest)
     label = "Report" if (latest / "report.html").exists() else "Entry"
     return [f"{label}: Latest {entry}", f"Folder: Latest {latest}"]
+
+
+def _scenario_replay_command_line(action: MenuAction) -> str:
+    tuned_config = action_latest_tuned_config(action)
+    if tuned_config is None:
+        return ""
+    parts = [
+        "python",
+        "-m",
+        "mclab",
+        "run",
+        action.lab_name,
+        "--config",
+        str(tuned_config),
+        "--viewer",
+        "--realtime",
+        "--pause-at-end",
+        "--plot",
+    ]
+    if action.plots:
+        parts.extend(["--plots", action.plots])
+    parts.append("--open-report")
+    return f"Replay command: {' '.join(parts)}"
 
 
 def _print_batches(query: str, *, limit: int = 8, details: bool = False) -> None:

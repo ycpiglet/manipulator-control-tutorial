@@ -12,10 +12,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from mclab.batch import BATCH_SETS  # noqa: E402
-from mclab.cli import LABS, _batch_handoff_detail_text, main  # noqa: E402
+from mclab.cli import LABS, _batch_handoff_detail_text, _scenario_replay_command_line, main  # noqa: E402
 from mclab.cli import build_parser  # noqa: E402
 from mclab.doctor import DoctorCheck  # noqa: E402
-from mclab.learner_menu import BATCH_ACTIONS  # noqa: E402
+from mclab.learner_menu import BATCH_ACTIONS, MENU_ACTIONS  # noqa: E402
 
 
 class CliImportTests(unittest.TestCase):
@@ -267,6 +267,10 @@ class CliImportTests(unittest.TestCase):
                 "mclab.cli._scenario_latest_artifact_lines",
                 return_value=["Report: Latest report.html", "Folder: Latest saved_virtual_wall"],
             ),
+            patch(
+                "mclab.cli._scenario_replay_command_line",
+                return_value="Replay command: python -m mclab run lab04 --config learner_tuned_config.yaml --viewer",
+            ),
             patch("builtins.print") as printer,
         ):
             self.assertEqual(
@@ -299,6 +303,7 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("Plot review: Virtual Wall - Compare force and gap", printed)
         self.assertIn("Worksheet: Latest worksheet.md", printed)
         self.assertIn("Replay: Latest learner_tuned_config.yaml", printed)
+        self.assertIn("Replay command: python -m mclab run lab04 --config learner_tuned_config.yaml --viewer", printed)
         self.assertIn("Setup: Ready", printed)
         self.assertIn(
             "Command: python -m mclab run lab04 --config configs/lab04_panda/interactive_virtual_wall.yaml "
@@ -313,6 +318,23 @@ class CliImportTests(unittest.TestCase):
         printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
         self.assertIn("Scenarios: showing 0 of 0 match(es)", printed)
         self.assertIn("No guided scenarios matched.", printed)
+
+    def test_cli_scenario_replay_command_uses_latest_tuned_config(self) -> None:
+        action = next(
+            action
+            for action in MENU_ACTIONS
+            if action.config_path == "configs/lab04_panda/interactive_virtual_wall.yaml"
+        )
+        tuned_config = Path("outputs/demo/learner_tuned_config.yaml")
+
+        with patch("mclab.cli.action_latest_tuned_config", return_value=tuned_config):
+            command = _scenario_replay_command_line(action)
+
+        self.assertEqual(
+            command,
+            "Replay command: python -m mclab run lab04 --config "
+            f"{tuned_config} --viewer --realtime --pause-at-end --plot --plots wall --open-report",
+        )
 
     def test_cli_searches_comparison_batches(self) -> None:
         args = build_parser().parse_args(["batches", "wall", "--limit", "0", "--details"])
