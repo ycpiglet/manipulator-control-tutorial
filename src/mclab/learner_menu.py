@@ -1208,6 +1208,24 @@ def learning_path_text(step: LearningPathStep) -> str:
     )
 
 
+def action_course_lines(action: MenuAction) -> list[str]:
+    for index, step in enumerate(LEARNING_PATH, start=1):
+        target = learning_path_target(step)
+        if isinstance(target, MenuAction) and target == action:
+            title = step.title
+            numeric_prefix = f"{index}. "
+            if title.startswith(numeric_prefix):
+                title = title.removeprefix(numeric_prefix)
+            return [
+                f"Course step: {index}/{len(LEARNING_PATH)} - {title}; {step.description}",
+                learning_path_completion_text(step),
+            ]
+    return [
+        "Course step: Optional exploration - not required by the recommended path; "
+        "use Next or Compare when ready."
+    ]
+
+
 def learning_path_progress(
     step: LearningPathStep,
     outputs_root: Path | None = None,
@@ -3595,6 +3613,7 @@ def _waypoint_position_preview(waypoint: dict[str, Any]) -> str:
 
 
 def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
+    course_text = "\n".join(action_course_lines(action))
     preset_labels = configured_preset_labels(action.config_path)
     presets = f"\nPresets: {', '.join(preset_labels)}" if preset_labels else ""
     preset_purposes = configured_preset_purposes(action.config_path)
@@ -3619,6 +3638,7 @@ def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
         f"Setup: {readiness.label}{setup_detail}{setup_fix}\n"
         f"Badges: {', '.join(action_badges(action))}\n"
         f"{action_plan_text(action)}\n"
+        f"{course_text}\n"
         f"{action_mission_text(action)}\n"
         f"{action_playbook_text(action)}\n"
         f"{action_start_steps_text(action)}\n"
@@ -3929,6 +3949,8 @@ def _action_matches_terms(action: MenuAction, terms: list[str]) -> bool:
         action_playbook_text(action),
         action_start_steps_text(action),
         action_challenge_text(action),
+        " ".join(action_course_lines(action)),
+        "course step done when recommended path optional exploration",
         "mission evidence challenge evidence artifact observation prediction outcome note proof",
         "playbook predict change mark review worksheet",
         "start steps first action run viewer priority plot",

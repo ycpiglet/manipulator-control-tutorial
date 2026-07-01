@@ -13,7 +13,6 @@ from .config import load_config
 from .doctor import doctor_exit_code, format_doctor_report, run_doctor_checks
 from .learner_menu import (
     BATCH_ACTIONS,
-    LEARNING_PATH,
     BatchMenuAction,
     MenuAction,
     action_activity_mix_text,
@@ -22,6 +21,7 @@ from .learner_menu import (
     action_compare_batch,
     action_control_credit_text,
     action_controls_text,
+    action_course_lines,
     action_evidence_text,
     action_followup,
     action_history_text,
@@ -54,7 +54,6 @@ from .learner_menu import (
     experience_coverage_summary_text,
     filter_menu_actions,
     learning_path_milestone_text,
-    learning_path_completion_text,
     learning_path_next_command,
     learning_path_next_label,
     learning_path_progress_items,
@@ -526,21 +525,7 @@ def _scenario_next_command_lines(action: MenuAction) -> list[str]:
 
 
 def _scenario_course_lines(action: MenuAction) -> list[str]:
-    for index, step in enumerate(LEARNING_PATH, start=1):
-        target = learning_path_target(step)
-        if isinstance(target, MenuAction) and target == action:
-            title = step.title
-            numeric_prefix = f"{index}. "
-            if title.startswith(numeric_prefix):
-                title = title.removeprefix(numeric_prefix)
-            return [
-                f"Course step: {index}/{len(LEARNING_PATH)} - {title}; {step.description}",
-                learning_path_completion_text(step),
-            ]
-    return [
-        "Course step: Optional exploration - not required by the recommended path; "
-        "use Next or Compare when ready."
-    ]
+    return action_course_lines(action)
 
 
 def _print_batches(query: str, *, limit: int = 8, details: bool = False) -> None:

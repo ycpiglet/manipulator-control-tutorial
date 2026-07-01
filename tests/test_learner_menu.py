@@ -34,6 +34,7 @@ from mclab.learner_menu import (  # noqa: E402
     action_compare_text,
     action_control_credit_text,
     action_controls_text,
+    action_course_lines,
     action_activity_mix_text,
     action_evidence_text,
     action_followup,
@@ -1264,6 +1265,34 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Panda", action_badges(lab04_wall))
         self.assertIn("Wall", action_badges(lab04_wall))
         self.assertIn("Badges: Hands-on, Panda, Wall", lesson_text(lab04_wall))
+
+    def test_menu_cards_show_course_context_for_scenarios(self) -> None:
+        by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
+        lab04_wall = by_label[("Lab04 Panda Manipulator", "Virtual wall")]
+        lab04_stability = by_label[("Lab04 Panda Manipulator", "30s stability hold")]
+
+        self.assertEqual(
+            action_course_lines(lab04_wall),
+            [
+                "Course step: 11/12 - Touch virtual wall; Tune wall position, stiffness, damping, and retreat gain.",
+                "Done when: use at least one button, slider, or preset, then save one Mark observation "
+                "with a Prediction and note after required presets: Close wall -> Back away -> Re-enter wall; "
+                "add the outcome during review.",
+            ],
+        )
+        self.assertIn("Course step: 11/12 - Touch virtual wall", lesson_text(lab04_wall))
+        self.assertIn("Done when: use at least one button, slider, or preset", lesson_text(lab04_wall))
+        self.assertEqual(
+            action_course_lines(lab04_stability),
+            [
+                "Course step: Optional exploration - not required by the recommended path; "
+                "use Next or Compare when ready."
+            ],
+        )
+        self.assertIn("Course step: Optional exploration", lesson_text(lab04_stability))
+
+        course_matches = filter_menu_actions("course step virtual wall")
+        self.assertIn(lab04_wall, course_matches)
 
     def test_menu_action_followups_point_to_real_next_experiences(self) -> None:
         for action in MENU_ACTIONS:
