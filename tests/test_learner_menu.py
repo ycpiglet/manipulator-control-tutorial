@@ -301,6 +301,8 @@ class LearnerMenuTests(unittest.TestCase):
         _set_status_after_doctor(status, 0, "Summary: 5 OK, 0 WARN, 0 FAIL")
         self.assertIn("Setup check passed", status.value)
         self.assertIn("5 OK", status.value)
+        self.assertIn("Use Run next", status.value)
+        self.assertIn("python -m mclab next --preview", status.value)
 
         _set_status_after_doctor(status, 1, "Summary: 4 OK, 0 WARN, 1 FAIL")
         self.assertIn("Setup check found issues", status.value)

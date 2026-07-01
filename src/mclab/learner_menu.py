@@ -4944,7 +4944,7 @@ def _set_status_after_doctor(
     def update_ui() -> None:
         suffix = f" {summary}" if summary else ""
         if return_code == 0:
-            status.set(f"Setup check passed.{suffix}")
+            status.set(f"Setup check passed.{suffix} Use Run next or `python -m mclab next --preview`.")
             return
         status.set(f"Setup check found issues.{suffix} Run `python -m mclab doctor` for details.")
 
