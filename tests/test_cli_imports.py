@@ -284,7 +284,18 @@ class CliImportTests(unittest.TestCase):
         self.assertEqual(args.limit, 0)
         self.assertTrue(args.details)
 
-        with patch("builtins.print") as printer:
+        with (
+            patch("mclab.cli.action_history_text", return_value="History: Latest saved_batch"),
+            patch("mclab.cli.action_worksheet_text", return_value="Worksheet: Latest worksheet.md"),
+            patch("mclab.cli.action_plot_text", return_value="Plots: Latest error_compare.png"),
+            patch("mclab.cli.action_plot_review_text", return_value="Plot review: Error - Compare traces"),
+            patch(
+                "mclab.cli.batch_prediction_check_text",
+                return_value="Prediction check: Ready in worksheet; mark Matched, Partly matched, or Surprised.",
+            ),
+            patch("mclab.cli._batch_handoff_detail_text", return_value="Handoff: Latest report.html#viewer-handoff"),
+            patch("builtins.print") as printer,
+        ):
             self.assertEqual(main(["batches", "wall", "--limit", "0", "--details"]), 0)
 
         printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
@@ -292,6 +303,13 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("Comparison Batches - Lab04 wall compare", printed)
         self.assertIn("Mission: Run", printed)
         self.assertIn("Setup: Ready", printed)
+        self.assertIn("Playbook: 1. predict the comparison outcome", printed)
+        self.assertIn("History: Latest saved_batch", printed)
+        self.assertIn("Worksheet: Latest worksheet.md", printed)
+        self.assertIn("Plots: Latest error_compare.png", printed)
+        self.assertIn("Plot review: Error - Compare traces", printed)
+        self.assertIn("Prediction check: Ready in worksheet; mark Matched, Partly matched, or Surprised.", printed)
+        self.assertIn("Handoff: Latest report.html#viewer-handoff", printed)
         self.assertIn("Command: python -m mclab batch lab04_wall_compare --open-report", printed)
 
     def test_cli_batch_search_handles_empty_matches(self) -> None:

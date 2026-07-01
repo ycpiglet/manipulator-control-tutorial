@@ -18,14 +18,21 @@ from .learner_menu import (
     action_challenge_text,
     action_control_credit_text,
     action_controls_text,
+    action_history_text,
+    action_latest_output,
     action_mission_text,
     action_playbook_text,
+    action_plot_review_text,
+    action_plot_text,
     action_plan_text,
     action_readiness,
     action_start_steps_text,
     action_viewer_text,
+    action_worksheet_text,
     batch_plan_text,
+    batch_prediction_check_text,
     batch_readiness,
+    batch_viewer_handoff_text,
     command_for_target,
     experience_coverage_next_command,
     experience_coverage_next_label,
@@ -489,7 +496,24 @@ def _print_batch_card(index: int, action: BatchMenuAction, *, details: bool = Fa
     if details:
         readiness = batch_readiness(action)
         print(f"   Setup: {readiness.label}{f' - {readiness.detail}' if readiness.detail else ''}")
+        print(f"   {action_playbook_text(action)}")
+        print(f"   {action_history_text(action)}")
+        print(f"   {action_worksheet_text(action)}")
+        print(f"   {action_plot_text(action)}")
+        print(f"   {action_plot_review_text(action)}")
+        print(f"   {batch_prediction_check_text(action)}")
+        print(f"   {_batch_handoff_detail_text(action)}")
     print(f"   Command: {command_for_target(action)}")
+
+
+def _batch_handoff_detail_text(action: BatchMenuAction) -> str:
+    latest = action_latest_output(action)
+    if latest is None:
+        return batch_viewer_handoff_text(action)
+    report = latest / "report.html"
+    if report.exists():
+        return f"Handoff: Latest {report}#viewer-handoff"
+    return "Handoff: Latest batch output has no report.html; rerun the batch or open the worksheet."
 
 
 def _output_artifact_lines(output_path: Path) -> list[str]:
