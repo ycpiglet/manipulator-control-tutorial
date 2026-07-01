@@ -955,7 +955,7 @@ def _render_worksheet(
     lines.extend(_worksheet_pairs_section("Summary Values", list(summary.items())))
     lines.extend(_worksheet_plot_review_lines(output, plots))
     lines.extend(_worksheet_observation_timeline_lines(interaction_events))
-    lines.extend(_worksheet_observation_lines(interaction_events))
+    lines.extend(_worksheet_observation_lines(interaction_events, config))
     lines.extend(_worksheet_review_checklist(interaction_events, config))
     lines.extend(_worksheet_activity_mix_lines(interaction_events, config))
     lines.extend(_worksheet_preset_comparison_lines(interaction_events, config))
@@ -1116,17 +1116,17 @@ def _worksheet_observation_timeline_lines(events: list[dict[str, Any]]) -> list[
     return lines
 
 
-def _worksheet_observation_lines(events: list[dict[str, Any]]) -> list[str]:
+def _worksheet_observation_lines(events: list[dict[str, Any]], config: dict[str, Any]) -> list[str]:
     markers = [event for event in events if _is_observation_marker(event)]
     lines = ["## Observation Markers", ""]
     if not markers:
-        lines.extend(
-            [
-                "- No observation markers saved yet.",
-                "- Next: run an interactive demo, write a prediction, then press Mark observation.",
-                "",
-            ]
-        )
+        lines.append("- No observation markers saved yet.")
+        if _has_observation_workflow(events, config):
+            lines.append("- Next: write a prediction, use one learner control, then press Mark observation.")
+        else:
+            lines.append("- Next: use the Plot Review and Challenge Evidence sections for this auto-run scenario.")
+            lines.append("- Hands-on marker evidence comes from interactive scenarios with buttons, sliders, or presets.")
+        lines.append("")
         return lines
 
     for marker_index, marker in enumerate(markers, start=1):
@@ -1172,6 +1172,7 @@ def _worksheet_review_checklist(events: list[dict[str, Any]], config: dict[str, 
     markers, predictions, notes, outcomes = _observation_evidence_counts_from_events(events)
     pending_outcomes = max(0, predictions - outcomes)
     required_labels, required_tried, next_required = _required_preset_progress(config, events)
+    has_observation_workflow = _has_observation_workflow(events, config)
     lines = [
         "## Review Checklist",
         "",
@@ -1187,6 +1188,17 @@ def _worksheet_review_checklist(events: list[dict[str, Any]], config: dict[str, 
             f"- Outcome review pending: {_markdown_inline(pending_outcomes)} "
             "prediction(s) still need Matched, Partly matched, or Surprised."
         )
+    if not has_observation_workflow:
+        lines.extend(
+            [
+                "- [ ] Answer the Prediction prompt before reading the plots.",
+                "- [ ] Use Plot Review and Challenge Evidence to decide whether the result matched your expectation.",
+                "- [ ] Write Matched, Partly matched, or Surprised in your notes or the batch Prediction Check.",
+                "- [ ] Run one Suggested Next Experiment or the Comparison Batch for a controlled comparison.",
+                "",
+            ]
+        )
+        return lines
     if markers <= 0:
         if next_required:
             lines.append(
@@ -1216,6 +1228,14 @@ def _worksheet_review_checklist(events: list[dict[str, Any]], config: dict[str, 
         )
     lines.append("")
     return lines
+
+
+def _has_observation_workflow(events: list[dict[str, Any]], config: dict[str, Any] | None) -> bool:
+    return (
+        any(learner_control_families_from_config(config))
+        or _learner_control_event_count(events) > 0
+        or any(_is_observation_marker(event) for event in events)
+    )
 
 
 def _worksheet_preset_comparison_lines(events: list[dict[str, Any]], config: dict[str, Any]) -> list[str]:

@@ -1077,6 +1077,58 @@ class LoggingTests(unittest.TestCase):
             )
             self.assertIn("- [ ] Save one observation marker with a prediction and note.", worksheet_text)
 
+    def test_auto_run_worksheet_uses_plot_review_instead_of_marker_tasks(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "run"
+            output.mkdir()
+            (output / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab03_2dof",
+                        "config_path": "configs/lab03_2dof/condition_aware_dls_adaptive_speed_retarget_2dof.yaml",
+                        "config_name": "condition_aware_dls_adaptive_speed_retarget_2dof",
+                        "samples": 10,
+                        "duration": 0.02,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (output / "notes.md").write_text("# Auto run\n", encoding="utf-8")
+            (output / "config.yaml").write_text(
+                (
+                    "model_path: models/lab03_2dof/two_link.xml\n"
+                    "mode: condition_aware_dls\n"
+                    "tracking_controller:\n"
+                    "  max_task_speed_schedule:\n"
+                    "    - time: 0.0\n"
+                    "      speed: 0.62\n"
+                ),
+                encoding="utf-8",
+            )
+            (output / "interaction_events.json").write_text("[]", encoding="utf-8")
+
+            write_run_report(output)
+
+            worksheet_text = (output / "worksheet.md").read_text(encoding="utf-8")
+            self.assertIn("- No observation markers saved yet.", worksheet_text)
+            self.assertIn(
+                "- Next: use the Plot Review and Challenge Evidence sections for this auto-run scenario.",
+                worksheet_text,
+            )
+            self.assertIn("- Hands-on marker evidence comes from interactive scenarios", worksheet_text)
+            self.assertIn("- [ ] Answer the Prediction prompt before reading the plots.", worksheet_text)
+            self.assertIn(
+                "- [ ] Use Plot Review and Challenge Evidence to decide whether the result matched your expectation.",
+                worksheet_text,
+            )
+            self.assertIn(
+                "- [ ] Run one Suggested Next Experiment or the Comparison Batch for a controlled comparison.",
+                worksheet_text,
+            )
+            self.assertNotIn("- [ ] Save one observation marker with a prediction and note.", worksheet_text)
+            self.assertNotIn("- [ ] Capture one live status or note before moving to the next scenario.", worksheet_text)
+            self.assertNotIn("press Mark observation", worksheet_text)
+
     def test_run_report_requires_preset_order(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "run"

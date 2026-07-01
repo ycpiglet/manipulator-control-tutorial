@@ -131,6 +131,7 @@ Implemented and verified:
 - Run reports and generated `worksheet.md` artifacts include a `Hands-on activity mix` summary for button, slider, preset, and observation-marker variety
 - Run reports and generated `worksheet.md` artifacts include a chronological `Activity path` for the learner's button, slider, preset, and observation-marker sequence
 - Generated `worksheet.md` artifacts include a control coverage checklist for preset, slider, button, and prediction-plus-note observation evidence
+- Auto-run `worksheet.md` review checklists point learners to Plot Review, Challenge Evidence, suggested next experiments, and comparison batches instead of asking for unavailable `Mark observation` controls
 - Activity mix and control coverage prompts only require control families that are available in the run config
 - Interactive `MCLab Interaction` changed-values summary shows slider parameters changed from run start
 - Interactive `MCLab Interaction` panel is scrollable and resizable so dense demos keep observation and live-status controls reachable
