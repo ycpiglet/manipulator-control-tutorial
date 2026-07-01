@@ -108,6 +108,8 @@ Implemented and verified:
 - CLI `--plots` requires `--plot` so plot preset selections are never silently ignored
 - CLI run and batch completion output lists key artifact paths such as report, worksheet, the cumulative outputs index, plots, comparison plots, plus the next experience and command when course coverage is available
 - CLI `python -m mclab scenarios <terms> --filter <type>` searches guided learner scenarios using the same terms as the GUI menu and prints mission, start steps, controls, and ready-to-run commands
+- CLI `python -m mclab batches <terms>` searches comparison batches and prints mission, start steps, challenge, readiness, and ready-to-run batch commands
+- Learner menu and CLI batch cards normalize mission text so `open...` and `compare...` actions read naturally without duplicated verbs
 - CLI `python -m mclab coverage` prints the saved Experience Coverage summary, seven-item coverage map, next missing experience, and ready-to-run command for VS Code terminal-only learners
 - CLI `python -m mclab path` prints the recommended 12-step learning-path summary, milestone status, next step, and ready-to-run command; `--all` adds a one-line status map for every path step
 - CLI `python -m mclab next --preview` prints the next recommended path step without running it, while `python -m mclab next` launches that next run or batch directly and opens the resulting report

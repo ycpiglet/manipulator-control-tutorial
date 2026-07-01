@@ -3235,8 +3235,8 @@ def batch_plan_text(action: BatchMenuAction) -> str:
 def action_mission_text(action: MenuAction | BatchMenuAction) -> str:
     if isinstance(action, BatchMenuAction):
         return (
-            f"Mission: Run {_batch_scenario_count(action)} scenarios; compare "
-            f"{_short_sentence(action.try_this, 88)}; prove it with {_short_sentence(action.watch, 88)}."
+            f"Mission: Run {_batch_scenario_count(action)} scenarios; "
+            f"{_batch_mission_action(action.try_this)}; prove it with {_short_sentence(action.watch, 88)}."
         )
 
     watch = _short_sentence(action.watch, 96)
@@ -3245,6 +3245,15 @@ def action_mission_text(action: MenuAction | BatchMenuAction) -> str:
     if _is_compare_action(action):
         return f"Mission: Isolate {_short_sentence(parameter_hint(action), 88)}; prove it with {watch}."
     return f"Mission: Run the demo; {_short_sentence(action.try_this, 88)}; prove it with {watch}."
+
+
+def _batch_mission_action(text: str) -> str:
+    action = _short_sentence(text, 88)
+    if not action:
+        return "compare the saved scenarios"
+    if action.lower().startswith(("compare ", "open ", "review ", "inspect ")):
+        return f"{action[0].lower()}{action[1:]}"
+    return f"compare {action[0].lower()}{action[1:]}"
 
 
 def action_playbook_text(action: MenuAction | BatchMenuAction) -> str:

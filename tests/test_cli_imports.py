@@ -268,6 +268,31 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("Scenarios: showing 0 of 0 match(es)", printed)
         self.assertIn("No guided scenarios matched.", printed)
 
+    def test_cli_searches_comparison_batches(self) -> None:
+        args = build_parser().parse_args(["batches", "wall", "--limit", "0", "--details"])
+        self.assertEqual(args.command, "batches")
+        self.assertEqual(args.query, ["wall"])
+        self.assertEqual(args.limit, 0)
+        self.assertTrue(args.details)
+
+        with patch("builtins.print") as printer:
+            self.assertEqual(main(["batches", "wall", "--limit", "0", "--details"]), 0)
+
+        printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
+        self.assertIn("Batches: showing", printed)
+        self.assertIn("Comparison Batches - Lab04 wall compare", printed)
+        self.assertIn("Mission: Run", printed)
+        self.assertIn("Setup: Ready", printed)
+        self.assertIn("Command: python -m mclab batch lab04_wall_compare --open-report", printed)
+
+    def test_cli_batch_search_handles_empty_matches(self) -> None:
+        with patch("builtins.print") as printer:
+            self.assertEqual(main(["batches", "not-a-real-batch-token"]), 0)
+
+        printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
+        self.assertIn("Batches: showing 0 of 0 match(es)", printed)
+        self.assertIn("No comparison batches matched.", printed)
+
     def test_cli_opens_batch_report_when_requested(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "batch"

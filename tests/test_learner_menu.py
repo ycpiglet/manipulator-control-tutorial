@@ -1005,11 +1005,16 @@ class LearnerMenuTests(unittest.TestCase):
         batch_by_label = {(action.group, action.label): action for action in BATCH_ACTIONS}
         all_compare = batch_by_label[("Comparison Batches", "All compare")]
         lab01_compare = batch_by_label[("Comparison Batches", "Lab01 compare")]
+        lab04_wall_compare = batch_by_label[("Comparison Batches", "Lab04 wall compare")]
         self.assertEqual(
             action_start_steps_text(all_compare),
             "Start steps: Predict the strongest course-level effect -> Run all comparison batches -> Open the course worksheet.",
         )
         self.assertIn("Run 5 scenarios", action_start_steps_text(lab01_compare))
+        self.assertIn("compare wall penetration", action_mission_text(lab04_wall_compare))
+        self.assertNotIn("compare Compare", action_mission_text(lab04_wall_compare))
+        self.assertIn("open the top report", action_mission_text(all_compare))
+        self.assertNotIn("Compare open", action_mission_text(all_compare))
 
     def test_menu_cards_show_actual_control_affordances(self) -> None:
         by_label = {(action.group, action.label): action for action in MENU_ACTIONS}

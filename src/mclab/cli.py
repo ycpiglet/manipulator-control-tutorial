@@ -12,13 +12,18 @@ from .batch import ALL_BATCH_NAME, BATCH_SETS, run_all_batches, run_batch
 from .config import load_config
 from .doctor import doctor_exit_code, format_doctor_report, run_doctor_checks
 from .learner_menu import (
+    BATCH_ACTIONS,
     BatchMenuAction,
     MenuAction,
+    action_challenge_text,
     action_controls_text,
     action_mission_text,
+    action_playbook_text,
     action_plan_text,
     action_readiness,
     action_start_steps_text,
+    batch_plan_text,
+    batch_readiness,
     command_for_target,
     experience_coverage_next_command,
     experience_coverage_next_label,
@@ -111,6 +116,14 @@ def build_parser() -> argparse.ArgumentParser:
     scenarios_parser.add_argument("--limit", type=int, default=8, help="Maximum matches to print; 0 prints all.")
     scenarios_parser.add_argument("--details", action="store_true", help="Include readiness and full control-credit cues.")
 
+    batches_parser = subparsers.add_parser(
+        "batches",
+        help="Search learner comparison batches and print ready-to-run commands.",
+    )
+    batches_parser.add_argument("query", nargs="*", help="Search terms, for example: wall damping.")
+    batches_parser.add_argument("--limit", type=int, default=8, help="Maximum matches to print; 0 prints all.")
+    batches_parser.add_argument("--details", action="store_true", help="Include readiness details.")
+
     index_parser = subparsers.add_parser("index", help="Generate the outputs review index.")
     index_parser.add_argument("--output-dir", default="outputs", help="Outputs root directory.")
     index_parser.add_argument("--open", action="store_true", help="Open the generated index after completion.")
@@ -184,6 +197,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "scenarios":
         _print_scenarios(" ".join(args.query), experience_filter=args.filter, limit=args.limit, details=args.details)
+        return 0
+
+    if args.command == "batches":
+        _print_batches(" ".join(args.query), limit=args.limit, details=args.details)
         return 0
 
     if args.command == "index":
@@ -395,6 +412,70 @@ def _print_scenario_card(index: int, action: MenuAction, *, details: bool = Fals
         print(f"   {controls}")
     if details:
         readiness = action_readiness(action)
+        print(f"   Setup: {readiness.label}{f' - {readiness.detail}' if readiness.detail else ''}")
+    print(f"   Command: {command_for_target(action)}")
+
+
+def _print_batches(query: str, *, limit: int = 8, details: bool = False) -> None:
+    matches = _filter_batch_actions(query)
+    shown = matches if limit <= 0 else matches[: max(0, limit)]
+    query_text = query.strip() or "all"
+    print(f"Batches: showing {len(shown)} of {len(matches)} match(es) for query '{query_text}'.")
+    if not matches:
+        print("No comparison batches matched. Try: all, lab01, PID, 2DOF, Panda, wall, Cartesian, or compare.")
+        return
+    if limit > 0 and len(matches) > len(shown):
+        print("Tip: use --limit 0 to print all matches.")
+    for index, action in enumerate(shown, start=1):
+        _print_batch_card(index, action, details=details)
+
+
+def _filter_batch_actions(query: str) -> tuple[BatchMenuAction, ...]:
+    terms = [term for term in query.lower().split() if term]
+    if not terms:
+        return BATCH_ACTIONS
+    matches = [action for action in BATCH_ACTIONS if _batch_matches_terms(action, terms)]
+    return tuple(sorted(matches, key=lambda action: _batch_match_sort_key(action, terms)))
+
+
+def _batch_matches_terms(action: BatchMenuAction, terms: list[str]) -> bool:
+    fields = [
+        action.group,
+        action.label,
+        action.batch_name,
+        action.description,
+        action.try_this,
+        action.watch,
+        batch_plan_text(action),
+        action_mission_text(action),
+        action_playbook_text(action),
+        action_start_steps_text(action),
+        action_challenge_text(action),
+        batch_readiness(action).label,
+        batch_readiness(action).detail,
+        command_for_target(action),
+        "compare comparison batch prediction check worksheet report plots handoff",
+    ]
+    text = " ".join(fields).lower()
+    return all(term in text for term in terms)
+
+
+def _batch_match_sort_key(action: BatchMenuAction, terms: list[str]) -> tuple[int, int, str]:
+    primary = " ".join((action.label, action.batch_name)).lower()
+    secondary = " ".join((action.description, action.try_this, action.watch)).lower()
+    primary_hits = sum(term in primary for term in terms)
+    secondary_hits = sum(term in secondary for term in terms)
+    return (-primary_hits, -secondary_hits, action.label)
+
+
+def _print_batch_card(index: int, action: BatchMenuAction, *, details: bool = False) -> None:
+    print(f"{index}. {action.group} - {action.label}")
+    print(f"   {batch_plan_text(action)}")
+    print(f"   {action_mission_text(action)}")
+    print(f"   {action_start_steps_text(action)}")
+    print(f"   {action_challenge_text(action)}")
+    if details:
+        readiness = batch_readiness(action)
         print(f"   Setup: {readiness.label}{f' - {readiness.detail}' if readiness.detail else ''}")
     print(f"   Command: {command_for_target(action)}")
 
