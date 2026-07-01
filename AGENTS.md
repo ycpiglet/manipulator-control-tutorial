@@ -108,6 +108,7 @@ Implemented and verified:
 - CLI `--plots` requires `--plot` so plot preset selections are never silently ignored
 - CLI run and batch completion output lists key artifact paths such as report, worksheet, the cumulative outputs index, plots, comparison plots, plus the next experience and command when course coverage is available
 - CLI run and batch completion output also surfaces worksheet review guidance: priority plot, review focus, next proof step, and the first checklist item
+- CLI batch completion output also surfaces the worksheet `Prediction Check` cue and the recommended `Viewer Handoff` rerun command for side-panel-free hands-on inspection
 - CLI `python -m mclab scenarios <terms> --filter <type>` searches guided learner scenarios using the same terms as the GUI menu and prints mission, start steps, challenge, controls, and ready-to-run commands; `--details` also prints playbook, viewer legend, readiness, and control-credit cues
 - Scenario search ranking prioritizes direct label/config matches and broad hands-on searches, so `wall` or `virtual wall` surfaces the interactive Virtual wall card before comparison-only wall cards while `soft wall` still surfaces the Soft wall comparison
 - Guide text does not classify a non-interactive scenario as hands-on only because a follow-up mentions a live demo, avoiding fake Pull/Push or Mark observation steps on auto-run wall comparisons

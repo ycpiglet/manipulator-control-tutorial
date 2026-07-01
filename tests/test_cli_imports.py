@@ -310,7 +310,27 @@ class CliImportTests(unittest.TestCase):
             all_reports_index.write_text("<html></html>", encoding="utf-8")
             report = output / "report.html"
             report.write_text("<html></html>", encoding="utf-8")
-            (output / "worksheet.md").write_text("# Batch worksheet\n", encoding="utf-8")
+            (output / "worksheet.md").write_text(
+                "\n".join(
+                    [
+                        "# Batch worksheet",
+                        "",
+                        "## Prediction Check",
+                        "",
+                        "- Use this after writing a prediction: mark each item as Matched, Partly matched, or Surprised.",
+                        "",
+                        "## Viewer Handoff",
+                        "",
+                        "- Start with: high damping",
+                        "- Why: largest baseline metric change",
+                        "- Priority plot: comparison_plots/error_compare.png",
+                        "- Viewer rerun: python -m mclab run lab01 --config configs/lab01_msd/over_damped.yaml --viewer --realtime --pause-at-end --plot --plots essential",
+                        "- [ ] Open this scenario in the side-panel-free viewer before editing another YAML parameter.",
+                        "",
+                    ]
+                ),
+                encoding="utf-8",
+            )
             (output / "comparison_plots").mkdir()
             (output / "comparison_plots" / "error_compare.png").write_bytes(b"fake-png")
 
@@ -329,6 +349,21 @@ class CliImportTests(unittest.TestCase):
             self.assertIn(f"Worksheet: {output / 'worksheet.md'}", printed)
             self.assertIn(f"All reports index: {all_reports_index}", printed)
             self.assertIn(f"Comparison plots: {output / 'comparison_plots'} (1 PNG; first: error_compare.png)", printed)
+            self.assertIn(f"Priority plot: {output / 'comparison_plots' / 'error_compare.png'}", printed)
+            self.assertIn(
+                "Prediction check: Mark Matched, Partly matched, or Surprised in worksheet.md.",
+                printed,
+            )
+            self.assertIn(
+                "Viewer handoff: high damping -> python -m mclab run lab01 "
+                "--config configs/lab01_msd/over_damped.yaml --viewer --realtime --pause-at-end "
+                "--plot --plots essential",
+                printed,
+            )
+            self.assertIn(
+                "Review checklist: Open this scenario in the side-panel-free viewer before editing another YAML parameter.",
+                printed,
+            )
 
     def test_cli_runs_all_batches_when_requested(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

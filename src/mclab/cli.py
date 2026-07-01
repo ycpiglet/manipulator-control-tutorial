@@ -526,17 +526,33 @@ def _worksheet_review_artifact_lines(output_path: Path) -> list[str]:
     what_to_check = ""
     next_proof_step = ""
     first_checklist_item = ""
+    has_prediction_check = False
+    in_viewer_handoff = False
+    viewer_handoff_start = ""
+    viewer_handoff_command = ""
     for line in text.splitlines():
-        if line.startswith("- Priority plot: ") and not priority_plot:
-            priority_plot = line.removeprefix("- Priority plot: ").strip()
-        elif line.startswith("- Read first: ") and not read_first:
-            read_first = line.removeprefix("- Read first: ").strip()
-        elif line.startswith("- What to check: ") and not what_to_check:
-            what_to_check = line.removeprefix("- What to check: ").strip()
-        elif line.startswith("- Next proof step: ") and not next_proof_step:
-            next_proof_step = line.removeprefix("- Next proof step: ").strip()
-        elif line.startswith("- [ ] ") and not first_checklist_item:
-            first_checklist_item = line.removeprefix("- [ ] ").strip()
+        stripped = line.strip()
+        if stripped == "## Prediction Check":
+            has_prediction_check = True
+        if stripped.startswith("## "):
+            in_viewer_handoff = stripped == "## Viewer Handoff"
+            continue
+        if in_viewer_handoff:
+            if stripped.startswith("- Start with: ") and not viewer_handoff_start:
+                viewer_handoff_start = stripped.removeprefix("- Start with: ").strip()
+            elif stripped.startswith("- Viewer rerun: ") and not viewer_handoff_command:
+                viewer_handoff_command = stripped.removeprefix("- Viewer rerun: ").strip()
+
+        if stripped.startswith("- Priority plot: ") and not priority_plot:
+            priority_plot = stripped.removeprefix("- Priority plot: ").strip()
+        elif stripped.startswith("- Read first: ") and not read_first:
+            read_first = stripped.removeprefix("- Read first: ").strip()
+        elif stripped.startswith("- What to check: ") and not what_to_check:
+            what_to_check = stripped.removeprefix("- What to check: ").strip()
+        elif stripped.startswith("- Next proof step: ") and not next_proof_step:
+            next_proof_step = stripped.removeprefix("- Next proof step: ").strip()
+        elif stripped.startswith("- [ ] ") and not first_checklist_item:
+            first_checklist_item = stripped.removeprefix("- [ ] ").strip()
 
     lines: list[str] = []
     if priority_plot:
@@ -546,6 +562,15 @@ def _worksheet_review_artifact_lines(output_path: Path) -> list[str]:
         lines.append(f"Review focus: {focus}")
     if next_proof_step:
         lines.append(f"Next proof step: {next_proof_step}")
+    if has_prediction_check:
+        lines.append("Prediction check: Mark Matched, Partly matched, or Surprised in worksheet.md.")
+    if viewer_handoff_command:
+        handoff = (
+            f"{viewer_handoff_start} -> {viewer_handoff_command}"
+            if viewer_handoff_start
+            else viewer_handoff_command
+        )
+        lines.append(f"Viewer handoff: {handoff}")
     if first_checklist_item:
         lines.append(f"Review checklist: {first_checklist_item}")
     return lines
