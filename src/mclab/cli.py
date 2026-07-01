@@ -441,6 +441,8 @@ def _print_scenario_card(index: int, action: MenuAction, *, details: bool = Fals
         if control_credit:
             print(f"   {control_credit}")
         print(f"   {action_history_text(action)}")
+        for artifact_line in _scenario_latest_artifact_lines(action):
+            print(f"   {artifact_line}")
         print(f"   {action_mission_evidence_text(action)}")
         print(f"   {action_challenge_evidence_text(action)}")
         print(f"   {action_evidence_text(action)}")
@@ -465,6 +467,15 @@ def _print_scenario_card(index: int, action: MenuAction, *, details: bool = Fals
         readiness = action_readiness(action)
         print(f"   Setup: {readiness.label}{f' - {readiness.detail}' if readiness.detail else ''}")
     print(f"   Command: {command_for_target(action)}")
+
+
+def _scenario_latest_artifact_lines(action: MenuAction) -> list[str]:
+    latest = action_latest_output(action)
+    if latest is None:
+        return ["Report: Not saved yet", "Folder: Not saved yet"]
+    entry = _preferred_output_entry(latest)
+    label = "Report" if (latest / "report.html").exists() else "Entry"
+    return [f"{label}: Latest {entry}", f"Folder: Latest {latest}"]
 
 
 def _print_batches(query: str, *, limit: int = 8, details: bool = False) -> None:

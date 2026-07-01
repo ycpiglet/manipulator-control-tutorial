@@ -263,6 +263,10 @@ class CliImportTests(unittest.TestCase):
             patch("mclab.cli.action_plot_review_text", return_value="Plot review: Virtual Wall - Compare force and gap"),
             patch("mclab.cli.action_worksheet_text", return_value="Worksheet: Latest worksheet.md"),
             patch("mclab.cli.action_replay_text", return_value="Replay: Latest learner_tuned_config.yaml"),
+            patch(
+                "mclab.cli._scenario_latest_artifact_lines",
+                return_value=["Report: Latest report.html", "Folder: Latest saved_virtual_wall"],
+            ),
             patch("builtins.print") as printer,
         ):
             self.assertEqual(
@@ -280,6 +284,8 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("Viewer: MuJoCo side panels are hidden", printed)
         self.assertIn("Red plane = Virtual wall location.", printed)
         self.assertIn("History: Latest saved_virtual_wall", printed)
+        self.assertIn("Report: Latest report.html", printed)
+        self.assertIn("Folder: Latest saved_virtual_wall", printed)
         self.assertIn("Mission evidence: Ready for review", printed)
         self.assertIn("Challenge evidence: Ready to review", printed)
         self.assertIn("Evidence: 1 observation, 1 prediction, 1 outcome, 1 note", printed)
