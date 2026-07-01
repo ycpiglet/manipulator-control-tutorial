@@ -42,6 +42,7 @@ from .learner_menu import (
     action_readiness,
     action_replay_text,
     action_start_steps_text,
+    action_tags,
     action_viewer_text,
     action_worksheet_text,
     batch_plan_text,
@@ -559,7 +560,42 @@ def _print_scenario_card(index: int, action: MenuAction, *, details: bool = Fals
             print(f"   {replay_command}")
         readiness = action_readiness(action)
         print(f"   Setup: {readiness.label}{f' - {readiness.detail}' if readiness.detail else ''}")
-    print(f"   Command: {command_for_target(action)}")
+    for command_line in _scenario_primary_command_lines(action):
+        print(f"   {command_line}")
+
+
+def _scenario_primary_command_lines(action: MenuAction) -> list[str]:
+    if "hands-on" in action_tags(action):
+        return [f"Command: {command_for_target(action)}"]
+
+    return [
+        f"Command: {_scenario_headless_command(action)}",
+        f"Viewer rerun: {command_for_target(action)}",
+    ]
+
+
+def _scenario_recommended_command(action: MenuAction) -> str:
+    if "hands-on" in action_tags(action):
+        return command_for_target(action)
+    return _scenario_headless_command(action)
+
+
+def _scenario_headless_command(action: MenuAction) -> str:
+    headless_parts = [
+        "python",
+        "-m",
+        "mclab",
+        "run",
+        action.lab_name,
+        "--config",
+        action.config_path,
+        "--headless",
+        "--plot",
+    ]
+    if action.plots:
+        headless_parts.extend(["--plots", action.plots])
+    headless_parts.append("--open-report")
+    return " ".join(headless_parts)
 
 
 def _scenario_latest_artifact_lines(action: MenuAction) -> list[str]:
@@ -596,7 +632,10 @@ def _scenario_replay_command_line(action: MenuAction) -> str:
 
 def _scenario_next_command_lines(action: MenuAction) -> list[str]:
     followup = action_followup(action)
-    followup_command = command_for_target(followup)
+    if isinstance(followup, MenuAction):
+        followup_command = _scenario_recommended_command(followup)
+    else:
+        followup_command = command_for_target(followup)
     lines = [f"Next command: {followup.group} - {followup.label} -> {followup_command}"]
 
     compare = action_compare_batch(action)

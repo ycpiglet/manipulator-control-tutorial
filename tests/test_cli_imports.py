@@ -17,6 +17,7 @@ from mclab.cli import (  # noqa: E402
     _batch_handoff_detail_text,
     _scenario_course_lines,
     _scenario_next_command_lines,
+    _scenario_primary_command_lines,
     _scenario_replay_command_line,
     main,
 )
@@ -424,6 +425,35 @@ class CliImportTests(unittest.TestCase):
             f"{tuned_config} --viewer --realtime --pause-at-end --plot --plots wall --open-report",
         )
 
+    def test_cli_scenario_primary_command_uses_headless_for_auto_runs(self) -> None:
+        soft_wall = next(
+            action
+            for action in MENU_ACTIONS
+            if action.config_path == "configs/lab04_panda/wall_soft.yaml"
+        )
+        virtual_wall = next(
+            action
+            for action in MENU_ACTIONS
+            if action.config_path == "configs/lab04_panda/interactive_virtual_wall.yaml"
+        )
+
+        self.assertEqual(
+            _scenario_primary_command_lines(soft_wall),
+            [
+                "Command: python -m mclab run lab04 --config configs/lab04_panda/wall_soft.yaml "
+                "--headless --plot --plots wall_compare --open-report",
+                "Viewer rerun: python -m mclab run lab04 --config configs/lab04_panda/wall_soft.yaml "
+                "--viewer --realtime --pause-at-end --plot --plots wall_compare --open-report",
+            ],
+        )
+        self.assertEqual(
+            _scenario_primary_command_lines(virtual_wall),
+            [
+                "Command: python -m mclab run lab04 --config configs/lab04_panda/interactive_virtual_wall.yaml "
+                "--viewer --realtime --pause-at-end --plot --plots wall --open-report"
+            ],
+        )
+
     def test_cli_scenario_next_command_lines_include_followup_and_compare(self) -> None:
         action = next(
             action
@@ -437,6 +467,22 @@ class CliImportTests(unittest.TestCase):
         self.assertIn(
             "Compare command: Comparison Batches - Lab04 wall compare -> "
             "python -m mclab batch lab04_wall_compare --open-report",
+            lines,
+        )
+
+    def test_cli_scenario_next_command_uses_headless_for_auto_followups(self) -> None:
+        action = next(
+            action
+            for action in MENU_ACTIONS
+            if action.config_path == "configs/lab04_panda/wall_soft.yaml"
+        )
+
+        lines = _scenario_next_command_lines(action)
+
+        self.assertIn(
+            "Next command: Lab04 Panda Manipulator - Stiff wall -> "
+            "python -m mclab run lab04 --config configs/lab04_panda/wall_stiff.yaml "
+            "--headless --plot --plots wall_compare --open-report",
             lines,
         )
 
