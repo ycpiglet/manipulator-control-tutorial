@@ -301,6 +301,9 @@ class BatchTests(unittest.TestCase):
             )
             self.assertIn("Headless rerun", report_html)
             self.assertIn("Viewer rerun", report_html)
+            self.assertIn("Viewer Handoff", report_html)
+            self.assertIn("Start with demo scenario", report_html)
+            self.assertIn("only saved scenario; inspect the motion before editing YAML", report_html)
             self.assertIn("demo scenario", report_html)
             self.assertIn("Start steps", report_html)
             self.assertIn("Predict -&gt; Run scenario -&gt; Review priority plot and worksheet.", report_html)
@@ -347,6 +350,9 @@ class BatchTests(unittest.TestCase):
                 "--viewer --realtime --pause-at-end --plot --plots essential",
                 worksheet,
             )
+            self.assertIn("## Viewer Handoff", worksheet)
+            self.assertIn("Start with: demo scenario", worksheet)
+            self.assertIn("Why: only saved scenario; inspect the motion before editing YAML", worksheet)
             self.assertIn("- [ ] Write which scenario best supports your prediction.", worksheet)
             parent_index = output.parent / "index.html"
             self.assertIn("batch_output/report.html", parent_index.read_text(encoding="utf-8"))
@@ -438,6 +444,22 @@ class BatchTests(unittest.TestCase):
         self.assertNotIn("max_wall_penetration_cm", keys)
         self.assertNotIn("max_wall_retreat_cm", keys)
         self.assertNotIn("max_abs_virtual_wall_force", keys)
+
+    def test_viewer_handoff_picks_largest_metric_change_from_baseline(self) -> None:
+        rows = [
+            {"label": "baseline", "summary": {"tracking_error": 1.0, "control_effort": 10.0}},
+            {"label": "small_change", "summary": {"tracking_error": 1.2, "control_effort": 11.0}},
+            {"label": "large_change", "summary": {"tracking_error": 3.0, "control_effort": 10.5}},
+        ]
+
+        picked, reason = batch._viewer_handoff_pick(
+            rows,
+            ["tracking_error", "control_effort"],
+            rows[0]["summary"],
+        )
+
+        self.assertEqual(picked["label"], "large_change")
+        self.assertIn("largest tracking error change from baseline", reason)
 
     def test_comparison_takeaways_rank_error_metrics_by_magnitude(self) -> None:
         rows = [

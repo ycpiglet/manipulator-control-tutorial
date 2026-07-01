@@ -716,6 +716,7 @@ def _render_batch_worksheet(output: Path, batch_name: str, guide: BatchGuide, ro
         lines.append(f"- Question: {question}")
     lines.append("")
     lines.extend(_batch_worksheet_prediction_check_lines(rows, metric_keys))
+    lines.extend(_batch_worksheet_viewer_handoff_lines(rows, metric_keys))
     lines.extend(_batch_worksheet_scenario_lines(rows, metric_keys))
     lines.extend(_batch_worksheet_comparison_lines(rows, metric_keys))
     lines.extend(_batch_worksheet_comparison_plot_lines(output))
@@ -798,6 +799,23 @@ def _batch_worksheet_prediction_check_lines(rows: list[dict[str, Any]], metric_k
         lines.append(f"  - [ ] {outcome_prompt}")
     lines.append("")
     return lines
+
+
+def _batch_worksheet_viewer_handoff_lines(rows: list[dict[str, Any]], metric_keys: list[str]) -> list[str]:
+    baseline_summary = rows[0].get("summary", {}) if rows else {}
+    pick = _viewer_handoff_pick(rows, metric_keys, baseline_summary)
+    if pick is None:
+        return []
+    row, reason = pick
+    return [
+        "## Viewer Handoff",
+        "",
+        f"- Start with: {row['label']}",
+        f"- Why: {reason}",
+        f"- Viewer rerun: {_scenario_viewer_command(row)}",
+        "- [ ] Open this scenario in the side-panel-free viewer before editing another YAML parameter.",
+        "",
+    ]
 
 
 def _batch_worksheet_checklist_lines() -> list[str]:
@@ -909,6 +927,7 @@ def _render_batch_report(output: Path, batch_name: str, guide: BatchGuide, rows:
     reproduce_commands = _reproduce_commands(batch_name, rows)
     baseline_config = rows[0].get("config", {}) if rows else {}
     baseline_summary = rows[0].get("summary", {}) if rows else {}
+    viewer_handoff = _viewer_handoff_section(rows, metric_keys, baseline_summary)
     scenario_cards = "\n".join(
         _scenario_card(
             row,
@@ -1119,6 +1138,7 @@ def _render_batch_report(output: Path, batch_name: str, guide: BatchGuide, rows:
     </section>
     {next_experiments}
     {reproduce_commands}
+    {viewer_handoff}
     {prediction_check}
     <section>
       <h2>Scenario Cards</h2>
@@ -1568,6 +1588,64 @@ def _reproduce_commands(batch_name: str, rows: list[dict[str, Any]]) -> str:
         "</div>"
         "</section>"
     )
+
+
+def _viewer_handoff_section(
+    rows: list[dict[str, Any]],
+    metric_keys: list[str],
+    baseline_summary: dict[str, Any],
+) -> str:
+    pick = _viewer_handoff_pick(rows, metric_keys, baseline_summary)
+    if pick is None:
+        return ""
+    row, reason = pick
+    label = str(row.get("label", "scenario"))
+    return (
+        "<section>"
+        "<h2>Viewer Handoff</h2>"
+        "<p>After comparing plots, reopen one scenario in the side-panel-free viewer and inspect the motion live.</p>"
+        f"<p><strong>Start with {escape(label)}</strong>: {escape(reason)}.</p>"
+        f'<code class="command">{escape(_scenario_viewer_command(row))}</code>'
+        "</section>"
+    )
+
+
+def _viewer_handoff_pick(
+    rows: list[dict[str, Any]],
+    metric_keys: list[str],
+    baseline_summary: dict[str, Any],
+) -> tuple[dict[str, Any], str] | None:
+    if not rows:
+        return None
+
+    changes: list[tuple[float, str, float, float, float, dict[str, Any]]] = []
+    for row in rows[1:]:
+        summary = row.get("summary", {})
+        if not isinstance(summary, dict):
+            continue
+        for key in metric_keys:
+            baseline_value = _as_finite_float(baseline_summary.get(key))
+            value = _as_finite_float(summary.get(key))
+            if baseline_value is None or value is None:
+                continue
+            delta = value - baseline_value
+            if abs(delta) < 1e-12:
+                continue
+            rank = abs(delta) if abs(baseline_value) < 1e-12 else abs(delta / baseline_value)
+            changes.append((rank, key, delta, baseline_value, value, row))
+
+    if changes:
+        _rank, key, delta, baseline_value, value, row = max(changes, key=lambda item: item[0])
+        reason = (
+            f"largest {_label(key)} change from baseline "
+            f"({_signed_value(delta)}; {_format_value(baseline_value)} -> {_format_value(value)})"
+        )
+        return row, reason
+
+    if len(rows) > 1:
+        return rows[1], "first non-baseline scenario; compare its live response against the saved baseline"
+
+    return rows[0], "only saved scenario; inspect the motion before editing YAML"
 
 
 def _scenario_run_command(row: dict[str, Any]) -> str:

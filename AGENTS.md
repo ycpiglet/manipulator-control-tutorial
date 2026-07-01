@@ -94,6 +94,7 @@ Implemented and verified:
 - The full `all` batch run generates a course-level report and `worksheet.md` that show each batch focus/question and link batch reports and batch worksheets
 - Batch scenario cards include per-config start steps, challenge, prediction, reflection question, and watch cues from the run guides
 - Batch reports and worksheets include whole-batch commands plus per-scenario headless and viewer rerun commands for learner handoff
+- Batch reports and worksheets include a `Viewer Handoff` recommendation that picks a scenario to reopen in the side-panel-free viewer based on the largest baseline metric change
 - Batch scenario cards include run-report, priority-plot, scenario-folder, and scenario-worksheet quick links when artifacts are available
 - The full `all` batch report includes per-batch folder links beside report and worksheet links
 - Batch scenario cards summarize the first few YAML changes from the baseline scenario
