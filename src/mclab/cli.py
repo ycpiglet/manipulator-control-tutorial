@@ -196,6 +196,32 @@ def _output_artifact_lines(output_path: Path) -> list[str]:
         lines.append(f"All reports index: {parent_index}")
     lines.extend(_plot_artifact_lines(output_path, "plots", "Plots"))
     lines.extend(_plot_artifact_lines(output_path, "comparison_plots", "Comparison plots"))
+    lines.extend(_next_experience_artifact_lines(output_path))
+    return lines
+
+
+def _next_experience_artifact_lines(output_path: Path) -> list[str]:
+    worksheet = output_path / "worksheet.md"
+    if not worksheet.exists():
+        return []
+    try:
+        text = worksheet.read_text(encoding="utf-8")
+    except OSError:
+        return []
+
+    next_experience = ""
+    next_command = ""
+    for line in text.splitlines():
+        if line.startswith("- Next experience: "):
+            next_experience = line.removeprefix("- Next experience: ").strip()
+        elif line.startswith("- Next command: "):
+            next_command = line.removeprefix("- Next command: ").strip()
+
+    lines: list[str] = []
+    if next_experience:
+        lines.append(f"Next experience: {next_experience}")
+    if next_command:
+        lines.append(f"Next command: {next_command}")
     return lines
 
 

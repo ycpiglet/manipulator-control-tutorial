@@ -250,7 +250,16 @@ class CliImportTests(unittest.TestCase):
             all_reports_index.write_text("<html></html>", encoding="utf-8")
             report = output / "report.html"
             report.write_text("<html></html>", encoding="utf-8")
-            (output / "worksheet.md").write_text("# Run worksheet\n", encoding="utf-8")
+            (output / "worksheet.md").write_text(
+                (
+                    "# Run worksheet\n\n"
+                    "## Course Experience Coverage\n\n"
+                    "- Next experience: Hands-on controls\n"
+                    "- Next command: python -m mclab run lab01 --config configs/lab01_msd/interactive_pull.yaml "
+                    "--viewer --realtime --pause-at-end --plot --open-report\n"
+                ),
+                encoding="utf-8",
+            )
             (output / "plots").mkdir()
             (output / "plots" / "position.png").write_bytes(b"fake-png")
 
@@ -283,3 +292,9 @@ class CliImportTests(unittest.TestCase):
             self.assertIn(f"Worksheet: {output / 'worksheet.md'}", printed)
             self.assertIn(f"All reports index: {all_reports_index}", printed)
             self.assertIn(f"Plots: {output / 'plots'} (1 PNG; first: position.png)", printed)
+            self.assertIn("Next experience: Hands-on controls", printed)
+            self.assertIn(
+                "Next command: python -m mclab run lab01 --config configs/lab01_msd/interactive_pull.yaml "
+                "--viewer --realtime --pause-at-end --plot --open-report",
+                printed,
+            )
