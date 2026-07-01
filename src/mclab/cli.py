@@ -97,6 +97,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="mclab",
         description="MuJoCo Manipulator Control Lab command-line interface.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Learner workflow:\n"
+            "  python -m mclab doctor          check setup and see next learner steps\n"
+            "  python -m mclab menu            open the guided launcher\n"
+            "  python -m mclab coverage        see missing experience types and next command\n"
+            "  python -m mclab next --preview  preview the next recommended step\n"
+            "  python -m mclab next            launch the next guided viewer"
+        ),
     )
     subparsers = parser.add_subparsers(dest="command")
 

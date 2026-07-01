@@ -809,6 +809,8 @@ CLI shape:
 python -m mclab run <lab_name> --config <config_path> [--headless | --viewer] [--realtime] [--pause-at-end] [--plot [--plots <preset_or_names>]] [--output-dir <path>]
 ```
 
+`python -m mclab --help` prints the learner workflow for setup checking, opening the menu, checking coverage, previewing the next path step, and launching the next guided viewer.
+
 `--plots` selects which plot preset or plot names to save, so it must be used with `--plot`.
 
 List learner entry points plus available labs and batches:

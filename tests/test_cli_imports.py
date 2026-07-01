@@ -77,6 +77,19 @@ class CliImportTests(unittest.TestCase):
         self.assertEqual(all_args.batch_name, "all")
         self.assertTrue(all_args.no_plot)
 
+    def test_top_level_help_prints_learner_workflow(self) -> None:
+        output = StringIO()
+        with self.assertRaises(SystemExit), redirect_stdout(output):
+            build_parser().parse_args(["--help"])
+
+        help_text = output.getvalue()
+        self.assertIn("Learner workflow:", help_text)
+        self.assertIn("python -m mclab doctor", help_text)
+        self.assertIn("python -m mclab menu", help_text)
+        self.assertIn("python -m mclab coverage", help_text)
+        self.assertIn("python -m mclab next --preview", help_text)
+        self.assertIn("python -m mclab next", help_text)
+
     def test_cli_runs_doctor_check(self) -> None:
         args = build_parser().parse_args(["doctor"])
         self.assertEqual(args.command, "doctor")
