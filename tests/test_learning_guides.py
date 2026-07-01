@@ -13,6 +13,7 @@ from mclab.learning_guides import (  # noqa: E402
     challenge_prompt_for_guide,
     control_credit_text,
     control_credit_text_for_config,
+    course_step_text_for_config,
     guide_for_config,
     guide_for_run_summary,
     learner_control_action_text,
@@ -50,6 +51,21 @@ class LearningGuideTests(unittest.TestCase):
                 self.assertTrue(question_for_guide(guide).startswith("Question: "))
                 self.assertTrue(observation_prompt_for_guide(guide).startswith("Evidence to capture: "))
                 self.assertTrue(prediction_prompt_for_guide(guide).startswith("Prediction: "))
+
+    def test_course_step_text_maps_recommended_run_configs(self) -> None:
+        self.assertEqual(
+            course_step_text_for_config("configs/lab04_panda/interactive_virtual_wall.yaml"),
+            "11/12 - Touch virtual wall; Tune wall position, stiffness, damping, and retreat gain.",
+        )
+        self.assertEqual(
+            course_step_text_for_config(ROOT / "configs" / "lab01_msd" / "default.yaml"),
+            "1/12 - Feel 1D physics; Start with position, velocity, force, and energy.",
+        )
+        self.assertEqual(
+            course_step_text_for_config("configs/lab04_panda/neutral_hold_30s.yaml"),
+            "Optional exploration - not required by the recommended path; use Next or Compare when ready.",
+        )
+        self.assertEqual(course_step_text_for_config(None, include_optional=False), "")
 
     def test_guides_can_be_resolved_from_summary(self) -> None:
         guide = guide_for_run_summary(

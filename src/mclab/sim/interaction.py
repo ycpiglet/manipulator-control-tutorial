@@ -12,6 +12,7 @@ from mclab.learning_guides import (
     VIEWER_CONTROL_SURFACE_TEXT,
     challenge_prompt_for_guide,
     control_credit_text,
+    course_step_text_for_config,
     mission_prompt_for_guide,
     observation_prompt_for_guide,
     playbook_for_guide,
@@ -777,6 +778,7 @@ def maybe_start_interaction_panel(
     control: Any,
     *,
     title: str,
+    config_path: str | None = None,
     tuning: LiveTuning | None = None,
     status: LiveStatus | None = None,
     guide: Any | None = None,
@@ -860,6 +862,7 @@ def maybe_start_interaction_panel(
             guide_title = _panel_guide_title(guide)
             guide_rows = _panel_guide_rows(
                 guide,
+                config_path=config_path,
                 tuning=tuning,
                 has_buttons=activity_has_buttons,
                 has_sliders=activity_has_sliders,
@@ -1585,6 +1588,7 @@ def _compact_label(value: Any) -> str:
 def _panel_guide_rows(
     guide: Any | None,
     *,
+    config_path: str | None = None,
     tuning: LiveTuning | None = None,
     has_buttons: bool = False,
     has_sliders: bool = False,
@@ -1593,7 +1597,9 @@ def _panel_guide_rows(
 ) -> list[tuple[str, str]]:
     if guide is None:
         return []
+    course_step_text = course_step_text_for_config(config_path, include_optional=bool(config_path))
     rows = [
+        ("Course step", course_step_text),
         ("Mission", mission_prompt_for_guide(guide).removeprefix("Mission:").strip()),
         ("Playbook", playbook_for_guide(guide).removeprefix("Playbook:").strip()),
         (

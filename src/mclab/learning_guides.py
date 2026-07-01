@@ -18,7 +18,74 @@ class RunGuide:
     question: str = ""
 
 
+@dataclass(frozen=True)
+class CourseStepHint:
+    number: int
+    title: str
+    description: str
+    config_path: str
+
+
 VIEWER_CONTROL_SURFACE_TEXT = "MuJoCo side panels are hidden; use YAML configs or the MCLab Interaction controls instead"
+COURSE_STEP_COUNT = 12
+COURSE_RUN_STEP_HINTS: tuple[CourseStepHint, ...] = (
+    CourseStepHint(1, "Feel 1D physics", "Start with position, velocity, force, and energy.", "configs/lab01_msd/default.yaml"),
+    CourseStepHint(
+        2,
+        "Disturb and tune",
+        "Push the mass and tune mass, damping, and stiffness live.",
+        "configs/lab01_msd/interactive_pull.yaml",
+    ),
+    CourseStepHint(3, "Close the loop", "Watch PID tracking, error, and control force.", "configs/lab02_pid/default.yaml"),
+    CourseStepHint(
+        4,
+        "Tune PID live",
+        "Disturb the plant and tune target, Kp, Ki, Kd, and force limit.",
+        "configs/lab02_pid/interactive_disturbance.yaml",
+    ),
+    CourseStepHint(
+        5,
+        "Move 2DOF joints",
+        "Track shoulder and elbow targets on the two-link arm.",
+        "configs/lab03_2dof/joint_space_2dof.yaml",
+    ),
+    CourseStepHint(
+        6,
+        "Control the hand",
+        "Move the end-effector toward an XY target with the Jacobian.",
+        "configs/lab03_2dof/task_space_2dof.yaml",
+    ),
+    CourseStepHint(
+        7,
+        "Handle singularity",
+        "Use DLS damping when the arm approaches poor Jacobian conditioning.",
+        "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
+    ),
+    CourseStepHint(
+        8,
+        "Compare DLS retarget",
+        "Compare a near-edge retarget path with an adaptive task-speed schedule before moving to Panda.",
+        "configs/lab03_2dof/condition_aware_dls_adaptive_speed_retarget_2dof.yaml",
+    ),
+    CourseStepHint(
+        9,
+        "Hold Panda",
+        "Use a stable neutral pose as the full manipulator baseline.",
+        "configs/lab04_panda/neutral_hold.yaml",
+    ),
+    CourseStepHint(
+        10,
+        "Reach in Cartesian",
+        "Move the Panda hand toward an XYZ target before adding wall response.",
+        "configs/lab04_panda/cartesian_reach.yaml",
+    ),
+    CourseStepHint(
+        11,
+        "Touch virtual wall",
+        "Tune wall position, stiffness, damping, and retreat gain.",
+        "configs/lab04_panda/interactive_virtual_wall.yaml",
+    ),
+)
 
 
 def question_for_guide(guide: RunGuide | None) -> str:
@@ -27,6 +94,27 @@ def question_for_guide(guide: RunGuide | None) -> str:
     if guide.question.strip():
         return _question_prefix(guide.question)
     return reflection_question_for_context(title=guide.title)
+
+
+def course_step_text_for_config(config_path: str | Path | None, *, include_optional: bool = True) -> str:
+    normalized = _normalized_config_key(config_path)
+    for step in COURSE_RUN_STEP_HINTS:
+        if normalized == step.config_path:
+            return f"{step.number}/{COURSE_STEP_COUNT} - {step.title}; {step.description}"
+    if include_optional:
+        return "Optional exploration - not required by the recommended path; use Next or Compare when ready."
+    return ""
+
+
+def _normalized_config_key(config_path: str | Path | None) -> str:
+    if config_path is None:
+        return ""
+    text = str(config_path).replace("\\", "/")
+    marker = "configs/"
+    marker_index = text.lower().find(marker)
+    if marker_index >= 0:
+        text = text[marker_index:]
+    return text.lstrip("./")
 
 
 def observation_prompt_for_guide(guide: RunGuide | None) -> str:

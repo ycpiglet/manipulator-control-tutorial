@@ -1504,6 +1504,15 @@ class KeyForcePulseTests(unittest.TestCase):
         )
         self.assertEqual(_panel_guide_rows(None), [])
 
+        rows_with_course = _panel_guide_rows(
+            guide,
+            config_path="configs/lab04_panda/interactive_virtual_wall.yaml",
+        )
+        self.assertEqual(
+            rows_with_course[0],
+            ("Course step", "11/12 - Touch virtual wall; Tune wall position, stiffness, damping, and retreat gain."),
+        )
+
     def test_panel_guidance_names_controls_that_count_for_completion(self) -> None:
         guide = RunGuide(
             title="Demo Guide",

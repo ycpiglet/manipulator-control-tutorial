@@ -110,6 +110,7 @@ def run(
         maybe_start_interaction_panel(
             target_offset,
             title="MCLab Lab04 Interaction",
+            config_path=str(config_path or ""),
             tuning=live_tuning,
             status=live_status,
             guide=run_guide,

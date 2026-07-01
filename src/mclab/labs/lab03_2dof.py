@@ -158,6 +158,7 @@ def _run_slider_trajectory(
         maybe_start_interaction_panel(
             key_force,
             title="MCLab Lab03 Interaction",
+            config_path=str(config_path or ""),
             tuning=live_tuning,
             status=live_status,
             guide=run_guide,
@@ -338,6 +339,7 @@ def _run_two_link_arm(
         maybe_start_interaction_panel(
             panel_control,
             title="MCLab Lab03 2DOF Interaction",
+            config_path=str(config_path or ""),
             tuning=live_tuning,
             status=live_status,
             guide=run_guide,
