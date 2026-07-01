@@ -161,6 +161,12 @@ class CliImportTests(unittest.TestCase):
         printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
         self.assertIn("Next step: 1. Feel 1D physics", printed)
         self.assertIn("Next command: python -m mclab run lab01", printed)
+        self.assertIn("Next guide: Lab01 Mass-Spring-Damper - Auto demo", printed)
+        self.assertIn("Mission: Run the demo", printed)
+        self.assertIn("Start steps:", printed)
+        self.assertIn("Viewer: MuJoCo side panels are hidden", printed)
+        self.assertIn("Controls: Auto run; edit YAML before running", printed)
+        self.assertIn("Next cue: Run this scenario, then review the saved plot and worksheet.", printed)
         self.assertNotIn("Running next step:", printed)
 
     def test_cli_runs_next_learning_path_step(self) -> None:
@@ -199,6 +205,7 @@ class CliImportTests(unittest.TestCase):
         self.assertEqual(calls[0]["seed"], 11)
         opener.assert_called_once_with(report)
         printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
+        self.assertIn("Next guide: Lab01 Mass-Spring-Damper - Auto demo", printed)
         self.assertIn("Running next step: Lab01 Mass-Spring-Damper - Auto demo", printed)
         self.assertIn(f"Run complete: {output}", printed)
         self.assertIn(f"Plots: {output / 'plots'} (1 PNG; first: position.png)", printed)

@@ -358,6 +358,7 @@ def _run_next_learning_path(outputs_root: Path, *, preview: bool = False, seed: 
     target = learning_path_target(next_step)
     print(f"Next step: {next_step.title}")
     print(f"Next command: {command_for_target(target)}")
+    _print_next_target_guide(target, outputs_root)
     if preview:
         return 0
 
@@ -370,6 +371,42 @@ def _run_next_learning_path(outputs_root: Path, *, preview: bool = False, seed: 
         _print_output_summary("Run", output_path)
     _open_path(_preferred_output_entry(output_path))
     return 0
+
+
+def _print_next_target_guide(target: MenuAction | BatchMenuAction, outputs_root: Path) -> None:
+    print(f"Next guide: {target.group} - {target.label}")
+    if isinstance(target, BatchMenuAction):
+        readiness = batch_readiness(target)
+        lines = [
+            batch_plan_text(target),
+            *action_course_lines(target),
+            action_mission_text(target),
+            action_playbook_text(target),
+            action_start_steps_text(target),
+            action_challenge_text(target),
+            batch_prediction_check_text(target, outputs_root),
+            batch_viewer_handoff_text(target),
+            f"Setup: {readiness.label}{f' - {readiness.detail}' if readiness.detail else ''}",
+        ]
+    else:
+        readiness = action_readiness(target)
+        lines = [
+            action_plan_text(target),
+            *action_course_lines(target),
+            action_mission_text(target),
+            action_playbook_text(target),
+            action_start_steps_text(target),
+            action_challenge_text(target),
+            action_viewer_text(target),
+            action_controls_text(target),
+            f"Setup: {readiness.label}{f' - {readiness.detail}' if readiness.detail else ''}",
+            action_next_cue_text(target, outputs_root),
+        ]
+        control_credit = action_control_credit_text(target)
+        if control_credit:
+            lines.insert(-2, control_credit)
+    for line in lines:
+        print(f"  {line}")
 
 
 def _run_next_menu_target(target: MenuAction, *, seed: int | None = None) -> Path:
