@@ -2711,6 +2711,11 @@ class LearnerMenuTests(unittest.TestCase):
                 "Prediction check: Ready in worksheet; mark Matched, Partly matched, or Surprised.",
                 lesson_text_for_batch(lab01_batch, outputs),
             )
+            self.assertIn(
+                "Viewer handoff: After running, open the batch report, choose one scenario card, "
+                "then use its Viewer rerun command for hands-on inspection in the side-panel-free viewer.",
+                lesson_text_for_batch(lab01_batch, outputs),
+            )
             self.assertEqual(action_history_text(lab02_batch, outputs), "History: Not run yet")
 
             with patch("mclab.learner_menu.open_path") as opener:

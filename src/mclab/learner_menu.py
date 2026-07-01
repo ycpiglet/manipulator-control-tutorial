@@ -2193,6 +2193,14 @@ def batch_prediction_check_text(
     return "Prediction check: Worksheet saved; use the comparison notes to judge your prediction."
 
 
+def batch_viewer_handoff_text(action: BatchMenuAction) -> str:
+    target = "a linked batch report" if action.batch_name == ALL_BATCH_NAME else "the batch report"
+    return (
+        f"Viewer handoff: After running, open {target}, choose one scenario card, "
+        "then use its Viewer rerun command for hands-on inspection in the side-panel-free viewer."
+    )
+
+
 def action_replay_text(action: MenuAction, outputs_root: Path | None = None) -> str:
     tuned_config = action_latest_tuned_config(action, outputs_root)
     if tuned_config is None:
@@ -4681,6 +4689,7 @@ def lesson_text_for_batch(action: BatchMenuAction, outputs_root: Path | None = N
         f"{action_plot_review_text(action, outputs_root)}\n"
         f"{action_worksheet_text(action, outputs_root)}\n"
         f"{batch_prediction_check_text(action, outputs_root)}\n"
+        f"{batch_viewer_handoff_text(action)}\n"
         f"Try: {action.try_this}\n"
         f"Watch: {action.watch}\n"
         f"Runs: {scenario_count} scenarios"
