@@ -1378,6 +1378,24 @@ def maybe_start_interaction_panel(
                     event_log.record("button", "use_changed_values_note", note, label="Use changed values")
                     marker_status.set("Added changed slider values to the observation note.")
 
+                def clear_observation_note() -> None:
+                    item_count = len(_observation_note_preview_parts(get_marker_note()))
+                    if item_count <= 0:
+                        marker_status.set("Observation note is already empty.")
+                        return
+                    set_marker_note("")
+                    event_log.record(
+                        "button",
+                        "clear_observation_note",
+                        {"items_removed": item_count},
+                        label="Clear note",
+                    )
+                    item_word = "item" if item_count == 1 else "items"
+                    marker_status.set(
+                        f"Cleared observation note ({item_count} evidence {item_word} removed); "
+                        "learner-control evidence unchanged."
+                    )
+
                 def mark_observation() -> None:
                     prediction = marker_prediction.get()
                     outcome = _prediction_outcome_value(marker_outcome.get())
@@ -1542,6 +1560,10 @@ def maybe_start_interaction_panel(
                         side="left",
                         padx=(0, 8),
                     )
+                tk.Button(marker_buttons, text="Clear note", command=clear_observation_note).pack(
+                    side="left",
+                    padx=(0, 8),
+                )
                 tk.Button(marker_buttons, text="Mark observation", command=mark_observation).pack(
                     side="left",
                 )
@@ -1866,6 +1888,7 @@ def _activity_event_kind_counts(events: list[dict[str, Any]]) -> dict[str, int]:
 
 
 NON_LEARNER_CONTROL_BUTTON_NAMES = {
+    "clear_observation_note",
     "pause_simulation",
     "resume_simulation",
     "step_simulation",

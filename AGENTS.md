@@ -161,10 +161,11 @@ Implemented and verified:
 - Interactive `MCLab Interaction` observation area shows a live `Action log` cue confirming the latest learner button, slider, preset, or marker event
 - Interactive `MCLab Interaction` observation area shows a `Note preview` with evidence-item counts and `|` separators so accumulated evidence is readable before `Mark observation`
 - Interactive `MCLab Interaction` observation note supports multiline entry and normalizes manual line breaks into saved evidence items
+- Interactive `MCLab Interaction` observation area includes a `Clear note` helper for removing unsaved accumulated note items without counting as learner-control evidence
 - Interactive `MCLab Interaction` post-`Mark observation` status messages name missing button, slider, or preset evidence using actual panel labels when available
 - Interactive `MCLab Interaction` post-`Mark observation` status messages summarize saved prediction, outcome, note item, learner-control, and preset-comparison evidence when the marker is complete
 - Hands-on mission evidence and learning-path completion require at least one learner control event (`button`, `slider`, or `preset`) plus a prediction-and-note observation marker
-- Evidence helper buttons such as `Use live status` and `Use changed values`, plus view/pacing controls such as pause, step, and playback speed, do not satisfy the learner-control requirement by themselves
+- Evidence helper buttons such as `Use live status`, `Use changed values`, and `Clear note`, plus view/pacing controls such as pause, step, and playback speed, do not satisfy the learner-control requirement by themselves
 - Run reports and worksheets include `Mission Evidence` status with observation, prediction, outcome, note, learner-control, plot counts, and the next proof step
 - Run reports and worksheets include `Challenge Evidence` status that maps the visible-effect challenge to proof status, proof source, mission evidence status, and next challenge step
 - Run report `Mission Evidence`, `Hands-on Evidence`, and worksheet guide text name concrete configured learner controls when a hands-on run still needs learner control

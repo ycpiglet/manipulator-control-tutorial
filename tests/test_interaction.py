@@ -1310,6 +1310,7 @@ class KeyForcePulseTests(unittest.TestCase):
 
         log.record("button", "use_live_status_note", "position=0.1", label="Use live status")
         log.record("button", "use_changed_values_note", "Kp=40", label="Use changed values")
+        log.record("button", "clear_observation_note", {"items_removed": 2}, label="Clear note")
         log.record("button", "pause_simulation", True, label="Pause simulation")
         log.record("button", "step_simulation", True, label="Step once")
         log.record("slider", "playback_speed", 0.5, label="Playback speed")
