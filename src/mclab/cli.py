@@ -71,6 +71,7 @@ from .learner_menu import (
     next_review_status_text,
     parameter_hint,
     prediction_prompt,
+    reflection_question,
     review_queue_summary_text,
 )
 from .labs import lab01_msd, lab02_pid, lab03_2dof, lab04_panda
@@ -590,6 +591,12 @@ def _print_scenario_card(index: int, action: MenuAction, *, details: bool = Fals
         for course_line in _scenario_course_lines(action):
             print(f"   {course_line}")
         print(f"   {action_playbook_text(action)}")
+        print(f"   Try: {action.try_this}")
+        print(f"   Change: {parameter_hint(action)}")
+        print(f"   {config_value_preview(action, max_items=8)}")
+        print(f"   {prediction_prompt(action)}")
+        print(f"   {reflection_question(action)}")
+        print(f"   Watch: {action.watch}")
         print(f"   {action_viewer_text(action)}")
         control_credit = action_control_credit_text(action)
         if control_credit:
