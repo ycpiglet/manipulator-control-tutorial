@@ -149,7 +149,7 @@ Windows PowerShell에서 가장 쉬운 방법:
 메뉴 카드에도 같은 내용이 `Viewer:` 줄로 표시되며, `red plane`, `orange sphere`, `green marker` 같은 검색어로 해당 시나리오를 찾을 수 있습니다.
 메뉴의 `Viewer:` 줄, 실행 중 `Viewer controls`, 실행 리포트의 `Control Surface`는 모두 MuJoCo 기본 사이드 패널이 숨겨져 있고 YAML 또는 `MCLab Interaction` 조작부를 써야 한다는 점을 다시 표시합니다.
 
-수업 시작 전 환경을 빠르게 확인하려면 메뉴 하단의 `Check setup`을 누르거나 다음 명령을 실행합니다. Python 패키지, config 로딩, MuJoCo model asset, learner menu 시나리오/비교 batch 준비 상태, `outputs/` 쓰기 권한을 점검합니다.
+수업 시작 전 환경을 빠르게 확인하려면 메뉴 하단의 `Check setup`을 누르거나 다음 명령을 실행합니다. Python 패키지, config 로딩, MuJoCo model asset, learner menu 시나리오/비교 batch 준비 상태, `outputs/` 쓰기 권한을 점검합니다. 모든 항목이 준비되면 메뉴 열기, coverage 확인, 추천 경로 preview, 다음 viewer 실행 명령도 바로 출력됩니다.
 
 ```powershell
 python -m mclab doctor
@@ -560,7 +560,7 @@ The `Viewer legend` in the `MCLab Interaction` window explains the green target,
 Menu cards show the same information in a `Viewer:` line, and searches such as `red plane`, `orange sphere`, or `green marker` find matching scenarios.
 The menu `Viewer:` line, live `Viewer controls`, and run-report `Control Surface` all repeat that MuJoCo side panels are hidden and learners should use YAML or the `MCLab Interaction` controls instead.
 
-Before class, click `Check setup` at the bottom of the menu or run the command below. It checks Python packages, config loading, MuJoCo model assets, learner menu scenario/comparison-batch readiness, and whether `outputs/` is writable.
+Before class, click `Check setup` at the bottom of the menu or run the command below. It checks Python packages, config loading, MuJoCo model assets, learner menu scenario/comparison-batch readiness, and whether `outputs/` is writable. When everything is ready, it also prints the launcher, coverage, recommended-path preview, and next-viewer commands.
 
 ```powershell
 python -m mclab doctor

@@ -212,7 +212,7 @@ Implemented and verified:
 - Learner menu Explore filters for Intro, Build, Deep dive, hands-on, comparison, PID, 2DOF, Panda, wall, and singularity scenario discovery
 - Learner menu scenario cards show readable `Badges` for hands-on, compare, PID, 2DOF, Panda, wall, singularity, trajectory, Cartesian, tuning, and dynamics modes
 - Learner menu includes an `Experience coverage` summary and `Coverage map` that track Intro basics, Hands-on controls, Comparison batch, 2DOF/Jacobian, Singularity/DLS, Panda manipulator, and Virtual wall saved evidence and exposes a `Run next` button for the next missing experience
-- Learner menu and CLI setup diagnostics through `python -m mclab doctor`
+- Learner menu and CLI setup diagnostics through `python -m mclab doctor`, including next learner commands after successful checks
 - Learner menu scenario readiness checks that disable run buttons when config or model assets are missing
 - Learner menu scenario history labels and per-scenario latest-report buttons
 - Learner menu scenario, batch, and learning-path plot buttons that open the latest prioritized plot when one exists
@@ -251,7 +251,7 @@ Implemented and verified:
 - Learner menu learning-path step report buttons for completed course steps
 - Learner menu learning-path step `Worksheet` buttons for completed course steps with saved review artifacts
 - Learner menu learning-path step `Replay` buttons for latest replayable `learner_tuned_config.yaml` runs
-- `python -m mclab doctor` checks learner menu scenario and comparison-batch readiness
+- `python -m mclab doctor` checks learner menu scenario and comparison-batch readiness and prints launcher, coverage, preview, and next-run commands when setup is ready
 - Run reports include suggested next-run cards with reflection questions, key parameter changes, and ready-to-run commands for every guided config
 - Run reports and worksheets include each suggested next experiment's `Start steps` and `Challenge` so the next run keeps the same predict-control-evidence flow
 - Run reports and worksheets show `Course Position` with the matching milestone, learning-path step, focus, completion rule, and repeat command

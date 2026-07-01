@@ -31,6 +31,9 @@ class DoctorTests(unittest.TestCase):
         self.assertIn("Summary:", report)
         self.assertIn("[OK] Configs and models", report)
         self.assertIn("[OK] Learner menu readiness", report)
+        self.assertIn("Next learner steps:", report)
+        self.assertIn("python -m mclab menu", report)
+        self.assertIn("python -m mclab next --preview", report)
 
     def test_doctor_reports_missing_model_assets(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -44,6 +47,7 @@ class DoctorTests(unittest.TestCase):
         self.assertIn("[FAIL] Configs and models", report)
         self.assertIn("Missing model assets", report)
         self.assertIn("configs/demo/default.yaml -> models/demo/scene.xml", report)
+        self.assertIn("Next learner step: fix the FAIL item(s) above", report)
 
     def test_doctor_reports_learner_menu_readiness_failures(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -73,6 +73,8 @@ class CliImportTests(unittest.TestCase):
         printed = str(printer.call_args.args[0])
         self.assertIn("MCLab Doctor", printed)
         self.assertIn("[OK] Python", printed)
+        self.assertIn("Next learner steps:", printed)
+        self.assertIn("python -m mclab next --preview", printed)
 
     def test_cli_generates_outputs_index(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

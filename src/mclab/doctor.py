@@ -48,11 +48,26 @@ def format_doctor_report(checks: list[DoctorCheck]) -> str:
     warn_count = sum(1 for check in checks if check.status == "WARN")
     fail_count = sum(1 for check in checks if check.status == "FAIL")
     lines.extend(("", f"Summary: {ok_count} OK, {warn_count} WARN, {fail_count} FAIL"))
+    lines.extend(("", *_doctor_next_step_lines(fail_count)))
     return "\n".join(lines)
 
 
 def doctor_exit_code(checks: list[DoctorCheck]) -> int:
     return 1 if any(check.status == "FAIL" for check in checks) else 0
+
+
+def _doctor_next_step_lines(fail_count: int) -> list[str]:
+    if fail_count:
+        return [
+            "Next learner step: fix the FAIL item(s) above, then rerun `python -m mclab doctor`.",
+        ]
+    return [
+        "Next learner steps:",
+        "- Open the launcher: `python -m mclab menu`",
+        "- See the next missing experience: `python -m mclab coverage`",
+        "- Preview the recommended path step: `python -m mclab next --preview`",
+        "- Launch the next guided viewer: `python -m mclab next`",
+    ]
 
 
 def _python_runtime_check() -> DoctorCheck:
