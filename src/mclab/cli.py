@@ -507,8 +507,55 @@ def _output_artifact_lines(output_path: Path) -> list[str]:
         lines.append(f"All reports index: {parent_index}")
     lines.extend(_plot_artifact_lines(output_path, "plots", "Plots"))
     lines.extend(_plot_artifact_lines(output_path, "comparison_plots", "Comparison plots"))
+    lines.extend(_worksheet_review_artifact_lines(output_path))
     lines.extend(_next_experience_artifact_lines(output_path))
     return lines
+
+
+def _worksheet_review_artifact_lines(output_path: Path) -> list[str]:
+    worksheet = output_path / "worksheet.md"
+    if not worksheet.exists():
+        return []
+    try:
+        text = worksheet.read_text(encoding="utf-8")
+    except OSError:
+        return []
+
+    priority_plot = ""
+    read_first = ""
+    what_to_check = ""
+    next_proof_step = ""
+    first_checklist_item = ""
+    for line in text.splitlines():
+        if line.startswith("- Priority plot: ") and not priority_plot:
+            priority_plot = line.removeprefix("- Priority plot: ").strip()
+        elif line.startswith("- Read first: ") and not read_first:
+            read_first = line.removeprefix("- Read first: ").strip()
+        elif line.startswith("- What to check: ") and not what_to_check:
+            what_to_check = line.removeprefix("- What to check: ").strip()
+        elif line.startswith("- Next proof step: ") and not next_proof_step:
+            next_proof_step = line.removeprefix("- Next proof step: ").strip()
+        elif line.startswith("- [ ] ") and not first_checklist_item:
+            first_checklist_item = line.removeprefix("- [ ] ").strip()
+
+    lines: list[str] = []
+    if priority_plot:
+        lines.append(f"Priority plot: {_worksheet_relative_path(output_path, priority_plot)}")
+    if read_first or what_to_check:
+        focus = f"{read_first} - {what_to_check}" if read_first and what_to_check else read_first or what_to_check
+        lines.append(f"Review focus: {focus}")
+    if next_proof_step:
+        lines.append(f"Next proof step: {next_proof_step}")
+    if first_checklist_item:
+        lines.append(f"Review checklist: {first_checklist_item}")
+    return lines
+
+
+def _worksheet_relative_path(output_path: Path, value: str) -> Path | str:
+    path = Path(value)
+    if path.is_absolute():
+        return path
+    return output_path / path
 
 
 def _next_experience_artifact_lines(output_path: Path) -> list[str]:

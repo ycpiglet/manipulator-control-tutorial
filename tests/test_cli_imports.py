@@ -468,6 +468,14 @@ class CliImportTests(unittest.TestCase):
             (output / "worksheet.md").write_text(
                 (
                     "# Run worksheet\n\n"
+                    "## Mission Evidence\n\n"
+                    "- Next proof step: Review the priority plot and worksheet, then run Next or Compare.\n\n"
+                    "## Plot Review\n\n"
+                    "- Priority plot: plots/position.png\n"
+                    "- Read first: Position\n"
+                    "- What to check: Compare target and actual motion.\n\n"
+                    "## Review Checklist\n\n"
+                    "- [ ] Answer the Prediction prompt before reading the plots.\n\n"
                     "## Course Experience Coverage\n\n"
                     "- Next experience: Hands-on controls\n"
                     "- Next command: python -m mclab run lab01 --config configs/lab01_msd/interactive_pull.yaml "
@@ -507,6 +515,10 @@ class CliImportTests(unittest.TestCase):
             self.assertIn(f"Worksheet: {output / 'worksheet.md'}", printed)
             self.assertIn(f"All reports index: {all_reports_index}", printed)
             self.assertIn(f"Plots: {output / 'plots'} (1 PNG; first: position.png)", printed)
+            self.assertIn(f"Priority plot: {output / 'plots' / 'position.png'}", printed)
+            self.assertIn("Review focus: Position - Compare target and actual motion.", printed)
+            self.assertIn("Next proof step: Review the priority plot and worksheet, then run Next or Compare.", printed)
+            self.assertIn("Review checklist: Answer the Prediction prompt before reading the plots.", printed)
             self.assertIn("Next experience: Hands-on controls", printed)
             self.assertIn(
                 "Next command: python -m mclab run lab01 --config configs/lab01_msd/interactive_pull.yaml "
