@@ -87,6 +87,7 @@ class LoggingTests(unittest.TestCase):
                 [
                     {"kind": "button", "name": "use_live_status_note", "label": "Use live status"},
                     {"kind": "button", "name": "use_changed_values_note", "label": "Use changed values"},
+                    {"kind": "button", "name": "clear_observation_note", "label": "Clear note"},
                     {"kind": "button", "name": "pause_simulation", "label": "Pause simulation"},
                     {"kind": "button", "name": "step_simulation", "label": "Step once"},
                     {"kind": "slider", "name": "playback_speed", "label": "Playback speed", "value": 0.5},
@@ -755,7 +756,8 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Observation markers", html)
             self.assertIn("Evidence Review Cue", html)
             self.assertIn("Observation-only markers", html)
-            self.assertIn("Repeat the run and write a prediction before observing", html)
+            self.assertIn("Learner controls", html)
+            self.assertIn("Write a prediction, use one counted control, then mark the observation again.", html)
 
             (output / "interaction_events.json").write_text(
                 json.dumps(
@@ -776,6 +778,10 @@ class LoggingTests(unittest.TestCase):
 
             html = write_run_report(output).read_text(encoding="utf-8")
             self.assertIn("Needs learner control", html)
+            self.assertIn(
+                "Use one counted button, slider, or preset, then mark another observation with prediction and note.",
+                html,
+            )
             self.assertIn(
                 "Use experiment buttons (Pull/Push buttons and A/D keys), live sliders, or Quick presets, "
                 "then mark the observation.",

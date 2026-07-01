@@ -3481,6 +3481,7 @@ def _observation_evidence_counts_from_events(events: list[dict[str, Any]]) -> tu
 
 
 NON_LEARNER_CONTROL_BUTTON_NAMES = {
+    "clear_observation_note",
     "pause_simulation",
     "resume_simulation",
     "step_simulation",
@@ -4195,7 +4196,7 @@ def _observation_markers_section(events: list[dict[str, Any]]) -> str:
     )
     review_prompt = _observation_review_prompt(markers)
     prediction_review = _prediction_review_prompt(markers)
-    evidence_review = _evidence_review_cue(markers)
+    evidence_review = _evidence_review_cue(events, markers)
     return (
         "<section>"
         "<h2>Observation Markers</h2>"
@@ -4317,12 +4318,13 @@ def _prediction_review_prompt(markers: list[dict[str, Any]]) -> str:
     )
 
 
-def _evidence_review_cue(markers: list[dict[str, Any]]) -> str:
+def _evidence_review_cue(events: list[dict[str, Any]], markers: list[dict[str, Any]]) -> str:
     ready_pairs = 0
     prediction_only = 0
     note_only = 0
     missing_both = 0
     outcome_judgments = 0
+    learner_controls = _learner_control_event_count(events)
     for marker in markers:
         payload = marker.get("value")
         value = payload if isinstance(payload, dict) else {}
@@ -4340,7 +4342,15 @@ def _evidence_review_cue(markers: list[dict[str, Any]]) -> str:
         else:
             missing_both += 1
 
-    if ready_pairs:
+    if learner_controls <= 0 and ready_pairs:
+        next_step = "Use one counted button, slider, or preset, then mark another observation with prediction and note."
+    elif learner_controls <= 0 and prediction_only:
+        next_step = "Add an observation note or live status snapshot, use one counted control, then mark another observation."
+    elif learner_controls <= 0 and note_only:
+        next_step = "Write a prediction, use one counted control, then mark the observation again."
+    elif learner_controls <= 0:
+        next_step = "Use one counted control, fill Prediction and Note, then mark the observation."
+    elif ready_pairs:
         next_step = "Decide whether each prediction matched, partially matched, or surprised you."
     elif prediction_only:
         next_step = "Add an observation note or live status snapshot before using this as evidence."
@@ -4359,6 +4369,7 @@ def _evidence_review_cue(markers: list[dict[str, Any]]) -> str:
                 ("Observation-only markers", note_only),
                 ("Empty markers", missing_both),
                 ("Outcome judgments", outcome_judgments),
+                ("Learner controls", learner_controls),
                 ("Next review step", next_step),
             )
         ),
