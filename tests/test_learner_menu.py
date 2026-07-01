@@ -3361,6 +3361,28 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(title, f"{batch_action.group} - {batch_action.label}")
         self.assertEqual(matched, batch_action)
 
+    def test_latest_output_status_text_marks_batch_handoff_ready(self) -> None:
+        batch_action = next(action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare")
+        with tempfile.TemporaryDirectory() as tmp:
+            output_path = Path(tmp) / "batch_lab01"
+            output_path.mkdir()
+            (output_path / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "batch",
+                        "config_name": batch_action.batch_name,
+                        "batch_name": batch_action.batch_name,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (output_path / "report.html").write_text("<html></html>", encoding="utf-8")
+
+            text = latest_output_status_text(output_path)
+
+        self.assertIn(f"Latest saved output: {batch_action.group} - {batch_action.label}", text)
+        self.assertIn("Viewer handoff ready.", text)
+
     def test_latest_output_status_text_reports_empty_startup_state(self) -> None:
         self.assertEqual(latest_output_status_text(None), "Ready.")
 

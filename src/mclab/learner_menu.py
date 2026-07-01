@@ -1541,7 +1541,8 @@ def latest_output_status_text(output_path: Path | None) -> str:
         f"Worksheet: {latest_worksheet.name}." if latest_worksheet is not None else "No worksheet yet."
     )
     replay_text = f"Replay: {replay_context[1].name}." if replay_context is not None else "No replay yet."
-    return f"Ready. Latest saved output: {output_text}. {plot_text} {worksheet_text} {replay_text}"
+    handoff_text = " Viewer handoff ready." if latest_output_viewer_handoff_uri(output_path) else ""
+    return f"Ready. Latest saved output: {output_text}. {plot_text} {worksheet_text} {replay_text}{handoff_text}"
 
 
 def latest_saved_output(outputs_root: Path | None = None) -> Path | None:

@@ -196,7 +196,7 @@ Implemented and verified:
 - Learner menu bottom bar includes `Open handoff` for the newest saved comparison batch, opening its report at the `Viewer Handoff` section
 - Learner menu bottom bar includes `Open latest folder` for the newest output's raw logs, configs, snapshots, and tuned YAML artifacts
 - Learner menu bottom bar initializes latest report/plot/worksheet buttons from the newest saved output on startup
-- Learner menu startup status summarizes the restored latest output scenario, priority plot, worksheet availability, and replay availability
+- Learner menu startup status summarizes the restored latest output scenario, priority plot, worksheet availability, viewer handoff availability, and replay availability
 - Learner menu bottom bar exposes `Replay tuned` for the newest saved output only when `learner_tuned_config.yaml` maps back to a menu scenario
 - Learner menu `Refresh menu` refreshes learning path, review queue, batch history, and bottom latest report/plot/worksheet/replay buttons from disk
 - Learner menu refreshes batch history, report, and plot state after comparison runs complete
