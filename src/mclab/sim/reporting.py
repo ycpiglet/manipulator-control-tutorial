@@ -4995,20 +4995,20 @@ def _starter_commands_section() -> str:
         ),
         (
             "Preview next path step",
-            "Read the next recommended step, mission, start steps, viewer/control guide, and command without running it.",
+            "Read the next recommended step, mission, start steps, controls guide, and command without running it.",
             "python -m mclab next --preview",
         ),
         (
             "Generate first artifacts",
             "Run the baseline 1D physics demo headless and save the first report, worksheet, and plots.",
-            "python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot --open-report",
+            "python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot --plots essential --open-report",
         ),
         (
             "Try first hands-on demo",
             "Open the side-panel-free viewer plus MCLab Interaction controls for live push, preset, and slider practice.",
             (
                 "python -m mclab run lab01 --config configs/lab01_msd/interactive_pull.yaml "
-                "--viewer --realtime --pause-at-end --plot --open-report"
+                "--viewer --realtime --pause-at-end --plot --plots essential --open-report"
             ),
         ),
         (
@@ -5607,9 +5607,14 @@ def _learning_path_command(step: IndexPathStep) -> str:
     lab_name = _cli_lab_name(step.config_path)
     if not lab_name:
         return ""
+    if _learning_path_requires_evidence(step):
+        return (
+            f"python -m mclab run {lab_name} --config {step.config_path} "
+            f"--viewer --realtime --pause-at-end --plot --plots {step.plots} --open-report"
+        )
     return (
         f"python -m mclab run {lab_name} --config {step.config_path} "
-        f"--viewer --realtime --pause-at-end --plot --plots {step.plots} --open-report"
+        f"--headless --plot --plots {step.plots} --open-report"
     )
 
 

@@ -1482,8 +1482,8 @@ def experience_coverage_next_label(outputs_root: Path | None = None) -> str:
 
 
 def experience_coverage_next_command(outputs_root: Path | None = None) -> str:
-    item = next_experience_coverage_item(_experience_coverage_records(outputs_root))
-    return item.command if item is not None else ""
+    target = experience_coverage_next_target(outputs_root)
+    return default_command_for_target(target) if target is not None else ""
 
 
 def _experience_coverage_target_for_key(key: str) -> MenuAction | BatchMenuAction:

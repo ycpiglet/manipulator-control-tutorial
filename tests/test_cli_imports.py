@@ -145,7 +145,7 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("Next experience: Intro basics", printed)
         self.assertIn(
             "Next command: python -m mclab run lab01 --config configs/lab01_msd/default.yaml "
-            "--headless --plot --open-report",
+            "--headless --plot --plots essential --open-report",
             printed,
         )
         self.assertIn("Next guide: Lab01 Mass-Spring-Damper - Auto demo", printed)

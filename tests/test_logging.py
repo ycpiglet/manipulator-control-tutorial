@@ -211,7 +211,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Hands-on controls", html)
             self.assertIn(
                 "python -m mclab run lab01 --config configs/lab01_msd/interactive_pull.yaml "
-                "--viewer --realtime --pause-at-end --plot --open-report",
+                "--viewer --realtime --pause-at-end --plot --plots essential --open-report",
                 html,
             )
             self.assertIn("Intro basics", html)
@@ -368,7 +368,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("- Next experience: Hands-on controls", worksheet)
             self.assertIn(
                 "- Next command: python -m mclab run lab01 --config configs/lab01_msd/interactive_pull.yaml "
-                "--viewer --realtime --pause-at-end --plot --open-report",
+                "--viewer --realtime --pause-at-end --plot --plots essential --open-report",
                 worksheet,
             )
             self.assertIn("  - Intro basics: Done", worksheet)
@@ -1422,7 +1422,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Run next: Hands-on controls", html)
             self.assertIn(
                 "python -m mclab run lab01 --config configs/lab01_msd/interactive_pull.yaml "
-                "--viewer --realtime --pause-at-end --plot --open-report",
+                "--viewer --realtime --pause-at-end --plot --plots essential --open-report",
                 html,
             )
             self.assertIn("Learning Path", html)
@@ -1722,12 +1722,12 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("<th>Mission evidence</th>", html)
             self.assertIn("<th>Challenge evidence</th>", html)
             self.assertIn(
-                "python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot --open-report",
+                "python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot --plots essential --open-report",
                 html,
             )
             self.assertIn(
                 "python -m mclab run lab01 --config configs/lab01_msd/interactive_pull.yaml "
-                "--viewer --realtime --pause-at-end --plot --open-report",
+                "--viewer --realtime --pause-at-end --plot --plots essential --open-report",
                 html,
             )
             self.assertIn("No markers", html)
@@ -2289,12 +2289,12 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Preview next path step", html)
             self.assertIn("python -m mclab next --preview", html)
             self.assertIn(
-                "python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot --open-report",
+                "python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot --plots essential --open-report",
                 html,
             )
             self.assertIn(
                 "python -m mclab run lab01 --config configs/lab01_msd/interactive_pull.yaml "
-                "--viewer --realtime --pause-at-end --plot --open-report",
+                "--viewer --realtime --pause-at-end --plot --plots essential --open-report",
                 html,
             )
             self.assertIn("Run first comparison", html)
