@@ -909,19 +909,30 @@ class KeyForcePulseTests(unittest.TestCase):
                 1,
                 note="The response settled.",
             ),
-            "Saved observation 1: prediction missing; outcome not judged; 1 note item; learner control missing.",
+            "Saved observation 1: prediction missing; outcome not judged; 1 note item; "
+            "learner control missing. Next: write a prediction and use learner control in another marker.",
         )
         self.assertEqual(
             _saved_observation_marker_review_message(
                 2,
+                prediction="More damping should settle faster.",
+                note="Settling time shortened",
+                learner_controls=1,
+            ),
+            "Saved observation 2: prediction saved; outcome not judged; 1 note item; "
+            "learner control saved. Next: choose an outcome in another marker or compare with plots after the run.",
+        )
+        self.assertEqual(
+            _saved_observation_marker_review_message(
+                3,
                 prediction="Stiffer wall should push back harder.",
                 outcome="Matched",
                 note="Wall force rose; Hand stayed outside",
                 learner_controls=3,
                 preset_state="ready",
             ),
-            "Saved observation 2: prediction saved; outcome saved; 2 note items; "
-            "learner control saved; preset comparison saved.",
+            "Saved observation 3: prediction saved; outcome saved; 2 note items; "
+            "learner control saved; preset comparison saved. Next: compare this marker with plots after the run.",
         )
 
     def test_observation_checklist_status_guides_before_marking(self) -> None:

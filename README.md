@@ -266,7 +266,7 @@ Observation 영역의 live `Action log` 줄은 기록된 이벤트 수, learner-
 
 `Mark observation`을 누른 뒤에는 prediction, outcome, note item, learner control, preset comparison 중 무엇이 저장됐는지 status 메시지가 바로 요약합니다.
 
-`Saved observation` 줄은 마지막으로 저장한 observation marker의 prediction, outcome, note item 수, learner-control evidence, preset comparison 저장 여부를 계속 보여주므로, 메모 칸이 비워진 뒤에도 방금 남긴 증거를 확인할 수 있습니다.
+`Saved observation` 줄은 마지막으로 저장한 observation marker의 prediction, outcome, note item 수, learner-control evidence, preset comparison 저장 여부와 다음 review/보완 단계를 계속 보여주므로, 메모 칸이 비워진 뒤에도 방금 남긴 증거와 다음 행동을 확인할 수 있습니다.
 
 `Clear note`는 `Mark observation` 전에 누적된 observation note를 비우는 보조 버튼입니다. 자동으로 붙인 live status나 changed values가 너무 길어졌을 때 메모를 다시 정리하는 용도이며 learner-control 완료 증거로 세지지 않습니다.
 
@@ -679,7 +679,7 @@ The `Note preview` line splits the accumulated observation note into evidence-it
 
 After `Mark observation`, the status message immediately summarizes which evidence was saved: prediction, outcome, note items, learner control, and preset comparison.
 
-The `Saved observation` line keeps the latest marker recap visible after saving, including prediction, outcome, note-item count, learner-control evidence, and preset-comparison evidence, so learners can confirm what was recorded even after the note box clears.
+The `Saved observation` line keeps the latest marker recap visible after saving, including prediction, outcome, note-item count, learner-control evidence, preset-comparison evidence, and the next review or repair step, so learners can confirm what was recorded and what to do next even after the note box clears.
 
 `Clear note` clears the accumulated observation note before `Mark observation`. Use it to clean up overly long live-status or changed-value notes; it is an evidence-editing helper and does not count as learner-control completion evidence.
 

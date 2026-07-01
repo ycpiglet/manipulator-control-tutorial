@@ -2127,7 +2127,50 @@ def _saved_observation_marker_review_message(
     ]
     if str(preset_state or "").strip() == "ready":
         pieces.append("preset comparison saved")
-    return f"Saved observation {count}: {'; '.join(pieces)}."
+    next_step = _saved_observation_marker_next_step(
+        prediction=prediction,
+        outcome=outcome,
+        note=note,
+        learner_controls=learner_controls,
+        preset_state=preset_state,
+    )
+    return f"Saved observation {count}: {'; '.join(pieces)}. {next_step}"
+
+
+def _saved_observation_marker_next_step(
+    *,
+    prediction: str = "",
+    outcome: str = "",
+    note: str = "",
+    learner_controls: int = 0,
+    preset_state: str = "",
+) -> str:
+    followups: list[str] = []
+    if not prediction.strip():
+        followups.append("write a prediction")
+    if learner_controls <= 0:
+        followups.append("use learner control")
+    preset_followup = _preset_state_followup(preset_state)
+    if preset_followup:
+        followups.append(preset_followup)
+    if not _observation_note_preview_parts(note):
+        followups.append("add a note")
+    if followups:
+        return f"Next: {_join_action_phrases(followups)} in another marker."
+    if not _prediction_outcome_value(outcome):
+        return "Next: choose an outcome in another marker or compare with plots after the run."
+    return "Next: compare this marker with plots after the run."
+
+
+def _join_action_phrases(phrases: Sequence[str]) -> str:
+    items = [str(phrase).strip() for phrase in phrases if str(phrase).strip()]
+    if not items:
+        return ""
+    if len(items) == 1:
+        return items[0]
+    if len(items) == 2:
+        return f"{items[0]} and {items[1]}"
+    return f"{', '.join(items[:-1])}, and {items[-1]}"
 
 
 def _preset_state_followup(preset_state: str) -> str:
