@@ -1184,6 +1184,7 @@ def maybe_start_interaction_panel(
                 marker_outcome = tk.StringVar(value=PREDICTION_OUTCOME_UNJUDGED)
                 marker_note = tk.StringVar(value="")
                 marker_note_preview = tk.StringVar(value=_observation_note_preview(marker_note.get()))
+                marker_saved_summary = tk.StringVar(value=_saved_observation_marker_review_message(0))
                 controls_available = activity_has_buttons or activity_has_sliders or activity_has_presets
                 marker_checklist = tk.StringVar(
                     value=_observation_checklist_status(
@@ -1428,6 +1429,16 @@ def maybe_start_interaction_panel(
                     marker_prediction.set("")
                     marker_outcome.set(PREDICTION_OUTCOME_UNJUDGED)
                     set_marker_note("")
+                    marker_saved_summary.set(
+                        _saved_observation_marker_review_message(
+                            _observation_marker_count(event_log),
+                            prediction=prediction,
+                            outcome=outcome,
+                            note=note,
+                            learner_controls=learner_controls,
+                            preset_state=preset_state,
+                        )
+                    )
                     marker_status.set(
                         _observation_marker_status_message(
                             event_log,
@@ -1575,6 +1586,14 @@ def maybe_start_interaction_panel(
                     sticky="ew",
                     pady=(6, 0),
                 )
+                marker_row += 1
+                tk.Label(
+                    marker_frame,
+                    textvariable=marker_saved_summary,
+                    anchor="w",
+                    justify="left",
+                    wraplength=430,
+                ).grid(row=marker_row, column=0, columnspan=2, sticky="ew", pady=(2, 0))
                 row += 1
 
             if status_enabled and status is not None:
@@ -2068,6 +2087,30 @@ def _saved_observation_marker_summary(
     if str(preset_state or "").strip() == "ready":
         parts.append("preset comparison")
     return ", ".join(parts) if parts else "marker"
+
+
+def _saved_observation_marker_review_message(
+    count: int,
+    *,
+    prediction: str = "",
+    outcome: str = "",
+    note: str = "",
+    learner_controls: int = 0,
+    preset_state: str = "",
+) -> str:
+    if count <= 0:
+        return "Saved observation: none yet."
+    note_item_count = len(_observation_note_preview_parts(note))
+    note_word = "item" if note_item_count == 1 else "items"
+    pieces = [
+        "prediction saved" if prediction.strip() else "prediction missing",
+        "outcome saved" if _prediction_outcome_value(outcome) else "outcome not judged",
+        f"{note_item_count} note {note_word}" if note_item_count else "note missing",
+        "learner control saved" if learner_controls > 0 else "learner control missing",
+    ]
+    if str(preset_state or "").strip() == "ready":
+        pieces.append("preset comparison saved")
+    return f"Saved observation {count}: {'; '.join(pieces)}."
 
 
 def _preset_state_followup(preset_state: str) -> str:

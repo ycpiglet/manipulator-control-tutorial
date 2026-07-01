@@ -46,6 +46,7 @@ from mclab.sim.interaction import (  # noqa: E402
     _preset_panel_status,
     _recent_action_status_message,
     _run_clock_cue,
+    _saved_observation_marker_review_message,
     learner_snapshot,
     learner_tuned_config,
     runtime_status_specs,
@@ -899,6 +900,28 @@ class KeyForcePulseTests(unittest.TestCase):
             ),
             "Marked observation 4 - saved prediction, outcome, 2 note items, learner control, "
             "preset comparison; learning path evidence saved.",
+        )
+
+    def test_saved_observation_marker_review_message_summarizes_latest_marker(self) -> None:
+        self.assertEqual(_saved_observation_marker_review_message(0), "Saved observation: none yet.")
+        self.assertEqual(
+            _saved_observation_marker_review_message(
+                1,
+                note="The response settled.",
+            ),
+            "Saved observation 1: prediction missing; outcome not judged; 1 note item; learner control missing.",
+        )
+        self.assertEqual(
+            _saved_observation_marker_review_message(
+                2,
+                prediction="Stiffer wall should push back harder.",
+                outcome="Matched",
+                note="Wall force rose; Hand stayed outside",
+                learner_controls=3,
+                preset_state="ready",
+            ),
+            "Saved observation 2: prediction saved; outcome saved; 2 note items; "
+            "learner control saved; preset comparison saved.",
         )
 
     def test_observation_checklist_status_guides_before_marking(self) -> None:

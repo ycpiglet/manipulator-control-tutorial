@@ -162,6 +162,7 @@ Implemented and verified:
 - Interactive `MCLab Interaction` observation area shows a `Note preview` with evidence-item counts and `|` separators so accumulated evidence is readable before `Mark observation`
 - Interactive `MCLab Interaction` observation note supports multiline entry and normalizes manual line breaks into saved evidence items
 - Interactive `MCLab Interaction` observation area includes a `Clear note` helper for removing unsaved accumulated note items without counting as learner-control evidence
+- Interactive `MCLab Interaction` observation area shows a persistent `Saved observation` recap after `Mark observation` so learners can confirm prediction, outcome, note, control, and preset evidence
 - Interactive `MCLab Interaction` post-`Mark observation` status messages name missing button, slider, or preset evidence using actual panel labels when available
 - Interactive `MCLab Interaction` post-`Mark observation` status messages summarize saved prediction, outcome, note item, learner-control, and preset-comparison evidence when the marker is complete
 - Hands-on mission evidence and learning-path completion require at least one learner control event (`button`, `slider`, or `preset`) plus a prediction-and-note observation marker
