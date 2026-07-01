@@ -5575,7 +5575,10 @@ def _run_next_cue_text(run: dict[str, Any]) -> str:
 
     if _summary_is_all_batch(summary):
         if has_worksheet:
-            return "Next cue: Open the course worksheet, then compare each linked batch Prediction Check."
+            return (
+                "Next cue: Open the course worksheet, then compare each linked batch Prediction Check "
+                "and Viewer Handoff."
+            )
         return "Next cue: Rerun all comparison batches to regenerate the course worksheet."
 
     if _summary_is_comparison_batch(summary):
@@ -5583,7 +5586,10 @@ def _run_next_cue_text(run: dict[str, Any]) -> str:
             return "Next cue: Rerun the comparison batch to regenerate the worksheet."
         if not has_plots:
             return "Next cue: Rerun the comparison batch with plots, then inspect the comparison plots."
-        return "Next cue: Open the worksheet Prediction Check, then compare the scenario plots."
+        return (
+            "Next cue: Open the worksheet Prediction Check, then open the report Viewer Handoff "
+            "and run the recommended viewer scenario."
+        )
 
     if _summary_requires_hands_on_evidence(summary):
         return _hands_on_run_next_cue(summary, events, config, has_plots=has_plots, has_worksheet=has_worksheet, run=run)

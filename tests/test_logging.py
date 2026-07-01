@@ -1525,12 +1525,45 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("1 ready, 0 pending", html)
             self.assertIn("No pending mission evidence.", html)
             self.assertIn(
-                "Next cue: Open the course worksheet, then compare each linked batch Prediction Check.",
+                "Next cue: Open the course worksheet, then compare each linked batch Prediction Check "
+                "and Viewer Handoff.",
                 html,
             )
             self.assertIn("Next action: run lab01", html)
             self.assertIn("20260627_151000_all_batches/report.html", html)
             self.assertIn("python -m mclab batch all --open-report", html)
+
+    def test_outputs_index_points_completed_batch_to_viewer_handoff(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "20260627_151000_lab01_msd_compare"
+            output.mkdir()
+            (output / "comparison_plots").mkdir()
+            (output / "comparison_plots" / "position_compare.png").write_bytes(b"fake-png")
+            (output / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "batch",
+                        "config_name": "lab01_msd_compare",
+                        "batch_name": "lab01_msd_compare",
+                        "samples": 5,
+                        "duration": "",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (output / "report.html").write_text('<html><section id="viewer-handoff"></section></html>', encoding="utf-8")
+            (output / "worksheet.md").write_text("# Batch worksheet\n\n## Prediction Check\n", encoding="utf-8")
+
+            index = write_outputs_index(temp_dir)
+
+            html = index.read_text(encoding="utf-8")
+            self.assertIn(
+                "Next cue: Open the worksheet Prediction Check, then open the report Viewer Handoff "
+                "and run the recommended viewer scenario.",
+                html,
+            )
+            self.assertIn("20260627_151000_lab01_msd_compare/report.html", html)
+            self.assertIn("20260627_151000_lab01_msd_compare/worksheet.md", html)
 
     def test_outputs_index_requires_hands_on_prediction_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
