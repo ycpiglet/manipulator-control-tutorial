@@ -34,6 +34,7 @@ from mclab.sim.reporting import (
 LabRunner = Callable[..., Path]
 
 ALL_BATCH_NAME = "all"
+VIEWER_HANDOFF_ANCHOR = "viewer-handoff"
 
 LAB_RUNNERS: dict[str, LabRunner] = {
     "lab01": lab01_msd.run,
@@ -900,6 +901,7 @@ def _render_all_batches_worksheet(completed_batches: list[dict[str, Any]]) -> st
         guide = _all_batch_guide(row)
         report = str(row.get("report", ""))
         worksheet = f"{report.rsplit('/', 1)[0]}/worksheet.md" if "/" in report else "worksheet.md" if report else ""
+        viewer_handoff = _all_batch_viewer_handoff(row)
         lines.extend(
             [
                 f"- {row.get('title', batch_name)}",
@@ -909,6 +911,7 @@ def _render_all_batches_worksheet(completed_batches: list[dict[str, Any]]) -> st
                 f"  - First question: {guide.questions[0] if guide is not None and guide.questions else 'n/a'}",
                 f"  - Report: {report or 'n/a'}",
                 f"  - Worksheet: {worksheet or 'n/a'}",
+                f"  - Viewer handoff: {viewer_handoff or 'n/a'}",
             ]
         )
     lines.extend(
@@ -1292,6 +1295,7 @@ def _all_batch_card(row: dict[str, Any]) -> str:
     guide = _all_batch_guide(row)
     worksheet = _all_batch_worksheet(row)
     folder = _all_batch_folder(row)
+    viewer_handoff = _all_batch_viewer_handoff(row)
     worksheet_link = (
         f'<a href="{escape(worksheet)}">Open worksheet</a>'
         if worksheet
@@ -1301,6 +1305,11 @@ def _all_batch_card(row: dict[str, Any]) -> str:
         f'<a href="{escape(folder)}">Open folder</a>'
         if folder
         else '<span class="muted">No folder</span>'
+    )
+    handoff_link = (
+        f'<a href="{escape(viewer_handoff)}">Open viewer handoff</a>'
+        if viewer_handoff
+        else '<span class="muted">No viewer handoff</span>'
     )
     focus = f'<p>{escape(guide.focus)}</p>' if guide is not None else ""
     question = (
@@ -1315,7 +1324,8 @@ def _all_batch_card(row: dict[str, Any]) -> str:
         f'<p>{escape(str(row["scenario_count"]))} scenarios</p>'
         f"{focus}"
         f"{question}"
-        f'<p class="muted"><a href="{escape(str(row["report"]))}">Open report</a> | {worksheet_link} | {folder_link}</p>'
+        f'<p class="muted"><a href="{escape(str(row["report"]))}">Open report</a> | '
+        f"{handoff_link} | {worksheet_link} | {folder_link}</p>"
         "</article>"
     )
 
@@ -1349,6 +1359,11 @@ def _all_batch_folder(row: dict[str, Any]) -> str:
     if "/" in report:
         return f"{report.rsplit('/', 1)[0]}/"
     return "./" if report else ""
+
+
+def _all_batch_viewer_handoff(row: dict[str, Any]) -> str:
+    report = str(row.get("report") or "")
+    return f"{report}#{VIEWER_HANDOFF_ANCHOR}" if report else ""
 
 
 def _all_batch_worksheet(row: dict[str, Any]) -> str:
@@ -1606,7 +1621,7 @@ def _viewer_handoff_section(
     row, reason = pick
     label = str(row.get("label", "scenario"))
     return (
-        "<section>"
+        f'<section id="{VIEWER_HANDOFF_ANCHOR}">'
         "<h2>Viewer Handoff</h2>"
         "<p>After comparing plots, reopen one scenario in the side-panel-free viewer and inspect the motion live.</p>"
         f"<p><strong>Start with {escape(label)}</strong>: {escape(reason)}.</p>"
