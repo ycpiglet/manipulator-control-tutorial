@@ -1358,11 +1358,40 @@ class KeyForcePulseTests(unittest.TestCase):
         self.assertEqual(_recent_action_status_message(log), "Action log: no learner actions yet.")
 
         log.record("button", "manual_force", 12.0, label="Push Right")
-        self.assertEqual(_recent_action_status_message(log), "Action log: 1 event; last Push Right.")
+        self.assertEqual(
+            _recent_action_status_message(log),
+            "Action log: 1 event; 1 learner control; last Push Right.",
+        )
 
         log.set_time(1.25)
         log.record("slider", "kp", 40.0, label="Kp")
-        self.assertEqual(_recent_action_status_message(log), "Action log: 2 events; last Kp at t=1.250s.")
+        self.assertEqual(
+            _recent_action_status_message(log),
+            "Action log: 2 events; 2 learner controls; last Kp at t=1.250s.",
+        )
+
+        log.record("button", "use_live_status_note", "position=0.1", label="Use live status")
+        self.assertEqual(
+            _recent_action_status_message(log),
+            "Action log: 3 events; 2 learner controls; last learner control Kp at t=1.250s; "
+            "last action Use live status at t=1.250s.",
+        )
+
+    def test_recent_action_status_separates_helper_only_events(self) -> None:
+        log = InteractionLog()
+
+        log.record("button", "use_live_status_note", "position=0.1", label="Use live status")
+        self.assertEqual(
+            _recent_action_status_message(log),
+            "Action log: 1 event; no learner-control event yet; last action Use live status.",
+        )
+
+        log.set_time(0.5)
+        log.record("button", "clear_observation_note", {"items_removed": 2}, label="Clear note")
+        self.assertEqual(
+            _recent_action_status_message(log),
+            "Action log: 2 events; no learner-control event yet; last action Clear note at t=0.500s.",
+        )
 
     def test_live_status_formats_dashboard_values(self) -> None:
         status = LiveStatus([StatusSpec("position", "Position [m]"), StatusSpec("mode", "Mode")])

@@ -258,7 +258,7 @@ Observation 영역의 `Next action` 줄은 현재 상태에서 바로 해야 할
 
 Observation 영역의 live `Activity mix` 줄은 현재 실행에서 버튼, 슬라이더, preset, observation marker를 몇 번 썼는지 계속 갱신하고, 아직 빠진 조작군이 있으면 다음에 시도할 행동을 바로 제안합니다.
 
-Observation 영역의 live `Action log` 줄은 방금 누른 버튼, 바꾼 슬라이더, 적용한 preset, 저장한 marker가 실제로 기록됐는지 이벤트 수와 마지막 조작 이름으로 확인해줍니다.
+Observation 영역의 live `Action log` 줄은 기록된 이벤트 수, learner-control로 인정된 조작 수, 마지막 learner-control, 마지막 전체 action을 분리해서 보여줍니다. 그래서 `Use live status`, `Clear note`, `Pause` 같은 helper를 눌러도 마지막으로 인정된 물리 실험 조작이 무엇인지 계속 확인할 수 있습니다.
 
 `Use live status`와 `Use changed values` 버튼은 기존 observation note를 덮어쓰지 않고 현재 live status나 실행 시작값 대비 바뀐 slider 값을 뒤에 이어 붙이므로, 학습자가 상태와 파라미터 변경 근거를 한 메모에 함께 남길 수 있습니다. Observation note는 여러 줄 입력을 지원하고, 수동 줄바꿈도 저장 시 evidence item으로 정리됩니다.
 
@@ -671,7 +671,7 @@ The `Challenge proof` line tells learners whether the visible-effect challenge s
 
 The observation area's live `Activity mix` line continuously counts button, slider, preset, and observation-marker use during the current run, then recommends the next missing control family to try.
 
-The observation area's live `Action log` line confirms that the last button press, slider change, preset choice, or marker save was recorded by showing the event count and latest action name.
+The observation area's live `Action log` line separates total events, counted learner-control events, the latest learner-control action, and the latest overall action. Helper actions such as `Use live status`, `Clear note`, or `Pause` can be recorded without hiding the last physical experiment control that counts toward completion.
 
 The `Use live status` and `Use changed values` buttons append to the existing observation note instead of replacing it, so learners can keep both live-state evidence and slider changes in one note. Observation notes support multiline entry, and manual line breaks are normalized into evidence items when saved.
 

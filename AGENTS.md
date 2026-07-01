@@ -158,7 +158,7 @@ Implemented and verified:
 - Interactive `MCLab Interaction` live `Next action` cue names actual panel button labels such as Pull/Push, Target X nudge, or Reset plant when button evidence is missing
 - Interactive `MCLab Interaction` observation area shows a live `Activity mix` cue that counts button, slider, preset, and marker use and recommends the next missing control family
 - Interactive `MCLab Interaction` live `Activity mix` next-step text names the actual panel button labels such as Pull/Push, Shoulder/Elbow pulse, Target X nudge, or Reset plant when button evidence is still missing
-- Interactive `MCLab Interaction` observation area shows a live `Action log` cue confirming the latest learner button, slider, preset, or marker event
+- Interactive `MCLab Interaction` observation area shows a live `Action log` cue that separates counted learner-control events from the latest helper/action event
 - Interactive `MCLab Interaction` observation area shows a `Note preview` with evidence-item counts and `|` separators so accumulated evidence is readable before `Mark observation`
 - Interactive `MCLab Interaction` observation note supports multiline entry and normalizes manual line breaks into saved evidence items
 - Interactive `MCLab Interaction` observation area includes a `Clear note` helper for removing unsaved accumulated note items without counting as learner-control evidence

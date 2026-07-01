@@ -1956,20 +1956,37 @@ def _activity_mix_next_step(
 
 
 def _recent_action_status_message(event_log: InteractionLog) -> str:
-    summary = event_log.summary()
-    event_count = int(summary.get("interaction_events") or 0)
+    events = event_log.events()
+    event_count = len(events)
     if event_count <= 0:
         return "Action log: no learner actions yet."
-    label = str(summary.get("last_interaction") or "learner action").strip()
     event_word = "event" if event_count == 1 else "events"
-    raw_time = summary.get("last_interaction_time")
+    last_event = events[-1]
+    last_text = _action_event_display_text(last_event)
+    learner_control_events = [event for event in events if _is_learner_control_event(event)]
+    learner_count = len(learner_control_events)
+    if learner_count <= 0:
+        return f"Action log: {event_count} {event_word}; no learner-control event yet; last action {last_text}."
+    learner_word = "control" if learner_count == 1 else "controls"
+    last_learner_text = _action_event_display_text(learner_control_events[-1])
+    if learner_control_events[-1] == last_event:
+        return f"Action log: {event_count} {event_word}; {learner_count} learner {learner_word}; last {last_learner_text}."
+    return (
+        f"Action log: {event_count} {event_word}; {learner_count} learner {learner_word}; "
+        f"last learner control {last_learner_text}; last action {last_text}."
+    )
+
+
+def _action_event_display_text(event: dict[str, Any]) -> str:
+    label = str(event.get("label") or event.get("name") or "learner action").strip()
+    raw_time = event.get("time")
     try:
         time = float(raw_time)
     except (TypeError, ValueError):
         time = None
     if time is None:
-        return f"Action log: {event_count} {event_word}; last {label}."
-    return f"Action log: {event_count} {event_word}; last {label} at t={time:.3f}s."
+        return label
+    return f"{label} at t={time:.3f}s"
 
 
 def _observation_marker_count(event_log: InteractionLog) -> int:
