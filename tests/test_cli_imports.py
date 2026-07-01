@@ -195,6 +195,51 @@ class CliImportTests(unittest.TestCase):
         self.assertIn(f"Run complete: {output}", printed)
         self.assertIn(f"Plots: {output / 'plots'} (1 PNG; first: position.png)", printed)
 
+    def test_cli_prints_review_queue_and_next_report(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            run_path = outputs / "run_lab01_interactive"
+            run_path.mkdir(parents=True)
+            report = run_path / "report.html"
+            report.write_text("<html></html>", encoding="utf-8")
+            worksheet = run_path / "worksheet.md"
+            worksheet.write_text("# Worksheet\n", encoding="utf-8")
+            (run_path / "summary.json").write_text(
+                (
+                    '{"lab_name": "lab01_msd", "config_path": '
+                    '"configs/lab01_msd/interactive_pull.yaml", "config_name": "interactive_pull"}'
+                ),
+                encoding="utf-8",
+            )
+
+            args = build_parser().parse_args(["review", "--output-dir", str(outputs), "--open"])
+            self.assertEqual(args.command, "review")
+            self.assertEqual(args.output_dir, str(outputs))
+            self.assertTrue(args.open)
+
+            with patch("mclab.cli._open_path") as opener, patch("builtins.print") as printer:
+                self.assertEqual(main(["review", "--output-dir", str(outputs), "--open"]), 0)
+
+        opener.assert_called_once_with(report)
+        printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
+        self.assertIn("Review queue: 0 ready, 1 pending", printed)
+        self.assertIn("Next review: run_lab01_interactive - Needs observation.", printed)
+        self.assertIn(f"Next review folder: {run_path}", printed)
+        self.assertIn("Next review status: Needs observation", printed)
+        self.assertIn(f"Next review report: {report}", printed)
+        self.assertIn(f"Next review worksheet: {worksheet}", printed)
+
+    def test_cli_review_handles_empty_outputs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            with patch("mclab.cli._open_path") as opener, patch("builtins.print") as printer:
+                self.assertEqual(main(["review", "--output-dir", str(outputs), "--open"]), 0)
+
+        opener.assert_not_called()
+        printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
+        self.assertIn("Review queue: No saved runs yet. Run a scenario first.", printed)
+        self.assertIn("Next review: none", printed)
+
     def test_cli_opens_batch_report_when_requested(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "batch"

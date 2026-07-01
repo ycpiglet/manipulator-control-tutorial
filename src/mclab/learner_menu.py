@@ -2041,6 +2041,12 @@ def next_review_output(outputs_root: Path | None = None) -> Path | None:
     return next_item[0] if next_item is not None else None
 
 
+def next_review_status_text(outputs_root: Path | None = None) -> str:
+    root = outputs_root if outputs_root is not None else PROJECT_ROOT / "outputs"
+    next_item = _next_review_queue_item(_review_queue_items(root))
+    return next_item[1] if next_item is not None else "All saved mission evidence is ready."
+
+
 def _review_queue_items(outputs_root: Path) -> list[tuple[Path, str, str, float]]:
     if not outputs_root.exists():
         return []

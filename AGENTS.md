@@ -110,6 +110,7 @@ Implemented and verified:
 - CLI `python -m mclab coverage` prints the saved Experience Coverage summary, seven-item coverage map, next missing experience, and ready-to-run command for VS Code terminal-only learners
 - CLI `python -m mclab path` prints the recommended 12-step learning-path summary, milestone status, next step, and ready-to-run command; `--all` adds a one-line status map for every path step
 - CLI `python -m mclab next --preview` prints the next recommended path step without running it, while `python -m mclab next` launches that next run or batch directly and opens the resulting report
+- CLI `python -m mclab review` prints the saved-run review queue, next pending evidence status, report, and worksheet; `--open` opens the next pending report
 - CLI `python -m mclab index --open` regenerates and opens `outputs/index.html` without launching the learner menu
 - Outputs index includes `Starter Commands` for setup checking, opening the learner menu, generating first headless artifacts, launching the first hands-on viewer demo, and running the first comparison batch
 - Outputs index includes the shared `Experience Coverage` summary plus Done/Next/Missing cards and CLI commands for all core experience types so browser-based review shows the same core experience evidence and next missing experience as the learner menu

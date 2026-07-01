@@ -28,6 +28,9 @@ from .learner_menu import (
     learning_path_target,
     main as learner_menu_main,
     next_learning_path_step,
+    next_review_output,
+    next_review_status_text,
+    review_queue_summary_text,
 )
 from .labs import lab01_msd, lab02_pid, lab03_2dof, lab04_panda
 from .sim.reporting import write_outputs_index
@@ -85,6 +88,13 @@ def build_parser() -> argparse.ArgumentParser:
     next_parser.add_argument("--output-dir", default="outputs", help="Outputs root directory used to choose the step.")
     next_parser.add_argument("--preview", action="store_true", help="Print the next step without running it.")
     next_parser.add_argument("--seed", type=int, help="Random seed for noisy experiments.")
+
+    review_parser = subparsers.add_parser(
+        "review",
+        help="Show the saved-run review queue and next report to inspect.",
+    )
+    review_parser.add_argument("--output-dir", default="outputs", help="Outputs root directory.")
+    review_parser.add_argument("--open", action="store_true", help="Open the next pending review report.")
 
     index_parser = subparsers.add_parser("index", help="Generate the outputs review index.")
     index_parser.add_argument("--output-dir", default="outputs", help="Outputs root directory.")
@@ -152,6 +162,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "next":
         return _run_next_learning_path(Path(args.output_dir), preview=args.preview, seed=args.seed)
+
+    if args.command == "review":
+        _print_review_queue(Path(args.output_dir), open_next=args.open)
+        return 0
 
     if args.command == "index":
         index_path = write_outputs_index(Path(args.output_dir))
@@ -315,6 +329,24 @@ def _run_next_batch_target(target: BatchMenuAction, *, seed: int | None = None) 
     if target.batch_name == ALL_BATCH_NAME:
         return run_all_batches(seed=seed)
     return run_batch(target.batch_name, seed=seed)
+
+
+def _print_review_queue(outputs_root: Path, *, open_next: bool = False) -> None:
+    print(review_queue_summary_text(outputs_root))
+    next_output = next_review_output(outputs_root)
+    if next_output is None:
+        print("Next review: none")
+        return
+
+    print(f"Next review folder: {next_output}")
+    print(f"Next review status: {next_review_status_text(outputs_root)}")
+    entry = _preferred_output_entry(next_output)
+    print(f"Next review report: {entry}")
+    worksheet = next_output / "worksheet.md"
+    if worksheet.exists():
+        print(f"Next review worksheet: {worksheet}")
+    if open_next:
+        _open_path(entry)
 
 
 def _output_artifact_lines(output_path: Path) -> list[str]:
