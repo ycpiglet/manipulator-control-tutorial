@@ -764,7 +764,11 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Evidence Review Cue", html)
             self.assertIn("Observation-only markers", html)
             self.assertIn("Learner controls", html)
-            self.assertIn("Write a prediction, use one counted control, then mark the observation again.", html)
+            self.assertIn(
+                "Write a prediction, use experiment buttons (Pull/Push buttons and A/D keys), "
+                "live sliders, or Quick presets, then mark the observation again.",
+                html,
+            )
 
             (output / "interaction_events.json").write_text(
                 json.dumps(
@@ -786,7 +790,8 @@ class LoggingTests(unittest.TestCase):
             html = write_run_report(output).read_text(encoding="utf-8")
             self.assertIn("Needs learner control", html)
             self.assertIn(
-                "Use one counted button, slider, or preset, then mark another observation with prediction and note.",
+                "Use experiment buttons (Pull/Push buttons and A/D keys), live sliders, or Quick presets, "
+                "then mark another observation with prediction and note.",
                 html,
             )
             self.assertIn(

@@ -1129,7 +1129,7 @@ def _worksheet_observation_lines(events: list[dict[str, Any]], config: dict[str,
         lines.append("")
         return lines
 
-    lines.extend(_worksheet_evidence_review_cue_lines(events, markers))
+    lines.extend(_worksheet_evidence_review_cue_lines(events, markers, _report_learner_control_phrase(config)))
 
     for marker_index, marker in enumerate(markers, start=1):
         payload = marker.get("value")
@@ -1173,13 +1173,14 @@ def _worksheet_observation_lines(events: list[dict[str, Any]], config: dict[str,
 def _worksheet_evidence_review_cue_lines(
     events: list[dict[str, Any]],
     markers: list[dict[str, Any]],
+    learner_control_phrase: str = "",
 ) -> list[str]:
     lines = [
         "### Evidence Review Cue",
         "",
         "- Use this as a quick worksheet checklist before moving to the next experiment.",
     ]
-    for label, value in _evidence_review_cue_items(events, markers):
+    for label, value in _evidence_review_cue_items(events, markers, learner_control_phrase=learner_control_phrase):
         lines.append(f"- {label}: {_markdown_inline(value)}")
     lines.append("")
     return lines
@@ -1527,7 +1528,7 @@ def _render_report(
     learner_action_summary = _learner_action_summary_section(interaction_events, config)
     learner_snapshot_section = _learner_snapshot_section(learner_snapshot)
     observation_timeline = _observation_timeline_section(interaction_events)
-    observation_markers = _observation_markers_section(interaction_events)
+    observation_markers = _observation_markers_section(interaction_events, config, summary)
     interaction_section = _interaction_section(interaction_events)
     plot_guide = _plot_guide_section(plots)
     rows = "\n".join(
@@ -4197,7 +4198,11 @@ def _observation_next_step_text_from_events(
     return "Observation next step: ready for review; compare the saved markers with plots and worksheet."
 
 
-def _observation_markers_section(events: list[dict[str, Any]]) -> str:
+def _observation_markers_section(
+    events: list[dict[str, Any]],
+    config: dict[str, Any] | None = None,
+    summary: dict[str, Any] | None = None,
+) -> str:
     markers = [event for event in events if _is_observation_marker(event)]
     if not markers:
         return ""
@@ -4213,7 +4218,11 @@ def _observation_markers_section(events: list[dict[str, Any]]) -> str:
     )
     review_prompt = _observation_review_prompt(markers)
     prediction_review = _prediction_review_prompt(markers)
-    evidence_review = _evidence_review_cue(events, markers)
+    evidence_review = _evidence_review_cue(
+        events,
+        markers,
+        learner_control_phrase=_report_learner_control_phrase(config, summary),
+    )
     return (
         "<section>"
         "<h2>Observation Markers</h2>"
@@ -4335,13 +4344,19 @@ def _prediction_review_prompt(markers: list[dict[str, Any]]) -> str:
     )
 
 
-def _evidence_review_cue_items(events: list[dict[str, Any]], markers: list[dict[str, Any]]) -> list[tuple[str, Any]]:
+def _evidence_review_cue_items(
+    events: list[dict[str, Any]],
+    markers: list[dict[str, Any]],
+    *,
+    learner_control_phrase: str = "",
+) -> list[tuple[str, Any]]:
     ready_pairs = 0
     prediction_only = 0
     note_only = 0
     missing_both = 0
     outcome_judgments = 0
     learner_controls = _learner_control_event_count(events)
+    control_phrase = learner_control_phrase.strip() or "one counted button, slider, or preset"
     for marker in markers:
         payload = marker.get("value")
         value = payload if isinstance(payload, dict) else {}
@@ -4360,13 +4375,16 @@ def _evidence_review_cue_items(events: list[dict[str, Any]], markers: list[dict[
             missing_both += 1
 
     if learner_controls <= 0 and ready_pairs:
-        next_step = "Use one counted button, slider, or preset, then mark another observation with prediction and note."
+        next_step = f"Use {control_phrase}, then mark another observation with prediction and note."
     elif learner_controls <= 0 and prediction_only:
-        next_step = "Add an observation note or live status snapshot, use one counted control, then mark another observation."
+        next_step = (
+            f"Add an observation note or live status snapshot, use {control_phrase}, "
+            "then mark another observation."
+        )
     elif learner_controls <= 0 and note_only:
-        next_step = "Write a prediction, use one counted control, then mark the observation again."
+        next_step = f"Write a prediction, use {control_phrase}, then mark the observation again."
     elif learner_controls <= 0:
-        next_step = "Use one counted control, fill Prediction and Note, then mark the observation."
+        next_step = f"Use {control_phrase}, fill Prediction and Note, then mark the observation."
     elif ready_pairs:
         next_step = "Decide whether each prediction matched, partially matched, or surprised you."
     elif prediction_only:
@@ -4387,11 +4405,16 @@ def _evidence_review_cue_items(events: list[dict[str, Any]], markers: list[dict[
     ]
 
 
-def _evidence_review_cue(events: list[dict[str, Any]], markers: list[dict[str, Any]]) -> str:
+def _evidence_review_cue(
+    events: list[dict[str, Any]],
+    markers: list[dict[str, Any]],
+    *,
+    learner_control_phrase: str = "",
+) -> str:
     return _action_card(
         "Evidence Review Cue",
         "Use this as a quick worksheet checklist before moving to the next experiment.",
-        _action_value_list(_evidence_review_cue_items(events, markers)),
+        _action_value_list(_evidence_review_cue_items(events, markers, learner_control_phrase=learner_control_phrase)),
     )
 
 
