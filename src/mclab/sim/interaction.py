@@ -1437,6 +1437,11 @@ def maybe_start_interaction_panel(
                             note=note,
                             learner_controls=learner_controls,
                             preset_state=preset_state,
+                            controls_available=controls_available,
+                            has_buttons=activity_has_buttons,
+                            has_sliders=activity_has_sliders,
+                            has_presets=activity_has_presets,
+                            button_next_step=activity_button_next_step,
                         )
                     )
                     marker_status.set(
@@ -2114,6 +2119,11 @@ def _saved_observation_marker_review_message(
     note: str = "",
     learner_controls: int = 0,
     preset_state: str = "",
+    controls_available: bool = True,
+    has_buttons: bool = False,
+    has_sliders: bool = False,
+    has_presets: bool = False,
+    button_next_step: str = "",
 ) -> str:
     if count <= 0:
         return "Saved observation: none yet."
@@ -2123,8 +2133,11 @@ def _saved_observation_marker_review_message(
         "prediction saved" if prediction.strip() else "prediction missing",
         "outcome saved" if _prediction_outcome_value(outcome) else "outcome not judged",
         f"{note_item_count} note {note_word}" if note_item_count else "note missing",
-        "learner control saved" if learner_controls > 0 else "learner control missing",
     ]
+    if controls_available:
+        pieces.append("learner control saved" if learner_controls > 0 else "learner control missing")
+    else:
+        pieces.append("learner control not required")
     if str(preset_state or "").strip() == "ready":
         pieces.append("preset comparison saved")
     next_step = _saved_observation_marker_next_step(
@@ -2133,6 +2146,11 @@ def _saved_observation_marker_review_message(
         note=note,
         learner_controls=learner_controls,
         preset_state=preset_state,
+        controls_available=controls_available,
+        has_buttons=has_buttons,
+        has_sliders=has_sliders,
+        has_presets=has_presets,
+        button_next_step=button_next_step,
     )
     return f"Saved observation {count}: {'; '.join(pieces)}. {next_step}"
 
@@ -2144,12 +2162,25 @@ def _saved_observation_marker_next_step(
     note: str = "",
     learner_controls: int = 0,
     preset_state: str = "",
+    controls_available: bool = True,
+    has_buttons: bool = False,
+    has_sliders: bool = False,
+    has_presets: bool = False,
+    button_next_step: str = "",
 ) -> str:
     followups: list[str] = []
     if not prediction.strip():
         followups.append("write a prediction")
-    if learner_controls <= 0:
-        followups.append("use learner control")
+    if controls_available and learner_controls <= 0:
+        followups.append(
+            _control_evidence_followup(
+                has_buttons,
+                has_sliders,
+                has_presets,
+                button_next_step=button_next_step,
+            )
+            or "use one button, slider, or preset"
+        )
     preset_followup = _preset_state_followup(preset_state)
     if preset_followup:
         followups.append(preset_followup)

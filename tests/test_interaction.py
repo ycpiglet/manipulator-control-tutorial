@@ -910,7 +910,30 @@ class KeyForcePulseTests(unittest.TestCase):
                 note="The response settled.",
             ),
             "Saved observation 1: prediction missing; outcome not judged; 1 note item; "
-            "learner control missing. Next: write a prediction and use learner control in another marker.",
+            "learner control missing. Next: write a prediction and use one button, slider, or preset "
+            "in another marker.",
+        )
+        self.assertEqual(
+            _saved_observation_marker_review_message(
+                1,
+                note="The response settled.",
+                has_buttons=True,
+                button_next_step="Use Pull Left A / Left or Push Right D / Right.",
+            ),
+            "Saved observation 1: prediction missing; outcome not judged; 1 note item; "
+            "learner control missing. Next: write a prediction and use Pull Left A / Left "
+            "or Push Right D / Right in another marker.",
+        )
+        self.assertEqual(
+            _saved_observation_marker_review_message(
+                1,
+                prediction="Auto run should stay stable.",
+                outcome="Matched",
+                note="Error stayed small.",
+                controls_available=False,
+            ),
+            "Saved observation 1: prediction saved; outcome saved; 1 note item; "
+            "learner control not required. Next: compare this marker with plots after the run.",
         )
         self.assertEqual(
             _saved_observation_marker_review_message(
