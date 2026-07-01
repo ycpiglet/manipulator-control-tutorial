@@ -260,7 +260,7 @@ Observation 영역의 live `Activity mix` 줄은 현재 실행에서 버튼, 슬
 
 Observation 영역의 live `Action log` 줄은 방금 누른 버튼, 바꾼 슬라이더, 적용한 preset, 저장한 marker가 실제로 기록됐는지 이벤트 수와 마지막 조작 이름으로 확인해줍니다.
 
-`Use live status`와 `Use changed values` 버튼은 기존 observation note를 덮어쓰지 않고 현재 live status나 실행 시작값 대비 바뀐 slider 값을 뒤에 이어 붙이므로, 학습자가 상태와 파라미터 변경 근거를 한 메모에 함께 남길 수 있습니다.
+`Use live status`와 `Use changed values` 버튼은 기존 observation note를 덮어쓰지 않고 현재 live status나 실행 시작값 대비 바뀐 slider 값을 뒤에 이어 붙이므로, 학습자가 상태와 파라미터 변경 근거를 한 메모에 함께 남길 수 있습니다. Observation note는 여러 줄 입력을 지원하고, 수동 줄바꿈도 저장 시 evidence item으로 정리됩니다.
 
 `Note preview` 줄은 누적된 observation note를 evidence item 개수와 `|` 구분자로 나눠 보여주므로, `Mark observation`을 누르기 전에 실제 저장될 메모와 증거 항목을 확인할 수 있습니다.
 
@@ -669,7 +669,7 @@ The observation area's live `Activity mix` line continuously counts button, slid
 
 The observation area's live `Action log` line confirms that the last button press, slider change, preset choice, or marker save was recorded by showing the event count and latest action name.
 
-The `Use live status` and `Use changed values` buttons append to the existing observation note instead of replacing it, so learners can keep both live-state evidence and slider changes in one note.
+The `Use live status` and `Use changed values` buttons append to the existing observation note instead of replacing it, so learners can keep both live-state evidence and slider changes in one note. Observation notes support multiline entry, and manual line breaks are normalized into evidence items when saved.
 
 The `Note preview` line splits the accumulated observation note into evidence-item counts and `|`-separated items so learners can check exactly what will be saved before pressing `Mark observation`.
 

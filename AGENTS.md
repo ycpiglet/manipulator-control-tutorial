@@ -160,6 +160,7 @@ Implemented and verified:
 - Interactive `MCLab Interaction` live `Activity mix` next-step text names the actual panel button labels such as Pull/Push, Shoulder/Elbow pulse, Target X nudge, or Reset plant when button evidence is still missing
 - Interactive `MCLab Interaction` observation area shows a live `Action log` cue confirming the latest learner button, slider, preset, or marker event
 - Interactive `MCLab Interaction` observation area shows a `Note preview` with evidence-item counts and `|` separators so accumulated evidence is readable before `Mark observation`
+- Interactive `MCLab Interaction` observation note supports multiline entry and normalizes manual line breaks into saved evidence items
 - Interactive `MCLab Interaction` post-`Mark observation` status messages name missing button, slider, or preset evidence using actual panel labels when available
 - Interactive `MCLab Interaction` post-`Mark observation` status messages summarize saved prediction, outcome, note item, learner-control, and preset-comparison evidence when the marker is complete
 - Hands-on mission evidence and learning-path completion require at least one learner control event (`button`, `slider`, or `preset`) plus a prediction-and-note observation marker

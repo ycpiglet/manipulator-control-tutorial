@@ -1252,6 +1252,32 @@ def maybe_start_interaction_panel(
                 )
                 recent_action_status = tk.StringVar(value=_recent_action_status_message(event_log))
                 marker_prompt = observation_prompt_for_guide(guide)
+                marker_note_widget: dict[str, Any] = {}
+                syncing_marker_note = {"active": False}
+
+                def get_marker_note() -> str:
+                    widget = marker_note_widget.get("widget")
+                    if widget is None:
+                        return marker_note.get()
+                    return str(widget.get("1.0", "end-1c"))
+
+                def set_marker_note(value: str) -> None:
+                    text = str(value or "")
+                    marker_note.set(text)
+                    widget = marker_note_widget.get("widget")
+                    if widget is None:
+                        return
+                    syncing_marker_note["active"] = True
+                    try:
+                        widget.delete("1.0", "end")
+                        widget.insert("1.0", text)
+                    finally:
+                        syncing_marker_note["active"] = False
+
+                def sync_marker_note_from_widget(_event: Any | None = None) -> None:
+                    if syncing_marker_note["active"]:
+                        return
+                    marker_note.set(get_marker_note())
 
                 def update_marker_checklist(*_args: Any) -> None:
                     preset_state = tuning.preset_checklist_state() if tuning is not None else ""
@@ -1339,7 +1365,7 @@ def maybe_start_interaction_panel(
                     if not note:
                         marker_status.set("No live status values are available yet.")
                         return
-                    marker_note.set(_append_observation_note(marker_note.get(), note))
+                    set_marker_note(_append_observation_note(get_marker_note(), note))
                     event_log.record("button", "use_live_status_note", note, label="Use live status")
                     marker_status.set("Added live status to the observation note.")
 
@@ -1348,14 +1374,14 @@ def maybe_start_interaction_panel(
                     if not note:
                         marker_status.set("No changed slider values yet.")
                         return
-                    marker_note.set(_append_observation_note(marker_note.get(), note))
+                    set_marker_note(_append_observation_note(get_marker_note(), note))
                     event_log.record("button", "use_changed_values_note", note, label="Use changed values")
                     marker_status.set("Added changed slider values to the observation note.")
 
                 def mark_observation() -> None:
                     prediction = marker_prediction.get()
                     outcome = _prediction_outcome_value(marker_outcome.get())
-                    note = marker_note.get()
+                    note = _observation_note_value(get_marker_note())
                     preset_state = tuning.preset_checklist_state() if tuning is not None else ""
                     learner_controls = _learner_control_event_count(event_log.events())
                     challenge_proof = _observation_challenge_proof_status(
@@ -1383,7 +1409,7 @@ def maybe_start_interaction_panel(
                     )
                     marker_prediction.set("")
                     marker_outcome.set(PREDICTION_OUTCOME_UNJUDGED)
-                    marker_note.set("")
+                    set_marker_note("")
                     marker_status.set(
                         _observation_marker_status_message(
                             event_log,
@@ -1438,12 +1464,16 @@ def maybe_start_interaction_panel(
                     column=0,
                     sticky="w",
                 )
-                tk.Entry(marker_frame, textvariable=marker_note, width=40).grid(
+                note_text = tk.Text(marker_frame, width=40, height=3, wrap="word", undo=True)
+                marker_note_widget["widget"] = note_text
+                note_text.grid(
                     row=marker_row,
                     column=1,
                     sticky="ew",
                     padx=(12, 0),
                 )
+                note_text.bind("<KeyRelease>", sync_marker_note_from_widget)
+                note_text.bind("<FocusOut>", sync_marker_note_from_widget)
                 marker_row += 1
                 tk.Label(
                     marker_frame,
@@ -2315,6 +2345,10 @@ def _observation_note_preview(note: str) -> str:
         return "Note preview: empty"
     item_word = "item" if len(parts) == 1 else "items"
     return f"Note preview ({len(parts)} {item_word}): {' | '.join(parts)}"
+
+
+def _observation_note_value(note: str) -> str:
+    return "; ".join(_observation_note_preview_parts(note))
 
 
 def _observation_note_preview_parts(note: str) -> list[str]:
