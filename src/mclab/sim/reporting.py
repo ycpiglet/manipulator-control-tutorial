@@ -4126,10 +4126,12 @@ def _observation_next_step_text_from_events(
     learner_control_phrase: str = "",
 ) -> str:
     markers, predictions, notes, outcomes = _observation_evidence_counts_from_events(events)
+    learner_controls = _learner_control_event_count(events)
+    needs_control = evidence_required and learner_controls <= 0
+    control_phrase = learner_control_phrase.strip() or "at least one learner control"
     if markers <= 0:
         if evidence_required:
-            if _learner_control_event_count(events) <= 0:
-                control_phrase = learner_control_phrase.strip() or "at least one learner control"
+            if needs_control:
                 return (
                     f"Observation next step: use {control_phrase}, then mark one observation "
                     "with a prediction and note."
@@ -4138,12 +4140,26 @@ def _observation_next_step_text_from_events(
         return ""
     if predictions < markers:
         missing = markers - predictions
+        if needs_control:
+            return (
+                "Observation next step: add a prediction and use "
+                f"{control_phrase} before marking the next observation "
+                f"({missing} marker{'s' if missing != 1 else ''} missing prediction; "
+                "no learner control yet)."
+            )
         return (
             "Observation next step: add a prediction before marking the next observation "
             f"({missing} marker{'s' if missing != 1 else ''} missing prediction)."
         )
     if notes < markers:
         missing = markers - notes
+        if needs_control:
+            return (
+                "Observation next step: add a learner note or Use live status snapshot, then use "
+                f"{control_phrase} before marking the next observation "
+                f"({missing} marker{'s' if missing != 1 else ''} missing note evidence; "
+                "no learner control yet)."
+            )
         return (
             "Observation next step: add a learner note or Use live status snapshot "
             f"({missing} marker{'s' if missing != 1 else ''} missing note evidence)."
@@ -4155,8 +4171,7 @@ def _observation_next_step_text_from_events(
             f"{missing} prediction outcome{'s' if missing != 1 else ''} "
             "(Matched, Partly matched, or Surprised)."
         )
-    if evidence_required and _learner_control_event_count(events) <= 0:
-        control_phrase = learner_control_phrase.strip() or "at least one learner control"
+    if needs_control:
         return (
             f"Observation next step: use {control_phrase}, then mark another observation "
             "with a prediction and note."

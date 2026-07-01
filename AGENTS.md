@@ -233,7 +233,7 @@ Implemented and verified:
 - Learner menu and outputs index show an `Observation flow` summary from first marker state to latest marker state
 - Learner menu and outputs index show an `Observation next step` cue for missing predictions, notes, outcomes, or review-ready markers
 - Learner menu and outputs index `Observation next step` cues name available learner-control families before asking for the first hands-on observation marker
-- Learner menu and outputs index `Observation next step` stays learner-control aware when a marker has prediction, note, and outcome but no counted learner-control event
+- Learner menu and outputs index `Observation next step` stays learner-control aware when a marker lacks prediction/note evidence or has prediction, note, and outcome but no counted learner-control event
 - Learner menu and outputs index show `Milestones` progress for 1D Dynamics, PID Control, 2DOF Control, Panda Manipulation, and Course Compare
 - Recommended learning path progress in the menu and outputs index requires prediction-bearing observation markers for hands-on steps
 - Recommended learning path cards show a `Done when` completion criterion for auto, hands-on, and batch steps

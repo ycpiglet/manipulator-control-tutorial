@@ -2078,6 +2078,48 @@ class LearnerMenuTests(unittest.TestCase):
                         {
                             "kind": "marker",
                             "name": "observation",
+                            "value": {"note": "The plotted response settled faster."},
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            self.assertEqual(
+                action_observation_next_step_text(lab01_interactive, outputs),
+                "Observation next step: add a prediction and use experiment buttons, live sliders, or Quick presets "
+                "before marking the next observation (1 marker missing prediction; no learner control yet).",
+            )
+
+            (run_path / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "prediction": "Higher damping should settle faster.",
+                                "outcome": "Matched",
+                            },
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            self.assertEqual(
+                action_observation_next_step_text(lab01_interactive, outputs),
+                "Observation next step: add a learner note or Use live status snapshot, then use "
+                "experiment buttons, live sliders, or Quick presets before marking the next observation "
+                "(1 marker missing note evidence; no learner control yet).",
+            )
+
+            (run_path / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "kind": "marker",
+                            "name": "observation",
                             "value": {
                                 "prediction": "Higher damping should settle faster.",
                                 "outcome": "Matched",
