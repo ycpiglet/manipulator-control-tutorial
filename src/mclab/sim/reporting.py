@@ -10,6 +10,7 @@ from typing import Any
 
 from mclab.config import load_config
 from mclab.course_progress import course_milestone_label_for_step_index, course_milestone_summary
+from mclab.experience_coverage import ExperienceCoverageRecord, experience_coverage_summary_text
 from mclab.learning_guides import (
     RunGuide,
     VIEWER_CONTROL_SURFACE_TEXT,
@@ -4597,6 +4598,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
     metric_keys = _index_metric_keys(runs)
     metric_headers = "".join(f"<th>{escape(_metric_label(key))}</th>" for key in metric_keys)
     learning_path = _learning_path_section(runs)
+    experience_coverage = _experience_coverage_section(runs)
     progress_cards = _progress_cards(runs)
     rows = "\n".join(
         (
@@ -4782,6 +4784,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
   <main>
     <h1>MuJoCo Control Lab outputs</h1>
     {_starter_commands_section()}
+    {experience_coverage}
     {learning_path}
     <section>
       <h2>Progress Snapshot</h2>
@@ -4852,6 +4855,62 @@ def _starter_commands_section() -> str:
         "</div>"
         "</section>"
     )
+
+
+def _experience_coverage_section(runs: list[dict[str, Any]]) -> str:
+    summary = experience_coverage_summary_text(_experience_coverage_records_for_index(runs))
+    return (
+        "<section>"
+        "<h2>Experience Coverage</h2>"
+        f'<p class="muted">{escape(summary)}</p>'
+        "</section>"
+    )
+
+
+def _experience_coverage_records_for_index(runs: list[dict[str, Any]]) -> list[ExperienceCoverageRecord]:
+    records: list[ExperienceCoverageRecord] = []
+    for run in runs:
+        tags = _experience_tags_for_index_run(run)
+        events = run.get("interaction_events")
+        if not isinstance(events, list):
+            events = []
+        records.append(
+            ExperienceCoverageRecord(
+                frozenset(tags),
+                has_control=_learner_control_event_count(events) > 0,
+            )
+        )
+    return records
+
+
+def _experience_tags_for_index_run(run: dict[str, Any]) -> set[str]:
+    summary = run.get("summary")
+    if not isinstance(summary, dict):
+        summary = {}
+    config_path = _normalize_path(str(run.get("config_path") or summary.get("config_path") or ""))
+    config_name = str(run.get("config_name") or summary.get("config_name") or "").lower()
+    lab_name = str(run.get("lab_name") or summary.get("lab_name") or "").lower()
+    batch_name = str(summary.get("batch_name") or config_name).lower()
+    text = " ".join((config_path, config_name, lab_name, batch_name))
+    tags: set[str] = set()
+
+    if "batch" in lab_name or batch_name in {"all", "all_batches"} or batch_name.endswith("_compare"):
+        tags.update({"batch", "compare"})
+    if batch_name == "all" or batch_name == "all_batches":
+        tags.update({"intro", "2dof", "singularity", "dls", "panda", "wall"})
+    if "lab01" in text or "lab02" in text:
+        tags.add("intro")
+    if "interactive" in text or "dls_singularity" in text or "condition_aware_dls_2dof" in text:
+        tags.add("hands-on")
+    if "lab03" in text or "2dof" in text:
+        tags.add("2dof")
+    if any(term in text for term in ("singularity", "condition", "dls")):
+        tags.update({"singularity", "dls"})
+    if "lab04" in text or "panda" in text:
+        tags.add("panda")
+    if "wall" in text:
+        tags.add("wall")
+    return tags
 
 
 def _learning_path_section(runs: list[dict[str, Any]]) -> str:

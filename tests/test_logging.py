@@ -1318,6 +1318,11 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("lab01_msd", html)
             self.assertIn("Config", html)
             self.assertIn("Progress Snapshot", html)
+            self.assertIn("Experience Coverage", html)
+            self.assertIn("Experience coverage: 1/7 types tried", html)
+            self.assertIn("Done: Intro basics", html)
+            self.assertIn("Missing: Hands-on controls", html)
+            self.assertIn("Next: Run an interactive viewer and use one button, slider, or preset.", html)
             self.assertIn("Learning Path", html)
             self.assertIn("1/12 steps complete", html)
             self.assertIn(
