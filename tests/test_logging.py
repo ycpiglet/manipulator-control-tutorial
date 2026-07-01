@@ -1479,6 +1479,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Next cue: Rerun the comparison batch to regenerate the worksheet.", html)
             self.assertIn("20260627_151000_lab02_pid_compare/comparison_plots/error_compare.png", html)
             self.assertIn("Plot review: Error - Check how quickly error shrinks", html)
+            self.assertNotIn("Viewer Handoff</a>", html)
 
     def test_outputs_index_marks_all_batch_learning_path_step(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1560,6 +1561,10 @@ class LoggingTests(unittest.TestCase):
             self.assertIn(
                 "Next cue: Open the worksheet Prediction Check, then open the report Viewer Handoff "
                 "and run the recommended viewer scenario.",
+                html,
+            )
+            self.assertIn(
+                'href="20260627_151000_lab01_msd_compare/report.html#viewer-handoff">Viewer Handoff</a>',
                 html,
             )
             self.assertIn("20260627_151000_lab01_msd_compare/report.html", html)

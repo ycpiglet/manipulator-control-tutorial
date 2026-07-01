@@ -4607,7 +4607,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
             f"<td>{escape(_config_cell(run))}</td>"
             f"<td>{escape(str(run.get('lesson_title', '')))}</td>"
             f"<td>{escape(str(run.get('next_step', '')))}</td>"
-            f'<td class="cue-cell">{escape(_run_next_cue_text(run))}</td>'
+            f'<td class="cue-cell">{_run_next_cue_cell(run)}</td>'
             f"<td>{_run_repeat_command_cell(run)}</td>"
             f"<td>{escape(_run_evidence_cell(run))}</td>"
             f"<td>{escape(str(run.get('activity_mix', '')))}</td>"
@@ -5602,6 +5602,30 @@ def _run_next_cue_text(run: dict[str, Any]) -> str:
     if next_step:
         return f"Next cue: Review the priority plot and worksheet, then try: {_short_evidence_text(next_step, max_length=96)}"
     return "Next cue: Review the priority plot and worksheet, then run the next guided scenario."
+
+
+def _run_next_cue_cell(run: dict[str, Any]) -> str:
+    cue = escape(_run_next_cue_text(run))
+    handoff_href = _run_viewer_handoff_href(run)
+    if not handoff_href:
+        return cue
+    return (
+        f"{cue}"
+        '<div class="path-links">'
+        f'<a class="plot-chip" href="{escape(handoff_href)}">Viewer Handoff</a>'
+        "</div>"
+    )
+
+
+def _run_viewer_handoff_href(run: dict[str, Any]) -> str:
+    summary = run.get("summary")
+    summary = summary if isinstance(summary, dict) else {}
+    if _summary_is_all_batch(summary) or not _summary_is_comparison_batch(summary):
+        return ""
+    report = str(run.get("report") or "").strip()
+    if not report or not report.endswith("/report.html"):
+        return ""
+    return f"{report}#viewer-handoff"
 
 
 def _hands_on_run_next_cue(
