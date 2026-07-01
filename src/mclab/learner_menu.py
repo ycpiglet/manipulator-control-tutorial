@@ -19,6 +19,7 @@ from mclab.config import PROJECT_ROOT, load_config
 from mclab.course_progress import course_milestone_summary
 from mclab.experience_coverage import (
     ExperienceCoverageRecord,
+    experience_coverage_statuses,
     experience_coverage_summary_text as format_experience_coverage_summary,
     next_experience_coverage_item,
 )
@@ -1365,6 +1366,14 @@ def next_learning_path_step(
 
 def experience_coverage_summary_text(outputs_root: Path | None = None) -> str:
     return format_experience_coverage_summary(_experience_coverage_records(outputs_root))
+
+
+def experience_coverage_status_text(outputs_root: Path | None = None) -> str:
+    parts = []
+    for status in experience_coverage_statuses(_experience_coverage_records(outputs_root)):
+        label = "Next" if status.next_missing else "Done" if status.covered else "Missing"
+        parts.append(f"{status.item.label}: {label}")
+    return f"Coverage map: {'; '.join(parts)}"
 
 
 def experience_coverage_next_target(outputs_root: Path | None = None) -> MenuAction | BatchMenuAction | None:
@@ -3890,6 +3899,7 @@ def main() -> int:
     post_run_refresh_ref: dict[str, Callable[[], None]] = {}
     review_queue = tk.StringVar(value=review_queue_summary_text())
     experience_coverage = tk.StringVar(value=experience_coverage_summary_text())
+    experience_coverage_status = tk.StringVar(value=experience_coverage_status_text())
     experience_coverage_next = tk.StringVar(value=experience_coverage_next_button_label())
 
     def update_learning_path_button_text(step: LearningPathStep, button: Any, key: str) -> None:
@@ -3927,6 +3937,7 @@ def main() -> int:
         path_milestones.set(learning_path_milestone_text(items))
         review_queue.set(review_queue_summary_text())
         experience_coverage.set(experience_coverage_summary_text())
+        experience_coverage_status.set(experience_coverage_status_text())
         coverage_target = experience_coverage_next_target()
         experience_coverage_next.set(experience_coverage_next_button_label())
         coverage_next_button = coverage_next_button_ref["button"]
@@ -4060,6 +4071,13 @@ def main() -> int:
     )
     coverage_next_button.grid(row=0, column=1, sticky="e", padx=(12, 0))
     coverage_next_button_ref["button"] = coverage_next_button
+    ttk.Label(coverage_frame, textvariable=experience_coverage_status, wraplength=900, justify="left").grid(
+        row=1,
+        column=0,
+        columnspan=2,
+        sticky="w",
+        pady=(8, 0),
+    )
 
     path_frame = ttk.LabelFrame(outer, text="Recommended learning path", padding=10)
     path_frame.pack(fill="x", pady=(0, 10))
