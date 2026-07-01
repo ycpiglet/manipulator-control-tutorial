@@ -4468,6 +4468,7 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
                 "samples": summary.get("samples", ""),
                 "duration": summary.get("duration", ""),
                 "report": _run_link(child, report_path, index_path),
+                "folder": _discover_output_folder(child),
                 "worksheet": worksheet,
                 "plots": plots,
                 "replay": _discover_replay_config(child),
@@ -4528,6 +4529,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
             "<tr>"
             f'<td><a href="{escape(str(run["report"]))}">{escape(str(run["name"]))}</a></td>'
             f"<td>{escape(str(run['lab_name']))}</td>"
+            f"<td>{_run_folder_cell(run)}</td>"
             f"<td>{escape(_config_cell(run))}</td>"
             f"<td>{escape(str(run.get('lesson_title', '')))}</td>"
             f"<td>{escape(str(run.get('next_step', '')))}</td>"
@@ -4552,7 +4554,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
         for run in runs
     )
     if not rows:
-        rows = f'<tr><td colspan="{17 + len(metric_keys)}">No run reports were found yet.</td></tr>'
+        rows = f'<tr><td colspan="{18 + len(metric_keys)}">No run reports were found yet.</td></tr>'
 
     return f"""<!doctype html>
 <html lang="en">
@@ -4715,7 +4717,7 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
     <section>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Run</th><th>Lab</th><th>Config</th><th>Lesson</th><th>Next</th><th>Next cue</th><th>Repeat command</th><th>Evidence</th><th>Activity</th><th>Mission evidence</th><th>Challenge evidence</th><th>Worksheet</th><th>Replay</th><th>Plots</th><th>Plot review</th><th>Duration [s]</th><th>Samples</th>{metric_headers}</tr></thead>
+          <thead><tr><th>Run</th><th>Lab</th><th>Folder</th><th>Config</th><th>Lesson</th><th>Next</th><th>Next cue</th><th>Repeat command</th><th>Evidence</th><th>Activity</th><th>Mission evidence</th><th>Challenge evidence</th><th>Worksheet</th><th>Replay</th><th>Plots</th><th>Plot review</th><th>Duration [s]</th><th>Samples</th>{metric_headers}</tr></thead>
           <tbody>{rows}</tbody>
         </table>
       </div>
@@ -5050,6 +5052,9 @@ def _learning_path_quick_links(run: dict[str, Any] | None) -> str:
             if href and label:
                 links.append((href, f"Plot: {label}"))
                 break
+    folder = run.get("folder")
+    if isinstance(folder, dict):
+        links.append((str(folder.get("href") or ""), str(folder.get("label") or "Folder")))
     replay = run.get("replay")
     if isinstance(replay, dict):
         links.append((str(replay.get("href") or ""), "Replay tuned"))
@@ -5672,6 +5677,17 @@ def _run_replay_cell(run: dict[str, Any]) -> str:
     return f'<a class="plot-chip" href="{escape(href)}">{escape(label)}</a>'
 
 
+def _run_folder_cell(run: dict[str, Any]) -> str:
+    folder = run.get("folder")
+    if not isinstance(folder, dict):
+        return '<span class="muted">No folder</span>'
+    href = str(folder.get("href") or "")
+    label = str(folder.get("label") or "Folder")
+    if not href:
+        return '<span class="muted">No folder</span>'
+    return f'<a class="plot-chip" href="{escape(href)}">{escape(label)}</a>'
+
+
 def _run_worksheet_cell(run: dict[str, Any]) -> str:
     worksheet = run.get("worksheet")
     if not isinstance(worksheet, dict):
@@ -5727,6 +5743,13 @@ def _run_link(child: Path, report_path: Path, index_path: Path) -> str:
     if index_path.exists():
         return f"{child.name}/index.html"
     return child.name
+
+
+def _discover_output_folder(child: Path) -> dict[str, str]:
+    return {
+        "href": f"{child.name}/",
+        "label": "Folder",
+    }
 
 
 def _discover_replay_config(child: Path) -> dict[str, str] | None:

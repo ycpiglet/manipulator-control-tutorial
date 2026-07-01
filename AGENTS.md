@@ -233,6 +233,7 @@ Implemented and verified:
 - Run reports show an evidence review cue that counts review-ready prediction-observation pairs and incomplete markers
 - Run reports and generated `worksheet.md` artifacts show run-level `Done when` completion criteria plus prediction outcomes, pending outcome review, notes, live status, key parameters, priority plot review prompts, checklist prompts, suggested next experiments, and comparison batch commands
 - Outputs index learning path cards include evidence status, latest evidence summaries, latest report/worksheet/priority-plot/replay links, and ready-to-run or repeat commands for each course step
+- Outputs index run table and learning-path cards include `Folder` links for the latest output directories and raw artifacts
 - Outputs index learning path cards show the priority plot review cue directly under the latest artifact links so learners know what to inspect before opening the plot
 - Learner menu learning-path cards show the latest worksheet/replay artifacts, latest priority plot filename, and the same plot review cue in the progress text
 - Learner menu learning-path cards separate the scenario launch button from Report/Plot/Worksheet/Folder/Replay artifact buttons so the 3-column path layout stays readable

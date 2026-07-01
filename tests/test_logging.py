@@ -1365,6 +1365,8 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("<th>Worksheet</th>", html)
             self.assertIn("20260627_150117_lab01_msd/worksheet.md", html)
             self.assertIn("Worksheet", html)
+            self.assertIn("<th>Folder</th>", html)
+            self.assertIn('href="20260627_150117_lab01_msd/">Folder</a>', html)
             self.assertIn("<th>Replay</th>", html)
             self.assertIn("20260627_150117_lab01_msd/learner_tuned_config.yaml", html)
             self.assertIn("Tuned config", html)
@@ -1383,6 +1385,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn(">Plot: Position</a>", html)
             self.assertIn(
                 ">Plot: Position</a><a class=\"plot-chip\" "
+                'href="20260627_150117_lab01_msd/">Folder</a><a class="plot-chip" '
                 'href="20260627_150117_lab01_msd/learner_tuned_config.yaml">Replay tuned</a></div>'
                 '<p class="muted">Plot review: Position - Compare actual motion against target',
                 html,
@@ -1426,7 +1429,8 @@ class LoggingTests(unittest.TestCase):
             )
             self.assertNotIn(f'href="{output.name}/plots/error.png">Plot: Error</a>', html)
             self.assertIn(
-                f'href="{output.name}/plots/dls.png">Plot: Damped Least Squares</a></div>'
+                f'href="{output.name}/plots/dls.png">Plot: Damped Least Squares</a>'
+                f'<a class="plot-chip" href="{output.name}/">Folder</a></div>'
                 '<p class="muted">Plot review: Damped Least Squares - Compare task speed',
                 html,
             )
