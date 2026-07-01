@@ -115,6 +115,11 @@ class CliImportTests(unittest.TestCase):
             "--headless --plot --open-report",
             printed,
         )
+        self.assertIn("Next guide: Lab01 Mass-Spring-Damper - Auto demo", printed)
+        self.assertIn("Mission: Run the demo", printed)
+        self.assertIn("Start steps:", printed)
+        self.assertIn("Challenge:", printed)
+        self.assertIn("Controls: Auto run; edit YAML before running", printed)
 
     def test_cli_prints_learning_path_progress_and_next_command(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -137,6 +142,10 @@ class CliImportTests(unittest.TestCase):
             "--viewer --realtime --pause-at-end --plot --plots essential --open-report",
             printed,
         )
+        self.assertIn("Next guide: Lab01 Mass-Spring-Damper - Auto demo", printed)
+        self.assertIn("Mission: Run the demo", printed)
+        self.assertIn("Viewer: MuJoCo side panels are hidden", printed)
+        self.assertIn("Controls: Auto run; edit YAML before running", printed)
         self.assertIn("Path map:", printed)
         self.assertIn("1. Feel 1D physics: Not run yet", printed)
 

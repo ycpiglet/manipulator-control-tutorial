@@ -51,6 +51,7 @@ from .learner_menu import (
     command_for_target,
     experience_coverage_next_command,
     experience_coverage_next_label,
+    experience_coverage_next_target,
     experience_coverage_status_text,
     experience_coverage_summary_text,
     filter_menu_actions,
@@ -315,6 +316,9 @@ def _print_experience_coverage(outputs_root: Path) -> None:
     if next_command:
         print(f"Next experience: {experience_coverage_next_label(outputs_root)}")
         print(f"Next command: {next_command}")
+        next_target = experience_coverage_next_target(outputs_root)
+        if next_target is not None:
+            _print_next_target_guide(next_target, outputs_root, include_viewer=False)
     else:
         print("Next experience: Coverage complete")
         print("Next command: replay one saved scenario or run a comparison batch more deeply.")
@@ -328,6 +332,7 @@ def _print_learning_path(outputs_root: Path, *, show_all: bool = False) -> None:
     if next_step is not None:
         print(f"Next step: {learning_path_next_label(outputs_root)}")
         print(f"Next command: {learning_path_next_command(outputs_root)}")
+        _print_next_target_guide(learning_path_target(next_step), outputs_root)
     else:
         print("Next step: Course path complete")
         print("Next command: open outputs/index.html or rerun a comparison batch for deeper review.")
@@ -373,7 +378,12 @@ def _run_next_learning_path(outputs_root: Path, *, preview: bool = False, seed: 
     return 0
 
 
-def _print_next_target_guide(target: MenuAction | BatchMenuAction, outputs_root: Path) -> None:
+def _print_next_target_guide(
+    target: MenuAction | BatchMenuAction,
+    outputs_root: Path,
+    *,
+    include_viewer: bool = True,
+) -> None:
     print(f"Next guide: {target.group} - {target.label}")
     if isinstance(target, BatchMenuAction):
         readiness = batch_readiness(target)
@@ -397,11 +407,12 @@ def _print_next_target_guide(target: MenuAction | BatchMenuAction, outputs_root:
             action_playbook_text(target),
             action_start_steps_text(target),
             action_challenge_text(target),
-            action_viewer_text(target),
             action_controls_text(target),
             f"Setup: {readiness.label}{f' - {readiness.detail}' if readiness.detail else ''}",
             action_next_cue_text(target, outputs_root),
         ]
+        if include_viewer:
+            lines.insert(7, action_viewer_text(target))
         control_credit = action_control_credit_text(target)
         if control_credit:
             lines.insert(-2, control_credit)
