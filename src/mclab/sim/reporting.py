@@ -12,6 +12,8 @@ from mclab.config import load_config
 from mclab.course_progress import course_milestone_label_for_step_index, course_milestone_summary
 from mclab.experience_coverage import (
     ExperienceCoverageRecord,
+    ExperienceCoverageStatus,
+    experience_coverage_statuses,
     experience_coverage_summary_text,
     next_experience_coverage_item,
 )
@@ -4865,6 +4867,7 @@ def _experience_coverage_section(runs: list[dict[str, Any]]) -> str:
     records = _experience_coverage_records_for_index(runs)
     summary = experience_coverage_summary_text(records)
     next_item = next_experience_coverage_item(records)
+    status_cards = _experience_coverage_status_cards(experience_coverage_statuses(records))
     if next_item is None:
         next_block = (
             '<p class="muted">'
@@ -4887,7 +4890,32 @@ def _experience_coverage_section(runs: list[dict[str, Any]]) -> str:
         "<h2>Experience Coverage</h2>"
         f'<p class="muted">{escape(summary)}</p>'
         f"{next_block}"
+        f"{status_cards}"
         "</section>"
+    )
+
+
+def _experience_coverage_status_cards(statuses: tuple[ExperienceCoverageStatus, ...]) -> str:
+    cards = "\n".join(_experience_coverage_status_card(status) for status in statuses)
+    return f'<div class="path-grid">{cards}</div>'
+
+
+def _experience_coverage_status_card(status: ExperienceCoverageStatus) -> str:
+    if status.next_missing:
+        status_label = "Next"
+    elif status.covered:
+        status_label = "Done"
+    else:
+        status_label = "Missing"
+    command = status.item.command
+    command_block = f'<pre class="path-command">{escape(command)}</pre>' if command else ""
+    return (
+        '<article class="path-card">'
+        f"<strong>{escape(status.item.label)}</strong>"
+        f'<span class="status">{escape(status_label)}</span>'
+        f'<p class="muted">{escape(status.item.next_step)}</p>'
+        f"{command_block}"
+        "</article>"
     )
 
 

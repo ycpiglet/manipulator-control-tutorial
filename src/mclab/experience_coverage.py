@@ -22,6 +22,13 @@ class ExperienceCoverageRecord:
     has_control: bool = False
 
 
+@dataclass(frozen=True)
+class ExperienceCoverageStatus:
+    item: ExperienceCoverageItem
+    covered: bool
+    next_missing: bool = False
+
+
 EXPERIENCE_COVERAGE_ITEMS: tuple[ExperienceCoverageItem, ...] = (
     ExperienceCoverageItem(
         "intro",
@@ -114,6 +121,20 @@ def next_experience_coverage_item(records: Iterable[ExperienceCoverageRecord]) -
         if item.key not in covered:
             return item
     return None
+
+
+def experience_coverage_statuses(records: Iterable[ExperienceCoverageRecord]) -> tuple[ExperienceCoverageStatus, ...]:
+    record_list = tuple(records)
+    covered = experience_coverage_keys(record_list)
+    next_item = next_experience_coverage_item(record_list)
+    return tuple(
+        ExperienceCoverageStatus(
+            item,
+            covered=item.key in covered,
+            next_missing=next_item is not None and item.key == next_item.key,
+        )
+        for item in EXPERIENCE_COVERAGE_ITEMS
+    )
 
 
 def experience_coverage_keys(records: Iterable[ExperienceCoverageRecord]) -> set[str]:
