@@ -13,6 +13,7 @@ class ExperienceCoverageItem:
     tags: tuple[str, ...]
     next_step: str
     requires_control: bool = False
+    command: str = ""
 
 
 @dataclass(frozen=True)
@@ -27,6 +28,7 @@ EXPERIENCE_COVERAGE_ITEMS: tuple[ExperienceCoverageItem, ...] = (
         "Intro basics",
         ("intro",),
         "Run Lab01 Mass-Spring-Damper - Auto demo.",
+        command="python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot --open-report",
     ),
     ExperienceCoverageItem(
         "hands-on",
@@ -34,36 +36,57 @@ EXPERIENCE_COVERAGE_ITEMS: tuple[ExperienceCoverageItem, ...] = (
         ("hands-on",),
         "Run an interactive viewer and use one button, slider, or preset.",
         requires_control=True,
+        command=(
+            "python -m mclab run lab01 --config configs/lab01_msd/interactive_pull.yaml "
+            "--viewer --realtime --pause-at-end --plot --open-report"
+        ),
     ),
     ExperienceCoverageItem(
         "compare",
         "Comparison batch",
         ("batch",),
         "Run any Comparison Batches card, then open the worksheet Prediction Check.",
+        command="python -m mclab batch lab01_msd_compare --open-report",
     ),
     ExperienceCoverageItem(
         "2dof",
         "2DOF/Jacobian",
         ("2dof",),
         "Run Lab03 2DOF task-space or condition-aware DLS.",
+        command=(
+            "python -m mclab run lab03 --config configs/lab03_2dof/task_space_2dof.yaml "
+            "--viewer --realtime --pause-at-end --plot --plots task --open-report"
+        ),
     ),
     ExperienceCoverageItem(
         "singularity",
         "Singularity/DLS",
         ("singularity", "dls"),
         "Run Lab03 2DOF condition-aware DLS.",
+        command=(
+            "python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_2dof.yaml "
+            "--viewer --realtime --pause-at-end --plot --plots dls_disturbance --open-report"
+        ),
     ),
     ExperienceCoverageItem(
         "panda",
         "Panda manipulator",
         ("panda",),
         "Run Lab04 Cartesian reach or Virtual wall.",
+        command=(
+            "python -m mclab run lab04 --config configs/lab04_panda/cartesian_reach.yaml "
+            "--viewer --realtime --pause-at-end --plot --plots cartesian_reach --open-report"
+        ),
     ),
     ExperienceCoverageItem(
         "wall",
         "Virtual wall",
         ("wall",),
         "Run Lab04 Virtual wall and try Close wall -> Back away -> Re-enter wall.",
+        command=(
+            "python -m mclab run lab04 --config configs/lab04_panda/interactive_virtual_wall.yaml "
+            "--viewer --realtime --pause-at-end --plot --plots wall --open-report"
+        ),
     ),
 )
 

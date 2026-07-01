@@ -10,7 +10,11 @@ from typing import Any
 
 from mclab.config import load_config
 from mclab.course_progress import course_milestone_label_for_step_index, course_milestone_summary
-from mclab.experience_coverage import ExperienceCoverageRecord, experience_coverage_summary_text
+from mclab.experience_coverage import (
+    ExperienceCoverageRecord,
+    experience_coverage_summary_text,
+    next_experience_coverage_item,
+)
 from mclab.learning_guides import (
     RunGuide,
     VIEWER_CONTROL_SURFACE_TEXT,
@@ -4858,11 +4862,31 @@ def _starter_commands_section() -> str:
 
 
 def _experience_coverage_section(runs: list[dict[str, Any]]) -> str:
-    summary = experience_coverage_summary_text(_experience_coverage_records_for_index(runs))
+    records = _experience_coverage_records_for_index(runs)
+    summary = experience_coverage_summary_text(records)
+    next_item = next_experience_coverage_item(records)
+    if next_item is None:
+        next_block = (
+            '<p class="muted">'
+            "All core experience types are represented. Replay a tuned run or open a comparison batch to go deeper."
+            "</p>"
+        )
+    else:
+        command_block = (
+            f'<pre class="path-command">{escape(next_item.command)}</pre>' if next_item.command else ""
+        )
+        next_block = (
+            '<article class="path-card">'
+            f"<strong>Run next: {escape(next_item.label)}</strong>"
+            f'<p class="muted">{escape(next_item.next_step)}</p>'
+            f"{command_block}"
+            "</article>"
+        )
     return (
         "<section>"
         "<h2>Experience Coverage</h2>"
         f'<p class="muted">{escape(summary)}</p>'
+        f"{next_block}"
         "</section>"
     )
 

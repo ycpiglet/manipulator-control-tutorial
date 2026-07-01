@@ -1323,6 +1323,12 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Done: Intro basics", html)
             self.assertIn("Missing: Hands-on controls", html)
             self.assertIn("Next: Run an interactive viewer and use one button, slider, or preset.", html)
+            self.assertIn("Run next: Hands-on controls", html)
+            self.assertIn(
+                "python -m mclab run lab01 --config configs/lab01_msd/interactive_pull.yaml "
+                "--viewer --realtime --pause-at-end --plot --open-report",
+                html,
+            )
             self.assertIn("Learning Path", html)
             self.assertIn("1/12 steps complete", html)
             self.assertIn(
@@ -2173,6 +2179,8 @@ class LoggingTests(unittest.TestCase):
 
             html = index.read_text(encoding="utf-8")
             self.assertIn("Starter Commands", html)
+            self.assertIn("Experience Coverage", html)
+            self.assertIn("Run next: Intro basics", html)
             self.assertIn("Check setup", html)
             self.assertIn("python -m mclab doctor", html)
             self.assertIn(r".\run_mclab.cmd", html)

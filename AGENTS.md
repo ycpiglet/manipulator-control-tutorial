@@ -109,7 +109,7 @@ Implemented and verified:
 - CLI run and batch completion output lists key artifact paths such as report, worksheet, the cumulative outputs index, plots, and comparison plots
 - CLI `python -m mclab index --open` regenerates and opens `outputs/index.html` without launching the learner menu
 - Outputs index includes `Starter Commands` for setup checking, opening the learner menu, generating first headless artifacts, launching the first hands-on viewer demo, and running the first comparison batch
-- Outputs index includes the shared `Experience Coverage` summary so browser-based review shows the same core experience evidence and next missing experience as the learner menu
+- Outputs index includes the shared `Experience Coverage` summary and a next-experience CLI command so browser-based review shows the same core experience evidence and next missing experience as the learner menu
 - Outputs index batch `Next cue` text and direct `Viewer Handoff` chip point completed comparison batches from the worksheet Prediction Check to the recommended viewer rerun section
 - Interactive `MCLab Interaction` quick presets, purpose/value previews, and per-slider step buttons for representative damping, PID, 2DOF reach, Panda reach, and virtual wall parameter sets
 - Lab03 2DOF interactive viewer demos include Shoulder/Elbow pulse buttons for live joint-disturbance recovery observations
