@@ -236,6 +236,13 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("Next review status: Needs observation", printed)
         self.assertIn(f"Next review report: {report}", printed)
         self.assertIn(f"Next review worksheet: {worksheet}", printed)
+        self.assertIn("Next review action: Lab01 Mass-Spring-Damper - Interactive", printed)
+        self.assertIn(
+            "Observation next step: use experiment buttons, live sliders, or Quick presets, "
+            "then mark one observation with a prediction and note.",
+            printed,
+        )
+        self.assertIn("Plot review: Not available until a plot is saved", printed)
 
     def test_cli_review_handles_empty_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

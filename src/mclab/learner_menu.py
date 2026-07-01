@@ -2499,6 +2499,10 @@ def _summary_matches_action(summary: dict[str, Any], action: MenuAction | BatchM
     return config_name == Path(action.config_path).stem and action.lab_name in lab_name
 
 
+def action_for_output(output_path: Path) -> MenuAction | BatchMenuAction | None:
+    return _action_for_summary(_read_json(output_path / "summary.json"))
+
+
 def _action_for_summary(summary: dict[str, Any]) -> MenuAction | BatchMenuAction | None:
     for action in BATCH_ACTIONS:
         if _summary_matches_action(summary, action):

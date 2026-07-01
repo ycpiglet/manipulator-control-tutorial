@@ -23,6 +23,7 @@ from .learner_menu import (
     action_controls_text,
     action_course_lines,
     action_evidence_text,
+    action_for_output,
     action_followup,
     action_history_text,
     action_latest_output,
@@ -408,6 +409,16 @@ def _print_review_queue(outputs_root: Path, *, open_next: bool = False) -> None:
     worksheet = next_output / "worksheet.md"
     if worksheet.exists():
         print(f"Next review worksheet: {worksheet}")
+    action = action_for_output(next_output)
+    if action is not None:
+        print(f"Next review action: {action.group} - {action.label}")
+        latest_evidence = action_latest_evidence_text(action, outputs_root)
+        if latest_evidence != "Latest evidence: None yet":
+            print(latest_evidence)
+        observation_next = action_observation_next_step_text(action, outputs_root)
+        if observation_next:
+            print(observation_next)
+        print(action_plot_review_text(action, outputs_root))
     if open_next:
         _open_path(entry)
 
