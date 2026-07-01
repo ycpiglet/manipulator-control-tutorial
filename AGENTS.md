@@ -100,6 +100,7 @@ Implemented and verified:
 - Batch scenario cards summarize the largest metric changes from the baseline scenario
 - Batch scenario cards include a `Control surface` cue for available live controls when the scenario is rerun interactively
 - MuJoCo viewer side panels are always hidden for learner demos; use the `MCLab Interaction` panel and YAML configs as the control surface
+- Learner menu `Viewer` lines, interaction-panel `Viewer controls`, and run-report `Control Surface` sections explicitly state that MuJoCo side panels are hidden
 - CLI `--viewer` help explicitly describes the side-panel-free viewer contract and `--show-viewer-ui` remains unavailable to learner commands
 - CLI `--viewer` and `--headless` are mutually exclusive so contradictory learner commands fail early with a usage error
 - CLI `--realtime` and `--pause-at-end` require `--viewer` so viewer-only options are never silently ignored in headless runs

@@ -17,6 +17,7 @@ from mclab.batch import ALL_BATCH_NAME, BATCH_SETS
 from mclab.config import PROJECT_ROOT, load_config
 from mclab.course_progress import course_milestone_summary
 from mclab.learning_guides import (
+    VIEWER_CONTROL_SURFACE_TEXT,
     batch_start_steps_text,
     challenge_prompt_for_guide,
     learner_control_action_text_for_config,
@@ -3213,9 +3214,9 @@ def action_viewer_text(action: MenuAction) -> str:
     guide = guide_for_config(config_path=action.config_path, lab_name=action.lab_name)
     legend = viewer_legend_for_guide(guide)
     if not legend:
-        return "Viewer: Standard MuJoCo scene; use plots and live status for exact values"
+        return f"Viewer: {VIEWER_CONTROL_SURFACE_TEXT}; standard MuJoCo scene; use plots and live status for exact values"
     items = [f"{label} = {text}" for label, text in legend]
-    return f"Viewer: {'; '.join(items)}"
+    return f"Viewer: {VIEWER_CONTROL_SURFACE_TEXT}; {'; '.join(items)}"
 
 
 def reflection_question(action: MenuAction) -> str:

@@ -18,6 +18,9 @@ class RunGuide:
     question: str = ""
 
 
+VIEWER_CONTROL_SURFACE_TEXT = "MuJoCo side panels are hidden; use YAML configs or the MCLab Interaction controls instead"
+
+
 def question_for_guide(guide: RunGuide | None) -> str:
     if guide is None:
         return ""

@@ -931,13 +931,15 @@ class LearnerMenuTests(unittest.TestCase):
         lab04_wall = by_label[("Lab04 Panda Manipulator", "Virtual wall")]
         lab04_joint = by_label[("Lab04 Panda Manipulator", "Joint target")]
 
+        self.assertIn("MuJoCo side panels are hidden", action_viewer_text(lab01_interactive))
         self.assertIn("Green marker = Target position.", action_viewer_text(lab01_interactive))
         self.assertIn("Orange sphere = Singularity warning", action_viewer_text(lab03_condition_dls))
         self.assertIn("Small green spheres = Planned target waypoint path.", action_viewer_text(lab03_retarget))
         self.assertIn("Red plane = Virtual wall location.", action_viewer_text(lab04_wall))
-        self.assertIn("Standard MuJoCo scene", action_viewer_text(lab04_joint))
+        self.assertIn("standard MuJoCo scene", action_viewer_text(lab04_joint))
         lesson = lesson_text(lab01_interactive)
         self.assertIn("Viewer:", lesson)
+        self.assertIn("MuJoCo side panels are hidden", lesson)
         self.assertIn("Green marker = Target position.", lesson)
 
     def test_menu_action_readiness_checks_config_and_model_assets(self) -> None:

@@ -1482,6 +1482,10 @@ class KeyForcePulseTests(unittest.TestCase):
                 ),
                 ("Start steps", "Predict -> Run viewer -> move one live slider -> Mark observation."),
                 (
+                    "Viewer controls",
+                    "MuJoCo side panels are hidden; use YAML configs or the MCLab Interaction controls instead",
+                ),
+                (
                     "Challenge",
                     "Use controller.kp to create a visible change in Tracking error, "
                     "then save one prediction-backed observation.",

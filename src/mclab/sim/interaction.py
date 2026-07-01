@@ -9,6 +9,7 @@ from threading import Lock
 from typing import Any
 
 from mclab.learning_guides import (
+    VIEWER_CONTROL_SURFACE_TEXT,
     challenge_prompt_for_guide,
     control_credit_text,
     mission_prompt_for_guide,
@@ -1606,6 +1607,7 @@ def _panel_guide_rows(
                 button_next_step=button_next_step,
             ),
         ),
+        ("Viewer controls", VIEWER_CONTROL_SURFACE_TEXT),
         ("Challenge", challenge_prompt_for_guide(guide).removeprefix("Challenge:").strip()),
         ("Try", str(getattr(guide, "try_this", "") or "").strip()),
         ("Change", str(getattr(guide, "change", "") or "").strip()),

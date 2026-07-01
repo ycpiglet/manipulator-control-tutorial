@@ -12,6 +12,7 @@ from mclab.config import load_config
 from mclab.course_progress import course_milestone_label_for_step_index, course_milestone_summary
 from mclab.learning_guides import (
     RunGuide,
+    VIEWER_CONTROL_SURFACE_TEXT,
     batch_start_steps_text,
     challenge_prompt_for_guide,
     guide_for_config,
@@ -2344,14 +2345,16 @@ def _control_surface_sentence(config: dict[str, Any]) -> str:
 
 def _control_surface_items(config: dict[str, Any]) -> list[tuple[str, str]]:
     interaction = config.get("interaction")
+    viewer_item = ("Viewer UI", VIEWER_CONTROL_SURFACE_TEXT)
     if not isinstance(interaction, dict) or not interaction:
         return [
+            viewer_item,
             ("Mode", "Auto run"),
             ("Change values", "Edit YAML or use Config Highlights before rerunning"),
         ]
 
     panel_enabled = bool(interaction.get("panel", False))
-    items: list[tuple[str, str]] = []
+    items: list[tuple[str, str]] = [viewer_item]
     if panel_enabled:
         items.append(("Panel", "MCLab Interaction window"))
     if bool(interaction.get("key_force", False)):
