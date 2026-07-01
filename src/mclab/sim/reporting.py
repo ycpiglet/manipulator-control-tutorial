@@ -947,6 +947,7 @@ def _render_worksheet(
     ]
     lines.extend(_worksheet_learning_guide_lines(guide, summary, config))
     lines.extend(_worksheet_course_position_lines(summary))
+    lines.extend(_worksheet_course_experience_coverage_lines(output))
     lines.extend(_worksheet_mission_evidence_lines(summary, interaction_events, plots, config))
     lines.extend(_worksheet_challenge_evidence_lines(summary, interaction_events, plots, config))
     lines.extend(_worksheet_pairs_section("Key Parameters", _config_highlight_pairs(config)))
@@ -1013,6 +1014,31 @@ def _worksheet_course_position_lines(summary: dict[str, Any]) -> list[str]:
     ]
     lines = ["## Course Position", ""]
     lines.extend(_worksheet_mapping_lines(dict(rows)))
+    lines.append("")
+    return lines
+
+
+def _worksheet_course_experience_coverage_lines(output: Path) -> list[str]:
+    records = _experience_coverage_records_for_index(_discover_runs(output.parent))
+    next_item = next_experience_coverage_item(records)
+    lines = [
+        "## Course Experience Coverage",
+        "",
+        f"- Summary: {_markdown_inline(experience_coverage_summary_text(records))}",
+    ]
+    if next_item is None:
+        lines.append("- Next experience: All core experience types have saved evidence.")
+    else:
+        lines.extend(
+            [
+                f"- Next experience: {_markdown_inline(next_item.label)}",
+                f"- Next command: {_markdown_inline(next_item.command)}",
+            ]
+        )
+    lines.append("- Coverage map:")
+    for status in experience_coverage_statuses(records):
+        state = "Next" if status.next_missing else "Done" if status.covered else "Missing"
+        lines.append(f"  - {_markdown_inline(status.item.label)}: {_markdown_inline(state)}")
     lines.append("")
     return lines
 

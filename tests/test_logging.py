@@ -362,6 +362,16 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("- Milestone: 1D Dynamics", worksheet)
             self.assertIn("- Learning path step: 1. Feel 1D physics", worksheet)
             self.assertIn("- Step focus: Mass-spring-damper baseline response.", worksheet)
+            self.assertIn("## Course Experience Coverage", worksheet)
+            self.assertIn("- Summary: Experience coverage: 1/7 types tried", worksheet)
+            self.assertIn("- Next experience: Hands-on controls", worksheet)
+            self.assertIn(
+                "- Next command: python -m mclab run lab01 --config configs/lab01_msd/interactive_pull.yaml "
+                "--viewer --realtime --pause-at-end --plot --open-report",
+                worksheet,
+            )
+            self.assertIn("  - Intro basics: Done", worksheet)
+            self.assertIn("  - Hands-on controls: Next", worksheet)
             self.assertIn("worksheet.md", html)
             self.assertIn("Check position.", html)
             self.assertIn("config.yaml", html)
