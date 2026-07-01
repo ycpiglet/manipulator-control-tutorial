@@ -1374,10 +1374,19 @@ def _scenario_card(
         f"{metric_changes}"
         f"{learning_cues}"
         f"{control_surface}"
-        f'<code class="command">{escape(command)}</code>'
-        f'<code class="command">{escape(viewer_command)}</code>'
+        f"{_scenario_command_cue('Headless rerun', command)}"
+        f"{_scenario_command_cue('Viewer rerun', viewer_command)}"
         f"{metrics}"
         "</article>"
+    )
+
+
+def _scenario_command_cue(label: str, command: str) -> str:
+    return (
+        '<div class="cue">'
+        f"<strong>{escape(label)}</strong>"
+        f'<code class="command">{escape(command)}</code>'
+        "</div>"
     )
 
 

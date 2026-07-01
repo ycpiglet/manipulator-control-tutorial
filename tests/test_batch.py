@@ -299,6 +299,8 @@ class BatchTests(unittest.TestCase):
                 "--viewer --realtime --pause-at-end --plot --plots essential",
                 report_html,
             )
+            self.assertIn("Headless rerun", report_html)
+            self.assertIn("Viewer rerun", report_html)
             self.assertIn("demo scenario", report_html)
             self.assertIn("Start steps", report_html)
             self.assertIn("Predict -&gt; Run scenario -&gt; Review priority plot and worksheet.", report_html)
