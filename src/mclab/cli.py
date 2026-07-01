@@ -510,6 +510,10 @@ def _batch_handoff_detail_text(action: BatchMenuAction) -> str:
     latest = action_latest_output(action)
     if latest is None:
         return batch_viewer_handoff_text(action)
+    start, command = _worksheet_viewer_handoff(latest)
+    if command:
+        handoff = f"{start} -> {command}" if start else command
+        return f"Handoff: {handoff}"
     report = latest / "report.html"
     if report.exists():
         return f"Handoff: Latest {report}#viewer-handoff"
@@ -551,21 +555,13 @@ def _worksheet_review_artifact_lines(output_path: Path) -> list[str]:
     next_proof_step = ""
     first_checklist_item = ""
     has_prediction_check = False
-    in_viewer_handoff = False
-    viewer_handoff_start = ""
-    viewer_handoff_command = ""
+    viewer_handoff_start, viewer_handoff_command = _viewer_handoff_from_worksheet_text(text)
     for line in text.splitlines():
         stripped = line.strip()
         if stripped == "## Prediction Check":
             has_prediction_check = True
         if stripped.startswith("## "):
-            in_viewer_handoff = stripped == "## Viewer Handoff"
             continue
-        if in_viewer_handoff:
-            if stripped.startswith("- Start with: ") and not viewer_handoff_start:
-                viewer_handoff_start = stripped.removeprefix("- Start with: ").strip()
-            elif stripped.startswith("- Viewer rerun: ") and not viewer_handoff_command:
-                viewer_handoff_command = stripped.removeprefix("- Viewer rerun: ").strip()
 
         if stripped.startswith("- Priority plot: ") and not priority_plot:
             priority_plot = stripped.removeprefix("- Priority plot: ").strip()
@@ -598,6 +594,35 @@ def _worksheet_review_artifact_lines(output_path: Path) -> list[str]:
     if first_checklist_item:
         lines.append(f"Review checklist: {first_checklist_item}")
     return lines
+
+
+def _worksheet_viewer_handoff(output_path: Path) -> tuple[str, str]:
+    worksheet = output_path / "worksheet.md"
+    if not worksheet.exists():
+        return "", ""
+    try:
+        text = worksheet.read_text(encoding="utf-8")
+    except OSError:
+        return "", ""
+    return _viewer_handoff_from_worksheet_text(text)
+
+
+def _viewer_handoff_from_worksheet_text(text: str) -> tuple[str, str]:
+    in_viewer_handoff = False
+    handoff_start = ""
+    handoff_command = ""
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("## "):
+            in_viewer_handoff = stripped == "## Viewer Handoff"
+            continue
+        if not in_viewer_handoff:
+            continue
+        if stripped.startswith("- Start with: ") and not handoff_start:
+            handoff_start = stripped.removeprefix("- Start with: ").strip()
+        elif stripped.startswith("- Viewer rerun: ") and not handoff_command:
+            handoff_command = stripped.removeprefix("- Viewer rerun: ").strip()
+    return handoff_start, handoff_command
 
 
 def _worksheet_relative_path(output_path: Path, value: str) -> Path | str:

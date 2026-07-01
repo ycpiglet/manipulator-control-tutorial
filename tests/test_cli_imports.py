@@ -12,9 +12,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from mclab.batch import BATCH_SETS  # noqa: E402
-from mclab.cli import LABS, main  # noqa: E402
+from mclab.cli import LABS, _batch_handoff_detail_text, main  # noqa: E402
 from mclab.cli import build_parser  # noqa: E402
 from mclab.doctor import DoctorCheck  # noqa: E402
+from mclab.learner_menu import BATCH_ACTIONS  # noqa: E402
 
 
 class CliImportTests(unittest.TestCase):
@@ -319,6 +320,34 @@ class CliImportTests(unittest.TestCase):
         printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
         self.assertIn("Batches: showing 0 of 0 match(es)", printed)
         self.assertIn("No comparison batches matched.", printed)
+
+    def test_cli_batch_handoff_detail_uses_latest_worksheet_viewer_command(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "batch"
+            output.mkdir()
+            (output / "report.html").write_text("<html></html>", encoding="utf-8")
+            (output / "worksheet.md").write_text(
+                "\n".join(
+                    [
+                        "# Batch worksheet",
+                        "",
+                        "## Viewer Handoff",
+                        "",
+                        "- Start with: underdamped",
+                        "- Viewer rerun: python -m mclab run lab01 --config configs/lab01_msd/underdamped.yaml --viewer --realtime --pause-at-end --plot --plots essential",
+                        "",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            action = next(action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare")
+
+            with patch("mclab.cli.action_latest_output", return_value=output):
+                handoff = _batch_handoff_detail_text(action)
+
+        self.assertIn("Handoff: underdamped -> python -m mclab run lab01", handoff)
+        self.assertIn("--viewer --realtime --pause-at-end --plot --plots essential", handoff)
+        self.assertNotIn("#viewer-handoff", handoff)
 
     def test_cli_opens_batch_report_when_requested(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
