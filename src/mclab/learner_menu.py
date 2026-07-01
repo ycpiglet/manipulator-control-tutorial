@@ -1507,6 +1507,7 @@ def latest_output_button_labels(output_path: Path | None) -> dict[str, str]:
             "plot": "Open latest plot",
             "worksheet": "Open latest worksheet",
             "folder": "Open latest folder",
+            "handoff": "Open handoff",
             "replay": "Replay latest",
         }
     latest_plot = latest_output_plot(output_path)
@@ -1522,6 +1523,7 @@ def latest_output_button_labels(output_path: Path | None) -> dict[str, str]:
         "plot": plot_label,
         "worksheet": worksheet_label,
         "folder": "Open folder",
+        "handoff": "Open handoff",
         "replay": replay_label,
     }
 
@@ -1560,6 +1562,7 @@ def initialize_latest_output_state(
     latest_plot_button: Any | None = None,
     latest_worksheet_button: Any | None = None,
     latest_folder_button: Any | None = None,
+    latest_handoff_button: Any | None = None,
     latest_replay_button: Any | None = None,
 ) -> Path | None:
     output_path = latest_saved_output(outputs_root)
@@ -1570,6 +1573,7 @@ def initialize_latest_output_state(
         latest_plot_button=latest_plot_button,
         latest_worksheet_button=latest_worksheet_button,
         latest_folder_button=latest_folder_button,
+        latest_handoff_button=latest_handoff_button,
         latest_replay_button=latest_replay_button,
     )
     return output_path
@@ -1584,6 +1588,7 @@ def refresh_latest_output_state(
     latest_plot_button: Any | None = None,
     latest_worksheet_button: Any | None = None,
     latest_folder_button: Any | None = None,
+    latest_handoff_button: Any | None = None,
     latest_replay_button: Any | None = None,
 ) -> Path | None:
     output_path = initialize_latest_output_state(
@@ -1593,6 +1598,7 @@ def refresh_latest_output_state(
         latest_plot_button=latest_plot_button,
         latest_worksheet_button=latest_worksheet_button,
         latest_folder_button=latest_folder_button,
+        latest_handoff_button=latest_handoff_button,
         latest_replay_button=latest_replay_button,
     )
     if status is not None:
@@ -2597,6 +2603,13 @@ def launch_latest_folder(latest_output: dict[str, Path | None]) -> subprocess.Po
     return open_path(path)
 
 
+def launch_latest_viewer_handoff(latest_output: dict[str, Path | None]) -> bool | None:
+    uri = latest_output_viewer_handoff_uri(latest_output.get("path"))
+    if not uri:
+        return None
+    return open_uri(uri)
+
+
 def launch_latest_tuned_replay(
     latest_output: dict[str, Path | None],
     status: Any,
@@ -2675,12 +2688,7 @@ def action_latest_viewer_handoff_uri(
     if not isinstance(action, BatchMenuAction):
         return ""
     latest = action_latest_output(action, outputs_root)
-    if latest is None:
-        return ""
-    report = latest / "report.html"
-    if not report.exists():
-        return ""
-    return f"{report.resolve().as_uri()}#{VIEWER_HANDOFF_FRAGMENT}"
+    return latest_output_viewer_handoff_uri(latest)
 
 
 def launch_action_latest_viewer_handoff(
@@ -2741,6 +2749,18 @@ def latest_output_tuned_config(path: Path | None) -> Path | None:
     return tuned_config if tuned_config.exists() else None
 
 
+def latest_output_viewer_handoff_uri(path: Path | None) -> str:
+    if path is None:
+        return ""
+    action = latest_output_action(path)
+    if not isinstance(action, BatchMenuAction):
+        return ""
+    report = path / "report.html"
+    if not report.exists():
+        return ""
+    return f"{report.resolve().as_uri()}#{VIEWER_HANDOFF_FRAGMENT}"
+
+
 def latest_output_action(path: Path | None) -> MenuAction | BatchMenuAction | None:
     if path is None:
         return None
@@ -2785,6 +2805,7 @@ def _configure_latest_output_buttons(
     latest_plot_button: Any | None = None,
     latest_worksheet_button: Any | None = None,
     latest_folder_button: Any | None = None,
+    latest_handoff_button: Any | None = None,
     latest_replay_button: Any | None = None,
 ) -> None:
     labels = latest_output_button_labels(output_path)
@@ -2800,6 +2821,11 @@ def _configure_latest_output_buttons(
     if latest_folder_button is not None:
         latest_folder_button.configure(text=labels["folder"])
         latest_folder_button.state(["!disabled"] if output_path is not None else ["disabled"])
+    if latest_handoff_button is not None:
+        latest_handoff_button.configure(text=labels["handoff"])
+        latest_handoff_button.state(
+            ["!disabled"] if latest_output_viewer_handoff_uri(output_path) else ["disabled"]
+        )
     if latest_replay_button is not None:
         latest_replay_button.configure(text=labels["replay"])
         latest_replay_button.state(
@@ -3829,6 +3855,7 @@ def main() -> int:
             latest_plot_button=latest_plot_button,
             latest_worksheet_button=latest_worksheet_button,
             latest_folder_button=latest_folder_button,
+            latest_handoff_button=latest_handoff_button,
             latest_replay_button=latest_replay_button,
         )
 
@@ -4150,6 +4177,13 @@ def main() -> int:
     )
     latest_folder_button.pack(side="left", padx=(8, 0))
     latest_folder_button.state(["disabled"])
+    latest_handoff_button = ttk.Button(
+        bottom,
+        text=latest_labels["handoff"],
+        command=lambda: launch_latest_viewer_handoff(latest_output),
+    )
+    latest_handoff_button.pack(side="left", padx=(8, 0))
+    latest_handoff_button.state(["disabled"])
     latest_replay_button = ttk.Button(
         bottom,
         text=latest_labels["replay"],
@@ -4174,6 +4208,7 @@ def main() -> int:
         latest_plot_button=latest_plot_button,
         latest_worksheet_button=latest_worksheet_button,
         latest_folder_button=latest_folder_button,
+        latest_handoff_button=latest_handoff_button,
         latest_replay_button=latest_replay_button,
     )
     ttk.Label(bottom, textvariable=status).pack(side="left", padx=12)

@@ -193,6 +193,7 @@ Implemented and verified:
 - Learner menu scenario, batch, and learning-path `Worksheet` buttons that open the latest `worksheet.md` when one exists
 - Learner menu scenario, batch, and learning-path `Folder` buttons open each latest output directory for raw logs, configs, snapshots, and tuned YAML artifacts
 - Learner menu bottom bar includes `Open latest worksheet` for the most recently completed run or batch
+- Learner menu bottom bar includes `Open handoff` for the newest saved comparison batch, opening its report at the `Viewer Handoff` section
 - Learner menu bottom bar includes `Open latest folder` for the newest output's raw logs, configs, snapshots, and tuned YAML artifacts
 - Learner menu bottom bar initializes latest report/plot/worksheet buttons from the newest saved output on startup
 - Learner menu startup status summarizes the restored latest output scenario, priority plot, worksheet availability, and replay availability

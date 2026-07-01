@@ -102,6 +102,7 @@ from mclab.learner_menu import (  # noqa: E402
     launch_learning_path_latest_worksheet,
     launch_next_review_output,
     launch_latest_folder,
+    launch_latest_viewer_handoff,
     launch_latest_plot,
     launch_latest_worksheet,
     launch_latest_tuned_replay,
@@ -111,6 +112,7 @@ from mclab.learner_menu import (  # noqa: E402
     latest_output_action,
     latest_output_menu_action,
     latest_output_replay_context,
+    latest_output_viewer_handoff_uri,
     latest_saved_output,
     latest_output_status_text,
     latest_output_title,
@@ -3017,6 +3019,48 @@ class LearnerMenuTests(unittest.TestCase):
 
             opener.assert_called_once_with(index)
 
+    def test_latest_output_viewer_handoff_opens_batch_report_anchor(self) -> None:
+        batch_action = next(action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare")
+        with tempfile.TemporaryDirectory() as tmp:
+            batch_path = Path(tmp) / "batch_lab01"
+            batch_path.mkdir()
+            (batch_path / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "batch",
+                        "config_name": batch_action.batch_name,
+                        "batch_name": batch_action.batch_name,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (batch_path / "report.html").write_text("<html></html>", encoding="utf-8")
+
+            self.assertTrue(
+                latest_output_viewer_handoff_uri(batch_path).endswith("batch_lab01/report.html#viewer-handoff")
+            )
+            with patch("mclab.learner_menu.open_uri") as opener:
+                launch_latest_viewer_handoff({"path": batch_path})
+
+            self.assertTrue(opener.call_args.args[0].endswith("batch_lab01/report.html#viewer-handoff"))
+
+    def test_latest_output_viewer_handoff_ignores_non_batch_runs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_path = Path(tmp) / "run_lab01"
+            run_path.mkdir()
+            (run_path / "summary.json").write_text(
+                json.dumps({"lab_name": "lab01_msd", "config_path": "configs/lab01_msd/default.yaml"}),
+                encoding="utf-8",
+            )
+            (run_path / "report.html").write_text("<html></html>", encoding="utf-8")
+
+            with patch("mclab.learner_menu.open_uri") as opener:
+                result = launch_latest_viewer_handoff({"path": run_path})
+
+            self.assertEqual(latest_output_viewer_handoff_uri(run_path), "")
+            self.assertIsNone(result)
+            opener.assert_not_called()
+
     def test_launch_outputs_index_opens_index_when_available(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp) / "outputs"
@@ -3089,6 +3133,7 @@ class LearnerMenuTests(unittest.TestCase):
             plot_button = FakeButton()
             worksheet_button = FakeButton()
             folder_button = FakeButton()
+            handoff_button = FakeButton()
             replay_button = FakeButton()
 
             selected = initialize_latest_output_state(
@@ -3098,6 +3143,7 @@ class LearnerMenuTests(unittest.TestCase):
                 latest_plot_button=plot_button,
                 latest_worksheet_button=worksheet_button,
                 latest_folder_button=folder_button,
+                latest_handoff_button=handoff_button,
                 latest_replay_button=replay_button,
             )
 
@@ -3107,12 +3153,45 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(plot_button.config["text"], "Open plot: position")
         self.assertEqual(worksheet_button.config["text"], "Open worksheet")
         self.assertEqual(folder_button.config["text"], "Open folder")
+        self.assertEqual(handoff_button.config["text"], "Open handoff")
         self.assertEqual(replay_button.config["text"], "Replay latest")
         self.assertEqual(report_button.state_calls[-1], ["!disabled"])
         self.assertEqual(plot_button.state_calls[-1], ["!disabled"])
         self.assertEqual(worksheet_button.state_calls[-1], ["!disabled"])
         self.assertEqual(folder_button.state_calls[-1], ["!disabled"])
+        self.assertEqual(handoff_button.state_calls[-1], ["disabled"])
         self.assertEqual(replay_button.state_calls[-1], ["disabled"])
+
+    def test_initialize_latest_output_state_enables_handoff_for_saved_batch(self) -> None:
+        batch_action = next(action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare")
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            output_path = outputs / "batch_lab01"
+            output_path.mkdir(parents=True)
+            (output_path / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "batch",
+                        "config_name": batch_action.batch_name,
+                        "batch_name": batch_action.batch_name,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (output_path / "report.html").write_text("<html></html>", encoding="utf-8")
+            latest_output: dict[str, Path | None] = {"path": None}
+            handoff_button = FakeButton()
+
+            selected = initialize_latest_output_state(
+                latest_output,
+                outputs_root=outputs,
+                latest_handoff_button=handoff_button,
+            )
+
+        self.assertEqual(selected, output_path)
+        self.assertEqual(latest_output["path"], output_path)
+        self.assertEqual(handoff_button.config["text"], "Open handoff")
+        self.assertEqual(handoff_button.state_calls[-1], ["!disabled"])
 
     def test_initialize_latest_output_state_enables_latest_replay_when_tuned_config_exists(self) -> None:
         action = MENU_ACTIONS[0]
@@ -3182,6 +3261,7 @@ class LearnerMenuTests(unittest.TestCase):
             plot_button = FakeButton()
             worksheet_button = FakeButton()
             folder_button = FakeButton()
+            handoff_button = FakeButton()
             replay_button = FakeButton()
 
             selected = refresh_latest_output_state(
@@ -3192,6 +3272,7 @@ class LearnerMenuTests(unittest.TestCase):
                 latest_plot_button=plot_button,
                 latest_worksheet_button=worksheet_button,
                 latest_folder_button=folder_button,
+                latest_handoff_button=handoff_button,
                 latest_replay_button=replay_button,
             )
 
@@ -3204,6 +3285,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(plot_button.state_calls[-1], ["!disabled"])
         self.assertEqual(worksheet_button.state_calls[-1], ["!disabled"])
         self.assertEqual(folder_button.state_calls[-1], ["!disabled"])
+        self.assertEqual(handoff_button.state_calls[-1], ["disabled"])
         self.assertEqual(replay_button.state_calls[-1], ["disabled"])
 
     def test_latest_replay_stays_disabled_when_tuned_config_has_no_matching_action(self) -> None:
@@ -3290,6 +3372,7 @@ class LearnerMenuTests(unittest.TestCase):
             plot_button = FakeButton()
             worksheet_button = FakeButton()
             folder_button = FakeButton()
+            handoff_button = FakeButton()
             replay_button = FakeButton()
 
             selected = initialize_latest_output_state(
@@ -3299,6 +3382,7 @@ class LearnerMenuTests(unittest.TestCase):
                 latest_plot_button=plot_button,
                 latest_worksheet_button=worksheet_button,
                 latest_folder_button=folder_button,
+                latest_handoff_button=handoff_button,
                 latest_replay_button=replay_button,
             )
 
@@ -3308,11 +3392,13 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(plot_button.config["text"], "Open latest plot")
         self.assertEqual(worksheet_button.config["text"], "Open latest worksheet")
         self.assertEqual(folder_button.config["text"], "Open latest folder")
+        self.assertEqual(handoff_button.config["text"], "Open handoff")
         self.assertEqual(replay_button.config["text"], "Replay latest")
         self.assertEqual(report_button.state_calls[-1], ["disabled"])
         self.assertEqual(plot_button.state_calls[-1], ["disabled"])
         self.assertEqual(worksheet_button.state_calls[-1], ["disabled"])
         self.assertEqual(folder_button.state_calls[-1], ["disabled"])
+        self.assertEqual(handoff_button.state_calls[-1], ["disabled"])
         self.assertEqual(replay_button.state_calls[-1], ["disabled"])
 
     def test_parse_run_output_path_detects_completed_run(self) -> None:
