@@ -4805,6 +4805,11 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
 def _starter_commands_section() -> str:
     items = (
         (
+            "Check setup",
+            "Verify Python packages, MuJoCo assets, scenario readiness, and output-folder access before class.",
+            "python -m mclab doctor",
+        ),
+        (
             "Open learner menu",
             "Best first step: browse scenarios, filters, reports, plots, and worksheets with buttons.",
             r".\run_mclab.cmd",
@@ -4821,6 +4826,11 @@ def _starter_commands_section() -> str:
                 "python -m mclab run lab01 --config configs/lab01_msd/interactive_pull.yaml "
                 "--viewer --realtime --pause-at-end --plot --open-report"
             ),
+        ),
+        (
+            "Run first comparison",
+            "Generate the first multi-scenario report and worksheet so learners can compare damping and stiffness.",
+            "python -m mclab batch lab01_msd_compare --open-report",
         ),
     )
     cards = "\n".join(
