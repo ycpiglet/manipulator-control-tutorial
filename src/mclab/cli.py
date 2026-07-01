@@ -15,17 +15,27 @@ from .learner_menu import (
     BATCH_ACTIONS,
     BatchMenuAction,
     MenuAction,
+    action_activity_mix_text,
     action_challenge_text,
+    action_challenge_evidence_text,
     action_control_credit_text,
     action_controls_text,
+    action_evidence_text,
     action_history_text,
     action_latest_output,
+    action_latest_evidence_text,
     action_mission_text,
+    action_mission_evidence_text,
+    action_next_cue_text,
+    action_observation_flow_text,
+    action_observation_next_step_text,
     action_playbook_text,
     action_plot_review_text,
     action_plot_text,
     action_plan_text,
+    action_preset_evidence_text,
     action_readiness,
+    action_replay_text,
     action_start_steps_text,
     action_viewer_text,
     action_worksheet_text,
@@ -430,6 +440,28 @@ def _print_scenario_card(index: int, action: MenuAction, *, details: bool = Fals
         control_credit = action_control_credit_text(action)
         if control_credit:
             print(f"   {control_credit}")
+        print(f"   {action_history_text(action)}")
+        print(f"   {action_mission_evidence_text(action)}")
+        print(f"   {action_challenge_evidence_text(action)}")
+        print(f"   {action_evidence_text(action)}")
+        print(f"   {action_latest_evidence_text(action)}")
+        observation_flow = action_observation_flow_text(action)
+        if observation_flow:
+            print(f"   {observation_flow}")
+        observation_next = action_observation_next_step_text(action)
+        if observation_next:
+            print(f"   {observation_next}")
+        preset_evidence = action_preset_evidence_text(action)
+        if preset_evidence:
+            print(f"   {preset_evidence}")
+        activity_mix = action_activity_mix_text(action)
+        if activity_mix:
+            print(f"   {activity_mix}")
+        print(f"   {action_next_cue_text(action)}")
+        print(f"   {action_plot_text(action)}")
+        print(f"   {action_plot_review_text(action)}")
+        print(f"   {action_worksheet_text(action)}")
+        print(f"   {action_replay_text(action)}")
         readiness = action_readiness(action)
         print(f"   Setup: {readiness.label}{f' - {readiness.detail}' if readiness.detail else ''}")
     print(f"   Command: {command_for_target(action)}")

@@ -248,7 +248,23 @@ class CliImportTests(unittest.TestCase):
         self.assertEqual(args.filter, "wall")
         self.assertEqual(args.limit, 0)
 
-        with patch("builtins.print") as printer:
+        with (
+            patch("mclab.cli.action_history_text", return_value="History: Latest saved_virtual_wall"),
+            patch("mclab.cli.action_mission_evidence_text", return_value="Mission evidence: Ready for review"),
+            patch("mclab.cli.action_challenge_evidence_text", return_value="Challenge evidence: Ready to review"),
+            patch("mclab.cli.action_evidence_text", return_value="Evidence: 1 observation, 1 prediction, 1 outcome, 1 note"),
+            patch("mclab.cli.action_latest_evidence_text", return_value="Latest evidence: prediction matched wall force"),
+            patch("mclab.cli.action_observation_flow_text", return_value="Observation flow: prediction -> observation"),
+            patch("mclab.cli.action_observation_next_step_text", return_value="Observation next step: Review outcome"),
+            patch("mclab.cli.action_preset_evidence_text", return_value="Preset evidence: 3 presets tried; required presets ready"),
+            patch("mclab.cli.action_activity_mix_text", return_value="Activity mix: 3/3 control families"),
+            patch("mclab.cli.action_next_cue_text", return_value="Next cue: Replay the tuned config, then run Compare."),
+            patch("mclab.cli.action_plot_text", return_value="Plots: Latest virtual_wall.png"),
+            patch("mclab.cli.action_plot_review_text", return_value="Plot review: Virtual Wall - Compare force and gap"),
+            patch("mclab.cli.action_worksheet_text", return_value="Worksheet: Latest worksheet.md"),
+            patch("mclab.cli.action_replay_text", return_value="Replay: Latest learner_tuned_config.yaml"),
+            patch("builtins.print") as printer,
+        ):
             self.assertEqual(
                 main(["scenarios", "virtual", "wall", "--filter", "wall", "--limit", "0", "--details"]),
                 0,
@@ -263,6 +279,20 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("Counts as control:", printed)
         self.assertIn("Viewer: MuJoCo side panels are hidden", printed)
         self.assertIn("Red plane = Virtual wall location.", printed)
+        self.assertIn("History: Latest saved_virtual_wall", printed)
+        self.assertIn("Mission evidence: Ready for review", printed)
+        self.assertIn("Challenge evidence: Ready to review", printed)
+        self.assertIn("Evidence: 1 observation, 1 prediction, 1 outcome, 1 note", printed)
+        self.assertIn("Latest evidence: prediction matched wall force", printed)
+        self.assertIn("Observation flow: prediction -> observation", printed)
+        self.assertIn("Observation next step: Review outcome", printed)
+        self.assertIn("Preset evidence: 3 presets tried; required presets ready", printed)
+        self.assertIn("Activity mix: 3/3 control families", printed)
+        self.assertIn("Next cue: Replay the tuned config, then run Compare.", printed)
+        self.assertIn("Plots: Latest virtual_wall.png", printed)
+        self.assertIn("Plot review: Virtual Wall - Compare force and gap", printed)
+        self.assertIn("Worksheet: Latest worksheet.md", printed)
+        self.assertIn("Replay: Latest learner_tuned_config.yaml", printed)
         self.assertIn("Setup: Ready", printed)
         self.assertIn(
             "Command: python -m mclab run lab04 --config configs/lab04_panda/interactive_virtual_wall.yaml "
