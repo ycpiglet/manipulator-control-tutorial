@@ -1286,13 +1286,40 @@ class LearnerMenuTests(unittest.TestCase):
             action_course_lines(lab04_stability),
             [
                 "Course step: Optional exploration - not required by the recommended path; "
-                "use Next or Compare when ready."
+                "use Next or Compare when ready.",
+                "Done when: the run report, priority plot, and worksheet are saved.",
             ],
         )
         self.assertIn("Course step: Optional exploration", lesson_text(lab04_stability))
+        self.assertIn("Done when: the run report, priority plot, and worksheet", lesson_text(lab04_stability))
 
         course_matches = filter_menu_actions("course step virtual wall")
         self.assertIn(lab04_wall, course_matches)
+
+    def test_batch_cards_show_course_context(self) -> None:
+        all_batch = next(action for action in BATCH_ACTIONS if action.batch_name == "all")
+        wall_batch = next(action for action in BATCH_ACTIONS if action.batch_name == "lab04_wall_compare")
+
+        self.assertEqual(
+            action_course_lines(all_batch),
+            [
+                "Course step: 12/12 - Compare the course; "
+                "Generate the full comparison report set across all labs.",
+                "Done when: the course comparison report, worksheet, and linked batch Prediction Checks are saved.",
+            ],
+        )
+        self.assertIn("Course step: 12/12 - Compare the course", lesson_text_for_batch(all_batch))
+        self.assertIn("Done when: the course comparison report", lesson_text_for_batch(all_batch))
+        self.assertEqual(
+            action_course_lines(wall_batch),
+            [
+                "Course step: Optional comparison - not required by the recommended path; "
+                "run after the matching scenario or when ready.",
+                "Done when: the comparison report, plots, worksheet, and Prediction Check are saved.",
+            ],
+        )
+        self.assertIn("Course step: Optional comparison", lesson_text_for_batch(wall_batch))
+        self.assertIn("Done when: the comparison report, plots, worksheet", lesson_text_for_batch(wall_batch))
 
     def test_menu_action_followups_point_to_real_next_experiences(self) -> None:
         for action in MENU_ACTIONS:

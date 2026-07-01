@@ -388,7 +388,8 @@ class CliImportTests(unittest.TestCase):
             optional_lines,
             [
                 "Course step: Optional exploration - not required by the recommended path; "
-                "use Next or Compare when ready."
+                "use Next or Compare when ready.",
+                "Done when: the run report, priority plot, and worksheet are saved.",
             ],
         )
 
@@ -418,6 +419,8 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("Comparison Batches - Lab04 wall compare", printed)
         self.assertIn("Mission: Run", printed)
         self.assertIn("Setup: Ready", printed)
+        self.assertIn("Course step: Optional comparison", printed)
+        self.assertIn("Done when: the comparison report, plots, worksheet, and Prediction Check are saved.", printed)
         self.assertIn("Playbook: 1. predict the comparison outcome", printed)
         self.assertIn("History: Latest saved_batch", printed)
         self.assertIn("Worksheet: Latest worksheet.md", printed)
@@ -426,6 +429,18 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("Prediction check: Ready in worksheet; mark Matched, Partly matched, or Surprised.", printed)
         self.assertIn("Handoff: Latest report.html#viewer-handoff", printed)
         self.assertIn("Command: python -m mclab batch lab04_wall_compare --open-report", printed)
+
+    def test_cli_batch_details_show_course_context_for_all_compare(self) -> None:
+        with patch("builtins.print") as printer:
+            self.assertEqual(main(["batches", "all", "--details", "--limit", "1"]), 0)
+
+        printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
+        self.assertIn("Comparison Batches - All compare", printed)
+        self.assertIn("Course step: 12/12 - Compare the course", printed)
+        self.assertIn(
+            "Done when: the course comparison report, worksheet, and linked batch Prediction Checks are saved.",
+            printed,
+        )
 
     def test_cli_batch_search_handles_empty_matches(self) -> None:
         with patch("builtins.print") as printer:

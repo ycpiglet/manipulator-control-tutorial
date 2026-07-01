@@ -563,10 +563,11 @@ def _batch_matches_terms(action: BatchMenuAction, terms: list[str]) -> bool:
         action_playbook_text(action),
         action_start_steps_text(action),
         action_challenge_text(action),
+        " ".join(action_course_lines(action)),
         batch_readiness(action).label,
         batch_readiness(action).detail,
         command_for_target(action),
-        "compare comparison batch prediction check worksheet report plots handoff",
+        "compare comparison batch prediction check worksheet report plots handoff course step done when",
     ]
     text = " ".join(fields).lower()
     return all(term in text for term in terms)
@@ -589,6 +590,8 @@ def _print_batch_card(index: int, action: BatchMenuAction, *, details: bool = Fa
     if details:
         readiness = batch_readiness(action)
         print(f"   Setup: {readiness.label}{f' - {readiness.detail}' if readiness.detail else ''}")
+        for course_line in action_course_lines(action):
+            print(f"   {course_line}")
         print(f"   {action_playbook_text(action)}")
         print(f"   {action_history_text(action)}")
         print(f"   {action_worksheet_text(action)}")

@@ -1176,8 +1176,7 @@ def learning_path_target(step: LearningPathStep) -> MenuAction | BatchMenuAction
     raise ValueError(f"Learning path target was not found: {step.group} - {step.label}")
 
 
-def learning_path_completion_text(step: LearningPathStep) -> str:
-    action = learning_path_target(step)
+def target_completion_text(action: MenuAction | BatchMenuAction) -> str:
     if isinstance(action, BatchMenuAction):
         if action.batch_name == ALL_BATCH_NAME:
             return "Done when: the course comparison report, worksheet, and linked batch Prediction Checks are saved."
@@ -1197,6 +1196,10 @@ def learning_path_completion_text(step: LearningPathStep) -> str:
     return "Done when: the run report, priority plot, and worksheet are saved."
 
 
+def learning_path_completion_text(step: LearningPathStep) -> str:
+    return target_completion_text(learning_path_target(step))
+
+
 def learning_path_text(step: LearningPathStep) -> str:
     action = learning_path_target(step)
     return (
@@ -1208,10 +1211,10 @@ def learning_path_text(step: LearningPathStep) -> str:
     )
 
 
-def action_course_lines(action: MenuAction) -> list[str]:
+def action_course_lines(action: MenuAction | BatchMenuAction) -> list[str]:
     for index, step in enumerate(LEARNING_PATH, start=1):
         target = learning_path_target(step)
-        if isinstance(target, MenuAction) and target == action:
+        if target == action:
             title = step.title
             numeric_prefix = f"{index}. "
             if title.startswith(numeric_prefix):
@@ -1220,9 +1223,16 @@ def action_course_lines(action: MenuAction) -> list[str]:
                 f"Course step: {index}/{len(LEARNING_PATH)} - {title}; {step.description}",
                 learning_path_completion_text(step),
             ]
+    if isinstance(action, BatchMenuAction):
+        return [
+            "Course step: Optional comparison - not required by the recommended path; "
+            "run after the matching scenario or when ready.",
+            target_completion_text(action),
+        ]
     return [
         "Course step: Optional exploration - not required by the recommended path; "
-        "use Next or Compare when ready."
+        "use Next or Compare when ready.",
+        target_completion_text(action),
     ]
 
 
@@ -5033,6 +5043,7 @@ def _set_status_after_run(
 
 def lesson_text_for_batch(action: BatchMenuAction, outputs_root: Path | None = None) -> str:
     scenario_count = _batch_scenario_count(action)
+    course_text = "\n".join(action_course_lines(action))
     readiness = batch_readiness(action)
     setup_detail = f" - {readiness.detail}" if readiness.status != "ok" and readiness.detail else ""
     setup_fix = f" Fix: {readiness.fix}" if readiness.status != "ok" and readiness.fix else ""
@@ -5040,6 +5051,7 @@ def lesson_text_for_batch(action: BatchMenuAction, outputs_root: Path | None = N
         f"{action.description}\n"
         f"Setup: {readiness.label}{setup_detail}{setup_fix}\n"
         f"{batch_plan_text(action)}\n"
+        f"{course_text}\n"
         f"{action_mission_text(action)}\n"
         f"{action_playbook_text(action)}\n"
         f"{action_start_steps_text(action)}\n"

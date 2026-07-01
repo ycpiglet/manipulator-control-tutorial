@@ -169,6 +169,7 @@ Implemented and verified:
 - Learner menu and outputs index `Needs learner control` states name the available learner-control families and concrete button labels, such as Pull/Push, Joint Target, Target X, Shoulder/Elbow pulse, live sliders, and Quick presets
 - Learner menu scenario and batch cards include a `Plan` line with level, mode, run length, and saved artifacts
 - Learner menu scenario cards include `Course step` and `Done when` lines so learners can tell whether a scenario is a recommended-path step or optional exploration before launching it
+- Learner menu comparison-batch cards and CLI `batches --details` include `Course step` and `Done when` lines so `All compare` is visibly the final recommended-path step and lab-specific batches are optional comparisons
 - Learner menu scenario, batch, and learning-path cards include a `Mission` line that turns Try/Change/Watch guidance into one evidence-focused task
 - Learner menu scenario and batch cards, the live interaction panel, run reports, and worksheets include a `Playbook` line that turns each demo into predict, manipulate, and evidence-review steps
 - Learner menu scenario and batch cards, the live interaction panel, run reports, and worksheets include a compact `Start steps` line for the shortest predict-run-control-review sequence before learners read the longer card

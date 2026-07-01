@@ -205,6 +205,7 @@ python -m mclab doctor
 | `.\run_lab04.cmd` | Panda viewer | `position`, `error` |
 
 여러 조건을 한 번에 비교하려면 메뉴의 `Comparison batches` 버튼을 누르거나 CLI batch를 실행합니다.
+Batch 카드와 `python -m mclab batches ... --details` 출력도 `Course step`과 `Done when`을 보여줍니다. `All compare`는 추천 경로의 12/12 단계로 표시되고, 개별 Lab 비교 batch는 optional comparison으로 표시됩니다.
 
 ```powershell
 .\run_batch_lab01.cmd
@@ -609,6 +610,7 @@ Each command opens the matching viewer without side panels, saves the lab's esse
 | `.\run_lab04.cmd` | Panda viewer | `position`, `error` |
 
 To compare several conditions at once, use the `Comparison batches` buttons in the menu or run a CLI batch:
+Batch cards and `python -m mclab batches ... --details` also show `Course step` and `Done when`. `All compare` appears as recommended path step 12/12, while individual lab comparison batches appear as optional comparisons.
 
 ```powershell
 .\run_batch_lab01.cmd
