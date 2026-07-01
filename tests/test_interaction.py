@@ -44,6 +44,7 @@ from mclab.sim.interaction import (  # noqa: E402
     _preset_button_label,
     _preset_panel_status,
     _recent_action_status_message,
+    _run_clock_cue,
     learner_snapshot,
     learner_tuned_config,
     runtime_status_specs,
@@ -1369,6 +1370,25 @@ class KeyForcePulseTests(unittest.TestCase):
             "Run time [s]: 1.250; Remaining [s]: 1.750",
         )
         self.assertEqual(runtime_status_values(4.0, 3.0)["remaining_time"], 0.0)
+
+    def test_run_clock_cue_turns_remaining_time_into_action(self) -> None:
+        self.assertEqual(_run_clock_cue({}), "")
+        self.assertEqual(
+            _run_clock_cue({"run_time": "1.250", "remaining_time": "1.750"}, pause_available=True),
+            "Run clock: t=1.250s, 1.750s left.",
+        )
+        self.assertEqual(
+            _run_clock_cue({"run_time": "2.400", "remaining_time": "0.600"}, pause_available=True),
+            "Run clock: 0.600s left - press Pause / Resume now if you need more time to inspect.",
+        )
+        self.assertEqual(
+            _run_clock_cue({"run_time": "2.400", "remaining_time": "0.600"}, pause_available=False),
+            "Run clock: 0.600s left - the run will finish soon.",
+        )
+        self.assertEqual(
+            _run_clock_cue({"run_time": "3.000", "remaining_time": "0.000"}, pause_available=True),
+            "Run clock: run finished; review the report or rerun with a longer sim_time.",
+        )
 
     def test_changed_tuning_observation_note_summarizes_slider_changes(self) -> None:
         tuning = LiveTuning(

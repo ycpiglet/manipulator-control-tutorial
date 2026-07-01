@@ -37,6 +37,7 @@ PREDICTION_OUTCOME_CHOICES = (
     "Partly matched",
     "Surprised",
 )
+RUN_CLOCK_WARNING_SECONDS = 1.0
 
 
 @dataclass(frozen=True)
@@ -402,6 +403,27 @@ def runtime_status_values(current_time: float, end_time: float) -> dict[str, flo
         "run_time": current,
         "remaining_time": max(0.0, end - current),
     }
+
+
+def _run_clock_cue(snapshot: dict[str, str], *, pause_available: bool = False) -> str:
+    run_time = _optional_status_float(snapshot.get("run_time"))
+    remaining = _optional_status_float(snapshot.get("remaining_time"))
+    if run_time is None and remaining is None:
+        return ""
+    if remaining is None:
+        return f"Run clock: t={run_time:.3f}s." if run_time is not None else ""
+    if remaining <= 0.0:
+        return "Run clock: run finished; review the report or rerun with a longer sim_time."
+    if remaining <= RUN_CLOCK_WARNING_SECONDS:
+        if pause_available:
+            return (
+                f"Run clock: {remaining:.3f}s left - press Pause / Resume now "
+                "if you need more time to inspect."
+            )
+        return f"Run clock: {remaining:.3f}s left - the run will finish soon."
+    if run_time is None:
+        return f"Run clock: {remaining:.3f}s left."
+    return f"Run clock: t={run_time:.3f}s, {remaining:.3f}s left."
 
 
 def learner_snapshot(
@@ -1518,11 +1540,21 @@ def maybe_start_interaction_panel(
                         pady=2,
                     )
                     row += 1
+                run_clock_cue = tk.StringVar(value="")
+                tk.Label(
+                    frame,
+                    textvariable=run_clock_cue,
+                    anchor="w",
+                    justify="left",
+                    wraplength=430,
+                ).grid(row=row, column=0, columnspan=2, sticky="ew", pady=(2, 0))
+                row += 1
 
                 def refresh_status() -> None:
                     snapshot = status.snapshot()
                     for name, variable in status_vars.items():
                         variable.set(snapshot.get(name, "--"))
+                    run_clock_cue.set(_run_clock_cue(snapshot, pause_available=pause_enabled))
                     root.after(200, refresh_status)
 
                 refresh_status()
@@ -2299,6 +2331,16 @@ def _format_status_value(value: Any) -> str:
     except (TypeError, ValueError):
         return str(value)
     return f"{number:.3f}"
+
+
+def _optional_status_float(value: Any) -> float | None:
+    text = str(value or "").strip()
+    if not text or text == "--":
+        return None
+    try:
+        return float(text)
+    except (TypeError, ValueError):
+        return None
 
 
 def _format_tuning_value(value: float) -> str:
