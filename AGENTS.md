@@ -267,6 +267,7 @@ Implemented and verified:
 - Run reports and worksheets include an `Observation Timeline` that compares marker time, prediction, outcome, challenge proof, note evidence, and live status in order
 - Run reports show an evidence review cue that counts review-ready prediction-observation pairs and incomplete markers
 - Run report `Evidence Review Cue` counts learner-control events with the same helper-exclusion rules as the live panel, including excluding `Clear note`
+- Generated `worksheet.md` artifacts include the same `Evidence Review Cue` counts as the run report before the individual observation marker details
 - Run reports and generated `worksheet.md` artifacts show run-level `Done when` completion criteria plus prediction outcomes, pending outcome review, notes, live status, key parameters, priority plot review prompts, checklist prompts, suggested next experiments, and comparison batch commands
 - Outputs index learning path cards include evidence status, latest evidence summaries, latest report/worksheet/priority-plot/replay links, and ready-to-run or repeat commands for each course step
 - Outputs index run table and learning-path cards include `Folder` links for the latest output directories and raw artifacts

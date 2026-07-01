@@ -1129,6 +1129,8 @@ def _worksheet_observation_lines(events: list[dict[str, Any]], config: dict[str,
         lines.append("")
         return lines
 
+    lines.extend(_worksheet_evidence_review_cue_lines(events, markers))
+
     for marker_index, marker in enumerate(markers, start=1):
         payload = marker.get("value")
         value = payload if isinstance(payload, dict) else {}
@@ -1165,6 +1167,21 @@ def _worksheet_observation_lines(events: list[dict[str, Any]], config: dict[str,
                 lines.append(f"- {label}:")
                 lines.extend(_worksheet_mapping_lines(values, indent=2))
         lines.append("")
+    return lines
+
+
+def _worksheet_evidence_review_cue_lines(
+    events: list[dict[str, Any]],
+    markers: list[dict[str, Any]],
+) -> list[str]:
+    lines = [
+        "### Evidence Review Cue",
+        "",
+        "- Use this as a quick worksheet checklist before moving to the next experiment.",
+    ]
+    for label, value in _evidence_review_cue_items(events, markers):
+        lines.append(f"- {label}: {_markdown_inline(value)}")
+    lines.append("")
     return lines
 
 
@@ -4318,7 +4335,7 @@ def _prediction_review_prompt(markers: list[dict[str, Any]]) -> str:
     )
 
 
-def _evidence_review_cue(events: list[dict[str, Any]], markers: list[dict[str, Any]]) -> str:
+def _evidence_review_cue_items(events: list[dict[str, Any]], markers: list[dict[str, Any]]) -> list[tuple[str, Any]]:
     ready_pairs = 0
     prediction_only = 0
     note_only = 0
@@ -4359,20 +4376,22 @@ def _evidence_review_cue(events: list[dict[str, Any]], markers: list[dict[str, A
     else:
         next_step = "Repeat the run, fill Prediction and Note, then mark the observation."
 
+    return [
+        ("Review-ready pairs", ready_pairs),
+        ("Prediction-only markers", prediction_only),
+        ("Observation-only markers", note_only),
+        ("Empty markers", missing_both),
+        ("Outcome judgments", outcome_judgments),
+        ("Learner controls", learner_controls),
+        ("Next review step", next_step),
+    ]
+
+
+def _evidence_review_cue(events: list[dict[str, Any]], markers: list[dict[str, Any]]) -> str:
     return _action_card(
         "Evidence Review Cue",
         "Use this as a quick worksheet checklist before moving to the next experiment.",
-        _action_value_list(
-            (
-                ("Review-ready pairs", ready_pairs),
-                ("Prediction-only markers", prediction_only),
-                ("Observation-only markers", note_only),
-                ("Empty markers", missing_both),
-                ("Outcome judgments", outcome_judgments),
-                ("Learner controls", learner_controls),
-                ("Next review step", next_step),
-            )
-        ),
+        _action_value_list(_evidence_review_cue_items(events, markers)),
     )
 
 

@@ -404,6 +404,13 @@ class LoggingTests(unittest.TestCase):
                 worksheet_text,
             )
             self.assertIn("## Observation Markers", worksheet_text)
+            self.assertIn("### Evidence Review Cue", worksheet_text)
+            self.assertIn("- Review-ready pairs: 1", worksheet_text)
+            self.assertIn("- Learner controls: 2", worksheet_text)
+            self.assertIn(
+                "- Next review step: Decide whether each prediction matched, partially matched, or surprised you.",
+                worksheet_text,
+            )
             self.assertIn("Higher stiffness should create a sharper force peak.", worksheet_text)
             self.assertIn("Prediction outcome: Matched", worksheet_text)
             self.assertIn(
