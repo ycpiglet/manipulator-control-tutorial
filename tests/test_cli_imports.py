@@ -108,6 +108,30 @@ class CliImportTests(unittest.TestCase):
             printed,
         )
 
+    def test_cli_prints_learning_path_progress_and_next_command(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp) / "outputs"
+
+            args = build_parser().parse_args(["path", "--output-dir", str(output_dir), "--all"])
+            self.assertEqual(args.command, "path")
+            self.assertEqual(args.output_dir, str(output_dir))
+            self.assertTrue(args.all)
+
+            with patch("builtins.print") as printer:
+                self.assertEqual(main(["path", "--output-dir", str(output_dir), "--all"]), 0)
+
+        printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
+        self.assertIn("Progress: 0/12 complete", printed)
+        self.assertIn("Next: 1. Feel 1D physics", printed)
+        self.assertIn("Next step: 1. Feel 1D physics", printed)
+        self.assertIn(
+            "Next command: python -m mclab run lab01 --config configs/lab01_msd/default.yaml "
+            "--viewer --realtime --pause-at-end --plot --plots essential --open-report",
+            printed,
+        )
+        self.assertIn("Path map:", printed)
+        self.assertIn("1. Feel 1D physics: Not run yet", printed)
+
     def test_cli_opens_batch_report_when_requested(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "batch"

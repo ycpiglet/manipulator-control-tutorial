@@ -1113,6 +1113,28 @@ def build_batch_args(action: BatchMenuAction) -> list[str]:
     ]
 
 
+def command_for_target(target: MenuAction | BatchMenuAction) -> str:
+    if isinstance(target, BatchMenuAction):
+        return f"python -m mclab batch {target.batch_name} --open-report"
+    parts = [
+        "python",
+        "-m",
+        "mclab",
+        "run",
+        target.lab_name,
+        "--config",
+        target.config_path,
+        "--viewer",
+        "--realtime",
+        "--pause-at-end",
+        "--plot",
+    ]
+    if target.plots:
+        parts.extend(["--plots", target.plots])
+    parts.append("--open-report")
+    return " ".join(parts)
+
+
 def build_doctor_args() -> list[str]:
     return [sys.executable, "-m", "mclab", "doctor"]
 
@@ -1362,6 +1384,18 @@ def next_learning_path_step(
         if not progress.completed:
             return step
     return None
+
+
+def learning_path_next_label(outputs_root: Path | None = None) -> str:
+    step = next_learning_path_step(learning_path_progress_items(outputs_root))
+    return step.title if step is not None else "Course path complete"
+
+
+def learning_path_next_command(outputs_root: Path | None = None) -> str:
+    step = next_learning_path_step(learning_path_progress_items(outputs_root))
+    if step is None:
+        return ""
+    return command_for_target(learning_path_target(step))
 
 
 def experience_coverage_summary_text(outputs_root: Path | None = None) -> str:

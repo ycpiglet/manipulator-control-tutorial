@@ -16,7 +16,14 @@ from .learner_menu import (
     experience_coverage_next_label,
     experience_coverage_status_text,
     experience_coverage_summary_text,
+    learning_path_milestone_text,
+    learning_path_next_command,
+    learning_path_next_label,
+    learning_path_progress_items,
+    learning_path_progress_text,
+    learning_path_summary_text,
     main as learner_menu_main,
+    next_learning_path_step,
 )
 from .labs import lab01_msd, lab02_pid, lab03_2dof, lab04_panda
 from .sim.reporting import write_outputs_index
@@ -59,6 +66,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Show course experience coverage and the next learner command.",
     )
     coverage_parser.add_argument("--output-dir", default="outputs", help="Outputs root directory.")
+
+    path_parser = subparsers.add_parser(
+        "path",
+        help="Show recommended learning path progress and the next learner command.",
+    )
+    path_parser.add_argument("--output-dir", default="outputs", help="Outputs root directory.")
+    path_parser.add_argument("--all", action="store_true", help="Print one status line for every path step.")
 
     index_parser = subparsers.add_parser("index", help="Generate the outputs review index.")
     index_parser.add_argument("--output-dir", default="outputs", help="Outputs root directory.")
@@ -118,6 +132,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "coverage":
         _print_experience_coverage(Path(args.output_dir))
+        return 0
+
+    if args.command == "path":
+        _print_learning_path(Path(args.output_dir), show_all=args.all)
         return 0
 
     if args.command == "index":
@@ -207,6 +225,31 @@ def _print_experience_coverage(outputs_root: Path) -> None:
     else:
         print("Next experience: Coverage complete")
         print("Next command: replay one saved scenario or run a comparison batch more deeply.")
+
+
+def _print_learning_path(outputs_root: Path, *, show_all: bool = False) -> None:
+    progress_items = learning_path_progress_items(outputs_root)
+    print(learning_path_summary_text(progress_items))
+    print(learning_path_milestone_text(progress_items))
+    next_step = next_learning_path_step(progress_items)
+    if next_step is not None:
+        print(f"Next step: {learning_path_next_label(outputs_root)}")
+        print(f"Next command: {learning_path_next_command(outputs_root)}")
+    else:
+        print("Next step: Course path complete")
+        print("Next command: open outputs/index.html or rerun a comparison batch for deeper review.")
+    if show_all:
+        print("Path map:")
+        for step, progress in progress_items:
+            status_line = _learning_path_status_line(step, progress)
+            print(f"  {step.title}: {status_line}")
+
+
+def _learning_path_status_line(step: object, progress: object) -> str:
+    for line in learning_path_progress_text(step, progress).splitlines():
+        if line.startswith("Status: "):
+            return line.removeprefix("Status: ")
+    return "Status unavailable"
 
 
 def _output_artifact_lines(output_path: Path) -> list[str]:
