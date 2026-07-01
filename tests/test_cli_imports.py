@@ -22,7 +22,7 @@ from mclab.cli import (  # noqa: E402
 )
 from mclab.cli import build_parser  # noqa: E402
 from mclab.doctor import DoctorCheck  # noqa: E402
-from mclab.learner_menu import BATCH_ACTIONS, MENU_ACTIONS  # noqa: E402
+from mclab.learner_menu import BATCH_ACTIONS, LEARNING_PATH, MENU_ACTIONS  # noqa: E402
 
 
 class CliImportTests(unittest.TestCase):
@@ -250,6 +250,26 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("Running next step: Lab01 Mass-Spring-Damper - Auto demo", printed)
         self.assertIn(f"Run complete: {output}", printed)
         self.assertIn(f"Plots: {output / 'plots'} (1 PNG; first: position.png)", printed)
+
+    def test_cli_previews_batch_next_step_with_review_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp) / "outputs"
+            with (
+                patch("mclab.cli.learning_path_progress_items", return_value=()),
+                patch("mclab.cli.learning_path_summary_text", return_value="Progress: batch next"),
+                patch("mclab.cli.learning_path_milestone_text", return_value="Milestones: compare next"),
+                patch("mclab.cli.next_learning_path_step", return_value=LEARNING_PATH[-1]),
+                patch("builtins.print") as printer,
+            ):
+                self.assertEqual(main(["next", "--output-dir", str(output_dir), "--preview"]), 0)
+
+        printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
+        self.assertIn("Next guide: Comparison Batches - All compare", printed)
+        self.assertIn("Worksheet: Not saved yet", printed)
+        self.assertIn("Plots: Not saved yet", printed)
+        self.assertIn("Plot review: Not available until a plot is saved", printed)
+        self.assertIn("Prediction check: Write a prediction before running the batch.", printed)
+        self.assertIn("Viewer handoff:", printed)
 
     def test_cli_prints_review_queue_and_next_report(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
