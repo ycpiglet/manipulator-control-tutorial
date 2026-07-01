@@ -172,12 +172,12 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("Next step: 1. Feel 1D physics", printed)
         self.assertIn(
             "Next command: python -m mclab run lab01 --config configs/lab01_msd/default.yaml "
-            "--viewer --realtime --pause-at-end --plot --plots essential --open-report",
+            "--headless --plot --plots essential --open-report",
             printed,
         )
         self.assertIn("Next guide: Lab01 Mass-Spring-Damper - Auto demo", printed)
         self.assertIn("Mission: Run the demo", printed)
-        self.assertIn("Viewer: MuJoCo side panels are hidden", printed)
+        self.assertNotIn("Viewer: MuJoCo side panels are hidden", printed)
         self.assertIn("Controls: Auto run; edit YAML before running", printed)
         self.assertIn("Path map:", printed)
         self.assertIn("1. Feel 1D physics: Not run yet", printed)
@@ -202,11 +202,15 @@ class CliImportTests(unittest.TestCase):
         opener.assert_not_called()
         printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
         self.assertIn("Next step: 1. Feel 1D physics", printed)
-        self.assertIn("Next command: python -m mclab run lab01", printed)
+        self.assertIn(
+            "Next command: python -m mclab run lab01 --config configs/lab01_msd/default.yaml "
+            "--headless --plot --plots essential --open-report",
+            printed,
+        )
         self.assertIn("Next guide: Lab01 Mass-Spring-Damper - Auto demo", printed)
         self.assertIn("Mission: Run the demo", printed)
         self.assertIn("Start steps:", printed)
-        self.assertIn("Viewer: MuJoCo side panels are hidden", printed)
+        self.assertNotIn("Viewer: MuJoCo side panels are hidden", printed)
         self.assertIn("Controls: Auto run; edit YAML before running", printed)
         self.assertIn("Next cue: Run this scenario, then review the saved plot and worksheet.", printed)
         self.assertNotIn("Running next step:", printed)
@@ -238,10 +242,10 @@ class CliImportTests(unittest.TestCase):
         loader.assert_called_once_with("configs/lab01_msd/default.yaml")
         self.assertEqual(len(calls), 1)
         self.assertEqual(calls[0]["config_path"], Path("configs/lab01_msd/default.yaml"))
-        self.assertTrue(calls[0]["viewer"])
-        self.assertFalse(calls[0]["headless"])
-        self.assertTrue(calls[0]["realtime"])
-        self.assertTrue(calls[0]["pause_at_end"])
+        self.assertFalse(calls[0]["viewer"])
+        self.assertTrue(calls[0]["headless"])
+        self.assertFalse(calls[0]["realtime"])
+        self.assertFalse(calls[0]["pause_at_end"])
         self.assertTrue(calls[0]["plot"])
         self.assertEqual(calls[0]["plot_selection"], "essential")
         self.assertEqual(calls[0]["seed"], 11)

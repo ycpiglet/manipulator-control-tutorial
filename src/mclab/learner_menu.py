@@ -1135,6 +1135,30 @@ def command_for_target(target: MenuAction | BatchMenuAction) -> str:
     return " ".join(parts)
 
 
+def default_command_for_target(target: MenuAction | BatchMenuAction) -> str:
+    if isinstance(target, BatchMenuAction) or "hands-on" in action_tags(target):
+        return command_for_target(target)
+    return headless_command_for_action(target)
+
+
+def headless_command_for_action(action: MenuAction) -> str:
+    parts = [
+        "python",
+        "-m",
+        "mclab",
+        "run",
+        action.lab_name,
+        "--config",
+        action.config_path,
+        "--headless",
+        "--plot",
+    ]
+    if action.plots:
+        parts.extend(["--plots", action.plots])
+    parts.append("--open-report")
+    return " ".join(parts)
+
+
 def build_doctor_args() -> list[str]:
     return [sys.executable, "-m", "mclab", "doctor"]
 
@@ -1423,7 +1447,7 @@ def learning_path_next_command(outputs_root: Path | None = None) -> str:
     step = next_learning_path_step(learning_path_progress_items(outputs_root))
     if step is None:
         return ""
-    return command_for_target(learning_path_target(step))
+    return default_command_for_target(learning_path_target(step))
 
 
 def experience_coverage_summary_text(outputs_root: Path | None = None) -> str:

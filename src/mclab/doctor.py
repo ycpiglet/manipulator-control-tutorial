@@ -66,7 +66,7 @@ def _doctor_next_step_lines(fail_count: int) -> list[str]:
         "- Open the launcher: `python -m mclab menu`",
         "- See the next missing experience: `python -m mclab coverage`",
         "- Preview the recommended path step: `python -m mclab next --preview`",
-        "- Launch the next guided viewer: `python -m mclab next`",
+        "- Launch the next path step: `python -m mclab next`",
     ]
 
 

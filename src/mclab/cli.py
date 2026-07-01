@@ -50,6 +50,7 @@ from .learner_menu import (
     batch_readiness,
     batch_viewer_handoff_text,
     command_for_target,
+    default_command_for_target,
     experience_coverage_next_command,
     experience_coverage_next_label,
     experience_coverage_next_target,
@@ -105,7 +106,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  python -m mclab menu            open the guided launcher\n"
             "  python -m mclab coverage        see missing experience types and next command\n"
             "  python -m mclab next --preview  preview the next recommended step\n"
-            "  python -m mclab next            launch the next guided viewer"
+            "  python -m mclab next            launch the next path step"
         ),
     )
     subparsers = parser.add_subparsers(dest="command")
@@ -208,7 +209,7 @@ def main(argv: list[str] | None = None) -> int:
         print("  python -m mclab menu            # open the guided launcher")
         print("  python -m mclab coverage        # see missing experience types and next command")
         print("  python -m mclab next --preview  # preview the next recommended step")
-        print("  python -m mclab next            # launch the next guided viewer")
+        print("  python -m mclab next            # launch the next path step")
         print("Available labs:")
         for name in sorted(LABS):
             print(f"  {name}")
@@ -346,9 +347,10 @@ def _print_learning_path(outputs_root: Path, *, show_all: bool = False) -> None:
     print(learning_path_milestone_text(progress_items))
     next_step = next_learning_path_step(progress_items)
     if next_step is not None:
+        target = learning_path_target(next_step)
         print(f"Next step: {learning_path_next_label(outputs_root)}")
         print(f"Next command: {learning_path_next_command(outputs_root)}")
-        _print_next_target_guide(learning_path_target(next_step), outputs_root)
+        _print_next_target_guide(target, outputs_root, include_viewer=_target_default_opens_viewer(target))
     else:
         print("Next step: Course path complete")
         print("Next command: open outputs/index.html or rerun a comparison batch for deeper review.")
@@ -378,8 +380,8 @@ def _run_next_learning_path(outputs_root: Path, *, preview: bool = False, seed: 
 
     target = learning_path_target(next_step)
     print(f"Next step: {next_step.title}")
-    print(f"Next command: {command_for_target(target)}")
-    _print_next_target_guide(target, outputs_root)
+    print(f"Next command: {default_command_for_target(target)}")
+    _print_next_target_guide(target, outputs_root, include_viewer=_target_default_opens_viewer(target))
     if preview:
         return 0
 
@@ -439,18 +441,23 @@ def _print_next_target_guide(
         print(f"  {line}")
 
 
+def _target_default_opens_viewer(target: MenuAction | BatchMenuAction) -> bool:
+    return isinstance(target, MenuAction) and "hands-on" in action_tags(target)
+
+
 def _run_next_menu_target(target: MenuAction, *, seed: int | None = None) -> Path:
     config = load_config(target.config_path)
     runner = LABS[target.lab_name]
+    opens_viewer = _target_default_opens_viewer(target)
     return runner(
         config,
         config_path=Path(target.config_path),
         output_dir=None,
         plot=True,
-        viewer=True,
-        headless=False,
-        realtime=True,
-        pause_at_end=True,
+        viewer=opens_viewer,
+        headless=not opens_viewer,
+        realtime=opens_viewer,
+        pause_at_end=opens_viewer,
         plot_selection=target.plots,
         seed=seed,
     )
@@ -569,33 +576,13 @@ def _scenario_primary_command_lines(action: MenuAction) -> list[str]:
         return [f"Command: {command_for_target(action)}"]
 
     return [
-        f"Command: {_scenario_headless_command(action)}",
+        f"Command: {default_command_for_target(action)}",
         f"Viewer rerun: {command_for_target(action)}",
     ]
 
 
 def _scenario_recommended_command(action: MenuAction) -> str:
-    if "hands-on" in action_tags(action):
-        return command_for_target(action)
-    return _scenario_headless_command(action)
-
-
-def _scenario_headless_command(action: MenuAction) -> str:
-    headless_parts = [
-        "python",
-        "-m",
-        "mclab",
-        "run",
-        action.lab_name,
-        "--config",
-        action.config_path,
-        "--headless",
-        "--plot",
-    ]
-    if action.plots:
-        headless_parts.extend(["--plots", action.plots])
-    headless_parts.append("--open-report")
-    return " ".join(headless_parts)
+    return default_command_for_target(action)
 
 
 def _scenario_latest_artifact_lines(action: MenuAction) -> list[str]:
