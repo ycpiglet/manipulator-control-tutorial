@@ -514,6 +514,10 @@ def _batch_handoff_detail_text(action: BatchMenuAction) -> str:
     if command:
         handoff = f"{start} -> {command}" if start else command
         return f"Handoff: {handoff}"
+    if action.batch_name == ALL_BATCH_NAME:
+        course_handoff = _course_batch_handoff_detail(latest)
+        if course_handoff:
+            return course_handoff
     report = latest / "report.html"
     if report.exists():
         return f"Handoff: Latest {report}#viewer-handoff"
@@ -605,6 +609,54 @@ def _worksheet_viewer_handoff(output_path: Path) -> tuple[str, str]:
     except OSError:
         return "", ""
     return _viewer_handoff_from_worksheet_text(text)
+
+
+def _course_batch_handoff_detail(output_path: Path) -> str:
+    linked_handoff = _course_linked_viewer_handoff(output_path)
+    if linked_handoff:
+        child_output = _linked_batch_output_path(output_path, linked_handoff)
+        if child_output is not None:
+            start, command = _worksheet_viewer_handoff(child_output)
+            if command:
+                label = child_output.name
+                handoff = f"{label} / {start} -> {command}" if start else f"{label} -> {command}"
+                return f"Handoff: {handoff}"
+        return f"Handoff: Open linked batch handoff: {linked_handoff}"
+
+    for batch_name in BATCH_SETS:
+        child_output = output_path / batch_name
+        start, command = _worksheet_viewer_handoff(child_output)
+        if command:
+            handoff = f"{batch_name} / {start} -> {command}" if start else f"{batch_name} -> {command}"
+            return f"Handoff: {handoff}"
+    return "Handoff: Open the course worksheet, then follow a linked batch Viewer Handoff."
+
+
+def _course_linked_viewer_handoff(output_path: Path) -> str:
+    worksheet = output_path / "worksheet.md"
+    if not worksheet.exists():
+        return ""
+    try:
+        text = worksheet.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("- Viewer handoff: "):
+            value = stripped.removeprefix("- Viewer handoff: ").strip()
+            if value and value.lower() != "n/a":
+                return value
+    return ""
+
+
+def _linked_batch_output_path(output_path: Path, linked_handoff: str) -> Path | None:
+    report_part = linked_handoff.split("#", 1)[0].strip()
+    if not report_part:
+        return None
+    linked_path = Path(report_part)
+    if not linked_path.is_absolute():
+        linked_path = output_path / linked_path
+    return linked_path.parent if linked_path.name == "report.html" else linked_path
 
 
 def _viewer_handoff_from_worksheet_text(text: str) -> tuple[str, str]:

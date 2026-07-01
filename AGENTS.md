@@ -114,6 +114,7 @@ Implemented and verified:
 - Guide text does not classify a non-interactive scenario as hands-on only because a follow-up mentions a live demo, avoiding fake Pull/Push or Mark observation steps on auto-run wall comparisons
 - CLI `python -m mclab batches <terms>` searches comparison batches and prints mission, start steps, challenge, readiness, and ready-to-run batch commands
 - CLI `python -m mclab batches <terms> --details` also prints playbook, latest history, worksheet, plot, plot-review, prediction-check, and latest worksheet handoff viewer rerun commands for terminal-only learners
+- CLI `python -m mclab batches all --details` follows linked child batch worksheets when available so the course-level batch can still print a concrete side-panel-free viewer rerun command
 - Learner menu and CLI batch cards normalize mission text so `open...` and `compare...` actions read naturally without duplicated verbs
 - CLI `python -m mclab coverage` prints the saved Experience Coverage summary, seven-item coverage map, next missing experience, and ready-to-run command for VS Code terminal-only learners
 - CLI `python -m mclab path` prints the recommended 12-step learning-path summary, milestone status, next step, and ready-to-run command; `--all` adds a one-line status map for every path step

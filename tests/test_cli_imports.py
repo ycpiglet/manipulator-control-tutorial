@@ -349,6 +349,48 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("--viewer --realtime --pause-at-end --plot --plots essential", handoff)
         self.assertNotIn("#viewer-handoff", handoff)
 
+    def test_cli_all_batch_handoff_follows_linked_batch_worksheet_command(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "all_batches"
+            child = output / "lab01_msd_compare"
+            child.mkdir(parents=True)
+            (output / "worksheet.md").write_text(
+                "\n".join(
+                    [
+                        "# Course worksheet",
+                        "",
+                        "## Batch Review",
+                        "",
+                        "- Lab01 Mass-Spring-Damper Comparison",
+                        "  - Viewer handoff: lab01_msd_compare/report.html#viewer-handoff",
+                        "",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            (child / "worksheet.md").write_text(
+                "\n".join(
+                    [
+                        "# Batch worksheet",
+                        "",
+                        "## Viewer Handoff",
+                        "",
+                        "- Start with: underdamped",
+                        "- Viewer rerun: python -m mclab run lab01 --config configs/lab01_msd/underdamped.yaml --viewer --realtime --pause-at-end --plot --plots essential",
+                        "",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            action = next(action for action in BATCH_ACTIONS if action.batch_name == "all")
+
+            with patch("mclab.cli.action_latest_output", return_value=output):
+                handoff = _batch_handoff_detail_text(action)
+
+        self.assertIn("Handoff: lab01_msd_compare / underdamped -> python -m mclab run lab01", handoff)
+        self.assertIn("--viewer --realtime --pause-at-end --plot --plots essential", handoff)
+        self.assertNotIn("Open linked batch handoff", handoff)
+
     def test_cli_opens_batch_report_when_requested(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "batch"
