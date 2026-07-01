@@ -1624,6 +1624,7 @@ def _panel_guide_rows(
                 has_sliders,
                 has_presets,
                 button_next_step=button_next_step,
+                required_preset_labels=_required_preset_labels(tuning),
             ),
         ),
         (
@@ -1675,6 +1676,7 @@ def _panel_completion_text(
     has_presets: bool = False,
     *,
     button_next_step: str = "",
+    required_preset_labels: Sequence[str] = (),
 ) -> str:
     control_text = _learner_control_followup_text(
         has_buttons,
@@ -1682,6 +1684,12 @@ def _panel_completion_text(
         has_presets,
         button_next_step=button_next_step,
     )
+    required_text = " -> ".join(label for label in required_preset_labels if label)
+    if required_text:
+        return (
+            f"try required presets {required_text}, then "
+            "write a Prediction and note, choose an outcome if known, and press Mark observation."
+        )
     if control_text == "use one button, slider, or preset":
         control_text = "use at least one button, slider, or preset"
     else:
@@ -1690,6 +1698,12 @@ def _panel_completion_text(
         f"{control_text}, then write a Prediction and note, "
         "choose an outcome if known, and press Mark observation."
     )
+
+
+def _required_preset_labels(tuning: LiveTuning | None) -> tuple[str, ...]:
+    if tuning is None:
+        return ()
+    return tuple(preset.label for preset in tuning.presets if preset.required and preset.label)
 
 
 def _panel_control_credit_text(

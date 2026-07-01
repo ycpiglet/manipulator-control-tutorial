@@ -1623,7 +1623,7 @@ class KeyForcePulseTests(unittest.TestCase):
                 "Start steps",
                 "Predict -> Run viewer -> try required presets Close wall -> Back away -> Re-enter wall -> Mark observation.",
             ),
-            _panel_guide_rows(guide, tuning=tuning),
+            _panel_guide_rows(guide, tuning=tuning, has_sliders=True, has_presets=True),
         )
         self.assertIn(
             (
@@ -1636,6 +1636,14 @@ class KeyForcePulseTests(unittest.TestCase):
                 has_buttons=True,
                 button_next_step="Use Target X - away or Target X + into wall.",
             ),
+        )
+        self.assertIn(
+            (
+                "Done when",
+                "try required presets Close wall -> Back away -> Re-enter wall, then "
+                "write a Prediction and note, choose an outcome if known, and press Mark observation.",
+            ),
+            _panel_guide_rows(guide, tuning=tuning, has_sliders=True, has_presets=True),
         )
 
     def test_panel_guidance_exposes_viewer_legend(self) -> None:
