@@ -15,6 +15,7 @@ from mclab.batch import BATCH_SETS  # noqa: E402
 from mclab.cli import (  # noqa: E402
     LABS,
     _batch_handoff_detail_text,
+    _scenario_course_lines,
     _scenario_next_command_lines,
     _scenario_replay_command_line,
     main,
@@ -288,6 +289,8 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("Scenarios: showing", printed)
         self.assertIn("Lab04 Panda Manipulator - Virtual wall", printed)
         self.assertIn("Challenge:", printed)
+        self.assertIn("Course step: 11/12 - Touch virtual wall", printed)
+        self.assertIn("Done when:", printed)
         self.assertIn("Playbook:", printed)
         self.assertIn("Controls:", printed)
         self.assertIn("Counts as control:", printed)
@@ -359,6 +362,34 @@ class CliImportTests(unittest.TestCase):
             "Compare command: Comparison Batches - Lab04 wall compare -> "
             "python -m mclab batch lab04_wall_compare --open-report",
             lines,
+        )
+
+    def test_cli_scenario_course_lines_show_path_context(self) -> None:
+        path_action = next(
+            action
+            for action in MENU_ACTIONS
+            if action.config_path == "configs/lab04_panda/interactive_virtual_wall.yaml"
+        )
+        optional_action = next(
+            action
+            for action in MENU_ACTIONS
+            if action.config_path == "configs/lab04_panda/neutral_hold_30s.yaml"
+        )
+
+        path_lines = _scenario_course_lines(path_action)
+        optional_lines = _scenario_course_lines(optional_action)
+
+        self.assertIn(
+            "Course step: 11/12 - Touch virtual wall; Tune wall position, stiffness, damping, and retreat gain.",
+            path_lines,
+        )
+        self.assertTrue(any(line.startswith("Done when:") for line in path_lines))
+        self.assertEqual(
+            optional_lines,
+            [
+                "Course step: Optional exploration - not required by the recommended path; "
+                "use Next or Compare when ready."
+            ],
         )
 
     def test_cli_searches_comparison_batches(self) -> None:

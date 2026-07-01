@@ -13,6 +13,7 @@ from .config import load_config
 from .doctor import doctor_exit_code, format_doctor_report, run_doctor_checks
 from .learner_menu import (
     BATCH_ACTIONS,
+    LEARNING_PATH,
     BatchMenuAction,
     MenuAction,
     action_activity_mix_text,
@@ -53,6 +54,7 @@ from .learner_menu import (
     experience_coverage_summary_text,
     filter_menu_actions,
     learning_path_milestone_text,
+    learning_path_completion_text,
     learning_path_next_command,
     learning_path_next_label,
     learning_path_progress_items,
@@ -438,6 +440,8 @@ def _print_scenario_card(index: int, action: MenuAction, *, details: bool = Fals
     if controls:
         print(f"   {controls}")
     if details:
+        for course_line in _scenario_course_lines(action):
+            print(f"   {course_line}")
         print(f"   {action_playbook_text(action)}")
         print(f"   {action_viewer_text(action)}")
         control_credit = action_control_credit_text(action)
@@ -519,6 +523,24 @@ def _scenario_next_command_lines(action: MenuAction) -> list[str]:
     if compare_command != followup_command:
         lines.append(f"Compare command: {compare.group} - {compare.label} -> {compare_command}")
     return lines
+
+
+def _scenario_course_lines(action: MenuAction) -> list[str]:
+    for index, step in enumerate(LEARNING_PATH, start=1):
+        target = learning_path_target(step)
+        if isinstance(target, MenuAction) and target == action:
+            title = step.title
+            numeric_prefix = f"{index}. "
+            if title.startswith(numeric_prefix):
+                title = title.removeprefix(numeric_prefix)
+            return [
+                f"Course step: {index}/{len(LEARNING_PATH)} - {title}; {step.description}",
+                learning_path_completion_text(step),
+            ]
+    return [
+        "Course step: Optional exploration - not required by the recommended path; "
+        "use Next or Compare when ready."
+    ]
 
 
 def _print_batches(query: str, *, limit: int = 8, details: bool = False) -> None:
