@@ -886,7 +886,18 @@ class KeyForcePulseTests(unittest.TestCase):
         log.mark_observation(prediction="More damping should settle faster.", note="Energy dropped.")
         self.assertEqual(
             _observation_marker_status_message(log, "More damping should settle faster.", "Energy dropped."),
-            "Marked observation 4 with prediction - learning path evidence saved.",
+            "Marked observation 4 - saved prediction, 1 note item, learner control; learning path evidence saved.",
+        )
+        self.assertEqual(
+            _observation_marker_status_message(
+                log,
+                "More damping should settle faster.",
+                "Energy dropped; Settling time shortened.",
+                "ready",
+                outcome="Matched",
+            ),
+            "Marked observation 4 - saved prediction, outcome, 2 note items, learner control, "
+            "preset comparison; learning path evidence saved.",
         )
 
     def test_observation_checklist_status_guides_before_marking(self) -> None:

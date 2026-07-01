@@ -1390,6 +1390,7 @@ def maybe_start_interaction_panel(
                             prediction,
                             note,
                             preset_state,
+                            outcome=outcome,
                             controls_available=controls_available,
                             has_buttons=activity_has_buttons,
                             has_sliders=activity_has_sliders,
@@ -1954,6 +1955,7 @@ def _observation_marker_status_message(
     note: str = "",
     preset_state: str = "",
     *,
+    outcome: str = "",
     controls_available: bool = True,
     has_buttons: bool = False,
     has_sliders: bool = False,
@@ -1961,10 +1963,11 @@ def _observation_marker_status_message(
     button_next_step: str = "",
 ) -> str:
     count = _observation_marker_count(event_log)
+    learner_controls = _learner_control_event_count(event_log.events())
     missing: list[str] = []
     if not prediction.strip():
         missing.append("add a prediction next time")
-    if controls_available and _learner_control_event_count(event_log.events()) <= 0:
+    if controls_available and learner_controls <= 0:
         missing.append(
             _learner_control_followup_text(
                 has_buttons,
@@ -1980,7 +1983,38 @@ def _observation_marker_status_message(
         missing.append(preset_followup)
     if missing:
         return f"Marked observation {count} - {'; '.join(missing)} to complete the learning path."
-    return f"Marked observation {count} with prediction - learning path evidence saved."
+    saved_summary = _saved_observation_marker_summary(
+        prediction=prediction,
+        outcome=outcome,
+        note=note,
+        learner_controls=learner_controls,
+        preset_state=preset_state,
+    )
+    return f"Marked observation {count} - saved {saved_summary}; learning path evidence saved."
+
+
+def _saved_observation_marker_summary(
+    *,
+    prediction: str,
+    outcome: str = "",
+    note: str = "",
+    learner_controls: int = 0,
+    preset_state: str = "",
+) -> str:
+    parts: list[str] = []
+    if prediction.strip():
+        parts.append("prediction")
+    if _prediction_outcome_value(outcome):
+        parts.append("outcome")
+    note_items = _observation_note_preview_parts(note)
+    if note_items:
+        item_word = "item" if len(note_items) == 1 else "items"
+        parts.append(f"{len(note_items)} note {item_word}")
+    if learner_controls > 0:
+        parts.append("learner control")
+    if str(preset_state or "").strip() == "ready":
+        parts.append("preset comparison")
+    return ", ".join(parts) if parts else "marker"
 
 
 def _preset_state_followup(preset_state: str) -> str:
