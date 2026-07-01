@@ -50,6 +50,7 @@ from .learner_menu import (
     batch_readiness,
     batch_viewer_handoff_text,
     command_for_target,
+    config_value_preview,
     default_command_for_target,
     experience_coverage_next_command,
     experience_coverage_next_label,
@@ -68,6 +69,8 @@ from .learner_menu import (
     next_learning_path_step,
     next_review_output,
     next_review_status_text,
+    parameter_hint,
+    prediction_prompt,
     review_queue_summary_text,
 )
 from .labs import lab01_msd, lab02_pid, lab03_2dof, lab04_panda
@@ -105,6 +108,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  python -m mclab doctor          check setup and see next learner steps\n"
             "  python -m mclab menu            open the guided launcher\n"
             "  python -m mclab coverage        see missing experience types and next command\n"
+            "  python -m mclab params wall     see editable YAML/live-control parameters\n"
             "  python -m mclab next --preview  preview the next recommended step\n"
             "  python -m mclab next            launch the next path step"
         ),
@@ -155,6 +159,15 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Include playbook, viewer, readiness, and full control-credit cues.",
     )
+
+    params_parser = subparsers.add_parser(
+        "params",
+        help="Search guided scenarios and print editable parameters, current values, and commands.",
+    )
+    params_parser.add_argument("query", nargs="*", help="Search terms, for example: wall stiffness.")
+    params_parser.add_argument("--filter", default="all", help="Experience filter such as hands-on, compare, wall.")
+    params_parser.add_argument("--limit", type=int, default=6, help="Maximum matches to print; 0 prints all.")
+    params_parser.add_argument("--values", type=int, default=8, help="Maximum current YAML values per scenario.")
 
     batches_parser = subparsers.add_parser(
         "batches",
@@ -208,6 +221,7 @@ def main(argv: list[str] | None = None) -> int:
         print("  python -m mclab doctor          # check setup and see next learner steps")
         print("  python -m mclab menu            # open the guided launcher")
         print("  python -m mclab coverage        # see missing experience types and next command")
+        print("  python -m mclab params wall     # see editable YAML/live-control parameters")
         print("  python -m mclab next --preview  # preview the next recommended step")
         print("  python -m mclab next            # launch the next path step")
         print("Available labs:")
@@ -243,6 +257,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "scenarios":
         _print_scenarios(" ".join(args.query), experience_filter=args.filter, limit=args.limit, details=args.details)
+        return 0
+
+    if args.command == "params":
+        _print_params(" ".join(args.query), experience_filter=args.filter, limit=args.limit, max_values=args.values)
         return 0
 
     if args.command == "batches":
@@ -517,6 +535,46 @@ def _print_scenarios(query: str, *, experience_filter: str = "all", limit: int =
         print("Tip: use --limit 0 to print all matches.")
     for index, action in enumerate(shown, start=1):
         _print_scenario_card(index, action, details=details)
+
+
+def _print_params(query: str, *, experience_filter: str = "all", limit: int = 6, max_values: int = 8) -> None:
+    matches = filter_menu_actions(query, experience_filter=experience_filter)
+    shown = matches if limit <= 0 else matches[: max(0, limit)]
+    query_text = query.strip() or "all"
+    print(
+        f"Parameter guide: showing {len(shown)} of {len(matches)} match(es) "
+        f"for query '{query_text}' with filter '{experience_filter}'."
+    )
+    if not matches:
+        print("No guided scenarios matched. Try: wall, PID, DLS, damping, stiffness, target, torque, or hands-on.")
+        return
+    print(
+        "Control surface: edit YAML for auto/comparison runs; use MCLab Interaction sliders, presets, "
+        "or buttons for hands-on runs. MuJoCo side panels stay hidden."
+    )
+    print(
+        "Discovery tips: try `python -m mclab params wall --filter hands-on`, "
+        "`python -m mclab params PID`, or `python -m mclab params DLS --limit 0`."
+    )
+    if limit > 0 and len(matches) > len(shown):
+        print("Tip: use --limit 0 to print all matches.")
+    for index, action in enumerate(shown, start=1):
+        _print_params_card(index, action, max_values=max_values)
+
+
+def _print_params_card(index: int, action: MenuAction, *, max_values: int = 8) -> None:
+    print(f"{index}. {action.group} - {action.label}")
+    print(f"   Config: {action.config_path}")
+    print(f"   Change: {parameter_hint(action)}")
+    print(f"   {config_value_preview(action, max_items=max(1, max_values))}")
+    print(f"   {action_controls_text(action)}")
+    control_credit = action_control_credit_text(action)
+    if control_credit:
+        print(f"   {control_credit}")
+    print(f"   {prediction_prompt(action)}")
+    print(f"   {action_start_steps_text(action)}")
+    for command_line in _scenario_primary_command_lines(action):
+        print(f"   {command_line}")
 
 
 def _print_scenario_card(index: int, action: MenuAction, *, details: bool = False) -> None:

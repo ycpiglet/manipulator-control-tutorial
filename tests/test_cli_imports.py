@@ -40,6 +40,7 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("python -m mclab doctor", printed)
         self.assertIn("python -m mclab menu", printed)
         self.assertIn("python -m mclab coverage", printed)
+        self.assertIn("python -m mclab params wall", printed)
         self.assertIn("python -m mclab next --preview", printed)
         self.assertIn("python -m mclab next", printed)
         self.assertIn("Available labs:", printed)
@@ -88,6 +89,7 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("python -m mclab doctor", help_text)
         self.assertIn("python -m mclab menu", help_text)
         self.assertIn("python -m mclab coverage", help_text)
+        self.assertIn("python -m mclab params wall", help_text)
         self.assertIn("python -m mclab next --preview", help_text)
         self.assertIn("python -m mclab next", help_text)
 
@@ -105,6 +107,7 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("MCLab Doctor", printed)
         self.assertIn("[OK] Python", printed)
         self.assertIn("Next learner steps:", printed)
+        self.assertIn("python -m mclab params wall --filter hands-on", printed)
         self.assertIn("python -m mclab next --preview", printed)
 
     def test_cli_generates_outputs_index(self) -> None:
@@ -403,6 +406,42 @@ class CliImportTests(unittest.TestCase):
             "--viewer --realtime --pause-at-end --plot --plots wall --open-report",
             printed,
         )
+
+    def test_cli_prints_parameter_guide_for_scenarios(self) -> None:
+        args = build_parser().parse_args(["params", "wall", "--filter", "hands-on", "--limit", "1", "--values", "6"])
+        self.assertEqual(args.command, "params")
+        self.assertEqual(args.query, ["wall"])
+        self.assertEqual(args.filter, "hands-on")
+        self.assertEqual(args.limit, 1)
+        self.assertEqual(args.values, 6)
+
+        with patch("builtins.print") as printer:
+            self.assertEqual(main(["params", "wall", "--filter", "hands-on", "--limit", "1", "--values", "6"]), 0)
+
+        printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
+        self.assertIn("Parameter guide: showing 1 of 1 match(es)", printed)
+        self.assertIn("Control surface: edit YAML for auto/comparison runs", printed)
+        self.assertIn("MuJoCo side panels stay hidden", printed)
+        self.assertIn("Lab04 Panda Manipulator - Virtual wall", printed)
+        self.assertIn("Config: configs/lab04_panda/interactive_virtual_wall.yaml", printed)
+        self.assertIn("Change: live sliders/presets: Target X/Y/Z", printed)
+        self.assertIn("virtual_wall.stiffness=260", printed)
+        self.assertIn("Counts as control:", printed)
+        self.assertIn("Prediction: Before changing", printed)
+        self.assertIn("Start steps: Predict -> Run viewer", printed)
+        self.assertIn(
+            "Command: python -m mclab run lab04 --config configs/lab04_panda/interactive_virtual_wall.yaml "
+            "--viewer --realtime --pause-at-end --plot --plots wall --open-report",
+            printed,
+        )
+
+    def test_cli_parameter_guide_handles_empty_matches(self) -> None:
+        with patch("builtins.print") as printer:
+            self.assertEqual(main(["params", "not-a-real-scenario-token"]), 0)
+
+        printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
+        self.assertIn("Parameter guide: showing 0 of 0 match(es)", printed)
+        self.assertIn("No guided scenarios matched.", printed)
 
     def test_cli_scenario_search_handles_empty_matches(self) -> None:
         with patch("builtins.print") as printer:

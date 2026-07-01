@@ -4994,6 +4994,11 @@ def _starter_commands_section() -> str:
             "python -m mclab coverage",
         ),
         (
+            "Inspect parameters",
+            "Show what a learner can change, current YAML values, controls, prediction prompt, and command.",
+            "python -m mclab params wall --filter hands-on",
+        ),
+        (
             "Preview next path step",
             "Read the next recommended step, mission, start steps, controls guide, and command without running it.",
             "python -m mclab next --preview",

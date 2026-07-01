@@ -33,6 +33,7 @@ class DoctorTests(unittest.TestCase):
         self.assertIn("[OK] Learner menu readiness", report)
         self.assertIn("Next learner steps:", report)
         self.assertIn("python -m mclab menu", report)
+        self.assertIn("python -m mclab params wall --filter hands-on", report)
         self.assertIn("python -m mclab next --preview", report)
 
     def test_doctor_reports_missing_model_assets(self) -> None:
