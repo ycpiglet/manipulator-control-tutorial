@@ -14,11 +14,17 @@ from .doctor import doctor_exit_code, format_doctor_report, run_doctor_checks
 from .learner_menu import (
     BatchMenuAction,
     MenuAction,
+    action_controls_text,
+    action_mission_text,
+    action_plan_text,
+    action_readiness,
+    action_start_steps_text,
     command_for_target,
     experience_coverage_next_command,
     experience_coverage_next_label,
     experience_coverage_status_text,
     experience_coverage_summary_text,
+    filter_menu_actions,
     learning_path_milestone_text,
     learning_path_next_command,
     learning_path_next_label,
@@ -96,6 +102,15 @@ def build_parser() -> argparse.ArgumentParser:
     review_parser.add_argument("--output-dir", default="outputs", help="Outputs root directory.")
     review_parser.add_argument("--open", action="store_true", help="Open the next pending review report.")
 
+    scenarios_parser = subparsers.add_parser(
+        "scenarios",
+        help="Search learner guided scenarios and print ready-to-run commands.",
+    )
+    scenarios_parser.add_argument("query", nargs="*", help="Search terms, for example: wall stiffness.")
+    scenarios_parser.add_argument("--filter", default="all", help="Experience filter such as hands-on, compare, wall.")
+    scenarios_parser.add_argument("--limit", type=int, default=8, help="Maximum matches to print; 0 prints all.")
+    scenarios_parser.add_argument("--details", action="store_true", help="Include readiness and full control-credit cues.")
+
     index_parser = subparsers.add_parser("index", help="Generate the outputs review index.")
     index_parser.add_argument("--output-dir", default="outputs", help="Outputs root directory.")
     index_parser.add_argument("--open", action="store_true", help="Open the generated index after completion.")
@@ -165,6 +180,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "review":
         _print_review_queue(Path(args.output_dir), open_next=args.open)
+        return 0
+
+    if args.command == "scenarios":
+        _print_scenarios(" ".join(args.query), experience_filter=args.filter, limit=args.limit, details=args.details)
         return 0
 
     if args.command == "index":
@@ -347,6 +366,37 @@ def _print_review_queue(outputs_root: Path, *, open_next: bool = False) -> None:
         print(f"Next review worksheet: {worksheet}")
     if open_next:
         _open_path(entry)
+
+
+def _print_scenarios(query: str, *, experience_filter: str = "all", limit: int = 8, details: bool = False) -> None:
+    matches = filter_menu_actions(query, experience_filter=experience_filter)
+    shown = matches if limit <= 0 else matches[: max(0, limit)]
+    query_text = query.strip() or "all"
+    print(
+        f"Scenarios: showing {len(shown)} of {len(matches)} match(es) "
+        f"for query '{query_text}' with filter '{experience_filter}'."
+    )
+    if not matches:
+        print("No guided scenarios matched. Try: intro, hands-on, wall, PID, 2DOF, singularity, or compare.")
+        return
+    if limit > 0 and len(matches) > len(shown):
+        print("Tip: use --limit 0 to print all matches.")
+    for index, action in enumerate(shown, start=1):
+        _print_scenario_card(index, action, details=details)
+
+
+def _print_scenario_card(index: int, action: MenuAction, *, details: bool = False) -> None:
+    print(f"{index}. {action.group} - {action.label}")
+    print(f"   {action_plan_text(action)}")
+    print(f"   {action_mission_text(action)}")
+    print(f"   {action_start_steps_text(action)}")
+    controls = action_controls_text(action)
+    if controls:
+        print(f"   {controls}")
+    if details:
+        readiness = action_readiness(action)
+        print(f"   Setup: {readiness.label}{f' - {readiness.detail}' if readiness.detail else ''}")
+    print(f"   Command: {command_for_target(action)}")
 
 
 def _output_artifact_lines(output_path: Path) -> list[str]:

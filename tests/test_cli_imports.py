@@ -240,6 +240,34 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("Review queue: No saved runs yet. Run a scenario first.", printed)
         self.assertIn("Next review: none", printed)
 
+    def test_cli_searches_guided_scenarios(self) -> None:
+        args = build_parser().parse_args(["scenarios", "virtual", "wall", "--filter", "wall", "--limit", "0"])
+        self.assertEqual(args.command, "scenarios")
+        self.assertEqual(args.query, ["virtual", "wall"])
+        self.assertEqual(args.filter, "wall")
+        self.assertEqual(args.limit, 0)
+
+        with patch("builtins.print") as printer:
+            self.assertEqual(main(["scenarios", "virtual", "wall", "--filter", "wall", "--limit", "0"]), 0)
+
+        printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
+        self.assertIn("Scenarios: showing", printed)
+        self.assertIn("Lab04 Panda Manipulator - Virtual wall", printed)
+        self.assertIn("Controls:", printed)
+        self.assertIn(
+            "Command: python -m mclab run lab04 --config configs/lab04_panda/interactive_virtual_wall.yaml "
+            "--viewer --realtime --pause-at-end --plot --plots wall --open-report",
+            printed,
+        )
+
+    def test_cli_scenario_search_handles_empty_matches(self) -> None:
+        with patch("builtins.print") as printer:
+            self.assertEqual(main(["scenarios", "not-a-real-scenario-token"]), 0)
+
+        printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
+        self.assertIn("Scenarios: showing 0 of 0 match(es)", printed)
+        self.assertIn("No guided scenarios matched.", printed)
+
     def test_cli_opens_batch_report_when_requested(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "batch"
