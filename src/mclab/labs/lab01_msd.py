@@ -20,6 +20,8 @@ from mclab.sim.interaction import (
     learner_snapshot,
     learner_tuned_config,
     maybe_start_interaction_panel,
+    runtime_status_specs,
+    runtime_status_values,
     tuning_presets_from_config,
 )
 from mclab.sim.logging import RunLogger
@@ -80,7 +82,8 @@ def run(
     run_guide = guide_for_config(config_path=str(config_path or ""), lab_name=lab_name)
     live_tuning = _live_tuning(config, interaction_log)
     live_status = LiveStatus(
-        [
+        runtime_status_specs()
+        + [
             StatusSpec("position", "Position [m]"),
             StatusSpec("velocity", "Velocity [m/s]"),
             StatusSpec("force", "Applied force [N]"),
@@ -153,7 +156,13 @@ def run(
                 stiffness=stiffness,
                 spring_reference=spring_reference,
             )
-            live_status.set_values(position=position, velocity=velocity, force=force, energy=total)
+            live_status.set_values(
+                **runtime_status_values(float(data.time), sim_time),
+                position=position,
+                velocity=velocity,
+                force=force,
+                energy=total,
+            )
             logger.record(
                 time=float(data.time),
                 position=position,

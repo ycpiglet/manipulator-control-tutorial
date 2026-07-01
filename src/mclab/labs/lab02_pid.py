@@ -24,6 +24,8 @@ from mclab.sim.interaction import (
     learner_snapshot,
     learner_tuned_config,
     maybe_start_interaction_panel,
+    runtime_status_specs,
+    runtime_status_values,
     tuning_presets_from_config,
 )
 from mclab.sim.logging import RunLogger
@@ -94,7 +96,8 @@ def run(
     run_guide = guide_for_config(config_path=str(config_path or ""), lab_name=lab_name)
     live_tuning = _live_tuning(config, pid_config, output_limit_value, interaction_log)
     live_status = LiveStatus(
-        [
+        runtime_status_specs()
+        + [
             StatusSpec("target", "Target [m]"),
             StatusSpec("position", "Position [m]"),
             StatusSpec("error", "Error [m]"),
@@ -176,6 +179,7 @@ def run(
 
             position, velocity, acceleration = slider_state(data, handles)
             live_status.set_values(
+                **runtime_status_values(float(data.time), sim_time),
                 target=target_position,
                 position=position,
                 error=target_position - position,

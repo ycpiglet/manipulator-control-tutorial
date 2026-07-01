@@ -46,6 +46,8 @@ from mclab.sim.interaction import (  # noqa: E402
     _recent_action_status_message,
     learner_snapshot,
     learner_tuned_config,
+    runtime_status_specs,
+    runtime_status_values,
     tuning_presets_from_config,
 )
 from mclab.config import load_config  # noqa: E402
@@ -1354,6 +1356,19 @@ class KeyForcePulseTests(unittest.TestCase):
             _live_status_observation_note(status),
             "Position [m]: 0.125; Force [N]: -3.500",
         )
+
+    def test_runtime_status_helpers_show_elapsed_and_remaining_time(self) -> None:
+        status = LiveStatus(runtime_status_specs())
+
+        status.set_values(**runtime_status_values(1.25, 3.0))
+
+        self.assertEqual(status.snapshot()["run_time"], "1.250")
+        self.assertEqual(status.snapshot()["remaining_time"], "1.750")
+        self.assertEqual(
+            _live_status_observation_note(status),
+            "Run time [s]: 1.250; Remaining [s]: 1.750",
+        )
+        self.assertEqual(runtime_status_values(4.0, 3.0)["remaining_time"], 0.0)
 
     def test_changed_tuning_observation_note_summarizes_slider_changes(self) -> None:
         tuning = LiveTuning(

@@ -140,6 +140,7 @@ Implemented and verified:
 - Activity mix and control coverage prompts only require control families that are available in the run config
 - Interactive `MCLab Interaction` changed-values summary shows slider parameters changed from run start
 - Interactive `MCLab Interaction` panel is scrollable and resizable so dense demos keep observation and live-status controls reachable
+- Interactive `MCLab Interaction` live status starts with `Run time` and `Remaining` for every lab so learners know how much observation time is left
 - Interactive `MCLab Interaction` panel and run reports show a `Viewer legend` for visible target/current/waypoint/force/singularity/wall markers
 - Interactive `MCLab Interaction` panel shows a config-based `Course step` cue so the live viewer preserves the same recommended-path context as the learner menu and CLI
 - Interactive `MCLab Interaction` panel, run reports, and worksheets show a shared `Mission` prompt so the learner sees the same evidence-focused task during launch, live tuning, and review

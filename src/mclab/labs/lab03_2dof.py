@@ -22,6 +22,8 @@ from mclab.sim.interaction import (
     learner_snapshot,
     learner_tuned_config,
     maybe_start_interaction_panel,
+    runtime_status_specs,
+    runtime_status_values,
     tuning_presets_from_config,
 )
 from mclab.sim.logging import RunLogger
@@ -139,7 +141,8 @@ def _run_slider_trajectory(
     run_guide = guide_for_config(config_path=str(config_path or ""), lab_name=lab_name)
     live_tuning = _live_tuning(config, controller_config, force_limit_value, interaction_log)
     live_status = LiveStatus(
-        [
+        runtime_status_specs()
+        + [
             StatusSpec("target", "Target [m]"),
             StatusSpec("position", "Position [m]"),
             StatusSpec("error", "Tracking error [m]"),
@@ -213,6 +216,7 @@ def _run_slider_trajectory(
 
             position, velocity, acceleration = slider_state(data, handles)
             live_status.set_values(
+                **runtime_status_values(float(data.time), sim_time),
                 target=target_position,
                 position=position,
                 error=target_position - position,
@@ -316,7 +320,8 @@ def _run_two_link_arm(
     run_guide = guide_for_config(config_path=str(config_path or ""), lab_name=lab_name)
     live_tuning = _two_link_live_tuning(config, mode, controller_config, torque_limit, target_xy_goal, interaction_log)
     live_status = LiveStatus(
-        [
+        runtime_status_specs()
+        + [
             StatusSpec("q1", "q1 [rad]"),
             StatusSpec("q2", "q2 [rad]"),
             StatusSpec("ee_x", "Hand X [m]"),
@@ -466,6 +471,7 @@ def _run_two_link_arm(
             manipulability_value = manipulability(q, geometry)
             determinant = jacobian_determinant(q, geometry)
             live_status.set_values(
+                **runtime_status_values(float(data.time), sim_time),
                 q1=q[0],
                 q2=q[1],
                 ee_x=x_ee[0],

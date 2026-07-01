@@ -21,6 +21,8 @@ from mclab.sim.interaction import (
     learner_snapshot,
     learner_tuned_config,
     maybe_start_interaction_panel,
+    runtime_status_specs,
+    runtime_status_values,
     tuning_presets_from_config,
 )
 from mclab.sim.logging import RunLogger
@@ -238,6 +240,7 @@ def run(
                 wall_force_x=wall_force[0],
             )
             live_status.set_values(
+                **runtime_status_values(float(data.time), sim_time),
                 joint_offset=button_joint_offset + tuned_joint_offset,
                 target_x_nudge=button_target_x_offset,
                 error_norm=error_norm,
@@ -363,7 +366,7 @@ def _live_status_specs(mode: str, *, cartesian_target_nudge: bool = False) -> li
         if cartesian_target_nudge
         else StatusSpec("joint_offset", "Joint target [rad]")
     )
-    specs = [
+    specs = runtime_status_specs() + [
         offset_spec,
         StatusSpec("error_norm", "Joint error norm"),
         StatusSpec("ee_x", "Hand X [m]"),

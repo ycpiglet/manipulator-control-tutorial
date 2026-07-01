@@ -386,6 +386,24 @@ class LiveStatus:
             return dict(self._values)
 
 
+def runtime_status_specs() -> list[StatusSpec]:
+    """Learner-facing run clock shown in every interactive status panel."""
+
+    return [
+        StatusSpec("run_time", "Run time [s]"),
+        StatusSpec("remaining_time", "Remaining [s]"),
+    ]
+
+
+def runtime_status_values(current_time: float, end_time: float) -> dict[str, float]:
+    current = max(0.0, float(current_time))
+    end = max(0.0, float(end_time))
+    return {
+        "run_time": current,
+        "remaining_time": max(0.0, end - current),
+    }
+
+
 def learner_snapshot(
     *,
     tuning: LiveTuning | None = None,
