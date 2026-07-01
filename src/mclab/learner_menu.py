@@ -119,6 +119,15 @@ class ExperienceFilter:
     description: str
 
 
+@dataclass(frozen=True)
+class ExperienceCoverageItem:
+    key: str
+    label: str
+    tags: tuple[str, ...]
+    next_step: str
+    requires_control: bool = False
+
+
 BatchMenuStateItem = tuple[BatchMenuAction, Any, Any, Any]
 BatchMenuStateItemWithWorksheet = tuple[BatchMenuAction, Any, Any, Any, Any]
 BatchMenuStateItemWithFolder = tuple[BatchMenuAction, Any, Any, Any, Any, Any]
@@ -168,6 +177,52 @@ ACTION_BADGE_LABELS = {
     "tuning": "Tuning",
     "dynamics": "Dynamics",
 }
+
+EXPERIENCE_COVERAGE_ITEMS: tuple[ExperienceCoverageItem, ...] = (
+    ExperienceCoverageItem(
+        "intro",
+        "Intro basics",
+        ("intro",),
+        "Run Lab01 Mass-Spring-Damper - Auto demo.",
+    ),
+    ExperienceCoverageItem(
+        "hands-on",
+        "Hands-on controls",
+        ("hands-on",),
+        "Run an interactive viewer and use one button, slider, or preset.",
+        requires_control=True,
+    ),
+    ExperienceCoverageItem(
+        "compare",
+        "Comparison batch",
+        ("batch",),
+        "Run any Comparison Batches card, then open the worksheet Prediction Check.",
+    ),
+    ExperienceCoverageItem(
+        "2dof",
+        "2DOF/Jacobian",
+        ("2dof",),
+        "Run Lab03 2DOF task-space or condition-aware DLS.",
+    ),
+    ExperienceCoverageItem(
+        "singularity",
+        "Singularity/DLS",
+        ("singularity", "dls"),
+        "Run Lab03 2DOF condition-aware DLS.",
+    ),
+    ExperienceCoverageItem(
+        "panda",
+        "Panda manipulator",
+        ("panda",),
+        "Run Lab04 Cartesian reach or Virtual wall.",
+    ),
+    ExperienceCoverageItem(
+        "wall",
+        "Virtual wall",
+        ("wall",),
+        "Run Lab04 Virtual wall and try Close wall -> Back away -> Re-enter wall.",
+    ),
+)
 
 
 def experience_filter_description(key: str) -> str:
@@ -1348,6 +1403,66 @@ def next_learning_path_step(
     return None
 
 
+def experience_coverage_summary_text(outputs_root: Path | None = None) -> str:
+    covered = _experience_coverage_keys(outputs_root)
+    done_items = [item for item in EXPERIENCE_COVERAGE_ITEMS if item.key in covered]
+    missing_items = [item for item in EXPERIENCE_COVERAGE_ITEMS if item.key not in covered]
+    done_labels = ", ".join(item.label for item in done_items) if done_items else "none yet"
+    missing_labels = ", ".join(item.label for item in missing_items[:4]) if missing_items else "none"
+    next_text = (
+        missing_items[0].next_step
+        if missing_items
+        else "All core experience types have saved evidence; replay or compare one topic more deeply."
+    )
+    return (
+        f"Experience coverage: {len(done_items)}/{len(EXPERIENCE_COVERAGE_ITEMS)} types tried. "
+        f"Done: {done_labels}. Missing: {missing_labels}. Next: {next_text}"
+    )
+
+
+def _experience_coverage_keys(outputs_root: Path | None = None) -> set[str]:
+    root = outputs_root if outputs_root is not None else PROJECT_ROOT / "outputs"
+    if not root.exists():
+        return set()
+    covered: set[str] = set()
+    for output_path, summary, _modified in _iter_output_summaries(root):
+        tags, has_control = _experience_tags_for_output(output_path, summary)
+        for item in EXPERIENCE_COVERAGE_ITEMS:
+            if item.key in covered:
+                continue
+            if not any(tag in tags for tag in item.tags):
+                continue
+            if item.requires_control and not has_control:
+                continue
+            covered.add(item.key)
+    return covered
+
+
+def _experience_tags_for_output(output_path: Path, summary: dict[str, Any]) -> tuple[set[str], bool]:
+    action = _action_for_summary(summary)
+    tags: set[str] = set()
+    if isinstance(action, MenuAction):
+        tags.update(action_tags(action))
+    elif isinstance(action, BatchMenuAction):
+        tags.update(_batch_experience_tags(action))
+    has_control = _learner_control_event_count(_read_json_list(output_path / "interaction_events.json")) > 0
+    return tags, has_control
+
+
+def _batch_experience_tags(action: BatchMenuAction) -> set[str]:
+    tags = {"batch", "compare"}
+    name = action.batch_name.lower()
+    if "lab03" in name:
+        tags.update({"2dof", "singularity", "dls"})
+    if "lab04" in name:
+        tags.update({"panda"})
+    if "wall" in name:
+        tags.add("wall")
+    if action.batch_name == ALL_BATCH_NAME:
+        tags.update({"intro", "2dof", "singularity", "dls", "panda", "wall"})
+    return tags
+
+
 def learning_path_summary_text(
     progress_items: tuple[LearningPathProgressItem, ...] | None = None,
 ) -> str:
@@ -2334,6 +2449,16 @@ def _summary_matches_action(summary: dict[str, Any], action: MenuAction | BatchM
     return config_name == Path(action.config_path).stem and action.lab_name in lab_name
 
 
+def _action_for_summary(summary: dict[str, Any]) -> MenuAction | BatchMenuAction | None:
+    for action in BATCH_ACTIONS:
+        if _summary_matches_action(summary, action):
+            return action
+    for action in MENU_ACTIONS:
+        if _summary_matches_action(summary, action):
+            return action
+    return None
+
+
 def _normalize_config_path(value: str) -> str:
     return value.replace("\\", "/").lstrip("./").lower()
 
@@ -2768,13 +2893,7 @@ def latest_output_action(path: Path | None) -> MenuAction | BatchMenuAction | No
     summary = _read_json(path / "summary.json")
     if not summary:
         return None
-    for action in BATCH_ACTIONS:
-        if _summary_matches_action(summary, action):
-            return action
-    for action in MENU_ACTIONS:
-        if _summary_matches_action(summary, action):
-            return action
-    return None
+    return _action_for_summary(summary)
 
 
 def latest_output_menu_action(path: Path | None) -> MenuAction | None:
@@ -3806,6 +3925,7 @@ def main() -> int:
     ] = []
     post_run_refresh_ref: dict[str, Callable[[], None]] = {}
     review_queue = tk.StringVar(value=review_queue_summary_text())
+    experience_coverage = tk.StringVar(value=experience_coverage_summary_text())
 
     def update_learning_path_button_text(step: LearningPathStep, button: Any, key: str) -> None:
         labels = learning_path_artifact_button_labels(step)
@@ -3841,6 +3961,7 @@ def main() -> int:
         path_summary.set(learning_path_summary_text(items))
         path_milestones.set(learning_path_milestone_text(items))
         review_queue.set(review_queue_summary_text())
+        experience_coverage.set(experience_coverage_summary_text())
         next_button = next_button_ref["button"]
         if next_button is not None:
             next_button.state(["disabled"] if next_step is None else ["!disabled"])
@@ -3926,6 +4047,10 @@ def main() -> int:
         padx=(8, 0),
         pady=(2, 0),
     )
+
+    coverage_frame = ttk.LabelFrame(outer, text="Experience coverage", padding=10)
+    coverage_frame.pack(fill="x", pady=(0, 10))
+    ttk.Label(coverage_frame, textvariable=experience_coverage, wraplength=900, justify="left").pack(anchor="w")
 
     path_frame = ttk.LabelFrame(outer, text="Recommended learning path", padding=10)
     path_frame.pack(fill="x", pady=(0, 10))

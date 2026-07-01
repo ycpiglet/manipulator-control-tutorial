@@ -185,6 +185,7 @@ Implemented and verified:
 - Learner menu scenario cards show latest preset comparison evidence after interactive runs with quick presets
 - Learner menu Explore filters for Intro, Build, Deep dive, hands-on, comparison, PID, 2DOF, Panda, wall, and singularity scenario discovery
 - Learner menu scenario cards show readable `Badges` for hands-on, compare, PID, 2DOF, Panda, wall, singularity, trajectory, Cartesian, tuning, and dynamics modes
+- Learner menu includes an `Experience coverage` summary that tracks Intro basics, Hands-on controls, Comparison batch, 2DOF/Jacobian, Singularity/DLS, Panda manipulator, and Virtual wall saved evidence and suggests the next missing experience
 - Learner menu and CLI setup diagnostics through `python -m mclab doctor`
 - Learner menu scenario readiness checks that disable run buttons when config or model assets are missing
 - Learner menu scenario history labels and per-scenario latest-report buttons

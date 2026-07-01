@@ -72,6 +72,7 @@ from mclab.learner_menu import (  # noqa: E402
     build_tuned_replay_args,
     config_value_preview,
     experience_filter_description,
+    experience_coverage_summary_text,
     filter_menu_actions,
     learning_path_artifact_button_labels,
     learning_path_completion_text,
@@ -300,6 +301,96 @@ class LearnerMenuTests(unittest.TestCase):
         _set_status_after_doctor(status, 1, "Summary: 4 OK, 0 WARN, 1 FAIL")
         self.assertIn("Setup check found issues", status.value)
         self.assertIn("python -m mclab doctor", status.value)
+
+    def test_experience_coverage_names_missing_experience_types(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            text = experience_coverage_summary_text(outputs)
+
+            interactive = outputs / "run_lab01_interactive"
+            interactive.mkdir()
+            (interactive / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab01_msd",
+                        "config_path": "configs/lab01_msd/interactive_pull.yaml",
+                        "config_name": "interactive_pull",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            no_control_text = experience_coverage_summary_text(outputs)
+
+            (interactive / "interaction_events.json").write_text(
+                json.dumps([{"kind": "slider", "name": "damping", "label": "Damping", "value": 4.0}]),
+                encoding="utf-8",
+            )
+            with_control_text = experience_coverage_summary_text(outputs)
+
+        self.assertIn("Experience coverage: 0/7 types tried", text)
+        self.assertIn("Next: Run Lab01 Mass-Spring-Damper - Auto demo.", text)
+        self.assertIn("Experience coverage: 1/7 types tried", no_control_text)
+        self.assertIn("Done: Intro basics.", no_control_text)
+        self.assertIn("Missing: Hands-on controls", no_control_text)
+        self.assertIn("Next: Run an interactive viewer and use one button, slider, or preset.", no_control_text)
+        self.assertIn("Experience coverage: 2/7 types tried", with_control_text)
+        self.assertIn("Done: Intro basics, Hands-on controls.", with_control_text)
+
+    def test_experience_coverage_reaches_all_core_experiences(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            lab01 = outputs / "run_lab01_interactive"
+            lab01.mkdir()
+            (lab01 / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab01_msd",
+                        "config_path": "configs/lab01_msd/interactive_pull.yaml",
+                        "config_name": "interactive_pull",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (lab01 / "interaction_events.json").write_text(
+                json.dumps([{"kind": "button", "name": "push", "label": "Push Right"}]),
+                encoding="utf-8",
+            )
+            lab03 = outputs / "run_lab03_dls"
+            lab03.mkdir()
+            (lab03 / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab03",
+                        "config_path": "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
+                        "config_name": "condition_aware_dls_2dof",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            lab04 = outputs / "run_lab04_wall"
+            lab04.mkdir()
+            (lab04 / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab04",
+                        "config_path": "configs/lab04_panda/interactive_virtual_wall.yaml",
+                        "config_name": "interactive_virtual_wall",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            batch = outputs / "batch_lab02"
+            batch.mkdir()
+            (batch / "summary.json").write_text(
+                json.dumps({"lab_name": "batch", "config_name": "lab02_pid_compare", "batch_name": "lab02_pid_compare"}),
+                encoding="utf-8",
+            )
+
+            text = experience_coverage_summary_text(outputs)
+
+        self.assertIn("Experience coverage: 7/7 types tried", text)
+        self.assertIn("Missing: none", text)
+        self.assertIn("All core experience types have saved evidence", text)
 
     def test_recommended_learning_path_targets_real_actions(self) -> None:
         self.assertGreaterEqual(len(LEARNING_PATH), 12)
