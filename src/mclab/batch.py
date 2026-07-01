@@ -684,6 +684,7 @@ def _batch_rows(output: Path, scenarios: tuple[BatchScenario, ...]) -> list[dict
                 "config": _load_config_for_report(run_dir, scenario.config_path),
                 "run_dir": run_dir.name,
                 "report": f"{run_dir.name}/report.html" if (run_dir / "report.html").exists() else run_dir.name,
+                "folder": f"{run_dir.name}/",
                 "worksheet": f"{run_dir.name}/worksheet.md" if (run_dir / "worksheet.md").exists() else "",
                 "summary": summary,
                 "plots": _available_plot_paths(run_dir),
@@ -732,6 +733,7 @@ def _batch_worksheet_scenario_lines(rows: list[dict[str, Any]], metric_keys: lis
                 "",
                 f"- Config: {row['config_path']}",
                 f"- Report: {row['report']}",
+                f"- Folder: {row.get('folder') or row.get('run_dir') or 'n/a'}",
                 f"- Worksheet: {row.get('worksheet') or 'n/a'}",
             ]
         )
@@ -1144,7 +1146,7 @@ def _render_all_batches_report(completed_batches: list[dict[str, Any]]) -> str:
     cards = "\n".join(_all_batch_card(row) for row in completed_batches)
     rows = "\n".join(_all_batch_row(row) for row in completed_batches)
     if not rows:
-        rows = '<tr><td colspan="4">No batch runs were found.</td></tr>'
+        rows = '<tr><td colspan="5">No batch runs were found.</td></tr>'
 
     return f"""<!doctype html>
 <html lang="en">
@@ -1245,7 +1247,7 @@ def _render_all_batches_report(completed_batches: list[dict[str, Any]]) -> str:
       <h2>Summary Table</h2>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Batch</th><th>Scenarios</th><th>Report</th><th>Worksheet</th></tr></thead>
+          <thead><tr><th>Batch</th><th>Scenarios</th><th>Report</th><th>Worksheet</th><th>Folder</th></tr></thead>
           <tbody>{rows}</tbody>
         </table>
       </div>
@@ -1259,10 +1261,16 @@ def _render_all_batches_report(completed_batches: list[dict[str, Any]]) -> str:
 def _all_batch_card(row: dict[str, Any]) -> str:
     guide = _all_batch_guide(row)
     worksheet = _all_batch_worksheet(row)
+    folder = _all_batch_folder(row)
     worksheet_link = (
         f'<a href="{escape(worksheet)}">Open worksheet</a>'
         if worksheet
         else '<span class="muted">No worksheet</span>'
+    )
+    folder_link = (
+        f'<a href="{escape(folder)}">Open folder</a>'
+        if folder
+        else '<span class="muted">No folder</span>'
     )
     focus = f'<p>{escape(guide.focus)}</p>' if guide is not None else ""
     question = (
@@ -1277,17 +1285,23 @@ def _all_batch_card(row: dict[str, Any]) -> str:
         f'<p>{escape(str(row["scenario_count"]))} scenarios</p>'
         f"{focus}"
         f"{question}"
-        f'<p class="muted"><a href="{escape(str(row["report"]))}">Open report</a> | {worksheet_link}</p>'
+        f'<p class="muted"><a href="{escape(str(row["report"]))}">Open report</a> | {worksheet_link} | {folder_link}</p>'
         "</article>"
     )
 
 
 def _all_batch_row(row: dict[str, Any]) -> str:
     worksheet = _all_batch_worksheet(row)
+    folder = _all_batch_folder(row)
     worksheet_cell = (
         f'<a href="{escape(worksheet)}">{escape(worksheet)}</a>'
         if worksheet
         else '<span class="muted">No worksheet</span>'
+    )
+    folder_cell = (
+        f'<a href="{escape(folder)}">{escape(folder)}</a>'
+        if folder
+        else '<span class="muted">No folder</span>'
     )
     return (
         "<tr>"
@@ -1295,8 +1309,16 @@ def _all_batch_row(row: dict[str, Any]) -> str:
         f"<td>{escape(str(row['scenario_count']))}</td>"
         f'<td><a href="{escape(str(row["report"]))}">{escape(str(row["report"]))}</a></td>'
         f"<td>{worksheet_cell}</td>"
+        f"<td>{folder_cell}</td>"
         "</tr>"
     )
+
+
+def _all_batch_folder(row: dict[str, Any]) -> str:
+    report = str(row.get("report") or "")
+    if "/" in report:
+        return f"{report.rsplit('/', 1)[0]}/"
+    return "./" if report else ""
 
 
 def _all_batch_worksheet(row: dict[str, Any]) -> str:
@@ -1440,11 +1462,18 @@ def _scenario_quick_links(row: dict[str, Any]) -> str:
         if worksheet
         else '<span class="muted">No worksheet link saved</span>'
     )
+    folder = str(row.get("folder") or row.get("run_dir") or "")
+    folder_link = (
+        f'<a href="{escape(folder)}">Open folder</a>'
+        if folder
+        else '<span class="muted">No folder link saved</span>'
+    )
     return (
         '<div class="quick-links">'
         f'<a href="{escape(str(row["report"]))}">Open report</a>'
         f"{plot_link}"
         f"{worksheet_link}"
+        f"{folder_link}"
         "</div>"
     )
 
