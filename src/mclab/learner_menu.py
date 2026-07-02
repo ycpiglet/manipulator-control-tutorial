@@ -2174,16 +2174,40 @@ def review_queue_action_lines(outputs_root: Path | None = None, *, limit: int = 
         _review_queue_items(root),
         buckets=("outcome", "preset", "observation", "prediction", "note", "control"),
     )
-    lines: list[str] = []
-    for output_path, status, _bucket, _modified in items[:limit]:
+    groups: list[dict[str, Any]] = []
+    group_indexes: dict[tuple[str, str], int] = {}
+    for output_path, status, _bucket, _modified in items:
         action = action_for_output(output_path)
-        if action is None:
-            lines.append(f"{output_path.name} - {status}")
+        command = default_command_for_target(action) if action is not None else ""
+        target_label = f"{action.group} - {action.label}" if action is not None else ""
+        key = (status, command or output_path.name)
+        if key in group_indexes:
+            groups[group_indexes[key]]["duplicates"] += 1
             continue
-        lines.append(
-            f"{output_path.name} - {status}; {action.group} - {action.label} -> "
-            f"{default_command_for_target(action)}"
+        group_indexes[key] = len(groups)
+        groups.append(
+            {
+                "output_path": output_path,
+                "status": status,
+                "target_label": target_label,
+                "command": command,
+                "duplicates": 0,
+            }
         )
+
+    lines: list[str] = []
+    for group in groups[:limit]:
+        output_path = group["output_path"]
+        status = str(group["status"])
+        duplicate_count = int(group["duplicates"])
+        run_word = "run" if duplicate_count == 1 else "runs"
+        suffix = f" (+{duplicate_count} older saved {run_word})" if duplicate_count else ""
+        target_label = str(group["target_label"])
+        command = str(group["command"])
+        if not target_label:
+            lines.append(f"{output_path.name} - {status}{suffix}")
+            continue
+        lines.append(f"{output_path.name} - {status}{suffix}; {target_label} -> {command}")
     return lines
 
 

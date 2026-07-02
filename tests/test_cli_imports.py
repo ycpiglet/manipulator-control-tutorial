@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from contextlib import redirect_stdout
 from io import StringIO
+import os
 import sys
 import tempfile
 import unittest
@@ -523,6 +524,52 @@ class CliImportTests(unittest.TestCase):
         )
         self.assertIn("Course path next: 1. Feel 1D physics", printed)
         self.assertIn(f"Review index command: python -m mclab index --output-dir {outputs} --open", printed)
+
+    def test_cli_review_groups_duplicate_repair_commands(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            wall_new = outputs / "new_lab04_wall"
+            wall_old = outputs / "old_lab04_wall"
+            arm_run = outputs / "lab03_interactive"
+            for path in (wall_new, wall_old, arm_run):
+                path.mkdir(parents=True)
+                (path / "report.html").write_text("<html></html>", encoding="utf-8")
+            wall_summary = (
+                '{"lab_name": "lab04_panda", "config_path": '
+                '"configs/lab04_panda/interactive_virtual_wall.yaml", '
+                '"config_name": "interactive_virtual_wall"}'
+            )
+            arm_summary = (
+                '{"lab_name": "lab03_2dof", "config_path": '
+                '"configs/lab03_2dof/interactive_2dof.yaml", '
+                '"config_name": "interactive_2dof"}'
+            )
+            (wall_new / "summary.json").write_text(wall_summary, encoding="utf-8")
+            (wall_old / "summary.json").write_text(wall_summary, encoding="utf-8")
+            (arm_run / "summary.json").write_text(arm_summary, encoding="utf-8")
+            for timestamp, path in ((3000, wall_new), (2000, wall_old), (1000, arm_run)):
+                os.utime(path / "report.html", (timestamp, timestamp))
+                os.utime(path / "summary.json", (timestamp, timestamp))
+
+            with patch("builtins.print") as printer:
+                self.assertEqual(main(["review", "--output-dir", str(outputs), "--limit", "3"]), 0)
+
+        printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
+        self.assertIn("Learner-action review list (top 2):", printed)
+        self.assertIn(
+            "1. new_lab04_wall - Needs required preset Close wall (+1 older saved run); "
+            "Lab04 Panda Manipulator - Virtual wall -> "
+            "python -m mclab run lab04 --config configs/lab04_panda/interactive_virtual_wall.yaml "
+            "--viewer --realtime --pause-at-end --plot --plots wall --open-report",
+            printed,
+        )
+        self.assertNotIn("old_lab04_wall - Needs required preset Close wall;", printed)
+        self.assertIn(
+            "2. lab03_interactive - Needs observation; Lab03 2DOF Arm and Trajectories - 2DOF interactive -> "
+            "python -m mclab run lab03 --config configs/lab03_2dof/interactive_2dof.yaml "
+            "--viewer --realtime --pause-at-end --plot --plots task_disturbance --open-report",
+            printed,
+        )
 
     def test_cli_review_handles_empty_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
