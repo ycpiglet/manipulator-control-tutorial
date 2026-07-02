@@ -1760,7 +1760,7 @@ class LoggingTests(unittest.TestCase):
             )
             self.assertIn("No markers", html)
             self.assertIn("No learner controls", html)
-            self.assertIn("Next cue: Try preset Lightly damped, then mark a comparison observation.", html)
+            self.assertIn("Next cue: Try preset Lightly damped, then mark a prediction-backed observation.", html)
             self.assertIn(
                 "Observation next step: use experiment buttons (Pull/Push buttons and A/D keys), "
                 "live sliders, or Quick presets, "
@@ -1932,7 +1932,7 @@ class LoggingTests(unittest.TestCase):
 
             html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
             self.assertIn("2/12 steps complete. Next: 3. Close the loop", html)
-            self.assertIn("Next cue: Try preset Lightly damped, then mark a comparison observation.", html)
+            self.assertIn("Next cue: Try preset Lightly damped, then mark a prediction-backed observation.", html)
             self.assertIn("Done (1 observation, 1 prediction, 1 outcome, 1 note, 3 controls)", html)
             self.assertIn("1 observation, 1 prediction, 1 outcome, 1 note", html)
             self.assertIn(
@@ -2011,7 +2011,7 @@ class LoggingTests(unittest.TestCase):
                 html,
             )
             self.assertIn("Try required preset Back away before moving on.", html)
-            self.assertIn("Next cue: Try required preset Back away, then mark a comparison observation.", html)
+            self.assertIn("Next cue: Try required preset Back away, then mark a prediction-backed observation.", html)
             self.assertIn(
                 "Mission evidence: Needs required preset Back away; "
                 "Try required preset Back away, watch live status, then mark one observation.",
@@ -2338,6 +2338,10 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("python -m mclab coverage --details", html)
             self.assertIn("Inspect parameters", html)
             self.assertIn("python -m mclab params wall --filter hands-on", html)
+            self.assertIn("Find hands-on scenarios", html)
+            self.assertIn("python -m mclab scenarios wall --filter hands-on --details", html)
+            self.assertIn("Find comparison batches", html)
+            self.assertIn("python -m mclab batches wall --details", html)
             self.assertIn("Preview next path step", html)
             self.assertIn("python -m mclab next --preview", html)
             self.assertIn("<strong>Plan:</strong> Intro; headless plot run; 5s simulated", html)

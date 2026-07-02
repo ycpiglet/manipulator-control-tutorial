@@ -2750,7 +2750,7 @@ class LearnerMenuTests(unittest.TestCase):
             )
             self.assertEqual(
                 action_next_cue_text(lab04_wall, outputs),
-                "Next cue: Try required preset Close wall, then mark a comparison observation.",
+                "Next cue: Try required preset Close wall, then mark a prediction-backed observation.",
             )
 
             (run_path / "interaction_events.json").write_text(
@@ -2854,7 +2854,7 @@ class LearnerMenuTests(unittest.TestCase):
 
             self.assertEqual(
                 action_next_cue_text(lab02_interactive, outputs),
-                "Next cue: Try preset Damped PD, then mark a comparison observation.",
+                "Next cue: Try preset Damped PD, then mark a prediction-backed observation.",
             )
             self.assertIn("Next cue: Try preset Damped PD", lesson_text(lab02_interactive, outputs))
 

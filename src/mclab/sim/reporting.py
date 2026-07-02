@@ -5065,6 +5065,16 @@ def _starter_commands_section() -> str:
             "python -m mclab params wall --filter hands-on",
         ),
         (
+            "Find hands-on scenarios",
+            "Search guided scenario cards by topic, mission, controls, viewer markers, and ready commands.",
+            "python -m mclab scenarios wall --filter hands-on --details",
+        ),
+        (
+            "Find comparison batches",
+            "Search batch cards with missions, prediction checks, worksheets, plots, and viewer handoff cues.",
+            "python -m mclab batches wall --details",
+        ),
+        (
             "Preview next path step",
             "Read the next recommended step, mission, start steps, controls guide, and command without running it.",
             "python -m mclab next --preview",
@@ -6382,12 +6392,12 @@ def _hands_on_run_next_cue(
     if len(labels) >= 2:
         required_labels, _required_tried, next_required = _required_preset_progress(config, events)
         if required_labels and next_required:
-            return f"Next cue: Try required preset {next_required}, then mark a comparison observation."
+            return f"Next cue: Try required preset {next_required}, then mark a prediction-backed observation."
         tried = _distinct_preset_labels(events, labels)
         if not required_labels and markers <= 0 and len(tried) < 2:
             next_label = next((label for label in labels if label not in tried), "")
             preset_text = f"preset {next_label}" if next_label else "one more preset"
-            return f"Next cue: Try {preset_text}, then mark a comparison observation."
+            return f"Next cue: Try {preset_text}, then mark a prediction-backed observation."
 
     control_phrase = _report_learner_control_phrase(config, summary)
     if markers <= 0:
@@ -6405,7 +6415,7 @@ def _hands_on_run_next_cue(
         if len(tried) < 2:
             next_label = next((label for label in labels if label not in tried), "")
             preset_text = f"preset {next_label}" if next_label else "one more preset"
-            return f"Next cue: Try {preset_text}, then mark a comparison observation."
+            return f"Next cue: Try {preset_text}, then mark a prediction-backed observation."
     if isinstance(run.get("replay"), dict):
         return "Next cue: Replay the tuned config, then run Compare for the broader tradeoff."
     if not has_plots:

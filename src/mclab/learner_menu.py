@@ -2358,11 +2358,11 @@ def action_next_cue_text(action: MenuAction, outputs_root: Path | None = None) -
                 _preset_event_labels(latest, labels),
             )
             if next_required:
-                return f"Next cue: Try required preset {next_required}, then mark a comparison observation."
+                return f"Next cue: Try required preset {next_required}, then mark a prediction-backed observation."
         elif len(tried) < 2:
             next_label = next((label for label in labels if label not in tried), "")
             preset_text = f"preset {next_label}" if next_label else "one more preset"
-            return f"Next cue: Try {preset_text}, then mark a comparison observation."
+            return f"Next cue: Try {preset_text}, then mark a prediction-backed observation."
 
     hands_on = "hands-on" in action_tags(action)
     if hands_on and markers == 0:
