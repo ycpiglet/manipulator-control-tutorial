@@ -2467,6 +2467,12 @@ def action_next_cue_text(action: MenuAction, outputs_root: Path | None = None) -
 
     latest = action_latest_output(action, outputs_root)
     if latest is None:
+        if "hands-on" in action_tags(action):
+            control_step = _hands_on_start_control_step(action)
+            return (
+                f"Next cue: Predict, run the viewer, {control_step}, "
+                "then Mark observation with a prediction and note."
+            )
         return "Next cue: Run this scenario, then review the saved plot and worksheet."
 
     markers, predictions, notes, outcomes = _observation_evidence_counts(latest)

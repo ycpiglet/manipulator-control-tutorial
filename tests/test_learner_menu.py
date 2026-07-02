@@ -2903,7 +2903,8 @@ class LearnerMenuTests(unittest.TestCase):
             outputs = Path(tmp)
             self.assertEqual(
                 action_next_cue_text(lab02_interactive, outputs),
-                "Next cue: Run this scenario, then review the saved plot and worksheet.",
+                "Next cue: Predict, run the viewer, try presets Gentle P -> Damped PD -> Aggressive PID, "
+                "then Mark observation with a prediction and note.",
             )
 
             joint_run_path = outputs / "run_lab04_joint_interactive"

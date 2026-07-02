@@ -207,6 +207,7 @@ Implemented and verified:
 - Learner menu cards and outputs index activity summaries include a compact latest `Activity path`
 - Activity mix next-step and worksheet coverage checklist text names configured button types such as Pull/Push, Shoulder/Elbow pulse, and target nudge when available
 - Learner menu scenario cards include a `Next cue` that points learners toward the next best action: run, try another preset, mark observation, review outcome, replay, or compare
+- Learner menu and CLI `next --preview` show first-run hands-on `Next cue` text that names the prediction, viewer launch, first configured preset/button/slider action, and `Mark observation` step before any saved run exists
 - Learner menu and outputs index preset-related `Next cue` text asks learners to mark a `prediction-backed observation` instead of calling viewer evidence a comparison observation
 - Learner menu `Next cue` distinguishes missing learner control from already-used learner control so learners mark evidence instead of repeating controls unnecessarily
 - Learner menu `Next cue` and hands-on `Start steps` name configured button labels such as Pull/Push, Joint Target, Target X, and Shoulder/Elbow pulse when learner-control evidence is missing

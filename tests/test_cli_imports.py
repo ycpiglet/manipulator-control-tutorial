@@ -370,6 +370,38 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("Next cue: Run this scenario, then review the saved plot and worksheet.", printed)
         self.assertNotIn("Running next step:", printed)
 
+    def test_cli_preview_names_first_hands_on_action_for_unrun_viewer_step(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp) / "outputs"
+            run_path = output_dir / "run_lab01_auto"
+            plots = run_path / "plots"
+            plots.mkdir(parents=True)
+            (run_path / "report.html").write_text("<html></html>", encoding="utf-8")
+            (run_path / "worksheet.md").write_text("# Worksheet\n", encoding="utf-8")
+            (plots / "position.png").write_bytes(b"fake-png")
+            (run_path / "summary.json").write_text(
+                '{"lab_name": "lab01_msd", "config_path": "configs/lab01_msd/default.yaml", '
+                '"config_name": "default"}',
+                encoding="utf-8",
+            )
+
+            with (
+                patch("mclab.cli._open_path") as opener,
+                patch("builtins.print") as printer,
+            ):
+                self.assertEqual(main(["next", "--output-dir", str(output_dir), "--preview"]), 0)
+
+        opener.assert_not_called()
+        printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
+        self.assertIn("Next step: 2. Disturb and tune", printed)
+        self.assertIn("Next guide: Lab01 Mass-Spring-Damper - Interactive", printed)
+        self.assertIn(
+            "Next cue: Predict, run the viewer, try presets Lightly damped -> Heavy damping -> Stiff spring, "
+            "then Mark observation with a prediction and note.",
+            printed,
+        )
+        self.assertNotIn("Running next step:", printed)
+
     def test_cli_runs_next_learning_path_step(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output_dir = Path(tmp) / "outputs"
