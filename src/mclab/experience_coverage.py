@@ -110,7 +110,7 @@ def experience_coverage_summary_text(records: Iterable[ExperienceCoverageRecord]
     next_text = (
         missing_items[0].next_step
         if missing_items
-        else "All core experience types have saved evidence; replay or compare one topic more deeply."
+        else "All core experience types have saved evidence; continue the learning path or replay one topic more deeply."
     )
     return (
         f"Experience coverage: {len(done_items)}/{len(EXPERIENCE_COVERAGE_ITEMS)} types tried. "

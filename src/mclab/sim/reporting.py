@@ -5080,7 +5080,8 @@ def _experience_coverage_section(runs: list[dict[str, Any]]) -> str:
     if next_item is None:
         next_block = (
             '<p class="muted">'
-            "All core experience types are represented. Replay a tuned run or open a comparison batch to go deeper."
+            "All core experience types are represented. Continue the Learning Path below if it still shows "
+            "pending evidence, or replay a tuned run or comparison batch to go deeper."
             "</p>"
         )
     else:

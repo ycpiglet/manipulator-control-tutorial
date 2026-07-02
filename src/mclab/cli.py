@@ -382,7 +382,22 @@ def _print_experience_coverage(outputs_root: Path, *, details: bool = False) -> 
             _print_next_target_guide(next_target, outputs_root, include_viewer=False)
     else:
         print("Next experience: Coverage complete")
-        print("Next command: replay one saved scenario or run a comparison batch more deeply.")
+        _print_learning_path_after_coverage_complete(outputs_root)
+
+
+def _print_learning_path_after_coverage_complete(outputs_root: Path) -> None:
+    progress_items = learning_path_progress_items(outputs_root)
+    print(learning_path_summary_text(progress_items))
+    print(learning_path_milestone_text(progress_items))
+    next_step = next_learning_path_step(progress_items)
+    if next_step is None:
+        print("Next path step: Course path complete")
+        print("Next command: open outputs/index.html or rerun a comparison batch for deeper review.")
+        return
+    target = learning_path_target(next_step)
+    print(f"Next path step: {learning_path_next_label(outputs_root)}")
+    print(f"Next command: {learning_path_next_command(outputs_root)}")
+    _print_next_target_guide(target, outputs_root, include_viewer=_target_default_opens_viewer(target))
 
 
 def _print_learning_path(outputs_root: Path, *, show_all: bool = False) -> None:

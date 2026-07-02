@@ -224,6 +224,64 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("Target X - away  A / Left / Target X + into wall  D / Right", printed)
         self.assertIn("view/evidence helpers such as Pause, Playback speed, and Use live status do not count.", printed)
 
+    def test_cli_coverage_complete_points_to_learning_path_when_path_is_pending(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp) / "outputs"
+            output_dir.mkdir()
+            lab01 = output_dir / "run_lab01_interactive"
+            lab01.mkdir()
+            (lab01 / "summary.json").write_text(
+                (
+                    '{"lab_name": "lab01_msd", '
+                    '"config_path": "configs/lab01_msd/interactive_pull.yaml", '
+                    '"config_name": "interactive_pull"}'
+                ),
+                encoding="utf-8",
+            )
+            (lab01 / "interaction_events.json").write_text(
+                '[{"kind": "button", "name": "push", "label": "Push Right"}]',
+                encoding="utf-8",
+            )
+            lab03 = output_dir / "run_lab03_dls"
+            lab03.mkdir()
+            (lab03 / "summary.json").write_text(
+                (
+                    '{"lab_name": "lab03", '
+                    '"config_path": "configs/lab03_2dof/condition_aware_dls_2dof.yaml", '
+                    '"config_name": "condition_aware_dls_2dof"}'
+                ),
+                encoding="utf-8",
+            )
+            lab04 = output_dir / "run_lab04_wall"
+            lab04.mkdir()
+            (lab04 / "summary.json").write_text(
+                (
+                    '{"lab_name": "lab04", '
+                    '"config_path": "configs/lab04_panda/interactive_virtual_wall.yaml", '
+                    '"config_name": "interactive_virtual_wall"}'
+                ),
+                encoding="utf-8",
+            )
+            batch = output_dir / "batch_lab02"
+            batch.mkdir()
+            (batch / "summary.json").write_text(
+                '{"lab_name": "batch", "config_name": "lab02_pid_compare", "batch_name": "lab02_pid_compare"}',
+                encoding="utf-8",
+            )
+
+            with patch("builtins.print") as printer:
+                self.assertEqual(main(["coverage", "--output-dir", str(output_dir)]), 0)
+
+        printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
+        self.assertIn("Experience coverage: 7/7 types tried", printed)
+        self.assertIn("continue the learning path", printed)
+        self.assertIn("Next experience: Coverage complete", printed)
+        self.assertIn("Progress:", printed)
+        self.assertIn("Next path step:", printed)
+        self.assertIn("Next command: python -m mclab", printed)
+        self.assertIn("Next guide:", printed)
+        self.assertNotIn("Next command: replay one saved scenario", printed)
+
     def test_cli_prints_learning_path_progress_and_next_command(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output_dir = Path(tmp) / "outputs"

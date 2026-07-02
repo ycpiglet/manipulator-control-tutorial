@@ -4223,7 +4223,10 @@ def main() -> int:
     def launch_next_experience_coverage_from_menu() -> None:
         target = experience_coverage_next_target()
         if target is None:
-            status.set("Experience coverage is complete. Replay or compare one topic more deeply.")
+            status.set(
+                "Experience coverage is complete. Use the Learning Path Run next button if path evidence is still "
+                "pending, or replay/compare one topic more deeply."
+            )
             return
         _launch_target_from_menu(
             target,

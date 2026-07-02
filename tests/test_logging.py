@@ -2364,3 +2364,55 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("python -m mclab batch lab01_msd_compare --open-report", html)
             self.assertIn("No run reports were found yet.", html)
             self.assertIn("No saved runs yet.", html)
+
+    def test_outputs_index_coverage_complete_points_to_learning_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            lab01 = root / "run_lab01_interactive"
+            lab01.mkdir()
+            (lab01 / "summary.json").write_text(
+                (
+                    '{"lab_name": "lab01_msd", '
+                    '"config_path": "configs/lab01_msd/interactive_pull.yaml", '
+                    '"config_name": "interactive_pull"}'
+                ),
+                encoding="utf-8",
+            )
+            (lab01 / "interaction_events.json").write_text(
+                '[{"kind": "button", "name": "push", "label": "Push Right"}]',
+                encoding="utf-8",
+            )
+            lab03 = root / "run_lab03_dls"
+            lab03.mkdir()
+            (lab03 / "summary.json").write_text(
+                (
+                    '{"lab_name": "lab03", '
+                    '"config_path": "configs/lab03_2dof/condition_aware_dls_2dof.yaml", '
+                    '"config_name": "condition_aware_dls_2dof"}'
+                ),
+                encoding="utf-8",
+            )
+            lab04 = root / "run_lab04_wall"
+            lab04.mkdir()
+            (lab04 / "summary.json").write_text(
+                (
+                    '{"lab_name": "lab04", '
+                    '"config_path": "configs/lab04_panda/interactive_virtual_wall.yaml", '
+                    '"config_name": "interactive_virtual_wall"}'
+                ),
+                encoding="utf-8",
+            )
+            batch = root / "batch_lab02"
+            batch.mkdir()
+            (batch / "summary.json").write_text(
+                '{"lab_name": "batch", "config_name": "lab02_pid_compare", "batch_name": "lab02_pid_compare"}',
+                encoding="utf-8",
+            )
+
+            html = write_outputs_index(root).read_text(encoding="utf-8")
+
+        self.assertIn("Experience coverage: 7/7 types tried", html)
+        self.assertIn("continue the learning path", html)
+        self.assertIn("All core experience types are represented.", html)
+        self.assertIn("Continue the Learning Path below if it still shows pending evidence", html)
+        self.assertIn("Learning Path", html)
