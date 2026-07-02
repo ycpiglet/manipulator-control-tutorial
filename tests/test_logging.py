@@ -2009,6 +2009,36 @@ class LoggingTests(unittest.TestCase):
                 html,
             )
 
+    def test_outputs_index_learning_path_names_first_hands_on_action_before_run(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            baseline = Path(temp_dir) / "20260627_150000_lab01_msd"
+            baseline.mkdir()
+            (baseline / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab01_msd",
+                        "config_path": "configs/lab01_msd/default.yaml",
+                        "config_name": "default",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (baseline / "report.html").write_text("<html>baseline</html>", encoding="utf-8")
+            (baseline / "worksheet.md").write_text("# Worksheet\n", encoding="utf-8")
+            (baseline / "plots").mkdir()
+            (baseline / "plots" / "position.png").write_bytes(b"fake-png")
+
+            html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
+
+        self.assertIn("Next: 2. Disturb and tune", html)
+        self.assertIn("Not run yet", html)
+        self.assertIn(
+            "<strong>Next cue:</strong> Predict, run the viewer, "
+            "try presets Lightly damped -&gt; Heavy damping -&gt; Stiff spring, "
+            "then Mark observation with a prediction and note.",
+            html,
+        )
+
     def test_outputs_index_requires_wall_required_presets(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             wall = Path(temp_dir) / "20260627_160000_lab04_wall_interactive"

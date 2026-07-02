@@ -5494,6 +5494,7 @@ def _learning_path_card(item: dict[str, Any]) -> str:
     activity_mix = _learning_path_activity_mix(run)
     mission_evidence = _learning_path_mission_evidence(run)
     challenge_evidence = _learning_path_challenge_evidence(run)
+    next_cue = _learning_path_next_cue(item)
     plan_cue = _learning_path_plan_cue(step)
     start_steps = _learning_path_start_steps(step)
     control_credit = _learning_path_control_credit(step)
@@ -5584,6 +5585,7 @@ def _learning_path_card(item: dict[str, Any]) -> str:
         f"{parameter_cues}"
         f"{learning_cue}"
         f"{status}"
+        f"{next_cue}"
         f"{latest_evidence}"
         f"{observation_flow}"
         f"{observation_next_step}"
@@ -5595,6 +5597,37 @@ def _learning_path_card(item: dict[str, Any]) -> str:
         f"{command_block}"
         "</article>"
     )
+
+
+def _learning_path_next_cue(item: dict[str, Any]) -> str:
+    step: IndexPathStep = item["step"]
+    run = item["run"]
+    cue = ""
+    if run is None and bool(item.get("evidence_required")):
+        control_step = _learning_path_first_run_control_step(step)
+        cue = (
+            f"Predict, run the viewer, {control_step}, "
+            "then Mark observation with a prediction and note."
+        )
+    elif isinstance(run, dict):
+        cue = _run_next_cue_text(run).removeprefix("Next cue:").strip()
+    if not cue:
+        return ""
+    return f'<p class="muted"><strong>Next cue:</strong> {escape(cue)}</p>'
+
+
+def _learning_path_first_run_control_step(step: IndexPathStep) -> str:
+    config = _index_step_config(step)
+    required_labels = _configured_required_preset_labels(config)
+    if required_labels:
+        return f"try required presets {' -> '.join(required_labels)}"
+    preset_labels = _configured_preset_labels(config)
+    if len(preset_labels) >= 2:
+        return f"try presets {' -> '.join(preset_labels[:3])}"
+    control_step = _hands_on_control_step_for_config(config)
+    if control_step:
+        return control_step
+    return "use one button, slider, or preset"
 
 
 def _learning_path_plan_cue(step: IndexPathStep) -> str:
