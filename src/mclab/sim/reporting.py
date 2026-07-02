@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from html import escape
 from pathlib import Path
@@ -238,6 +239,8 @@ CONFIG_HIGHLIGHT_KEYS = (
     "viewer_guides.condition_warning",
     "viewer_guides.condition_threshold",
 )
+
+CONFIG_PATH_TOKEN_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z0-9_*]+)*")
 
 
 @dataclass(frozen=True)
@@ -5263,6 +5266,7 @@ def _learning_path_card(item: dict[str, Any]) -> str:
     challenge_evidence = _learning_path_challenge_evidence(run)
     start_steps = _learning_path_start_steps(step)
     control_credit = _learning_path_control_credit(step)
+    parameter_cues = _learning_path_parameter_cues(step)
     learning_cue = _learning_path_learning_cue(step)
     completion_text = _learning_path_completion_text(step)
     command_label = "Run this step" if run is None else "Repeat this step"
@@ -5341,6 +5345,7 @@ def _learning_path_card(item: dict[str, Any]) -> str:
         f'<p class="muted"><strong>Done when:</strong> {escape(completion_text.removeprefix("Done when:").strip())}</p>'
         f"{start_steps}"
         f"{control_credit}"
+        f"{parameter_cues}"
         f"{learning_cue}"
         f"{status}"
         f"{latest_evidence}"
@@ -5505,6 +5510,174 @@ def _learning_path_control_credit(step: IndexPathStep) -> str:
     if not text:
         return ""
     return f'<p class="muted"><strong>Counts as control:</strong> {escape(text)}</p>'
+
+
+def _learning_path_parameter_cues(step: IndexPathStep) -> str:
+    if step.batch_name or not step.config_path:
+        return ""
+    guide = guide_for_config(config_path=step.config_path)
+    if guide is None:
+        return ""
+
+    lines: list[str] = []
+    change = str(guide.change or "").strip()
+    if change:
+        lines.append(f'<p class="muted"><strong>Change:</strong> {escape(change)}</p>')
+    value_preview = _config_value_preview_from_hint(_index_step_config(step), change, max_items=6)
+    if value_preview:
+        value_text = value_preview.removeprefix("Values:").strip()
+        lines.append(f'<p class="muted"><strong>Values:</strong> {escape(value_text)}</p>')
+    return "".join(lines)
+
+
+def _config_value_preview_from_hint(config: dict[str, Any], hint: str, *, max_items: int) -> str:
+    if not config:
+        return "Values: Config unavailable"
+
+    entries: list[str] = []
+    for path in _hint_config_paths(hint):
+        for resolved_path, value in _resolve_preview_values(config, path):
+            entries.append(f"{resolved_path}={_format_config_preview_value(value)}")
+            if len(entries) >= max_items:
+                return f"Values: {'; '.join(entries)}"
+    if not entries:
+        return "Values: Open Config to inspect YAML"
+    return f"Values: {'; '.join(entries)}"
+
+
+def _hint_config_paths(hint: str) -> tuple[str, ...]:
+    paths: list[str] = []
+    for raw_part in str(hint).replace(";", ",").split(","):
+        candidate = raw_part.strip()
+        if ":" in candidate:
+            candidate = candidate.split(":", 1)[1].strip()
+        candidate = candidate.strip("` ")
+        if _is_hint_config_path(candidate):
+            paths.append(candidate)
+            continue
+        for token in CONFIG_PATH_TOKEN_RE.findall(candidate):
+            if _is_hint_config_token(token):
+                paths.append(token)
+    return tuple(dict.fromkeys(paths))
+
+
+def _is_hint_config_path(candidate: str) -> bool:
+    if not candidate or " " in candidate or "/" in candidate:
+        return False
+    if candidate == "config" or candidate.startswith("live"):
+        return False
+    allowed = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.*"
+    return all(character in allowed for character in candidate)
+
+
+def _is_hint_config_token(token: str) -> bool:
+    if token in {"YAML", "Config"} or token.lower() in {"with", "same", "live", "presets", "buttons"}:
+        return False
+    if "." in token or "_" in token:
+        return _is_hint_config_path(token)
+    return False
+
+
+def _resolve_preview_values(config: dict[str, Any], path: str) -> tuple[tuple[str, Any], ...]:
+    if path.endswith(".*"):
+        parent_path = path.removesuffix(".*")
+        parent = _get_config_value(config, parent_path)
+        if not isinstance(parent, dict):
+            return ()
+        return tuple(
+            (f"{parent_path}.{key}", value)
+            for key, value in parent.items()
+            if _is_config_preview_value(value)
+        )
+
+    value = _get_config_value(config, path)
+    if path.endswith("waypoints") and _is_preview_waypoint_list(value):
+        return ((path, value),)
+    if path.endswith("schedule") and _is_preview_schedule_list(value):
+        return ((path, value),)
+    if not _is_config_preview_value(value):
+        return ()
+    return ((path, value),)
+
+
+def _get_config_value(config: dict[str, Any], path: str) -> Any:
+    current: Any = config
+    for part in path.split("."):
+        if isinstance(current, dict):
+            if part not in current:
+                return None
+            current = current[part]
+            continue
+        if isinstance(current, list) and part.isdigit():
+            index = int(part)
+            if not 0 <= index < len(current):
+                return None
+            current = current[index]
+            continue
+        return None
+    return current
+
+
+def _is_config_preview_value(value: Any) -> bool:
+    if isinstance(value, bool | int | float | str):
+        return True
+    if isinstance(value, list | tuple):
+        return all(isinstance(item, bool | int | float | str) for item in value)
+    return False
+
+
+def _is_preview_waypoint_list(value: Any) -> bool:
+    return isinstance(value, list) and bool(value) and all(isinstance(item, dict) for item in value)
+
+
+def _is_preview_schedule_list(value: Any) -> bool:
+    return (
+        isinstance(value, list)
+        and bool(value)
+        and all(isinstance(item, dict) and ("value" in item or "speed" in item) for item in value)
+    )
+
+
+def _format_config_preview_value(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, int | float):
+        return f"{value:g}"
+    if isinstance(value, str):
+        return value if len(value) <= 32 else f"{value[:29]}..."
+    if _is_preview_schedule_list(value):
+        return _format_schedule_preview(value)
+    if _is_preview_waypoint_list(value):
+        return _format_waypoint_preview(value)
+    if isinstance(value, list | tuple):
+        shown = [_format_config_preview_value(item) for item in value[:4]]
+        suffix = ", ..." if len(value) > 4 else ""
+        return f"[{', '.join(shown)}{suffix}]"
+    return str(value)
+
+
+def _format_waypoint_preview(waypoints: list[dict[str, Any]]) -> str:
+    first = _waypoint_position_preview(waypoints[0])
+    last = _waypoint_position_preview(waypoints[-1])
+    return f"{len(waypoints)} waypoints: {first} -> {last}"
+
+
+def _format_schedule_preview(points: list[dict[str, Any]]) -> str:
+    def point_value(point: dict[str, Any]) -> str:
+        return _format_config_preview_value(point.get("value", point.get("speed", "?")))
+
+    return f"{len(points)} points: {point_value(points[0])} -> {point_value(points[-1])}"
+
+
+def _waypoint_position_preview(waypoint: dict[str, Any]) -> str:
+    raw_position = waypoint.get("position", waypoint.get("xy"))
+    if raw_position is None:
+        raw_position = [waypoint.get("x", "?"), waypoint.get("y", "?")]
+    if isinstance(raw_position, list | tuple):
+        shown = [_format_config_preview_value(item) for item in raw_position[:3]]
+        suffix = ", ..." if len(raw_position) > 3 else ""
+        return f"[{', '.join(shown)}{suffix}]"
+    return _format_config_preview_value(raw_position)
 
 
 def _index_step_required_preset_labels(step: IndexPathStep) -> list[str]:

@@ -2290,6 +2290,10 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("python -m mclab params wall --filter hands-on", html)
             self.assertIn("Preview next path step", html)
             self.assertIn("python -m mclab next --preview", html)
+            self.assertIn("<strong>Change:</strong> mass, damping, stiffness, initial_position", html)
+            self.assertIn("Values:</strong> mass=1; damping=2; stiffness=50; initial_position=0.1", html)
+            self.assertIn("tracking_controller.max_task_speed_schedule=4 points", html)
+            self.assertIn("virtual_wall.stiffness=260", html)
             self.assertIn(
                 "python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot --plots essential --open-report",
                 html,
