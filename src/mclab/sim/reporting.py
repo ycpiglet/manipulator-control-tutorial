@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import shlex
 from dataclasses import dataclass
 from html import escape
 from pathlib import Path
@@ -12,6 +13,7 @@ from typing import Any
 from mclab.config import load_config
 from mclab.course_progress import course_milestone_label_for_step_index, course_milestone_summary
 from mclab.experience_coverage import (
+    ExperienceCoverageItem,
     ExperienceCoverageRecord,
     ExperienceCoverageStatus,
     experience_coverage_item_evidence,
@@ -5091,6 +5093,7 @@ def _experience_coverage_section(runs: list[dict[str, Any]]) -> str:
             f'<p class="muted"><strong>Mode:</strong> {escape(experience_coverage_item_mode(next_item))}</p>'
             f'<p class="muted"><strong>Next action:</strong> {escape(next_item.next_step)}</p>'
             f'<p class="muted"><strong>Evidence:</strong> {escape(experience_coverage_item_evidence(next_item))}</p>'
+            f"{_experience_coverage_control_cues(next_item)}"
             f"{command_block}"
             "</article>"
         )
@@ -5125,9 +5128,45 @@ def _experience_coverage_status_card(status: ExperienceCoverageStatus) -> str:
         f'<p class="muted"><strong>Mode:</strong> {escape(experience_coverage_item_mode(status.item))}</p>'
         f'<p class="muted"><strong>Focus:</strong> {escape(status.item.next_step)}</p>'
         f'<p class="muted"><strong>Evidence:</strong> {escape(experience_coverage_item_evidence(status.item))}</p>'
+        f"{_experience_coverage_control_cues(status.item)}"
         f"{command_block}"
         "</article>"
     )
+
+
+def _experience_coverage_control_cues(item: ExperienceCoverageItem) -> str:
+    if " batch " in f" {item.command} ":
+        return (
+            '<p class="muted"><strong>Controls:</strong> '
+            "comparison batch; inspect plots and worksheet, then use Viewer Handoff for hands-on rerun."
+            "</p>"
+        )
+    config = _experience_coverage_item_config(item)
+    controls = _coverage_control_surface_sentence(config)
+    if not controls:
+        return ""
+    credit = _control_credit_text_for_config(config)
+    credit_block = (
+        f'<p class="muted"><strong>Counts as control:</strong> {escape(credit)}</p>' if credit else ""
+    )
+    return f'<p class="muted"><strong>Controls:</strong> {escape(controls)}</p>{credit_block}'
+
+
+def _coverage_control_surface_sentence(config: dict[str, Any]) -> str:
+    controls = _control_surface_items(config)
+    values = [str(value) for label, value in controls if label != "Counts as control"]
+    return "; ".join(dict.fromkeys(values))
+
+
+def _experience_coverage_item_config(item: ExperienceCoverageItem) -> dict[str, Any]:
+    try:
+        tokens = shlex.split(item.command)
+    except ValueError:
+        return {}
+    for index, token in enumerate(tokens):
+        if token == "--config" and index + 1 < len(tokens):
+            return _safe_load_config(tokens[index + 1])
+    return {}
 
 
 def _experience_coverage_records_for_index(runs: list[dict[str, Any]]) -> list[ExperienceCoverageRecord]:

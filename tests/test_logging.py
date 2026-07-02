@@ -2315,6 +2315,16 @@ class LoggingTests(unittest.TestCase):
                 "<strong>Evidence:</strong> A batch comparison report and worksheet with a Prediction Check table.",
                 html,
             )
+            self.assertIn("MCLab Interaction window; Pull/Push buttons and A/D keys", html)
+            self.assertIn(
+                "<strong>Counts as control:</strong> experiment buttons (Pull/Push buttons and A/D keys), "
+                "live sliders, Quick presets",
+                html,
+            )
+            self.assertIn(
+                "comparison batch; inspect plots and worksheet, then use Viewer Handoff for hands-on rerun.",
+                html,
+            )
             self.assertIn("<strong>Intro basics</strong>", html)
             self.assertIn('<span class="status">Next</span>', html)
             self.assertIn("<strong>Virtual wall</strong>", html)
