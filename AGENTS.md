@@ -130,7 +130,7 @@ Implemented and verified:
 - Outputs index includes `Starter Commands` for setup checking, opening the learner menu, checking coverage, comparing all coverage details, inspecting editable parameters, previewing the next path step, generating first headless artifacts, launching the first hands-on viewer demo, and running the first comparison batch
 - Outputs index includes the shared `Experience Coverage` summary plus Done/Next/Missing cards with mode, focus, evidence, controls, learner-control credit, and CLI commands for all core experience types so browser-based review shows the same core experience evidence and next missing experience as the learner menu
 - Outputs index points completed Experience Coverage back to the Learning Path section when course-path evidence may still be pending
-- Outputs index mission review queue prioritizes required-preset gaps before generic observation gaps and names the next required preset in the run-table observation next step
+- Outputs index mission review queue prioritizes required-preset gaps before generic observation gaps and shows next review, repair command, course-path next step/command, and the next required preset in the run-table observation next step
 - Outputs index batch `Next cue` text and direct `Viewer Handoff` chip point completed comparison batches from the worksheet Prediction Check to the recommended viewer rerun section
 - Interactive `MCLab Interaction` quick presets, purpose/value previews, and per-slider step buttons for representative damping, PID, 2DOF reach, Panda reach, and virtual wall parameter sets
 - Lab03 2DOF interactive viewer demos include Shoulder/Elbow pulse buttons for live joint-disturbance recovery observations

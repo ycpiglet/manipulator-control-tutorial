@@ -6036,12 +6036,19 @@ def _mission_review_queue_card(runs: list[dict[str, Any]]) -> str:
     pending = len(runs) - ready
     next_review = _mission_review_next_run(runs)
     next_review_text = "No pending mission evidence."
+    repair_command_block = ""
     if next_review is not None:
         status = _mission_review_status(next_review)
         next_review_text = (
             f'<a href="{escape(str(next_review["report"]))}">{escape(str(next_review["name"]))}</a>'
             f" - {escape(status)}"
         )
+        repair_command = _run_repeat_command(next_review)
+        if repair_command:
+            repair_command_block = (
+                '<p class="muted"><strong>Repair command:</strong></p>'
+                f'<pre class="path-command">{escape(repair_command)}</pre>'
+            )
 
     return (
         '<div class="progress-card">'
@@ -6057,7 +6064,28 @@ def _mission_review_queue_card(runs: list[dict[str, Any]]) -> str:
         f"artifact: {counts.get('artifact', 0)}"
         "</p>"
         f'<p class="muted">Next review: {next_review_text}</p>'
+        f"{repair_command_block}"
+        f"{_mission_review_course_path_block(runs)}"
         "</div>"
+    )
+
+
+def _mission_review_course_path_block(runs: list[dict[str, Any]]) -> str:
+    path_items = [_learning_path_item(step, runs) for step in INDEX_LEARNING_PATH]
+    next_item = next((item for item in path_items if not item["completed"]), None)
+    if next_item is None:
+        return (
+            '<p class="muted"><strong>Course path next:</strong> Course path complete</p>'
+            '<p class="muted"><strong>Course path command:</strong> open outputs/index.html or rerun a comparison batch '
+            "for deeper review.</p>"
+        )
+    step: IndexPathStep = next_item["step"]
+    command = _learning_path_command(step)
+    command_block = f'<pre class="path-command">{escape(command)}</pre>' if command else ""
+    return (
+        f'<p class="muted"><strong>Course path next:</strong> {escape(step.title)}</p>'
+        f'<p class="muted"><strong>Course path command:</strong></p>'
+        f"{command_block}"
     )
 
 

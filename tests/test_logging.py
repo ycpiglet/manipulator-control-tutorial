@@ -2436,6 +2436,18 @@ class LoggingTests(unittest.TestCase):
 
         self.assertIn("required preset: 1", html)
         self.assertIn("run_lab04_wall</a> - Needs required preset Close wall", html)
+        self.assertIn("<strong>Repair command:</strong>", html)
+        self.assertIn(
+            "python -m mclab run lab04 --config configs/lab04_panda/interactive_virtual_wall.yaml "
+            "--viewer --realtime --pause-at-end --plot --open-report",
+            html,
+        )
+        self.assertIn("<strong>Course path next:</strong> 1. Feel 1D physics", html)
+        self.assertIn(
+            "python -m mclab run lab01 --config configs/lab01_msd/default.yaml "
+            "--headless --plot --plots essential --open-report",
+            html,
+        )
         self.assertIn("Needs required preset Close wall; Try required preset Close wall", html)
         self.assertIn(
             "Observation next step: try required preset Close wall, "
