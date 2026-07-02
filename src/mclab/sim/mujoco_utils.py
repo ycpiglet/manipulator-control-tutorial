@@ -43,13 +43,49 @@ def maybe_launch_viewer(
         from mujoco import viewer as mujoco_viewer  # type: ignore
     except Exception as exc:  # pragma: no cover - depends on local GUI support.
         raise RuntimeError("MuJoCo viewer could not be launched in this environment.") from exc
-    return mujoco_viewer.launch_passive(
+    viewer_handle = mujoco_viewer.launch_passive(
         model,
         data,
         key_callback=key_callback,
         show_left_ui=False,
         show_right_ui=False,
     )
+    hide_viewer_side_panels(viewer_handle)
+    return viewer_handle
+
+
+def hide_viewer_side_panels(viewer_handle: Any | None) -> None:
+    """Keep MuJoCo's built-in side panels out of learner-facing demos."""
+
+    sim = _viewer_sim(viewer_handle)
+    if sim is None:
+        return
+    for attr in ("ui0_enable", "ui1_enable"):
+        if hasattr(sim, attr):
+            try:
+                setattr(sim, attr, False)
+            except Exception:
+                pass
+
+
+def _viewer_sim(viewer_handle: Any | None) -> Any | None:
+    if viewer_handle is None:
+        return None
+
+    get_sim = getattr(viewer_handle, "_get_sim", None)
+    if callable(get_sim):
+        try:
+            return get_sim()
+        except Exception:
+            return None
+
+    sim_ref = getattr(viewer_handle, "_sim", None)
+    if callable(sim_ref):
+        try:
+            return sim_ref()
+        except Exception:
+            return None
+    return None
 
 
 def viewer_clock() -> float:
@@ -67,7 +103,9 @@ def sync_viewer(
 ) -> None:
     if viewer_handle is None:
         return
+    hide_viewer_side_panels(viewer_handle)
     viewer_handle.sync()
+    hide_viewer_side_panels(viewer_handle)
     if realtime and wall_start is not None:
         speed = max(0.05, float(speed_scale))
         target_wall_time = wall_start + max(0.0, float(data.time) - sim_start) / speed
@@ -83,7 +121,9 @@ def realtime_wall_start(data_time: float, sim_start: float, speed_scale: float =
 
 def sync_paused_viewer(viewer_handle: Any | None, *, interval: float = 1.0 / 30.0) -> None:
     if viewer_handle is not None:
+        hide_viewer_side_panels(viewer_handle)
         viewer_handle.sync()
+        hide_viewer_side_panels(viewer_handle)
     sleep(max(0.0, float(interval)))
 
 
@@ -110,7 +150,9 @@ def pause_viewer_at_end(viewer_handle: Any | None, *, enabled: bool) -> None:
     print("Simulation complete. Close the MuJoCo viewer window to exit.")
     try:
         while viewer_is_running(viewer_handle):
+            hide_viewer_side_panels(viewer_handle)
             viewer_handle.sync()
+            hide_viewer_side_panels(viewer_handle)
             sleep(1.0 / 30.0)
     except KeyboardInterrupt:
         pass

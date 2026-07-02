@@ -12,12 +12,14 @@ sys.path.insert(0, str(ROOT / "src"))
 from mclab.sim.mujoco_utils import (  # noqa: E402
     add_viewer_box,
     add_viewer_sphere,
+    hide_viewer_side_panels,
     maybe_launch_viewer,
     realtime_wall_start,
     reset_viewer_overlays,
     sync_paused_viewer,
     sync_viewer,
 )
+from mclab.sim.runner import run_fixed_step_loop  # noqa: E402
 
 
 class ViewerUtilityTests(unittest.TestCase):
@@ -44,6 +46,58 @@ class ViewerUtilityTests(unittest.TestCase):
         sync_paused_viewer(viewer, interval=0.0)
 
         viewer.sync.assert_called_once_with()
+
+    def test_hide_viewer_side_panels_locks_private_mujoco_ui_flags(self) -> None:
+        sim = types.SimpleNamespace(ui0_enable=True, ui1_enable=True)
+        viewer = types.SimpleNamespace(_get_sim=lambda: sim)
+
+        hide_viewer_side_panels(viewer)
+
+        self.assertFalse(sim.ui0_enable)
+        self.assertFalse(sim.ui1_enable)
+
+    def test_sync_viewer_rehides_side_panels_if_viewer_reenables_them(self) -> None:
+        sim = types.SimpleNamespace(ui0_enable=True, ui1_enable=True)
+
+        def sync() -> None:
+            sim.ui0_enable = True
+            sim.ui1_enable = True
+
+        viewer = types.SimpleNamespace(_get_sim=lambda: sim, sync=Mock(side_effect=sync))
+        data = types.SimpleNamespace(time=1.0)
+
+        sync_viewer(viewer, data)
+
+        viewer.sync.assert_called_once_with()
+        self.assertFalse(sim.ui0_enable)
+        self.assertFalse(sim.ui1_enable)
+
+    def test_fixed_step_loop_rehides_side_panels_around_direct_sync(self) -> None:
+        sim = types.SimpleNamespace(ui0_enable=True, ui1_enable=True)
+
+        def sync() -> None:
+            sim.ui0_enable = True
+            sim.ui1_enable = True
+
+        def step(_model: object, data: object) -> None:
+            data.time = 0.1
+
+        mujoco = types.SimpleNamespace(mj_step=step)
+        viewer = types.SimpleNamespace(_get_sim=lambda: sim, sync=Mock(side_effect=sync))
+        data = types.SimpleNamespace(time=0.0)
+
+        run_fixed_step_loop(
+            mujoco=mujoco,
+            model=object(),
+            data=data,
+            sim_time=0.1,
+            step_callback=lambda _time: None,
+            viewer=viewer,
+        )
+
+        viewer.sync.assert_called_once_with()
+        self.assertFalse(sim.ui0_enable)
+        self.assertFalse(sim.ui1_enable)
 
     def test_sync_viewer_uses_playback_speed_for_realtime_pacing(self) -> None:
         viewer = types.SimpleNamespace(sync=Mock())

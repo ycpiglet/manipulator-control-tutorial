@@ -147,7 +147,7 @@ Windows PowerShell에서 가장 쉬운 방법:
 
 `MCLab Interaction` 창의 `Viewer legend`는 현재 데모에서 보이는 초록 목표, 작은 초록 waypoint 경로, 파란 현재 위치, 주황 힘/경고/접촉, 붉은 wall 가이드의 의미를 설명합니다.
 메뉴 카드에도 같은 내용이 `Viewer:` 줄로 표시되며, `red plane`, `orange sphere`, `green marker` 같은 검색어로 해당 시나리오를 찾을 수 있습니다.
-메뉴의 `Viewer:` 줄, 실행 중 `Viewer controls`, 실행 리포트의 `Control Surface`는 모두 MuJoCo 기본 사이드 패널이 숨겨져 있고 YAML 또는 `MCLab Interaction` 조작부를 써야 한다는 점을 다시 표시합니다.
+메뉴의 `Viewer:` 줄, 실행 중 `Viewer controls`, 실행 리포트의 `Control Surface`는 모두 MuJoCo 기본 사이드 패널이 숨겨져 있고 YAML 또는 `MCLab Interaction` 조작부를 써야 한다는 점을 다시 표시합니다. Viewer helper는 실행 중 sync마다 MuJoCo 좌우 UI 플래그를 다시 꺼서, 학습자 데모가 계속 side-panel-free 상태를 유지하도록 합니다.
 
 수업 시작 전 환경을 빠르게 확인하려면 메뉴 하단의 `Check setup`을 누르거나 다음 명령을 실행합니다. Python 패키지, config 로딩, MuJoCo model asset, learner menu 시나리오/비교 batch 준비 상태, `outputs/` 쓰기 권한을 점검합니다. 모든 항목이 준비되면 CLI는 메뉴 열기, coverage 확인, coverage details 비교, 추천 경로 preview, 다음 경로 단계 실행 명령을 출력하고, 메뉴 상태줄은 `Run next` 또는 `python -m mclab next --preview`로 이어지라고 안내합니다.
 
@@ -794,7 +794,7 @@ Without activating the virtual environment on Windows:
 .\.venv\Scripts\python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless --plot
 ```
 
-Use `--viewer --realtime` instead of `--headless` to open the MuJoCo viewer and pace motion close to wall-clock time. `--viewer` and `--headless` are mutually exclusive; using both makes the CLI stop with a usage error. `--realtime` and `--pause-at-end` are viewer-only flags, so the CLI stops if they are used without `--viewer`. Add `--pause-at-end` to keep the window open after the simulation finishes. Viewer side panels are always hidden; change experiments through YAML configs or the `MCLab Interaction` window.
+Use `--viewer --realtime` instead of `--headless` to open the MuJoCo viewer and pace motion close to wall-clock time. `--viewer` and `--headless` are mutually exclusive; using both makes the CLI stop with a usage error. `--realtime` and `--pause-at-end` are viewer-only flags, so the CLI stops if they are used without `--viewer`. Add `--pause-at-end` to keep the window open after the simulation finishes. Viewer side panels are always hidden and the viewer helper re-applies that hidden state on sync; change experiments through YAML configs or the `MCLab Interaction` window.
 
 ```bash
 python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --viewer --realtime --pause-at-end --plot
@@ -809,7 +809,7 @@ python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --headless 
 
 For Lab04 `joint_pd.yaml`, check `q_3` versus `target_q_3` in `position.png` first, then the tracking error in `error.png`. This demo controls Panda joint 4, represented by `controlled_joint_index: 3`, with a minimum-jerk target position. Before a live class demo, run `configs/lab04_panda/neutral_hold_30s.yaml` headless with `--plots stability`; the report checks maximum joint speed and joint drift for the 30-second hold.
 
-The MuJoCo viewer side panels are not the main control UI for this project. The Python loops write actuator `ctrl` values from YAML-based targets or controller outputs at every simulation step. If you change actuator values in the viewer side panel, they are overwritten during the run; after `--pause-at-end`, physics stepping has stopped, so slider edits do not move the robot. Viewer side panels are therefore always hidden. Change experiment parameters in YAML under `configs/` or use the `MCLab Interaction` window, which also shows the live status values learners need during the demo.
+The MuJoCo viewer side panels are not the main control UI for this project. The Python loops write actuator `ctrl` values from YAML-based targets or controller outputs at every simulation step. If you change actuator values in the viewer side panel, they are overwritten during the run; after `--pause-at-end`, physics stepping has stopped, so slider edits do not move the robot. Viewer side panels are therefore hidden at launch and kept hidden during viewer sync. Change experiment parameters in YAML under `configs/` or use the `MCLab Interaction` window, which also shows the live status values learners need during the demo.
 
 CLI shape:
 
