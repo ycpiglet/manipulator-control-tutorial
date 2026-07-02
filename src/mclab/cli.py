@@ -978,16 +978,31 @@ def _next_experience_artifact_lines(output_path: Path) -> list[str]:
         return []
 
     next_experience = ""
+    next_mode = ""
+    next_action = ""
+    evidence_needed = ""
     next_command = ""
     for line in text.splitlines():
         if line.startswith("- Next experience: "):
             next_experience = line.removeprefix("- Next experience: ").strip()
+        elif line.startswith("- Next mode: "):
+            next_mode = line.removeprefix("- Next mode: ").strip()
+        elif line.startswith("- Next action: "):
+            next_action = line.removeprefix("- Next action: ").strip()
+        elif line.startswith("- Evidence needed: "):
+            evidence_needed = line.removeprefix("- Evidence needed: ").strip()
         elif line.startswith("- Next command: "):
             next_command = line.removeprefix("- Next command: ").strip()
 
     lines: list[str] = []
     if next_experience:
         lines.append(f"Next experience: {next_experience}")
+    if next_mode:
+        lines.append(f"Next mode: {next_mode}")
+    if next_action:
+        lines.append(f"Next action: {next_action}")
+    if evidence_needed:
+        lines.append(f"Evidence needed: {evidence_needed}")
     if next_command:
         lines.append(f"Next command: {next_command}")
     return lines

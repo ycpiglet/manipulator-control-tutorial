@@ -919,6 +919,9 @@ class CliImportTests(unittest.TestCase):
                     "- [ ] Answer the Prediction prompt before reading the plots.\n\n"
                     "## Course Experience Coverage\n\n"
                     "- Next experience: Hands-on controls\n"
+                    "- Next mode: hands-on viewer\n"
+                    "- Next action: Run an interactive viewer and use one button, slider, or preset.\n"
+                    "- Evidence needed: At least one learner-control event plus one prediction-backed observation marker.\n"
                     "- Next command: python -m mclab run lab01 --config configs/lab01_msd/interactive_pull.yaml "
                     "--viewer --realtime --pause-at-end --plot --open-report\n"
                 ),
@@ -961,6 +964,15 @@ class CliImportTests(unittest.TestCase):
             self.assertIn("Next proof step: Review the priority plot and worksheet, then run Next or Compare.", printed)
             self.assertIn("Review checklist: Answer the Prediction prompt before reading the plots.", printed)
             self.assertIn("Next experience: Hands-on controls", printed)
+            self.assertIn("Next mode: hands-on viewer", printed)
+            self.assertIn(
+                "Next action: Run an interactive viewer and use one button, slider, or preset.",
+                printed,
+            )
+            self.assertIn(
+                "Evidence needed: At least one learner-control event plus one prediction-backed observation marker.",
+                printed,
+            )
             self.assertIn(
                 "Next command: python -m mclab run lab01 --config configs/lab01_msd/interactive_pull.yaml "
                 "--viewer --realtime --pause-at-end --plot --open-report",
