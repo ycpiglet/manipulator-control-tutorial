@@ -1036,13 +1036,21 @@ def _worksheet_course_experience_coverage_lines(output: Path) -> list[str]:
         lines.extend(
             [
                 f"- Next experience: {_markdown_inline(next_item.label)}",
+                f"- Next mode: {_markdown_inline(_experience_coverage_item_mode(next_item))}",
+                f"- Next action: {_markdown_inline(next_item.next_step)}",
+                f"- Evidence needed: {_markdown_inline(_experience_coverage_item_evidence(next_item))}",
                 f"- Next command: {_markdown_inline(next_item.command)}",
             ]
         )
     lines.append("- Coverage map:")
     for status in experience_coverage_statuses(records):
         state = "Next" if status.next_missing else "Done" if status.covered else "Missing"
-        lines.append(f"  - {_markdown_inline(status.item.label)}: {_markdown_inline(state)}")
+        lines.append(
+            f"  - {_markdown_inline(status.item.label)}: {_markdown_inline(state)}; "
+            f"mode: {_markdown_inline(_experience_coverage_item_mode(status.item))}; "
+            f"focus: {_markdown_inline(status.item.next_step)}; "
+            f"evidence: {_markdown_inline(_experience_coverage_item_evidence(status.item))}"
+        )
     lines.append("")
     return lines
 
@@ -1973,7 +1981,14 @@ def _course_experience_coverage_section(output: Path) -> str:
         )
     else:
         next_body = (
-            _action_value_list((("Next experience", next_item.label), ("Next step", next_item.next_step)))
+            _action_value_list(
+                (
+                    ("Next experience", next_item.label),
+                    ("Mode", _experience_coverage_item_mode(next_item)),
+                    ("Next action", next_item.next_step),
+                    ("Evidence", _experience_coverage_item_evidence(next_item)),
+                )
+            )
             + f"<pre>{escape(next_item.command)}</pre>"
         )
     return (
@@ -1999,7 +2014,9 @@ def _course_experience_status_card(status: ExperienceCoverageStatus) -> str:
     body = _action_value_list(
         (
             ("Status", state),
-            ("Goal", status.item.next_step),
+            ("Mode", _experience_coverage_item_mode(status.item)),
+            ("Focus", status.item.next_step),
+            ("Evidence", _experience_coverage_item_evidence(status.item)),
         )
     )
     return _action_card(status.item.label, "Core learner experience type.", body)

@@ -209,6 +209,15 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Run next experience", html)
             self.assertIn("Next experience", html)
             self.assertIn("Hands-on controls", html)
+            self.assertIn("hands-on viewer", html)
+            self.assertIn("Next action", html)
+            self.assertIn("Run an interactive viewer and use one button, slider, or preset.", html)
+            self.assertIn(
+                "At least one learner-control event plus one prediction-backed observation marker.",
+                html,
+            )
+            self.assertIn("headless plot run", html)
+            self.assertIn("A saved run report, priority plot, and worksheet for the baseline 1D plant.", html)
             self.assertIn(
                 "python -m mclab run lab01 --config configs/lab01_msd/interactive_pull.yaml "
                 "--viewer --realtime --pause-at-end --plot --plots essential --open-report",
@@ -366,13 +375,32 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("## Course Experience Coverage", worksheet)
             self.assertIn("- Summary: Experience coverage: 1/7 types tried", worksheet)
             self.assertIn("- Next experience: Hands-on controls", worksheet)
+            self.assertIn("- Next mode: hands-on viewer", worksheet)
+            self.assertIn(
+                "- Next action: Run an interactive viewer and use one button, slider, or preset.",
+                worksheet,
+            )
+            self.assertIn(
+                "- Evidence needed: At least one learner-control event plus one prediction-backed observation marker.",
+                worksheet,
+            )
             self.assertIn(
                 "- Next command: python -m mclab run lab01 --config configs/lab01_msd/interactive_pull.yaml "
                 "--viewer --realtime --pause-at-end --plot --plots essential --open-report",
                 worksheet,
             )
             self.assertIn("  - Intro basics: Done", worksheet)
+            self.assertIn(
+                "mode: headless plot run; focus: Run Lab01 Mass-Spring-Damper - Auto demo.; "
+                "evidence: A saved run report, priority plot, and worksheet for the baseline 1D plant.",
+                worksheet,
+            )
             self.assertIn("  - Hands-on controls: Next", worksheet)
+            self.assertIn(
+                "mode: hands-on viewer; focus: Run an interactive viewer and use one button, slider, or preset.; "
+                "evidence: At least one learner-control event plus one prediction-backed observation marker.",
+                worksheet,
+            )
             self.assertIn("worksheet.md", html)
             self.assertIn("Check position.", html)
             self.assertIn("config.yaml", html)
