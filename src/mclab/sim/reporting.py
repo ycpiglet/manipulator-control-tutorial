@@ -3249,8 +3249,16 @@ def _mission_evidence_items(
 
     if requires_hands_on:
         if markers <= 0:
-            status = "Needs observation"
-            next_step = "Run the demo, write a prediction, then press Mark observation."
+            if required_labels and len(required_tried) < len(required_labels):
+                status = f"Needs required preset {next_required}" if next_required else "Needs required preset"
+                next_step = (
+                    f"Try required preset {next_required}, watch live status, then mark one observation."
+                    if next_required
+                    else "Try the remaining required preset, watch live status, then mark one observation."
+                )
+            else:
+                status = "Needs observation"
+                next_step = "Run the demo, write a prediction, then press Mark observation."
         elif predictions <= 0:
             status = "Needs prediction"
             next_step = "Repeat or continue the demo and save a Mark observation with a prediction."
@@ -4721,12 +4729,7 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
         outcome_counts = _observation_outcome_counts_from_events(interaction_events)
         latest_evidence = _latest_observation_evidence_from_events(interaction_events)
         observation_flow = _observation_flow_text_from_events(interaction_events)
-        evidence_required = _summary_requires_hands_on_evidence(summary)
-        observation_next_step = _observation_next_step_text_from_events(
-            interaction_events,
-            evidence_required=evidence_required,
-            learner_control_phrase=_report_learner_control_phrase(config, summary) if evidence_required else "",
-        )
+        observation_next_step = _index_observation_next_step(summary, interaction_events, config)
         plots = _discover_run_plots(child, summary)
         worksheet = _discover_worksheet(child)
         runs.append(
@@ -4787,6 +4790,31 @@ def _index_run_config(child: Path, summary: dict[str, Any]) -> dict[str, Any]:
         return load_config(config_path)
     except (OSError, ValueError):
         return {}
+
+
+def _index_observation_next_step(
+    summary: dict[str, Any],
+    events: list[dict[str, Any]],
+    config: dict[str, Any],
+) -> str:
+    evidence_required = _summary_requires_hands_on_evidence(summary)
+    if evidence_required:
+        required_labels, required_tried, next_required = _required_preset_progress(config, events)
+        if required_labels and len(required_tried) < len(required_labels):
+            if next_required:
+                return (
+                    f"Observation next step: try required preset {next_required}, "
+                    "then mark one observation with a prediction and note."
+                )
+            return (
+                "Observation next step: try the remaining required preset, "
+                "then mark one observation with a prediction and note."
+            )
+    return _observation_next_step_text_from_events(
+        events,
+        evidence_required=evidence_required,
+        learner_control_phrase=_report_learner_control_phrase(config, summary) if evidence_required else "",
+    )
 
 
 def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
@@ -6045,7 +6073,7 @@ def _mission_review_queue_counts(runs: list[dict[str, Any]]) -> dict[str, int]:
 
 
 def _mission_review_next_run(runs: list[dict[str, Any]]) -> dict[str, Any] | None:
-    priority = ("outcome", "observation", "prediction", "preset", "note", "control", "artifact", "other")
+    priority = ("outcome", "preset", "observation", "prediction", "note", "control", "artifact", "other")
     for bucket in priority:
         for run in runs:
             if _mission_review_bucket(_mission_review_status(run)) == bucket:

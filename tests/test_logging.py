@@ -2416,3 +2416,29 @@ class LoggingTests(unittest.TestCase):
         self.assertIn("All core experience types are represented.", html)
         self.assertIn("Continue the Learning Path below if it still shows pending evidence", html)
         self.assertIn("Learning Path", html)
+
+    def test_outputs_index_review_queue_prioritizes_required_preset(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            run = root / "run_lab04_wall"
+            run.mkdir()
+            (run / "report.html").write_text("<html></html>", encoding="utf-8")
+            (run / "summary.json").write_text(
+                (
+                    '{"lab_name": "lab04_panda", '
+                    '"config_path": "configs/lab04_panda/interactive_virtual_wall.yaml", '
+                    '"config_name": "interactive_virtual_wall"}'
+                ),
+                encoding="utf-8",
+            )
+
+            html = write_outputs_index(root).read_text(encoding="utf-8")
+
+        self.assertIn("required preset: 1", html)
+        self.assertIn("run_lab04_wall</a> - Needs required preset Close wall", html)
+        self.assertIn("Needs required preset Close wall; Try required preset Close wall", html)
+        self.assertIn(
+            "Observation next step: try required preset Close wall, "
+            "then mark one observation with a prediction and note.",
+            html,
+        )

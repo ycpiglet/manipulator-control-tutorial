@@ -454,6 +454,35 @@ class CliImportTests(unittest.TestCase):
         )
         self.assertIn("Plot review: Not available until a plot is saved", printed)
 
+    def test_cli_review_names_required_preset_before_observation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            run_path = outputs / "run_lab04_wall"
+            run_path.mkdir(parents=True)
+            report = run_path / "report.html"
+            report.write_text("<html></html>", encoding="utf-8")
+            (run_path / "summary.json").write_text(
+                (
+                    '{"lab_name": "lab04_panda", "config_path": '
+                    '"configs/lab04_panda/interactive_virtual_wall.yaml", '
+                    '"config_name": "interactive_virtual_wall"}'
+                ),
+                encoding="utf-8",
+            )
+
+            with patch("builtins.print") as printer:
+                self.assertEqual(main(["review", "--output-dir", str(outputs)]), 0)
+
+        printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
+        self.assertIn("required preset: 1", printed)
+        self.assertIn("Next review: run_lab04_wall - Needs required preset Close wall.", printed)
+        self.assertIn("Next review status: Needs required preset Close wall", printed)
+        self.assertIn(
+            "Observation next step: try required preset Close wall, "
+            "then mark one observation with a prediction and note.",
+            printed,
+        )
+
     def test_cli_review_handles_empty_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp) / "outputs"

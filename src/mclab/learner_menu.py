@@ -1949,8 +1949,21 @@ def action_observation_next_step_text(
                 learner_control_phrase=_action_learner_control_phrase(action, None),
             )
         return ""
+    events = _read_json_list(latest / "interaction_events.json")
+    if evidence_required and isinstance(action, MenuAction):
+        required_total, required_tried, next_required = _required_preset_progress_for_action(action, latest)
+        if required_total and required_tried < required_total:
+            if next_required:
+                return (
+                    f"Observation next step: try required preset {next_required}, "
+                    "then mark one observation with a prediction and note."
+                )
+            return (
+                "Observation next step: try the remaining required preset, "
+                "then mark one observation with a prediction and note."
+            )
     return _observation_next_step_text_from_events(
-        _read_json_list(latest / "interaction_events.json"),
+        events,
         evidence_required=evidence_required,
         learner_control_phrase=(
             _action_learner_control_phrase(action, latest)
@@ -2160,11 +2173,13 @@ def _review_queue_status(output_path: Path, summary: dict[str, Any]) -> str:
     markers, predictions, notes, outcomes = _observation_evidence_counts(output_path)
 
     if _summary_requires_hands_on_evidence(summary):
+        required_total, required_tried, next_required = _required_preset_progress_for_summary(summary, output_path)
         if markers <= 0:
+            if required_total and required_tried < required_total:
+                return f"Needs required preset {next_required}" if next_required else "Needs required preset"
             return "Needs observation"
         if predictions <= 0:
             return "Needs prediction"
-        required_total, required_tried, next_required = _required_preset_progress_for_summary(summary, output_path)
         if required_total and required_tried < required_total:
             return f"Needs required preset {next_required}" if next_required else "Needs required preset"
         if notes <= 0:
@@ -2245,7 +2260,7 @@ def _review_queue_counts(items: list[tuple[Path, str, str, float]]) -> dict[str,
 
 
 def _next_review_queue_item(items: list[tuple[Path, str, str, float]]) -> tuple[Path, str, str, float] | None:
-    priority = ("outcome", "observation", "prediction", "preset", "note", "control", "artifact", "other")
+    priority = ("outcome", "preset", "observation", "prediction", "note", "control", "artifact", "other")
     for bucket in priority:
         for item in items:
             if item[2] == bucket:

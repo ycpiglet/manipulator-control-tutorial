@@ -2564,6 +2564,26 @@ class LearnerMenuTests(unittest.TestCase):
             )
             self.assertEqual(next_review_output(preset_only_root), preset_only)
 
+            preset_no_marker_root = outputs / "preset_no_marker_root"
+            preset_no_marker_root.mkdir()
+            preset_no_marker = preset_no_marker_root / "run_lab04_no_marker"
+            write_summary(preset_no_marker, "lab04_panda", "configs/lab04_panda/interactive_virtual_wall.yaml")
+            self.assertIn(
+                "Needs observation: 0; prediction: 0; outcome: 0; required preset: 1;",
+                review_queue_summary_text(preset_no_marker_root),
+            )
+            self.assertIn(
+                "Next review: run_lab04_no_marker - Needs required preset Close wall.",
+                review_queue_summary_text(preset_no_marker_root),
+            )
+            self.assertEqual(next_review_output(preset_no_marker_root), preset_no_marker)
+            wall_action = next(action for action in MENU_ACTIONS if action.config_path == "configs/lab04_panda/interactive_virtual_wall.yaml")
+            self.assertEqual(
+                action_observation_next_step_text(wall_action, preset_no_marker_root),
+                "Observation next step: try required preset Close wall, "
+                "then mark one observation with a prediction and note.",
+            )
+
     def test_launch_next_review_output_opens_the_pending_run_report(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)
