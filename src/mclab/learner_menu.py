@@ -18,6 +18,8 @@ from mclab.batch import ALL_BATCH_NAME, BATCH_SETS
 from mclab.config import PROJECT_ROOT, load_config
 from mclab.course_progress import course_milestone_summary
 from mclab.experience_coverage import (
+    EXPERIENCE_COVERAGE_ITEMS,
+    ExperienceCoverageItem,
     ExperienceCoverageRecord,
     experience_coverage_item_evidence,
     experience_coverage_item_mode,
@@ -1501,6 +1503,7 @@ def experience_coverage_next_evidence(outputs_root: Path | None = None) -> str:
 
 def experience_coverage_detail_lines(outputs_root: Path | None = None) -> list[str]:
     root = outputs_root if outputs_root is not None else PROJECT_ROOT / "outputs"
+    repairs = _experience_coverage_repair_lines(root)
     lines = ["Coverage details:"]
     for status in experience_coverage_statuses(_experience_coverage_records(root)):
         if status.next_missing:
@@ -1527,26 +1530,66 @@ def experience_coverage_detail_lines(outputs_root: Path | None = None) -> list[s
             lines.append(
                 "  Controls: comparison batch; inspect plots and worksheet, then use Viewer Handoff for hands-on rerun."
             )
-        repair_text = _experience_coverage_repair_text(target, root)
+        repair_text = repairs.get(status.item.key, "")
         if repair_text:
             lines.append(f"  {repair_text}")
     return lines
 
 
-def _experience_coverage_repair_text(target: MenuAction | BatchMenuAction, outputs_root: Path) -> str:
+def _experience_coverage_repair_lines(outputs_root: Path) -> dict[str, str]:
+    targets_by_key = {
+        item.key: _experience_coverage_target_for_key(item.key)
+        for item in EXPERIENCE_COVERAGE_ITEMS
+    }
     items = _prioritized_review_queue_items(
         _review_queue_items(outputs_root),
         buckets=("outcome", "preset", "observation", "prediction", "note", "control"),
     )
+    repairs: dict[str, str] = {}
     for output_path, status, _bucket, _modified in items:
         action = action_for_output(output_path)
-        if action != target:
+        if action is None:
             continue
-        return (
+        key = _experience_coverage_repair_key(action, targets_by_key)
+        if not key or key in repairs:
+            continue
+        repairs[key] = (
             f"Review repair: {status} in {output_path.name}; "
-            f"rerun {default_command_for_target(target)}"
+            f"rerun {default_command_for_target(action)}"
         )
+    return repairs
+
+
+def _experience_coverage_repair_key(
+    action: MenuAction | BatchMenuAction,
+    targets_by_key: dict[str, MenuAction | BatchMenuAction],
+) -> str:
+    for key, target in targets_by_key.items():
+        if action == target:
+            return key
+    tags = _experience_coverage_action_tags(action)
+    if not tags:
+        return ""
+    for key in ("wall", "singularity", "2dof", "panda", "compare", "intro"):
+        item = _experience_coverage_item_for_key(key)
+        if item is not None and any(tag in tags for tag in item.tags):
+            return key
+    if "hands-on" in tags:
+        return "hands-on"
     return ""
+
+
+def _experience_coverage_item_for_key(key: str) -> ExperienceCoverageItem | None:
+    for item in EXPERIENCE_COVERAGE_ITEMS:
+        if item.key == key:
+            return item
+    return None
+
+
+def _experience_coverage_action_tags(action: MenuAction | BatchMenuAction) -> set[str]:
+    if isinstance(action, BatchMenuAction):
+        return _batch_experience_tags(action)
+    return set(action_tags(action))
 
 
 def experience_coverage_next_command(outputs_root: Path | None = None) -> str:

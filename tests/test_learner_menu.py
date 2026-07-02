@@ -460,6 +460,54 @@ class LearnerMenuTests(unittest.TestCase):
             lines,
         )
 
+    def test_experience_coverage_details_assign_related_review_repairs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+
+            def write_summary(name: str, lab_name: str, config_path: str) -> None:
+                run = outputs / name
+                run.mkdir()
+                (run / "summary.json").write_text(
+                    json.dumps(
+                        {
+                            "lab_name": lab_name,
+                            "config_path": config_path,
+                            "config_name": Path(config_path).stem,
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+                (run / "report.html").write_text("<html></html>", encoding="utf-8")
+
+            write_summary("run_lab04_wall", "lab04_panda", "configs/lab04_panda/interactive_virtual_wall.yaml")
+            write_summary(
+                "run_lab04_cartesian",
+                "lab04_panda",
+                "configs/lab04_panda/interactive_cartesian_reach.yaml",
+            )
+            write_summary("run_lab03_interactive", "lab03_2dof", "configs/lab03_2dof/interactive_2dof.yaml")
+
+            lines = experience_coverage_detail_lines(outputs)
+
+        self.assertIn(
+            "  Review repair: Needs observation in run_lab04_cartesian; "
+            "rerun python -m mclab run lab04 --config configs/lab04_panda/interactive_cartesian_reach.yaml "
+            "--viewer --realtime --pause-at-end --plot --plots cartesian_reach --open-report",
+            lines,
+        )
+        self.assertIn(
+            "  Review repair: Needs observation in run_lab03_interactive; "
+            "rerun python -m mclab run lab03 --config configs/lab03_2dof/interactive_2dof.yaml "
+            "--viewer --realtime --pause-at-end --plot --plots task_disturbance --open-report",
+            lines,
+        )
+        self.assertIn(
+            "  Review repair: Needs required preset Close wall in run_lab04_wall; "
+            "rerun python -m mclab run lab04 --config configs/lab04_panda/interactive_virtual_wall.yaml "
+            "--viewer --realtime --pause-at-end --plot --plots wall --open-report",
+            lines,
+        )
+
     def test_recommended_learning_path_targets_real_actions(self) -> None:
         self.assertGreaterEqual(len(LEARNING_PATH), 12)
         self.assertEqual(LEARNING_PATH[0].title, "1. Feel 1D physics")
