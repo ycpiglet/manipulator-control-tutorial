@@ -453,6 +453,12 @@ class CliImportTests(unittest.TestCase):
             printed,
         )
         self.assertIn("Plot review: Not available until a plot is saved", printed)
+        self.assertIn("Course path next: 1. Feel 1D physics", printed)
+        self.assertIn(
+            "Course path command: python -m mclab run lab01 --config configs/lab01_msd/default.yaml "
+            "--headless --plot --plots essential --open-report",
+            printed,
+        )
 
     def test_cli_review_names_required_preset_before_observation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -482,6 +488,7 @@ class CliImportTests(unittest.TestCase):
             "then mark one observation with a prediction and note.",
             printed,
         )
+        self.assertIn("Course path next: 1. Feel 1D physics", printed)
 
     def test_cli_review_handles_empty_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -493,6 +500,12 @@ class CliImportTests(unittest.TestCase):
         printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
         self.assertIn("Review queue: No saved runs yet. Run a scenario first.", printed)
         self.assertIn("Next review: none", printed)
+        self.assertIn("Course path next: 1. Feel 1D physics", printed)
+        self.assertIn(
+            "Course path command: python -m mclab run lab01 --config configs/lab01_msd/default.yaml "
+            "--headless --plot --plots essential --open-report",
+            printed,
+        )
 
     def test_cli_searches_guided_scenarios(self) -> None:
         args = build_parser().parse_args(["scenarios", "virtual", "wall", "--filter", "wall", "--limit", "0"])

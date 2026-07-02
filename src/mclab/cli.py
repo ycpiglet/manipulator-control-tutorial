@@ -543,6 +543,7 @@ def _print_review_queue(outputs_root: Path, *, open_next: bool = False) -> None:
     next_output = next_review_output(outputs_root)
     if next_output is None:
         print("Next review: none")
+        _print_review_path_context(outputs_root)
         return
 
     print(f"Next review folder: {next_output}")
@@ -562,8 +563,20 @@ def _print_review_queue(outputs_root: Path, *, open_next: bool = False) -> None:
         if observation_next:
             print(observation_next)
         print(action_plot_review_text(action, outputs_root))
+    _print_review_path_context(outputs_root)
     if open_next:
         _open_path(entry)
+
+
+def _print_review_path_context(outputs_root: Path) -> None:
+    progress_items = learning_path_progress_items(outputs_root)
+    next_step = next_learning_path_step(progress_items)
+    if next_step is None:
+        print("Course path next: Course path complete")
+        print("Course path command: open outputs/index.html or rerun a comparison batch for deeper review.")
+        return
+    print(f"Course path next: {learning_path_next_label(outputs_root)}")
+    print(f"Course path command: {learning_path_next_command(outputs_root)}")
 
 
 def _print_scenarios(query: str, *, experience_filter: str = "all", limit: int = 8, details: bool = False) -> None:
