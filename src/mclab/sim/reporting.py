@@ -295,7 +295,7 @@ INDEX_LEARNING_PATH: tuple[IndexPathStep, ...] = (
         "7. Handle singularity",
         "Condition-aware DLS near poor Jacobian conditioning.",
         "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
-        plots="dls",
+        plots="dls_disturbance",
     ),
     IndexPathStep(
         "8. Compare DLS retarget",
@@ -3506,7 +3506,16 @@ def _run_completion_text(summary: dict[str, Any]) -> str:
 
 def _summary_requires_hands_on_evidence(summary: dict[str, Any]) -> bool:
     config_text = " ".join(str(summary.get(name) or "") for name in ("config_path", "config_name")).lower()
-    return "interactive" in config_text
+    if "interactive" in config_text:
+        return True
+
+    config_path = str(summary.get("config_path") or "").strip()
+    if not config_path:
+        return False
+    interaction = _config_for_path(config_path).get("interaction")
+    if not isinstance(interaction, dict):
+        return False
+    return bool(interaction.get("panel") or interaction.get("live_tuning"))
 
 
 def _observation_evidence_counts_from_events(events: list[dict[str, Any]]) -> tuple[int, int, int, int]:
@@ -6213,12 +6222,63 @@ def _run_repeat_command(run: dict[str, Any]) -> str:
     lab_name = _cli_lab_name(str(summary.get("lab_name") or run.get("lab_name") or config_path))
     if not config_path or not lab_name:
         return ""
+    plot_args = _plot_selection_args_for_config(config_path)
     if _summary_requires_hands_on_evidence(summary):
         return (
             f"python -m mclab run {lab_name} --config {config_path} "
-            "--viewer --realtime --pause-at-end --plot --open-report"
+            f"--viewer --realtime --pause-at-end --plot{plot_args} --open-report"
         )
-    return f"python -m mclab run {lab_name} --config {config_path} --headless --plot --open-report"
+    return f"python -m mclab run {lab_name} --config {config_path} --headless --plot{plot_args} --open-report"
+
+
+def _plot_selection_args_for_config(config_path: str) -> str:
+    selection = _plot_selection_for_config(config_path)
+    return f" --plots {selection}" if selection else ""
+
+
+def _plot_selection_for_config(config_path: str) -> str:
+    normalized = _normalize_path(config_path)
+    config = _config_for_path(config_path)
+    config_selection = str(config.get("plots") or "").strip() if isinstance(config, dict) else ""
+    if config_selection:
+        return config_selection
+
+    for step in INDEX_LEARNING_PATH:
+        if step.config_path and _normalize_path(step.config_path) == normalized:
+            return step.plots
+
+    for suggestions in NEXT_RUN_SUGGESTIONS.values():
+        for suggestion in suggestions:
+            if _normalize_path(suggestion.config_path) == normalized:
+                return suggestion.plots
+
+    return _inferred_plot_selection(normalized, config)
+
+
+def _config_for_path(config_path: str) -> dict[str, Any]:
+    try:
+        config = load_config(config_path)
+    except Exception:
+        return {}
+    return config if isinstance(config, dict) else {}
+
+
+def _inferred_plot_selection(normalized_config_path: str, config: dict[str, Any]) -> str:
+    mode = str(config.get("mode") or "").strip().lower()
+    context = f"{normalized_config_path} {mode}"
+    if "interactive_virtual_wall" in context:
+        return "wall"
+    if "wall" in context or "impedance_wall" in context or "virtual_wall" in context:
+        return "wall_compare"
+    if "interactive_cartesian_reach" in context or "cartesian" in context or "ee_reach" in context:
+        return "cartesian_reach"
+    if "neutral_hold_30s" in context:
+        return "stability"
+    if "dls_singularity" in context or "condition_aware_dls" in context:
+        return "dls_disturbance"
+    if "task_space" in context:
+        return "task"
+    return "essential"
 
 
 def _summary_batch_command_name(summary: dict[str, Any]) -> str:

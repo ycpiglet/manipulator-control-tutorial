@@ -169,7 +169,7 @@ python -m mclab doctor
 
 CLI discovery 명령은 결과가 있을 때도 다음 검색 예시를 함께 보여줍니다. `scenarios`는 hands-on wall, singularity, prediction/live-target 예시를 안내하고, `params`는 wall/PID/DLS 파라미터 검색 예시를 안내하며, `batches`는 wall, 2DOF, all batch 예시를 안내합니다. Scenario 카드와 learning path의 `Command`는 필요한 것만 실행하는 기본 경로입니다. Hands-on 단계는 side-panel-free viewer를 열고, 자동/비교 단계는 headless로 plot/report/worksheet를 만든 뒤 필요할 때만 `Viewer rerun` 명령으로 live 확인을 합니다.
 
-`python -m mclab review`의 `Next review`는 저장된 실행 중 먼저 보완할 증거를 뜻하고, `Repair command`는 그 증거를 고치기 위해 다시 열 명령을 뜻하며, `Course path next`는 추천 학습 경로에서 다음에 실행할 단계를 뜻합니다. 복습할 때는 `Next review`와 `Repair command`를, 수업을 계속 진행할 때는 `Course path command`를 사용합니다.
+`python -m mclab review`의 `Next review`는 저장된 실행 중 먼저 보완할 증거를 뜻하고, `Repair command`는 그 증거를 고치기 위해 다시 열 명령을 뜻하며, `Course path next`는 추천 학습 경로에서 다음에 실행할 단계를 뜻합니다. 복습할 때는 `Next review`와 `Repair command`를, 수업을 계속 진행할 때는 `Course path command`를 사용합니다. `outputs/index.html`의 `Repair command`와 `Repeat command`도 YAML 또는 학습 경로의 plot preset을 보존하므로, wall/DLS/Cartesian 복습에서 핵심 그래프가 빠지지 않습니다.
 
 | Step | Menu button | What it builds |
 |---|---|---|
@@ -584,7 +584,7 @@ Each step reads the saved runs under `outputs/` and shows `Done`, `Needs observa
 
 CLI discovery commands now print example searches even when matches are found. `scenarios` suggests hands-on wall, singularity, and prediction/live-target searches, `params` suggests wall/PID/DLS parameter searches, and `batches` suggests wall, 2DOF, and all-batch searches. A scenario card or learning-path `Command` is the minimal default path: hands-on steps open the side-panel-free viewer, while auto/comparison steps run headless to generate plots, reports, and worksheets; use `Viewer rerun` only when live inspection is useful.
 
-In `python -m mclab review`, `Next review` means the saved run whose evidence should be repaired first, `Repair command` is the rerun command for fixing that evidence, and `Course path next` means the next recommended learning-path step to run. Use `Next review` plus `Repair command` for cleanup and `Course path command` when continuing the course.
+In `python -m mclab review`, `Next review` means the saved run whose evidence should be repaired first, `Repair command` is the rerun command for fixing that evidence, and `Course path next` means the next recommended learning-path step to run. Use `Next review` plus `Repair command` for cleanup and `Course path command` when continuing the course. The `Repair command` and `Repeat command` snippets in `outputs/index.html` preserve YAML or learning-path plot presets, so wall, DLS, and Cartesian review runs keep their priority graphs.
 
 | Step | Menu button | What it builds |
 |---|---|---|

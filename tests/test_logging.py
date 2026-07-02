@@ -2439,7 +2439,7 @@ class LoggingTests(unittest.TestCase):
         self.assertIn("<strong>Repair command:</strong>", html)
         self.assertIn(
             "python -m mclab run lab04 --config configs/lab04_panda/interactive_virtual_wall.yaml "
-            "--viewer --realtime --pause-at-end --plot --open-report",
+            "--viewer --realtime --pause-at-end --plot --plots wall --open-report",
             html,
         )
         self.assertIn("<strong>Course path next:</strong> 1. Feel 1D physics", html)
@@ -2452,5 +2452,30 @@ class LoggingTests(unittest.TestCase):
         self.assertIn(
             "Observation next step: try required preset Close wall, "
             "then mark one observation with a prediction and note.",
+            html,
+        )
+
+    def test_outputs_index_repeat_command_preserves_config_plot_selection(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            run = root / "run_lab03_dls"
+            run.mkdir()
+            (run / "report.html").write_text("<html></html>", encoding="utf-8")
+            (run / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab03",
+                        "config_path": "configs/lab03_2dof/dls_singularity_2dof.yaml",
+                        "config_name": "dls_singularity_2dof",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            html = write_outputs_index(root).read_text(encoding="utf-8")
+
+        self.assertIn(
+            "python -m mclab run lab03 --config configs/lab03_2dof/dls_singularity_2dof.yaml "
+            "--viewer --realtime --pause-at-end --plot --plots dls_disturbance --open-report",
             html,
         )
