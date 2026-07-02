@@ -1500,8 +1500,9 @@ def experience_coverage_next_evidence(outputs_root: Path | None = None) -> str:
 
 
 def experience_coverage_detail_lines(outputs_root: Path | None = None) -> list[str]:
+    root = outputs_root if outputs_root is not None else PROJECT_ROOT / "outputs"
     lines = ["Coverage details:"]
-    for status in experience_coverage_statuses(_experience_coverage_records(outputs_root)):
+    for status in experience_coverage_statuses(_experience_coverage_records(root)):
         if status.next_missing:
             state = "Next"
         elif status.covered:
@@ -1526,7 +1527,26 @@ def experience_coverage_detail_lines(outputs_root: Path | None = None) -> list[s
             lines.append(
                 "  Controls: comparison batch; inspect plots and worksheet, then use Viewer Handoff for hands-on rerun."
             )
+        repair_text = _experience_coverage_repair_text(target, root)
+        if repair_text:
+            lines.append(f"  {repair_text}")
     return lines
+
+
+def _experience_coverage_repair_text(target: MenuAction | BatchMenuAction, outputs_root: Path) -> str:
+    items = _prioritized_review_queue_items(
+        _review_queue_items(outputs_root),
+        buckets=("outcome", "preset", "observation", "prediction", "note", "control"),
+    )
+    for output_path, status, _bucket, _modified in items:
+        action = action_for_output(output_path)
+        if action != target:
+            continue
+        return (
+            f"Review repair: {status} in {output_path.name}; "
+            f"rerun {default_command_for_target(target)}"
+        )
+    return ""
 
 
 def experience_coverage_next_command(outputs_root: Path | None = None) -> str:

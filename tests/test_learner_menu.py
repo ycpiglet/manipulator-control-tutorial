@@ -73,6 +73,7 @@ from mclab.learner_menu import (  # noqa: E402
     build_tuned_replay_args,
     config_value_preview,
     experience_filter_description,
+    experience_coverage_detail_lines,
     experience_coverage_next_button_label,
     experience_coverage_next_target,
     experience_coverage_status_text,
@@ -432,6 +433,32 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertNotIn(": Next", status)
         self.assertIsNone(target)
         self.assertEqual(button, "Coverage complete")
+
+    def test_experience_coverage_details_show_matching_review_repair(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            wall = outputs / "run_lab04_wall"
+            wall.mkdir()
+            (wall / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab04_panda",
+                        "config_path": "configs/lab04_panda/interactive_virtual_wall.yaml",
+                        "config_name": "interactive_virtual_wall",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (wall / "report.html").write_text("<html></html>", encoding="utf-8")
+
+            lines = experience_coverage_detail_lines(outputs)
+
+        self.assertIn(
+            "  Review repair: Needs required preset Close wall in run_lab04_wall; "
+            "rerun python -m mclab run lab04 --config configs/lab04_panda/interactive_virtual_wall.yaml "
+            "--viewer --realtime --pause-at-end --plot --plots wall --open-report",
+            lines,
+        )
 
     def test_recommended_learning_path_targets_real_actions(self) -> None:
         self.assertGreaterEqual(len(LEARNING_PATH), 12)
