@@ -605,6 +605,8 @@ class CliImportTests(unittest.TestCase):
             "--viewer --realtime --pause-at-end --plot --plots wall --open-report",
             printed,
         )
+        self.assertIn("After running: review saved evidence with `python -m mclab review`.", printed)
+        self.assertIn("All reports: reopen the cumulative browser index with `python -m mclab index --open`.", printed)
 
     def test_cli_prints_parameter_guide_for_scenarios(self) -> None:
         args = build_parser().parse_args(["params", "wall", "--filter", "hands-on", "--limit", "1", "--values", "6"])
@@ -633,6 +635,8 @@ class CliImportTests(unittest.TestCase):
             "--viewer --realtime --pause-at-end --plot --plots wall --open-report",
             printed,
         )
+        self.assertIn("After running: review saved evidence with `python -m mclab review`.", printed)
+        self.assertIn("All reports: reopen the cumulative browser index with `python -m mclab index --open`.", printed)
 
     def test_cli_parameter_guide_handles_empty_matches(self) -> None:
         with patch("builtins.print") as printer:
@@ -641,6 +645,8 @@ class CliImportTests(unittest.TestCase):
         printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
         self.assertIn("Parameter guide: showing 0 of 0 match(es)", printed)
         self.assertIn("No guided scenarios matched.", printed)
+        self.assertIn("After running: review saved evidence with `python -m mclab review`.", printed)
+        self.assertIn("All reports: reopen the cumulative browser index with `python -m mclab index --open`.", printed)
 
     def test_cli_scenario_search_handles_empty_matches(self) -> None:
         with patch("builtins.print") as printer:
@@ -649,6 +655,8 @@ class CliImportTests(unittest.TestCase):
         printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
         self.assertIn("Scenarios: showing 0 of 0 match(es)", printed)
         self.assertIn("No guided scenarios matched.", printed)
+        self.assertIn("After running: review saved evidence with `python -m mclab review`.", printed)
+        self.assertIn("All reports: reopen the cumulative browser index with `python -m mclab index --open`.", printed)
 
     def test_cli_scenario_replay_command_uses_latest_tuned_config(self) -> None:
         action = next(
@@ -794,6 +802,8 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("Prediction check: Ready in worksheet; mark Matched, Partly matched, or Surprised.", printed)
         self.assertIn("Handoff: Latest report.html#viewer-handoff", printed)
         self.assertIn("Command: python -m mclab batch lab04_wall_compare --open-report", printed)
+        self.assertIn("After running: review saved evidence with `python -m mclab review`.", printed)
+        self.assertIn("All reports: reopen the cumulative browser index with `python -m mclab index --open`.", printed)
 
     def test_cli_batch_details_show_course_context_for_all_compare(self) -> None:
         with patch("builtins.print") as printer:
@@ -814,6 +824,8 @@ class CliImportTests(unittest.TestCase):
         printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
         self.assertIn("Batches: showing 0 of 0 match(es)", printed)
         self.assertIn("No comparison batches matched.", printed)
+        self.assertIn("After running: review saved evidence with `python -m mclab review`.", printed)
+        self.assertIn("All reports: reopen the cumulative browser index with `python -m mclab index --open`.", printed)
 
     def test_cli_batch_handoff_detail_uses_latest_worksheet_viewer_command(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

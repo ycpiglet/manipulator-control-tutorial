@@ -584,6 +584,11 @@ def _print_review_path_context(outputs_root: Path) -> None:
     print(f"Course path command: {learning_path_next_command(outputs_root)}")
 
 
+def _print_discovery_review_footer() -> None:
+    print("After running: review saved evidence with `python -m mclab review`.")
+    print("All reports: reopen the cumulative browser index with `python -m mclab index --open`.")
+
+
 def _print_scenarios(query: str, *, experience_filter: str = "all", limit: int = 8, details: bool = False) -> None:
     matches = filter_menu_actions(query, experience_filter=experience_filter)
     shown = matches if limit <= 0 else matches[: max(0, limit)]
@@ -594,6 +599,7 @@ def _print_scenarios(query: str, *, experience_filter: str = "all", limit: int =
     )
     if not matches:
         print("No guided scenarios matched. Try: intro, hands-on, wall, PID, 2DOF, singularity, or compare.")
+        _print_discovery_review_footer()
         return
     print(
         "Discovery tips: try `python -m mclab scenarios wall --filter hands-on --details`, "
@@ -604,6 +610,7 @@ def _print_scenarios(query: str, *, experience_filter: str = "all", limit: int =
         print("Tip: use --limit 0 to print all matches.")
     for index, action in enumerate(shown, start=1):
         _print_scenario_card(index, action, details=details)
+    _print_discovery_review_footer()
 
 
 def _print_params(query: str, *, experience_filter: str = "all", limit: int = 6, max_values: int = 8) -> None:
@@ -616,6 +623,7 @@ def _print_params(query: str, *, experience_filter: str = "all", limit: int = 6,
     )
     if not matches:
         print("No guided scenarios matched. Try: wall, PID, DLS, damping, stiffness, target, torque, or hands-on.")
+        _print_discovery_review_footer()
         return
     print(
         "Control surface: edit YAML for auto/comparison runs; use MCLab Interaction sliders, presets, "
@@ -629,6 +637,7 @@ def _print_params(query: str, *, experience_filter: str = "all", limit: int = 6,
         print("Tip: use --limit 0 to print all matches.")
     for index, action in enumerate(shown, start=1):
         _print_params_card(index, action, max_values=max_values)
+    _print_discovery_review_footer()
 
 
 def _print_params_card(index: int, action: MenuAction, *, max_values: int = 8) -> None:
@@ -776,6 +785,7 @@ def _print_batches(query: str, *, limit: int = 8, details: bool = False) -> None
     print(f"Batches: showing {len(shown)} of {len(matches)} match(es) for query '{query_text}'.")
     if not matches:
         print("No comparison batches matched. Try: all, lab01, PID, 2DOF, Panda, wall, Cartesian, or compare.")
+        _print_discovery_review_footer()
         return
     print(
         "Discovery tips: try `python -m mclab batches wall --details`, "
@@ -786,6 +796,7 @@ def _print_batches(query: str, *, limit: int = 8, details: bool = False) -> None
         print("Tip: use --limit 0 to print all matches.")
     for index, action in enumerate(shown, start=1):
         _print_batch_card(index, action, details=details)
+    _print_discovery_review_footer()
 
 
 def _filter_batch_actions(query: str) -> tuple[BatchMenuAction, ...]:
