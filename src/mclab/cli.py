@@ -394,6 +394,15 @@ def _print_experience_coverage(outputs_root: Path, *, details: bool = False) -> 
     else:
         print("Next experience: Coverage complete")
         _print_learning_path_after_coverage_complete(outputs_root)
+    _print_coverage_review_hint(outputs_root)
+
+
+def _print_coverage_review_hint(outputs_root: Path) -> None:
+    lines = review_queue_action_lines(outputs_root, limit=3)
+    if not lines:
+        return
+    print("Evidence repair queue: run python -m mclab review --limit 3 to fix saved hands-on evidence.")
+    print(f"Top repair: {lines[0]}")
 
 
 def _print_learning_path_after_coverage_complete(outputs_root: Path) -> None:

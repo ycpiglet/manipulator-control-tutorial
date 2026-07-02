@@ -287,6 +287,17 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("Next path step:", printed)
         self.assertIn("Next command: python -m mclab", printed)
         self.assertIn("Next guide:", printed)
+        self.assertIn(
+            "Evidence repair queue: run python -m mclab review --limit 3 to fix saved hands-on evidence.",
+            printed,
+        )
+        self.assertIn(
+            "Top repair: run_lab04_wall - Needs required preset Close wall; "
+            "Lab04 Panda Manipulator - Virtual wall -> "
+            "python -m mclab run lab04 --config configs/lab04_panda/interactive_virtual_wall.yaml "
+            "--viewer --realtime --pause-at-end --plot --plots wall --open-report",
+            printed,
+        )
         self.assertNotIn("Next command: replay one saved scenario", printed)
 
     def test_cli_prints_learning_path_progress_and_next_command(self) -> None:
