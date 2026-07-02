@@ -2362,6 +2362,10 @@ class LoggingTests(unittest.TestCase):
             )
             self.assertIn("Run first comparison", html)
             self.assertIn("python -m mclab batch lab01_msd_compare --open-report", html)
+            self.assertIn("Review saved evidence", html)
+            self.assertIn("python -m mclab review", html)
+            self.assertIn("Open all reports", html)
+            self.assertIn("python -m mclab index --open", html)
             self.assertIn("No run reports were found yet.", html)
             self.assertIn("No saved runs yet.", html)
 

@@ -69,6 +69,8 @@ def _doctor_next_step_lines(fail_count: int) -> list[str]:
         "- Inspect editable parameters: `python -m mclab params wall --filter hands-on`",
         "- Preview the recommended path step: `python -m mclab next --preview`",
         "- Launch the next path step: `python -m mclab next`",
+        "- Review saved evidence: `python -m mclab review`",
+        "- Open the reports index: `python -m mclab index --open`",
     ]
 
 

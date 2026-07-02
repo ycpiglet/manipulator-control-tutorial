@@ -35,6 +35,8 @@ class DoctorTests(unittest.TestCase):
         self.assertIn("python -m mclab menu", report)
         self.assertIn("python -m mclab params wall --filter hands-on", report)
         self.assertIn("python -m mclab next --preview", report)
+        self.assertIn("python -m mclab review", report)
+        self.assertIn("python -m mclab index --open", report)
 
     def test_doctor_reports_missing_model_assets(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

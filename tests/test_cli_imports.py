@@ -44,6 +44,8 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("python -m mclab params wall", printed)
         self.assertIn("python -m mclab next --preview", printed)
         self.assertIn("python -m mclab next", printed)
+        self.assertIn("python -m mclab review", printed)
+        self.assertIn("python -m mclab index --open", printed)
         self.assertIn("Available labs:", printed)
         self.assertIn("Available batches:", printed)
         self.assertIn("lab01", printed)
@@ -93,6 +95,8 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("python -m mclab params wall", help_text)
         self.assertIn("python -m mclab next --preview", help_text)
         self.assertIn("python -m mclab next", help_text)
+        self.assertIn("python -m mclab review", help_text)
+        self.assertIn("python -m mclab index --open", help_text)
 
     def test_cli_runs_doctor_check(self) -> None:
         args = build_parser().parse_args(["doctor"])
@@ -111,6 +115,8 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("python -m mclab coverage --details", printed)
         self.assertIn("python -m mclab params wall --filter hands-on", printed)
         self.assertIn("python -m mclab next --preview", printed)
+        self.assertIn("python -m mclab review", printed)
+        self.assertIn("python -m mclab index --open", printed)
 
     def test_cli_generates_outputs_index(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

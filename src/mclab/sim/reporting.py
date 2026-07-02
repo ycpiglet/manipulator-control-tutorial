@@ -5070,6 +5070,16 @@ def _starter_commands_section() -> str:
             "python -m mclab next --preview",
         ),
         (
+            "Review saved evidence",
+            "Find the next saved run that still needs observation, preset, outcome, note, plot, or worksheet evidence.",
+            "python -m mclab review",
+        ),
+        (
+            "Open all reports",
+            "Regenerate this browser index so reports, worksheets, plots, replay configs, and repair commands are one click away.",
+            "python -m mclab index --open",
+        ),
+        (
             "Generate first artifacts",
             "Run the baseline 1D physics demo headless and save the first report, worksheet, and plots.",
             "python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot --plots essential --open-report",

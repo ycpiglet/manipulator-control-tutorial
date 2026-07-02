@@ -104,11 +104,11 @@ Implemented and verified:
 - MuJoCo viewer side panels are hidden at launch and re-hidden during viewer sync for learner demos; use the `MCLab Interaction` panel and YAML configs as the control surface
 - Learner menu `Viewer` lines, interaction-panel `Viewer controls`, and run-report `Control Surface` sections explicitly state that MuJoCo side panels are hidden
 - CLI `--viewer` help explicitly describes the side-panel-free viewer contract and `--show-viewer-ui` remains unavailable to learner commands
-- Top-level CLI `--help` prints a learner workflow for setup checking, menu launch, coverage, parameter lookup, next preview, and next path-step launch
+- Top-level CLI `--help` prints a learner workflow for setup checking, menu launch, coverage, parameter lookup, next preview, next path-step launch, review, and outputs index opening
 - CLI `--viewer` and `--headless` are mutually exclusive so contradictory learner commands fail early with a usage error
 - CLI `--realtime` and `--pause-at-end` require `--viewer` so viewer-only options are never silently ignored in headless runs
 - CLI `--plots` requires `--plot` so plot preset selections are never silently ignored
-- CLI `python -m mclab` and `python -m mclab list` print learner entry points for doctor, menu, coverage, coverage details, parameter lookup, next preview, and launching the next path step before the low-level lab/batch names
+- CLI `python -m mclab` and `python -m mclab list` print learner entry points for doctor, menu, coverage, coverage details, parameter lookup, next preview, launching the next path step, review, and opening the outputs index before the low-level lab/batch names
 - CLI run and batch completion output lists key artifact paths such as report, worksheet, the cumulative outputs index, plots, comparison plots, plus the next experience, mode, action, evidence cue, and command when course coverage is available
 - CLI run and batch completion output also surfaces worksheet review guidance: priority plot, review focus, next proof step, and the first checklist item
 - CLI batch completion output also surfaces the worksheet `Prediction Check` cue and the recommended `Viewer Handoff` rerun command for side-panel-free hands-on inspection
@@ -127,7 +127,7 @@ Implemented and verified:
 - CLI `python -m mclab next --preview` prints the next recommended path step plus a compact Plan/Course/Mission/Try/Change/Values/Prediction/Question/Watch/Start steps/Challenge/Controls guide without running it, adding the Viewer guide only for hands-on steps and worksheet/plot/plot-review cues for batch steps; `python -m mclab next` prints the same guide, launches automatic steps headless and hands-on steps in the side-panel-free viewer, and opens the resulting report
 - CLI `python -m mclab review` prints the saved-run review queue, next pending evidence status, report, worksheet, matched action, repair command, observation next step, plot review cue, and the separate recommended course-path next step/command; required-preset gaps are named before generic observation gaps so wall learners see the exact next preset such as `Close wall`; `--open` opens the next pending report
 - CLI `python -m mclab index --open` regenerates and opens `outputs/index.html` without launching the learner menu
-- Outputs index includes `Starter Commands` for setup checking, opening the learner menu, checking coverage, comparing all coverage details, inspecting editable parameters, previewing the next path step, generating first headless artifacts, launching the first hands-on viewer demo, and running the first comparison batch
+- Outputs index includes `Starter Commands` for setup checking, opening the learner menu, checking coverage, comparing all coverage details, inspecting editable parameters, previewing the next path step, reviewing saved evidence, opening all reports, generating first headless artifacts, launching the first hands-on viewer demo, and running the first comparison batch
 - Outputs index includes the shared `Experience Coverage` summary plus Done/Next/Missing cards with mode, focus, evidence, controls, learner-control credit, and CLI commands for all core experience types so browser-based review shows the same core experience evidence and next missing experience as the learner menu
 - Outputs index points completed Experience Coverage back to the Learning Path section when course-path evidence may still be pending
 - Outputs index mission review queue prioritizes required-preset gaps before generic observation gaps and shows next review, repair command, course-path next step/command, and the next required preset in the run-table observation next step
@@ -259,7 +259,7 @@ Implemented and verified:
 - Learner menu learning-path step report buttons for completed course steps
 - Learner menu learning-path step `Worksheet` buttons for completed course steps with saved review artifacts
 - Learner menu learning-path step `Replay` buttons for latest replayable `learner_tuned_config.yaml` runs
-- `python -m mclab doctor` checks learner menu scenario and comparison-batch readiness and prints launcher, coverage, coverage-details, preview, and next-run commands when setup is ready
+- `python -m mclab doctor` checks learner menu scenario and comparison-batch readiness and prints launcher, coverage, coverage-details, preview, next-run, review, and outputs-index commands when setup is ready
 - Run reports include suggested next-run cards with reflection questions, key parameter changes, and ready-to-run commands for every guided config
 - Run reports and worksheets include each suggested next experiment's `Start steps` and `Challenge` so the next run keeps the same predict-control-evidence flow
 - Run reports and worksheets show `Course Position` with the matching milestone, learning-path step, focus, completion rule, and repeat command

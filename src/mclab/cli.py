@@ -117,7 +117,9 @@ def build_parser() -> argparse.ArgumentParser:
             "                                  compare all experience modes and evidence cues\n"
             "  python -m mclab params wall     see editable YAML/live-control parameters\n"
             "  python -m mclab next --preview  preview the next recommended step\n"
-            "  python -m mclab next            launch the next path step"
+            "  python -m mclab next            launch the next path step\n"
+            "  python -m mclab review          review saved evidence gaps\n"
+            "  python -m mclab index --open    open all reports and worksheets"
         ),
     )
     subparsers = parser.add_subparsers(dest="command")
@@ -238,6 +240,8 @@ def main(argv: list[str] | None = None) -> int:
         print("  python -m mclab params wall     # see editable YAML/live-control parameters")
         print("  python -m mclab next --preview  # preview the next recommended step")
         print("  python -m mclab next            # launch the next path step")
+        print("  python -m mclab review          # review saved evidence gaps")
+        print("  python -m mclab index --open    # open all reports and worksheets")
         print("Available labs:")
         for name in sorted(LABS):
             print(f"  {name}")
