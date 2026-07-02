@@ -76,6 +76,7 @@ from .learner_menu import (
     parameter_hint,
     prediction_prompt,
     reflection_question,
+    review_queue_action_lines,
     review_queue_summary_text,
 )
 from .labs import lab01_msd, lab02_pid, lab03_2dof, lab04_panda
@@ -160,6 +161,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     review_parser.add_argument("--output-dir", default="outputs", help="Outputs root directory.")
     review_parser.add_argument("--open", action="store_true", help="Open the next pending review report.")
+    review_parser.add_argument(
+        "--limit",
+        type=int,
+        default=5,
+        help="Number of learner-action review items to list; 0 hides the list.",
+    )
 
     scenarios_parser = subparsers.add_parser(
         "scenarios",
@@ -270,7 +277,7 @@ def main(argv: list[str] | None = None) -> int:
         return _run_next_learning_path(Path(args.output_dir), preview=args.preview, seed=args.seed)
 
     if args.command == "review":
-        _print_review_queue(Path(args.output_dir), open_next=args.open)
+        _print_review_queue(Path(args.output_dir), open_next=args.open, action_limit=args.limit)
         return 0
 
     if args.command == "scenarios":
@@ -542,11 +549,12 @@ def _run_next_batch_target(target: BatchMenuAction, *, seed: int | None = None) 
     return run_batch(target.batch_name, seed=seed)
 
 
-def _print_review_queue(outputs_root: Path, *, open_next: bool = False) -> None:
+def _print_review_queue(outputs_root: Path, *, open_next: bool = False, action_limit: int = 5) -> None:
     print(review_queue_summary_text(outputs_root))
     next_output = next_review_output(outputs_root)
     if next_output is None:
         print("Next review: none")
+        _print_review_action_list(outputs_root, limit=action_limit)
         _print_review_path_context(outputs_root)
         _print_review_index_command(outputs_root)
         return
@@ -569,10 +577,23 @@ def _print_review_queue(outputs_root: Path, *, open_next: bool = False) -> None:
         if observation_next:
             print(observation_next)
         print(action_plot_review_text(action, outputs_root))
+    _print_review_action_list(outputs_root, limit=action_limit)
     _print_review_path_context(outputs_root)
     _print_review_index_command(outputs_root)
     if open_next:
         _open_path(entry)
+
+
+def _print_review_action_list(outputs_root: Path, *, limit: int) -> None:
+    lines = review_queue_action_lines(outputs_root, limit=limit)
+    if limit <= 0:
+        return
+    if not lines:
+        print("Learner-action review list: none")
+        return
+    print(f"Learner-action review list (top {len(lines)}):")
+    for index, line in enumerate(lines, start=1):
+        print(f"  {index}. {line}")
 
 
 def _print_review_path_context(outputs_root: Path) -> None:

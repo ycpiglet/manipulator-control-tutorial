@@ -440,6 +440,7 @@ class CliImportTests(unittest.TestCase):
             self.assertEqual(args.command, "review")
             self.assertEqual(args.output_dir, str(outputs))
             self.assertTrue(args.open)
+            self.assertEqual(args.limit, 5)
 
             with patch("mclab.cli._open_path") as opener, patch("builtins.print") as printer:
                 self.assertEqual(main(["review", "--output-dir", str(outputs), "--open"]), 0)
@@ -462,6 +463,13 @@ class CliImportTests(unittest.TestCase):
         self.assertIn(
             "Observation next step: use experiment buttons, live sliders, or Quick presets, "
             "then mark one observation with a prediction and note.",
+            printed,
+        )
+        self.assertIn("Learner-action review list (top 1):", printed)
+        self.assertIn(
+            "1. run_lab01_interactive - Needs observation; Lab01 Mass-Spring-Damper - Interactive -> "
+            "python -m mclab run lab01 --config configs/lab01_msd/interactive_pull.yaml "
+            "--viewer --realtime --pause-at-end --plot --plots essential --open-report",
             printed,
         )
         self.assertIn("Plot review: Not available until a plot is saved", printed)
@@ -506,6 +514,13 @@ class CliImportTests(unittest.TestCase):
             "then mark one observation with a prediction and note.",
             printed,
         )
+        self.assertIn("Learner-action review list (top 1):", printed)
+        self.assertIn(
+            "1. run_lab04_wall - Needs required preset Close wall; Lab04 Panda Manipulator - Virtual wall -> "
+            "python -m mclab run lab04 --config configs/lab04_panda/interactive_virtual_wall.yaml "
+            "--viewer --realtime --pause-at-end --plot --plots wall --open-report",
+            printed,
+        )
         self.assertIn("Course path next: 1. Feel 1D physics", printed)
         self.assertIn(f"Review index command: python -m mclab index --output-dir {outputs} --open", printed)
 
@@ -519,6 +534,7 @@ class CliImportTests(unittest.TestCase):
         printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
         self.assertIn("Review queue: No saved runs yet. Run a scenario first.", printed)
         self.assertIn("Next review: none", printed)
+        self.assertIn("Learner-action review list: none", printed)
         self.assertIn("Course path next: 1. Feel 1D physics", printed)
         self.assertIn(
             "Course path command: python -m mclab run lab01 --config configs/lab01_msd/default.yaml "

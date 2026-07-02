@@ -2166,6 +2166,27 @@ def next_review_status_text(outputs_root: Path | None = None) -> str:
     return next_item[1] if next_item is not None else "All saved mission evidence is ready."
 
 
+def review_queue_action_lines(outputs_root: Path | None = None, *, limit: int = 5) -> list[str]:
+    if limit <= 0:
+        return []
+    root = outputs_root if outputs_root is not None else PROJECT_ROOT / "outputs"
+    items = _prioritized_review_queue_items(
+        _review_queue_items(root),
+        buckets=("outcome", "preset", "observation", "prediction", "note", "control"),
+    )
+    lines: list[str] = []
+    for output_path, status, _bucket, _modified in items[:limit]:
+        action = action_for_output(output_path)
+        if action is None:
+            lines.append(f"{output_path.name} - {status}")
+            continue
+        lines.append(
+            f"{output_path.name} - {status}; {action.group} - {action.label} -> "
+            f"{default_command_for_target(action)}"
+        )
+    return lines
+
+
 def _review_queue_items(outputs_root: Path) -> list[tuple[Path, str, str, float]]:
     if not outputs_root.exists():
         return []
@@ -2267,12 +2288,24 @@ def _review_queue_counts(items: list[tuple[Path, str, str, float]]) -> dict[str,
 
 
 def _next_review_queue_item(items: list[tuple[Path, str, str, float]]) -> tuple[Path, str, str, float] | None:
-    priority = ("outcome", "preset", "observation", "prediction", "note", "control", "artifact", "other")
-    for bucket in priority:
+    matches = _prioritized_review_queue_items(
+        items,
+        buckets=("outcome", "preset", "observation", "prediction", "note", "control", "artifact", "other"),
+    )
+    return matches[0] if matches else None
+
+
+def _prioritized_review_queue_items(
+    items: list[tuple[Path, str, str, float]],
+    *,
+    buckets: tuple[str, ...],
+) -> list[tuple[Path, str, str, float]]:
+    matches: list[tuple[Path, str, str, float]] = []
+    for bucket in buckets:
         for item in items:
             if item[2] == bucket:
-                return item
-    return None
+                matches.append(item)
+    return matches
 
 
 def action_preset_evidence_text(action: MenuAction, outputs_root: Path | None = None) -> str:
