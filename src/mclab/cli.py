@@ -445,17 +445,27 @@ def _print_next_target_guide(
             *action_course_lines(target),
             action_mission_text(target),
             action_playbook_text(target),
+            f"Try: {target.try_this}",
+            f"Change: {parameter_hint(target)}",
+            config_value_preview(target, max_items=8),
+            prediction_prompt(target),
+            reflection_question(target),
+            f"Watch: {target.watch}",
             action_start_steps_text(target),
             action_challenge_text(target),
             action_controls_text(target),
-            f"Setup: {readiness.label}{f' - {readiness.detail}' if readiness.detail else ''}",
-            action_next_cue_text(target, outputs_root),
         ]
         if include_viewer:
-            lines.insert(7, action_viewer_text(target))
+            lines.append(action_viewer_text(target))
         control_credit = action_control_credit_text(target)
         if control_credit:
-            lines.insert(-2, control_credit)
+            lines.append(control_credit)
+        lines.extend(
+            [
+                f"Setup: {readiness.label}{f' - {readiness.detail}' if readiness.detail else ''}",
+                action_next_cue_text(target, outputs_root),
+            ]
+        )
     for line in lines:
         print(f"  {line}")
 
