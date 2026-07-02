@@ -1029,7 +1029,9 @@ def _worksheet_course_position_lines(summary: dict[str, Any]) -> list[str]:
 
 
 def _worksheet_course_experience_coverage_lines(output: Path) -> list[str]:
-    records = _experience_coverage_records_for_index(_discover_runs(output.parent))
+    runs = _discover_runs(output.parent)
+    records = _experience_coverage_records_for_index(runs)
+    repair_items = _experience_coverage_repair_items(runs)
     next_item = next_experience_coverage_item(records)
     lines = [
         "## Course Experience Coverage",
@@ -1057,6 +1059,13 @@ def _worksheet_course_experience_coverage_lines(output: Path) -> list[str]:
             f"focus: {_markdown_inline(status.item.next_step)}; "
             f"evidence: {_markdown_inline(experience_coverage_item_evidence(status.item))}"
         )
+        repair = repair_items.get(status.item.key)
+        if repair:
+            repair_status, run_name, _report, command = repair
+            lines.append(
+                f"    Review repair: {_markdown_inline(repair_status)} in {_markdown_inline(run_name)}; "
+                f"rerun {_markdown_inline(command)}"
+            )
     lines.append("")
     return lines
 
@@ -1975,8 +1984,9 @@ def _course_experience_coverage_section(output: Path) -> str:
     records = _experience_coverage_records_for_index(runs)
     summary = experience_coverage_summary_text(records)
     next_item = next_experience_coverage_item(records)
+    repair_blocks = _experience_coverage_repair_blocks(runs, report_prefix="../")
     status_cards = "\n".join(
-        _course_experience_status_card(status)
+        _course_experience_status_card(status, repair_blocks)
         for status in experience_coverage_statuses(records)
     )
     if next_item is None:
@@ -2010,13 +2020,14 @@ def _course_experience_coverage_section(output: Path) -> str:
     )
 
 
-def _course_experience_status_card(status: ExperienceCoverageStatus) -> str:
+def _course_experience_status_card(status: ExperienceCoverageStatus, repair_blocks: dict[str, str]) -> str:
     if status.next_missing:
         state = "Next"
     elif status.covered:
         state = "Done"
     else:
         state = "Missing"
+    repair_block = repair_blocks.get(status.item.key, "")
     body = _action_value_list(
         (
             ("Status", state),
@@ -2025,6 +2036,8 @@ def _course_experience_status_card(status: ExperienceCoverageStatus) -> str:
             ("Evidence", experience_coverage_item_evidence(status.item)),
         )
     )
+    body += _experience_coverage_control_cues(status.item)
+    body += repair_block
     return _action_card(status.item.label, "Core learner experience type.", body)
 
 
@@ -5229,23 +5242,31 @@ def _experience_coverage_status_card(status: ExperienceCoverageStatus, repair_bl
     )
 
 
-def _experience_coverage_repair_blocks(runs: list[dict[str, Any]]) -> dict[str, str]:
+def _experience_coverage_repair_blocks(runs: list[dict[str, Any]], *, report_prefix: str = "") -> dict[str, str]:
     repairs: dict[str, str] = {}
+    for key, (status, name, report, command) in _experience_coverage_repair_items(runs).items():
+        command_block = f'<pre class="path-command">{escape(command)}</pre>' if command else ""
+        href = f"{report_prefix}{report}" if report else ""
+        link = f'<a href="{escape(href)}">{escape(name)}</a>' if href else escape(name)
+        repairs[key] = (
+            '<p class="muted"><strong>Review repair:</strong> '
+            f"{escape(status)} in {link}</p>"
+            f"{command_block}"
+        )
+    return repairs
+
+
+def _experience_coverage_repair_items(runs: list[dict[str, Any]]) -> dict[str, tuple[str, str, str, str]]:
+    repairs: dict[str, tuple[str, str, str, str]] = {}
     for run in _mission_review_prioritized_runs(runs):
         key = _experience_coverage_repair_key_for_run(run)
         if not key or key in repairs:
             continue
         status = _mission_review_status(run)
         command = _run_repeat_command(run)
-        command_block = f'<pre class="path-command">{escape(command)}</pre>' if command else ""
         report = str(run.get("report") or "")
         name = str(run.get("name") or "")
-        link = f'<a href="{escape(report)}">{escape(name)}</a>' if report else escape(name)
-        repairs[key] = (
-            '<p class="muted"><strong>Review repair:</strong> '
-            f"{escape(status)} in {link}</p>"
-            f"{command_block}"
-        )
+        repairs[key] = (status, name, report, command)
     return repairs
 
 

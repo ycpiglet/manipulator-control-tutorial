@@ -494,6 +494,51 @@ class LoggingTests(unittest.TestCase):
             self.assertEqual(summary["config_path"], "configs/lab01_msd/default.yaml")
             self.assertEqual(summary["config_name"], "default")
 
+    def test_run_report_course_coverage_shows_related_review_repairs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+
+            def write_summary(path: Path, lab_name: str, config_path: str) -> None:
+                path.mkdir()
+                (path / "summary.json").write_text(
+                    json.dumps(
+                        {
+                            "lab_name": lab_name,
+                            "config_path": config_path,
+                            "config_name": Path(config_path).stem,
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+                (path / "report.html").write_text("<html></html>", encoding="utf-8")
+
+            current = root / "run_lab04_cartesian"
+            write_summary(current, "lab04_panda", "configs/lab04_panda/interactive_cartesian_reach.yaml")
+            wall = root / "run_lab04_wall"
+            write_summary(wall, "lab04_panda", "configs/lab04_panda/interactive_virtual_wall.yaml")
+
+            html = write_run_report(current).read_text(encoding="utf-8")
+            worksheet = (current / "worksheet.md").read_text(encoding="utf-8")
+
+        self.assertIn("Course Experience Coverage", html)
+        self.assertIn("<strong>Virtual wall</strong>", html)
+        self.assertIn(
+            '<strong>Review repair:</strong> Needs required preset Close wall in '
+            '<a href="../run_lab04_wall/report.html">run_lab04_wall</a>',
+            html,
+        )
+        self.assertIn(
+            "python -m mclab run lab04 --config configs/lab04_panda/interactive_virtual_wall.yaml "
+            "--viewer --realtime --pause-at-end --plot --plots wall --open-report",
+            html,
+        )
+        self.assertIn(
+            "Review repair: Needs required preset Close wall in run_lab04_wall; "
+            "rerun python -m mclab run lab04 --config configs/lab04_panda/interactive_virtual_wall.yaml "
+            "--viewer --realtime --pause-at-end --plot --plots wall --open-report",
+            worksheet,
+        )
+
     def test_run_report_renders_observation_timeline_in_time_order(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "run"
