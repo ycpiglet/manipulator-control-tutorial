@@ -286,6 +286,7 @@ Implemented and verified:
 - Outputs index learning path cards show `Counts as control` learner-control criteria with concrete configured button labels for hands-on configs
 - Outputs index batch learning-path cards include the same `Prediction check` cue used by the learner menu
 - Outputs index learning path summary flags evidence-pending and outcome-review-pending hands-on steps
+- Outputs index learning path cards show mission/challenge cues plus hands-on viewer marker legends before each ready-to-run or repeat command
 - Outputs index learning path cards show change/value, prediction/compare, and watch cues before each ready-to-run or repeat command
 - Outputs index progress snapshot includes an evidence quality card with prediction outcome coverage and outcome mix
 - Outputs index progress snapshot includes a mission review queue with ready/pending totals, evidence gap counts, and the next review link

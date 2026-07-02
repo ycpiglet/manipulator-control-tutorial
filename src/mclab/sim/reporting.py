@@ -5266,6 +5266,8 @@ def _learning_path_card(item: dict[str, Any]) -> str:
     challenge_evidence = _learning_path_challenge_evidence(run)
     start_steps = _learning_path_start_steps(step)
     control_credit = _learning_path_control_credit(step)
+    mission_challenge = _learning_path_mission_challenge(step)
+    viewer_cue = _learning_path_viewer_cue(step)
     parameter_cues = _learning_path_parameter_cues(step)
     learning_cue = _learning_path_learning_cue(step)
     completion_text = _learning_path_completion_text(step)
@@ -5345,6 +5347,8 @@ def _learning_path_card(item: dict[str, Any]) -> str:
         f'<p class="muted"><strong>Done when:</strong> {escape(completion_text.removeprefix("Done when:").strip())}</p>'
         f"{start_steps}"
         f"{control_credit}"
+        f"{mission_challenge}"
+        f"{viewer_cue}"
         f"{parameter_cues}"
         f"{learning_cue}"
         f"{status}"
@@ -5510,6 +5514,37 @@ def _learning_path_control_credit(step: IndexPathStep) -> str:
     if not text:
         return ""
     return f'<p class="muted"><strong>Counts as control:</strong> {escape(text)}</p>'
+
+
+def _learning_path_mission_challenge(step: IndexPathStep) -> str:
+    if step.batch_name or not step.config_path:
+        return ""
+    guide = guide_for_config(config_path=step.config_path)
+    if guide is None:
+        return ""
+
+    rows = (
+        ("Mission", mission_prompt_for_guide(guide).removeprefix("Mission:").strip()),
+        ("Challenge", challenge_prompt_for_guide(guide).removeprefix("Challenge:").strip()),
+    )
+    return "".join(
+        f'<p class="muted"><strong>{escape(label)}:</strong> {escape(text)}</p>'
+        for label, text in rows
+        if text
+    )
+
+
+def _learning_path_viewer_cue(step: IndexPathStep) -> str:
+    if not _learning_path_requires_evidence(step):
+        return ""
+    guide = guide_for_config(config_path=step.config_path)
+    legend = viewer_legend_for_guide(guide)
+    if not legend:
+        text = f"{VIEWER_CONTROL_SURFACE_TEXT}; standard MuJoCo scene; use plots and live status for exact values"
+    else:
+        legend_text = "; ".join(f"{label} = {description}" for label, description in legend)
+        text = f"{VIEWER_CONTROL_SURFACE_TEXT}; {legend_text}"
+    return f'<p class="muted"><strong>Viewer:</strong> {escape(_short_evidence_text(text, max_length=220))}</p>'
 
 
 def _learning_path_parameter_cues(step: IndexPathStep) -> str:
