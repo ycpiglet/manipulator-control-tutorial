@@ -448,6 +448,11 @@ class CliImportTests(unittest.TestCase):
         self.assertIn(f"Next review worksheet: {worksheet}", printed)
         self.assertIn("Next review action: Lab01 Mass-Spring-Damper - Interactive", printed)
         self.assertIn(
+            "Repair command: python -m mclab run lab01 --config configs/lab01_msd/interactive_pull.yaml "
+            "--viewer --realtime --pause-at-end --plot --plots essential --open-report",
+            printed,
+        )
+        self.assertIn(
             "Observation next step: use experiment buttons, live sliders, or Quick presets, "
             "then mark one observation with a prediction and note.",
             printed,
@@ -483,6 +488,11 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("required preset: 1", printed)
         self.assertIn("Next review: run_lab04_wall - Needs required preset Close wall.", printed)
         self.assertIn("Next review status: Needs required preset Close wall", printed)
+        self.assertIn(
+            "Repair command: python -m mclab run lab04 --config configs/lab04_panda/interactive_virtual_wall.yaml "
+            "--viewer --realtime --pause-at-end --plot --plots wall --open-report",
+            printed,
+        )
         self.assertIn(
             "Observation next step: try required preset Close wall, "
             "then mark one observation with a prediction and note.",

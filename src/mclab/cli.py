@@ -556,6 +556,7 @@ def _print_review_queue(outputs_root: Path, *, open_next: bool = False) -> None:
     action = action_for_output(next_output)
     if action is not None:
         print(f"Next review action: {action.group} - {action.label}")
+        print(f"Repair command: {default_command_for_target(action)}")
         latest_evidence = action_latest_evidence_text(action, outputs_root)
         if latest_evidence != "Latest evidence: None yet":
             print(latest_evidence)
