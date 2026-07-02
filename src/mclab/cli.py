@@ -58,6 +58,7 @@ from .learner_menu import (
     experience_coverage_next_label,
     experience_coverage_next_mode,
     experience_coverage_next_target,
+    experience_coverage_detail_lines,
     experience_coverage_status_text,
     experience_coverage_summary_text,
     filter_menu_actions,
@@ -112,6 +113,8 @@ def build_parser() -> argparse.ArgumentParser:
             "  python -m mclab doctor          check setup and see next learner steps\n"
             "  python -m mclab menu            open the guided launcher\n"
             "  python -m mclab coverage        see missing experience types and next command\n"
+            "  python -m mclab coverage --details\n"
+            "                                  compare all experience modes and evidence cues\n"
             "  python -m mclab params wall     see editable YAML/live-control parameters\n"
             "  python -m mclab next --preview  preview the next recommended step\n"
             "  python -m mclab next            launch the next path step"
@@ -128,6 +131,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Show course experience coverage and the next learner command.",
     )
     coverage_parser.add_argument("--output-dir", default="outputs", help="Outputs root directory.")
+    coverage_parser.add_argument(
+        "--details",
+        action="store_true",
+        help="Print mode, focus, evidence, and command for every core experience type.",
+    )
 
     path_parser = subparsers.add_parser(
         "path",
@@ -245,7 +253,7 @@ def main(argv: list[str] | None = None) -> int:
         return doctor_exit_code(checks)
 
     if args.command == "coverage":
-        _print_experience_coverage(Path(args.output_dir))
+        _print_experience_coverage(Path(args.output_dir), details=args.details)
         return 0
 
     if args.command == "path":
@@ -348,9 +356,12 @@ def _print_output_summary(kind: str, output_path: Path) -> None:
         print(f"  {line}")
 
 
-def _print_experience_coverage(outputs_root: Path) -> None:
+def _print_experience_coverage(outputs_root: Path, *, details: bool = False) -> None:
     print(experience_coverage_summary_text(outputs_root))
     print(experience_coverage_status_text(outputs_root))
+    if details:
+        for line in experience_coverage_detail_lines(outputs_root):
+            print(line)
     next_command = experience_coverage_next_command(outputs_root)
     if next_command:
         print(f"Next experience: {experience_coverage_next_label(outputs_root)}")

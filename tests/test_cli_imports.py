@@ -168,6 +168,51 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("Start steps:", printed)
         self.assertIn("Challenge:", printed)
         self.assertIn("Controls: Auto run; edit YAML before running", printed)
+        self.assertNotIn("Coverage details:", printed)
+
+    def test_cli_prints_experience_coverage_details(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp) / "outputs"
+
+            args = build_parser().parse_args(["coverage", "--output-dir", str(output_dir), "--details"])
+            self.assertEqual(args.command, "coverage")
+            self.assertEqual(args.output_dir, str(output_dir))
+            self.assertTrue(args.details)
+
+            with patch("builtins.print") as printer:
+                self.assertEqual(main(["coverage", "--output-dir", str(output_dir), "--details"]), 0)
+
+        printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
+        self.assertIn("Coverage details:", printed)
+        self.assertIn(
+            "- Intro basics: Next; mode: headless plot run; "
+            "focus: Run Lab01 Mass-Spring-Damper - Auto demo.; "
+            "evidence: A saved run report, priority plot, and worksheet for the baseline 1D plant.",
+            printed,
+        )
+        self.assertIn(
+            "Command: python -m mclab run lab01 --config configs/lab01_msd/default.yaml "
+            "--headless --plot --plots essential --open-report",
+            printed,
+        )
+        self.assertIn(
+            "- Hands-on controls: Missing; mode: hands-on viewer; "
+            "focus: Run an interactive viewer and use one button, slider, or preset.; "
+            "evidence: At least one learner-control event plus one prediction-backed observation marker.",
+            printed,
+        )
+        self.assertIn(
+            "- Comparison batch: Missing; mode: comparison batch; "
+            "focus: Run any Comparison Batches card, then open the worksheet Prediction Check.; "
+            "evidence: A batch comparison report and worksheet with a Prediction Check table.",
+            printed,
+        )
+        self.assertIn(
+            "- Virtual wall: Missing; mode: hands-on viewer; "
+            "focus: Run Lab04 Virtual wall and try Close wall -> Back away -> Re-enter wall.; "
+            "evidence: A virtual-wall run with target crossing, contact/release, force, or wall-gap evidence.",
+            printed,
+        )
 
     def test_cli_prints_learning_path_progress_and_next_command(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

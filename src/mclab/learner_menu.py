@@ -1498,6 +1498,26 @@ def experience_coverage_next_evidence(outputs_root: Path | None = None) -> str:
     return experience_coverage_item_evidence(item) if item is not None else ""
 
 
+def experience_coverage_detail_lines(outputs_root: Path | None = None) -> list[str]:
+    lines = ["Coverage details:"]
+    for status in experience_coverage_statuses(_experience_coverage_records(outputs_root)):
+        if status.next_missing:
+            state = "Next"
+        elif status.covered:
+            state = "Done"
+        else:
+            state = "Missing"
+        lines.append(
+            f"- {status.item.label}: {state}; "
+            f"mode: {experience_coverage_item_mode(status.item)}; "
+            f"focus: {status.item.next_step}; "
+            f"evidence: {experience_coverage_item_evidence(status.item)}"
+        )
+        if status.item.command:
+            lines.append(f"  Command: {status.item.command}")
+    return lines
+
+
 def experience_coverage_next_command(outputs_root: Path | None = None) -> str:
     target = experience_coverage_next_target(outputs_root)
     return default_command_for_target(target) if target is not None else ""
