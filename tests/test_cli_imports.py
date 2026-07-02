@@ -146,6 +146,12 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("Experience coverage: 0/7 types tried", printed)
         self.assertIn("Coverage map: Intro basics: Next", printed)
         self.assertIn("Next experience: Intro basics", printed)
+        self.assertIn("Next mode: headless plot run", printed)
+        self.assertIn("Next action: Run Lab01 Mass-Spring-Damper - Auto demo.", printed)
+        self.assertIn(
+            "Evidence needed: A saved run report, priority plot, and worksheet for the baseline 1D plant.",
+            printed,
+        )
         self.assertIn(
             "Next command: python -m mclab run lab01 --config configs/lab01_msd/default.yaml "
             "--headless --plot --plots essential --open-report",

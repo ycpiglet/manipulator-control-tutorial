@@ -53,7 +53,10 @@ from .learner_menu import (
     config_value_preview,
     default_command_for_target,
     experience_coverage_next_command,
+    experience_coverage_next_action,
+    experience_coverage_next_evidence,
     experience_coverage_next_label,
+    experience_coverage_next_mode,
     experience_coverage_next_target,
     experience_coverage_status_text,
     experience_coverage_summary_text,
@@ -351,6 +354,15 @@ def _print_experience_coverage(outputs_root: Path) -> None:
     next_command = experience_coverage_next_command(outputs_root)
     if next_command:
         print(f"Next experience: {experience_coverage_next_label(outputs_root)}")
+        next_mode = experience_coverage_next_mode(outputs_root)
+        if next_mode:
+            print(f"Next mode: {next_mode}")
+        next_action = experience_coverage_next_action(outputs_root)
+        if next_action:
+            print(f"Next action: {next_action}")
+        next_evidence = experience_coverage_next_evidence(outputs_root)
+        if next_evidence:
+            print(f"Evidence needed: {next_evidence}")
         print(f"Next command: {next_command}")
         next_target = experience_coverage_next_target(outputs_root)
         if next_target is not None:

@@ -140,6 +140,27 @@ def experience_coverage_statuses(records: Iterable[ExperienceCoverageRecord]) ->
     )
 
 
+def experience_coverage_item_mode(item: ExperienceCoverageItem) -> str:
+    command = str(item.command or "")
+    if " batch " in f" {command} ":
+        return "comparison batch"
+    if "--viewer" in command:
+        return "hands-on viewer"
+    return "headless plot run"
+
+
+def experience_coverage_item_evidence(item: ExperienceCoverageItem) -> str:
+    return {
+        "intro": "A saved run report, priority plot, and worksheet for the baseline 1D plant.",
+        "hands-on": "At least one learner-control event plus one prediction-backed observation marker.",
+        "compare": "A batch comparison report and worksheet with a Prediction Check table.",
+        "2dof": "A Lab03 2DOF/Jacobian run report, priority plot, and worksheet.",
+        "singularity": "A DLS/singularity run with damping, condition, speed, or task-error evidence.",
+        "panda": "A Panda manipulator run report and Cartesian or joint-control evidence plot.",
+        "wall": "A virtual-wall run with target crossing, contact/release, force, or wall-gap evidence.",
+    }.get(item.key, "A saved report, plot, and worksheet for this experience type.")
+
+
 def experience_coverage_keys(records: Iterable[ExperienceCoverageRecord]) -> set[str]:
     covered: set[str] = set()
     for record in records:

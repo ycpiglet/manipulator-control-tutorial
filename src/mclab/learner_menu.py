@@ -19,6 +19,8 @@ from mclab.config import PROJECT_ROOT, load_config
 from mclab.course_progress import course_milestone_summary
 from mclab.experience_coverage import (
     ExperienceCoverageRecord,
+    experience_coverage_item_evidence,
+    experience_coverage_item_mode,
     experience_coverage_statuses,
     experience_coverage_summary_text as format_experience_coverage_summary,
     next_experience_coverage_item,
@@ -1479,6 +1481,21 @@ def experience_coverage_next_button_label(outputs_root: Path | None = None) -> s
 def experience_coverage_next_label(outputs_root: Path | None = None) -> str:
     item = next_experience_coverage_item(_experience_coverage_records(outputs_root))
     return item.label if item is not None else "Coverage complete"
+
+
+def experience_coverage_next_mode(outputs_root: Path | None = None) -> str:
+    item = next_experience_coverage_item(_experience_coverage_records(outputs_root))
+    return experience_coverage_item_mode(item) if item is not None else ""
+
+
+def experience_coverage_next_action(outputs_root: Path | None = None) -> str:
+    item = next_experience_coverage_item(_experience_coverage_records(outputs_root))
+    return item.next_step if item is not None else ""
+
+
+def experience_coverage_next_evidence(outputs_root: Path | None = None) -> str:
+    item = next_experience_coverage_item(_experience_coverage_records(outputs_root))
+    return experience_coverage_item_evidence(item) if item is not None else ""
 
 
 def experience_coverage_next_command(outputs_root: Path | None = None) -> str:
