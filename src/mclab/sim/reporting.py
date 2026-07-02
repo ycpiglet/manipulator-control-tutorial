@@ -5264,6 +5264,7 @@ def _learning_path_card(item: dict[str, Any]) -> str:
     activity_mix = _learning_path_activity_mix(run)
     mission_evidence = _learning_path_mission_evidence(run)
     challenge_evidence = _learning_path_challenge_evidence(run)
+    plan_cue = _learning_path_plan_cue(step)
     start_steps = _learning_path_start_steps(step)
     control_credit = _learning_path_control_credit(step)
     mission_challenge = _learning_path_mission_challenge(step)
@@ -5344,6 +5345,7 @@ def _learning_path_card(item: dict[str, Any]) -> str:
         '<article class="path-card">'
         f"<strong>{escape(step.title)}</strong>"
         f'<p class="muted">{escape(step.description)}</p>'
+        f"{plan_cue}"
         f'<p class="muted"><strong>Done when:</strong> {escape(completion_text.removeprefix("Done when:").strip())}</p>'
         f"{start_steps}"
         f"{control_credit}"
@@ -5363,6 +5365,42 @@ def _learning_path_card(item: dict[str, Any]) -> str:
         f"{command_block}"
         "</article>"
     )
+
+
+def _learning_path_plan_cue(step: IndexPathStep) -> str:
+    return f'<p class="muted"><strong>Plan:</strong> {escape(_learning_path_plan_text(step))}</p>'
+
+
+def _learning_path_plan_text(step: IndexPathStep) -> str:
+    if step.batch_name:
+        if step.batch_name == "all":
+            return "Compare; course batch; all comparison batches; saves combined reports/worksheets"
+        return f"Compare; batch; {step.batch_name}; saves combined report/worksheet"
+
+    config = _index_step_config(step)
+    duration = _learning_path_duration_text(config)
+    experience = "hands-on viewer" if _learning_path_requires_evidence(step) else "headless plot run"
+    return f"{_learning_path_level(step)}; {experience}; {duration}; saves report/plots/worksheet"
+
+
+def _learning_path_level(step: IndexPathStep) -> str:
+    context = " ".join((step.title, step.description, step.config_path)).lower()
+    if step.batch_name:
+        return "Compare"
+    if "lab01" in context or "lab02" in context:
+        return "Intro"
+    if any(term in context for term in ("dls", "singularity", "wall", "condition")):
+        return "Deep dive"
+    if "lab03" in context or "lab04" in context or "panda" in context:
+        return "Build"
+    return "Build"
+
+
+def _learning_path_duration_text(config: dict[str, Any]) -> str:
+    sim_time = config.get("sim_time") if isinstance(config, dict) else None
+    if isinstance(sim_time, int | float):
+        return f"{float(sim_time):g}s simulated"
+    return "configured sim time"
 
 
 def _learning_path_latest_evidence(run: dict[str, Any] | None) -> str:
