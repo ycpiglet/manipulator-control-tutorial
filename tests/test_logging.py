@@ -2139,6 +2139,34 @@ class LoggingTests(unittest.TestCase):
             )
             (artifact / "report.html").write_text("<html>artifact</html>", encoding="utf-8")
 
+            internal_smoke = Path(temp_dir) / "_codex_smoke_internal"
+            internal_smoke.mkdir()
+            (internal_smoke / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab01_msd",
+                        "config_path": "configs/lab01_msd/interactive_pull.yaml",
+                        "config_name": "interactive_pull",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (internal_smoke / "report.html").write_text("<html>internal</html>", encoding="utf-8")
+
+            codex_internal = Path(temp_dir) / "codex_smoke_internal"
+            codex_internal.mkdir()
+            (codex_internal / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab02_pid",
+                        "config_path": "configs/lab02_pid/interactive_disturbance.yaml",
+                        "config_name": "interactive_disturbance",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (codex_internal / "report.html").write_text("<html>internal</html>", encoding="utf-8")
+
             needs_observation = Path(temp_dir) / "20260627_150200_lab01_interactive_empty"
             needs_observation.mkdir()
             (needs_observation / "summary.json").write_text(
@@ -2240,6 +2268,8 @@ class LoggingTests(unittest.TestCase):
 
             html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
 
+            self.assertNotIn("_codex_smoke_internal", html)
+            self.assertNotIn("codex_smoke_internal", html)
             self.assertIn("Mission Review Queue", html)
             self.assertIn("1 ready, 5 pending", html)
             self.assertIn(

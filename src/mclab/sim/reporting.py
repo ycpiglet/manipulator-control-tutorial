@@ -38,6 +38,7 @@ from mclab.learning_guides import (
     start_steps_for_guide,
     viewer_legend_for_guide,
 )
+from mclab.output_filters import is_internal_output_dir
 
 INDEX_METRIC_KEYS = (
     "max_abs_position",
@@ -4715,6 +4716,8 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
     runs: list[dict[str, Any]] = []
     for child in root.iterdir():
         if not child.is_dir():
+            continue
+        if is_internal_output_dir(child):
             continue
         summary = _read_json(child / "summary.json")
         report_path = child / "report.html"

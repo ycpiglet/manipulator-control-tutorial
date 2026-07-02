@@ -38,6 +38,7 @@ from mclab.learning_guides import (
     start_steps_for_guide,
     viewer_legend_for_guide,
 )
+from mclab.output_filters import is_internal_output_dir
 from mclab.sim.reporting import (
     INDEX_PLOT_PRIORITY,
     _activity_mix_items,
@@ -2554,6 +2555,8 @@ def _iter_output_summaries(outputs_root: Path) -> list[tuple[Path, dict[str, Any
     summaries: list[tuple[Path, dict[str, Any], float]] = []
     for child in outputs_root.iterdir():
         if not child.is_dir():
+            continue
+        if is_internal_output_dir(child):
             continue
         summary_path = child / "summary.json"
         summary = _read_json(summary_path)
