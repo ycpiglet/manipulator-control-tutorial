@@ -470,6 +470,7 @@ class CliImportTests(unittest.TestCase):
             "--headless --plot --plots essential --open-report",
             printed,
         )
+        self.assertIn(f"Review index command: python -m mclab index --output-dir {outputs} --open", printed)
 
     def test_cli_review_names_required_preset_before_observation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -505,6 +506,7 @@ class CliImportTests(unittest.TestCase):
             printed,
         )
         self.assertIn("Course path next: 1. Feel 1D physics", printed)
+        self.assertIn(f"Review index command: python -m mclab index --output-dir {outputs} --open", printed)
 
     def test_cli_review_handles_empty_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -522,6 +524,7 @@ class CliImportTests(unittest.TestCase):
             "--headless --plot --plots essential --open-report",
             printed,
         )
+        self.assertIn(f"Review index command: python -m mclab index --output-dir {outputs} --open", printed)
 
     def test_cli_searches_guided_scenarios(self) -> None:
         args = build_parser().parse_args(["scenarios", "virtual", "wall", "--filter", "wall", "--limit", "0"])

@@ -548,6 +548,7 @@ def _print_review_queue(outputs_root: Path, *, open_next: bool = False) -> None:
     if next_output is None:
         print("Next review: none")
         _print_review_path_context(outputs_root)
+        _print_review_index_command(outputs_root)
         return
 
     print(f"Next review folder: {next_output}")
@@ -569,6 +570,7 @@ def _print_review_queue(outputs_root: Path, *, open_next: bool = False) -> None:
             print(observation_next)
         print(action_plot_review_text(action, outputs_root))
     _print_review_path_context(outputs_root)
+    _print_review_index_command(outputs_root)
     if open_next:
         _open_path(entry)
 
@@ -582,6 +584,16 @@ def _print_review_path_context(outputs_root: Path) -> None:
         return
     print(f"Course path next: {learning_path_next_label(outputs_root)}")
     print(f"Course path command: {learning_path_next_command(outputs_root)}")
+
+
+def _print_review_index_command(outputs_root: Path) -> None:
+    print(f"Review index command: {_review_index_command(outputs_root)}")
+
+
+def _review_index_command(outputs_root: Path) -> str:
+    if outputs_root == Path("outputs"):
+        return "python -m mclab index --open"
+    return f"python -m mclab index --output-dir {outputs_root} --open"
 
 
 def _print_discovery_review_footer() -> None:
