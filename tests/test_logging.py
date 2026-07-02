@@ -2180,6 +2180,20 @@ class LoggingTests(unittest.TestCase):
             )
             (codex_internal / "report.html").write_text("<html>internal</html>", encoding="utf-8")
 
+            verify_internal = Path(temp_dir) / "verify_smoke_internal"
+            verify_internal.mkdir()
+            (verify_internal / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab03_2dof",
+                        "config_path": "configs/lab03_2dof/interactive_2dof.yaml",
+                        "config_name": "interactive_2dof",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (verify_internal / "report.html").write_text("<html>internal</html>", encoding="utf-8")
+
             needs_observation = Path(temp_dir) / "20260627_150200_lab01_interactive_empty"
             needs_observation.mkdir()
             (needs_observation / "summary.json").write_text(
@@ -2283,6 +2297,7 @@ class LoggingTests(unittest.TestCase):
 
             self.assertNotIn("_codex_smoke_internal", html)
             self.assertNotIn("codex_smoke_internal", html)
+            self.assertNotIn("verify_smoke_internal", html)
             self.assertIn("Mission Review Queue", html)
             self.assertIn("1 ready, 5 pending", html)
             self.assertIn("4 learner-action, 1 artifact-only", html)

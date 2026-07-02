@@ -2536,6 +2536,11 @@ class LearnerMenuTests(unittest.TestCase):
                 "configs/lab01_msd/interactive_pull.yaml",
             )
             write_summary(
+                outputs / "verify_smoke_needs_observation",
+                "lab03_2dof",
+                "configs/lab03_2dof/interactive_2dof.yaml",
+            )
+            write_summary(
                 outputs / "run_lab01_needs_observation",
                 "lab01_msd",
                 "configs/lab01_msd/interactive_pull.yaml",
@@ -3453,9 +3458,11 @@ class LearnerMenuTests(unittest.TestCase):
             older = outputs / "older_lab01"
             newer = outputs / "newer_lab04"
             internal_newer = outputs / "codex_newer_lab02"
+            verify_newer = outputs / "verify_newer_lab03"
             older.mkdir(parents=True)
             newer.mkdir(parents=True)
             internal_newer.mkdir(parents=True)
+            verify_newer.mkdir(parents=True)
             (older / "summary.json").write_text(
                 json.dumps({"lab_name": "lab01_msd", "config_path": "configs/lab01_msd/default.yaml"}),
                 encoding="utf-8",
@@ -3468,9 +3475,14 @@ class LearnerMenuTests(unittest.TestCase):
                 json.dumps({"lab_name": "lab02_pid", "config_path": "configs/lab02_pid/default.yaml"}),
                 encoding="utf-8",
             )
+            (verify_newer / "summary.json").write_text(
+                json.dumps({"lab_name": "lab03_2dof", "config_path": "configs/lab03_2dof/interactive_2dof.yaml"}),
+                encoding="utf-8",
+            )
             (older / "report.html").write_text("<html></html>", encoding="utf-8")
             (newer / "report.html").write_text("<html></html>", encoding="utf-8")
             (internal_newer / "report.html").write_text("<html></html>", encoding="utf-8")
+            (verify_newer / "report.html").write_text("<html></html>", encoding="utf-8")
             now = time.time()
             for path in (older / "summary.json", older / "report.html"):
                 os.utime(path, (now - 20.0, now - 20.0))
@@ -3478,6 +3490,8 @@ class LearnerMenuTests(unittest.TestCase):
                 os.utime(path, (now, now))
             for path in (internal_newer / "summary.json", internal_newer / "report.html"):
                 os.utime(path, (now + 20.0, now + 20.0))
+            for path in (verify_newer / "summary.json", verify_newer / "report.html"):
+                os.utime(path, (now + 30.0, now + 30.0))
 
             self.assertEqual(latest_saved_output(outputs), newer)
 

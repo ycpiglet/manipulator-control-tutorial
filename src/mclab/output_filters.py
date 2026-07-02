@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 
-INTERNAL_OUTPUT_PREFIXES = ("_", "codex_")
+INTERNAL_OUTPUT_PREFIXES = ("_", "codex_", "verify_")
 
 
 def is_internal_output_dir(path_or_name: str | Path) -> bool:
