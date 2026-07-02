@@ -14,6 +14,7 @@ from typing import Any
 from mclab.config import load_config
 from mclab.course_progress import course_milestone_label_for_step_index, course_milestone_summary
 from mclab.experience_coverage import (
+    EXPERIENCE_COVERAGE_ITEMS,
     ExperienceCoverageItem,
     ExperienceCoverageRecord,
     ExperienceCoverageStatus,
@@ -5161,7 +5162,8 @@ def _experience_coverage_section(runs: list[dict[str, Any]]) -> str:
     records = _experience_coverage_records_for_index(runs)
     summary = experience_coverage_summary_text(records)
     next_item = next_experience_coverage_item(records)
-    status_cards = _experience_coverage_status_cards(experience_coverage_statuses(records))
+    repair_blocks = _experience_coverage_repair_blocks(runs)
+    status_cards = _experience_coverage_status_cards(experience_coverage_statuses(records), repair_blocks)
     if next_item is None:
         next_block = (
             '<p class="muted">'
@@ -5193,19 +5195,25 @@ def _experience_coverage_section(runs: list[dict[str, Any]]) -> str:
     )
 
 
-def _experience_coverage_status_cards(statuses: tuple[ExperienceCoverageStatus, ...]) -> str:
-    cards = "\n".join(_experience_coverage_status_card(status) for status in statuses)
+def _experience_coverage_status_cards(
+    statuses: tuple[ExperienceCoverageStatus, ...],
+    repair_blocks: dict[str, str],
+) -> str:
+    cards = "\n".join(_experience_coverage_status_card(status, repair_blocks) for status in statuses)
     return f'<div class="path-grid">{cards}</div>'
 
 
-def _experience_coverage_status_card(status: ExperienceCoverageStatus) -> str:
+def _experience_coverage_status_card(status: ExperienceCoverageStatus, repair_blocks: dict[str, str]) -> str:
     if status.next_missing:
         status_label = "Next"
     elif status.covered:
         status_label = "Done"
     else:
         status_label = "Missing"
+    repair_block = repair_blocks.get(status.item.key, "")
     command = status.item.command
+    if repair_block and command and escape(command) in repair_block:
+        command = ""
     command_block = f'<pre class="path-command">{escape(command)}</pre>' if command else ""
     return (
         '<article class="path-card">'
@@ -5215,9 +5223,57 @@ def _experience_coverage_status_card(status: ExperienceCoverageStatus) -> str:
         f'<p class="muted"><strong>Focus:</strong> {escape(status.item.next_step)}</p>'
         f'<p class="muted"><strong>Evidence:</strong> {escape(experience_coverage_item_evidence(status.item))}</p>'
         f"{_experience_coverage_control_cues(status.item)}"
+        f"{repair_block}"
         f"{command_block}"
         "</article>"
     )
+
+
+def _experience_coverage_repair_blocks(runs: list[dict[str, Any]]) -> dict[str, str]:
+    repairs: dict[str, str] = {}
+    for run in _mission_review_prioritized_runs(runs):
+        key = _experience_coverage_repair_key_for_run(run)
+        if not key or key in repairs:
+            continue
+        status = _mission_review_status(run)
+        command = _run_repeat_command(run)
+        command_block = f'<pre class="path-command">{escape(command)}</pre>' if command else ""
+        report = str(run.get("report") or "")
+        name = str(run.get("name") or "")
+        link = f'<a href="{escape(report)}">{escape(name)}</a>' if report else escape(name)
+        repairs[key] = (
+            '<p class="muted"><strong>Review repair:</strong> '
+            f"{escape(status)} in {link}</p>"
+            f"{command_block}"
+        )
+    return repairs
+
+
+def _mission_review_prioritized_runs(runs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    matches: list[dict[str, Any]] = []
+    for bucket in ("outcome", "preset", "observation", "prediction", "note", "control"):
+        for run in runs:
+            if _mission_review_bucket(_mission_review_status(run)) == bucket:
+                matches.append(run)
+    return matches
+
+
+def _experience_coverage_repair_key_for_run(run: dict[str, Any]) -> str:
+    tags = _experience_tags_for_index_run(run)
+    for key in ("wall", "singularity", "2dof", "panda", "compare", "intro"):
+        item = _experience_coverage_item_for_key(key)
+        if item is not None and any(tag in tags for tag in item.tags):
+            return key
+    if "hands-on" in tags:
+        return "hands-on"
+    return ""
+
+
+def _experience_coverage_item_for_key(key: str) -> ExperienceCoverageItem | None:
+    for item in EXPERIENCE_COVERAGE_ITEMS:
+        if item.key == key:
+            return item
+    return None
 
 
 def _experience_coverage_control_cues(item: ExperienceCoverageItem) -> str:

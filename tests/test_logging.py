@@ -2507,6 +2507,66 @@ class LoggingTests(unittest.TestCase):
             html,
         )
 
+    def test_outputs_index_coverage_cards_show_related_review_repairs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+
+            def write_run(name: str, lab_name: str, config_path: str) -> None:
+                run = root / name
+                run.mkdir()
+                (run / "report.html").write_text("<html></html>", encoding="utf-8")
+                (run / "summary.json").write_text(
+                    json.dumps(
+                        {
+                            "lab_name": lab_name,
+                            "config_path": config_path,
+                            "config_name": Path(config_path).stem,
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+
+            write_run("run_lab04_wall", "lab04_panda", "configs/lab04_panda/interactive_virtual_wall.yaml")
+            write_run(
+                "run_lab04_cartesian",
+                "lab04_panda",
+                "configs/lab04_panda/interactive_cartesian_reach.yaml",
+            )
+            write_run("run_lab03_interactive", "lab03_2dof", "configs/lab03_2dof/interactive_2dof.yaml")
+
+            html = write_outputs_index(root).read_text(encoding="utf-8")
+
+        self.assertIn("<strong>2DOF/Jacobian</strong>", html)
+        self.assertIn(
+            '<strong>Review repair:</strong> Needs observation in '
+            '<a href="run_lab03_interactive/report.html">run_lab03_interactive</a>',
+            html,
+        )
+        self.assertIn(
+            "python -m mclab run lab03 --config configs/lab03_2dof/interactive_2dof.yaml "
+            "--viewer --realtime --pause-at-end --plot --plots task_disturbance --open-report",
+            html,
+        )
+        self.assertIn("<strong>Panda manipulator</strong>", html)
+        self.assertIn(
+            '<strong>Review repair:</strong> Needs observation in '
+            '<a href="run_lab04_cartesian/report.html">run_lab04_cartesian</a>',
+            html,
+        )
+        self.assertIn("<strong>Virtual wall</strong>", html)
+        self.assertIn(
+            '<strong>Review repair:</strong> Needs required preset Close wall in '
+            '<a href="run_lab04_wall/report.html">run_lab04_wall</a>',
+            html,
+        )
+        wall_card_start = html.index("<strong>Virtual wall</strong>")
+        wall_card = html[wall_card_start : html.index("</article>", wall_card_start)]
+        wall_command = (
+            "python -m mclab run lab04 --config configs/lab04_panda/interactive_virtual_wall.yaml "
+            "--viewer --realtime --pause-at-end --plot --plots wall --open-report"
+        )
+        self.assertEqual(wall_card.count(wall_command), 1)
+
     def test_outputs_index_repeat_command_preserves_config_plot_selection(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
