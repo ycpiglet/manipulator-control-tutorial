@@ -5016,6 +5016,11 @@ def _starter_commands_section() -> str:
             "python -m mclab coverage",
         ),
         (
+            "Compare all experiences",
+            "Print every core experience type with its mode, focus, evidence cue, and ready command.",
+            "python -m mclab coverage --details",
+        ),
+        (
             "Inspect parameters",
             "Show what a learner can change, current YAML values, controls, prediction prompt, and command.",
             "python -m mclab params wall --filter hands-on",

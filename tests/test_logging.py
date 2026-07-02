@@ -2324,6 +2324,8 @@ class LoggingTests(unittest.TestCase):
             self.assertIn(r".\run_mclab.cmd", html)
             self.assertIn("See next experience", html)
             self.assertIn("python -m mclab coverage", html)
+            self.assertIn("Compare all experiences", html)
+            self.assertIn("python -m mclab coverage --details", html)
             self.assertIn("Inspect parameters", html)
             self.assertIn("python -m mclab params wall --filter hands-on", html)
             self.assertIn("Preview next path step", html)
