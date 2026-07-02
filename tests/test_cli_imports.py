@@ -203,10 +203,16 @@ class CliImportTests(unittest.TestCase):
             "evidence: At least one learner-control event plus one prediction-backed observation marker.",
             printed,
         )
+        self.assertIn("Controls: MCLab Interaction panel, Pull/Push buttons and A/D keys", printed)
+        self.assertIn("Counts as control: experiment buttons, live sliders, Quick presets", printed)
         self.assertIn(
             "- Comparison batch: Missing; mode: comparison batch; "
             "focus: Run any Comparison Batches card, then open the worksheet Prediction Check.; "
             "evidence: A batch comparison report and worksheet with a Prediction Check table.",
+            printed,
+        )
+        self.assertIn(
+            "Controls: comparison batch; inspect plots and worksheet, then use Viewer Handoff for hands-on rerun.",
             printed,
         )
         self.assertIn(
@@ -215,6 +221,8 @@ class CliImportTests(unittest.TestCase):
             "evidence: A virtual-wall run with target crossing, contact/release, force, or wall-gap evidence.",
             printed,
         )
+        self.assertIn("Target X - away  A / Left / Target X + into wall  D / Right", printed)
+        self.assertIn("view/evidence helpers such as Pause, Playback speed, and Use live status do not count.", printed)
 
     def test_cli_prints_learning_path_progress_and_next_command(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

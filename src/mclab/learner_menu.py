@@ -1515,6 +1515,16 @@ def experience_coverage_detail_lines(outputs_root: Path | None = None) -> list[s
         )
         if status.item.command:
             lines.append(f"  Command: {status.item.command}")
+        target = _experience_coverage_target_for_key(status.item.key)
+        if isinstance(target, MenuAction):
+            lines.append(f"  {action_controls_text(target)}")
+            credit_text = action_control_credit_text(target)
+            if credit_text:
+                lines.append(f"  {credit_text}")
+        else:
+            lines.append(
+                "  Controls: comparison batch; inspect plots and worksheet, then use Viewer Handoff for hands-on rerun."
+            )
     return lines
 
 
