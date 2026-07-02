@@ -128,7 +128,7 @@ Implemented and verified:
 - CLI `python -m mclab review` prints the saved-run review queue, next pending evidence status, report, worksheet, matched action, observation next step, and plot review cue; `--open` opens the next pending report
 - CLI `python -m mclab index --open` regenerates and opens `outputs/index.html` without launching the learner menu
 - Outputs index includes `Starter Commands` for setup checking, opening the learner menu, checking coverage, inspecting editable parameters, previewing the next path step, generating first headless artifacts, launching the first hands-on viewer demo, and running the first comparison batch
-- Outputs index includes the shared `Experience Coverage` summary plus Done/Next/Missing cards and CLI commands for all core experience types so browser-based review shows the same core experience evidence and next missing experience as the learner menu
+- Outputs index includes the shared `Experience Coverage` summary plus Done/Next/Missing cards with mode, focus, evidence, and CLI commands for all core experience types so browser-based review shows the same core experience evidence and next missing experience as the learner menu
 - Outputs index batch `Next cue` text and direct `Viewer Handoff` chip point completed comparison batches from the worksheet Prediction Check to the recommended viewer rerun section
 - Interactive `MCLab Interaction` quick presets, purpose/value previews, and per-slider step buttons for representative damping, PID, 2DOF reach, Panda reach, and virtual wall parameter sets
 - Lab03 2DOF interactive viewer demos include Shoulder/Elbow pulse buttons for live joint-disturbance recovery observations

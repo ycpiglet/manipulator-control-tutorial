@@ -12,6 +12,7 @@ from typing import Any
 from mclab.config import load_config
 from mclab.course_progress import course_milestone_label_for_step_index, course_milestone_summary
 from mclab.experience_coverage import (
+    ExperienceCoverageItem,
     ExperienceCoverageRecord,
     ExperienceCoverageStatus,
     experience_coverage_statuses,
@@ -5064,7 +5065,9 @@ def _experience_coverage_section(runs: list[dict[str, Any]]) -> str:
         next_block = (
             '<article class="path-card">'
             f"<strong>Run next: {escape(next_item.label)}</strong>"
-            f'<p class="muted">{escape(next_item.next_step)}</p>'
+            f'<p class="muted"><strong>Mode:</strong> {escape(_experience_coverage_item_mode(next_item))}</p>'
+            f'<p class="muted"><strong>Next action:</strong> {escape(next_item.next_step)}</p>'
+            f'<p class="muted"><strong>Evidence:</strong> {escape(_experience_coverage_item_evidence(next_item))}</p>'
             f"{command_block}"
             "</article>"
         )
@@ -5096,10 +5099,34 @@ def _experience_coverage_status_card(status: ExperienceCoverageStatus) -> str:
         '<article class="path-card">'
         f"<strong>{escape(status.item.label)}</strong>"
         f'<span class="status">{escape(status_label)}</span>'
-        f'<p class="muted">{escape(status.item.next_step)}</p>'
+        f'<p class="muted"><strong>Mode:</strong> {escape(_experience_coverage_item_mode(status.item))}</p>'
+        f'<p class="muted"><strong>Focus:</strong> {escape(status.item.next_step)}</p>'
+        f'<p class="muted"><strong>Evidence:</strong> {escape(_experience_coverage_item_evidence(status.item))}</p>'
         f"{command_block}"
         "</article>"
     )
+
+
+def _experience_coverage_item_mode(item: ExperienceCoverageItem) -> str:
+    command = str(getattr(item, "command", "") or "")
+    if " batch " in f" {command} ":
+        return "comparison batch"
+    if "--viewer" in command:
+        return "hands-on viewer"
+    return "headless plot run"
+
+
+def _experience_coverage_item_evidence(item: ExperienceCoverageItem) -> str:
+    key = str(getattr(item, "key", "") or "")
+    return {
+        "intro": "A saved run report, priority plot, and worksheet for the baseline 1D plant.",
+        "hands-on": "At least one learner-control event plus one prediction-backed observation marker.",
+        "compare": "A batch comparison report and worksheet with a Prediction Check table.",
+        "2dof": "A Lab03 2DOF/Jacobian run report, priority plot, and worksheet.",
+        "singularity": "A DLS/singularity run with damping, condition, speed, or task-error evidence.",
+        "panda": "A Panda manipulator run report and Cartesian or joint-control evidence plot.",
+        "wall": "A virtual-wall run with target crossing, contact/release, force, or wall-gap evidence.",
+    }.get(key, "A saved report, plot, and worksheet for this experience type.")
 
 
 def _experience_coverage_records_for_index(runs: list[dict[str, Any]]) -> list[ExperienceCoverageRecord]:

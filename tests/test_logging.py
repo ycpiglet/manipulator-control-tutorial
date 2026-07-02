@@ -2277,6 +2277,16 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Starter Commands", html)
             self.assertIn("Experience Coverage", html)
             self.assertIn("Run next: Intro basics", html)
+            self.assertIn("<strong>Next action:</strong> Run Lab01 Mass-Spring-Damper - Auto demo.", html)
+            self.assertIn("<strong>Mode:</strong> hands-on viewer", html)
+            self.assertIn(
+                "<strong>Evidence:</strong> At least one learner-control event plus one prediction-backed observation marker.",
+                html,
+            )
+            self.assertIn(
+                "<strong>Evidence:</strong> A batch comparison report and worksheet with a Prediction Check table.",
+                html,
+            )
             self.assertIn("<strong>Intro basics</strong>", html)
             self.assertIn('<span class="status">Next</span>', html)
             self.assertIn("<strong>Virtual wall</strong>", html)
