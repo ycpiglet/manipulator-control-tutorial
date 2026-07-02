@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 import shlex
+from copy import deepcopy
 from dataclasses import dataclass
 from html import escape
 from pathlib import Path
@@ -4792,16 +4793,40 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
 
 
 def _index_run_config(child: Path, summary: dict[str, Any]) -> dict[str, Any]:
+    config_path = str(summary.get("config_path") or "").strip()
+    source_config: dict[str, Any] = {}
+    if config_path:
+        try:
+            source_config = load_config(config_path)
+        except (OSError, ValueError):
+            source_config = {}
     config = _read_config(child / "config.yaml")
     if config:
+        return _merge_source_learning_metadata(config, source_config)
+    if source_config:
+        return source_config
+    return {}
+
+
+def _merge_source_learning_metadata(config: dict[str, Any], source_config: dict[str, Any]) -> dict[str, Any]:
+    """Preserve saved run values while using current source metadata for learner cues."""
+    if not source_config:
         return config
-    config_path = str(summary.get("config_path") or "").strip()
-    if not config_path:
-        return {}
-    try:
-        return load_config(config_path)
-    except (OSError, ValueError):
-        return {}
+    source_interaction = source_config.get("interaction")
+    if not isinstance(source_interaction, dict):
+        return config
+    source_presets = source_interaction.get("tuning_presets")
+    if not isinstance(source_presets, list) or not source_presets:
+        return config
+    merged = deepcopy(config)
+    interaction = merged.get("interaction")
+    if not isinstance(interaction, dict):
+        interaction = {}
+    else:
+        interaction = dict(interaction)
+    interaction["tuning_presets"] = deepcopy(source_presets)
+    merged["interaction"] = interaction
+    return merged
 
 
 def _index_observation_next_step(
@@ -6066,6 +6091,8 @@ def _mission_review_queue_card(runs: list[dict[str, Any]]) -> str:
     counts = _mission_review_queue_counts(runs)
     ready = counts.get("ready", 0)
     pending = len(runs) - ready
+    artifact_pending = counts.get("artifact", 0)
+    learner_action_pending = max(0, pending - artifact_pending)
     next_review = _mission_review_next_run(runs)
     next_review_text = "No pending mission evidence."
     repair_command_block = ""
@@ -6085,7 +6112,8 @@ def _mission_review_queue_card(runs: list[dict[str, Any]]) -> str:
     return (
         '<div class="progress-card">'
         "<strong>Mission Review Queue</strong>"
-        f'<span class="muted">{ready} ready, {pending} pending</span>'
+        f'<span class="muted">{ready} ready, {pending} pending '
+        f"({learner_action_pending} learner-action, {artifact_pending} artifact-only)</span>"
         '<p class="muted">'
         f"Needs observation: {counts.get('observation', 0)}; "
         f"prediction: {counts.get('prediction', 0)}; "

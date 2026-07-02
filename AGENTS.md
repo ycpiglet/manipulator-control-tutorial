@@ -133,6 +133,8 @@ Implemented and verified:
 - Outputs index includes the shared `Experience Coverage` summary plus Done/Next/Missing cards with mode, focus, evidence, controls, learner-control credit, and CLI commands for all core experience types so browser-based review shows the same core experience evidence and next missing experience as the learner menu
 - Outputs index points completed Experience Coverage back to the Learning Path section when course-path evidence may still be pending
 - Outputs index mission review queue prioritizes required-preset gaps before generic observation gaps and shows next review, repair command, course-path next step/command, and the next required preset in the run-table observation next step
+- Learner menu, CLI review, and outputs index review queues split pending counts into learner-action pending and artifact-only pending so old plot/worksheet regeneration tasks do not hide hands-on evidence work
+- Outputs index augments stale saved run configs with current source YAML preset metadata for learner cues so older Lab04 wall outputs still show required preset gaps such as `Close wall`
 - Outputs index repair and repeat commands preserve YAML or learning-path plot presets such as `wall`, `dls_disturbance`, and `cartesian_reach`
 - Outputs index batch `Next cue` text and direct `Viewer Handoff` chip point completed comparison batches from the worksheet Prediction Check to the recommended viewer rerun section
 - Interactive `MCLab Interaction` quick presets, purpose/value previews, and per-slider step buttons for representative damping, PID, 2DOF reach, Panda reach, and virtual wall parameter sets

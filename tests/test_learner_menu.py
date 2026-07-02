@@ -2540,7 +2540,7 @@ class LearnerMenuTests(unittest.TestCase):
             self.assertEqual(
                 review_queue_summary_text(outputs),
                 (
-                    "Review queue: 1 ready, 6 pending. "
+                    "Review queue: 1 ready, 6 pending (5 learner-action, 1 artifact-only). "
                     "Needs observation: 1; prediction: 1; outcome: 1; required preset: 1; note: 1; control: 0; artifact: 1. "
                     "Next review: run_lab03_outcome_pending - Outcome review pending."
                 ),

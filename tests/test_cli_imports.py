@@ -447,6 +447,7 @@ class CliImportTests(unittest.TestCase):
         opener.assert_called_once_with(report)
         printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
         self.assertIn("Review queue: 0 ready, 1 pending", printed)
+        self.assertIn("(1 learner-action, 0 artifact-only)", printed)
         self.assertIn("Next review: run_lab01_interactive - Needs observation.", printed)
         self.assertIn(f"Next review folder: {run_path}", printed)
         self.assertIn("Next review status: Needs observation", printed)

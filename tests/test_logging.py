@@ -1978,6 +1978,19 @@ class LoggingTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            (wall / "config.yaml").write_text(
+                json.dumps(
+                    {
+                        "interaction": {
+                            "tuning_presets": [
+                                {"label": "Close wall", "values": {"target_x": 0.64}},
+                                {"label": "Back away", "values": {"target_x": 0.52}},
+                            ]
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
             (wall / "report.html").write_text("<html>wall</html>", encoding="utf-8")
             (wall / "interaction_events.json").write_text(
                 json.dumps(
@@ -2272,6 +2285,7 @@ class LoggingTests(unittest.TestCase):
             self.assertNotIn("codex_smoke_internal", html)
             self.assertIn("Mission Review Queue", html)
             self.assertIn("1 ready, 5 pending", html)
+            self.assertIn("4 learner-action, 1 artifact-only", html)
             self.assertIn(
                 "Needs observation: 1; prediction: 1; outcome: 1; required preset: 1; note: 0; control: 0; artifact: 1",
                 html,

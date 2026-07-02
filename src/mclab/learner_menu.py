@@ -2131,6 +2131,8 @@ def review_queue_summary_text(outputs_root: Path | None = None) -> str:
     counts = _review_queue_counts(items)
     ready = counts.get("ready", 0)
     pending = len(items) - ready
+    artifact_pending = counts.get("artifact", 0)
+    learner_action_pending = max(0, pending - artifact_pending)
     gap_text = (
         f"Needs observation: {counts.get('observation', 0)}; "
         f"prediction: {counts.get('prediction', 0)}; "
@@ -2145,7 +2147,11 @@ def review_queue_summary_text(outputs_root: Path | None = None) -> str:
         next_text = "Next review: all saved mission evidence is ready."
     else:
         next_text = f"Next review: {next_item[0].name} - {next_item[1]}."
-    return f"Review queue: {ready} ready, {pending} pending. {gap_text} {next_text}"
+    return (
+        f"Review queue: {ready} ready, {pending} pending "
+        f"({learner_action_pending} learner-action, {artifact_pending} artifact-only). "
+        f"{gap_text} {next_text}"
+    )
 
 
 def next_review_output(outputs_root: Path | None = None) -> Path | None:
