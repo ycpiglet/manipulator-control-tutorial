@@ -40,6 +40,7 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("python -m mclab doctor", printed)
         self.assertIn("python -m mclab menu", printed)
         self.assertIn("python -m mclab coverage", printed)
+        self.assertIn("python -m mclab coverage --details", printed)
         self.assertIn("python -m mclab params wall", printed)
         self.assertIn("python -m mclab next --preview", printed)
         self.assertIn("python -m mclab next", printed)
@@ -107,6 +108,7 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("MCLab Doctor", printed)
         self.assertIn("[OK] Python", printed)
         self.assertIn("Next learner steps:", printed)
+        self.assertIn("python -m mclab coverage --details", printed)
         self.assertIn("python -m mclab params wall --filter hands-on", printed)
         self.assertIn("python -m mclab next --preview", printed)
 

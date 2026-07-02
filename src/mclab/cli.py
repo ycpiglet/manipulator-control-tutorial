@@ -233,6 +233,8 @@ def main(argv: list[str] | None = None) -> int:
         print("  python -m mclab doctor          # check setup and see next learner steps")
         print("  python -m mclab menu            # open the guided launcher")
         print("  python -m mclab coverage        # see missing experience types and next command")
+        print("  python -m mclab coverage --details")
+        print("                                 # compare all experience modes and evidence cues")
         print("  python -m mclab params wall     # see editable YAML/live-control parameters")
         print("  python -m mclab next --preview  # preview the next recommended step")
         print("  python -m mclab next            # launch the next path step")
