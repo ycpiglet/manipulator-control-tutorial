@@ -44,6 +44,13 @@ Implemented:
   `.agents/OPERATING_SYSTEM.md`; added portable `tectonic` build command to
   `paper/README.md`.
 - Removed the single ruff F841 in `validate_robotics_foundations.py`.
+- Cross-platform fixes found by the first CI run (this pass intentionally
+  edited simulator source and tests here, scoped to portability):
+  `_discover_runs` in `src/mclab/sim/reporting.py` now skips sibling
+  directories that raise `OSError` (unreadable systemd private /tmp trees on
+  Linux made outputs-index generation crash); two `test_learner_menu.py`
+  path-parsing tests now build their input with `pathlib.Path` instead of
+  hard-coded Windows backslash strings.
 - Intentionally deferred: converting manuscript marker checks from phrase
   counting to stable keys (needs a manuscript+rebuild iteration before the
   compression pass); preserving reviewer full texts from future review passes.

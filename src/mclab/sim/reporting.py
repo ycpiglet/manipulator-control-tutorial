@@ -4730,14 +4730,19 @@ def _plot_guidance(filename: str) -> tuple[str, str] | None:
 def _discover_runs(root: Path) -> list[dict[str, Any]]:
     runs: list[dict[str, Any]] = []
     for child in root.iterdir():
-        if not child.is_dir():
-            continue
-        if is_internal_output_dir(child):
-            continue
-        summary = _read_json(child / "summary.json")
-        report_path = child / "report.html"
-        index_path = child / "index.html"
-        if not summary and not report_path.exists() and not index_path.exists():
+        try:
+            if not child.is_dir():
+                continue
+            if is_internal_output_dir(child):
+                continue
+            summary = _read_json(child / "summary.json")
+            report_path = child / "report.html"
+            index_path = child / "index.html"
+            if not summary and not report_path.exists() and not index_path.exists():
+                continue
+        except OSError:
+            # Sibling directories owned by other users (e.g. systemd private
+            # /tmp trees on Linux) are unreadable and cannot be run outputs.
             continue
         guide = guide_for_run_summary(summary)
         modified = max(
