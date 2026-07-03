@@ -1,0 +1,4 @@
+interface:
+  display_name: "Deployment Rollback Manager"
+  short_description: "Prepare safer deploy and rollback plans"
+  default_prompt: "Use $deployment-rollback-manager to prepare a deploy checklist and rollback plan."

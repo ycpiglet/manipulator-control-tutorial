@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agent Collaboration Orchestrator"
+  short_description: "Coordinate specialist agent handoffs"
+  default_prompt: "Use $agent-collaboration-orchestrator to split this work across specialist roles."

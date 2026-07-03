@@ -1,0 +1,4 @@
+interface:
+  display_name: "Traceability Manager"
+  short_description: "Map claims and requirements to evidence"
+  default_prompt: "Use $traceability-manager to map requirements or paper claims to evidence."

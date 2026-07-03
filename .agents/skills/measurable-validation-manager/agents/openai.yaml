@@ -1,0 +1,4 @@
+interface:
+  display_name: "Measurable Validation Manager"
+  short_description: "Define numeric validation gates"
+  default_prompt: "Use $measurable-validation-manager to turn this goal into measurable pass/fail checks."

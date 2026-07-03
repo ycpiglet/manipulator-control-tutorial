@@ -1,0 +1,4 @@
+interface:
+  display_name: "Paper Manuscript Writer"
+  short_description: "Draft clear academic prose"
+  default_prompt: "Use $paper-manuscript-writer to write or rewrite a manuscript section."

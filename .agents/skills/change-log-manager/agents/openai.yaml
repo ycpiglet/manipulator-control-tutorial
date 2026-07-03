@@ -1,0 +1,4 @@
+interface:
+  display_name: "Change Log Manager"
+  short_description: "Summarize changes and impact"
+  default_prompt: "Use $change-log-manager to turn diffs or edits into a clear change log."

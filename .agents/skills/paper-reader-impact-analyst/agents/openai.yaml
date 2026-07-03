@@ -1,0 +1,4 @@
+interface:
+  display_name: "Paper Reader Impact Analyst"
+  short_description: "Evaluate reader usefulness"
+  default_prompt: "Use $paper-reader-impact-analyst to assess what readers will remember and use."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Garbage Collection Manager"
+  short_description: "Clean stale artifacts and repository clutter"
+  default_prompt: "Use $garbage-collection-manager to inventory and safely clean stale project artifacts."

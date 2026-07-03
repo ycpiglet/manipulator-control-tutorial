@@ -1,0 +1,4 @@
+interface:
+  display_name: "Paper LaTeX Editor"
+  short_description: "Edit and compile LaTeX papers"
+  default_prompt: "Use $paper-latex-editor to fix LaTeX structure, citations, equations, and builds."

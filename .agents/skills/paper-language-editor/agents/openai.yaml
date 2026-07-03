@@ -1,0 +1,4 @@
+interface:
+  display_name: "Paper Language Editor"
+  short_description: "Polish natural manuscript style"
+  default_prompt: "Use $paper-language-editor to remove awkward or AI-like phrasing from a paper."

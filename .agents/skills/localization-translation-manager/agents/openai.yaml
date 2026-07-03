@@ -1,0 +1,4 @@
+interface:
+  display_name: "Localization Translation Manager"
+  short_description: "Manage translation and terminology quality"
+  default_prompt: "Use $localization-translation-manager to translate and standardize this material."

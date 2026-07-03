@@ -1,0 +1,561 @@
+# Validation Metrics History (snapshot 2026-07-04)
+# Verbatim archive of .agents/VALIDATION_METRICS.yaml before the registry was
+# trimmed to durable, currently-enforced gates. Pass-specific historical gates
+# live here; the live registry points at this file.
+
+version: 1
+purpose: "Metric registry for repeatable agent validation in this repository."
+
+global_gates:
+  state_recorded:
+    metric: "state snapshot or final summary exists"
+    threshold: "present"
+    evidence: "final response, change log, or project-state-manager record"
+  commands_reported:
+    metric: "validation commands and outcomes reported"
+    threshold: "all attempted checks listed"
+    evidence: "final response"
+  no_unknown_deletions:
+    metric: "unknown or user-authored files deleted without explicit approval"
+    threshold: 0
+    evidence: "git diff, cleanup inventory"
+
+code_quality:
+  tests:
+    metric: "pytest exit code"
+    threshold: 0
+    command: "python -m pytest -q"
+  lint:
+    metric: "ruff check exit code"
+    threshold: 0
+    command: "python -m ruff check ."
+  package_import:
+    metric: "CLI import/list command exit code"
+    threshold: 0
+    command: "python -m mclab --help"
+  bootstrap_verify:
+    metric: "bootstrap verification exit code"
+    threshold: 0
+    command: "python scripts/bootstrap_and_run.py --verify"
+
+simulation_runs:
+  required_artifacts:
+    metric: "required output files"
+    threshold: "config.yaml, summary.json, notes.md, log.csv, report.html present"
+    evidence: "outputs/<run>/"
+  sample_count:
+    metric: "summary.samples"
+    threshold: "> 0"
+    evidence: "outputs/<run>/summary.json"
+  duration:
+    metric: "summary.duration"
+    threshold: "> 0 seconds"
+    evidence: "outputs/<run>/summary.json"
+  report_sections:
+    metric: "HTML report sections"
+    threshold: "Learning Focus, Reproduce, Summary, Artifacts present"
+    evidence: "outputs/<run>/report.html"
+
+lab01_mass_spring_damper:
+  energy_logged:
+    metric: "energy columns"
+    threshold: "kinetic_energy and potential_energy present when applicable"
+    evidence: "outputs/<run>/log.csv"
+  response_bounded:
+    metric: "max_abs_position"
+    threshold: "finite and lesson-appropriate"
+    evidence: "outputs/<run>/summary.json"
+
+lab02_pid:
+  steady_state_error:
+    metric: "absolute steady_state_error"
+    threshold: "<= 0.05 m for default tracking demos"
+    evidence: "outputs/<run>/summary.json"
+  overshoot:
+    metric: "overshoot_percent"
+    threshold: "<= 20 percent unless the lesson intentionally demonstrates overshoot"
+    evidence: "outputs/<run>/summary.json"
+  settling_time:
+    metric: "settling_time"
+    threshold: "finite for stable comparison demos"
+    evidence: "outputs/<run>/summary.json"
+
+lab03_2dof:
+  final_joint_error:
+    metric: "final_joint_error_norm"
+    threshold: "<= 0.1 rad norm for joint-space demos"
+    evidence: "outputs/<run>/summary.json"
+  final_task_error:
+    metric: "final_task_error_norm"
+    threshold: "<= 0.05 m norm for task-space demos"
+    evidence: "outputs/<run>/summary.json"
+  jacobian_condition:
+    metric: "max_jacobian_condition"
+    threshold: "<= 20 OK, <= 100 caution, > 100 singularity lesson or inspect"
+    evidence: "outputs/<run>/summary.json"
+
+lab04_panda:
+  final_cartesian_error:
+    metric: "final_cartesian_error_cm"
+    threshold: "<= 2.0 cm for reach demos"
+    evidence: "outputs/<run>/summary.json"
+  actuator_effort:
+    metric: "max_abs_tau_cmd"
+    threshold: "<= 60 force/torque proxy unless stress lesson"
+    evidence: "outputs/<run>/summary.json"
+  virtual_wall_penetration:
+    metric: "max_wall_penetration_cm"
+    threshold: "<= 5.0 cm for stable wall demos"
+    evidence: "outputs/<run>/summary.json"
+  virtual_wall_force:
+    metric: "max_abs_virtual_wall_force"
+    threshold: "<= 80 for stable wall demos"
+    evidence: "outputs/<run>/summary.json"
+
+paper_tutorial:
+  paper_only_validation:
+    metric: "paper-only validation for paper/.agents-only edits"
+    threshold: "Tectonic exit code 0; final rerun segment has 0 citation/reference/rerun/overfull/underfull warnings; citation/provenance diff has no missing used keys; latest PDF page count and byte size recorded"
+    command: "$env:PYTHONUTF8='1'; python C:\\Users\\ycpig\\.codex\\plugins\\cache\\openai-bundled\\latex\\0.2.4\\scripts\\compile_latex.py C:\\Users\\ycpig\\manipulator-control-tutorial\\paper\\main.tex --compiler tectonic --output-directory C:\\Users\\ycpig\\manipulator-control-tutorial\\paper --json"
+    evidence: "paper/main.pdf, .agents/validation/robotics_foundations_validation_summary.yaml, citation/provenance check output, .agents/CURRENT_STATE.md, .agents/PAPER_VERSION_LOG.md"
+  source_coverage:
+    metric: "major technical claims with citation or derivation"
+    threshold: "100 percent for publication-facing claims"
+    evidence: "paper/*.tex, bibliography, traceability record"
+  beginner_readability:
+    metric: "undefined core terms before use"
+    threshold: 0
+    evidence: "paper-novice-reader review"
+  equation_traceability:
+    metric: "important equations explained in prose"
+    threshold: "all key equations"
+    evidence: "paper/*.tex"
+  section3_lti_transfer_function_clarity:
+    metric: "Section 3 explains LTI systems, response types, transfer functions, frequency response, and final-value intuition with beginner-facing scaffolding and explicit assumptions"
+    threshold: "system/input/output/state definitions, RLC-MSD mapping table, staged linearity explanation, zero-input/zero-state/impulse/step response table, causal convolution caveat, transfer-function definition as Laplace transform of impulse response, compliance/admittance/impedance unit table, H(0) static-compliance caveat, final-value-theorem caveats, and LTI checklist present"
+    evidence: "paper/sections/03_lti_system.tex plus rendered PDF pages 14-20"
+  section2_history_concept_clarity:
+    metric: "Section 2 explains why impedance emerged from changing-signal transmission problems and distinguishes port variables, resistance, reactance, phasors, static stiffness/compliance, and mechanical impedance"
+    threshold: "power-conjugate effort/flow caveat, static stiffness/compliance caveat, per-unit R'/L'/C'/G' line elements, telegrapher equations, distortionless-line condition, phasor assumptions, reactance signs, damping-power sign, and mechanical impedance sign/frequency interpretation present"
+    evidence: "paper/sections/02_impedance.tex plus rendered PDF pages 5-14"
+  bibliography_cleanup_and_convergence:
+    metric: "latest reference-management pass keeps BibTeX keys consistent, confirms final citation convergence, and removes internal cache/retrieval notes from the visible bibliography"
+    threshold: "0 missing cite keys, 0 duplicate BibTeX keys, final log segment after main.bbl has 0 citation warnings, 0 undefined-reference warnings, and 0 rerun warnings; PDF text has 0 occurrences of unresolved citation markers and internal phrases such as `Ignored local PDF cache`, `source URL recorded in sources.md`, `Metadata-only`, `bot-check`, and `automated retrieval`; local PDF provenance remains in sources.md or BibTeX comments rather than printed notes"
+    evidence: "paper/references/refs.bib, paper/references/sources.md, review agents Poincare the 2nd and Mendel the 2nd, bundled Tectonic compile with explicit --compiler tectonic, bundled Python/PyPDF text check, and rendered PDF page 87"
+  control_map_pose_scope_and_wall_damping:
+    metric: "latest multi-agent pass adds a beginner control-mode map, fixes translational-position versus full-pose scope in Section 6, and clarifies one-sided virtual-wall damping"
+    threshold: "Section 6 contains table caption `초심자용 제어 방식 구분`; Section 6 states that x in R^3 means translational end-effector position only and that full pose impedance requires rotation error, wrench, and geometric Jacobian; virtual-wall text says damping turns on only while penetrating further and does not pull the endpoint inward while exiting; stale wording `손끝이 공간의 어디에 있는지` and `로봇이 벽에서 빠져나오는 순간` is absent"
+    evidence: "paper/sections/06_impedance_control.tex, review agents Cicero the 2nd, Carson the 2nd, and Ramanujan the 2nd, bundled Tectonic compile with explicit --compiler tectonic, bundled Python/PyPDF text check, and rendered PDF pages 53, 59, and 69"
+  resonance_energy_and_conclusion_model:
+    metric: "latest multi-agent pass clarifies RLC resonance cancellation, corrects damping-ratio energy-decay interpretation, and makes the conclusion start with a memorable virtual spring-damper mental model"
+    threshold: "Section 4 states that series resonance cancellation means the source sees zero net imaginary opposition, not vanished inductor/capacitor voltages; Section 5 says underdamped amplitude decays as e^{-zeta omega_n t} and energy roughly as e^{-2 zeta omega_n t}, and warns zeta>=1 has no cycle-based energy-loss reading; Conclusion opens with the end-effector as a target-tied virtual spring-damper and frames MuJoCo logs/plots as observation tools; stale phrases `감쇠가 크면 한 주기 동안 많은 에너지가` and `이 논문은 임피던스의 전기적 기원` are absent"
+    evidence: "paper/sections/04_electric_system.tex, paper/sections/05_mechanical_system.tex, paper/sections/09_conclusion.tex, review agents Hooke the 2nd, Singer the 2nd, and Carver the 2nd, bundled Tectonic compile with explicit --compiler tectonic, bundled Python/PyPDF text check, and rendered PDF pages 33, 44, 82, and 83"
+  direction_scope_energy_wording:
+    metric: "latest multi-agent pass clarifies impedance/admittance reading direction, Lab04 educational scope, and stable virtual-potential curvature without changing simulator code"
+    threshold: "Introduction states that cause/response is a chosen reading direction; Section 6 describes the virtual spring potential as an upward-opening energy bowl with positive curvature/Hessian; the incorrect phrase '오목한 곡면' is absent; Lab04 paragraph says tau_cmd/current_proxy are actuator_force-derived effort records rather than hardware force/torque signals"
+    evidence: "paper/sections/01_introduction.tex, paper/sections/06_impedance_control.tex, paper/sections/07_mujoco_lab_design.tex, review agents Bohr the 2nd, Noether the 2nd, and Banach the 2nd, bundled Tectonic compile, bundled Python/PyPDF text check, and rendered PDF pages 4, 65, and 73"
+  frequency_and_pd_bridge:
+    metric: "latest multi-agent pass clarifies early impedance history, separates free-oscillation frequency from forced-input frequency, and distinguishes positive definite from semidefinite virtual stiffness"
+    threshold: "Section 2 history transition frames impedance as a practical long-line communication problem; Section 4 contains the phrase `두 주파수를 나누어 읽자` and separates omega_d from externally chosen omega; Section 6 states K_d=K_d^T succ0 for a closed energy bowl and says semidefinite zero-stiffness directions have no restoring force"
+    evidence: "paper/sections/02_impedance.tex, paper/sections/04_electric_system.tex, paper/sections/06_impedance_control.tex, review agents Peirce the 2nd, Russell the 2nd, and Copernicus the 2nd, bundled Tectonic compile, bundled Python/PyPDF text check, and rendered PDF pages 9, 32, 65, and 66"
+  plot_final_value_and_singularity_reading:
+    metric: "latest multi-agent pass prevents common plot-reading and singularity-reading mistakes while keeping the appendix tone beginner-friendly"
+    threshold: "Section 7 tells readers not to use the last plotted point as the final value until the tail is flat, velocity is near zero, and summary.json settling-time evidence is checked; Section 7 singularity wording uses absolute determinant, manipulability, and condition number rather than signed determinant shrinking; Appendix A closes by framing the notation questions as a small map for orientation"
+    evidence: "paper/sections/07_mujoco_lab_design.tex, paper/sections/A_notation_checklist.tex, review agents Popper the 2nd, Parfit the 2nd, and Tesla the 2nd, bundled Tectonic compile, bundled Python/PyPDF page/text check, and rendered PDF pages 71, 73, and 85"
+  parameter_choice_and_wall_force_sign:
+    metric: "latest multi-agent pass clarifies the non-independent choice relation among stiffness, desired inertia, and natural frequency, fixes signed Lab04 virtual-wall force reading, and softens defensive scope wording"
+    threshold: "Section 6 states k_d=m_d*omega_n^2 and says choosing two of k_d, m_d, and omega_n fixes the third; Section 7 says signed force_virtual_0 becomes more negative while its magnitude increases with penetration depth; Discussion frames Lab04 as an educational scale for reading plot traces rather than a real-robot performance verdict; stale wording about wall force simply increasing and complete operational-space performance guarantee is absent"
+    evidence: "paper/sections/06_impedance_control.tex, paper/sections/07_mujoco_lab_design.tex, paper/sections/08_discussion.tex, review agents Confucius the 2nd, Lorentz the 2nd, and Ptolemy the 2nd, bundled Tectonic compile, bundled Python/PyPDF page/text check, and rendered PDF pages 63, 75, and 79"
+  zero_state_sign_and_frequency_intuition:
+    metric: "latest multi-agent pass clarifies zero-state versus zero-input shared dynamics, static contact sign conventions, and hand-feel mechanical-impedance frequency intuition"
+    threshold: "Section 3 states signed static force depends on force/coordinate convention and gives f_wall≈-kδ for wall penetration; Section 4 says zero-state and zero-input are different experiments but share the same denominator/poles; Section 5 replaces abstract mechanical-impedance wording with slow-push spring, fast-shake mass, and damping-as-energy-loss intuition; stale phrases about `부호까지 쓰면 외력 기준` and `이 식은 각 요소가 ... 명확히` are absent"
+    evidence: "paper/sections/03_lti_system.tex, paper/sections/04_electric_system.tex, paper/sections/05_mechanical_system.tex, review agents Raman the 2nd, Faraday the 2nd, and Wegener the 2nd, bundled Tectonic compile, bundled Python/PyPDF page/text check, and rendered PDF pages 21, 32, and 48"
+  history_phasor_and_mechanical_sign:
+    metric: "latest multi-agent pass connects telegraph/telephone history to phasor impedance and states the mechanical port force sign convention at the first definition"
+    threshold: "Section 2 defines mechanical impedance using externally injected port force, states F_react=-F_in for reaction-force wording, and preserves Z_m=F_in/V_x=ms+b+k/s under the passive convention; the Heaviside/history transition says resistance alone explains DC flow but not frequency-dependent attenuation and phase delay; the complex-impedance bridge says a pulse or voice can be read one sinusoidal component at a time and calls impedance a record of magnitude ratio plus time offset; stale report-like phrases `역사적으로 impedance` and `핵심은 다음이다` are absent"
+    evidence: "paper/sections/02_impedance.tex, review agents Erdos the 2nd, Euclid the 2nd, and Avicenna the 2nd, bundled Tectonic compile, bundled Python/PyPDF page/text check, and rendered PDF pages 8, 10, and 11"
+  element_mapping_and_ratio_meaning:
+    metric: "latest multi-agent pass prevents early capacitor-spring parameter inversion and clarifies why impedance can appear as force/velocity, force/position, or a broader force-motion design relation depending on context"
+    threshold: "Introduction frames the MuJoCo lab as a small experiment map; Section 2 Table 2 maps capacitor C to spring compliance 1/k and names restoring terms q/C and kx; Discussion misconception table states that narrow frequency-domain mechanical impedance is force/velocity while robot impedance control designs the broader force-motion relation and static contact is read as force/position; table-reference particles do not render as forms like '표 35은'"
+    evidence: "paper/sections/01_introduction.tex, paper/sections/02_impedance.tex, paper/sections/07_mujoco_lab_design.tex, paper/sections/08_discussion.tex, review agents Boole the 2nd, Hegel the 2nd, and Mencius the 2nd, bundled Tectonic compile, bundled Python/PyPDF text check, and rendered PDF pages 4, 9, and 77"
+  admittance_flow_split:
+    metric: "latest multi-agent pass distinguishes flow velocity, integrated position/error state, error admittance, and absolute mechanical admittance across Section 6, Discussion, and Appendix"
+    threshold: "Section 6 defines Y_e(s)=V_e(s)/F_ext(s)=sC_e(s) and separately states Y_m(s)=V_x(s)/F_ext(s); moving-target caveat V_x=V_e+V_d present; Discussion effort-flow table says endpoint velocity is flow and position is integrated error/storage state; Discussion formula table uses Y_e for error-velocity admittance; Appendix A has separate Y_e and Y_m rows; Section 5 transition names capacitor-spring, inductor-mass, and resistor-damper roles in beginner-friendly prose"
+    evidence: "paper/sections/05_mechanical_system.tex, paper/sections/06_impedance_control.tex, paper/sections/08_discussion.tex, paper/sections/A_notation_checklist.tex, review agents Nash the 2nd, Herschel the 2nd, and Nietzsche the 2nd, bundled Tectonic compile, bundled Python/PyPDF text check, and rendered PDF pages 37, 53, 76, 78, and 82"
+  pde_and_frame_bridge:
+    metric: "latest multi-agent pass reduces early math shock around the telegrapher equations and prevents frame-mixing in Jacobian-transpose force-to-torque interpretation"
+    threshold: "Section 2 includes a pre-telegrapher-equation bridge explaining time variation, line-position variation, left/right side meaning, and tiny storage/loss elements; Section 6 states that xdot, force, and Jv translational components must be expressed in the same Cartesian frame and that tool-frame forces need rotation before tau=Jv^T f"
+    evidence: "paper/sections/02_impedance.tex, paper/sections/06_impedance_control.tex, review agents Descartes the 2nd, Godel the 2nd, and Dewey the 2nd, bundled Tectonic compile, bundled Python/PyPDF page/text check, and rendered PDF pages 9-10 and 58-59"
+  section4_electric_system_intuition:
+    metric: "Section 4 explains resistor/inductor/capacitor/RLC behavior with beginner-facing physical intuition, sign conventions, and output-specific transfer functions"
+    threshold: "Ohm units and numeric check, resistance geometry, passive sign convention, terminal voltage versus induced EMF, separated capacitor charge, C=epsilon A/d intuition, energy-return caveats, RLC state table, zero-initial transfer-function bridge, output-specific Q/Vc/I transfer functions, numeric omega_n/zeta example, and series-current resonance caveat present"
+    evidence: "paper/sections/04_electric_system.tex plus rendered PDF pages 17-27"
+  section5_mechanical_system_intuition:
+    metric: "Section 5 explains mass-spring-damper behavior with beginner-facing physical intuition, energy/power interpretation, response metrics, and mechanical impedance derivation"
+    threshold: "symbol/unit table, paired RLC/MSD energy-state bridge, 2nd-order definition, standard-form coefficient matching, force-displacement spring-energy area, negative energy-gradient force sign, mechanical power definition, net-force mass caveat, free/step/zero-initial definitions, underdamped-only omega_d caveat, numeric overshoot/settling example, and stepwise Z_m derivation present"
+    evidence: "paper/sections/05_mechanical_system.tex plus rendered PDF pages 27-41"
+  section5_msd_force_map_wording:
+    metric: "latest multi-agent pass makes the first mass-spring-damper equation interpretation easier for beginners without weakening sign, energy, or impedance caveats"
+    threshold: "after m*xddot + b*xdot + k*x = f, prose frames the equation as a small map of what external force must account for; list distinguishes inertia through acceleration, damping through velocity, and stiffness through displacement; sign convention states +b*xdot+k*x are moved-left terms, not actual physical force directions; energy distinction says mass and spring store energy while damper dissipates; impedance preview states ms+b+k/s uses externally supplied force over velocity"
+    evidence: "paper/sections/05_mechanical_system.tex, review agents Rawls the 2nd, Boyle the 2nd, and Beauvoir the 2nd, bundled Tectonic compile, bundled Python/PyPDF page/text check, and rendered PDF pages 33-35"
+  electric_mechanical_analogy:
+    metric: "effort/flow, reactance, capacitor-spring mapping, energy exchange, and impedance-frequency bridges explained"
+    threshold: "all five bridge points present"
+    evidence: "paper/sections/02_impedance.tex, paper/sections/04_electric_system.tex, paper/sections/05_mechanical_system.tex"
+  electric_mechanical_element_memory:
+    metric: "readers can identify what each RLC/MSD element resists and whether it stores or dissipates energy"
+    threshold: "resistor/damper, inductor/mass, capacitor/spring memory table present; C versus 1/k caveat present; RLC term interpretation present; phase/topology caveats present"
+    evidence: "paper/sections/02_impedance.tex, paper/sections/04_electric_system.tex, paper/sections/05_mechanical_system.tex"
+  response_metrics_clarity:
+    metric: "Section 5 explains natural frequency, damping ratio, resonance, and time-response metrics with assumptions and graph-reading definitions"
+    threshold: "sqrt(k/m) derivation, scalar-model caveat, critical-damping caveat, response-metric table, overshoot/settling formula conditions, and resonance peak caveat present"
+    evidence: "paper/sections/05_mechanical_system.tex"
+  impedance_control_realism:
+    metric: "desired impedance assumptions stated before advanced implementation details"
+    threshold: "force/torque capability, dynamics compensation, bandwidth, and saturation/delay caveats present"
+    evidence: "paper/sections/06_impedance_control.tex"
+  section6_parameter_decision_clarity:
+    metric: "Section 6 explains how to choose impedance parameters from both design goals and observed symptoms"
+    threshold: "purpose-to-parameter table, observation-to-adjustment table, effective-mass reminder, target-offset distinction, static-equilibrium caveats, and contact-force approximation caveats present"
+    evidence: "paper/sections/06_impedance_control.tex plus paper-novice-reader and paper-technical-reviewer feedback"
+  section6_beginner_tuning_recipe:
+    metric: "latest multi-agent pass gives beginners a concrete first-number recipe for impedance parameters while separating desired inertia, effective mass, and nominal mass"
+    threshold: "mass-basis table includes educational nominal mass, response-speed paragraph ties omega_n to desired inertia with observed-response caveats, numeric F/Delta x stiffness example present, beginner tuning-order table present, and impedance-versus-admittance implementation choice connected to available command interface"
+    evidence: "paper/sections/06_impedance_control.tex, novice-reader agent Mill, technical reviewer agent Darwin, bundled Python/PyPDF page/text check, and rendered PDF pages 54 and 62"
+  section6_flow_controller_choice:
+    metric: "Section 6 explains impedance-control flow, controller choice, signs, and energy interpretation without beginner-critical jumps"
+    threshold: "desired-inertia bridge, equilibrium table, transfer-function definition, units, admittance/control distinction, final-value theorem caveat, spring sign convention, admittance sign test, controller-choice table, energy-landscape intuition, directional-stiffness example, and virtual-wall relative-velocity caveat present"
+    evidence: "paper/sections/06_impedance_control.tex plus rendered PDF pages 35-51"
+  section6_implementation_ladder:
+    metric: "latest multi-agent pass clarifies the implementation boundary between ideal impedance equations, torque-control implementations, position-command approximations, and the Lab04 virtual-wall demo"
+    threshold: "Section 6 contains implementation-ladder table after the beginner numeric tuning example; table distinguishes target impedance model, torque-control implementation, position-command approximation, and Lab04 virtual-wall demo; prose states Lab04 is not complete operational-space impedance validation or direct tau=J^T f realization; bridge before potential-energy and virtual-wall subsections explains how to read the remaining theory before the MuJoCo lab"
+    evidence: "paper/sections/06_impedance_control.tex, review agents Pascal the 2nd, Sartre the 2nd, and Curie the 2nd, bundled Tectonic compile, bundled Python/PyPDF page/text check, and rendered PDF pages 63-64"
+  section6_command_signal_split:
+    metric: "latest multi-agent pass separates desired external-force response, internal command force, joint-space velocity-error damping, and deterministic virtual-wall teaching signal"
+    threshold: "Section 6 explains f_ext as environmental external force in the desired closed-loop relation and f_cmd as internal restoring command; joint-space impedance uses qdot-qdot_d and states the fixed-posture reduction; virtual-wall paragraph says the deterministic wall computes f_wall from delta and delta_dot_plus rather than using contact-solver force directly; wording preserves the educational boundary without sounding defensive"
+    evidence: "paper/sections/06_impedance_control.tex, review agents Hilbert the 2nd, Pauli the 2nd, and Maxwell the 2nd, bundled Tectonic compile, bundled Python/PyPDF text check, and rendered PDF pages 50-51, 57-58, and 67"
+  section7_lab_observation_bridge:
+    metric: "Section 7 maps each MuJoCo lab to observable plots/logs and the theory questions they answer without implying hardware or digital-twin validation"
+    threshold: "plot-reading order, Lab01-Lab04 signal table, lab-specific expected-signal explanations, Lab04 conceptual-evidence caveat, computed virtual-wall force caveat, effective-mass reminder, and beginner misreading table present"
+    evidence: "paper/sections/07_mujoco_lab_design.tex plus rendered PDF pages 60-64"
+  section7_first_plot_checklist:
+    metric: "latest multi-agent pass gives beginners a first-pass checklist for reading each lab plot without duplicating the later troubleshooting tables"
+    threshold: "compact Lab01-Lab04 checklist table present after the common lab-reading routine; table separates expected shape, first abnormal signal, and next check; Lab03 DLS damping framed as numerical regularization; Lab04 force_virtual and actuator_force framed as calculated virtual-wall signal and position-actuator effort indicator rather than measured contact force"
+    evidence: "paper/sections/07_mujoco_lab_design.tex, review agents Heisenberg the 2nd, Plato the 2nd, and Feynman the 2nd, bundled Tectonic compile, bundled Python/PyPDF page/text check, and rendered PDF pages 69-71"
+  section7_lab04_signal_flow_boundary:
+    metric: "latest multi-agent pass clarifies how Lab04 calculated virtual-wall signals become position-actuator motion without implying torque-control or measured contact-force validation"
+    threshold: "Section 7 Lab04 subsection explains endpoint position/velocity -> penetration depth/approach speed -> force_virtual -> target retreat -> DLS joint-target offset -> ctrl signal flow; Lab04 signal table includes tau_cmd/current_proxy row tied to actuator_force effort proxy; text states these are not operational-space torque commands, measured motor current, measured contact force, or hardware validation"
+    evidence: "paper/sections/07_mujoco_lab_design.tex, code evidence from src/mclab/labs/lab04_panda.py, review agents Aristotle the 2nd, Helmholtz the 2nd, and Aquinas the 2nd, bundled Tectonic compile, bundled Python/PyPDF page/text check, and rendered PDF pages 72-74"
+  section7_artifact_theory_bridge:
+    metric: "latest multi-agent pass connects saved run artifacts to the theory-reading workflow without implying hardware validation"
+    threshold: "artifact-to-theory table present after file-format explanation; config/log/states/summary/plots/report/worksheet/interactive artifacts mapped to learner questions; optional plot and interactive artifacts worded conditionally; report/worksheet framed as learning review artifacts; Lab04 effort, tau_cmd, actuator_force, and force_virtual caveats present"
+    evidence: "paper/sections/07_mujoco_lab_design.tex, README output artifact list, src/mclab/sim/logging.py, src/mclab/sim/reporting.py, review agents Zeno the 2nd, Lagrange the 2nd, and Laplace the 2nd, bundled Tectonic compile, bundled Python/PyPDF page/text check, and rendered PDF pages 68-70"
+  front_back_framing:
+    metric: "abstract/introduction/discussion/conclusion explain why now, paper identity, reader outcomes, scope boundaries, and final take-home criteria"
+    threshold: "Physical AI motivation framed as background, PLC/position-control limits stated without overclaim, reader contract and prerequisite boundary present, MuJoCo lab identified as concept-checking environment not hardware/performance validation, ideal impedance equation distinguished from educational spring-damper approximation, and conclusion checklist present"
+    evidence: "paper/sections/00_abstract.tex, paper/sections/01_introduction.tex, paper/sections/08_discussion.tex, paper/sections/09_conclusion.tex plus rendered PDF pages 1, 3-5, and 62-65"
+  discussion_conclusion_tuning_takeaway:
+    metric: "latest multi-agent pass carries Section 6 practical tuning concepts through the Discussion and Conclusion"
+    threshold: "Discussion minimum-memory bullets include F/Delta x stiffness selection, damping-ratio-to-damping-coefficient calculation, and nominal-mass caveat; formula table distinguishes m_d and m_nom; robot implementation table links command interface to impedance/admittance implementation; Conclusion states four takeaways and final actionable criteria"
+    evidence: "paper/sections/08_discussion.tex, paper/sections/09_conclusion.tex, novice consistency reviewer Sartre, bundled Python/PyPDF page/text check, and rendered PDF pages 74, 75, 76, and 77"
+  section8_formula_table_usage_guide:
+    metric: "latest multi-agent pass makes the Section 8 formula tables usable as a plot/log interpretation checklist rather than a memorization list"
+    threshold: "guide paragraph before the three formula tables gives a three-step reading order; first step distinguishes electrical phasor impedance, mechanical force/velocity impedance, position-error/force compliance, and velocity/force admittance; second step separates steady-state deflection from transient overshoot/vibration/settling interpretation; third step states Lab04 tau_cmd/current_proxy/actuator_force and calculated virtual-wall force are educational proxies, not real Panda torque, motor current, external-force measurements, or hardware validation"
+    evidence: "paper/sections/08_discussion.tex, review agents Locke the 2nd, Huygens the 2nd, and James the 2nd, bundled Tectonic compile, bundled Python/PyPDF page/text check, and rendered PDF pages 77-79"
+  conclusion_artifact_workflow_takeaway:
+    metric: "latest multi-agent pass carries Section 7's artifact-to-theory workflow into the final conclusion without adding another table"
+    threshold: "Conclusion names YAML config, CSV/NPZ logs, summary JSON, plots, and worksheet as part of the concept-checking lab; final practical workflow tells beginners to choose one config parameter, predict plot changes, inspect log/summary/plots, and record next single change in worksheet; Lab04 contact/effort wording softened to computed wall/contact signals and actuator effort indicators; future-work wording no longer implies Section 7 has not connected artifacts and failure cases"
+    evidence: "paper/sections/09_conclusion.tex, review agents Leibniz the 2nd, Galileo the 2nd, and Ampere the 2nd, bundled Tectonic compile, bundled Python/PyPDF page/text check, and rendered PDF pages 79-80"
+  front_artifact_workflow_preview:
+    metric: "latest multi-agent pass previews the saved-artifact learning loop in the abstract and introduction without overclaiming plot availability or hardware validation"
+    threshold: "Abstract names YAML settings, CSV/NPZ logs, summary JSON, optional saved plot images, worksheet notes, and prediction/observation/next-experiment loop; Introduction learning-output paragraph tells readers to change one config.yaml value, inspect log.csv, summary.json, optional --plot plots/*.png, and worksheet.md; no new table added; Lab04/contact wording remains scoped to Section 7 caveats"
+    evidence: "paper/sections/00_abstract.tex, paper/sections/01_introduction.tex, review agents Kuhn the 2nd, Volta the 2nd, and Hypatia the 2nd, bundled Tectonic compile, bundled Python/PyPDF page/text check, and rendered PDF pages 1 and 5"
+  appendix_notation_tuning_consistency:
+    metric: "latest multi-agent pass makes recently introduced tuning notation findable in Appendix A"
+    threshold: "Appendix distinguishes desired inertia, endpoint effective mass, and m_nom; includes both m_d and m_nom damping-coefficient formulas; defines Delta x, delta_d, and delta separately; adds command-interface implementation table; Discussion wording matches the appendix distinctions"
+    evidence: "paper/sections/A_notation_checklist.tex, paper/sections/08_discussion.tex, novice notation reviewer Socrates the 2nd, bundled Python/PyPDF page/text check, and rendered PDF pages 75, 79, and 80"
+  numeric_tuning_lab04_signal_bridge:
+    metric: "latest multi-agent pass carries one concrete impedance tuning example into Lab04 signal interpretation while preserving implementation boundaries"
+    threshold: "Physical AI focus clarified; PLC/interlock/control-cycle/saturation/bandwidth definitions present; Section 6 includes 10 N / 2 cm / k_d=500 N/m / zeta=0.7 / m_nom=1 kg / d_d≈31.3 Ns/m example; omega_d caveat present; Lab04 signal dictionary present; virtual-wall before/entering/stopped reading present; Appendix implementation-signal row matches Lab04 target-position retreat approximation"
+    evidence: "paper/sections/00_abstract.tex, paper/sections/01_introduction.tex, paper/sections/06_impedance_control.tex, paper/sections/07_mujoco_lab_design.tex, paper/sections/08_discussion.tex, paper/sections/09_conclusion.tex, paper/sections/A_notation_checklist.tex, review agents Linnaeus the 2nd, Jason the 2nd, and Schrodinger the 2nd, bundled Python/PyPDF page/text check, and rendered PDF pages 62, 71, 75, 76, 80, and 81"
+  failure_case_tuning_loop:
+    metric: "latest multi-agent pass connects plot symptoms to a next single-hypothesis experiment while preserving Lab04 signal boundaries"
+    threshold: "Section 6 one-independent-cause tuning rule present; Section 7 defines failure plots as observation records; representative next-run table present; table distinguishes calculated virtual-wall signal from force sensor data, b_wall from damping ratio, DLS damping from physical damping, and actuator effort proxies from measured endpoint force; Conclusion follow-up wording updated"
+    evidence: "paper/sections/06_impedance_control.tex, paper/sections/07_mujoco_lab_design.tex, paper/sections/09_conclusion.tex, review agents Fermat the 2nd, Chandrasekhar the 2nd, and Newton the 2nd, bundled Tectonic compile, bundled Python/PyPDF page/text check, and rendered PDF pages 70-73"
+  roadmap_bridge_readability:
+    metric: "latest multi-agent pass clarifies how the roadmap arrows should be read as a learning sequence rather than a strict historical chronology"
+    threshold: "Introduction bridge explains telegraph/telephone problem -> complex impedance/LTI grammar -> RLC storage/dissipation -> MSD visible motion -> robot endpoint virtual impedance -> MuJoCo plots; Section 2 starts by returning to the roadmap's first scene; Discussion restates the same-question-across-physical-systems frame; no uncited Steinmetz/phasor-history claim or direct Heaviside-to-Hogan genealogy added"
+    evidence: "paper/sections/01_introduction.tex, paper/sections/02_impedance.tex, paper/sections/08_discussion.tex, review agents Kierkegaard the 2nd, Sagan the 2nd, and Mill the 2nd, bundled Tectonic compile, bundled Python/PyPDF page/text check, and rendered PDF pages 4-6"
+  global_bridge_consistency:
+    metric: "cross-section bridges preserve beginner flow while keeping sign, magnitude, impedance/admittance, and virtual-wall distinctions technically clear"
+    threshold: "Section 2 port-variable bridge, Section 4 transmission-line-to-RLC bridge, Section 5 theory-to-plot bridge, Section 6 1D-to-3D and joint/Cartesian bridges, Section 7 lab-observation chain, Section 8 effort/flow and signed/magnitude caveats, Appendix X-versus-X(s) notation note, and Korean-first caption labels present"
+    evidence: "paper/sections/01_introduction.tex, paper/sections/02_impedance.tex, paper/sections/04_electric_system.tex, paper/sections/05_mechanical_system.tex, paper/sections/06_impedance_control.tex, paper/sections/07_mujoco_lab_design.tex, paper/sections/08_discussion.tex, paper/sections/09_conclusion.tex, paper/sections/A_notation_checklist.tex, paper/main.tex, and rendered PDF pages 3, 19, 44, 58, 60, 64, 68"
+  mini_bridge_technical_clarity:
+    metric: "latest beginner-review bridge sentences and technical notation corrections are reflected consistently across text, figures, appendix, and PDF"
+    threshold: "distortionless-line intuition, reactance-cancellation caveat, force-input standard-form bridge, f_ext/f_cmd distinction, error-compliance notation, translational Jacobian J_v, 6D wrench caveat, approach-only virtual-wall damping, and Korean-first figure notes present"
+    evidence: "paper/sections/02_impedance.tex, paper/sections/04_electric_system.tex, paper/sections/05_mechanical_system.tex, paper/sections/06_impedance_control.tex, paper/sections/08_discussion.tex, paper/sections/A_notation_checklist.tex, paper/figures/*.tex, paper/figures/figure_plan.md, rendered PDF pages 1, 9, 23, 30, 44, 53, 59, 60, and 69"
+  notation_language_polish:
+    metric: "latest multi-agent polish removes remaining beginner-confusing notation and stiff phrasing without changing simulator scope"
+    threshold: "compliance term unified as 순응성, rotational angular-velocity/frequency notation separated, Laplace signal-unit convention stated, final-value theorem caveat simplified, off-diagonal stiffness and hybrid force/position context added, damping matrix condition relaxed to semidefinite symmetric part, virtual-wall damping gated by penetration state, and Korean-first figure-plan labels present"
+    evidence: "paper/sections/00_abstract.tex, paper/sections/01_introduction.tex, paper/sections/02_impedance.tex, paper/sections/03_lti_system.tex, paper/sections/06_impedance_control.tex, paper/sections/08_discussion.tex, paper/sections/A_notation_checklist.tex, paper/figures/fig_effort_flow_power.tex, paper/figures/figure_plan.md, rendered PDF pages 1, 11, 18, 44, 59, 60, and 69"
+  beginner_bridge_control_choice:
+    metric: "latest beginner bridge pass clarifies frequency-dependent electrical impedance, sign conventions, equilibrium/steady-state distinctions, damping-ratio tuning, mass terminology, and controller-choice boundaries"
+    threshold: "L/C-not-impedance-without-frequency caveat, reactance-sign caveat, 1 A sinusoid reading, internal reactive-voltage cancellation caveat, capacitor voltage-change caveat, finite stored-energy-change caveat, spring holding-force/restoring-force sign distinction, moved equilibrium preview, stiffness-change damping-ratio example, transient-versus-steady-state bridge, actual/effective/desired mass table, nominal-mass policy caveat, hybrid position/force control definition, and controller-choice table row present"
+    evidence: "paper/sections/02_impedance.tex, paper/sections/03_lti_system.tex, paper/sections/04_electric_system.tex, paper/sections/05_mechanical_system.tex, paper/sections/06_impedance_control.tex, paper/figures/fig_effort_flow_power.tex, rendered PDF pages 7, 10, 11, 24, 25, 32, 40, 50, 56, 57, and 58"
+  reader_logic_scaffold:
+    metric: "latest reader-contract pass gives beginners a repeatable way to carry input/output/state/flow, energy storage/dissipation, transient/steady-state, and lab-reading questions across the whole tutorial"
+    threshold: "introduction reader checklist, impedance/admittance bridge, Lab01-Lab04 reading map, expanded term map, Section 3 state/flow/output role labels, transfer-function recipe, zero-input/free-response labels, mechanical compliance/mobility/impedance bridge, Section 6 closing checklist, and softened safety/stability wording present"
+    evidence: "paper/sections/01_introduction.tex, paper/sections/03_lti_system.tex, paper/sections/04_electric_system.tex, paper/sections/05_mechanical_system.tex, paper/sections/06_impedance_control.tex, paper/sections/08_discussion.tex, rendered PDF pages 3, 4, 14, 20, 31, 46, 62, 71, and 72"
+  element_role_precision:
+    metric: "latest multi-agent pass makes element roles, convergence assumptions, energy balance, and virtual-element interpretation precise for beginner readers"
+    threshold: "telegrapher series/parallel explanation, impedance magnitude wording, capacitor viewpoint caveat, zero-state linearity caveat, final-value convergence condition, RLC q/C restoring explanation, resonance average-power balance, MSD internal-energy exchange explanation, mechanical impedance real/reactive energy interpretation, virtual element caveat, low-stiffness and virtual-wall safety caveats, and Appendix C/m/k storage-resistance rows present"
+    evidence: "paper/sections/02_impedance.tex, paper/sections/03_lti_system.tex, paper/sections/04_electric_system.tex, paper/sections/05_mechanical_system.tex, paper/sections/06_impedance_control.tex, paper/sections/07_mujoco_lab_design.tex, paper/sections/08_discussion.tex, paper/sections/09_conclusion.tex, paper/sections/A_notation_checklist.tex, rendered PDF pages 8, 14, 20, 25, 31, 45, 47, 63, 66, 72, 73, 74, and 75"
+  beginner_bridge_technical_boundary:
+    metric: "latest multi-agent pass adds beginner bridge sentences, tightens notation, and states Lab04/control boundary assumptions without changing simulator code"
+    threshold: "Appendix A cross-reference, telegrapher-equation purpose note, pre-LTI phasor bridge, transfer-function setup checklist, RLC-to-MSD input-scaling bridge, desired-virtual-inertia caveat, explicit Ce/E/Ve notation, admittance sign example, virtual-wall nonsmooth-model caveat, Lab04 position-actuator/DLS-offset/proxy-effort boundary note, and reduced repetitive phrasing present"
+    evidence: "paper/sections/01_introduction.tex, paper/sections/02_impedance.tex, paper/sections/03_lti_system.tex, paper/sections/05_mechanical_system.tex, paper/sections/06_impedance_control.tex, paper/sections/07_mujoco_lab_design.tex, paper/sections/08_discussion.tex, paper/sections/09_conclusion.tex, paper/sections/A_notation_checklist.tex, rendered PDF pages 4, 52, 59, 64, 67, 68, 72, and 73"
+  lab_plot_diagnostics_bridge:
+    metric: "latest multi-agent pass gives beginners a concrete way to diagnose lab plots while preserving Lab04 actuator/interface boundaries"
+    threshold: "Lab01 expected-response description, Lab02 saturation reading, Lab03 manipulability/condition/DLS tradeoff reading, Lab04 virtual-wall pre-contact zero check, Table 23 symptom-to-signal-to-interpretation guide, softer damping-ratio wording, static-contact-force caveat, and `actuator_force`-based effort-proxy wording present"
+    evidence: "paper/sections/04_electric_system.tex, paper/sections/05_mechanical_system.tex, paper/sections/06_impedance_control.tex, paper/sections/07_mujoco_lab_design.tex, paper/sections/09_conclusion.tex, three focused review agents, bundled Python/PyPDF page/text check, and rendered PDF pages 68--69"
+  learning_checkpoint_scaffold:
+    metric: "latest multi-agent pass adds explicit beginner learning outputs and section-transition checks without weakening technical caveats"
+    threshold: "introduction learning-output paragraph, Section 2 chapter-end impedance checklist, Section 3 transfer-function entry check, Section 4 RLC bridge and chapter learning output, Section 5 hand-calculation checkpoint, Section 6 Laplace-to-parameter bridge with nonlinear/Lab04 caveat, Section 6 joint/Cartesian coordinate transition, and Section 7 common lab routine present"
+    evidence: "paper/sections/01_introduction.tex, paper/sections/02_impedance.tex, paper/sections/03_lti_system.tex, paper/sections/04_electric_system.tex, paper/sections/05_mechanical_system.tex, paper/sections/06_impedance_control.tex, paper/sections/07_mujoco_lab_design.tex, three focused review agents, bundled Python/PyPDF page/text check, and rendered PDF pages 5, 14, 15, 21, 31, 32, 42, 56, 57, 65, and 66"
+  history_background_role_tables:
+    metric: "latest multi-agent pass connects historical/background clues to the physical role of each RLC and MSD element before the main equations"
+    threshold: "RLC history-role table, MSD history-role table, Ohm/Faraday/Leyden/Hooke/Newton/viscous-damping citations, resistor-damper/inductor-mass/capacitor-spring memory bridges, and rendered table pages present"
+    evidence: "paper/sections/04_electric_system.tex, paper/sections/05_mechanical_system.tex, paper/references/refs.bib, subagent Boole review, bundled Python/PyPDF page/text check, and rendered PDF pages 28 and 37"
+  intro_framing_boundary_pass:
+    metric: "latest multi-agent pass improves the abstract/introduction first impression while preserving technical boundaries and simulator scope"
+    threshold: "Physical AI framed as background rather than solved deployment, position-control and PLC scope defined, modern industrial-controller and human-contact safety caveats present, contact-force example uses quasi-static equivalent stiffness k_eff with dynamic-collision/friction/saturation caveat, quote block removed, compliance/admittance distinction clarified, and Lab04 described as position-actuator target-retreat educational proxy rather than torque-level contact validation"
+    evidence: "paper/sections/00_abstract.tex, paper/sections/01_introduction.tex, review agents Gibbs the 2nd, Bacon the 2nd, and Meitner the 2nd, bundled Tectonic compile exit code 0, final compile segment with 0 citation/reference/overfull/underfull warnings, bundled Python/PyPDF text-marker check, and Poppler-rendered PDF pages 1, 3, 6, and 7"
+  quote_cleanup_impedance_boundary_pass:
+    metric: "latest multi-agent pass removes displayed quote emphasis while preserving beginner intuition and tightening transmission-line versus port-impedance wording"
+    threshold: "all `begin{quote}` blocks removed from paper sections; Section 2 distinguishes line attenuation/delay from local port impedance Z=V/I and uses phase-difference wording; Section 4 states inductor current-change intuition in prose, explains signed terminal voltage under passive sign convention, includes the current-decrease energy-return case, and distinguishes terminal voltage from internal induced EMF"
+    evidence: "paper/sections/02_impedance.tex, paper/sections/04_electric_system.tex, review agents Averroes the 2nd, Gauss the 2nd, and Goodall the 2nd, bundled Tectonic compile exit code 0, final compile segment with 0 citation/reference/overfull/underfull warnings, bundled Python/PyPDF text-marker check, and Poppler-rendered PDF pages 10, 11, 25, and 26"
+  transmission_line_bridge_pass:
+    metric: "latest multi-agent pass makes distributed transmission-line elements and the distortionless-line condition understandable to beginner readers"
+    threshold: "per-unit-length prime explanation, shunt leakage meaning of G', loss-versus-storage grouping, Delta-x line-piece model, v(x,t)/i(x,t) definitions, telegrapher sign convention, equation-by-equation interpretations, loading-coil effective-L' caveat, ideal distortionless-line assumptions, R'/L' and G'/C' unit/time-scale explanation, and old telephone-line inductance-loading intuition present"
+    evidence: "paper/sections/02_impedance.tex, review agents Anscombe the 2nd, McClintock the 2nd, and Dirac the 2nd, bundled Tectonic compile exit code 0, final compile segment with 0 citation/reference/rerun/overfull/underfull warnings, bundled Python/PyPDF text-marker check, and Poppler-rendered PDF pages 10 and 11"
+  msd_response_bridge_pass:
+    metric: "latest multi-agent pass makes natural frequency, damping ratio, characteristic roots, overshoot, and settling time easier and technically safer for beginner readers"
+    threshold: "forced/free-response bridge, natural-frequency rhythm clarification, ruler example, rad/s-to-Hz bridge, k/m restoring-acceleration intuition, resonance-peak caveat, natural-frequency-to-damping-ratio transition, damping coefficient physical definition, critical-damping crossing caveat, bc and zeta unit check, energy/envelope bridge, robot effective-mass caveat, stiffness-change damping-ratio rule, characteristic-root role explanation, envelope definition, settling-time scope caveat, and robot-tuning language bridge present"
+    evidence: "paper/sections/05_mechanical_system.tex, review agents Arendt the 2nd, Archimedes the 2nd, and Euler the 2nd, bundled Tectonic compile exit code 0, final compile segment with 0 citation/reference/rerun/overfull/underfull warnings, bundled Python/PyPDF text-marker check, and Poppler-rendered PDF pages 42, 44, 47, and 50"
+  impedance_tuning_bridge_pass:
+    metric: "latest multi-agent pass clarifies impedance-control tuning logic around steady state, transient response, stiffness, damping ratio, nominal mass, and contact-force symbols"
+    threshold: "Section 6 states final-value theorem assumptions; distinguishes stopped steady-state contact from transient motion; explains mass, damping, and stiffness roles in transient response; says k_d changes final error and natural frequency while zeta controls remaining oscillation; states same d_d can mean different zeta as m_d or k_d change; includes coupled-matrix impedance caveat; explains that k_d and zeta are user-facing knobs while d_d is computed internally from zeta and desired/nominal mass; explains why visible mass sliders can mislead beginners; states F_0 sign basis; conditions |f_contact|≈k_d*delta_d on near-wall static contact; includes a contact-symbol table distinguishing k_d, delta_d, k_wall, delta, and force_virtual; separates k_d*delta_d intuition from MuJoCo contact constraints and Lab04 deterministic virtual-wall signals; states d_d and zeta are not independent once the damping-ratio formula is used"
+    evidence: "paper/sections/06_impedance_control.tex, review agents Darwin the 2nd, Franklin the 2nd, and Harvey the 2nd, bundled Tectonic compile exit code 0, final compile segment with 0 citation/reference/rerun/overfull/underfull warnings, bundled Python/PyPDF text-marker check, and Poppler-rendered PDF pages 58, 59, 66, and 67"
+  lab_plot_bridge_pass:
+    metric: "latest multi-agent pass connects Section 7 lab artifacts, plot reading, and Lab04 virtual-wall signals to beginner impedance intuition while preserving implementation boundaries"
+    threshold: "Section 7 defines artifacts and effort proxies; tells readers to compare position with force/control/effort plots; maps steady-state value, overshoot, settling time, and tolerance band to plots; uses lab-specific parameter names instead of generic k_d/d_d where needed; defines condition number; explains the Lab04 endpoint-position to virtual-wall signal to target-retreat to DLS to position-actuator chain; includes table `Lab04 주요 신호의 해석 범위`; distinguishes `force_virtual_0`, `force_virtual_spring_0`, `force_virtual_damping_0`, MuJoCo `data.actuator_force`, saved `tau_cmd_*`/`current_proxy_*`, `ctrl`, `wall_retreat_cm`, and `target_wall_gap_m`; explains signed wall force versus magnitude and approach-only wall damping; stale wording such as `정답표`, `정답 그래프`, `목표 후퇴 위치`, and `대표 실패 사례` is absent"
+    evidence: "paper/sections/07_mujoco_lab_design.tex, review agents Hubble the 2nd, Epicurus the 2nd, and Pasteur the 2nd, bundled Tectonic compile exit code 0, final compile segment with 0 citation/reference/rerun/overfull/underfull warnings, bundled Python/Poppler text-marker check, source `rg` marker check, and Poppler-rendered PDF pages 73, 78, 79, and 80"
+  closing_mental_model_pass:
+    metric: "latest multi-agent pass makes the Discussion and Conclusion end with a simple beginner mental model, concrete stiffness example, and technically bounded implementation choices"
+    threshold: "Section 8 describes impedance as an invisible spring-damper tied to the robot endpoint; effort/flow table is introduced as what pushes versus what flows; robot-contact effort row uses contact force/external force rather than command force; Section 8 includes a 10 N over 2 cm stiffness example giving k_d≈500 N/m; formula-table bridge says tables are plot-side interpretation notes; exact Lab04 proxy signal families tau_cmd_* and current_proxy_* are preserved; position-command-only wording requires measured/estimated external force or a calculated interaction signal before admittance-style or target-correction implementation; Section 9 says a few senses are enough, adds the three-question starter, qualifies energy/effort readings, and ends with the rubber-band/damper mental image; stale wording `접촉력/명령 힘`, `대표 실패 사례`, and placeholder terms are absent"
+    evidence: "paper/sections/08_discussion.tex, paper/sections/09_conclusion.tex, review agents Ramanujan, Tesla, and Laplace, bundled Tectonic compile exit code 0, final compile segment with 0 citation/reference/rerun/overfull/underfull warnings, bundled Python/pypdf text-marker check, source `rg` marker check, and Poppler-rendered PDF pages 81, 83, 86, and 87"
+  appendix_boundary_pass:
+    metric: "latest multi-agent pass separates the main-text conclusion from appendix reference material and documents paper-only validation/cleanup"
+    threshold: "paper/main.tex contains clearpage before appendix; Appendix A starts with a sentence saying it is a notation reference rather than continued main argument; paper/README.md documents tmp/latex_compile_* and tmp/pdfs/*_review scratch, paper/main.pdf review target, and Paper-Only Validation; .agents current state records the latest PDF page count and byte size; PDF shows conclusion marker on the page before Appendix A; paper-only validation has compile exit code 0, final warning counts 0 for citation/reference/rerun/overfull/underfull, and citation/provenance missing used keys 0"
+    evidence: "paper/main.tex, paper/sections/A_notation_checklist.tex, paper/README.md, .agents/CURRENT_STATE.md, review agents Lovelace, Linnaeus, and Pauli, bundled Tectonic compile exit code 0, bundled Python/pypdf text-marker check, PowerShell citation/provenance check, and Poppler-rendered PDF pages 87 and 88"
+  history_to_impedance_bridge_pass:
+    metric: "latest multi-agent pass makes the historical need for impedance and the transition from transmission-line distortion to one-frequency phasor impedance easier and technically safer for beginners"
+    threshold: "Section 2 frames impedance through late-19th-century telegraph/telephone-line theory and Heaviside's problems without overgeneralizing; waveform distortion wording uses frequency-dependent attenuation and group delay; the distortionless-line condition is explicitly not the definition of impedance; a test-tone bridge motivates measuring shrinkage and delay one frequency at a time; capacitor/spring memory wording uses corresponding effort rather than literal mechanical restoration; the spring mechanical-impedance summary shows -j k/omega with magnitude k/omega; stale wording such as `19세기 통신 기술자`, `저항과 리액턴스`, `위상 지연이 달라`, `감쇠와 위상`, `출처 입력`, `AI 활용`, `Phace`, and `요악` is absent; final compile segment has 0 citation/reference/rerun/overfull/underfull warnings"
+    evidence: "paper/sections/02_impedance.tex, paper/references/refs.bib, formatting-only signal-name cleanup in paper/sections/07_mujoco_lab_design.tex, review agents Sagan, Raman, and Socrates, bundled Tectonic compile exit code 0, final compile segment with 0 citation/reference/rerun/overfull/underfull warnings, bundled Python/pypdf text-marker check, source `rg` stale-wording check, and Poppler-rendered PDF pages 11, 12, 17, and 73"
+  electric_element_intuition_bridge_pass:
+    metric: "latest multi-agent pass makes resistor, inductor, capacitor, KVL, energy storage, transfer-function, pole, and resonance explanations more beginner-friendly while preserving technical sign conventions"
+    threshold: "Section 4 explains resistor dissipation and passive sign convention before power; explains inductor magnetic-field storage and why current cannot jump; explains capacitor charge separation, Leyden-jar history, field-energy storage, and why voltage-change resistance is compatible with high-frequency current; frames KVL as a voltage/energy ledger; treats Laplace and transfer functions as calculation tools; uses closed-loop zero-input wording; defines pole intuition; states XL=+omega L and XC=-1/(omega C); explains resonance through transient buildup and sinusoidal steady-state average power balance; removes stale wording including `loading coil`, `전원을 떼고`, `입력 전원을`, `전압 변화에 대한 음의 리액턴스`, `초기 과도 동안`, `출처 입력`, `AI 활용`, `Phace`, and `요악`; final compile segment has 0 citation/reference/rerun/overfull/underfull warnings"
+    evidence: "paper/sections/02_impedance.tex, paper/sections/04_electric_system.tex, review agents McClintock, Godel, and Euclid, bundled Tectonic compile exit code 0, final compile segment with 0 citation/reference/rerun/overfull/underfull warnings, bundled Python/pypdf text-marker check, source `rg` stale-wording check, citation/provenance regex check with missing 0 and duplicate 0, and Poppler-rendered PDF pages 25, 27, 30, 34, and 35"
+  mechanical_system_beginner_bridge_pass:
+    metric: "latest multi-agent pass makes the mass-spring-damper, spring, damper, mass, natural-frequency, damping-ratio, characteristic-root, overshoot, settling-time, and robot-handoff explanations easier for beginners while preserving technical conditions"
+    threshold: "Section 5 includes a temporary impedance definition; unit intuition for N, N/m, and N s/m; a safety bridge before the RLC analogy; force-balance ledger wording while preserving actual element-force signs; natural-vs-static equilibrium clarification; spring linearity and spring-energy area examples; damper zero-speed and power explanations; a concrete F=ma example; transition sentences before standard second-order and energy-derivative calculations; natural-frequency sinusoid-trial and 4x stiffness/mass summaries; deeper resonance peak condition marked as advanced; response-term table; over-damping described as sometimes intentional; characteristic-root derivation bridge from quadratic formula; s=-2 and s=-2+3j examples; overshoot ratio/percent distinction and general-output normalization caution; settling-time approximation caveat with omitted envelope factor; robot effective-mass handoff that distinguishes simple k,b tuning from inertia shaping; stale wording such as `세 값을 로봇 끝단에 가상`, `감쇠가 너무 크다`, `출처 입력`, `AI 활용`, `Phace`, and `요악` is absent from checked scope; final compile segment has 0 citation/reference/rerun/overfull/underfull warnings"
+    evidence: "paper/sections/05_mechanical_system.tex, review agents Descartes, Poincare, and Chandrasekhar, bundled Tectonic compile exit code 0, final compile segment with 0 citation/reference/rerun/overfull/underfull warnings, bundled Python/pypdf marker check, source `rg` stale-wording check, and Poppler-rendered PDF pages 35, 36, 37, 39, 45, 49, 50, and 53"
+  impedance_control_beginner_bridge_pass:
+    metric: "latest multi-agent pass makes Section 6 impedance-control theory easier to follow while preserving control-theory and Lab04 implementation boundaries"
+    threshold: "Section 6 includes a chapter-opening map separating free-space motion, static contact, and transient contact; a table distinguishing ideal external-force-to-motion impedance from error/velocity-to-restoring-force implementation commands; translational-only task-space and pose/moment caveats; a time-domain bridge before Laplace and transfer functions; explicit Ye=sCe and Zm=1/Ye interpretation; steady-state photo versus transient video intuition; DLS definition; damping-ratio response-shape table; direction-specific effective-mass formula and singularity/force-realizability caveat; spring-only simplification conditioned on stopped final contact or d_d|dot e| << k_d|e|; spring-energy average-force/triangle explanation; joint-versus-Cartesian impedance intuition; impedance/admittance/force-control comparison framed by command interface; tuning prose using friendly Korean tutorial style; final compile segment has 0 citation/reference/rerun/overfull/underfull warnings"
+    evidence: "paper/sections/06_impedance_control.tex, review agents Dewey, Gauss, and Russell, bundled Tectonic compile exit code 0, final compile segment with 0 citation/reference/rerun/overfull/underfull warnings, bundled Python/pypdf text-marker and page-count checks, and Poppler-rendered PDF pages 53, 55, 61, and 71"
+  theory_flow_bridge_pass:
+    metric: "latest multi-agent pass improves the global theory arc from history to LTI to RLC to MSD to impedance control while preserving technical boundaries"
+    threshold: "Introduction reading-order paragraph frames the paper as one question becoming concrete across history, circuits, 1DOF vibration, and robot endpoints; telegraph/telephone-line history is described as an important tutorial entrance rather than the sole origin; Section 2 states impedance was also formalized/expanded in AC circuits, power systems, and network analysis; Section 2 to Section 3 bridge says LTI/transfer functions are the minimal grammar for magnitude/phase changes of time-varying inputs; Section 3 ending states the RLC physical question; Section 4 ending says the MSD chapter is not forced translation but the same second-order structure in visible motion; Section 6 clarifies left-side stiffness term versus restoring command sign, scalar SISO inverse limits for impedance/admittance/compliance, endpoint effective-mass assumptions, Cartesian impedance implementation limits, and strict admittance control versus Lab04 calculated virtual-wall target-retreat proxy; repeated `초심자` and `덜 헷갈린다` wording is reduced; final compile segment has 0 citation/reference/rerun/overfull/underfull warnings"
+    evidence: "paper/sections/01_introduction.tex, paper/sections/02_impedance.tex, paper/sections/03_lti_system.tex, paper/sections/04_electric_system.tex, paper/sections/06_impedance_control.tex, review agents Avicenna, Kepler, and Sartre, bundled Tectonic compile exit code 0, final compile segment with 0 citation/reference/rerun/overfull/underfull warnings, bundled Python/pypdf text-marker and page-count checks, and Poppler-rendered PDF pages 9, 17, 35, 55, 58, and 71"
+  global_reader_boundary_pass:
+    metric: "latest multi-agent pass reduces beginner terminology pileups, fixes moving-target error-impedance wording, and tightens Lab04 virtual-wall boundary language without simulator-code changes"
+    threshold: "Abstract/introduction clearly frame Physical AI as background and the paper as a review/tutorial; Section 2 includes effort-flow-power table, passive sign convention, spring k/s hand calculation, and lumped-vs-distributed wording; Section 3 includes affine and final-value examples; Section 4 distinguishes zeta from zeta*omega_n and states u=Cv_in is a calculation-scale input; Section 6 uses error impedance Z_err and distinguishes actual port speed V_x from error speed V_e; Section 7 makes virtual_wall.stiffness penetration effects conditional rather than guaranteed; repeated 초심자/충분하다 wording is reduced; final compile segment has 0 citation/reference/rerun/overfull/underfull warnings"
+    evidence: "paper/sections/00_abstract.tex, paper/sections/01_introduction.tex, paper/sections/02_impedance.tex, paper/sections/03_lti_system.tex, paper/sections/04_electric_system.tex, paper/sections/06_impedance_control.tex, paper/sections/07_mujoco_lab_design.tex, paper/sections/08_discussion.tex, paper/sections/09_conclusion.tex, review agents Ohm, Dirac, and Einstein, bundled Tectonic compile exit code 0, final compile segment with 0 citation/reference/rerun/overfull/underfull warnings, bundled Python/pypdf text-marker and page-count checks, source rg stale-wording checks, and Poppler-rendered PDF pages 8, 34, 60, 83, and 91"
+  theory_depth_logic_handoff_pass:
+    metric: "latest multi-agent handoff pass deepens beginner explanations of storage-element resistance, RLC damping energy meaning, kinetic-energy derivation, closed-loop 1DOF impedance, endpoint effective mass, finite environment stiffness, virtual-wall damping power, and Lab03 kinematics-to-impedance logic"
+    threshold: "Section 2 explains finite-power stored-state change and port-impedance algebraic connection; Section 4 explains omega_n as L/C energy-exchange rhythm and zeta as normalized loss; Section 5 derives T=1/2mv^2 from work; Section 6 derives m_eff e_ddot + d_d e_dot + k_d e = f_ext from a 1DOF plant and virtual spring-damper command, gives joint-energy intuition for endpoint effective mass, explains finite environment stiffness as shared robot/environment deformation, and checks approach-only virtual-wall damping by power; Section 7 states why Lab03 kinematics precedes impedance; final compile segment has 0 citation/reference/rerun/overfull/underfull warnings"
+    evidence: "paper/sections/02_impedance.tex, paper/sections/04_electric_system.tex, paper/sections/05_mechanical_system.tex, paper/sections/06_impedance_control.tex, paper/sections/07_mujoco_lab_design.tex, review agents Popper, Galileo, and Peirce, bundled Tectonic compile exit code 0, final compile segment with 0 citation/reference/rerun/overfull/underfull warnings, bundled Python/pypdf text-marker and page-count checks, and Poppler-rendered PDF pages 7, 12, 34, 41, 57, 63, 71, 77, and 82"
+  laplace_pole_bridge_pass:
+    metric: "latest multi-agent pass makes Laplace transform, transfer-function poles, characteristic roots, final-value theorem, standard-form scaling, zero-initial-condition identities, and endpoint apparent-mass assumptions more intuitive and technically precise"
+    threshold: "Section 3 frames Laplace transform as a reusable algebraic ledger, s as a response-shape address, and final-value theorem as a final-frame shortcut with correct sY(s) pole caveat; Section 4 explains standard-form input scaling as a change of comparison scale; Section 5 connects pole and characteristic root, qualifies Vx=sX with zero initial conditions, and uses X0 for sinusoid amplitude; Section 6 qualifies Ve=sE with zero initial conditions, states coupled M/D/K modal pole condition, and distinguishes force-to-acceleration apparent mass from kinetic-energy directional mass; final TeX run has 0 citation/reference/rerun/overfull/underfull warnings"
+    evidence: "paper/sections/01_introduction.tex, paper/sections/02_impedance.tex, paper/sections/03_lti_system.tex, paper/sections/04_electric_system.tex, paper/sections/05_mechanical_system.tex, paper/sections/06_impedance_control.tex, paper/sections/09_conclusion.tex, review agents Faraday, Hume, and Kant, bundled Tectonic compile exit code 0, final TeX run warning counts 0/0/0/0/0, bundled Python/pypdf text-marker and page-count checks, and Poppler-rendered PDF pages 9, 20, 21, 23, 34, 38, 52, 59, 60, 62, 63, and 93"
+  robotics_foundations_expansion_pass:
+    metric: "latest multi-agent pass adds a beginner-friendly Modern Robotics bridge between the mechanical-system and impedance-control chapters"
+    threshold: "paper/main.tex includes sections/05b_robotics_foundations before Section 6; Section 5b defines joint/link/joint variable, q/qdot/qddot/qdddot, joint/task/workspace, FK/IK, Jacobian local small-motion and velocity relations, acceleration caveat Jdot*qdot, singularity/manipulability, J^T force-to-torque derivation from power, path versus trajectory, trapezoidal velocity profile, S-curve, jerk, and contact bridge to impedance; abstract/introduction/Section 6/Section 7 cross-references acknowledge the new robotics-foundation bridge; refs.bib and sources.md include lynchpark2017modernrobotics and berscheid2021ruckig; final TeX run has 0 citation/reference/rerun/overfull/underfull warnings"
+    evidence: "paper/sections/05b_robotics_foundations.tex, paper/main.tex, paper/sections/00_abstract.tex, paper/sections/01_introduction.tex, paper/sections/06_impedance_control.tex, paper/sections/07_mujoco_lab_design.tex, paper/references/refs.bib, paper/references/sources.md, .agents/ROBOTICS_FOUNDATIONS_PLAN.md, review agents Kierkegaard, Planck, and Pascal, bundled Tectonic compile, citation/provenance check, bundled Python/pypdf marker check, and Poppler-rendered PDF pages around the new section"
+  robotics_foundations_readability_trace_pass:
+    metric: "latest multi-agent pass deepens Section 5b Jacobian/trajectory/contact explanations and traces them into later lab interpretation without changing simulator code"
+    threshold: "Section 5b expands the 2-link Jacobian derivation term-by-term, includes a numeric Jacobian-column example, states velocity kinematics via the chain-rule limit, distinguishes task space/Cartesian position space/workspace, states translational-vs-geometric Jacobian scope, clarifies force-command versus external-force signs for J^T f, gives singularity/manipulability/DLS formulas and caveats, includes fig:path-trajectory-profiles, states ideal trapezoid acceleration discontinuity/jerk implication, and ends with an endpoint-error -> virtual force -> J^T torque -> contact handoff; Section 6 stale '앞 장' references are disambiguated; Section 7 explicitly connects path/trajectory/jerk to Lab03/Lab04 plot-reading; final TeX run has 0 citation/reference/rerun/overfull/underfull warnings"
+    evidence: "paper/sections/05b_robotics_foundations.tex, paper/figures/fig_path_trajectory_profiles.tex, paper/figures/figure_plan.md, paper/sections/06_impedance_control.tex, paper/sections/07_mujoco_lab_design.tex, review agents Anscombe, Fermat, and Volta, bundled Tectonic compile, source marker checks, pypdf marker checks, and rendered PDF pages around Section 5b"
+  robotics_foundations_formula_gates:
+    metric: "Section 5b core robotics formulas are mechanically checked against finite-difference or algebraic identities"
+    threshold: "2-link analytic Jacobian matches finite-difference FK within tolerance; xdot=J*qdot identity finite-difference check passes; virtual-work identity f^T J qdot = (J^T f)^T qdot passes; det(J)=l1*l2*sin(q2) and manipulability trend near q2=0,pi are checked; 2-link IK branch classification gives no/one/two branch outcomes from the cosine-law q2 condition; straight-path timing checkpoint gives 5x/25x/125x speed/acceleration/jerk ratios for 5 s versus 1 s with derivative error 0"
+    evidence: ".agents/validation/validate_robotics_foundations.py, .agents/validation/robotics_foundations_validation_summary.yaml, and latest .agents/CURRENT_STATE.md output record"
+  robotics_foundations_traceability_pass:
+    metric: "Section 5b robotics concepts are explicitly traced into Section 6 impedance interpretation and Section 7 Lab03/Lab04 plot-reading guidance"
+    threshold: ".agents/ROBOTICS_FOUNDATIONS_TRACEABILITY.md exists and maps every RF row to Section 5b support, citation/derivation, later Section 6/7 anchor, validation evidence, status, and next action; Section 6/7 include explicit references to sec:robotics-foundations or relevant 5b concepts; stale '앞 장' references in Section 6/7 that point to the wrong chapter are absent or disambiguated; DLS/manipulability and virtual-wall equations have stable labels"
+    evidence: "paper/sections/05b_robotics_foundations.tex, paper/sections/06_impedance_control.tex, paper/sections/07_mujoco_lab_design.tex, .agents/ROBOTICS_FOUNDATIONS_TRACEABILITY.md, .agents/ROBOTICS_FOUNDATIONS_PLAN.md, review agents Noether and Herschel, rg checks"
+  robotics_foundations_ik_branch_redundancy_pass:
+    metric: "IK multiple-solution concepts are explicitly connected to Lab03 branch comparisons and Lab04 7-DoF redundancy without overclaiming simulator capabilities"
+    threshold: "Section 5b explains elbow-up/elbow-down IK multiplicity, 7-DoF redundancy, and null-space motion in beginner-friendly prose; Section 7 Lab03 upper/lower branch text tells readers to compare q1/q2, manipulability, condition number, and effort indicators; Section 7 Lab04 text says 7 joints for 3D position leaves redundant choices but the current demo reads DLS target offsets and effort proxies rather than validating full null-space optimization; RF-04 in .agents/ROBOTICS_FOUNDATIONS_TRACEABILITY.md is Supported; no simulator code/config files are intentionally edited"
+    evidence: "paper/sections/05b_robotics_foundations.tex, paper/sections/07_mujoco_lab_design.tex, .agents/ROBOTICS_FOUNDATIONS_TRACEABILITY.md, .agents/ROBOTICS_FOUNDATIONS_PLAN.md, source/PDF marker checks, review agents Mencius and Zeno, git diff scope check"
+  robotics_foundations_ik_branch_checkpoint_pass:
+    metric: "IK multiple-solution explanation includes a small beginner-facing algebraic checkpoint instead of only prose"
+    threshold: "Section 5b contains `eq:two-link-ik-cos-q2`, defines r^2=x_d^2+y_d^2, explains outside [-1,1] as no solution, boundary +/-1 as one boundary solution, and interior values as q2=+/- arccos branches; RF-04 mentions the branch checkpoint; .agents/validation/validate_robotics_foundations.py checks no/one/two branch classification"
+    evidence: "paper/sections/05b_robotics_foundations.tex, .agents/ROBOTICS_FOUNDATIONS_TRACEABILITY.md, .agents/ROBOTICS_FOUNDATIONS_COMPLETION_AUDIT.md, .agents/validation/validate_robotics_foundations.py, .agents/validation/robotics_foundations_validation_summary.yaml, review agents Darwin and Aristotle, source/PDF marker checks, final TeX warning counts"
+  robotics_foundations_objective_audit_pass:
+    metric: "Original Modern Robotics foundation objective is audited requirement-by-requirement against current evidence"
+    threshold: ".agents/ROBOTICS_FOUNDATIONS_COMPLETION_AUDIT.md maps the original objective into RA rows covering research/planning, joint variables/types, joint/task/workspace, FK/IK, Jacobian derivation, velocity/angular quantities, force/torque, path/trajectory/jerk profiles, multijoint contact linkage, beginner readability, multi-agent loop records, and measurable validation/version management; each row has evidence, validation record, status, and residual risk"
+    evidence: ".agents/ROBOTICS_FOUNDATIONS_COMPLETION_AUDIT.md, .agents/ROBOTICS_FOUNDATIONS_TRACEABILITY.md, .agents/CURRENT_STATE.md, .agents/VALIDATION_METRICS.yaml, .agents/validation/robotics_foundations_validation_summary.yaml, .agents/PAPER_VERSION_LOG.md, review agents Darwin, Aristotle, and Curie"
+  robotics_foundations_durable_validation_summary_pass:
+    metric: "Latest Modern Robotics foundation manuscript version has durable main-reflection, validation, and version-management evidence"
+    threshold: ".agents/validation/robotics_foundations_validation_summary.yaml exists and records paper/main.tex inclusion, compile exit code, final warning counts, PDF pages/bytes/hash, formula metrics, citation/provenance counts, source/PDF marker checks, forbidden-overclaim result, and visual layout result; .agents/PAPER_VERSION_LOG.md exists and records a readable draft label, source/PDF paths, change purpose, verification, open risks, and next draft target; .agents/CURRENT_STATE.md, .agents/ROBOTICS_FOUNDATIONS_COMPLETION_AUDIT.md, and .agents/ROBOTICS_FOUNDATIONS_PLAN.md point future loops to those durable files"
+    evidence: ".agents/validation/robotics_foundations_validation_summary.yaml, .agents/PAPER_VERSION_LOG.md, .agents/CURRENT_STATE.md, .agents/ROBOTICS_FOUNDATIONS_COMPLETION_AUDIT.md, .agents/ROBOTICS_FOUNDATIONS_PLAN.md, review agent Curie, rg marker checks, formula validator output"
+  robotics_foundations_angular_velocity_notation_pass:
+    metric: "Appendix distinguishes pose, twist, wrench, angular velocity, angular acceleration, and Euler/RPY rates without expanding Lab04 scope"
+    threshold: "Appendix `sec:notation-6d-pose-impedance` contains pose matrix T with R and p, twist V=[v;omega], wrench w=[f;mu], table row `롤--피치--요와 각속도`, prose saying Euler/RPY time derivatives are generally not omega, and prose saying angular acceleration is not simply the second derivative of Euler angles; validator includes `angular_velocity_checkpoint`; Appendix still states Lab04 does not validate full 6D pose impedance or rotation/wrench terms"
+    evidence: "paper/sections/A_notation_checklist.tex, .agents/validation/validate_robotics_foundations.py, .agents/validation/robotics_foundations_validation_summary.yaml, .agents/PAPER_VERSION_LOG.md, review agents Leibniz and Helmholtz, PDF markers on pages 108 and 109, rendered page inspection"
+  robotics_foundations_prismatic_sanity_pass:
+    metric: "1D prismatic joint sanity check distinguishes generalized effort from torque and validates J^T force projection"
+    threshold: "Section 5b contains the scalar slider check x=q, J=[1], xdot=qdot, tau=J^T f=f; Section 5b contains the 3D +x slider projection j=[1,0,0]^T and tau=f_x; text says perpendicular force components do not disappear but do no work in the ideal slider DoF and therefore do not project to actuator generalized effort; validator includes manuscript_prismatic_sanity_marker_checkpoint with all markers >= 1 and joint_effort_unit_checkpoint with prismatic_axis_projection=1, perpendicular_axis_projection=0, scalar_slider_effort_n=10, prismatic_expected_effort_n=10, revolute_expected_effort_nm=4, and max_power_error=0"
+    evidence: "paper/sections/05b_robotics_foundations.tex, .agents/validation/validate_robotics_foundations.py, .agents/validation/robotics_foundations_validation_summary.yaml, .agents/PAPER_VERSION_LOG.md, review agents Averroes and Pasteur, PDF markers on pages 64-65, rendered page inspection"
+  robotics_foundations_configuration_space_pass:
+    metric: "Configuration space / C-space is bridged to joint space, task space, and workspace without overgeneralizing"
+    threshold: "Section 5b contains `configuration space` and `C-space`; text says fixed-base serial manipulator joint variables q usually form the configuration for this tutorial; text says configuration space and joint space are not universally identical; text says full configuration space can include base/object pose or constraints; text distinguishes task space as selected output variables and workspace as reachable task positions; validator includes manuscript_configuration_space_marker_checkpoint with all required markers >= 1"
+    evidence: "paper/sections/05b_robotics_foundations.tex, .agents/validation/validate_robotics_foundations.py, .agents/validation/robotics_foundations_validation_summary.yaml, .agents/PAPER_VERSION_LOG.md, review agents Herschel and Carver, PDF marker page 57, rendered page inspection"
+  robotics_foundations_state_configuration_pass:
+    metric: "Configuration, control/dynamics state, acceleration, and jerk are separated for beginner readers"
+    threshold: "Section 5b says configuration is geometric posture coordinates; text says common control/dynamics state uses q and qdot for simple second-order robot models; text states future motion depends on position and velocity plus inputs/model/constraints; text states qddot is determined by dynamics/control input and is not normally a separate minimal first-order state variable; text states jerk is a trajectory smoothness demand rather than a new geometric coordinate; validator includes manuscript_state_configuration_marker_checkpoint with all required markers >= 1"
+    evidence: "paper/sections/05b_robotics_foundations.tex, .agents/validation/validate_robotics_foundations.py, .agents/validation/robotics_foundations_validation_summary.yaml, .agents/PAPER_VERSION_LOG.md, review agents McClintock and Hegel, PDF marker page 56, rendered page inspection"
+  robotics_foundations_dls_first_use_handoff_clarity_pass:
+    metric: "DLS is expanded at first roadmap use, and the IK-to-Jacobian handoff avoids implying exact sequential IK solving"
+    threshold: "Section 5b contains `감쇠 최소제곱(DLS)은 특이점 근처`; the roadmap still contains `관절속도 폭주를 줄이는 완화식`; the handoff says the next Jacobian step starts after choosing the hand target and selected current branch q; the old phrase `손끝 위치 하나를 맞춘 다음` is absent; validator reports dls_expanded_first_use_marker_count >= 1, branch_pose_framing_marker_count >= 1, and old_exact_position_handoff_count == 0"
+    evidence: "paper/sections/05b_robotics_foundations.tex, .agents/validation/validate_robotics_foundations.py, .agents/validation/robotics_foundations_validation_summary.yaml, .agents/PAPER_VERSION_LOG.md, review agents Bacon and Leibniz, PDF markers on pages 55 and 61, rendered pages 55 and 60-61 inspection"
+  robotics_foundations_generalized_effort_bridge_pass:
+    metric: "Generic J^T f bridge wording uses generalized joint effort rather than torque-only language while preserving revolute torque intuition"
+    threshold: "Section 5b contains `손끝 힘을 관절 effort로 옮기는`, `손끝 힘과 관절 effort도 연결한다`, `일반화 관절 effort \\(\\bm{\\tau}\\)`, `\\(\\bm{J}^{\\mathsf{T}}\\)의 힘--관절 effort 관계`, `\\bm{J}^{\\mathsf{T}}\\text{를 통한 관절 effort}`, and `관절 effort 피크`; Section 5b no longer contains the generic-overreach phrases `손끝 힘을 관절 토크로`, `손끝 힘과 관절 토크도`, `모터 토크 \\(\\bm{\\tau}\\)`, `힘-토크 변환`, `\\bm{J}^{\\mathsf{T}}\\text{를 통한 관절 토크}`, or `구동기 부담 또는 토크 피크`; validator reports all required generalized-effort markers >= 1 and old generic torque markers == 0"
+    evidence: "paper/sections/05b_robotics_foundations.tex, .agents/validation/validate_robotics_foundations.py, .agents/validation/robotics_foundations_validation_summary.yaml, .agents/PAPER_VERSION_LOG.md, review agents Faraday and Beauvoir, PDF markers on pages 63, 64, and 68, rendered page inspection"
+  robotics_foundations_section6_effort_torque_scope_pass:
+    metric: "Section 6 carries generalized joint-effort scope into the Jacobian recap while preserving torque-control implementation wording"
+    threshold: "Introduction contains `힘--관절 effort 변환`; Section 6 says `\\(\\bm{\\tau}\\)를 관절좌표와 짝을 이루는 일반화 관절 effort`, says `병진 힘을 관절 effort 쪽으로 되돌린다`, has recap row `힘--관절 effort 변환`, says `일반화 effort 기여`, says `회전 관절에서는 이 값이 토크이다`, says `실제 관절 effort로 바꾸기`, preserves `토크 제어 구현` and `완전한 운영공간 임피던스 검증이 아니다`; Appendix A contains `자코비안 전치와 힘--관절 effort 변환`; validator `manuscript_section6_effort_torque_scope_marker_checkpoint` reports all required markers >= 1 and old Section 6/appendix/introduction force-torque transform markers == 0"
+    evidence: "paper/sections/01_introduction.tex, paper/sections/06_impedance_control.tex, paper/sections/A_notation_checklist.tex, .agents/validation/validate_robotics_foundations.py, .agents/validation/robotics_foundations_validation_summary.yaml, .agents/PAPER_VERSION_LOG.md, review agents Poincare and Gauss, PDF markers on pages 81, 82, and 110, rendered page inspection"
+  robotics_foundations_ik_jacobian_handoff_pass:
+    metric: "IK branch choice is handed off to the later Jacobian, DLS, force, and trajectory readings without implying DLS selects branches"
+    threshold: "Section 5b contains `IK에서 자코비안으로 넘어가는 다리`; text says later calculations start from the selected current branch q; text says J(q) is computed at that q; text says branch differences can change Jacobian, condition number, joint speed, and effort; text says DLS is not magic for choosing a branch; text says J^T f reads force as joint effort at the same current pose; validator includes `manuscript_ik_to_jacobian_handoff_marker_checkpoint` with all required markers >= 1"
+    evidence: "paper/sections/05b_robotics_foundations.tex, .agents/validation/validate_robotics_foundations.py, .agents/validation/robotics_foundations_validation_summary.yaml, .agents/PAPER_VERSION_LOG.md, review agents Euler and Averroes, PDF marker page 60, rendered pages 60-61 inspection"
+  robotics_foundations_acceleration_kinematics_pass:
+    metric: "Acceleration kinematics explains the product-rule origin of Jdot*qdot and validates it numerically"
+    threshold: "Section 5b states x is first read as fixed-frame translational end-effector position; explains that J(q) is not a fixed number table; states acceleration comes from differentiating the product J(q) qdot; defines Jdot as d/dt J(q(t)); states Jdot is not an independent new matrix; checks both J*qddot and Jdot*qdot have m/s^2 units for revolute columns; warns the Jdot*qdot direction/sign depends on pose, joint speed, frame, and sign conventions; validator includes `acceleration_kinematics_checkpoint` with max_acceleration_identity_error_m_s2 <= 1e-5 and `manuscript_acceleration_kinematics_marker_checkpoint` with all required markers >= 1"
+    evidence: "paper/sections/05b_robotics_foundations.tex, .agents/validation/validate_robotics_foundations.py, .agents/validation/robotics_foundations_validation_summary.yaml, .agents/PAPER_VERSION_LOG.md, review agents Kuhn and Heisenberg, PDF markers on pages 61 and 62, rendered page inspection"
+  robotics_foundations_joint_effort_units_pass:
+    metric: "Revolute/prismatic joint variables, Jacobian columns, and generalized efforts are explained with unit and power checks"
+    threshold: "Section 5b contains `tab:joint-type-units-generalized-effort`, `eq:joint-effort-unit-check`, virtual-displacement identity, revolute moment-arm example 10 N * 0.4 m = 4 N m, prismatic-axis force example 10 N, and same-frame/sign caveats; Appendix A mixed-unit rows state q is rad or m, J_v columns are m/rad or m/m, and tau is generalized effort N m or N; validator includes `joint_effort_unit_checkpoint` with max_power_error <= 1e-12; no new Lab04 torque-level or measured-force claims"
+    evidence: "paper/sections/05b_robotics_foundations.tex, paper/sections/A_notation_checklist.tex, .agents/validation/validate_robotics_foundations.py, .agents/validation/robotics_foundations_validation_summary.yaml, .agents/PAPER_VERSION_LOG.md, review agents Boyle and Harvey, PDF markers on pages 56, 61, and 107, rendered page inspection"
+  robotics_foundations_dls_reading_checkpoint_pass:
+    metric: "DLS velocity-IK equation is decomposed for beginners and validated with a measurable speed/residual tradeoff"
+    threshold: "Section 5b contains `tab:dls-velocity-ik-reading`, states `eq:dls-velocity-ik` is a velocity IK equation rather than the force/torque `J^T f` mapping, contains `eq:dls-singular-value-gain`, explains that lambda is numerical regularization rather than a physical damper, and includes a 6D scaling caveat; Section 7 states DLS may leave condition-number peaks while reducing excessive joint-speed commands; validator includes `dls_velocity_ik_checkpoint` where high lambda reduces joint-speed norm by more than 100x and increases task-velocity residual by more than 10x; no wording claims DLS solves singularities or is always better"
+    evidence: "paper/sections/05b_robotics_foundations.tex, paper/sections/07_mujoco_lab_design.tex, .agents/validation/validate_robotics_foundations.py, .agents/validation/robotics_foundations_validation_summary.yaml, .agents/PAPER_VERSION_LOG.md, review agents Rawls and Hypatia, PDF markers on pages 61 and 94, rendered page inspection"
+  robotics_foundations_section_reading_map_pass:
+    metric: "Section 5b starts with a compact learning-navigation map that separates position, velocity, force, and timing translations"
+    threshold: "Section 5b contains `이 장을 읽는 순서`; text explicitly says the roadmap is a learning navigation aid, not a control pipeline; text maps FK to q -> x reading, IK to finding possible q candidates from target x, Jacobian to small-change/velocity translation, DLS to reducing velocity-IK joint-speed blow-up near singularities, J^T f to force-to-effort translation, and path/trajectory to time-scheduled speed/acceleration/jerk demands; validator `manuscript_section_reading_map_checkpoint` reports all required markers >= 1"
+    evidence: "paper/sections/05b_robotics_foundations.tex, .agents/validation/validate_robotics_foundations.py, .agents/validation/robotics_foundations_validation_summary.yaml, .agents/PAPER_VERSION_LOG.md, review agents Singer and Gibbs, PDF markers on page 55, rendered page inspection"
+  robotics_foundations_trajectory_profile_selection_pass:
+    metric: "Trajectory-profile section gives beginners a safe selection rule and avoids overclaiming educational S-curve traces"
+    threshold: "Section 5b contains `프로파일 선택 체크포인트`; text says to start with trapezoidal profiles and first check whether velocity/acceleration limits are sufficient; text says to consider jerk-limited or smoother S-curve family profiles when transition vibration, noise, contact shock, or heavy loads matter; text states that the name S-curve does not always mean a full online generator satisfying all velocity, acceleration, and jerk limits; text says `S-curve-shaped smooth polynomial target` logs are same-simulator diagnostics, not measured contact force or hardware validation; validator `manuscript_trajectory_profile_marker_checkpoint` reports all required markers >= 1"
+    evidence: "paper/sections/05b_robotics_foundations.tex, .agents/validation/validate_robotics_foundations.py, .agents/validation/robotics_foundations_validation_summary.yaml, .agents/PAPER_VERSION_LOG.md, review agents Goodall and Feynman, PDF markers on page 66, rendered page inspection"
+  robotics_foundations_trajectory_profile_numeric_pass:
+    metric: "Trapezoidal and S-curve trajectory-profile explanations include beginner numeric checkpoints and safe scope boundaries"
+    threshold: "Section 5b contains `eq:trapezoid-accel-time`, `eq:trapezoid-accel-distance`, `eq:trapezoid-total-time`, `eq:s-curve-jerk-ramp-time`, `eq:s-curve-jerk-ramp-dv`, and `eq:s-curve-jerk-ramp-dx`; prose states speed-graph area is distance, explains triangular-profile fallback when L < 2*d_acc, and states the S-curve checkpoint is only the first jerk ramp; validator includes `trapezoidal_velocity_profile_checkpoint` with profile_type trapezoidal and total_time_s 2.5, and `s_curve_jerk_ramp_checkpoint` with ramp_delta_position_m 0.0010416666666666667; no wording claims ideal trapezoid has finite jerk, S-curve is always better, or the jerk ramp validates a full S-curve"
+    evidence: "paper/sections/05b_robotics_foundations.tex, .agents/validation/validate_robotics_foundations.py, .agents/validation/robotics_foundations_validation_summary.yaml, .agents/PAPER_VERSION_LOG.md, review agents Archimedes and Carson, PDF markers on pages 63 and 64, rendered page inspection"
+  robotics_foundations_ik_branch_numeric_pass:
+    metric: "2-link inverse-kinematics branch choice is explained step-by-step and checked with FK closure"
+    threshold: "Section 5b contains `tab:two-link-ik-reachability`, `eq:two-link-ik-c-value`, `eq:two-link-ik-q2-branches`, `eq:two-link-ik-q1-from-q2`, `eq:two-link-ik-positive-branch`, and `eq:two-link-ik-negative-branch`; prose defines `atan2`, explains that `arccos` returns a principal angle requiring signed branch handling, warns about degenerate boundary cases and joint limits, defines branch by `q2` sign or signed side rather than assuming elbow-up/down; validator includes `two_link_ik_numeric_branch_checkpoint` with FK closure errors <= 1e-12, signed sides -1/+1, and inner-boundary cos_q2=-1"
+    evidence: "paper/sections/05b_robotics_foundations.tex, .agents/validation/validate_robotics_foundations.py, .agents/validation/robotics_foundations_validation_summary.yaml, .agents/PAPER_VERSION_LOG.md, review agents Carver and Jason, PDF markers on pages 58 and 59, rendered page inspection"
+  robotics_foundations_ik_branch_figure_pass:
+    metric: "2-link IK branch explanation includes a rendered figure that matches the numeric branch checkpoint"
+    threshold: "Section 5b inputs `figures/fig_two_link_ik_branches`; the figure has label `fig:two-link-ik-branches`, shows S=(0,0), T=(1,1), E+=(1,0), E-=(0,1), q2 positive/negative branch meaning through the caption or side note, and explicitly uses signed-side formula `s=x_d e_y-y_d e_x`; validator `two_link_ik_numeric_branch_checkpoint` checks FK closure errors <= 1e-12, all four link lengths equal 1, signed sides -1/+1, and inner-boundary cos_q2=-1; rendered PDF page has no clipping or severe label overlap"
+    evidence: "paper/figures/fig_two_link_ik_branches.tex, paper/sections/05b_robotics_foundations.tex, paper/figures/figure_plan.md, .agents/validation/validate_robotics_foundations.py, .agents/validation/robotics_foundations_validation_summary.yaml, .agents/PAPER_VERSION_LOG.md, review agents Parfit and Copernicus, PDF markers and rendered page 59 inspection"
+  robotics_foundations_jacobian_column_figure_pass:
+    metric: "2-link Jacobian numeric example includes a rendered figure that teaches each Jacobian column as an instantaneous hand-velocity arrow"
+    threshold: "Section 5b inputs `figures/fig_two_link_jacobian_columns`; the figure has label `fig:two-link-jacobian-columns`, states the normalized example l1=l2=1, q1=0, q2=pi/2, shows S, E, H=(1,1), and distinguishes q1-only column j1=(-1,1)^T from q2-only column j2=(-1,0)^T; text or caption states arrows are instantaneous velocities, not finite paths; validator `jacobian_column_geometry_checkpoint` checks hand=(1,1), elbow=(1,0), exact columns, qdot examples (-0.1,0.1) and (-0.1,0), finite-difference column errors <= 1e-5, tangent dot products near 0, determinant 1, and condition number 2.618033988749895; rendered PDF page has no clipping or severe label overlap"
+    evidence: "paper/figures/fig_two_link_jacobian_columns.tex, paper/sections/05b_robotics_foundations.tex, .agents/validation/validate_robotics_foundations.py, .agents/validation/robotics_foundations_validation_summary.yaml, .agents/PAPER_VERSION_LOG.md, review agents Meitner and Newton, PDF markers on page 61, Poppler-rendered page 61 inspection"
+  robotics_foundations_jacobian_navigation_checkpoint_pass:
+    metric: "The Jacobian/DLS/J^T sequence includes a compact reader checkpoint that separates velocity mapping, DLS velocity IK, and force-to-effort mapping"
+    threshold: "Section 5b contains a `체크포인트` paragraph before the force/torque subsection; it says J is a local derivative at the current pose, Jacobian columns are instantaneous hand velocities for unit joint speed, J*qdot is velocity translation, DLS is a velocity-IK relaxation, J^T*f is a power/virtual-work force-to-effort relation, and force mapping requires frame/sign checks; stale phrase `작업공간 포트` appears 0 times; validator `manuscript_navigation_marker_checkpoint` reports all required marker counts >= 1 and old_task_space_port_count == 0; rendered PDF page has no clipping or severe crowding"
+    evidence: "paper/sections/05b_robotics_foundations.tex, .agents/validation/validate_robotics_foundations.py, .agents/validation/robotics_foundations_validation_summary.yaml, .agents/PAPER_VERSION_LOG.md, review agents Hegel and Bernoulli, PDF markers on page 63, Poppler-rendered page 63 inspection"
+  robotics_foundations_trajectory_timing_checkpoint_pass:
+    metric: "Path-versus-trajectory explanation includes a beginner calculation checkpoint and lab-facing interpretation links"
+    threshold: "Section 5b contains `eq:straight-path-time-scaling-checkpoint`, `eq:straight-path-time-derivatives`, and `tab:same-path-different-timing`; text explains a 10 cm straight path and 5 s versus 1 s timing compression with 5x speed, 25x acceleration, and 125x jerk demand ratios; Section 7 contains `tab:trajectory-profile-lab-checkpoint` naming Lab03 step/trapezoidal/minimum_jerk/s_curve configs and Lab04 wall_slow_approach/wall_fast_approach configs; text states sampled trapezoid jerk=0 must not be read as no physical transition shock and avoids claiming S-curve is always better or Lab04 validates S-curve contact control"
+    evidence: "paper/sections/05b_robotics_foundations.tex, paper/sections/07_mujoco_lab_design.tex, .agents/validation/validate_robotics_foundations.py, .agents/validation/robotics_foundations_validation_summary.yaml, .agents/PAPER_VERSION_LOG.md, review agents Ampere and Lorentz, PDF markers on pages 62 and 93, rendered page inspection"
+  robotics_foundations_jacobian_recap_compression_pass:
+    metric: "Section 6 uses the Section 5b Jacobian-transpose derivation as a short implementation-facing recap rather than repeating the full derivation"
+    threshold: "Section 6 contains `tab:jacobian-recap-for-impedance`, references `eq:jacobian-transpose-foundation`, preserves `eq:cartesian_to_joint_torque`, includes the one-line virtual-work identity f^T xdot = tau^T qdot, states same-frame/tool-frame rotation caveat, distinguishes f_cmd from environment/contact/sensor force sign conventions, says J_v^T is not inverse kinematics or a realized-force guarantee, and avoids new claims that Lab04 validates torque-level operational-space impedance"
+    evidence: "paper/sections/06_impedance_control.tex, paper/sections/05b_robotics_foundations.tex, .agents/ROBOTICS_FOUNDATIONS_TRACEABILITY.md, .agents/ROBOTICS_FOUNDATIONS_PLAN.md, review agents Confucius and Huygens, source/PDF marker checks, final TeX warning counts"
+  robotics_foundations_appendix_6d_pose_notation_pass:
+    metric: "Appendix gives beginner-safe notation guidance for 6D pose impedance without expanding the main text or overclaiming Lab04"
+    threshold: "Appendix contains `sec:notation-6d-pose-impedance` and `tab:pose-impedance-notation`; distinguishes translational x in R^3 from pose T in SE(3); defines orientation, angular velocity/angular acceleration, twist V, wrench w, geometric Jacobian J_g, and tau=J_g^T w in beginner-facing prose/table; warns rotation error is not simply R-R_d; distinguishes Euler/RPY angle rates from angular velocity; states V, w, and J_g need the same coordinate frame and reference point; states Lab04 is not full 6D pose impedance validation; RF-08 and RF-10 traceability rows mention the appendix anchor"
+    evidence: "paper/sections/A_notation_checklist.tex, .agents/ROBOTICS_FOUNDATIONS_TRACEABILITY.md, .agents/ROBOTICS_FOUNDATIONS_PLAN.md, review agents Arendt, Ptolemy, Leibniz, and Helmholtz, source/PDF marker checks, final TeX warning counts"
+  robotics_foundations_beginner_glossary_roadmap_pass:
+    metric: "Appendix gives beginners a navigation table for Modern Robotics and impedance-control terms without adding new theory or simulator claims"
+    threshold: "Appendix contains `sec:beginner-glossary-roadmap`, `tab:beginner-glossary-kinematics`, and `tab:beginner-glossary-control-contact`; the glossary includes lookup paths for joint/task/workspace, FK, IK, Jacobian, velocity kinematics, singularity/DLS, Jacobian-transpose force mapping, path/trajectory/jerk profiles, stiffness, damping/damping ratio, impedance/admittance, virtual wall/contact, position actuator/effort proxy, and 6D pose notation; new Section 5b subsection labels resolve; RF-15 records the navigation table; no new wording claims Lab04 validates full 6D impedance, measured contact force, hardware current, torque-level Cartesian impedance, or MuJoCo contact force equality"
+    evidence: "paper/sections/05b_robotics_foundations.tex, paper/sections/A_notation_checklist.tex, .agents/ROBOTICS_FOUNDATIONS_TRACEABILITY.md, .agents/ROBOTICS_FOUNDATIONS_PLAN.md, review agents Bacon and Mill, source/PDF marker checks, final TeX warning counts, rendered appendix page inspection"
+  trajectory_profile_trace_metrics:
+    metric: "Path/trajectory/jerk concepts from Section 5b are visible in Lab03/Lab04 interpretation"
+    threshold: "paper text explicitly tells readers to distinguish geometric path following from time-scheduled trajectory aggressiveness, inspect speed/acceleration/jerk-related effort or contact peaks where available, and use concrete Lab03/Lab04 configs as safe plot-reading checkpoints"
+    evidence: "paper/sections/05b_robotics_foundations.tex, paper/sections/07_mujoco_lab_design.tex, fig:path-trajectory-profiles, tab:same-path-different-timing, tab:trajectory-profile-lab-checkpoint"
+  pdf_visual_layout:
+    metric: "rendered PDF pages have legible tables, equations, margins, and section transitions"
+    threshold: "representative pages visually inspected with no clipping or severe crowding"
+    evidence: "Poppler-rendered PNG inspection plus latest paper/main.pdf"
+  discussion_reference_tables:
+    metric: "closing misconception and formula tables are grouped by reader task"
+    threshold: "misconception tables split by concept/control; formula tables split by impedance, 1D response, robot implementation"
+    evidence: "paper/sections/08_discussion.tex"
+  latex_build:
+    metric: "LaTeX compile exit code"
+    threshold: 0
+    command: "latex compile skill or available TeX command"
+
+operations:
+  ci_reproducibility:
+    metric: "CI commands reproducible locally"
+    threshold: "all CI commands have local equivalent"
+    evidence: "workflow files and final report"
+  cleanup_safety:
+    metric: "cleanup candidates classified before deletion"
+    threshold: "100 percent classified"
+    evidence: "garbage-collection-manager inventory"
+  secrets_exposure:
+    metric: "new secrets committed or printed"
+    threshold: 0
+    evidence: "security review, git diff"
+  rollback_defined:
+    metric: "rollback plan for release-impacting changes"
+    threshold: "present"
+    evidence: "deployment-rollback-manager checklist"
+
+agent_system:
+  skill_structure:
+    metric: "skill folders with SKILL.md and agents/openai.yaml"
+    threshold: "100 percent for created skills"
+    evidence: "C:/Users/ycpig/.codex/skills/<skill>/"
+  skill_frontmatter:
+    metric: "valid name and description frontmatter"
+    threshold: "100 percent"
+    evidence: "manual validation or quick_validate.py"
+  handoff_completeness:
+    metric: "handoff packet fields completed"
+    threshold: "all required fields or explicit N/A"
+    evidence: ".agents/OPERATING_SYSTEM.md handoff packet"
+

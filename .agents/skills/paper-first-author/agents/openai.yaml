@@ -1,0 +1,4 @@
+interface:
+  display_name: "Paper First Author"
+  short_description: "Drive the complete paper draft"
+  default_prompt: "Use $paper-first-author to turn notes and feedback into a coherent manuscript draft."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Product Version Manager"
+  short_description: "Manage product release versions"
+  default_prompt: "Use $product-version-manager to decide a product version and draft release notes."

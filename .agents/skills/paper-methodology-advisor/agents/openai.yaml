@@ -1,0 +1,4 @@
+interface:
+  display_name: "Paper Methodology Advisor"
+  short_description: "Check methods and validation"
+  default_prompt: "Use $paper-methodology-advisor to assess whether methods support the paper claims."

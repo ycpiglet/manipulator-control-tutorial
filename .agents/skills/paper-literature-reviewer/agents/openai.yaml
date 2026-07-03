@@ -1,0 +1,4 @@
+interface:
+  display_name: "Paper Literature Reviewer"
+  short_description: "Find and synthesize sources"
+  default_prompt: "Use $paper-literature-reviewer to build related work and verify citation needs."

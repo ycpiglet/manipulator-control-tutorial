@@ -65,6 +65,29 @@ Use `.agents/VALIDATION_METRICS.yaml` as the metric registry. Each task should c
 Metric | Threshold | Measured value | Evidence path/command | Status | Next action
 ```
 
+The registry keeps only durable, currently-enforced gates. Pass-specific
+historical gates are archived in `.agents/archive/VALIDATION_METRICS_HISTORY.yaml`
+and are not re-enforced.
+
+Core gates are also enforced automatically by GitHub Actions
+(`.github/workflows/ci.yml`): simulator lint/tests, paper citation and formula
+checks, and the paper LaTeX build. A change is not done while CI is red.
+
+## Skills Location
+
+The skill definitions referenced in this document are mirrored into the
+repository at `.agents/skills/<skill>/` so the operating system is
+self-contained after a clone. The working copy used by the local agent harness
+lives at `~/.codex/skills/`. When a skill changes, update the machine copy and
+re-mirror it into `.agents/skills/` in the same iteration.
+
+## State Record Policy
+
+`.agents/CURRENT_STATE.md` keeps only the latest snapshot: objective, current
+manuscript/simulator state, the most recent pass records, residual risks, and
+the next recommended action. Older pass records move verbatim to dated files in
+`.agents/archive/`. Do not let the live state file grow without bound.
+
 ## Recommended Agent Chains
 
 For simulator code:

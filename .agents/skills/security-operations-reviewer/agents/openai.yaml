@@ -1,0 +1,4 @@
+interface:
+  display_name: "Security Operations Reviewer"
+  short_description: "Review operational and supply-chain security"
+  default_prompt: "Use $security-operations-reviewer to review this workflow for security risks."

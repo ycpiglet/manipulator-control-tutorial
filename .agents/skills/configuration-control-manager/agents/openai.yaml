@@ -1,0 +1,4 @@
+interface:
+  display_name: "Configuration Control Manager"
+  short_description: "Manage baselines and configs"
+  default_prompt: "Use $configuration-control-manager to define controlled items and baselines."

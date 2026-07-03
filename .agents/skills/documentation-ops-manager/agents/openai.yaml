@@ -1,0 +1,4 @@
+interface:
+  display_name: "Documentation Ops Manager"
+  short_description: "Keep docs, runbooks, and READMEs current"
+  default_prompt: "Use $documentation-ops-manager to align documentation with current behavior."

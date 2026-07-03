@@ -1,0 +1,4 @@
+interface:
+  display_name: "Paper Publication Editor"
+  short_description: "Prepare final publication proof"
+  default_prompt: "Use $paper-publication-editor to check final proof, metadata, figures, and references."

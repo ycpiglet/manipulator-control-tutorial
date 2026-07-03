@@ -1,0 +1,4 @@
+interface:
+  display_name: "Autonomous Iteration Manager"
+  short_description: "Run repeatable plan-build-validate loops"
+  default_prompt: "Use $autonomous-iteration-manager to run this task as a measurable iteration loop."

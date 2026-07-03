@@ -1,0 +1,4 @@
+interface:
+  display_name: "CI/CD Pipeline Manager"
+  short_description: "Design and debug CI/CD workflows"
+  default_prompt: "Use $cicd-pipeline-manager to design a reliable CI/CD pipeline for this repository."

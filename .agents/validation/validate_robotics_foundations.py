@@ -930,7 +930,6 @@ def joint_effort_unit_checkpoint() -> dict[str, float]:
     prismatic_qdot_m_s = 0.2
     prismatic_xdot = tuple(prismatic_axis[i] * prismatic_qdot_m_s for i in range(3))
     prismatic_effort_n = dot(prismatic_jacobian_column, force_parallel)
-    prismatic_endpoint_speed_m_s = dot(prismatic_axis, prismatic_xdot)
     prismatic_task_power_w = dot(force_parallel, prismatic_xdot)
     prismatic_joint_power_w = prismatic_effort_n * prismatic_qdot_m_s
 

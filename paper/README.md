@@ -31,9 +31,16 @@
 
 ## Build
 
-Codex LaTeX plugin의 bundled Tectonic을 사용할 때의 검증 명령은 다음과 같다.
-현재 Codex 작업에서의 표준 검증은 아래 Tectonic 명령이다.
+이식 가능한 표준 빌드는 Tectonic CLI이다. 어떤 머신에서든 같은 명령으로 빌드하며,
+CI(`.github/workflows/ci.yml`의 `paper-build` job)도 같은 명령을 사용한다.
 `main.tex`의 `% !TEX program = xelatex` 지시문은 일반 TeX 편집기에서 열 때의 힌트로 남겨 둔다.
+
+```bash
+tectonic --keep-logs paper/main.tex
+```
+
+Codex LaTeX plugin의 bundled Tectonic을 쓰는 로컬 대안 명령은 다음과 같다
+(경로는 이 머신 전용이므로 다른 환경에서는 위의 Tectonic CLI를 사용한다).
 
 ```powershell
 $env:PYTHONUTF8='1'; python C:\Users\ycpig\.codex\plugins\cache\openai-bundled\latex\0.2.4\scripts\compile_latex.py C:\Users\ycpig\manipulator-control-tutorial\paper\main.tex --compiler tectonic --output-directory C:\Users\ycpig\manipulator-control-tutorial\paper --json
@@ -45,6 +52,13 @@ Tectonic 로그에는 첫 번째 pass의 undefined citation/reference 경고가 
 ## Citation And Provenance Checks
 
 본문 citation이 BibTeX와 source manifest에 모두 있는지 확인한다.
+표준 검사는 이식 가능한 스크립트이며 CI(`paper-gates` job)에서도 같은 명령을 실행한다.
+
+```bash
+python .agents/validation/check_citation_coverage.py
+```
+
+아래 PowerShell 스니펫은 같은 검사의 수동 대안으로 남겨 둔다.
 
 ```powershell
 $tex = rg -o "\\cite\{[^}]+\}" paper\sections paper\main.tex | ForEach-Object { if ($_ -match "\\cite\{([^}]+)\}") { $matches[1].Split(',') | ForEach-Object { $_.Trim() } } } | Sort-Object -Unique

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Paper Peer Reviewer"
+  short_description: "Simulate external peer review"
+  default_prompt: "Use $paper-peer-reviewer to produce a rigorous review and recommendation."

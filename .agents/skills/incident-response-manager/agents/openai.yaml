@@ -1,0 +1,4 @@
+interface:
+  display_name: "Incident Response Manager"
+  short_description: "Coordinate incident mitigation and postmortems"
+  default_prompt: "Use $incident-response-manager to triage this incident and produce a recovery plan."
