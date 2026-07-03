@@ -1,0 +1,92 @@
+# Agent Operating System
+
+This repository uses a local-first agent operating system: each agent works in short iterations, leaves measurable evidence, and hands off with enough state for another agent or human to continue.
+
+## Core Loop
+
+```text
+Intake -> Plan -> Implement -> Validate -> Review -> Record -> Next Iteration
+```
+
+| Phase | Lead Skill | Supporting Skills | Required Output |
+|---|---|---|---|
+| Intake | `project-state-manager` | `traceability-manager` | Goal, scope, constraints, affected files |
+| Plan | `autonomous-iteration-manager` | `agent-collaboration-orchestrator` | Iteration plan and acceptance metrics |
+| Implement | Task-specific skill | `configuration-control-manager` | Code, paper, config, doc, or artifact change |
+| Validate | `measurable-validation-manager` | `test-automation-manager`, `paper-technical-reviewer` | Pass/fail table with measured values |
+| Review | Domain reviewer | `security-operations-reviewer`, `paper-internal-reviewer` | Findings, risks, missing evidence |
+| Record | `project-state-manager` | `change-log-manager`, `artifact-provenance-manager` | State snapshot, changed artifacts, next action |
+| Repeat | `autonomous-iteration-manager` | `release-readiness-manager` | Stop, repeat, hand off, or release decision |
+
+## Collaboration Model
+
+Use one owner per iteration and multiple reviewers only when their responsibilities are different.
+
+| Role | Responsibility | Typical Skills |
+|---|---|---|
+| Director | Defines the target, scope, and stop condition | `paper-research-director`, `project-state-manager` |
+| Producer | Creates the concrete artifact | `paper-manuscript-writer`, `paper-latex-editor`, task coding agent |
+| Domain Reviewer | Checks technical truth and field fit | `paper-technical-reviewer`, `paper-domain-expert-reviewer` |
+| Beginner Reviewer | Checks whether an entry-level reader can follow | `paper-novice-reader` |
+| Operations Reviewer | Checks release, CI, security, cleanup, and costs | `cicd-pipeline-manager`, `security-operations-reviewer`, `garbage-collection-manager` |
+| Validator | Converts claims into measured checks | `measurable-validation-manager`, `test-automation-manager` |
+| Archivist | Records versions, state, provenance, and decisions | `paper-version-manager`, `product-version-manager`, `artifact-provenance-manager` |
+
+## Handoff Packet
+
+Every non-trivial handoff should include this packet:
+
+```text
+Objective:
+Current state:
+Files/artifacts:
+Constraints:
+Acceptance metrics:
+Commands already run:
+Measured results:
+Open risks:
+Next recommended action:
+```
+
+## Iteration Rules
+
+- Run at most one primary goal per iteration.
+- Make the smallest change that can be validated.
+- Prefer repository commands over invented checks.
+- Do not call a task complete until evidence exists.
+- Record both successful checks and checks that could not be run.
+- If the same blocker appears in three consecutive iterations, stop and mark the blocker explicitly.
+
+## Validation Gate
+
+Use `.agents/VALIDATION_METRICS.yaml` as the metric registry. Each task should choose the smallest relevant subset and report:
+
+```text
+Metric | Threshold | Measured value | Evidence path/command | Status | Next action
+```
+
+## Recommended Agent Chains
+
+For simulator code:
+
+```text
+project-state-manager -> autonomous-iteration-manager -> implementation -> test-automation-manager -> measurable-validation-manager -> change-log-manager
+```
+
+For paper/tutorial writing:
+
+```text
+paper-research-director -> paper-manuscript-writer -> paper-technical-reviewer -> paper-novice-reader -> paper-language-editor -> paper-version-manager
+```
+
+For release or demo readiness:
+
+```text
+release-readiness-manager -> cicd-pipeline-manager -> observability-sre-manager -> garbage-collection-manager -> measurable-validation-manager
+```
+
+For cleanup:
+
+```text
+garbage-collection-manager -> artifact-provenance-manager -> configuration-control-manager -> project-state-manager
+```

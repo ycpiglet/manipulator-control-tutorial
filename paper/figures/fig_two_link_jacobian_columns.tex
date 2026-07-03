@@ -1,0 +1,65 @@
+\begin{figure}[!htbp]
+  \centering
+  \resizebox{\linewidth}{!}{%
+  \begin{tikzpicture}[
+      axis/.style={-{Latex[length=1.7mm]}, draw=black!65, line width=0.45pt},
+      guide/.style={densely dashed, draw=black!35, line width=0.45pt},
+      link/.style={draw=black!70, line width=1.2pt},
+      colone/.style={-{Latex[length=2mm]}, draw=blue!70!black, line width=1.25pt},
+      coltwo/.style={-{Latex[length=2mm]}, draw=orange!85!black, line width=1.25pt},
+      panel/.style={draw=black!25, rounded corners=2pt, fill=black!2},
+      point/.style={circle, fill=black, inner sep=1.5pt},
+      hand/.style={circle, fill=green!45!black, inner sep=1.8pt},
+      lab/.style={font=\scriptsize, align=center},
+      title/.style={font=\scriptsize\bfseries, align=center},
+      note/.style={draw=black!30, rounded corners=2pt, fill=white, align=left, font=\scriptsize, inner sep=4pt}
+    ]
+
+    \draw[panel] (-0.35,-0.35) rectangle (10.25,3.45);
+
+    \begin{scope}[shift={(0.22,0.18)}, scale=1.18]
+      \draw[axis] (-0.08,0) -- (2.35,0) node[right, lab] {$x$};
+      \draw[axis] (0,-0.08) -- (0,2.35) node[above, lab] {$y$};
+
+      \coordinate (S) at (0,0);
+      \coordinate (E) at (1,0);
+      \coordinate (H) at (1,1);
+
+      \draw[link] (S) -- (E) -- (H);
+      \draw[guide] (S) -- (H);
+      \draw[guide] (E) -- (H);
+
+      \draw[colone] (0.34,0) arc[start angle=0, end angle=52, radius=0.34];
+      \node[lab, text=blue!70!black] at (0.53,0.40) {$+q_1$};
+      \draw[coltwo] (1.25,0.20) arc[start angle=35, end angle=120, radius=0.28];
+      \node[lab, text=orange!85!black] at (1.42,0.42) {$+q_2$};
+
+      \draw[colone] (H) -- ++(-0.58,0.58)
+        node[lab, text=blue!70!black, above left] {$\bm{j}_1=(-1,1)$};
+      \draw[coltwo] (H) -- ++(-0.78,0)
+        node[lab, text=orange!85!black, left] {$\bm{j}_2=(-1,0)$};
+
+      \node[point, label={[lab, below left]$S$}] at (S) {};
+      \node[point, label={[lab, below right]$E$}] at (E) {};
+      \node[hand, label={[lab, above right]$H=(1,1)$}] at (H) {};
+    \end{scope}
+
+    \begin{scope}[shift={(3.7,0.12)}]
+      \node[title, anchor=west] at (0,2.95) {자코비안 열을 손끝 속도로 읽기};
+
+      \node[note, text width=6.05cm, anchor=north west] at (0,2.72)
+        {\textbf{정규화 예제}\\
+        \(l_1=l_2=1\), \(q_1=0\), \(q_2=\pi/2\).\\[2pt]
+        \textbf{첫 번째 열}\\
+        \(q_1\)만 \(1~\mathrm{rad/s}\)로 돌리면 손끝은 어깨 \(S\)를 중심으로 움직인다.\\
+        \(S\rightarrow H=(1,1)\)의 접선 방향이 \(\bm{j}_1=(-1,1)~\mathrm{m/rad}\)이다.\\[2pt]
+        \textbf{두 번째 열}\\
+        \(q_2\)만 \(1~\mathrm{rad/s}\)로 돌리면 둘째 링크 끝은 팔꿈치 \(E\)를 중심으로 움직인다.\\
+        \(E\rightarrow H=(0,1)\)의 접선 방향이 \(\bm{j}_2=(-1,0)~\mathrm{m/rad}\)이다.\\[2pt]
+        \(\bm{J}=[\bm{j}_1\ \bm{j}_2]\).};
+    \end{scope}
+  \end{tikzpicture}%
+  }
+  \caption{정규화된 2링크 팔 자세 \(l_1=l_2=1~\mathrm{m}\), \(q_1=0\), \(q_2=\pi/2\)에서 자코비안의 두 열을 손끝 순간속도 방향으로 읽은 그림이다. 첫 번째 열 \(\bm{j}_1=(-1,1)^{\mathsf T}\)은 어깨 관절 \(q_1\)만 단위 속도로 움직이고 팔꿈치 \(q_2\)를 고정했을 때의 손끝 순간속도이다. 두 번째 열 \(\bm{j}_2=(-1,0)^{\mathsf T}\)은 팔꿈치 관절 \(q_2\)만 움직이고 어깨 \(q_1\)을 고정했을 때의 손끝 순간속도이다. 화살표는 유한한 이동 경로가 아니라 순간속도 방향을 표시하기 위해 축척해 그린 것이다. 따라서 자코비안 행렬의 열은 숫자 목록이 아니라, 현재 자세에서 각 관절 하나가 손끝에 만드는 속도 화살표로 볼 수 있다.}
+  \label{fig:two-link-jacobian-columns}
+\end{figure}

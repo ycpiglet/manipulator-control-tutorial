@@ -1,0 +1,312 @@
+\section{기호와 단위 빠른 참조}
+\label{sec:notation-checklist}
+
+여기서부터는 본문을 이어 읽는 장이 아니라, 헷갈리는 기호를 다시 확인하기 위한 부록이다.
+본문을 처음부터 끝까지 한 번에 이해하려고 하면 기호가 헷갈릴 수 있다.
+특히 전기와 기계, 로봇 제어에서 비슷한 글자를 서로 다른 뜻으로 쓰는 경우가 많다.
+이 부록은 새로운 이론을 추가하기 위한 장이 아니라, 본문을 읽다가 기호와 단위가 흔들릴 때 돌아와 확인하기 위한 빠른 참조표이다.
+특히 $q$, $C$, $V$, $x$, $e$, $f$처럼 여러 분야에서 반복해서 등장하는 글자는 반드시 문맥과 아래첨자를 함께 확인해야 한다.
+이 부록에서는 $q(t)$와 $Q(s)$를 전하로, $\bm{q}$와 $q_i$를 관절좌표로 구분한다.
+또한 $\mathrm{C}$는 쿨롱 단위이고 $C$는 커패시턴스이며, $C_e$는 목표점 기준 오차 순응성이다.
+$V(s)$는 전압이지만, $V_x(s)$와 $V_e(s)$처럼 아래첨자가 붙으면 속도의 라플라스 변환으로 읽는다.
+$E(t)$는 에너지로, $E(s)$는 오차 $e(t)$의 라플라스 변환으로 쓰일 수 있으므로 문맥을 함께 확인한다.
+회로 장에서 아래첨자 없이 쓰는 $X$는 리액턴스를 뜻할 수 있고, $X(s)$처럼 괄호와 라플라스 변수 $s$가 붙으면 위치 $x(t)$의 라플라스 변환으로 읽는다.
+
+\subsection{초심자용 용어 길찾기}
+\label{sec:beginner-glossary-roadmap}
+
+다음 표는 새로운 이론을 더하는 표가 아니라, 본문을 읽다가 용어가 흔들릴 때 어디로 돌아가면 좋은지 알려 주는 색인이다.
+처음 읽을 때는 모든 항목을 외우려고 하기보다, 헷갈리는 단어를 만났을 때 한 줄 의미를 보고 해당 절이나 표로 돌아가면 된다.
+
+\begin{table}[H]
+  \centering
+  \caption{초심자용 로봇공학 용어 길찾기: 기구학과 궤적}
+  \label{tab:beginner-glossary-kinematics}
+  \small
+  \setlength{\tabcolsep}{3pt}
+  \renewcommand{\arraystretch}{1.14}
+  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.22\linewidth}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{0.31\linewidth}@{}}
+    \toprule
+    용어 & 처음에는 이렇게 읽기 & 돌아갈 곳과 주의점 \\
+    \midrule
+    링크, 관절, 자유도 & 링크는 단단한 몸체, 관절은 허용된 움직임, 자유도는 독립적으로 정할 수 있는 움직임 개수이다 & 절~\ref{sec:robotics-links-joints-variables}, 표~\ref{tab:joint-variable-derivatives}. 자유도가 많으면 선택지도 많지만 해석도 쉬워진다는 뜻은 아니다 \\
+    관절 변수와 미분 & $\bm{q}$는 관절 위치, $\dot{\bm{q}}$, $\ddot{\bm{q}}$, $\dddot{\bm{q}}$는 관절 속도, 가속도, 저크이다 & 표~\ref{tab:joint-variable-derivatives}. 전하 $q(t)$와 관절좌표 $\bm{q}$를 문맥으로 구분한다 \\
+    관절공간, 작업공간, 작업영역 & 관절공간은 모터 각도들의 세계이고, 작업공간은 손끝 위치처럼 사람이 보고 싶은 세계이다 & 절~\ref{sec:robotics-joint-task-workspace}, 표~\ref{tab:joint-task-space}. 작업영역은 그중 실제로 도달 가능한 집합이다 \\
+    정기구학(FK) & 관절값에서 손끝 위치나 포즈를 계산하는 일이다 & 절~\ref{sec:robotics-forward-kinematics}, 식~\eqref{eq:fk-minimal}--\eqref{eq:two-link-fk-y}. 관절값 하나를 정하면 이상적인 강체 모델의 손끝 위치가 정해진다 \\
+    역기구학(IK) & 원하는 손끝 목표에서 필요한 관절값을 찾는 일이다 & 절~\ref{sec:robotics-inverse-kinematics}. 해가 없거나, 하나이거나, 여러 개일 수 있으며 여러 해는 자세 branch와 effort 차이로 이어진다 \\
+    자코비안 & 관절을 조금 움직이면 손끝이 어느 방향으로 얼마나 움직이는지 알려 주는 순간 번역표이다 & 절~\ref{sec:robotics-jacobian-small-motion}, 식~\eqref{eq:jacobian-small-motion}, \eqref{eq:two-link-jacobian}. 큰 이동 전체를 푸는 공식이 아니라 현재 자세 근처의 선형 근사이다 \\
+    속도기구학 & 작은 변화 식을 시간으로 나누어 관절속도와 손끝속도를 연결하는 관점이다 & 절~\ref{sec:robotics-velocity-kinematics}, 식~\eqref{eq:jacobian-velocity-foundation}. 가속도에는 $\dot{\bm J}\dot{\bm q}$ 항이 추가될 수 있다 \\
+    특이점, 조건수, 조작성, DLS & 어떤 자세에서는 특정 손끝 방향이 만들기 어려워지고, 역문제가 작은 오차에도 예민해진다 & 절~\ref{sec:robotics-singularity-conditioning}, 식~\eqref{eq:two-link-manipulability}, \eqref{eq:dls-velocity-ik}. DLS 감쇠는 물리 감쇠비가 아니라 역기구학 계산 완화이다 \\
+    경로, 궤적, 저크 프로파일 & 경로는 어디를 지나는가이고, 궤적은 언제 얼마나 빠르게 지나는가까지 포함한다 & 절~\ref{sec:robotics-path-trajectory}, \ref{sec:robotics-trajectory-profiles}, 표~\ref{tab:path-trajectory-profile}. 사다리꼴과 S-curve는 시간 스케일링을 읽는 말이다 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \caption{초심자용 로봇공학 용어 길찾기: 임피던스와 접촉}
+  \label{tab:beginner-glossary-control-contact}
+  \small
+  \setlength{\tabcolsep}{3pt}
+  \renewcommand{\arraystretch}{1.14}
+  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.22\linewidth}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{0.31\linewidth}@{}}
+    \toprule
+    용어 & 처음에는 이렇게 읽기 & 돌아갈 곳과 주의점 \\
+    \midrule
+    자코비안 전치와 힘--관절 effort 변환 & 손끝 힘을 각 관절이 나눠 맡을 일반화 effort 쪽으로 옮길 때 $\bm{J}^{\mathsf T}$가 등장한다. 회전 관절에서는 이 값이 토크이다 & 절~\ref{sec:robotics-force-torque-jacobian-transpose}, 식~\eqref{eq:jacobian-transpose-foundation}, 표~\ref{tab:jacobian-recap-for-impedance}. 좌표계와 힘 부호를 함께 확인한다 \\
+    평형점, 목표점, anchor point & 가상 스프링이 묶인 기준 위치이다. 힘이 균형을 이루는 곳으로 읽으면 된다 & 식~\eqref{eq:steady_position_under_force}, \eqref{eq:virtual_spring_damper}. 목표점 오프셋과 실제 벽 침투 깊이를 섞지 않는다 \\
+    강성 & 위치가 목표에서 벗어날수록 되돌리려는 힘이 얼마나 빨리 커지는지를 나타낸다 & 식~\eqref{eq:virtual_spring_damper}. 접촉 방향 강성을 키우면 정적 힘이 커질 수 있지만 토크 포화와 안전 한계도 같이 본다 \\
+    감쇠와 감쇠비 & 감쇠는 속도에 저항해 흔들림을 줄이는 효과이고, 감쇠비는 질량과 강성까지 함께 본 흔들림 모양의 기준이다 & 식~\eqref{eq:damping_from_ratio}. DLS damping, virtual wall damping, 물리 감쇠비를 같은 값으로 읽지 않는다 \\
+    임피던스 제어와 어드미턴스 제어 & 임피던스는 운동에서 힘 반응을 설계하는 관점이고, 어드미턴스는 힘을 받아 목표 운동을 바꾸는 관점이다 & 식~\eqref{eq:task_impedance}, 표~\ref{tab:impedance-implementation-ladder}. 실제 로봇 인터페이스가 힘/토크 명령인지 위치 명령인지 먼저 본다 \\
+    관절 임피던스와 직교 임피던스 & 관절 기준으로 가상 스프링을 거는지, 손끝 작업공간 기준으로 거는지의 차이이다 & 식~\eqref{eq:joint_impedance}, \eqref{eq:cartesian_to_joint_torque}. 직교 임피던스에서는 자코비안 조건과 방향별 단위를 조심한다 \\
+    가상 벽, 침투 깊이, 접근 속도 & 정해 둔 경계를 넘으면 계산식으로 밀어내는 교육용 벽 모델이다 & 표~\ref{tab:contact-symbols}, 식~\eqref{eq:virtual-wall-penetration}--\eqref{eq:virtual-wall-force}. 가상 벽 힘은 실측 접촉력이 아니라 정의한 식으로 계산한 신호이다 \\
+    position actuator와 effort proxy & 위치 액추에이터는 목표 관절 위치를 받는 인터페이스이고, effort proxy는 구동기 부담 비교용 대리 지표이다 & 표~\ref{tab:artifact-theory-bridge}, \ref{tab:lab-observation-guide}. 실측 모터 전류나 힘 센서값으로 읽지 않는다 \\
+    6차원 포즈, 트위스트, 렌치 & 자세까지 포함하면 위치만이 아니라 회전 오차, 6차원 속도, 힘과 모멘트 묶음이 필요하다 & 절~\ref{sec:notation-6d-pose-impedance}, 표~\ref{tab:pose-impedance-notation}. 이 논문의 Lab04는 완전한 6차원 포즈 임피던스 검증이 아니다 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{영역 표기 먼저 구분하기}
+
+\begin{table}[H]
+  \centering
+  \caption{시간영역, 라플라스 영역, 주파수 응답의 빠른 구분}
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.21\linewidth}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X@{}}
+    \toprule
+    표기 & 쉬운 의미 & 읽을 때의 질문 \\
+    \midrule
+    $x(t)$, $v(t)$ & 시간에 따라 변하는 실제 신호 & 지금 순간의 움직임이나 전압을 보는가? \\
+    $X(s)$, $V(s)$ & 라플라스 영역의 신호 & 과도응답과 안정성까지 함께 보는가? \\
+    $Z(\jj\omega)$, $H(\jj\omega)$ & 정현파 주파수 응답 & 특정 주파수에서 크기와 위상을 보는가? \\
+    $s=\sigma+\jj\omega$ & 감쇠와 진동을 함께 담은 복소 변수 & $s$를 시간 단위 초와 혼동하지 않았는가? \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{전기 시스템 기호}
+
+\begin{table}[H]
+  \centering
+  \caption{전기 시스템에서 자주 쓰는 기호}
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.15\linewidth}>{\raggedright\arraybackslash}p{0.27\linewidth}>{\raggedright\arraybackslash}p{0.14\linewidth}>{\raggedright\arraybackslash}X@{}}
+    \toprule
+    기호 & 의미 & 대표 단위 & 주의할 점 \\
+    \midrule
+    $v(t)$, $V(s)$ & 전압 & $\mathrm{V}$ & 전기적 effort이다 \\
+    $i(t)$, $I(s)$ & 전류 & $\mathrm{A}$ & 전기적 flow이다 \\
+    $q(t)$, $Q(s)$ & 전하 & $\mathrm{C}$ & $q_i$, $\bm{q}$는 관절각이므로 문맥으로 구분한다 \\
+    $R$ & 저항 & $\Omega$ & 에너지를 열로 소산한다 \\
+    $L$ & 인덕턴스 & $\mathrm{H}$ & 전류 변화에 저항하고 자기장에 에너지를 저장한다 \\
+    $C$ & 커패시턴스 & $\mathrm{F}$ & 전압/전하 상태를 전기장 에너지로 저장하고 전압의 급격한 변화에 저항한다. 전하 단위 $\mathrm{C}$와 구분한다 \\
+    $Z_e$ & 전기 임피던스 & $\Omega$ & $V/I$이며, 페이저나 라플라스 문맥에서 읽는다 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{기계 시스템 기호}
+
+\begin{table}[H]
+  \centering
+  \caption{기계 시스템에서 자주 쓰는 기호}
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.16\linewidth}>{\raggedright\arraybackslash}p{0.26\linewidth}>{\raggedright\arraybackslash}p{0.15\linewidth}>{\raggedright\arraybackslash}X@{}}
+    \toprule
+    기호 & 의미 & 대표 단위 & 주의할 점 \\
+    \midrule
+    $x(t)$ & 위치 & $\mathrm{m}$ & 스프링 변위나 로봇 끝단 위치로 쓰인다 \\
+    $\dot{x}(t)$, $V_x(s)$, $V_e(s)$ & 속도 & $\mathrm{m/s}$ & 아래첨자가 붙은 $V_x$, $V_e$는 전압이 아니라 속도이다 \\
+    $e$, $\bm{e}$ & 위치 오차 & $\mathrm{m}$ & 보통 $e=x-x_d$, $\bm{e}=\bm{x}-\bm{x}_d$이다. $e^{st}$의 $e$는 자연상수이다 \\
+    $E(s)$ & 오차의 라플라스 변환 & $\mathrm{m}$ & 제어공학의 신호 단위 관례로 적는다. 엄밀한 적분 변환 단위는 별도 초 단위를 포함할 수 있다 \\
+    $f(t)$, $F(s)$ & 힘 & $\mathrm{N}$ & 기계적 effort이다 \\
+    $m$ & 질량 & $\mathrm{kg}$ & 운동 에너지를 저장하고 속도 변화에 저항한다 \\
+    $b$ & 점성 감쇠계수 & $\mathrm{N\,s/m}$ & 속도에 비례해 에너지를 소산한다 \\
+    $k$ & 스프링 강성 & $\mathrm{N/m}$ & 탄성 퍼텐셜 에너지를 저장하고 위치가 평형점에서 벗어나는 것을 되돌린다 \\
+    $Z_m$ & 기계 임피던스 & $\mathrm{N\,s/m}$ & 힘/속도 관계이며 힘/위치가 아니다 \\
+    $C_e$ & 오차 순응성 & $\mathrm{m/N}$ & 힘이 목표점 기준 위치 오차를 얼마나 만드는지 나타낸다 \\
+    $Y_e$ & 오차 어드미턴스 & $\mathrm{m/(N\,s)}$ & 오차 속도/힘 관계이고, 고정 목표점에서는 기계 어드미턴스 $Y_m=V_x/F_{\mathrm{ext}}$처럼 읽을 수 있다 \\
+    $Y_m$ & 기계 어드미턴스 & $\mathrm{m/(N\,s)}$ & 절대 속도/힘 관계이다. 목표점이 움직이면 $Y_e=V_e/F_{\mathrm{ext}}$와 구분한다 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{2차 시스템과 로봇 제어 기호}
+
+\begin{table}[H]
+  \centering
+  \caption{2차 시스템과 로봇 제어에서 자주 쓰는 기호}
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.16\linewidth}>{\raggedright\arraybackslash}p{0.26\linewidth}>{\raggedright\arraybackslash}p{0.15\linewidth}>{\raggedright\arraybackslash}X@{}}
+    \toprule
+    기호 & 의미 & 대표 단위 & 주의할 점 \\
+    \midrule
+    $\omega$ & 각주파수 & $\mathrm{rad/s}$ & Hz 변환은 $f=\omega/(2\pi)$이다 \\
+    $\omega_n$ & 고유진동수 & $\mathrm{rad/s}$ & 시스템이 자연스럽게 흔들리려는 빠르기이다 \\
+    $\zeta$ & 감쇠비 & 없음 & 감쇠계수 하나가 아니라 $m,b,k$의 조합이다 \\
+    $m_d$, $\bm{M}_d$ & 희망 관성, 목표 모델의 관성 & $\mathrm{kg}$ & 제어기가 만들고 싶은 가상 관성이다. 실제 링크 질량이나 끝단 유효질량과 구분한다 \\
+    끝단 유효질량, 겉보기 관성 & 현재 자세와 힘 방향에서 손끝이 무겁게 또는 가볍게 느껴지는 값 & $\mathrm{kg}$ & 로봇 구조와 자세가 정하는 값이며, 사용자가 고르는 $m_d$나 $m_{\mathrm{nom}}$과 다르다 \\
+    $m_{\mathrm{nom}}$ & 교육용 명목 질량 & $\mathrm{kg}$ & $d_d$ 계산을 일관되게 하기 위한 기준값이다. 실제 끝단 유효질량이나 안전성 보증으로 읽지 않는다 \\
+    $d_d$, $\bm{D}_d$ & 희망 감쇠, 감쇠계수 & $\mathrm{N\,s/m}$ & 1축 또는 대각 근사에서는 $d_d=2\zeta\sqrt{m_dk_d}$로 계산한다. 교육용 명목 질량을 쓰면 $d_d=2\zeta\sqrt{m_{\mathrm{nom}}k_d}$이며, 실제 유효질량과 다르면 감쇠비는 보증값이 아니라 튜닝 기준이다 \\
+    $k_d$, $\bm{K}_d$ & 희망 강성 & $\mathrm{N/m}$ & 병진 기준이다. 실제 끝단 느낌은 자코비안과 액추에이터 인터페이스의 영향을 받는다 \\
+    $\bm{K}\succeq0$, $\bm{K}\succ0$ & 양의 준정부호, 양의 정부호 & 없음 & $\succeq0$은 에너지가 음수가 되지 않는다는 뜻이고, $\succ0$은 모든 방향에서 닫힌 그릇처럼 복원력이 있다는 뜻이다 \\
+    $\Delta x$ & 허용 변위 & $\mathrm{m}$ & 원하는 접촉력에서 강성 출발값을 잡을 때 쓰는 설계 허용량이다. $k_d\approx F/\Delta x$로 읽으며, 실제 침투 $\delta$나 목표 오프셋 $\delta_d$와 구분한다 \\
+    $\delta_d$ & 목표점 오프셋 & $\mathrm{m}$ & 벽 뒤에 일부러 둔 목표 평형점의 거리이다. 접촉력을 만들기 위한 설계량이며 실제 침투 깊이가 아니다 \\
+    $\delta$ & 벽 침투 깊이 & $\mathrm{m}$ & 현재 끝단이 벽을 넘은 양이다. 가상 벽에서는 $\delta=\max(0,x-x_{\mathrm{wall}})$로 두며 $\delta_d$와 별도이다 \\
+    $\bm{x}$ & 작업공간 위치 & $\mathrm{m}$ & 이 글에서는 주로 병진 위치 $\R^3$에 집중한다 \\
+    $\bm{q}$, $q_i$ & 관절공간 좌표 & 회전 관절은 $\mathrm{rad}$, 직선 관절은 $\mathrm{m}$ & 전기 전하 $q(t)$와 문맥으로 구분한다. 하나의 벡터 안에서도 관절 종류에 따라 성분 단위가 달라질 수 있다 \\
+    $\bm{J}_v$ & 병진 자코비안 & 회전 관절 열은 $\mathrm{m/rad}$, 직선 관절 열은 $\mathrm{m/m}$ & 병진 위치 기준이다. $\dot{\bm{x}}=\bm{J}_v(\bm{q})\dot{\bm{q}}$로 작은 운동을 연결한다 \\
+    조작성(manipulability) & 손끝을 여러 방향으로 움직이기 쉬운 정도 & 없음 & 작아지면 특이점에 가까워져 역기구학이 예민해질 수 있다 \\
+    나쁜 조건수 상태(ill-conditioned) & 계산이 오차에 예민한 상태 & 없음 & 작은 위치 오차나 센서 노이즈가 큰 관절 변화로 증폭될 수 있다 \\
+    $\bm{\tau}$ & 일반화 관절 effort & 회전 관절은 $\mathrm{N\,m}$, 직선 관절은 $\mathrm{N}$ & 병진 힘은 $\bm{\tau}=\bm{J}_v^{\mathsf{T}}\bm{f}$로 관절 effort와 연결된다. 회전 관절 성분은 토크, 직선 관절 성분은 축 방향 힘이다 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+관절공간 임피던스를 직접 쓸 때는 단위가 달라진다.
+관절 강성은 보통 $\mathrm{N\,m/rad}$, 관절 감쇠는 $\mathrm{N\,m\,s/rad}$로 읽는 편이 안전하다.
+따라서 $\bm{K}_d$, $\bm{D}_d$가 작업공간 값인지 관절공간 값인지 항상 먼저 확인해야 한다.
+
+\subsection{병진 위치와 6차원 포즈 표기 구분}
+\label{sec:notation-6d-pose-impedance}
+
+본문의 대부분은 손끝 병진 위치 $\bm{x}=[x\ y\ z]^{\mathsf T}\in\R^3$를 기준으로 설명했다.
+즉, 로봇 손끝이 공간에서 어디에 있는지를 보는 설명이다.
+하지만 실제 로봇 작업에서는 손끝이 어디에 있는지만큼, 공구가 어느 방향을 보고 있는지도 중요할 수 있다.
+예를 들어 드라이버를 나사에 맞추거나, 문손잡이를 돌리거나, 컵을 기울이지 않고 옮기는 작업에서는 자세(orientation)를 빼면 문제가 완전히 설명되지 않는다.
+
+이때 위치와 자세를 합쳐 포즈(pose)라고 부른다.
+자세는 회전행렬 $R\in SO(3)$로, 위치와 자세를 함께 담은 포즈는 보통 $T\in SE(3)$로 쓴다.
+처음 읽을 때는 $R$은 손끝 좌표축이 어느 방향을 보는지, $T$는 위치와 방향을 함께 담은 좌표계 표지판이라고 생각하면 된다.
+롤--피치--요 세 각도로 자세를 표현할 수도 있지만, 특정 자세 근처에서 특이점이 생길 수 있으므로 정밀한 제어식에서는 회전행렬, 사원수, 또는 회전 오차 벡터를 따로 쓴다.
+
+초심자용으로는 다음 구분만 먼저 붙잡으면 된다.
+병진 위치는 \(\bm{x}\in\mathbb{R}^3\)이지만, 6차원 포즈는 보통
+\[
+  T
+  =
+  \begin{bmatrix}
+    R & \bm{p} \\
+    \bm{0}^{\mathsf T} & 1
+  \end{bmatrix}
+\]
+처럼 위치 \(\bm{p}\)와 자세 \(R\)를 함께 담는 표현이다.
+반면 트위스트는 포즈 자체가 아니라 순간 속도
+\[
+  \bm{V}
+  =
+  \begin{bmatrix}
+    \bm{v} \\
+    \bm{\omega}
+  \end{bmatrix}
+\]
+이고, 렌치는 힘과 모멘트
+\[
+  \bm{w}
+  =
+  \begin{bmatrix}
+    \bm{f} \\
+    \bm{\mu}
+  \end{bmatrix}
+\]
+이다.
+즉 포즈는 현재의 위치와 방향을 적은 사진이고, 트위스트는 그 사진이 지금 어떻게 움직이는지를 적은 속도이다.
+
+\begin{table}[H]
+  \centering
+  \caption{병진 위치 임피던스와 6차원 포즈 임피던스 표기 구분}
+  \label{tab:pose-impedance-notation}
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \renewcommand{\arraystretch}{1.12}
+  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.20\linewidth}>{\raggedright\arraybackslash}p{0.31\linewidth}>{\raggedright\arraybackslash}X@{}}
+    \toprule
+    표기 & 쉬운 의미 & 읽을 때의 주의점 \\
+    \midrule
+    $\bm{x}\in\R^3$ & 손끝 병진 위치 & 이 논문의 주된 작업공간 변수이다. 회전 자세는 포함하지 않는다 \\
+    $R\in SO(3)$ & 손끝 자세, 즉 공구 좌표축의 방향 & 롤--피치--요 숫자 3개와 같다고 단순화하면 특이점과 좌표계 문제가 생길 수 있다 \\
+    $T\in SE(3)$ & 위치와 자세를 합친 포즈 & 손끝이 어디에 있고 어느 방향을 보는지를 함께 담는다 \\
+    롤--피치--요와 각속도 & 자세를 세 각도로 적는 편리한 좌표와 실제 순간 회전 속도는 구분한다 & 롤--피치--요의 시간미분은 특이점 근처에서 불안정할 수 있고, 일반적으로 $\bm{\omega}$와 같은 벡터가 아니다. 6차원 트위스트에는 Euler angle rate가 아니라 같은 좌표계에서 표현한 각속도 $\bm{\omega}$를 넣는다 \\
+    $\bm{\omega}$, $\dot{\bm{\omega}}$ & 각속도, 각가속도 & 병진 속도 $\dot{\bm{x}}$와 단위가 다르다. 각각 $\mathrm{rad/s}$, $\mathrm{rad/s^2}$로 읽는다 \\
+    $\bm{V}$ & 트위스트, 병진 속도와 각속도를 묶은 6차원 속도 & 선속도와 각속도를 같은 벡터에 넣지만 단위가 섞여 있다 \\
+    $\bm{w}$ & 렌치, 힘과 모멘트를 묶은 6차원 힘 & 병진 힘 $\bm{f}$와 회전 모멘트 $\bm{\mu}$를 함께 다룬다 \\
+    $\bm{J}_g$ & 기하학적 자코비안 & $\bm{V}=\bm{J}_g\dot{\bm{q}}$처럼 관절속도를 6차원 손끝 속도로 옮긴다 \\
+    $\bm{\tau}=\bm{J}_g^{\mathsf T}\bm{w}$ & 렌치를 관절 토크로 옮기는 관계 & $\bm{V}$, $\bm{w}$, $\bm{J}_g$가 같은 기준 좌표계와 기준점에서 표현되어야 한다 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+따라서 6차원 포즈 임피던스는 단순히 $\bm{x}$를 6개 숫자로 늘리는 일이 아니다.
+병진 오차 $\bm{x}-\bm{x}_d$에 더해 회전 오차를 어떤 방식으로 정의할지 정해야 하고, 힘뿐 아니라 모멘트까지 포함한 렌치를 써야 한다.
+회전 오차는 단순히 $R-R_d$처럼 행렬을 빼서 끝나는 값으로 생각하기보다, 현재 자세에서 목표 자세까지 어느 축으로 얼마나 돌려야 하는지를 나타내는 작은 회전 벡터로 먼저 읽는 편이 안전하다.
+한 축만 도는 아주 쉬운 경우에는 yaw rate가 \(\omega_z\)처럼 보일 수 있다.
+하지만 일반적인 3차원 자세에서는 롤--피치--요 각도의 시간미분이 각속도 \(\bm{\omega}\) 자체와 같지 않고, 선택한 자세 표현에 따른 변환을 거쳐야 한다.
+각가속도도 Euler 각도의 두 번째 미분을 그대로 넣는 값으로 단순화하면 안 되고, 선택한 자세 표현과 좌표계 변환을 확인해야 한다.
+또 병진 강성의 단위는 $\mathrm{N/m}$이지만 회전 강성은 보통 $\mathrm{N\,m/rad}$로 읽는다.
+둘을 한 행렬에 넣을 수는 있지만, 단위와 좌표계가 다르다는 사실을 잊으면 안 된다.
+특히 $\bm{V}$, $\bm{w}$, $\bm{J}_g$는 같은 좌표계와 같은 기준점에서 표현되어야 한다.
+공구 좌표계(tool frame)에서 측정한 렌치를 기준 좌표계(base frame) 자코비안에 바로 넣으면 방향과 모멘트 기준점이 틀어질 수 있다.
+
+이 논문에서 Lab04를 병진 위치 데모로 제한한 이유도 여기에 있다.
+현재 Lab04 설명은 손끝의 $x,y,z$ 위치, 계산된 가상 벽 힘, DLS 목표 오프셋, position actuator effort 지표를 읽는 훈련이다.
+표~\ref{tab:pose-impedance-notation}의 6차원 표기는 나중에 자세와 모멘트까지 다루는 로봇 제어를 읽기 위한 안내판이지, 현재 Lab04가 완전한 6차원 포즈 임피던스를 검증한다는 뜻이 아니다.
+
+\subsection{힘 부호 빠른 구분}
+
+\begin{table}[H]
+  \centering
+  \caption{임피던스 제어에서 힘 기호를 읽는 법}
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.22\linewidth}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{0.28\linewidth}@{}}
+    \toprule
+    기호 & 의미 & 부호/크기 주의 \\
+    \midrule
+    $f_{\mathrm{ext}}$ & 환경이 로봇에 가하는 외력 & 부호 있는 힘 \\
+    $f_{\mathrm{cmd}}$ & 로봇 제어기가 만들려고 하는 명령힘 & 부호 있는 힘 \\
+    $f_{\mathrm{wall}}$ & 벽이 로봇에 가하는 힘 & 부호 있는 힘 \\
+    $|f_{\mathrm{contact}}|$ & 접촉력의 크기 & 방향보다 크기를 볼 때 사용 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{구현 신호 빠른 구분}
+
+\begin{table}[H]
+  \centering
+  \caption{임피던스 관계를 실제 로봇 명령으로 옮길 때의 구분}
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.25\linewidth}>{\raggedright\arraybackslash}p{0.34\linewidth}>{\raggedright\arraybackslash}X@{}}
+    \toprule
+    로봇 인터페이스 & 제어기가 만드는 신호 & 읽을 때의 기준 \\
+    \midrule
+    힘/토크 명령 가능 & 위치/속도 오차에서 $\bm{f}_{\mathrm{cmd}}$ 또는 $\bm{\tau}$를 계산 & 임피던스식 구현으로 읽는다. 단, 토크 한계와 동역학 보상이 실제 응답을 제한한다 \\
+    위치 명령만 가능 & 측정 또는 추정 외력에서 목표 위치/속도 변화를 계산 & 어드미턴스식 외부 루프 또는 목표 위치 보정으로 읽는다. Lab04 가상 벽은 실측 외력 대신 계산된 가상 벽 신호를 쓰는 교육용 목표 후퇴 근사이며, 완전한 운영공간 임피던스 보증은 아니다 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{읽을 때마다 확인할 질문}
+
+수식을 만났을 때 다음 질문을 차례대로 던지면 훨씬 덜 헷갈린다.
+
+\begin{enumerate}
+  \item 지금 식은 시간영역 식인가, 라플라스 영역 식인가, 정현파 정상상태의 페이저 식인가?
+  \item 입력과 출력은 무엇인가? 힘에서 위치로 보는가, 힘에서 속도로 보는가, 운동에서 힘으로 보는가?
+  \item 정상상태를 말하고 있는가, 과도응답을 말하고 있는가?
+  \item 힘은 부호 있는 힘인가, 접촉력의 크기인가?
+  \item 위치 좌표인가, 속도 좌표인가, 관절공간인가, 작업공간인가?
+  \item 강성, 감쇠, 관성 중 어떤 요소가 에너지를 저장하고 어떤 요소가 에너지를 소산하는가?
+  \item 같은 기호가 다른 장에서 다른 뜻으로 쓰이지 않는가? 특히 $q$, $C$, $V$는 문맥을 확인한다.
+  \item 이 설명은 실제 로봇 성능 보증인가, 교육용 모델에서 개념을 확인하기 위한 단순화인가?
+\end{enumerate}
+
+수식을 만났을 때 이 질문들은 잠깐 방향을 잡아 주는 작은 지도에 가깝다.
+지금 식이 시간응답을 말하는지, 주파수응답을 말하는지, 입력과 출력이 무엇인지 알면 계산보다 먼저 그림이 잡힌다.
+처음에는 목록을 하나씩 확인해도 좋고, 익숙해지면 필요한 질문만 빠르게 꺼내 쓰면 된다.
+헷갈리는 순간에 이 중 하나만 붙잡아도 다음 문장이 훨씬 편하게 이어진다.

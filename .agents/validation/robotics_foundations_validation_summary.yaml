@@ -1,0 +1,225 @@
+schema_version: 1
+validation_id: robotics_foundations_section6_effort_torque_scope_pass
+scope: paper_only_robotics_foundations
+validated_at_kst: "2026-07-03T00:31:00+09:00"
+status: pass
+
+main_reflection:
+  source: paper/main.tex
+  includes_robotics_foundations: true
+  includes_impedance_control: true
+  includes_notation_appendix: true
+  checked_markers:
+    - "\\input{sections/05b_robotics_foundations}"
+    - "\\input{sections/A_notation_checklist}"
+    - "감쇠 최소제곱(DLS)은 특이점 근처"
+    - "관절속도 폭주를 줄이는 완화식"
+    - "IK에서 자코비안으로 넘어가는 다리"
+    - "가지 선택 뒤의 읽기 순서"
+    - "선택된 현재 branch의 \\(\\bm{q}\\)"
+    - "그 \\(\\bm{q}\\)에서 \\(\\bm{J}(\\bm{q})\\)"
+    - "DLS는 branch를 고르는 마법이 아니라"
+    - "같은 현재 자세에서 힘을 관절 effort로 읽는다"
+    - "손끝 목표와 선택된 현재 branch의 \\(\\bm{q}\\)를 정한 뒤"
+    - "손끝 힘을 관절 effort로 옮기는"
+    - "일반화 관절 effort \\(\\bm{\\tau}\\)"
+    - "\\(\\bm{J}^{\\mathsf{T}}\\)의 힘--관절 effort 관계"
+    - "\\bm{J}^{\\mathsf{T}}\\text{를 통한 관절 effort}"
+    - "힘--관절 effort 변환"
+    - "\\(\\bm{\\tau}\\)를 관절좌표와 짝을 이루는 일반화 관절 effort"
+    - "병진 힘을 관절 effort 쪽으로 되돌린다"
+    - "회전 관절에서는 이 값이 토크이다"
+    - "완전한 운영공간 임피던스 검증이 아니다"
+  compiled_pdf: paper/main.pdf
+  result: "Section 6 now scopes generic J_v^T f wording as generalized joint effort while preserving revolute-joint torque-control implementation language."
+
+compile:
+  tool: compile_latex.py
+  compiler: tectonic
+  command: "python C:/Users/ycpig/.codex/plugins/cache/openai-bundled/latex/0.2.4/scripts/compile_latex.py C:/Users/ycpig/manipulator-control-tutorial/paper/main.tex --compiler tectonic --output-directory C:/Users/ycpig/manipulator-control-tutorial/paper --json"
+  exit_code: 0
+  final_citation_warnings: 0
+  final_reference_warnings: 0
+  final_rerun_warnings: 0
+  final_overfull_boxes: 0
+  final_underfull_boxes: 0
+  final_float_specifier_warnings: 0
+  missing_character_warnings: 0
+  known_residual_font_warnings: 2
+  residual_warning_note: "Korean italic font substitution in bibliography only"
+  scratch_log_retained: false
+
+pdf:
+  path: paper/main.pdf
+  pages: 118
+  size_bytes: 961187
+  sha256: "75EA71A0AE0F967A39C29EB65DF5D8967FAB16CC84869A7BF6E7C4CF7A0D99AD"
+  last_write_kst: "2026-07-03T00:25:49+09:00"
+
+formula_validation:
+  command: "python .agents/validation/validate_robotics_foundations.py"
+  script: .agents/validation/validate_robotics_foundations.py
+  exit_code: 0
+  failures: 0
+  max_fk_jacobian_fd_error: 6.452007814128358e-07
+  max_velocity_identity_error: 2.7783687794880052e-08
+  acceleration_kinematics_checkpoint:
+    max_acceleration_identity_error_m_s2: 1.1720832559371311e-08
+  max_virtual_work_error: 8.881784197001252e-16
+  max_determinant_formula_error: 2.0816681711721685e-17
+  manuscript_section_reading_map_checkpoint:
+    section_reading_map_count: 1
+    dls_expanded_first_use_marker_count: 1
+    dls_relief_marker_count: 1
+    jtf_force_translation_marker_count: 1
+  manuscript_ik_to_jacobian_handoff_marker_checkpoint:
+    handoff_paragraph_count: 1
+    branch_reading_order_marker_count: 1
+    current_branch_q_marker_count: 2
+    jacobian_at_that_q_marker_count: 1
+    different_branch_metrics_marker_count: 1
+    dls_not_branch_magic_marker_count: 1
+    same_pose_effort_marker_count: 1
+    branch_pose_framing_marker_count: 1
+    velocity_force_translation_marker_count: 1
+    old_exact_position_handoff_count: 0
+  manuscript_generalized_effort_bridge_marker_checkpoint:
+    dls_force_effort_handoff_marker_count: 1
+    force_effort_intro_marker_count: 1
+    generalized_effort_power_marker_count: 1
+    effort_sharing_marker_count: 1
+    actuator_effort_limit_marker_count: 1
+    closing_joint_effort_tau_marker_count: 1
+    closing_force_effort_relation_marker_count: 1
+    closing_jtf_joint_effort_flow_marker_count: 1
+    closing_effort_peak_marker_count: 1
+    old_force_joint_torque_handoff_count: 0
+    old_force_joint_torque_intro_count: 0
+    old_motor_torque_power_count: 0
+    old_force_torque_transform_count: 0
+    old_jtf_joint_torque_flow_count: 0
+    old_torque_peak_phrase_count: 0
+  manuscript_section6_effort_torque_scope_marker_checkpoint:
+    intro_force_effort_transform_marker_count: 1
+    section6_general_tau_effort_scope_marker_count: 1
+    section6_revolute_torque_context_marker_count: 1
+    section6_jtf_effort_back_marker_count: 1
+    section6_revolute_read_as_torque_marker_count: 1
+    section6_effort_table_label_marker_count: 1
+    section6_generalized_effort_contribution_marker_count: 2
+    section6_revolute_table_torque_marker_count: 1
+    section6_actual_joint_effort_marker_count: 1
+    section6_force_to_generalized_effort_marker_count: 1
+    section6_n_joint_effort_marker_count: 1
+    section6_torque_control_ladder_preserved_marker_count: 2
+    section6_lab04_caveat_preserved_marker_count: 1
+    notation_effort_transform_marker_count: 1
+    notation_generalized_effort_marker_count: 1
+    old_section6_force_torque_transform_count: 0
+    old_section6_joint_torque_back_count: 0
+    old_notation_force_torque_transform_count: 0
+    old_intro_force_torque_transform_count: 0
+    combined_valid_pose_wrench_phrase_count: 1
+  manuscript_configuration_space_marker_checkpoint:
+    configuration_space_marker_count: 4
+    c_space_marker_count: 1
+    fixed_base_serial_marker_count: 2
+    configuration_joint_space_scope_marker_count: 1
+    not_universal_identity_marker_count: 1
+    base_object_constraints_marker_count: 1
+    task_space_output_marker_count: 1
+    workspace_reachable_marker_count: 1
+    q_space_x_space_translation_marker_count: 1
+  manuscript_state_configuration_marker_checkpoint:
+    configuration_pose_coordinate_marker_count: 1
+    fixed_base_q_configuration_marker_count: 1
+    state_q_qdot_marker_count: 1
+    future_motion_position_velocity_marker_count: 1
+    qddot_input_dynamics_marker_count: 1
+    minimal_first_order_state_marker_count: 1
+    augmented_state_caveat_marker_count: 1
+    jerk_smoothness_requirement_marker_count: 1
+    not_geometric_coordinate_marker_count: 1
+  manuscript_prismatic_sanity_marker_checkpoint:
+    one_dimensional_slider_marker_count: 1
+    scalar_x_equals_q_marker_count: 1
+    scalar_j_equals_one_marker_count: 1
+    scalar_tau_equals_force_marker_count: 1
+    three_dimensional_axis_marker_count: 1
+    projection_fx_marker_count: 1
+    perpendicular_projection_marker_count: 1
+    joint_effort_not_torque_marker_count: 1
+  joint_effort_unit_checkpoint:
+    force_n: 10.0
+    revolute_moment_arm_m: 0.4
+    revolute_expected_effort_nm: 4.0
+    revolute_task_power_w: 2.0
+    revolute_joint_power_w: 2.0
+    prismatic_axis_projection: 1.0
+    prismatic_jacobian_col_x: 1.0
+    prismatic_jacobian_col_y: 0.0
+    prismatic_jacobian_col_z: 0.0
+    prismatic_expected_effort_n: 10.0
+    prismatic_expected_xdot_x_m_s: 0.2
+    prismatic_scalar_j: 1.0
+    prismatic_scalar_effort_n: 10.0
+    prismatic_scalar_xdot_m_s: 0.2
+    prismatic_task_power_w: 2.0
+    prismatic_joint_power_w: 2.0
+    perpendicular_axis_projection: 0.0
+    perpendicular_expected_effort_n: 0.0
+    max_power_error: 0.0
+
+marker_checks:
+  source_markers_present: true
+  source_marker_examples:
+    - "paper/sections/01_introduction.tex names force-to-joint-effort conversion in the roadmap"
+    - "paper/sections/06_impedance_control.tex states tau is generalized joint effort in the general scope"
+    - "paper/sections/06_impedance_control.tex keeps torque wording for revolute-joint torque-control implementation contexts"
+    - "paper/sections/A_notation_checklist.tex now says Jacobian transpose maps force to joint effort, with torque as the revolute-joint case"
+    - ".agents/validation/validate_robotics_foundations.py has manuscript_section6_effort_torque_scope_marker_checkpoint"
+  pdf_markers_present: true
+  pdf_marker_pages:
+    section6_tau_scope: [81]
+    section6_effort_table: [81]
+    section6_generalized_effort_paragraph: [82]
+    appendix_effort_glossary: [110]
+  forbidden_overclaim_hits: 0
+  forbidden_overclaim_scope:
+    - "힘-토크 변환 in Section 6 recap table"
+    - "관절 토크 쪽으로 되돌린다"
+    - "힘--토크 변환 in Appendix A beginner glossary"
+    - "힘-토크 변환 in Introduction roadmap"
+    - "Lab04 validates full null-space optimization"
+    - "Lab04 torque-level operational-space force validation"
+    - "measured hardware contact force"
+  preserved_valid_scope:
+    - "힘-토크를 합친 렌치 remains valid in the 6D wrench caveat"
+    - "토크 제어 구현 remains valid in the implementation ladder"
+    - "Lab04 caveat remains explicit: not complete operational-space impedance validation"
+
+visual_layout:
+  inspected_pages: [81, 82, 109, 110]
+  rendered_images:
+    - tmp/pdfs/section6_effort_scope_review/section6-081.png
+    - tmp/pdfs/section6_effort_scope_review/section6-082.png
+    - tmp/pdfs/section6_effort_scope_review/appendix-109.png
+    - tmp/pdfs/section6_effort_scope_review/appendix-110.png
+  result: "Section 6 bridge text, recap table, continuation paragraph, and Appendix A glossary render without clipping, overlap, or severe crowding."
+  scratch_images_retained: false
+
+agent_review:
+  novice_reviewer:
+    agent: Poincare
+    finding: "A beginner could be mildly confused when Section 6 returned to torque-only wording after Section 5b generalized tau as joint effort."
+  technical_reviewer:
+    agent: Gauss
+    finding: "Preserve torque-control implementation wording, but change generic Jacobian recap wording to joint effort and keep revolute torque as the special case."
+
+change_record:
+  version_label: draft-20260703-section6-effort-torque-scope
+  change_log: .agents/PAPER_VERSION_LOG.md
+  state_snapshot: .agents/CURRENT_STATE.md
+  completion_audit: .agents/ROBOTICS_FOUNDATIONS_COMPLETION_AUDIT.md
+  validation_metrics: .agents/VALIDATION_METRICS.yaml
+  traceability: .agents/ROBOTICS_FOUNDATIONS_TRACEABILITY.md

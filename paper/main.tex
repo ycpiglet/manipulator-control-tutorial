@@ -1,0 +1,66 @@
+% !TEX program = xelatex
+\documentclass[11pt,a4paper]{article}
+
+\usepackage{kotex}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{float}
+\usepackage{xurl}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc}
+
+\geometry{margin=25mm}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!55!black,
+  citecolor=blue!55!black,
+  urlcolor=blue!55!black
+}
+
+\renewcommand{\figurename}{그림}
+\renewcommand{\tablename}{표}
+\renewcommand{\refname}{참고문헌}
+
+\newcommand{\jj}{\mathrm{j}}
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\diag}{\mathrm{diag}}
+
+\title{임피던스와 로봇 임피던스 제어를 위한 교육용 시뮬레이션 튜토리얼}
+\author{초안}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\input{sections/00_abstract}
+
+\tableofcontents
+
+% Main text is split by section so the source stays readable.
+\input{sections/01_introduction}
+\input{sections/02_impedance}
+\input{sections/03_lti_system}
+\input{sections/04_electric_system}
+\input{sections/05_mechanical_system}
+\input{sections/05b_robotics_foundations}
+\input{sections/06_impedance_control}
+\input{sections/07_mujoco_lab_design}
+\input{sections/08_discussion}
+\input{sections/09_conclusion}
+
+\clearpage
+\appendix
+\input{sections/A_notation_checklist}
+
+\bibliographystyle{plain}
+\bibliography{references/refs}
+
+\end{document}

@@ -1,0 +1,81 @@
+\begin{figure}[!htbp]
+  \centering
+  \resizebox{\linewidth}{!}{%
+  \begin{tikzpicture}[
+      axis/.style={-{Latex[length=1.7mm]}, draw=black!65, line width=0.45pt},
+      curve/.style={line width=0.95pt},
+      guide/.style={densely dashed, draw=black!35, line width=0.4pt},
+      panel/.style={draw=black!25, rounded corners=2pt, fill=black!2},
+      title/.style={font=\scriptsize\bfseries, align=center},
+      lab/.style={font=\scriptsize, align=center},
+      note/.style={draw=black!35, rounded corners=2pt, fill=white, align=center, font=\scriptsize, inner sep=3.5pt}
+    ]
+
+    \begin{scope}[shift={(0,0)}]
+      \draw[panel] (-0.25,-0.25) rectangle (3.45,2.85);
+      \node[title] at (1.6,2.62) {경로: 어디를 지날까};
+      \draw[axis] (0,0) -- (3.05,0) node[right, lab] {$x$};
+      \draw[axis] (0,0) -- (0,2.15) node[above, lab] {$y$};
+      \draw[curve, blue!70!black] plot[smooth] coordinates {
+        (0.35,0.35) (0.85,1.1) (1.55,1.55) (2.25,1.25) (2.8,1.85)
+      };
+      \fill[blue!70!black] (0.35,0.35) circle (0.055);
+      \fill[blue!70!black] (2.8,1.85) circle (0.055);
+      \node[lab, anchor=east] at (0.28,0.35) {$s=0$};
+      \node[lab, anchor=west] at (2.88,1.85) {$s=1$};
+      \node[note] at (1.65,0.12) {지도 위 선\\시간표 없음};
+    \end{scope}
+
+    \begin{scope}[shift={(4.05,0)}]
+      \draw[panel] (-0.25,-0.25) rectangle (3.45,2.85);
+      \node[title] at (1.6,2.62) {궤적: 언제 어디까지 갈까};
+      \draw[axis] (0,0) -- (3.05,0) node[right, lab] {$t$};
+      \draw[axis] (0,0) -- (0,2.15) node[above, lab] {$s(t)$};
+      \draw[guide] (0,1.9) -- (2.95,1.9);
+      \node[lab, anchor=east] at (-0.03,1.9) {$1$};
+      \draw[curve, green!45!black] plot[smooth] coordinates {
+        (0.0,0.0) (0.4,0.35) (0.8,0.92) (1.2,1.4) (1.65,1.72) (2.1,1.86) (2.7,1.9)
+      };
+      \draw[curve, orange!80!black, dashed] plot[smooth] coordinates {
+        (0.0,0.0) (0.65,0.18) (1.15,0.55) (1.7,1.08) (2.25,1.55) (2.75,1.82) (2.95,1.9)
+      };
+      \node[lab, text=green!45!black] at (1.1,1.85) {빠른 시간표};
+      \node[lab, text=orange!80!black] at (2.15,0.7) {느린 시간표};
+      \node[note] at (1.55,0.12) {같은 경로라도\\속도와 접촉감이 달라짐};
+    \end{scope}
+
+    \begin{scope}[shift={(8.1,1.45)}]
+      \draw[panel] (-0.25,-1.7) rectangle (4.45,1.4);
+      \node[title] at (2.1,1.18) {사다리꼴 속도};
+      \draw[axis] (0,0) -- (4.05,0) node[right, lab] {$t$};
+      \draw[axis] (0,0) -- (0,0.95) node[above, lab] {$v$};
+      \draw[curve, red!70!black] (0,0) -- (1.0,0.75) -- (2.65,0.75) -- (3.65,0);
+      \draw[axis] (0,-1.15) -- (4.05,-1.15) node[right, lab] {$t$};
+      \draw[axis] (0,-1.15) -- (0,-0.25) node[above, lab] {$a$};
+      \draw[curve, red!70!black] (0,-0.55) -- (1.0,-0.55) -- (1.0,-1.15) -- (2.65,-1.15) -- (2.65,-1.52) -- (3.65,-1.52);
+      \draw[guide] (1.0,-1.6) -- (1.0,0.85);
+      \draw[guide] (2.65,-1.6) -- (2.65,0.85);
+      \node[lab] at (2.05,-1.42) {가속도 점프\\저크 피크};
+    \end{scope}
+
+    \begin{scope}[shift={(13.15,1.45)}]
+      \draw[panel] (-0.25,-1.7) rectangle (4.45,1.4);
+      \node[title] at (2.1,1.18) {S-curve};
+      \draw[axis] (0,0) -- (4.05,0) node[right, lab] {$t$};
+      \draw[axis] (0,0) -- (0,0.95) node[above, lab] {$v$};
+      \draw[curve, purple!70!black] plot[smooth] coordinates {
+        (0,0) (0.35,0.08) (0.75,0.38) (1.25,0.68) (1.9,0.75) (2.55,0.68) (3.05,0.38) (3.45,0.08) (3.75,0)
+      };
+      \draw[axis] (0,-1.15) -- (4.05,-1.15) node[right, lab] {$t$};
+      \draw[axis] (0,-1.15) -- (0,-0.25) node[above, lab] {$a$};
+      \draw[curve, purple!70!black] plot[smooth] coordinates {
+        (0,-1.15) (0.35,-0.75) (0.8,-0.55) (1.2,-0.75) (1.55,-1.15)
+        (2.15,-1.15) (2.55,-1.55) (3.0,-1.75) (3.45,-1.55) (3.75,-1.15)
+      };
+      \node[lab, text=purple!70!black] at (2.05,-1.42) {가속도도\\완만히 변화};
+    \end{scope}
+  \end{tikzpicture}%
+  }
+  \caption{경로는 공간에서 지나는 길이고, 궤적은 그 길에 시간표를 붙인 것이다. 같은 경로라도 시간 스케일링 \(s(t)\)이 다르면 속도, 가속도, 접촉 순간의 힘 피크가 달라진다. 사다리꼴 속도 프로파일은 단순하지만 이상적인 형태에서는 가속도가 구간 경계에서 점프하므로 저크가 크게 나타난다. S-curve는 저크 크기를 제한해 가속도 변화를 더 부드럽게 만드는 시간 스케일링이다.}
+  \label{fig:path-trajectory-profiles}
+\end{figure}

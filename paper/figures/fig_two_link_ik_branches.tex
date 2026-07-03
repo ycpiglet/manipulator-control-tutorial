@@ -1,0 +1,63 @@
+\begin{figure}[!htbp]
+  \centering
+  \resizebox{\linewidth}{!}{%
+  \begin{tikzpicture}[
+      axis/.style={-{Latex[length=1.7mm]}, draw=black!65, line width=0.45pt},
+      guide/.style={densely dashed, draw=black!35, line width=0.45pt},
+      panel/.style={draw=black!25, rounded corners=2pt, fill=black!2},
+      poslink/.style={draw=blue!70!black, line width=1.25pt},
+      neglink/.style={draw=orange!85!black, line width=1.25pt, dashed},
+      point/.style={circle, fill=black, inner sep=1.5pt},
+      target/.style={circle, fill=green!45!black, inner sep=1.8pt},
+      lab/.style={font=\scriptsize, align=center},
+      title/.style={font=\scriptsize\bfseries, align=center},
+      note/.style={draw=black!30, rounded corners=2pt, fill=white, align=left, font=\scriptsize, inner sep=4pt}
+    ]
+
+    \draw[panel] (-0.35,-0.35) rectangle (8.9,3.45);
+
+    \begin{scope}[shift={(0,0)}]
+      \draw[axis] (-0.08,0) -- (2.25,0) node[right, lab] {$x$};
+      \draw[axis] (0,-0.08) -- (0,2.25) node[above, lab] {$y$};
+
+      \coordinate (S) at (0,0);
+      \coordinate (Ep) at (1,0);
+      \coordinate (En) at (0,1);
+      \coordinate (T) at (1,1);
+
+      \draw[guide] (S) -- (T);
+      \node[lab, rotate=45, anchor=south] at (0.54,0.54) {기준선 \(\bm{x}_d\)};
+
+      \draw[poslink] (S) -- (Ep) -- (T);
+      \draw[neglink] (S) -- (En) -- (T);
+      \node[lab, text=blue!70!black, below] at (0.5,-0.05) {$l_1$};
+      \node[lab, text=blue!70!black, right] at (1.05,0.5) {$l_2$};
+      \node[lab, text=orange!85!black, left] at (-0.05,0.5) {$l_1$};
+      \node[lab, text=orange!85!black, above] at (0.5,1.05) {$l_2$};
+
+      \node[point, label={[lab, below left]$S=(0,0)$}] at (S) {};
+      \node[target, label={[lab, above right]$T=(1,1)$}] at (T) {};
+      \node[point, blue!70!black, fill=blue!70!black,
+        label={[lab, below]$E_+=(1,0)$}] at (Ep) {};
+      \node[point, orange!85!black, fill=orange!85!black,
+        label={[lab, left]$E_-=(0,1)$}] at (En) {};
+
+    \end{scope}
+
+    \begin{scope}[shift={(3.1,0.12)}]
+      \node[title, anchor=west] at (0,2.95) {같은 손끝점, 다른 branch};
+
+      \node[note, text width=5.35cm, anchor=north west] at (0,2.72)
+        {\textbf{손끝은 같다}\\
+        두 해 모두 정기구학에 넣으면 \(T=(1,1)\)을 만든다.\\[2pt]
+        \textbf{팔꿈치 위치는 다르다}\\
+        \(q_2>0\): \(E_+=(1,0)\), \(s_+=x_d e_y-y_d e_x=-1\).\\
+        \(q_2<0\): \(E_-=(0,1)\), \(s_-=x_d e_y-y_d e_x=+1\).\\[2pt]
+        \textbf{주의}\\
+        위/아래 이름은 관례이므로 branch 정의를 명시한다.};
+    \end{scope}
+  \end{tikzpicture}%
+  }
+  \caption{관절 한계와 \(2\pi\) 각도 wrapping을 잠시 무시한 2R 팔에서 같은 목표점 \((1,1)\)에 도달하는 두 대표 IK branch이다. 여기서는 \(s=x_d e_y-y_d e_x\)로 팔꿈치가 어깨--목표 기준선의 어느 쪽에 있는지 정하므로, \(q_2>0\) branch는 \(s<0\), \(q_2<0\) branch는 \(s>0\)에 놓인다. 따라서 팔꿈치 위쪽/아래쪽이라는 말은 좌표계와 그림 관례에 의존하며, 실험이나 코드에서는 \(q_2\)의 부호 또는 signed side로 branch를 분명히 정의하는 편이 안전하다.}
+  \label{fig:two-link-ik-branches}
+\end{figure}

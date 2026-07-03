@@ -1,0 +1,57 @@
+\begin{figure}[!htbp]
+  \centering
+  \resizebox{0.96\linewidth}{!}{%
+  \begin{tikzpicture}[
+      axis/.style={-{Latex[length=2.0mm]}, draw=black!55},
+      contour/.style={draw=blue!45, line width=0.55pt},
+      softcontour/.style={draw=green!45!black, line width=0.55pt},
+      force/.style={-{Latex[length=2.4mm]}, draw=red!75!black, line width=1.2pt},
+      disp/.style={-{Latex[length=1.8mm]}, draw=black!45, dashed},
+      title/.style={font=\small\bfseries, align=center},
+      lab/.style={font=\scriptsize, align=center}
+    ]
+
+    \begin{scope}[shift={(0,0)}]
+      \node[title] at (0,2.30) {등방 강성\\$k_x=k_y$};
+      \draw[axis] (-2.20,0) -- (2.35,0) node[right, lab] {$e_x$};
+      \draw[axis] (0,-1.80) -- (0,1.95) node[pos=0.92, left, lab] {$e_y$};
+      \foreach \r in {0.55,1.00,1.45} {
+        \draw[contour] (0,0) ellipse ({\r} and {\r});
+      }
+      \node[lab, text=blue!55!black] at (-1.58,1.42) {같은 $U$\\등고선};
+      \fill[black] (0,0) circle (1.8pt);
+      \node[lab] at (-0.65,-0.42) {목표점\\$\bm{x}_d$, $U_{\min}$};
+      \coordinate (piso) at (1.18,0.68);
+      \fill[red!75!black] (piso) circle (2.0pt);
+      \node[lab] at (1.62,1.18) {현재 오차\\$\bm{e}=\bm{x}-\bm{x}_d$};
+      \draw[disp] (0,0) -- node[below, lab] {$\bm{e}$} (piso);
+      \draw[force] (piso) -- ++(-0.88,-0.50);
+      \node[lab, text=red!75!black] at (0.72,0.28) {$\bm{f}_k=-k\bm{e}$};
+      \node[lab, text=black!70] at (0,-2.20) {원형 등고선: 어느 방향으로 밀어도\\같은 강성 기울기를 느낀다.};
+    \end{scope}
+
+    \begin{scope}[shift={(6.45,0)}]
+      \node[title] at (0,2.30) {방향별 강성\\$k_x<k_y$};
+      \draw[axis] (-2.60,0) -- (2.70,0) node[right, lab] {$e_x$};
+      \draw[axis] (0,-1.80) -- (0,1.95) node[pos=0.92, left, lab] {$e_y$};
+      \foreach \xrad/\yrad in {0.90/0.38,1.55/0.68,2.18/0.96} {
+        \draw[softcontour] (0,0) ellipse ({\xrad} and {\yrad});
+      }
+      \node[lab, text=green!35!black] at (-1.78,1.28) {같은 $U$\\타원 등고선};
+      \node[lab, text=green!35!black] at (1.55,-0.42) {$e_x$ 방향\\부드러움};
+      \node[lab, text=green!35!black] at (-0.75,1.48) {$e_y$ 방향\\단단함};
+      \fill[black] (0,0) circle (1.8pt);
+      \node[lab] at (-0.52,-0.42) {목표점\\$\bm{x}_d$};
+      \coordinate (pani) at (1.45,0.63);
+      \fill[red!75!black] (pani) circle (2.0pt);
+      \node[lab] at (2.02,0.92) {현재 오차\\$\bm{e}$};
+      \draw[disp] (0,0) -- node[above, lab] {$\bm{e}$} (pani);
+      \draw[force] (pani) -- ++(-0.48,-0.92);
+      \node[lab, text=red!75!black] at (0.70,-0.88) {$-\bm{K}_d\bm{e}$\\음의 기울기};
+      \node[lab, text=black!70] at (0,-2.20) {타원이 긴 방향은 부드럽고,\\짧은 방향은 더 단단하다.};
+    \end{scope}
+  \end{tikzpicture}%
+  }
+  \caption{가상 퍼텐셜 에너지와 방향별 강성. 등고선은 같은 힘이 아니라 같은 가상 퍼텐셜 에너지 $U=\frac{1}{2}\bm{e}^{\mathsf T}\bm{K}_d\bm{e}$를 뜻한다. 등방 강성에서는 목표점 주변의 에너지 등고선이 원형이고, 복원력이 변위의 반대 방향과 나란하다. 방향별 강성이 다르면 등고선이 타원형이 되며, 긴 축 방향은 더 부드럽고 짧은 축 방향은 더 단단하다. 로봇 끝단에 작용하는 가상 스프링 복원력은 $\bm{f}_k=-\nabla U=-\bm{K}_d\bm{e}$이고, 끝단을 그 위치에 붙잡기 위해 외부에서 가해야 하는 힘은 반대 방향이다.}
+  \label{fig:virtual-potential-stiffness}
+\end{figure}

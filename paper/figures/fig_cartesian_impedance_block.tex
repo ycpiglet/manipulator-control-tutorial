@@ -1,0 +1,48 @@
+\begin{figure}[!htbp]
+  \centering
+  \resizebox{\linewidth}{!}{%
+  \begin{tikzpicture}[
+      block/.style={draw=blue!55!black, rounded corners=2pt, fill=blue!4, align=center, minimum width=2.7cm, minimum height=1.06cm, font=\small, inner sep=5pt},
+      calc/.style={draw=black!45, rounded corners=2pt, fill=black!3, align=center, minimum width=2.2cm, minimum height=0.86cm, font=\scriptsize, inner sep=4pt},
+      input/.style={draw=black!45, rounded corners=2pt, fill=white, align=center, minimum width=1.85cm, minimum height=0.74cm, font=\scriptsize, inner sep=3pt},
+      sum/.style={draw=black!65, circle, fill=white, minimum size=0.58cm, inner sep=0pt, font=\scriptsize},
+      arr/.style={-{Latex[length=2.0mm]}, thick, draw=black!65},
+      fb/.style={-{Latex[length=1.7mm]}, draw=black!45, thick},
+      note/.style={draw=black!35, rounded corners=2pt, fill=black!3, align=center, font=\scriptsize, text width=5.9cm, inner sep=4pt}
+    ]
+
+    \node[input] (xd) at (0,1.05) {희망 위치\\$\bm{x}_d$};
+    \node[input] (x) at (0,-1.05) {현재 위치\\$\bm{x}$};
+    \node[sum] (sumx) at (1.65,0) {$\Sigma$};
+    \node[calc] (err) at (3.25,0) {작업공간 오차\\$\bm{e}=\bm{x}-\bm{x}_d$};
+    \node[input] (xdot) at (3.25,-1.45) {현재 속도\\$\dot{\bm{x}}$};
+    \node[block, minimum width=3.2cm] (imp) at (6.15,0) {가상 스프링-댐퍼\\힘 생성\\$\bm{f}_{\mathrm{cmd}}=-\bm{K}_d\bm{e}-\bm{D}_d\dot{\bm{x}}$};
+    \node[block, minimum width=2.7cm] (jt) at (9.55,0) {자코비안 전치\\토크 변환\\$\bm{\tau}_{\mathrm{cmd}}=\bm{J}_v(\bm{q})^{\mathsf T}\bm{f}_{\mathrm{cmd}}$};
+    \node[block, minimum width=2.35cm] (robot) at (12.45,0) {로봇 팔\\환경과 접촉};
+    \node[input] (fext) at (12.45,1.55) {외력\\$\bm{f}_{\mathrm{ext}}$\\환경 $\rightarrow$ 로봇};
+    \node[calc] (state) at (12.45,-1.55) {센서/상태 추정\\$\bm{x},\dot{\bm{x}},\bm{q}$};
+
+    \draw[arr] (xd) -| node[pos=0.28, above, font=\scriptsize] {$-$} (sumx);
+    \draw[arr] (x) -| node[pos=0.28, below, font=\scriptsize] {$+$} (sumx);
+    \draw[arr] (sumx) -- (err);
+    \draw[arr] (err) -- (imp);
+    \draw[arr] (xdot) -| (imp.south);
+    \draw[arr] (imp) -- (jt);
+    \draw[arr] (jt) -- (robot);
+    \draw[arr] (fext) -- (robot);
+    \draw[fb] (robot.south) -- (state.north);
+    \draw[fb] (state.west) -- ++(-1.0,0) |- (x.east);
+    \draw[fb] (state.west) -- ++(-1.0,0) |- (xdot.east);
+    \draw[fb] (state.north west) -- ++(-0.85,0.48) |- (jt.south);
+
+    \node[note] at (6.15,-2.55) {개념도: 병진 위치 임피던스 중심. 정지 목표 $\dot{\bm{x}}_d=\bm{0}$를 가정하고, 중력 보상과 토크 제한, 자세 임피던스는 생략했다.};
+
+    \draw[densely dashed, blue!35] (1.2,-2.05) rectangle (7.95,1.95);
+    \node[font=\scriptsize, text=blue!55!black] at (4.58,2.15) {작업공간에서 힘을 설계};
+    \draw[densely dashed, green!35!black] (8.15,-2.05) rectangle (13.75,1.95);
+    \node[font=\scriptsize, text=green!35!black] at (10.95,2.15) {관절 토크로 실행};
+  \end{tikzpicture}%
+  }
+  \caption{직교 임피던스 제어의 기본 흐름. 작업공간에서 현재 위치와 희망 위치의 차이, 그리고 현재 속도로부터 가상 스프링-댐퍼 힘 $\bm{f}_{\mathrm{cmd}}$를 만든다. 이 병진 작업공간 힘은 가상일 또는 순간 일률 보존 관점에서 자코비안 전치 관계 $\bm{\tau}_{\mathrm{cmd}}=\bm{J}_v(\bm{q})^{\mathsf T}\bm{f}_{\mathrm{cmd}}$를 통해 관절 토크로 변환된다. 따라서 흐름은 운동 오차에서 힘 명령으로, 다시 관절 토크로 이어진다.}
+  \label{fig:cartesian-impedance-block}
+\end{figure}
