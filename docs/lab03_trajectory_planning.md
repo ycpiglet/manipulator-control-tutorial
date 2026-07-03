@@ -1,0 +1,181 @@
+# Lab03 2DOF Arm and Trajectory Planning
+
+This lab bridges the 1D plants and the Panda manipulator with a planar two-link MuJoCo arm.
+
+The main controlled variables are:
+
+- shoulder and elbow joint angles in joint-space mode
+- end-effector X/Y position in task-space mode
+- torque and current proxy at both joints
+
+In the 2DOF viewer, green marks the target hand position and blue marks the current hand position. When the Jacobian condition number exceeds the configured warning threshold, the current hand marker turns orange to indicate a near-singular posture.
+
+Run:
+
+```powershell
+.\run_lab03.cmd
+```
+
+This opens the 2DOF arm joint-space demo:
+
+```bash
+python -m mclab run lab03 --config configs/lab03_2dof/joint_space_2dof.yaml --viewer --realtime --pause-at-end --plot --plots essential
+```
+
+Read the plots in this order:
+
+1. `position.png`: check whether `q_0` and `q_1` follow their joint targets.
+2. `end_effector.png`: check how joint motion changes hand X/Y position.
+3. `torque.png`: check how much shoulder and elbow torque the motion used.
+4. `error.png`: compare joint-space and task-space error norms.
+5. `singularity.png`: check Jacobian condition number and manipulability when available.
+
+Task-space demo:
+
+```bash
+python -m mclab run lab03 --config configs/lab03_2dof/task_space_2dof.yaml --plot --headless --plots task
+```
+
+This uses analytic FK and a Jacobian-transpose PD command:
+
+```text
+tau = J(q)^T * (Kp * (x_target - x_ee) + Kd * (xdot_target - xdot_ee))
+```
+
+Singularity demo:
+
+```bash
+python -m mclab run lab03 --config configs/lab03_2dof/singularity_2dof.yaml --plot --headless --plots singularity
+```
+
+This moves the arm toward a nearly straight posture. In `singularity.png`, the Jacobian condition number should rise while manipulability falls. That is the visual cue that the same end-effector command becomes harder to realize with well-conditioned joint motion.
+
+Damped least-squares singularity demo:
+
+```powershell
+.\run_lab03_dls_interactive.cmd
+```
+
+This moves the hand toward the workspace edge using a damped least-squares inverse Jacobian:
+
+```text
+qdot_cmd = J(q)^T * (J(q) * J(q)^T + lambda^2 I)^-1 * xdot_cmd
+```
+
+Use the `MCLab Interaction` sliders to change `DLS task gain` and `DLS damping` while the arm moves. Use the `Low DLS damping`, `Balanced DLS`, and `High DLS damping` quick presets to jump between representative settings, then use `Shoulder pulse` or `Elbow pulse` to test whether the chosen damping still recovers cleanly after a joint disturbance. Use `Playback speed` or the `-` / `+` buttons next to a slider for one-resolution-step adjustments. Use `Pause / Resume` to stop near a singular posture before changing damping, `Step once` to advance one physics step at a time, or `Reset plant` to send the arm back to the starting posture while keeping the current DLS slider values. Lower damping follows the hand command more aggressively but can demand faster joint motion near a singular posture. Higher damping is calmer but may leave more task-space error. Compare `dls.png`, `singularity.png`, `torque.png`, `disturbance.png`, and `error.png` after the run.
+
+Condition-aware DLS demo:
+
+```powershell
+.\run_lab03_condition_dls_interactive.cmd
+```
+
+This uses the same near-edge target as the DLS singularity demo, but `tracking_controller.condition_aware_damping` raises the effective DLS damping when the Jacobian condition number exceeds `condition_damping_threshold`. Use the `Early damping`, `Balanced schedule`, and `Late damping` presets to change when the automatic damping starts, when it reaches the maximum, and how large the maximum can be. In `dls.png`, compare `dls_damping`, `dls_condition_scale`, and `dls_joint_speed`; in `singularity.png`, confirm that the damping rise happens when conditioning gets poor.
+
+Condition-aware schedule comparison:
+
+```bash
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_early_2dof.yaml --headless --plot --plots dls
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_late_2dof.yaml --headless --plot --plots dls
+python -m mclab batch lab03_2dof_compare --open-report
+```
+
+The early schedule starts increasing DLS damping at a lower condition number and allows a higher damping ceiling. The late schedule waits until conditioning is worse and caps damping lower. Compare `dls_damping_compare.png`, `dls_joint_speed_compare.png`, and `task_error_compare.png` in the batch report to discuss the tradeoff between calmer joint motion and hand tracking error.
+
+Condition-aware target-position comparison:
+
+```bash
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_inner_target_2dof.yaml --headless --plot --plots dls
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_edge_target_2dof.yaml --headless --plot --plots dls
+python -m mclab batch lab03_2dof_compare --open-report
+```
+
+These two configs keep the same condition-aware damping schedule, torque limits, gains, and trajectory timing while changing only `target_xy`. The inner target stays away from the workspace edge, so `dls_condition_scale` should remain low and the effective damping should stay near the base value. The edge target should raise condition number, increase `dls_damping`, and expose the task-error tradeoff. Compare `dls_damping_compare.png`, `dls_joint_speed_compare.png`, `task_error_compare.png`, and `manipulability_compare.png`.
+
+Condition-aware path-branch comparison:
+
+```bash
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_upper_path_2dof.yaml --headless --plot --plots dls
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_lower_path_2dof.yaml --headless --plot --plots dls
+python -m mclab batch lab03_2dof_compare --open-report
+```
+
+These two configs keep the same near-edge target, condition-aware damping schedule, torque limits, gains, and timing while mirroring only `initial_q`. In the viewer, the arm approaches the same green target from different elbow branches. In the batch report, compare `hand_y_compare.png`, `elbow_torque_compare.png`, `dls_damping_compare.png`, and `task_error_compare.png` to separate geometric branch choice from controller damping behavior.
+
+Condition-aware disturbance comparison:
+
+```bash
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_shoulder_disturbance_2dof.yaml --headless --plot --plots dls_disturbance
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_elbow_disturbance_2dof.yaml --headless --plot --plots dls_disturbance
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_staggered_disturbance_2dof.yaml --headless --plot --plots dls_disturbance
+python -m mclab batch lab03_2dof_compare --open-report
+```
+
+These configs keep the same near-edge target and condition-aware DLS schedule while adding a short torque pulse to the shoulder, the elbow, or a shoulder-then-elbow staggered sequence. Compare `disturbance.png`, `torque.png`, `error.png`, `shoulder_disturbance_compare.png`, `elbow_disturbance_compare.png`, and `disturbance_recovery_time_compare.png` to see when each disturbance happens, how total torque changes, how much task error appears during each recovery window, and how long `disturbance_recovery_duration` says the joint error took to return to the pre-disturbance recovery band.
+
+Condition-aware torque-limit comparison:
+
+```bash
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_low_torque_2dof.yaml --headless --plot --plots dls
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_high_torque_2dof.yaml --headless --plot --plots dls
+python -m mclab batch lab03_2dof_compare --open-report
+```
+
+These two configs keep the same near-edge hand target and condition-aware damping schedule while changing only `tracking_controller.torque_limit`. The low-torque case should make actuator clipping and larger task error easier to see. The high-torque case should track the same hand command more closely if the damping schedule and joint-speed limits allow it. Compare `torque.png`, `error.png`, `task_error_compare.png`, and `shoulder_torque_compare.png` in the batch report.
+
+Condition-aware command-speed comparison:
+
+```bash
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_slow_command_2dof.yaml --headless --plot --plots dls
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_fast_command_2dof.yaml --headless --plot --plots dls
+python -m mclab batch lab03_2dof_compare --open-report
+```
+
+These two configs keep the same near-edge target, damping schedule, torque limits, and gains while changing `trajectory.duration` and `tracking_controller.max_task_speed`. The slow-command case asks for the same motion more gently; the fast-command case should make task-speed clipping, DLS joint speed, and hand tracking error easier to see. Compare `dls.png`, `error.png`, `dls_task_speed_compare.png`, and `dls_joint_speed_compare.png`.
+
+Condition-aware joint-speed-limit comparison:
+
+```bash
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_low_joint_speed_2dof.yaml --headless --plot --plots dls
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_high_joint_speed_2dof.yaml --headless --plot --plots dls
+python -m mclab batch lab03_2dof_compare --open-report
+```
+
+These two configs keep the same near-edge target, timing, condition-aware damping schedule, torque limits, and gains while changing only `tracking_controller.max_joint_speed`. The low-joint-speed case clips the DLS joint command earlier, so it should leave more hand tracking error while keeping the same damping trigger. The high-joint-speed case lets the arm chase the target more aggressively. Compare `dls_joint_speed_compare.png`, `task_error_compare.png`, `dls_damping_compare.png`, and `torque.png`.
+
+Condition-aware retargeting-path comparison:
+
+```bash
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_direct_retarget_2dof.yaml --headless --plot --plots dls
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_inward_retarget_2dof.yaml --headless --plot --plots dls
+python -m mclab batch lab03_2dof_compare --open-report
+```
+
+These two configs keep the same near-edge final target, condition-aware damping schedule, torque limits, and gains while changing only `target_xy_waypoints`. The direct-retarget case moves straight from the start pose to the workspace edge. The inward-retarget case moves through an inner waypoint before returning to the edge, so learners can see whether a geometric detour lowers conditioning cost or simply asks for faster motion and more torque. In viewer runs, small green spheres show the planned target waypoint path while the larger green sphere remains the current hand target. Compare `hand_x_compare.png`, `hand_y_compare.png`, `dls_task_speed_compare.png`, `dls_joint_speed_compare.png`, `dls_damping_compare.png`, and `task_error_compare.png`.
+
+Condition-aware adaptive-speed retargeting comparison:
+
+```bash
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_fixed_speed_retarget_2dof.yaml --headless --plot --plots dls
+python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_adaptive_speed_retarget_2dof.yaml --headless --plot --plots dls
+python -m mclab batch lab03_2dof_compare --open-report
+```
+
+These two configs keep the same target waypoints, condition-aware damping schedule, torque limits, and gains while changing only `tracking_controller.max_task_speed_schedule`. The fixed-speed case uses one constant task-speed limit. The adaptive-speed case starts faster, slows near the workspace edge, then returns to the normal limit. Compare `dls_task_speed_limit_compare.png`, `dls_task_speed_compare.png`, `dls_joint_speed_compare.png`, `dls_damping_compare.png`, and `task_error_compare.png`.
+
+Interactive 2DOF demo:
+
+```powershell
+.\run_lab03_interactive.cmd
+```
+
+Use the small `MCLab Interaction` window next to the viewer. Move `Target X`, `Target Y`, `Task stiffness`, `Task damping`, and `Torque limit` while the simulation is running, or use `Quick presets` to jump between soft reach, default reach, and near-edge targets. Press `Shoulder pulse` or `Elbow pulse` to inject a short disturbance torque into one joint and watch how the controller recovers. Use `Playback speed` or the `-` / `+` buttons next to a slider for one-resolution-step adjustments. Use `Pause / Resume` to stop the arm before changing target or gains, `Step once` to inspect one physics step at a time, `Reset sliders` to return to the starting values, or `Reset plant` to send the arm back to the starting posture while keeping the current target and gain sliders. Watch the green target marker and blue hand marker move in the viewer; an orange hand marker means the arm is near a poorly conditioned posture. Press `Mark observation` when a response is worth comparing later; the report's `Observation Markers` section saves the learning question, prediction, evidence prompt, note, sliders, and live status snapshot together. The report's `Learner Snapshot` section and `learner_snapshot.json` preserve the final slider, disturbance-button settings, and live-status state for review, while `learner_tuned_config.yaml` lets you replay the final target, gain, damping, and torque-limit values without live controls. Use `Live status` to read `q1`, `q2`, hand X/Y, error norm, max torque, and disturbance torque.
+
+The older 1D trajectory profile demos are still available for comparing motion profiles before applying the idea to the arm:
+
+```bash
+python -m mclab run lab03 --config configs/lab03_2dof/step.yaml --plot --headless
+python -m mclab run lab03 --config configs/lab03_2dof/trapezoidal.yaml --plot --headless
+python -m mclab run lab03 --config configs/lab03_2dof/minimum_jerk.yaml --plot --headless
+python -m mclab run lab03 --config configs/lab03_2dof/s_curve.yaml --plot --headless
+```

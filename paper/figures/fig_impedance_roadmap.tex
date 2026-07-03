@@ -1,0 +1,49 @@
+\begin{figure}[!htbp]
+  \centering
+  \resizebox{\linewidth}{!}{%
+  \begin{tikzpicture}[
+      stage/.style={
+        draw=blue!55!black,
+        rounded corners=2pt,
+        fill=blue!4,
+        align=center,
+        text width=3.0cm,
+        minimum height=1.35cm,
+        inner sep=5pt,
+        font=\small
+      },
+      note/.style={
+        draw=black!35,
+        rounded corners=2pt,
+        fill=black!3,
+        align=center,
+        text width=2.95cm,
+        inner sep=4pt,
+        font=\scriptsize
+      },
+      arr/.style={-{Latex[length=2.2mm]}, thick, draw=black!55}
+    ]
+    \node[stage] (line) {긴 전보선ㆍ전화선\\신호 왜곡};
+    \node[stage, right=6mm of line] (complex) {복소 임피던스\\$V=IZ$};
+    \node[stage, right=6mm of complex] (rlc) {RLC 회로\\저장과 소산};
+    \node[stage, right=6mm of rlc] (msd) {질량-스프링-댐퍼\\기계 임피던스};
+    \node[stage, right=6mm of msd] (robot) {로봇 끝단\\가상 임피던스};
+    \node[stage, right=6mm of robot] (lab) {MuJoCo Lab\\로그와 plot};
+
+    \draw[arr] (line) -- (complex);
+    \draw[arr] (complex) -- (rlc);
+    \draw[arr] (rlc) -- (msd);
+    \draw[arr] (msd) -- (robot);
+    \draw[arr] (robot) -- (lab);
+
+    \node[note, below=5mm of line] {왜 저항만으로\\설명이 부족한가?};
+    \node[note, below=5mm of complex] {크기와 위상을\\함께 본다};
+    \node[note, below=5mm of rlc] {$R$: 소산\\$L,C$: 저장};
+    \node[note, below=5mm of msd] {$b$: 소산\\$m,k$: 저장};
+    \node[note, below=5mm of robot] {힘과 운동의 관계를\\어떻게 설계하는가?};
+    \node[note, below=5mm of lab] {파라미터 변화가\\응답을 어떻게 바꾸는가?};
+  \end{tikzpicture}%
+  }
+  \caption{이 튜토리얼이 따라가는 임피던스 개념의 이동 경로. 이 그림은 임피던스의 완전한 역사 연대기가 아니라, 긴 통신선의 신호 왜곡이라는 중요한 역사적 동기에서 출발해 에너지 저장과 소산, 기계적 임피던스, 로봇 끝단의 접촉 반응 설계까지 이어지는 학습 경로를 요약한 것이다.}
+  \label{fig:impedance-roadmap}
+\end{figure}

@@ -1,0 +1,1541 @@
+"""Trajectory planning and 2DOF manipulator lab."""
+
+from __future__ import annotations
+
+import math
+from pathlib import Path
+from typing import Any
+
+from mclab.config import resolve_project_path
+from mclab.learning_guides import guide_for_config
+from mclab.sim.interaction import (
+    ExperimentResetControl,
+    InteractionLog,
+    JointTorquePulse,
+    KeyForcePulse,
+    LiveStatus,
+    LiveTuning,
+    SimulationPlaybackControl,
+    SimulationPauseControl,
+    SliderSpec,
+    StatusSpec,
+    learner_snapshot,
+    learner_tuned_config,
+    maybe_start_interaction_panel,
+    runtime_status_specs,
+    runtime_status_values,
+    tuning_presets_from_config,
+)
+from mclab.sim.logging import RunLogger
+from mclab.sim.mujoco_utils import (
+    add_viewer_sphere,
+    load_model_and_data,
+    maybe_launch_viewer,
+    pause_viewer_at_end,
+    realtime_wall_start,
+    reset_viewer_overlays,
+    sync_paused_viewer,
+    sync_viewer,
+    viewer_clock,
+    viewer_is_running,
+)
+from mclab.sim.one_dof import configure_slider_plant, reset_slider_plant_state, slider_state
+from mclab.sim.plotting import PlotSelection, save_time_series_plots, select_plot_specs
+from mclab.sim.two_link import (
+    TwoLinkGeometry,
+    damped_least_squares_joint_velocity,
+    end_effector_velocity,
+    forward_kinematics,
+    inverse_kinematics,
+    jacobian,
+    jacobian_condition_number,
+    jacobian_determinant,
+    manipulability,
+)
+from mclab.trajectories import build_trajectory
+
+
+TASK_SPACE_MODES = {"task_space", "cartesian", "jacobian"}
+CONDITION_AWARE_DLS_MODES = {"condition_aware_dls", "condition_dls", "task_space_condition_dls"}
+DLS_MODES = {"task_space_dls", "dls", "damped_least_squares", *CONDITION_AWARE_DLS_MODES}
+TWO_LINK_MODES = {"joint_space", *TASK_SPACE_MODES, *DLS_MODES}
+
+
+def run(
+    config: dict[str, Any],
+    *,
+    config_path: Path | None = None,
+    output_dir: Path | None = None,
+    plot: bool = False,
+    viewer: bool = False,
+    headless: bool = False,
+    realtime: bool = False,
+    pause_at_end: bool = False,
+    plot_selection: PlotSelection = None,
+    seed: int | None = None,
+) -> Path:
+    if _is_two_link_config(config):
+        return _run_two_link_arm(
+            config,
+            config_path=config_path,
+            output_dir=output_dir,
+            plot=plot,
+            viewer=viewer,
+            headless=headless,
+            realtime=realtime,
+            pause_at_end=pause_at_end,
+            plot_selection=plot_selection,
+            seed=seed,
+        )
+    return _run_slider_trajectory(
+        config,
+        config_path=config_path,
+        output_dir=output_dir,
+        plot=plot,
+        viewer=viewer,
+        headless=headless,
+        realtime=realtime,
+        pause_at_end=pause_at_end,
+        plot_selection=plot_selection,
+        seed=seed,
+    )
+
+
+def _run_slider_trajectory(
+    config: dict[str, Any],
+    *,
+    config_path: Path | None = None,
+    output_dir: Path | None = None,
+    plot: bool = False,
+    viewer: bool = False,
+    headless: bool = False,
+    realtime: bool = False,
+    pause_at_end: bool = False,
+    plot_selection: PlotSelection = None,
+    seed: int | None = None,
+) -> Path:
+    del seed
+    lab_name = "lab03_trajectory"
+    model_path = config.get("model_path", "models/lab03_2dof/scene.xml")
+    mujoco, model, data = load_model_and_data(model_path)
+    handles = configure_slider_plant(mujoco, model, data, config)
+    logger = RunLogger(lab_name, config, config_path=config_path, output_dir=output_dir)
+
+    sim_time = float(config.get("sim_time", 5.0))
+    trajectory = build_trajectory(dict(config.get("trajectory", {})))
+    controller_config = dict(config.get("tracking_controller", {}))
+    kp = float(controller_config.get("kp", 120.0))
+    kd = float(controller_config.get("kd", 18.0))
+    feedforward_mass = float(controller_config.get("feedforward_mass", config.get("mass", 1.0)))
+    use_feedforward = bool(controller_config.get("feedforward_acceleration", True))
+    force_limit = controller_config.get("force_limit", 200.0)
+    lower_limit, upper_limit = _limits(force_limit)
+    force_limit_value = max(abs(limit) for limit in (lower_limit, upper_limit) if limit is not None) if force_limit else 200.0
+    kt = float(config.get("torque_constant", 1.0))
+
+    interaction_log = InteractionLog()
+    key_force = KeyForcePulse(config, event_log=interaction_log)
+    reset_control = ExperimentResetControl(config, event_log=interaction_log)
+    pause_control = SimulationPauseControl(config, event_log=interaction_log)
+    playback_control = SimulationPlaybackControl(config, event_log=interaction_log)
+    run_guide = guide_for_config(config_path=str(config_path or ""), lab_name=lab_name)
+    live_tuning = _live_tuning(config, controller_config, force_limit_value, interaction_log)
+    live_status = LiveStatus(
+        runtime_status_specs()
+        + [
+            StatusSpec("target", "Target [m]"),
+            StatusSpec("position", "Position [m]"),
+            StatusSpec("error", "Tracking error [m]"),
+            StatusSpec("control", "Control force [N]"),
+            StatusSpec("manual", "Disturbance [N]"),
+        ]
+    )
+    viewer_handle = maybe_launch_viewer(
+        mujoco,
+        model,
+        data,
+        enabled=viewer and not headless,
+        key_callback=key_force.key_callback if key_force.enabled else None,
+    )
+    interaction_panel = (
+        maybe_start_interaction_panel(
+            key_force,
+            title="MCLab Lab03 Interaction",
+            config_path=str(config_path or ""),
+            tuning=live_tuning,
+            status=live_status,
+            guide=run_guide,
+            event_log=interaction_log,
+            reset_control=reset_control,
+            pause_control=pause_control,
+            playback_control=playback_control,
+        )
+        if viewer and not headless
+        else None
+    )
+    wall_start = viewer_clock()
+    sim_start = float(data.time)
+    completed = False
+    try:
+        while data.time < sim_time:
+            if not viewer_is_running(viewer_handle):
+                break
+            interaction_log.set_time(float(data.time))
+            if reset_control.consume():
+                key_force.clear()
+                reset_slider_plant_state(mujoco, model, data, handles, config)
+            if pause_control.paused() and not pause_control.consume_step():
+                sync_paused_viewer(viewer_handle)
+                wall_start = realtime_wall_start(float(data.time), sim_start, playback_control.speed())
+                continue
+            if playback_control.consume_change():
+                wall_start = realtime_wall_start(float(data.time), sim_start, playback_control.speed())
+            key_force.update_time(float(data.time))
+            position, velocity, _ = slider_state(data, handles)
+            target = trajectory.evaluate(float(data.time))
+            tuned_kp = live_tuning.value("kp", kp)
+            tuned_kd = live_tuning.value("kd", kd)
+            tuned_force_limit = abs(live_tuning.value("force_limit", force_limit_value))
+            target_position = target.position + live_tuning.value("target_offset", 0.0)
+            feedback = tuned_kp * (target_position - position) + tuned_kd * (target.velocity - velocity)
+            feedforward = feedforward_mass * target.acceleration if use_feedforward else 0.0
+            control_force = _clip(feedback + feedforward, -tuned_force_limit, tuned_force_limit)
+            manual_force = key_force.value(float(data.time))
+            total_force = control_force + manual_force
+
+            data.ctrl[handles.actuator_id] = total_force
+            mujoco.mj_step(model, data)
+            sync_viewer(
+                viewer_handle,
+                data,
+                realtime=realtime,
+                wall_start=wall_start,
+                sim_start=sim_start,
+                speed_scale=playback_control.speed(),
+            )
+
+            position, velocity, acceleration = slider_state(data, handles)
+            live_status.set_values(
+                **runtime_status_values(float(data.time), sim_time),
+                target=target_position,
+                position=position,
+                error=target_position - position,
+                control=control_force,
+                manual=manual_force,
+            )
+            logger.record(
+                time=float(data.time),
+                position=position,
+                velocity=velocity,
+                acceleration=acceleration,
+                target_position=target_position,
+                target_velocity=target.velocity,
+                target_acceleration=target.acceleration,
+                target_jerk=target.jerk,
+                position_error=target_position - position,
+                velocity_error=target.velocity - velocity,
+                control_force=control_force,
+                manual_force=manual_force,
+                total_force=total_force,
+                tuned_kp=tuned_kp,
+                tuned_kd=tuned_kd,
+                tuned_force_limit=tuned_force_limit,
+                current_proxy=total_force / kt,
+            )
+        completed = True
+    finally:
+        if interaction_panel is not None:
+            interaction_panel.close()
+        if viewer_handle is not None:
+            if completed:
+                pause_viewer_at_end(viewer_handle, enabled=pause_at_end)
+            viewer_handle.close()
+
+    summary = {**_summary(logger.rows), **interaction_log.summary()}
+    events = interaction_log.events()
+    output_path = logger.save_with_artifacts(
+        summary=summary,
+        notes=_notes(config),
+        interaction_events=events if events else None,
+        learner_snapshot=learner_snapshot(
+            tuning=live_tuning,
+            status=live_status,
+            playback_control=playback_control,
+        ),
+        learner_tuned_config=learner_tuned_config(config, _slider_learner_tuned_updates(config, live_tuning)),
+    )
+    if plot:
+        _save_plots(output_path, logger.rows, plot_selection or config.get("plots"))
+    return resolve_project_path(output_path)
+
+
+def _run_two_link_arm(
+    config: dict[str, Any],
+    *,
+    config_path: Path | None = None,
+    output_dir: Path | None = None,
+    plot: bool = False,
+    viewer: bool = False,
+    headless: bool = False,
+    realtime: bool = False,
+    pause_at_end: bool = False,
+    plot_selection: PlotSelection = None,
+    seed: int | None = None,
+) -> Path:
+    del seed
+    lab_name = "lab03_2dof"
+    model_path = config.get("model_path", "models/lab03_2dof/two_link.xml")
+    mujoco, model, data = load_model_and_data(model_path)
+    if "dt" in config:
+        model.opt.timestep = float(config["dt"])
+
+    handles = _two_link_handles(mujoco, model, config)
+    logger = RunLogger(lab_name, config, config_path=config_path, output_dir=output_dir)
+
+    sim_time = float(config.get("sim_time", 5.0))
+    mode = str(config.get("mode", "joint_space")).lower()
+    viewer_guides = _two_link_viewer_guides(config)
+    geometry = _two_link_geometry(config)
+    initial_q = _pair(config.get("initial_q", [0.25, -1.0]), "initial_q")
+    _set_two_link_state(data, handles, initial_q)
+    mujoco.mj_forward(model, data)
+
+    trajectory = build_trajectory(dict(config.get("trajectory", {"type": "minimum_jerk", "start": 0.0, "end": 1.0})))
+    controller_config = dict(config.get("tracking_controller", {}))
+    torque_limit = _pair(controller_config.get("torque_limit", [50.0, 40.0]), "torque_limit")
+    kt = float(config.get("torque_constant", 1.0))
+
+    target_q_goal = _pair(config.get("target_q", [0.9, -1.1]), "target_q")
+    start_xy = forward_kinematics(initial_q, geometry)
+    target_xy_goal = _pair(config.get("target_xy", start_xy), "target_xy")
+    target_xy_waypoints = _two_link_target_xy_waypoints(config)
+    dls_target_q = list(initial_q)
+    simulation_dt = float(model.opt.timestep)
+
+    interaction_log = InteractionLog()
+    panel_control = JointTorquePulse(config, event_log=interaction_log)
+    reset_control = ExperimentResetControl(config, event_log=interaction_log)
+    pause_control = SimulationPauseControl(config, event_log=interaction_log)
+    playback_control = SimulationPlaybackControl(config, event_log=interaction_log)
+    run_guide = guide_for_config(config_path=str(config_path or ""), lab_name=lab_name)
+    live_tuning = _two_link_live_tuning(config, mode, controller_config, torque_limit, target_xy_goal, interaction_log)
+    live_status = LiveStatus(
+        runtime_status_specs()
+        + [
+            StatusSpec("q1", "q1 [rad]"),
+            StatusSpec("q2", "q2 [rad]"),
+            StatusSpec("ee_x", "Hand X [m]"),
+            StatusSpec("ee_y", "Hand Y [m]"),
+            StatusSpec("error", "Error norm"),
+            StatusSpec("tau", "Max torque [N m]"),
+            StatusSpec("disturbance", "Disturbance [N m]"),
+            StatusSpec("condition", "Jacobian cond."),
+            StatusSpec("manipulability", "Manipulability"),
+        ]
+    )
+    viewer_handle = maybe_launch_viewer(
+        mujoco,
+        model,
+        data,
+        enabled=viewer and not headless,
+        key_callback=panel_control.key_callback if panel_control.enabled else None,
+    )
+    interaction_panel = (
+        maybe_start_interaction_panel(
+            panel_control,
+            title="MCLab Lab03 2DOF Interaction",
+            config_path=str(config_path or ""),
+            tuning=live_tuning,
+            status=live_status,
+            guide=run_guide,
+            event_log=interaction_log,
+            reset_control=reset_control,
+            pause_control=pause_control,
+            playback_control=playback_control,
+        )
+        if viewer and not headless
+        else None
+    )
+
+    wall_start = viewer_clock()
+    sim_start = float(data.time)
+    completed = False
+    try:
+        while data.time < sim_time:
+            if not viewer_is_running(viewer_handle):
+                break
+            interaction_log.set_time(float(data.time))
+            if reset_control.consume():
+                panel_control.clear()
+                _set_two_link_state(data, handles, initial_q)
+                for actuator_id in handles["actuator_ids"]:
+                    data.ctrl[actuator_id] = 0.0
+                dls_target_q = list(initial_q)
+                mujoco.mj_forward(model, data)
+            if pause_control.paused() and not pause_control.consume_step():
+                sync_paused_viewer(viewer_handle)
+                wall_start = realtime_wall_start(float(data.time), sim_start, playback_control.speed())
+                continue
+            if playback_control.consume_change():
+                wall_start = realtime_wall_start(float(data.time), sim_start, playback_control.speed())
+
+            panel_control.update_time(float(data.time))
+            q, qdot = _two_link_state(data, handles)
+            target = trajectory.evaluate(float(data.time))
+            alpha = target.position
+            alpha_dot = target.velocity
+
+            if mode in DLS_MODES:
+                target_xy, target_xdot = _two_link_target_xy_command(
+                    start_xy=start_xy,
+                    goal_xy=target_xy_goal,
+                    alpha=alpha,
+                    alpha_dot=alpha_dot,
+                    time=float(data.time),
+                    waypoints=target_xy_waypoints,
+                    live_tuning=live_tuning,
+                )
+                command = _dls_task_space_command(
+                    q=q,
+                    qdot=qdot,
+                    target_q_state=dls_target_q,
+                    target_xy=target_xy,
+                    target_xdot=target_xdot,
+                    time=float(data.time),
+                    dt=simulation_dt,
+                    geometry=geometry,
+                    controller_config=controller_config,
+                    live_tuning=live_tuning,
+                    torque_limit=torque_limit,
+                    condition_aware=mode in CONDITION_AWARE_DLS_MODES
+                    or bool(controller_config.get("condition_aware_damping", False)),
+                )
+                dls_target_q = list(command["target_q"])
+            elif mode in TASK_SPACE_MODES:
+                target_xy, target_xdot = _two_link_target_xy_command(
+                    start_xy=start_xy,
+                    goal_xy=target_xy_goal,
+                    alpha=alpha,
+                    alpha_dot=alpha_dot,
+                    time=float(data.time),
+                    waypoints=target_xy_waypoints,
+                    live_tuning=live_tuning,
+                )
+                command = _task_space_command(
+                    q=q,
+                    qdot=qdot,
+                    target_xy=target_xy,
+                    target_xdot=target_xdot,
+                    geometry=geometry,
+                    controller_config=controller_config,
+                    live_tuning=live_tuning,
+                    torque_limit=torque_limit,
+                )
+            else:
+                command = _joint_space_command(
+                    q=q,
+                    qdot=qdot,
+                    start_q=initial_q,
+                    goal_q=target_q_goal,
+                    alpha=alpha,
+                    alpha_dot=alpha_dot,
+                    geometry=geometry,
+                    controller_config=controller_config,
+                    live_tuning=live_tuning,
+                    torque_limit=torque_limit,
+                )
+
+            scripted_disturbance_tau = _two_link_disturbance_torque(config, float(data.time))
+            manual_disturbance_tau = panel_control.value(float(data.time))
+            disturbance_tau = [
+                scripted_disturbance_tau[index] + manual_disturbance_tau[index]
+                for index in range(2)
+            ]
+            total_tau = [command["tau"][index] + disturbance_tau[index] for index in range(2)]
+
+            for index, actuator_id in enumerate(handles["actuator_ids"]):
+                data.ctrl[actuator_id] = total_tau[index]
+
+            mujoco.mj_step(model, data)
+
+            q, qdot = _two_link_state(data, handles)
+            x_ee = forward_kinematics(q, geometry)
+            xdot_ee = end_effector_velocity(q, qdot, geometry)
+            joint_error = [command["target_q"][index] - q[index] for index in range(2)]
+            task_error = [command["target_xy"][index] - x_ee[index] for index in range(2)]
+            joint_error_norm = _norm(joint_error)
+            task_error_norm = _norm(task_error)
+            max_tau = max(abs(value) for value in total_tau)
+            condition = jacobian_condition_number(q, geometry)
+            condition_capped = _cap_infinite(condition)
+            manipulability_value = manipulability(q, geometry)
+            determinant = jacobian_determinant(q, geometry)
+            live_status.set_values(
+                **runtime_status_values(float(data.time), sim_time),
+                q1=q[0],
+                q2=q[1],
+                ee_x=x_ee[0],
+                ee_y=x_ee[1],
+                error=task_error_norm if mode in TASK_SPACE_MODES | DLS_MODES else joint_error_norm,
+                tau=max_tau,
+                disturbance=max(abs(value) for value in disturbance_tau),
+                condition=condition_capped,
+                manipulability=manipulability_value,
+            )
+            _update_two_link_viewer_guides(
+                mujoco,
+                viewer_handle,
+                guide_config=viewer_guides,
+                x_ee=x_ee,
+                target_xy=command["target_xy"],
+                target_path=target_xy_waypoints,
+                condition=condition_capped,
+            )
+            sync_viewer(
+                viewer_handle,
+                data,
+                realtime=realtime,
+                wall_start=wall_start,
+                sim_start=sim_start,
+                speed_scale=playback_control.speed(),
+            )
+            dls_fields = _dls_log_fields(command)
+            logger.record(
+                time=float(data.time),
+                mode=mode,
+                q=q,
+                qdot=qdot,
+                target_q=command["target_q"],
+                joint_error=joint_error,
+                joint_error_norm=joint_error_norm,
+                x_ee=x_ee,
+                xdot_ee=xdot_ee,
+                target_x_ee=command["target_xy"],
+                target_xdot_ee=command.get("target_xdot", [0.0, 0.0]),
+                task_error=task_error,
+                task_error_norm=task_error_norm,
+                tau_cmd=command["tau"],
+                tau_scripted_disturbance=scripted_disturbance_tau,
+                tau_manual_disturbance=manual_disturbance_tau,
+                tau_disturbance=disturbance_tau,
+                tau_total=total_tau,
+                current_proxy=[value / kt for value in command["tau"]],
+                jacobian_determinant=determinant,
+                manipulability=manipulability_value,
+                jacobian_condition=condition_capped,
+                disturbance_active=1.0 if any(abs(value) > 1e-12 for value in disturbance_tau) else 0.0,
+                tuned_kp=command["kp"],
+                tuned_kd=command["kd"],
+                tuned_torque_limit=command["torque_limit"],
+                **dls_fields,
+            )
+        completed = True
+    finally:
+        if interaction_panel is not None:
+            interaction_panel.close()
+        if viewer_handle is not None:
+            if completed:
+                pause_viewer_at_end(viewer_handle, enabled=pause_at_end)
+            viewer_handle.close()
+
+    summary = {**_two_link_summary(logger.rows), **interaction_log.summary()}
+    events = interaction_log.events()
+    output_path = logger.save_with_artifacts(
+        summary=summary,
+        notes=_two_link_notes(config),
+        interaction_events=events if events else None,
+        learner_snapshot=learner_snapshot(
+            tuning=live_tuning,
+            status=live_status,
+            playback_control=playback_control,
+            extra_controls={"joint_disturbance": panel_control.snapshot()} if panel_control.enabled else None,
+        ),
+        learner_tuned_config=learner_tuned_config(
+            config,
+            _two_link_learner_tuned_updates(
+                config,
+                live_tuning,
+                mode=mode,
+                torque_limit=torque_limit,
+                target_q_goal=target_q_goal,
+                target_xy_goal=target_xy_goal,
+            ),
+        ),
+    )
+    if plot:
+        _save_two_link_plots(output_path, logger.rows, plot_selection or config.get("plots"))
+    return resolve_project_path(output_path)
+
+
+def _two_link_viewer_guides(config: dict[str, Any]) -> dict[str, bool | float]:
+    guide_config = dict(config.get("viewer_guides", {}))
+    return {
+        "enabled": bool(guide_config.get("enabled", True)),
+        "hand": bool(guide_config.get("hand", True)),
+        "target": bool(guide_config.get("target", True)),
+        "target_path": bool(guide_config.get("target_path", True)),
+        "condition_warning": bool(guide_config.get("condition_warning", True)),
+        "condition_threshold": float(guide_config.get("condition_threshold", 20.0)),
+    }
+
+
+def _update_two_link_viewer_guides(
+    mujoco: Any,
+    viewer_handle: Any | None,
+    *,
+    guide_config: dict[str, bool | float],
+    x_ee: tuple[float, float],
+    target_xy: list[float],
+    condition: float,
+    target_path: list[tuple[float, tuple[float, float]]] | None = None,
+) -> None:
+    if viewer_handle is None:
+        return
+    reset_viewer_overlays(viewer_handle)
+    if not bool(guide_config.get("enabled", True)):
+        return
+
+    if bool(guide_config.get("target_path", True)) and target_path:
+        for _, waypoint_xy in target_path:
+            add_viewer_sphere(
+                mujoco,
+                viewer_handle,
+                _two_link_guide_position(waypoint_xy, z=0.075),
+                radius=0.018,
+                rgba=[0.62, 1.0, 0.22, 0.46],
+            )
+
+    if bool(guide_config.get("target", True)):
+        add_viewer_sphere(
+            mujoco,
+            viewer_handle,
+            _two_link_guide_position(target_xy),
+            radius=0.035,
+            rgba=[0.10, 0.82, 0.28, 0.85],
+        )
+
+    if bool(guide_config.get("hand", True)):
+        threshold = float(guide_config.get("condition_threshold", 20.0))
+        warning_enabled = bool(guide_config.get("condition_warning", True))
+        hand_color = [1.0, 0.48, 0.10, 0.90] if warning_enabled and condition >= threshold else [0.10, 0.42, 1.0, 0.78]
+        add_viewer_sphere(
+            mujoco,
+            viewer_handle,
+            _two_link_guide_position(x_ee),
+            radius=0.026,
+            rgba=hand_color,
+        )
+
+
+def _two_link_guide_position(xy: tuple[float, float] | list[float], *, z: float = 0.11) -> list[float]:
+    return [float(xy[0]), float(xy[1]), float(z)]
+
+
+def _two_link_disturbance_torque(config: dict[str, Any], time: float) -> list[float]:
+    pulse = dict(config.get("disturbance_torque", {}))
+    if not pulse or not bool(pulse.get("enabled", True)):
+        return [0.0, 0.0]
+
+    pulses = pulse.get("pulses")
+    if isinstance(pulses, list):
+        total = [0.0, 0.0]
+        default_duration = max(0.0, float(pulse.get("duration", 0.2)))
+        default_ramp = max(0.0, float(pulse.get("ramp_time", 0.0)))
+        for index, raw_pulse in enumerate(pulses):
+            if not isinstance(raw_pulse, dict):
+                continue
+            if not bool(raw_pulse.get("enabled", True)):
+                continue
+            torque = _disturbance_pulse_torque(
+                raw_pulse,
+                time,
+                name=f"disturbance_torque.pulses[{index}]",
+                default_duration=default_duration,
+                default_ramp_time=default_ramp,
+            )
+            total[0] += torque[0]
+            total[1] += torque[1]
+        return total
+
+    return _disturbance_pulse_torque(pulse, time, name="disturbance_torque")
+
+
+def _disturbance_pulse_torque(
+    pulse: dict[str, Any],
+    time: float,
+    *,
+    name: str,
+    default_duration: float | None = None,
+    default_ramp_time: float | None = None,
+) -> list[float]:
+    start_time = float(pulse.get("start_time", 1.5))
+    duration = max(0.0, float(pulse.get("duration", 0.2 if default_duration is None else default_duration)))
+    elapsed = float(time) - start_time
+    if duration <= 0.0 or elapsed < 0.0 or elapsed > duration:
+        return [0.0, 0.0]
+
+    torque = _pair(pulse.get("torque", [0.0, 0.0]), f"{name}.torque")
+    default_ramp = 0.0 if default_ramp_time is None else default_ramp_time
+    ramp_time = max(0.0, min(duration * 0.5, float(pulse.get("ramp_time", default_ramp))))
+    scale = _smooth_pulse_scale(elapsed, duration, ramp_time)
+    return [scale * torque[0], scale * torque[1]]
+
+
+def _smooth_pulse_scale(elapsed: float, duration: float, ramp_time: float) -> float:
+    if ramp_time <= 0.0:
+        return 1.0
+    if elapsed < ramp_time:
+        return 0.5 - 0.5 * math.cos(math.pi * elapsed / ramp_time)
+    if elapsed > duration - ramp_time:
+        return 0.5 - 0.5 * math.cos(math.pi * (duration - elapsed) / ramp_time)
+    return 1.0
+
+
+def _live_tuning(
+    config: dict[str, Any],
+    controller_config: dict[str, Any],
+    force_limit: float,
+    interaction_log: InteractionLog | None = None,
+) -> LiveTuning:
+    interaction = dict(config.get("interaction", {}))
+    if not bool(interaction.get("live_tuning", False)):
+        return LiveTuning([])
+    specs = [
+        SliderSpec("target_offset", "Target offset [m]", -0.5, 0.5, 0.0, 0.01),
+        SliderSpec("kp", "Tracking Kp", 0.0, 250.0, float(controller_config.get("kp", 120.0)), 1.0),
+        SliderSpec("kd", "Tracking Kd", 0.0, 60.0, float(controller_config.get("kd", 18.0)), 0.5),
+        SliderSpec("force_limit", "Force limit [N]", 10.0, 250.0, force_limit, 1.0),
+    ]
+    return LiveTuning(
+        specs,
+        event_log=interaction_log,
+        presets=tuning_presets_from_config(config, specs),
+    )
+
+
+def _two_link_live_tuning(
+    config: dict[str, Any],
+    mode: str,
+    controller_config: dict[str, Any],
+    torque_limit: tuple[float, float],
+    target_xy: tuple[float, float],
+    interaction_log: InteractionLog | None = None,
+) -> LiveTuning:
+    interaction = dict(config.get("interaction", {}))
+    if not bool(interaction.get("live_tuning", False)):
+        return LiveTuning([])
+    if mode in DLS_MODES:
+        specs = [
+            SliderSpec("target_x", "Target X [m]", -0.95, 1.05, target_xy[0], 0.01),
+            SliderSpec("target_y", "Target Y [m]", -0.85, 0.85, target_xy[1], 0.01),
+            SliderSpec(
+                "dls_gain",
+                "DLS task gain [1/s]",
+                0.5,
+                12.0,
+                float(controller_config.get("dls_gain", 4.0)),
+                0.1,
+            ),
+            SliderSpec(
+                "dls_damping",
+                "DLS damping",
+                0.0,
+                0.4,
+                float(controller_config.get("dls_damping", 0.08)),
+                0.01,
+            ),
+            SliderSpec("torque_limit", "Torque limit [N m]", 5.0, 80.0, max(torque_limit), 1.0),
+        ]
+        condition_aware = mode in CONDITION_AWARE_DLS_MODES or bool(controller_config.get("condition_aware_damping", False))
+        if condition_aware:
+            specs.extend(
+                [
+                    SliderSpec(
+                        "condition_damping_threshold",
+                        "Damping starts at cond.",
+                        1.0,
+                        80.0,
+                        float(controller_config.get("condition_damping_threshold", 10.0)),
+                        1.0,
+                    ),
+                    SliderSpec(
+                        "condition_damping_full",
+                        "Full damping at cond.",
+                        2.0,
+                        140.0,
+                        float(controller_config.get("condition_damping_full", 40.0)),
+                        1.0,
+                    ),
+                    SliderSpec(
+                        "max_dls_damping",
+                        "Max DLS damping",
+                        0.0,
+                        0.5,
+                        float(controller_config.get("max_dls_damping", 0.3)),
+                        0.01,
+                    ),
+                ]
+            )
+        return LiveTuning(
+            specs,
+            event_log=interaction_log,
+            presets=tuning_presets_from_config(config, specs),
+        )
+    if mode in TASK_SPACE_MODES:
+        specs = [
+            SliderSpec("target_x", "Target X [m]", -0.95, 0.95, target_xy[0], 0.01),
+            SliderSpec("target_y", "Target Y [m]", -0.85, 0.85, target_xy[1], 0.01),
+            SliderSpec("task_kp", "Task stiffness", 5.0, 180.0, float(controller_config.get("task_kp", 90.0)), 1.0),
+            SliderSpec("task_kd", "Task damping", 0.0, 45.0, float(controller_config.get("task_kd", 16.0)), 0.5),
+            SliderSpec("torque_limit", "Torque limit [N m]", 5.0, 80.0, max(torque_limit), 1.0),
+        ]
+        return LiveTuning(
+            specs,
+            event_log=interaction_log,
+            presets=tuning_presets_from_config(config, specs),
+        )
+    specs = [
+        SliderSpec("q1_offset", "q1 target offset [rad]", -0.8, 0.8, 0.0, 0.01),
+        SliderSpec("q2_offset", "q2 target offset [rad]", -0.8, 0.8, 0.0, 0.01),
+        SliderSpec("joint_kp", "Joint Kp scale", 0.2, 2.0, 1.0, 0.05),
+        SliderSpec("joint_kd", "Joint Kd scale", 0.2, 2.0, 1.0, 0.05),
+        SliderSpec("torque_limit", "Torque limit [N m]", 5.0, 80.0, max(torque_limit), 1.0),
+    ]
+    return LiveTuning(
+        specs,
+        event_log=interaction_log,
+        presets=tuning_presets_from_config(config, specs),
+    )
+
+
+def _slider_learner_tuned_updates(config: dict[str, Any], live_tuning: LiveTuning) -> dict[str, Any]:
+    if not live_tuning.enabled:
+        return {}
+    values = live_tuning.snapshot()
+    trajectory = dict(config.get("trajectory", {}))
+    offset = values["target_offset"]
+    return {
+        "trajectory": {
+            "start": float(trajectory.get("start", 0.0)) + offset,
+            "end": float(trajectory.get("end", 0.0)) + offset,
+        },
+        "tracking_controller": {
+            "kp": values["kp"],
+            "kd": values["kd"],
+            "force_limit": values["force_limit"],
+        },
+    }
+
+
+def _two_link_learner_tuned_updates(
+    config: dict[str, Any],
+    live_tuning: LiveTuning,
+    *,
+    mode: str,
+    torque_limit: tuple[float, float],
+    target_q_goal: tuple[float, float],
+    target_xy_goal: tuple[float, float],
+) -> dict[str, Any]:
+    if not live_tuning.enabled:
+        return {}
+    values = live_tuning.snapshot()
+    controller_updates: dict[str, Any] = {}
+    updates: dict[str, Any] = {"tracking_controller": controller_updates}
+    if "torque_limit" in values:
+        controller_updates["torque_limit"] = _capped_limit_pair(torque_limit, values["torque_limit"])
+
+    if mode in DLS_MODES:
+        updates["target_xy"] = [values.get("target_x", target_xy_goal[0]), values.get("target_y", target_xy_goal[1])]
+        controller_updates["dls_gain"] = values["dls_gain"]
+        controller_updates["dls_damping"] = values["dls_damping"]
+        if "condition_damping_threshold" in values:
+            controller_updates["condition_damping_threshold"] = values["condition_damping_threshold"]
+        if "condition_damping_full" in values:
+            controller_updates["condition_damping_full"] = values["condition_damping_full"]
+        if "max_dls_damping" in values:
+            controller_updates["max_dls_damping"] = values["max_dls_damping"]
+        return updates
+
+    if mode in TASK_SPACE_MODES:
+        updates["target_xy"] = [values.get("target_x", target_xy_goal[0]), values.get("target_y", target_xy_goal[1])]
+        controller_updates["task_kp"] = values["task_kp"]
+        controller_updates["task_kd"] = values["task_kd"]
+        return updates
+
+    kp_base = _gain_pair(dict(config.get("tracking_controller", {})).get("kp", [80.0, 60.0]), "kp")
+    kd_base = _gain_pair(dict(config.get("tracking_controller", {})).get("kd", [8.0, 6.0]), "kd")
+    updates["target_q"] = [
+        target_q_goal[0] + values.get("q1_offset", 0.0),
+        target_q_goal[1] + values.get("q2_offset", 0.0),
+    ]
+    controller_updates["kp"] = [kp_base[0] * values.get("joint_kp", 1.0), kp_base[1] * values.get("joint_kp", 1.0)]
+    controller_updates["kd"] = [kd_base[0] * values.get("joint_kd", 1.0), kd_base[1] * values.get("joint_kd", 1.0)]
+    return updates
+
+
+def _capped_limit_pair(base_limits: tuple[float, float], limit_value: float) -> list[float]:
+    limit = abs(float(limit_value))
+    return [min(float(base_limits[0]), limit), min(float(base_limits[1]), limit)]
+
+
+def _two_link_handles(mujoco: Any, model: Any, config: dict[str, Any]) -> dict[str, Any]:
+    joint_names = list(config.get("joint_names", ["shoulder", "elbow"]))
+    actuator_names = list(config.get("actuator_names", ["shoulder_motor", "elbow_motor"]))
+    site_name = str(config.get("end_effector_site", "ee"))
+    joint_ids = [_id(mujoco, model, mujoco.mjtObj.mjOBJ_JOINT, name) for name in joint_names]
+    actuator_ids = [_id(mujoco, model, mujoco.mjtObj.mjOBJ_ACTUATOR, name) for name in actuator_names]
+    site_id = _id(mujoco, model, mujoco.mjtObj.mjOBJ_SITE, site_name)
+    return {
+        "joint_ids": joint_ids,
+        "actuator_ids": actuator_ids,
+        "site_id": site_id,
+        "qpos_indices": [int(model.jnt_qposadr[index]) for index in joint_ids],
+        "dof_indices": [int(model.jnt_dofadr[index]) for index in joint_ids],
+    }
+
+
+def _id(mujoco: Any, model: Any, kind: Any, name: str) -> int:
+    item_id = int(mujoco.mj_name2id(model, kind, name))
+    if item_id < 0:
+        raise RuntimeError(f"MuJoCo object not found: {name}")
+    return item_id
+
+
+def _set_two_link_state(data: Any, handles: dict[str, Any], q: tuple[float, float]) -> None:
+    for index, value in enumerate(q):
+        data.qpos[handles["qpos_indices"][index]] = value
+        data.qvel[handles["dof_indices"][index]] = 0.0
+
+
+def _two_link_state(data: Any, handles: dict[str, Any]) -> tuple[list[float], list[float]]:
+    q = [float(data.qpos[index]) for index in handles["qpos_indices"]]
+    qdot = [float(data.qvel[index]) for index in handles["dof_indices"]]
+    return q, qdot
+
+
+def _two_link_target_xy_command(
+    *,
+    start_xy: tuple[float, float],
+    goal_xy: tuple[float, float],
+    alpha: float,
+    alpha_dot: float,
+    time: float,
+    waypoints: list[tuple[float, tuple[float, float]]],
+    live_tuning: LiveTuning,
+) -> tuple[list[float], list[float]]:
+    if waypoints:
+        return _interpolate_two_link_target_xy_waypoints(waypoints, time)
+
+    tuned_goal = (
+        live_tuning.value("target_x", goal_xy[0]),
+        live_tuning.value("target_y", goal_xy[1]),
+    )
+    target_xy = [start_xy[index] + alpha * (tuned_goal[index] - start_xy[index]) for index in range(2)]
+    target_xdot = [alpha_dot * (tuned_goal[index] - start_xy[index]) for index in range(2)]
+    return target_xy, target_xdot
+
+
+def _two_link_target_xy_waypoints(config: dict[str, Any]) -> list[tuple[float, tuple[float, float]]]:
+    raw_waypoints = config.get("target_xy_waypoints")
+    if not isinstance(raw_waypoints, list):
+        return []
+
+    waypoints: list[tuple[float, tuple[float, float]]] = []
+    for index, raw in enumerate(raw_waypoints):
+        if not isinstance(raw, dict):
+            raise ValueError(f"target_xy_waypoints[{index}] must be a mapping")
+        waypoint_time = float(raw.get("time", raw.get("t", 0.0)))
+        if "position" in raw:
+            position = _pair(raw["position"], f"target_xy_waypoints[{index}].position")
+        elif "xy" in raw:
+            position = _pair(raw["xy"], f"target_xy_waypoints[{index}].xy")
+        else:
+            position = (
+                float(raw.get("x", 0.0)),
+                float(raw.get("y", 0.0)),
+            )
+        waypoints.append((waypoint_time, position))
+    return sorted(waypoints, key=lambda item: item[0])
+
+
+def _interpolate_two_link_target_xy_waypoints(
+    waypoints: list[tuple[float, tuple[float, float]]],
+    time: float,
+) -> tuple[list[float], list[float]]:
+    if not waypoints:
+        raise ValueError("At least one target_xy waypoint is required")
+    if len(waypoints) == 1 or time <= waypoints[0][0]:
+        return list(waypoints[0][1]), [0.0, 0.0]
+    if time >= waypoints[-1][0]:
+        return list(waypoints[-1][1]), [0.0, 0.0]
+
+    for (start_time, start_position), (end_time, end_position) in zip(waypoints, waypoints[1:]):
+        if start_time <= time <= end_time:
+            duration = max(1e-9, end_time - start_time)
+            phase = max(0.0, min(1.0, (time - start_time) / duration))
+            smooth = phase**3 * (10.0 - 15.0 * phase + 6.0 * phase**2)
+            smooth_dot = (30.0 * phase**2 - 60.0 * phase**3 + 30.0 * phase**4) / duration
+            position = [
+                start_position[index] + smooth * (end_position[index] - start_position[index])
+                for index in range(2)
+            ]
+            velocity = [
+                smooth_dot * (end_position[index] - start_position[index])
+                for index in range(2)
+            ]
+            return position, velocity
+    return list(waypoints[-1][1]), [0.0, 0.0]
+
+
+def _scheduled_controller_scalar(
+    controller_config: dict[str, Any],
+    schedule_key: str,
+    fallback_key: str,
+    default: float,
+    time: float,
+) -> float:
+    fallback = abs(float(controller_config.get(fallback_key, default)))
+    raw_schedule = controller_config.get(schedule_key)
+    if not isinstance(raw_schedule, list):
+        return fallback
+
+    points: list[tuple[float, float]] = []
+    for index, raw in enumerate(raw_schedule):
+        if not isinstance(raw, dict):
+            raise ValueError(f"{schedule_key}[{index}] must be a mapping")
+        point_time = float(raw.get("time", raw.get("t", 0.0)))
+        if "value" in raw:
+            value = float(raw["value"])
+        elif "speed" in raw:
+            value = float(raw["speed"])
+        else:
+            value = float(raw.get(fallback_key, fallback))
+        points.append((point_time, abs(value)))
+    if not points:
+        return fallback
+
+    points.sort(key=lambda item: item[0])
+    if len(points) == 1 or time <= points[0][0]:
+        return points[0][1]
+    if time >= points[-1][0]:
+        return points[-1][1]
+
+    for (start_time, start_value), (end_time, end_value) in zip(points, points[1:]):
+        if start_time <= time <= end_time:
+            duration = max(1e-9, end_time - start_time)
+            phase = max(0.0, min(1.0, (time - start_time) / duration))
+            return start_value + phase * (end_value - start_value)
+    return points[-1][1]
+
+
+def _joint_space_command(
+    *,
+    q: list[float],
+    qdot: list[float],
+    start_q: tuple[float, float],
+    goal_q: tuple[float, float],
+    alpha: float,
+    alpha_dot: float,
+    geometry: TwoLinkGeometry,
+    controller_config: dict[str, Any],
+    live_tuning: LiveTuning,
+    torque_limit: tuple[float, float],
+) -> dict[str, Any]:
+    goal = (
+        goal_q[0] + live_tuning.value("q1_offset", 0.0),
+        goal_q[1] + live_tuning.value("q2_offset", 0.0),
+    )
+    target_q = [start_q[index] + alpha * (goal[index] - start_q[index]) for index in range(2)]
+    target_qdot = [alpha_dot * (goal[index] - start_q[index]) for index in range(2)]
+    kp_base = _gain_pair(controller_config.get("kp", [80.0, 60.0]), "kp")
+    kd_base = _gain_pair(controller_config.get("kd", [8.0, 6.0]), "kd")
+    kp_scale = live_tuning.value("joint_kp", 1.0)
+    kd_scale = live_tuning.value("joint_kd", 1.0)
+    limit_value = abs(live_tuning.value("torque_limit", max(torque_limit)))
+    limit = (min(torque_limit[0], limit_value), min(torque_limit[1], limit_value))
+    tau = []
+    for index in range(2):
+        command = kp_base[index] * kp_scale * (target_q[index] - q[index])
+        command += kd_base[index] * kd_scale * (target_qdot[index] - qdot[index])
+        tau.append(_clip(command, -limit[index], limit[index]))
+    return {
+        "target_q": target_q,
+        "target_xy": list(forward_kinematics(target_q, geometry)),
+        "tau": tau,
+        "kp": sum(kp_base) * 0.5 * kp_scale,
+        "kd": sum(kd_base) * 0.5 * kd_scale,
+        "torque_limit": max(limit),
+    }
+
+
+def _task_space_command(
+    *,
+    q: list[float],
+    qdot: list[float],
+    target_xy: list[float],
+    target_xdot: list[float],
+    geometry: TwoLinkGeometry,
+    controller_config: dict[str, Any],
+    live_tuning: LiveTuning,
+    torque_limit: tuple[float, float],
+) -> dict[str, Any]:
+    x_ee = forward_kinematics(q, geometry)
+    xdot_ee = end_effector_velocity(q, qdot, geometry)
+    kp = live_tuning.value("task_kp", float(controller_config.get("task_kp", 90.0)))
+    kd = live_tuning.value("task_kd", float(controller_config.get("task_kd", 16.0)))
+    joint_damping = float(controller_config.get("joint_damping", 0.5))
+    force = [kp * (target_xy[index] - x_ee[index]) + kd * (target_xdot[index] - xdot_ee[index]) for index in range(2)]
+    j = jacobian(q, geometry)
+    tau = [
+        j[0][0] * force[0] + j[1][0] * force[1] - joint_damping * qdot[0],
+        j[0][1] * force[0] + j[1][1] * force[1] - joint_damping * qdot[1],
+    ]
+    limit_value = abs(live_tuning.value("torque_limit", max(torque_limit)))
+    limit = (min(torque_limit[0], limit_value), min(torque_limit[1], limit_value))
+    tau = [_clip(tau[index], -limit[index], limit[index]) for index in range(2)]
+    return {
+        "target_q": list(inverse_kinematics(target_xy, geometry)),
+        "target_xy": target_xy,
+        "target_xdot": target_xdot,
+        "tau": tau,
+        "kp": kp,
+        "kd": kd,
+        "torque_limit": max(limit),
+    }
+
+
+def _dls_task_space_command(
+    *,
+    q: list[float],
+    qdot: list[float],
+    target_q_state: list[float],
+    target_xy: list[float],
+    target_xdot: list[float],
+    time: float,
+    dt: float,
+    geometry: TwoLinkGeometry,
+    controller_config: dict[str, Any],
+    live_tuning: LiveTuning,
+    torque_limit: tuple[float, float],
+    condition_aware: bool = False,
+) -> dict[str, Any]:
+    x_ee = forward_kinematics(q, geometry)
+    error = [target_xy[index] - x_ee[index] for index in range(2)]
+
+    dls_gain = live_tuning.value("dls_gain", float(controller_config.get("dls_gain", 4.0)))
+    base_dls_damping = abs(live_tuning.value("dls_damping", float(controller_config.get("dls_damping", 0.08))))
+    condition = _cap_infinite(jacobian_condition_number(q, geometry))
+    damping_config = dict(controller_config)
+    if condition_aware:
+        damping_config.update(
+            {
+                "condition_damping_threshold": live_tuning.value(
+                    "condition_damping_threshold",
+                    float(controller_config.get("condition_damping_threshold", 25.0)),
+                ),
+                "condition_damping_full": live_tuning.value(
+                    "condition_damping_full",
+                    float(controller_config.get("condition_damping_full", 120.0)),
+                ),
+                "max_dls_damping": live_tuning.value(
+                    "max_dls_damping",
+                    float(controller_config.get("max_dls_damping", max(base_dls_damping, 0.28))),
+                ),
+            }
+        )
+    dls_damping, condition_scale = _condition_aware_dls_damping(
+        base_dls_damping,
+        condition,
+        damping_config,
+        enabled=condition_aware,
+    )
+    max_task_speed = _scheduled_controller_scalar(
+        controller_config,
+        "max_task_speed_schedule",
+        "max_task_speed",
+        0.55,
+        time,
+    )
+    max_joint_speed = abs(float(controller_config.get("max_joint_speed", 2.8)))
+    max_joint_error = abs(float(controller_config.get("max_joint_error", 0.35)))
+
+    task_velocity = [target_xdot[index] + dls_gain * error[index] for index in range(2)]
+    task_velocity = _clip_vector_norm(task_velocity, max_task_speed)
+    qdot_dls = list(
+        damped_least_squares_joint_velocity(
+            q,
+            task_velocity,
+            geometry,
+            damping=dls_damping,
+        )
+    )
+    qdot_dls = _clip_vector_norm(qdot_dls, max_joint_speed)
+    target_q = [target_q_state[index] + qdot_dls[index] * dt for index in range(2)]
+    target_q = [
+        q[index] + _clip(target_q[index] - q[index], -max_joint_error, max_joint_error)
+        for index in range(2)
+    ]
+
+    kp_base = _gain_pair(controller_config.get("kp", [80.0, 60.0]), "kp")
+    kd_base = _gain_pair(controller_config.get("kd", [8.0, 6.0]), "kd")
+    limit_value = abs(live_tuning.value("torque_limit", max(torque_limit)))
+    limit = (min(torque_limit[0], limit_value), min(torque_limit[1], limit_value))
+    tau = []
+    for index in range(2):
+        command = kp_base[index] * (target_q[index] - q[index])
+        command += kd_base[index] * (qdot_dls[index] - qdot[index])
+        tau.append(_clip(command, -limit[index], limit[index]))
+
+    return {
+        "target_q": target_q,
+        "target_xy": target_xy,
+        "target_xdot": target_xdot,
+        "tau": tau,
+        "kp": sum(kp_base) * 0.5,
+        "kd": sum(kd_base) * 0.5,
+        "torque_limit": max(limit),
+        "dls_damping": dls_damping,
+        "dls_base_damping": base_dls_damping,
+        "dls_condition_scale": condition_scale,
+        "dls_condition_number": condition,
+        "dls_gain": dls_gain,
+        "dls_task_speed": _norm(task_velocity),
+        "dls_task_speed_limit": max_task_speed,
+        "dls_joint_speed": _norm(qdot_dls),
+        "dls_condition_threshold": damping_config.get("condition_damping_threshold"),
+        "dls_condition_full": damping_config.get("condition_damping_full"),
+        "dls_max_damping": damping_config.get("max_dls_damping"),
+    }
+
+
+def _save_two_link_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSelection = None) -> None:
+    specs = [
+        ("position.png", "2DOF Joint Position Tracking", "joint position [rad]", ["q_0", "q_1", "target_q_0", "target_q_1"]),
+        ("end_effector.png", "2DOF End-Effector Tracking", "position [m]", ["x_ee_0", "x_ee_1", "target_x_ee_0", "target_x_ee_1"]),
+        ("torque.png", "2DOF Joint Torques", "torque [N m]", ["tau_cmd_0", "tau_cmd_1", "tau_total_0", "tau_total_1"]),
+        ("disturbance.png", "2DOF Disturbance Torque", "torque [N m]", ["tau_disturbance_0", "tau_disturbance_1"]),
+        ("current_proxy.png", "2DOF Current Proxy", "current proxy", ["current_proxy_0", "current_proxy_1"]),
+        ("error.png", "2DOF Tracking Error", "error norm", ["joint_error_norm", "task_error_norm"]),
+        (
+            "singularity.png",
+            "2DOF Jacobian Singularity Metrics",
+            "condition / manipulability",
+            ["jacobian_condition", "manipulability", "jacobian_determinant"],
+        ),
+        (
+            "dls.png",
+            "2DOF Damped Least-Squares Command",
+            "speed / damping",
+            ["dls_task_speed", "dls_task_speed_limit", "dls_joint_speed", "dls_damping", "dls_condition_scale"],
+        ),
+    ]
+    presets = {
+        "essential": ["position", "end_effector", "torque", "error"],
+        "joint": ["position", "torque", "error"],
+        "task": ["end_effector", "torque", "error"],
+        "task_disturbance": ["end_effector", "torque", "disturbance", "error"],
+        "singularity": ["position", "end_effector", "torque", "singularity", "error"],
+        "dls": ["end_effector", "torque", "singularity", "dls", "error"],
+        "dls_disturbance": ["end_effector", "torque", "disturbance", "singularity", "dls", "error"],
+        "control": ["position", "end_effector", "torque", "current_proxy", "singularity", "error"],
+    }
+    save_time_series_plots(output_path, rows, select_plot_specs(specs, selection, presets=presets))
+
+
+def _two_link_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    if not rows:
+        return {}
+    summary = {
+        "max_joint_error_norm": max(float(row["joint_error_norm"]) for row in rows),
+        "final_joint_error_norm": rows[-1]["joint_error_norm"],
+        "max_task_error_norm": max(float(row["task_error_norm"]) for row in rows),
+        "final_task_error_norm": rows[-1]["task_error_norm"],
+        "min_manipulability": min(float(row["manipulability"]) for row in rows),
+        "max_jacobian_condition": max(float(row["jacobian_condition"]) for row in rows),
+        "max_abs_tau_cmd": max(
+            abs(float(value))
+            for row in rows
+            for key, value in row.items()
+            if key.startswith("tau_cmd_")
+        ),
+        "max_abs_tau_total": max(
+            abs(float(value))
+            for row in rows
+            for key, value in row.items()
+            if key.startswith("tau_total_")
+        ),
+    }
+    disturbance_values = [
+        abs(float(value))
+        for row in rows
+        for key, value in row.items()
+        if key.startswith("tau_disturbance_")
+    ]
+    if disturbance_values and max(disturbance_values) > 0.0:
+        disturbed_rows = [row for row in rows if float(row.get("disturbance_active", 0.0)) > 0.5]
+        summary["max_abs_tau_disturbance"] = max(disturbance_values)
+        if disturbed_rows:
+            summary["max_task_error_during_disturbance"] = max(float(row["task_error_norm"]) for row in disturbed_rows)
+            summary["max_joint_error_during_disturbance"] = max(float(row["joint_error_norm"]) for row in disturbed_rows)
+        summary.update(_two_link_disturbance_recovery_metrics(rows))
+    dls_joint_speeds = _finite_row_values(rows, "dls_joint_speed")
+    if dls_joint_speeds:
+        dls_task_speed_limits = _finite_row_values(rows, "dls_task_speed_limit")
+        summary.update(
+            {
+                "max_dls_joint_speed": max(dls_joint_speeds),
+                "max_dls_task_speed": max(_finite_row_values(rows, "dls_task_speed")),
+                "dls_damping": rows[-1].get("dls_damping"),
+            }
+        )
+        if dls_task_speed_limits:
+            summary["min_dls_task_speed_limit"] = min(dls_task_speed_limits)
+            summary["max_dls_task_speed_limit"] = max(dls_task_speed_limits)
+        condition_scales = _finite_row_values(rows, "dls_condition_scale")
+        if condition_scales:
+            summary["max_dls_condition_scale"] = max(condition_scales)
+            summary["max_dls_damping"] = max(_finite_row_values(rows, "dls_damping"))
+    return summary
+
+
+def _two_link_disturbance_recovery_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    active_indices = [
+        index
+        for index, row in enumerate(rows)
+        if _safe_float(row.get("disturbance_active", 0.0), default=0.0) > 0.5
+    ]
+    if not active_indices:
+        return {}
+
+    start_index = active_indices[0]
+    end_index = active_indices[-1]
+    pre_index = max(0, start_index - 1)
+    pre_joint_error = _safe_float(rows[pre_index].get("joint_error_norm"), default=0.0)
+    pre_task_error = _safe_float(rows[pre_index].get("task_error_norm"), default=0.0)
+    joint_threshold = max(pre_joint_error * 1.25, pre_joint_error + 0.00025, 0.0005)
+
+    recovery_time: float | None = None
+    for row in rows[end_index + 1 :]:
+        joint_error = _safe_float(row.get("joint_error_norm"), default=math.inf)
+        if joint_error <= joint_threshold:
+            recovery_time = _safe_float(row.get("time"), default=math.inf)
+            break
+
+    start_time = _safe_float(rows[start_index].get("time"), default=0.0)
+    end_time = _safe_float(rows[end_index].get("time"), default=start_time)
+    disturbed_rows = [rows[index] for index in active_indices]
+    peak_task_row = max(
+        disturbed_rows,
+        key=lambda row: _safe_float(row.get("task_error_norm"), default=-math.inf),
+    )
+    peak_joint_row = max(
+        disturbed_rows,
+        key=lambda row: _safe_float(row.get("joint_error_norm"), default=-math.inf),
+    )
+    metrics: dict[str, Any] = {
+        "first_disturbance_time": start_time,
+        "last_disturbance_time": end_time,
+        "disturbance_duration": max(0.0, end_time - start_time),
+        "pre_disturbance_joint_error_norm": pre_joint_error,
+        "pre_disturbance_task_error_norm": pre_task_error,
+        "disturbance_recovery_threshold": joint_threshold,
+        "disturbance_recovered": recovery_time is not None,
+        "disturbance_recovery_time": recovery_time,
+        "disturbance_recovery_duration": None if recovery_time is None else max(0.0, recovery_time - end_time),
+        "peak_task_error_during_disturbance_time": _safe_float(peak_task_row.get("time"), default=start_time),
+        "peak_joint_error_during_disturbance_time": _safe_float(peak_joint_row.get("time"), default=start_time),
+    }
+    return metrics
+
+
+def _safe_float(value: Any, *, default: float) -> float:
+    try:
+        result = float(value)
+    except (TypeError, ValueError):
+        return default
+    if math.isnan(result):
+        return default
+    return result
+
+
+def _two_link_notes(config: dict[str, Any]) -> str:
+    return f"""# Lab03 2DOF Manipulator
+
+This run uses a planar two-link MuJoCo arm with torque motors at the shoulder and elbow.
+
+- mode: {config.get("mode", "joint_space")}
+- model_path: {config.get("model_path", "models/lab03_2dof/two_link.xml")}
+- link_lengths: {config.get("link_lengths", [0.6, 0.45])}
+
+Joint-space mode tracks desired joint angles with PD torque control.
+Task-space mode uses a Jacobian-transpose PD command on end-effector position.
+DLS task-space mode converts hand velocity commands through a damped least-squares inverse Jacobian.
+Singularity metrics log Jacobian determinant, manipulability, and condition number.
+"""
+
+
+def _is_two_link_config(config: dict[str, Any]) -> bool:
+    plant = str(config.get("plant", "")).lower()
+    mode = str(config.get("mode", "")).lower()
+    return plant in {"two_link", "two_link_arm", "2dof", "2dof_arm"} or mode in TWO_LINK_MODES
+
+
+def _two_link_geometry(config: dict[str, Any]) -> TwoLinkGeometry:
+    lengths = _pair(config.get("link_lengths", [0.6, 0.45]), "link_lengths")
+    return TwoLinkGeometry(link1=lengths[0], link2=lengths[1])
+
+
+def _pair(value: Any, name: str) -> tuple[float, float]:
+    if isinstance(value, (list, tuple)) and len(value) == 2:
+        return float(value[0]), float(value[1])
+    scalar = float(value)
+    return scalar, scalar
+
+
+def _gain_pair(value: Any, name: str) -> tuple[float, float]:
+    try:
+        return _pair(value, name)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a scalar or a length-2 list") from exc
+
+
+def _norm(values: list[float]) -> float:
+    return sum(value * value for value in values) ** 0.5
+
+
+def _clip_vector_norm(values: list[float], limit: float) -> list[float]:
+    norm = _norm(values)
+    if limit <= 0.0 or norm <= limit or norm == 0.0:
+        return values
+    scale = limit / norm
+    return [value * scale for value in values]
+
+
+def _finite_row_values(rows: list[dict[str, Any]], key: str) -> list[float]:
+    values: list[float] = []
+    for row in rows:
+        try:
+            value = float(row.get(key))
+        except (TypeError, ValueError):
+            continue
+        if value == value and value not in {float("inf"), float("-inf")}:
+            values.append(value)
+    return values
+
+
+def _dls_log_fields(command: dict[str, Any]) -> dict[str, Any]:
+    keys = (
+        "dls_damping",
+        "dls_base_damping",
+        "dls_condition_scale",
+        "dls_condition_number",
+        "dls_gain",
+        "dls_task_speed",
+        "dls_task_speed_limit",
+        "dls_joint_speed",
+        "dls_condition_threshold",
+        "dls_condition_full",
+        "dls_max_damping",
+    )
+    return {key: command[key] for key in keys if key in command}
+
+
+def _condition_aware_dls_damping(
+    base_damping: float,
+    condition: float,
+    controller_config: dict[str, Any],
+    *,
+    enabled: bool,
+) -> tuple[float, float]:
+    base = max(0.0, float(base_damping))
+    if not enabled:
+        return base, 0.0
+
+    threshold = max(1.0, float(controller_config.get("condition_damping_threshold", 25.0)))
+    full_condition = max(threshold + 1.0, float(controller_config.get("condition_damping_full", 120.0)))
+    max_damping = max(base, float(controller_config.get("max_dls_damping", max(base, 0.28))))
+    condition_value = max(0.0, float(condition))
+    scale = _clip((condition_value - threshold) / (full_condition - threshold), 0.0, 1.0)
+    return base + scale * (max_damping - base), scale
+
+
+def _cap_infinite(value: float, cap: float = 1.0e6) -> float:
+    if value == float("inf"):
+        return cap
+    return min(value, cap)
+
+
+def _save_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSelection = None) -> None:
+    specs = [
+        (
+            "position.png",
+            "Trajectory Position Tracking",
+            "position [m]",
+            ["position", "target_position"],
+        ),
+        (
+            "velocity.png",
+            "Trajectory Velocity",
+            "velocity [m/s]",
+            ["velocity", "target_velocity"],
+        ),
+        (
+            "acceleration.png",
+            "Trajectory Acceleration",
+            "acceleration [m/s^2]",
+            ["acceleration", "target_acceleration"],
+        ),
+        ("jerk.png", "Trajectory Jerk", "jerk [m/s^3]", ["target_jerk"]),
+        ("torque.png", "Control Effort", "force / torque proxy", ["control_force", "manual_force", "total_force"]),
+        ("current_proxy.png", "Current Proxy", "current proxy", ["current_proxy"]),
+        ("error.png", "Tracking Error", "error [m]", ["position_error"]),
+    ]
+    presets = {
+        "essential": ["position", "velocity", "torque", "error"],
+        "profile": ["position", "velocity", "acceleration", "jerk"],
+        "control": ["position", "torque", "current_proxy", "error"],
+    }
+    save_time_series_plots(output_path, rows, select_plot_specs(specs, selection, presets=presets))
+
+
+def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    if not rows:
+        return {}
+    max_error = max(abs(float(row["position_error"])) for row in rows)
+    max_effort = max(abs(float(row["control_force"])) for row in rows)
+    return {
+        "max_abs_tracking_error": max_error,
+        "final_tracking_error": rows[-1]["position_error"],
+        "max_abs_control_force": max_effort,
+    }
+
+
+def _limits(value: Any) -> tuple[float | None, float | None]:
+    if value is None:
+        return None, None
+    if isinstance(value, (list, tuple)) and len(value) == 2:
+        return float(value[0]), float(value[1])
+    magnitude = abs(float(value))
+    return -magnitude, magnitude
+
+
+def _clip(value: float, lower: float | None, upper: float | None) -> float:
+    if lower is not None and value < lower:
+        return lower
+    if upper is not None and value > upper:
+        return upper
+    return value
+
+
+def _notes(config: dict[str, Any]) -> str:
+    trajectory = config.get("trajectory", {})
+    return f"""# Lab03 Trajectory Planning
+
+Incremental trajectory-planning lab on a MuJoCo slide-joint plant.
+
+Generated profiles include target position, velocity, acceleration, and jerk.
+
+- trajectory type: {trajectory.get("type", "minimum_jerk")}
+- start: {trajectory.get("start", trajectory.get("start_position", 0.0))}
+- end: {trajectory.get("end", trajectory.get("goal_position", 1.0))}
+"""

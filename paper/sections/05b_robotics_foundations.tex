@@ -1,0 +1,1044 @@
+\section{다관절 로봇을 읽기 위한 최소 문법}
+\label{sec:robotics-foundations}
+
+앞 장에서는 질량--스프링--댐퍼 하나만 보아도 힘, 위치, 속도, 에너지가 어떻게 얽히는지 꽤 많은 것을 설명할 수 있었다.
+하지만 로봇 팔로 넘어오면 상황이 한 단계 복잡해진다.
+사람은 보통 로봇 손끝이 어디에 있는지, 벽을 얼마나 눌렀는지, 물체를 어느 방향으로 밀었는지를 보고 싶어 한다.
+반면 실제 모터는 어깨, 팔꿈치, 손목 같은 관절을 돌리거나 밀어내는 명령을 받는다.
+
+따라서 로봇 제어에서는 늘 두 언어 사이를 오간다.
+하나는 관절이 몇 도 돌아갔는지를 말하는 관절 언어이고, 다른 하나는 손끝이 공간에서 어디에 있는지를 말하는 작업 언어이다.
+이 장의 목적은 로봇공학 전체를 다루는 것이 아니라, 뒤의 임피던스 제어 장을 읽기 위한 최소한의 번역 규칙을 준비하는 것이다.
+관절공간, 작업공간, 정기구학, 역기구학, 자코비안, 궤적이라는 말이 왜 필요한지부터 차례로 보자.
+이 장의 기본 흐름은 Lynch와 Park의 Modern Robotics가 다루는 기구학, 속도기구학, 정역학, 궤적 생성의 표준 틀을 교육용으로 풀어 쓴 것이다 \cite{lynchpark2017modernrobotics}.
+
+\paragraph{이 장을 읽는 순서.}
+처음 읽을 때는 이 장을 실제 제어기가 반드시 따르는 계산 파이프라인이 아니라, 학습 내비게이션으로 보면 된다.
+먼저 \(\bm{q}\)라는 관절 언어를 정하고, 정기구학 \(\bm{x}=f(\bm{q})\)으로 관절값에서 손끝 위치를 읽는다.
+역기구학은 원하는 손끝 위치에서 가능한 관절값 후보를 찾는 반대 질문이다.
+그다음 자코비안은 현재 자세 근처에서 작은 변화와 속도를 번역한다.
+즉 \(\delta\bm{x}\approx\bm{J}\delta\bm{q}\), \(\dot{\bm{x}}=\bm{J}\dot{\bm{q}}\)를 통해 관절 쪽 변화가 손끝 쪽 변화로 어떻게 보이는지 읽는다.
+감쇠 최소제곱(DLS)은 특이점 근처에서 원하는 손끝 속도를 관절 속도로 되돌릴 때 관절속도 폭주를 줄이는 완화식이다.
+\(\bm{J}^{\mathsf{T}}\bm{f}\)는 속도 역계산이 아니라 손끝 힘을 관절 effort로 읽는 힘 번역이다.
+마지막으로 경로와 궤적은 관절공간 또는 작업공간 명령에 시간표를 붙여 속도, 가속도, 저크 요구를 읽는 관점이다.
+
+\subsection{링크, 관절, 관절 변수}
+\label{sec:robotics-links-joints-variables}
+
+로봇 팔은 대체로 단단한 막대나 몸체가 관절로 이어진 구조이다.
+단단한 몸체를 링크(link)라고 부르고, 링크와 링크 사이에서 허용된 움직임을 관절(joint)이라고 부른다.
+문짝과 경첩을 떠올리면 가장 쉽다.
+문짝은 링크이고, 경첩은 문짝이 한 축을 중심으로 회전하도록 허용하는 관절이다.
+
+산업용 매니퓰레이터에서 가장 자주 만나는 관절은 두 가지이다.
+\begin{itemize}
+  \item 회전 관절(revolute joint): 경첩처럼 한 축을 중심으로 돈다. 관절 변수는 각도이고 보통 라디안(rad)으로 쓴다.
+  \item 직선 관절(prismatic joint): 서랍 레일처럼 한 방향으로 밀려 나가거나 들어온다. 관절 변수는 길이이고 보통 미터(m)로 쓴다.
+\end{itemize}
+
+각 관절의 값을 모아 쓴 벡터가 관절 변수이다.
+관절이 \(n\)개인 로봇이면
+\begin{equation}
+  \bm{q}
+  =
+  \begin{bmatrix}
+    q_1 & q_2 & \cdots & q_n
+  \end{bmatrix}^{\mathsf{T}}
+  \in \R^n
+\end{equation}
+처럼 쓴다.
+여기서 \(q_i\)는 \(i\)번째 관절의 각도 또는 직선 변위이다.
+회전 관절이면 \(q_i\)의 단위가 rad이고, 직선 관절이면 m이다.
+전기 회로에서 전하를 \(q\)로 썼던 것과 같은 글자이지만, 로봇 장에서는 굵은 \(\bm{q}\) 또는 아래첨자 \(q_i\)를 관절 변수로 읽는다.
+
+관절 속도, 관절 가속도, 관절 저크(jerk)는 시간 미분으로 정의한다.
+\begin{equation}
+  \dot{\bm{q}}=\frac{\dd \bm{q}}{\dd t},
+  \qquad
+  \ddot{\bm{q}}=\frac{\dd^2 \bm{q}}{\dd t^2},
+  \qquad
+  \dddot{\bm{q}}=\frac{\dd^3 \bm{q}}{\dd t^3}.
+\end{equation}
+\(\dot{\bm{q}}\)는 각속도 또는 직선 속도, \(\ddot{\bm{q}}\)는 각가속도 또는 직선 가속도, \(\dddot{\bm{q}}\)는 가속도가 얼마나 갑자기 바뀌는지를 나타내는 값이다.
+운전할 때 속도 자체보다 갑자기 가속 페달을 밟거나 떼는 순간이 몸에 더 거칠게 느껴지는 것처럼, 로봇에서도 저크가 큰 명령은 진동, 소음, 구동기 부담을 키울 수 있다.
+
+\begin{table}[!htbp]
+  \centering
+  \caption{관절 변수와 시간 미분의 물리적 의미}
+  \label{tab:joint-variable-derivatives}
+  \small
+  \renewcommand{\arraystretch}{1.12}
+  \begin{tabularx}{\linewidth}{@{}p{0.18\linewidth}p{0.25\linewidth}X@{}}
+    \toprule
+    기호 & 이름 & 쉽게 읽는 법 \\
+    \midrule
+    \(\bm{q}\) & 관절 위치 & 각 관절이 얼마나 돌았거나 밀렸는가 \\
+    \(\dot{\bm{q}}\) & 관절 속도 & 각 관절이 지금 얼마나 빠르게 움직이는가 \\
+    \(\ddot{\bm{q}}\) & 관절 가속도 & 관절 속도가 얼마나 빠르게 변하는가 \\
+    \(\dddot{\bm{q}}\) & 관절 저크 & 가속도가 얼마나 갑자기 바뀌는가 \\
+    \(\bm{\tau}\) & 관절 힘/토크 & 회전 관절에서는 토크, 직선 관절에서는 힘 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+여기서 configuration과 state를 한 번 구분해 두면 뒤의 제어식이 덜 헷갈린다.
+Configuration은 기하학적 자세를 정하는 좌표이고, 이 장의 고정 베이스 직렬 매니퓰레이터에서는 보통 \(\bm{q}\)가 configuration이다.
+반면 제어와 동역학에서 상태(state)는 보통 \(\bm{q}\)와 \(\dot{\bm{q}}\)를 함께 둔다.
+가장 흔한 강체 2차 모델에서는 미래 운동은 위치와 속도에 의존하지만, 실제 예측에는 입력, 모델, 제약조건도 함께 필요하다.
+\(\ddot{\bm{q}}\)는 동역학과 제어 입력으로 정해지는 값으로 읽고, 최소 first-order state에 보통 따로 넣지 않는다.
+물론 구동기 동역학, 필터, 접촉 모드, 유연체, 추정기까지 모델에 넣으면 상태를 더 크게 잡을 수 있다.
+마찬가지로 저크는 궤적의 부드러움 요구나 명령의 급격함을 보는 값이지, 로봇의 기하학적 자세를 정하는 새 좌표는 아니다.
+
+\(\bm{\tau}\)를 관절 토크라고만 부르면 회전 관절에서는 자연스럽지만, 직선 관절에서는 살짝 어색해진다.
+정확히는 \(\tau_i\)를 \(q_i\)와 짝을 이루는 일반화 힘(generalized effort)으로 읽는 편이 안전하다.
+회전 관절의 \(q_i\)는 각도이므로 그 관절의 effort는 토크이고, 직선 관절의 \(q_i\)는 길이이므로 그 관절의 effort는 선형 힘이다.
+이 구분은 단위 암기가 아니라 일률을 맞추기 위한 약속에서 나온다.
+\[
+  P_i=\tau_i\dot{q}_i
+\]
+가 와트(W), 즉 초당 일의 양이 되려면 \(q_i\)가 무엇인지에 따라 \(\tau_i\)의 단위도 함께 바뀌어야 한다.
+라디안은 SI 단위계에서 무차원처럼 처리되지만, 로봇 제어를 배울 때는 각도 단위로 남겨 두고 읽는 편이 실수를 줄인다.
+
+\begin{table}[!htbp]
+  \centering
+  \caption{관절 종류에 따라 달라지는 관절 effort의 단위}
+  \label{tab:joint-type-units-generalized-effort}
+  \small
+  \renewcommand{\arraystretch}{1.12}
+  \begin{tabularx}{\linewidth}{@{}p{0.19\linewidth}p{0.18\linewidth}p{0.19\linewidth}X@{}}
+    \toprule
+    관절 종류 & \(q_i\)의 단위 & \(\tau_i\)의 단위 & 일률로 확인하는 법 \\
+    \midrule
+    회전 관절 & \(\mathrm{rad}\) & \(\mathrm{N\,m}\) & \(P_i=\tau_i\dot{q}_i\). 모터가 축을 돌리므로 effort는 토크이다 \\
+    직선 관절 & \(\mathrm{m}\) & \(\mathrm{N}\) & \(P_i=\tau_i\dot{q}_i\). 축을 따라 밀거나 당기므로 effort는 힘이다 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+자유도(degree of freedom, DoF)는 독립적으로 정할 수 있는 움직임의 개수이다.
+단순한 회전 관절 하나는 보통 1자유도이고, 7자유도 Panda 로봇은 일곱 개의 독립 관절 변수를 갖는다.
+자유도가 많다는 말은 손끝을 움직일 수 있는 선택지가 많다는 뜻이지만, 동시에 같은 손끝 위치를 만드는 관절 자세도 여러 개일 수 있다는 뜻이다.
+이 점이 역기구학과 null-space, 특이점 이야기를 어렵게 만든다.
+
+\subsection{관절공간, 작업공간, 작업영역}
+\label{sec:robotics-joint-task-workspace}
+
+관절공간(joint space)은 로봇을 관절 변수 \(\bm{q}\)로 보는 공간이다.
+2자유도 평면 팔이라면 \(\bm{q}=[q_1\ q_2]^{\mathsf{T}}\)이고, 이 공간의 한 점은 어깨와 팔꿈치 각도 한 쌍을 뜻한다.
+7자유도 로봇이라면 관절공간은 7차원이다.
+우리가 머릿속으로 7차원 공간을 그리기는 어렵지만, 의미는 단순하다.
+각 축이 관절 하나의 값이다.
+
+여기서 Modern Robotics에서 자주 나오는 configuration space, 또는 C-space라는 말도 함께 연결해 두자.
+Configuration은 로봇의 기하학적 상태를 정하는 데 필요한 좌표 묶음이다.
+이 논문에서 주로 다루는 고정 베이스 직렬 매니퓰레이터에서는 관절 변수 \(\bm{q}\)가 보통 configuration을 이루므로, 관절공간을 그 로봇 팔의 configuration space로 읽어도 된다.
+다만 이것은 언제나 configuration space와 joint space가 같은 말이라는 뜻은 아니다.
+이동 베이스, 부유 베이스, 물체 포즈, 폐사슬 또는 접촉 제약까지 모델에 넣으면 전체 configuration space는 base/object pose 또는 constraints를 포함할 수 있다.
+반대로 task space는 우리가 선택한 출력 변수의 공간이고, workspace는 그중 로봇이 실제로 도달 가능한 작업 위치들의 집합이다.
+여기서는 먼저 \(\bm{q}\)-공간과 \(\bm{x}\)-공간의 번역에 집중한다.
+
+작업공간(task space)은 사람이 관심 있는 작업 변수를 모은 공간이다.
+이 글처럼 손끝의 병진 위치를 \([x\ y\ z]^{\mathsf{T}}\)로 고르면, 그 작업공간은 직교 위치 공간(Cartesian position space)이 된다.
+예를 들어 손끝 위치만 보면
+\begin{equation}
+  \bm{x}
+  =
+  \begin{bmatrix}
+    x & y & z
+  \end{bmatrix}^{\mathsf{T}}
+  \in \R^3
+\end{equation}
+이다.
+손끝의 방향까지 포함하면 위치뿐 아니라 자세도 필요하다.
+자세는 보통 회전행렬 \(R\in SO(3)\) 또는 포즈 \(T\in SE(3)\)로 표현하고, 롤--피치--요처럼 3개 숫자로 쓰는 방식은 편리하지만 국소 좌표라 특이점이 생길 수 있다.
+속도를 다룰 때는 트위스트(twist), 힘과 모멘트를 함께 다룰 때는 렌치(wrench)라는 표현도 등장한다.
+지금은 이름만 기억해도 충분하다.
+이 논문에서는 임피던스 직관을 먼저 잡기 위해 주로 손끝의 병진 위치 \(\bm{x}\)에 집중한다.
+
+작업영역(workspace)은 선택한 작업공간 안에서 로봇 손끝이 실제로 도달할 수 있는 위치들의 집합이다.
+관절공간과 작업공간은 비슷해 보이지만 다르다.
+관절공간의 직선 경로는 관절각을 일정한 비율로 바꾸는 길이고, 작업공간의 직선 경로는 손끝이 실제 공간에서 직선으로 움직이는 길이다.
+관절공간에서 직선으로 움직인다고 해서 손끝도 직선으로 움직이는 것은 아니다.
+이 차이를 모르면 로봇이 왜 예상과 다른 곡선으로 움직이는지 이해하기 어렵다.
+
+\begin{table}[!htbp]
+  \centering
+  \caption{관절공간과 작업공간의 차이}
+  \label{tab:joint-task-space}
+  \small
+  \renewcommand{\arraystretch}{1.12}
+  \begin{tabularx}{\linewidth}{@{}p{0.18\linewidth}p{0.31\linewidth}X@{}}
+    \toprule
+    관점 & 좌표 & 질문 \\
+    \midrule
+    관절공간 & \(\bm{q},\dot{\bm{q}},\ddot{\bm{q}}\) & 각 모터가 얼마만큼 움직여야 하는가? \\
+    작업공간 & \(\bm{x},\dot{\bm{x}},\ddot{\bm{x}}\) 또는 포즈/트위스트 & 손끝이 공간에서 어디로, 얼마나 빠르게 움직이는가? \\
+    작업영역 & 도달 가능한 \(\bm{x}\)의 집합 & 이 손끝 목표가 로봇이 실제로 갈 수 있는 곳인가? \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+접촉 작업에서는 작업공간 표현이 특히 중요하다.
+벽을 누르는 방향, 표면을 따라 미끄러지는 방향, 삽입 방향처럼 사람이 말하는 작업은 대부분 손끝 기준 방향으로 표현되기 때문이다.
+하지만 실제 명령은 관절 모터로 들어간다.
+뒤에서 볼 자코비안은 바로 이 두 언어 사이의 순간 번역기이다.
+
+\subsection{정기구학: 관절값에서 손끝 위치로}
+\label{sec:robotics-forward-kinematics}
+
+정기구학(forward kinematics)은 관절값 \(\bm{q}\)가 주어졌을 때 손끝 위치나 포즈를 계산하는 일이다.
+가장 짧게 쓰면
+\begin{equation}
+  \bm{x}=f(\bm{q})
+  \label{eq:fk-minimal}
+\end{equation}
+이다.
+여기서 \(f\)는 로봇의 링크 길이, 관절 배치, 좌표계 정의를 모두 담고 있는 함수이다.
+
+2자유도 평면 팔을 예로 보자.
+첫 번째 링크 길이를 \(l_1\), 두 번째 링크 길이를 \(l_2\), 관절각을 \(q_1,q_2\)라고 하자.
+어깨 관절에서 첫 링크가 \(q_1\)만큼 돌고, 둘째 링크는 첫 링크에 대해 \(q_2\)만큼 더 돈다.
+그러면 손끝 위치는
+\begin{align}
+  x(q_1,q_2)
+  &=
+  l_1\cos q_1
+  +
+  l_2\cos(q_1+q_2),
+  \label{eq:two-link-fk-x}
+  \\
+  y(q_1,q_2)
+  &=
+  l_1\sin q_1
+  +
+  l_2\sin(q_1+q_2).
+  \label{eq:two-link-fk-y}
+\end{align}
+이 된다.
+식이 길어 보여도 의미는 간단하다.
+첫 링크 끝점의 \(x,y\) 좌표에 둘째 링크가 더해지는 것이다.
+코사인은 가로 성분, 사인은 세로 성분을 만든다고 생각하면 된다.
+
+정기구학은 보통 한 방향으로는 잘 정의된다.
+관절각을 정확히 하나 정하면, 이상적인 강체 모델에서 손끝 위치도 하나로 정해진다.
+그래서 시뮬레이터나 로봇 제어기 안에서는 현재 관절각을 읽어 손끝 위치를 계산하는 데 계속 사용된다.
+
+\subsection{역기구학: 손끝 목표에서 관절값으로}
+\label{sec:robotics-inverse-kinematics}
+
+역기구학(inverse kinematics, IK)은 반대 질문이다.
+원하는 손끝 위치 \(\bm{x}_d\)가 있을 때 어떤 관절값 \(\bm{q}\)가 필요한가?
+기호만 보면
+\begin{equation}
+  \bm{q}=f^{-1}(\bm{x}_d)
+\end{equation}
+처럼 쓰고 싶지만, 실제로는 조심해야 한다.
+정기구학 함수 \(f\)는 보통 단순한 일대일 함수가 아니기 때문이다.
+
+역기구학에서는 세 가지 일이 생길 수 있다.
+\begin{itemize}
+  \item 해가 없다. 목표점이 작업영역 밖에 있으면 어떤 관절각으로도 갈 수 없다.
+  \item 해가 하나 있다. 특별한 조건에서 관절 자세가 하나로 정해질 수 있다.
+  \item 해가 여러 개 있다. 2링크 팔에서도 같은 손끝 위치에 대해 팔꿈치를 위로 접는 해와 아래로 접는 해가 생길 수 있다.
+\end{itemize}
+
+2링크 평면 팔에서는 목표점까지의 거리 \(r\)만 보아도 먼저 해의 개수를 대략 판정할 수 있다.
+\begin{table}[!htbp]
+  \centering
+  \caption{2링크 위치 IK에서 거리로 먼저 보는 해의 개수}
+  \label{tab:two-link-ik-reachability}
+  \begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{0.28\linewidth}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{0.18\linewidth}}
+    \toprule
+    조건 & 의미 & IK 해석 \\
+    \midrule
+    \(r>l_1+l_2\) & 팔을 모두 펴도 닿지 않음 & 해 없음 \\
+    \(r<|l_1-l_2|\) & 한 링크가 너무 길어 안쪽 빈 구멍에 들어감 & 해 없음 \\
+    \(r=l_1+l_2\) 또는 \(r=|l_1-l_2|\) & 완전히 펴지거나 접힌 경계 & 경계 해 하나 \\
+    \(|l_1-l_2|<r<l_1+l_2\) & 두 링크가 삼각형을 만들 수 있음 & 보통 두 branch \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+2링크 팔에서는 이 세 경우가 어디서 나오는지 코사인 법칙으로 한 번 볼 수 있다.
+목표 손끝 위치를 \((x_d,y_d)\)라고 하고, 어깨에서 목표점까지의 거리 제곱을
+\begin{equation}
+  r^2=x_d^2+y_d^2
+\end{equation}
+라고 두자.
+어깨, 팔꿈치, 손끝이 만드는 삼각형에서 두 링크 길이 \(l_1,l_2\)와 거리 \(r\)가 정해지면, 팔꿈치 각도 \(q_2\)는
+\begin{equation}
+  \cos q_2
+  =
+  \frac{r^2-l_1^2-l_2^2}{2l_1l_2}
+  \label{eq:two-link-ik-cos-q2}
+\end{equation}
+를 만족해야 한다.
+오른쪽 값이 \(1\)보다 크거나 \(-1\)보다 작으면 실제 각도 \(q_2\)가 존재하지 않으므로 해가 없다.
+오른쪽 값이 정확히 \(1\)이나 \(-1\)이면 팔이 완전히 펴지거나 접힌 경계 자세라 해가 하나로 붙는다.
+다만 여기서의 하나는 보통의 비퇴화 2링크 기하와 관절 한계를 잠시 무시한 말이다.
+예를 들어 \(l_1=l_2\)이고 목표점이 어깨 원점에 놓이는 특수한 경우에는 \(q_2=\pi\)로 접힌 채 \(q_1\)을 여러 방향으로 돌릴 수 있고, 반대로 실제 로봇의 관절 한계가 있으면 수식상 가능한 branch가 사라질 수도 있다.
+그 사이 값이면 \(q_2=\arccos(\cdot)\)와 \(q_2=-\arccos(\cdot)\)가 모두 가능해서 팔꿈치 위쪽 해와 아래쪽 해가 생긴다.
+\(\arccos\) 자체는 \(0\)부터 \(\pi\) 사이의 대표 각도 하나를 돌려주므로, 같은 cosine 값을 갖는 두 자세를 표현하려면 부호를 따로 붙여 읽어야 한다.
+이 작은 계산만 보아도 IK가 단순히 \(f^{-1}\) 하나로 끝나는 문제가 아니라는 점이 드러난다.
+
+실제로 계산할 때는 다음 순서로 읽으면 된다.
+먼저
+\begin{equation}
+  c
+  =
+  \frac{r^2-l_1^2-l_2^2}{2l_1l_2}
+  \label{eq:two-link-ik-c-value}
+\end{equation}
+를 계산한다.
+\(c\)가 \([-1,1]\) 범위 안에 있으면 팔꿈치 각도 후보는
+\begin{equation}
+  q_2^{(+)}
+  =
+  \arccos c,
+  \qquad
+  q_2^{(-)}
+  =
+  -\arccos c
+  \label{eq:two-link-ik-q2-branches}
+\end{equation}
+처럼 두 개가 된다.
+그 다음에는 목표점 방향각에서 팔 안쪽 삼각형의 보정각을 빼서 \(q_1\)을 구한다.
+\begin{equation}
+  q_1^{(\pm)}
+  =
+  \operatorname{atan2}(y_d,x_d)
+  -
+  \operatorname{atan2}
+  \left(
+    l_2\sin q_2^{(\pm)},
+    l_1+l_2\cos q_2^{(\pm)}
+  \right).
+  \label{eq:two-link-ik-q1-from-q2}
+\end{equation}
+여기서 \(\operatorname{atan2}(y,x)\)는 점 \((x,y)\)가 원점에서 보이는 방향각을 사분면까지 고려해서 돌려주는 함수이다.
+보통 \(\tan^{-1}(y/x)\)만 쓰면 \(x\)가 음수인 경우 사분면을 헷갈릴 수 있기 때문에, 로봇공학 코드에서는 \(\operatorname{atan2}\)를 쓰는 편이 안전하다.
+
+숫자를 하나 넣어 보자.
+\(l_1=l_2=1~\mathrm{m}\), 목표점 \((x_d,y_d)=(1,1)~\mathrm{m}\)이면 \(r^2=2\)이고 \(c=0\)이다.
+따라서
+\begin{align}
+  q_2^{(+)}
+  &=
+  \frac{\pi}{2},
+  &
+  q_1^{(+)}
+  &=
+  \operatorname{atan2}(1,1)
+  -
+  \operatorname{atan2}(1,1)
+  =
+  0,
+  \label{eq:two-link-ik-positive-branch}
+  \\
+  q_2^{(-)}
+  &=
+  -\frac{\pi}{2},
+  &
+  q_1^{(-)}
+  &=
+  \operatorname{atan2}(1,1)
+  -
+  \operatorname{atan2}(-1,1)
+  =
+  \frac{\pi}{2}.
+  \label{eq:two-link-ik-negative-branch}
+\end{align}
+두 해를 다시 정기구학 식에 넣으면 둘 다 같은 손끝점 \((1,1)\)을 만든다.
+다만 첫 번째 해 \((q_1,q_2)=(0,\pi/2)\)에서는 팔꿈치가 \((1,0)\)에 있고, 두 번째 해 \((q_1,q_2)=(\pi/2,-\pi/2)\)에서는 팔꿈치가 \((0,1)\)에 있다.
+손끝은 같지만 팔꿈치가 놓인 쪽이 다른 것이다.
+그림~\ref{fig:two-link-ik-branches}처럼 두 branch를 같은 좌표계에 겹쳐 그리면, 같은 목표점에 도달하더라도 팔꿈치가 어깨--목표선의 서로 다른 쪽에 놓인다는 점이 보인다.
+
+\input{figures/fig_two_link_ik_branches}
+
+어깨에서 목표점으로 향하는 선을 기준으로 팔꿈치가 어느 쪽에 있는지 숫자로 보려면, 팔꿈치 좌표를 \((e_x,e_y)\)라고 두고 \(x_d e_y-y_d e_x\)의 부호를 볼 수 있다.
+이 예제에서는 \(q_2>0\) branch가 \(-1\), \(q_2<0\) branch가 \(+1\)이므로 서로 반대쪽에 있다.
+그래서 팔꿈치 위쪽/아래쪽이라는 이름은 그림의 좌표계와 관례에 따라 달라질 수 있고, 코드나 실험 설정에서는 \(q_2\)의 부호 또는 upper/lower branch 정의를 명시하는 것이 안전하다.
+여기서 branch는 같은 목표점에 도달하는 연속적인 자세 선택의 갈래를 뜻한다.
+두 해는 손끝은 같지만 팔꿈치 위치가 다르므로, 이후 같은 손끝 명령도 서로 다른 관절 속도와 effort로 번역될 수 있다.
+
+여기서 해가 여러 개 있다는 말은 단순히 수학 풀이가 귀찮다는 뜻이 아니다.
+같은 손끝 위치라도 로봇의 팔꿈치, 손목, 어깨 자세가 달라질 수 있고, 그 결과 관절 속도, 관절 토크, 특이점까지의 거리도 달라진다.
+2자유도 평면 팔에서는 이것이 팔꿈치 위쪽 해와 아래쪽 해처럼 보인다.
+손끝은 같은 점에 있어도 한 자세는 팔꿈치가 위로 접혀 있고, 다른 자세는 아래로 접혀 있을 수 있다.
+Lab03의 upper/lower 또는 mirrored branch 비교는 바로 이 차이를 플롯으로 읽기 위한 장면이다.
+목표 손끝 경로가 비슷해도 관절각 곡선, 조건수, effort 지표가 다르게 나타날 수 있다.
+따라서 IK의 어려움은 목표에 도달하느냐만의 문제가 아니라, 여러 해 중 어떤 자세 가지(branch)를 선택하느냐의 문제이기도 하다.
+
+자유도가 작업 변수보다 많은 로봇에서는 이 문제가 더 자연스럽게 커진다.
+예를 들어 손끝 병진 위치만 \((x,y,z)\) 세 숫자로 정하는데 로봇에는 관절이 7개 있다면, 남는 선택지가 생긴다.
+이 남는 관절 움직임을 보통 여유 자유도(redundancy)라고 부르고, 손끝 위치를 거의 바꾸지 않는 방향의 관절 움직임을 null-space 움직임이라고 부른다.
+2링크 위치 IK에서는 보통 두 개의 떨어진 branch를 고르는 문제로 보이지만, 7자유도 로봇에서는 해가 연속적인 가족처럼 생길 수 있다.
+직관적으로 말하면 손끝은 같은 곳에 두고 팔꿈치 모양만 조금 바꾸는 여지가 있는 셈이다.
+이 여유는 관절 한계를 피하거나, 특이점에서 멀어지거나, 더 편한 자세를 고르는 데 사용할 수 있다.
+하지만 이 논문과 Lab04에서는 null-space 최적화 자체를 깊게 다루기보다, 7자유도 로봇에서는 같은 손끝 목표라도 현재 자세와 역기구학 선택에 따라 관절공간의 부담이 달라질 수 있다는 점을 기억하는 정도로 둔다.
+즉, 여기서의 핵심은 더 많은 관절이 항상 더 쉽다는 말이 아니라, 선택지가 늘어난 만큼 어떤 관절 자세를 고를 것인지도 제어 문제의 일부가 된다는 점이다.
+
+이 점은 임피던스 제어에서도 중요하다.
+손끝에 같은 가상 스프링을 걸어도, 어떤 관절 자세로 그 손끝 위치를 만들고 있는지에 따라 필요한 관절 움직임과 effort가 달라진다.
+그래서 Lab03의 2자유도 팔은 단순한 장난감 예제가 아니라, 관절공간과 작업공간 사이의 번역 문제가 관절각, 속도, effort, 조건수에 어떤 흔적을 남기는지 보여주는 중간 계단이다.
+
+\paragraph{IK에서 자코비안으로 넘어가는 다리.}
+가지 선택 뒤의 읽기 순서를 한 번만 정리하자.
+IK는 가능한 branch 후보를 보여 주지만, 이후 계산은 실제로 선택된 현재 branch의 \(\bm{q}\)에서 시작한다.
+그 \(\bm{q}\)에서 \(\bm{J}(\bm{q})\)를 계산하므로, 같은 손끝 위치라도 branch가 다르면 자코비안, 조건수, 관절속도, effort가 달라질 수 있다.
+DLS는 branch를 고르는 마법이 아니라, 선택된 현재 자세 근처에서 원하는 손끝 속도를 너무 큰 관절속도 없이 만들기 위한 완화식이다.
+마찬가지로 \(\bm{J}^{\mathsf{T}}\bm{f}\)도 같은 현재 자세에서 힘을 관절 effort로 읽는다.
+그래서 다음 절의 자코비안은 손끝 목표와 선택된 현재 branch의 \(\bm{q}\)를 정한 뒤, 그 자세 근처에서 속도와 힘이 어떻게 번역되는지를 묻는 단계라고 보면 된다.
+
+\subsection{자코비안 1단계: 작은 변화의 장부}
+\label{sec:robotics-jacobian-small-motion}
+
+자코비안(Jacobian)은 처음 보면 어려운 이름처럼 들리지만, 출발점은 아주 단순하다.
+정기구학이
+\[
+  \bm{x}=f(\bm{q})
+\]
+라면, 자코비안은 관절을 아주 조금 움직였을 때 손끝이 얼마나 조금 움직이는지를 모은 표이다.
+
+2자유도 평면 팔에서 손끝 좌표가 \(x(q_1,q_2),y(q_1,q_2)\)라고 하자.
+관절각이 아주 조금 \(\Delta q_1,\Delta q_2\)만큼 바뀌면 손끝 위치도 조금 바뀐다.
+그 작은 변화는 1차 근사로
+\begin{align}
+  \Delta x
+  &\approx
+  \frac{\partial x}{\partial q_1}\Delta q_1
+  +
+  \frac{\partial x}{\partial q_2}\Delta q_2,
+  \label{eq:jacobian-dx}
+  \\
+  \Delta y
+  &\approx
+  \frac{\partial y}{\partial q_1}\Delta q_1
+  +
+  \frac{\partial y}{\partial q_2}\Delta q_2.
+  \label{eq:jacobian-dy}
+\end{align}
+여기서 \(\partial x/\partial q_1\)은 \(q_1\)만 아주 조금 바꿨을 때 \(x\)가 얼마나 민감하게 변하는지를 뜻한다.
+마찬가지로 \(\partial y/\partial q_2\)는 \(q_2\)만 바꿨을 때 \(y\)가 얼마나 변하는지를 뜻한다.
+
+이 네 개의 민감도를 행렬로 모으면
+\begin{equation}
+  \bm{J}(\bm{q})
+  =
+  \begin{bmatrix}
+    \partial x/\partial q_1 & \partial x/\partial q_2 \\
+    \partial y/\partial q_1 & \partial y/\partial q_2
+  \end{bmatrix}
+  \label{eq:jacobian-partial-table}
+\end{equation}
+가 된다.
+그러면 식 \eqref{eq:jacobian-dx}, \eqref{eq:jacobian-dy}를 한 줄로
+\begin{equation}
+  \Delta \bm{x}
+  \approx
+  \bm{J}(\bm{q})\Delta\bm{q}
+  \label{eq:jacobian-small-motion}
+\end{equation}
+라고 쓸 수 있다.
+
+이 식은 자코비안을 이해하는 첫 번째 핵심이다.
+자코비안은 큰 이동 전체를 정확히 푸는 마법 공식이 아니라, 현재 자세 근처에서 작은 관절 변화가 작은 손끝 변화로 어떻게 바뀌는지 알려주는 국소적인 선형 근사이다.
+그래서 자코비안은 항상 현재 자세 \(\bm{q}\)에 따라 달라진다.
+팔꿈치가 접혀 있을 때와 쭉 펴져 있을 때, 같은 관절 변화가 손끝에 만드는 움직임은 다르다.
+
+2링크 팔의 정기구학 식 \eqref{eq:two-link-fk-x}, \eqref{eq:two-link-fk-y}에서 직접 편미분해 보자.
+먼저 \(x\)식은 코사인으로 되어 있으므로, 미분하면 \(-\sin\)이 나온다.
+\(q_1+q_2\)를 \(q_1\)로 미분해도 1이고, \(q_2\)로 미분해도 1이지만, 첫 번째 링크 항 \(l_1\cos q_1\)은 \(q_2\)를 포함하지 않으므로 \(q_2\)에 대해서는 사라진다.
+\begin{align}
+  \frac{\partial x}{\partial q_1}
+  &=
+  -l_1\sin q_1-l_2\sin(q_1+q_2),
+  &
+  \frac{\partial x}{\partial q_2}
+  &=
+  -l_2\sin(q_1+q_2),
+  \\
+  \frac{\partial y}{\partial q_1}
+  &=
+  l_1\cos q_1+l_2\cos(q_1+q_2),
+  &
+  \frac{\partial y}{\partial q_2}
+  &=
+  l_2\cos(q_1+q_2).
+\end{align}
+이 네 항을 표처럼 모으면
+\begin{equation}
+  \bm{J}(\bm{q})
+  =
+  \begin{bmatrix}
+    -l_1\sin q_1-l_2\sin(q_1+q_2)
+    &
+    -l_2\sin(q_1+q_2)
+    \\
+    l_1\cos q_1+l_2\cos(q_1+q_2)
+    &
+    l_2\cos(q_1+q_2)
+  \end{bmatrix}.
+  \label{eq:two-link-jacobian}
+\end{equation}
+첫 번째 열은 \(q_1\)을 단위 속도로 움직이고 \(q_2\)는 가만히 둘 때 손끝이 어느 방향으로 움직이는지를 나타낸다.
+두 번째 열은 \(q_2\)를 단위 속도로 움직이고 \(q_1\)은 가만히 둘 때의 손끝 움직임이다.
+즉 자코비안의 각 열은 각 관절 하나가 손끝에 기여하는 순간 움직임 벡터라고 볼 수 있다.
+
+숫자를 하나 넣어 보면 더 선명하다.
+\(l_1=l_2=1~\mathrm{m}\), \(q_1=0\), \(q_2=\pi/2\)라면 손끝은 \((1,1)\)에 있고,
+\[
+  \bm{J}
+  =
+  \begin{bmatrix}
+    -1 & -1 \\
+     1 &  0
+  \end{bmatrix}
+\]
+가 된다.
+그림~\ref{fig:two-link-jacobian-columns}처럼 이 두 열을 손끝에 붙은 속도 화살표로 그리면, 행렬의 각 열이 왜 특정 관절 하나의 순간 기여를 뜻하는지 바로 보인다.
+
+\input{figures/fig_two_link_jacobian_columns}
+
+이제 같은 생각을 아주 작은 변화 대신 1초 동안의 변화, 즉 속도로 읽어 보자.
+이때 첫 번째 관절만 \(0.1~\mathrm{rad/s}\)로 움직이면 손끝 속도는 \([-0.1\ \ 0.1]^{\mathsf{T}}~\mathrm{m/s}\)이고, 두 번째 관절만 \(0.1~\mathrm{rad/s}\)로 움직이면 \([-0.1\ \ 0]^{\mathsf{T}}~\mathrm{m/s}\)이다.
+같은 \(0.1~\mathrm{rad/s}\)라도 어떤 관절을 움직이는지에 따라 손끝 방향이 달라진다는 뜻이다.
+
+\subsection{자코비안 2단계: 속도 관계}
+\label{sec:robotics-velocity-kinematics}
+
+작은 변화 식에서 \(\Delta t\)를 점점 작게 보내는 극한을 취하면, 즉 연쇄법칙을 적용하면 속도 관계가 된다.
+\begin{equation}
+  \dot{\bm{x}}
+  =
+  \bm{J}(\bm{q})\dot{\bm{q}}.
+  \label{eq:jacobian-velocity-foundation}
+\end{equation}
+이 식이 속도기구학(velocity kinematics)의 핵심이다.
+관절 속도 \(\dot{\bm{q}}\)를 넣으면 현재 자세에서 손끝 속도 \(\dot{\bm{x}}\)가 나온다.
+이때 \(\bm{J}\)의 단위도 의미가 있다.
+회전 관절만 있는 평면 팔에서 \(\dot{q}\)의 단위는 \(\mathrm{rad/s}\), \(\dot{x}\)의 단위는 \(\mathrm{m/s}\)이므로, 병진 자코비안의 성분은 대략 \(\mathrm{m/rad}\)처럼 읽을 수 있다.
+직선 관절이 섞이면 그 열의 단위는 \(\mathrm{m/m}\), 즉 축 방향을 나타내는 무차원 방향 벡터처럼 읽힌다.
+따라서 하나의 자코비안 안에서도 회전 관절 열과 직선 관절 열은 서로 다른 단위 감각을 가질 수 있다.
+이것이 뒤에서 \(\bm{J}^{\mathsf{T}}\bm{f}\)를 계산했을 때 어떤 성분은 토크가 되고, 어떤 성분은 선형 힘이 되는 이유이다.
+
+가속도까지 가면 한 항이 더 생긴다.
+여기서 \(\bm{x}\)는 먼저 고정 좌표계에서 본 손끝의 병진 위치로 읽자.
+속도 식 \(\dot{\bm{x}}=\bm{J}(\bm{q})\dot{\bm{q}}\)에서 \(\bm{J}(\bm{q})\)는 고정된 숫자표가 아니다.
+관절각 \(\bm{q}(t)\)가 움직이면 로봇 자세가 바뀌고, 그 자세에서의 자코비안 값도 함께 바뀐다.
+따라서 속도 식을 시간으로 한 번 더 미분할 때는 \(\bm{J}\)와 \(\dot{\bm{q}}\)의 곱을 미분한다고 읽어야 한다.
+\begin{equation}
+  \ddot{\bm{x}}
+  =
+  \bm{J}(\bm{q})\ddot{\bm{q}}
+  +
+  \dot{\bm{J}}(\bm{q},\dot{\bm{q}})\dot{\bm{q}}.
+  \label{eq:jacobian-acceleration-foundation}
+\end{equation}
+첫 항은 관절 가속도가 손끝 가속도로 바뀌는 효과이고, 둘째 항은 로봇 자세가 움직이면서 자코비안 자체도 변하기 때문에 생기는 효과이다.
+짧게 쓰면
+\[
+  \dot{\bm{J}}
+  =
+  \frac{\dd}{\dd t}\bm{J}(\bm{q}(t))
+\]
+라는 뜻이다.
+즉 \(\dot{\bm{J}}\)는 독립적으로 새로 생긴 행렬이 아니라, 관절 속도 \(\dot{\bm{q}}\) 때문에 현재 자세가 지나가며 자코비안 표가 변하는 속도이다.
+회전 관절 열만 놓고 단위를 확인하면 \(\bm{J}\ddot{\bm{q}}\)는 \((\mathrm{m/rad})(\mathrm{rad/s^2})=\mathrm{m/s^2}\), \(\dot{\bm{J}}\dot{\bm{q}}\)는 \((\mathrm{m/(rad\,s)})(\mathrm{rad/s})=\mathrm{m/s^2}\)로 둘 다 손끝 가속도 단위가 된다.
+이 항의 크기와 방향은 현재 자세, 관절 속도, 좌표계와 양의 관절 방향 약속에 따라 달라지므로 항상 목표 쪽이나 반대쪽으로 작용하는 항으로 외우면 안 된다.
+처음 읽을 때는 이 식을 외우기보다, 속도 관계보다 가속도 관계가 한 단계 더 까다롭다는 사실만 붙잡아도 좋다.
+로봇이 빠르게 움직이고 그 구간에서 \(\bm{J}\)가 자세에 따라 많이 변할수록 \(\dot{\bm{J}}\dot{\bm{q}}\) 같은 항을 무시하기 어려워진다.
+
+3차원 로봇에서는 손끝의 선속도뿐 아니라 각속도도 중요하다.
+선속도와 각속도를 함께 묶은 6차원 속도를 트위스트(twist)라고 부르고, 힘과 모멘트를 함께 묶은 6차원 힘을 렌치(wrench)라고 부른다.
+이 절의 \(\bm{J}\)는 먼저 병진 위치를 다루는 자코비안 \(\bm{J}_v\)로 읽으면 된다.
+실제 6차원 자세 제어에서는 기하학적 자코비안 \(\bm{J}_g\), 트위스트 \(\bm{V}\), 렌치 \(\bm{w}\)를 같은 좌표계와 같은 기준점에서 표현해
+\[
+  \bm{V}=\bm{J}_g\dot{\bm{q}},
+  \qquad
+  \bm{\tau}=\bm{J}_g^{\mathsf{T}}\bm{w}
+\]
+처럼 확장한다.
+
+\subsection{특이점과 조작성: 왜 어떤 자세는 어렵게 느껴지는가}
+\label{sec:robotics-singularity-conditioning}
+
+자코비안은 현재 자세에서 가능한 손끝 속도 방향을 보여준다.
+그런데 어떤 자세에서는 자코비안의 열들이 서로 비슷한 방향을 가리키거나, 필요한 방향을 충분히 만들지 못한다.
+이때 로봇은 특정 방향으로 손끝을 움직이기 어려워진다.
+이런 자세를 특이점(singularity)에 가깝다고 말한다.
+
+2링크 팔을 거의 일직선으로 쭉 편 모습을 떠올려 보자.
+어깨와 팔꿈치를 조금 돌렸을 때 손끝이 움직일 수 있는 방향들이 서로 비슷해진다.
+그러면 어떤 방향의 손끝 속도를 만들기 위해 관절 속도를 매우 크게 요구하거나, 아예 만들기 어려운 방향이 생긴다.
+수학적으로는 자코비안의 랭크가 떨어지고, 가장 작은 특이값 \(\sigma_{\min}\)이 0에 가까워지며, 조건수 \(\kappa=\sigma_{\max}/\sigma_{\min}\)가 커지는 현상으로 나타난다.
+
+조작성(manipulability)은 현재 자세에서 손끝을 여러 방향으로 얼마나 쉽게 움직일 수 있는지를 나타내는 지표이다.
+값 하나만으로 모든 것을 판단할 수는 없지만, Lab03처럼 교육용 플롯을 볼 때는 조작성이 낮아지고 조건수가 커지는 구간을 특이점 근처의 신호로 읽을 수 있다.
+2링크 평면 팔에서는
+\begin{equation}
+  w
+  =
+  \sqrt{\det(\bm{J}\bm{J}^{\mathsf{T}})}
+  =
+  |l_1l_2\sin q_2|
+  \label{eq:two-link-manipulability}
+\end{equation}
+처럼 조작성을 읽을 수 있고, \(q_2=0\) 또는 \(\pi\) 근처에서 팔이 일직선에 가까워지면 \(w\)가 0에 가까워진다.
+감쇠 최소제곱(DLS)은 이런 구간에서 역기구학 계산이 너무 큰 관절 속도를 요구하지 않도록 완화하는 방법이다 \cite{buss2005sdls}.
+여기서 입력은 원하는 손끝 속도 \(\dot{\bm{x}}_d\)이고, 출력은 그 속도를 만들기 위한 관절 속도 \(\dot{\bm{q}}\)이다.
+대표적인 속도 IK 형태로 쓰면
+\begin{equation}
+  \dot{\bm{q}}
+  =
+  \bm{J}^{\mathsf{T}}
+  \left(\bm{J}\bm{J}^{\mathsf{T}}+\lambda^2\bm{I}\right)^{-1}
+  \dot{\bm{x}}_d
+  \label{eq:dls-velocity-ik}
+\end{equation}
+처럼 쓸 수 있다.
+이 식은 손끝 힘을 관절 effort로 옮기는 뒤 절의 \(\bm{J}^{\mathsf{T}}\bm{f}\)와 모양이 비슷하지만, 용도는 다르다.
+여기서는 원하는 손끝 속도 \(\dot{\bm{x}}_d\)를 관절 속도 \(\dot{\bm{q}}\)로 바꾸는 속도 IK 식으로 읽어야 한다.
+한 번에 외우려 하지 말고 오른쪽에서 왼쪽으로 읽으면 덜 어렵다.
+
+\begin{table}[!htbp]
+  \centering
+  \caption{DLS 속도 IK 식을 오른쪽에서 왼쪽으로 읽는 법}
+  \label{tab:dls-velocity-ik-reading}
+  \small
+  \renewcommand{\arraystretch}{1.12}
+  \begin{tabularx}{\linewidth}{@{}p{0.28\linewidth}X@{}}
+    \toprule
+    식의 조각 & 초보자용 읽기 \\
+    \midrule
+    \(\dot{\bm{x}}_d\) & 지금 만들고 싶은 손끝 속도이다 \\
+    \(\bm{J}\bm{J}^{\mathsf{T}}\) & 현재 자세에서 손끝 속도를 만들기 쉬운 방향과 어려운 방향을 담은 작업공간 쪽 행렬이다 \\
+    \(\lambda^2\bm{I}\) & 너무 얇아진 방향을 수치적으로 조금 두껍게 만들어 역계산이 폭주하지 않게 한다 \\
+    \((\bm{J}\bm{J}^{\mathsf{T}}+\lambda^2\bm{I})^{-1}\) & 원하는 손끝 속도 중 위험하게 증폭될 부분을 완화해서 읽는다 \\
+    \(\bm{J}^{\mathsf{T}}\) & 완화된 작업공간 속도 요구를 관절 속도 방향으로 되돌린다 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+여기서 \(\lambda\)는 물리 댐퍼가 아니라 수치 계산이 과하게 커지지 않도록 넣는 완화 파라미터이다.
+\(\bm{I}\)는 행렬 크기를 맞추기 위한 단위행렬이고, \(\lambda\)를 키우면 움직임은 더 보수적이지만 관절 속도 폭주는 덜해진다.
+특이값 관점에서는 순수 역계산이 작은 특이값 \(\sigma\) 방향에서 대략 \(1/\sigma\)처럼 커지는 반면, DLS는 그 방향의 이득을
+\begin{equation}
+  g_{\mathrm{DLS}}(\sigma)
+  =
+  \frac{\sigma}{\sigma^2+\lambda^2}
+  \label{eq:dls-singular-value-gain}
+\end{equation}
+처럼 바꾸어 분모를 \(\lambda^2\)로 받쳐 준다.
+예를 들어 \(\sigma=0.05\), \(\lambda=0.1\)이면 순수 역계산의 이득 \(1/\sigma=20\) 대신 DLS 이득은 \(0.05/(0.05^2+0.1^2)=4\)가 된다.
+관절 속도 요구는 줄어들지만, 실제 \(\bm{J}\dot{\bm{q}}\)가 \(\dot{\bm{x}}_d\)를 완전히 따라가지 못하는 잔차가 커질 수 있다.
+즉 DLS는 정확도를 조금 양보하고 관절 속도 폭주를 줄이는 타협이다.
+현재 본문의 2차원 병진 속도 IK에서는 이 설명으로 충분하지만, 6차원 트위스트까지 확장할 때는 선속도와 각속도의 단위, 좌표계, 기준점, 스케일링을 함께 맞추어야 한다.
+
+\paragraph{체크포인트.}
+여기까지의 \(\bm{J}\)는 현재 자세에서의 국소 미분이다.
+자코비안 열은 해당 관절만 단위 속도로 움직일 때의 손끝 순간속도로 읽고, \(\bm{J}\dot{\bm{q}}\)는 관절 속도를 손끝 속도로 옮기는 속도 번역으로 읽는다.
+DLS 식 전체는 원하는 손끝 속도를 관절 속도로 바꾸는 속도 IK 완화식이다.
+다음 절의 \(\bm{J}^{\mathsf{T}}\bm{f}\)는 모양은 비슷하지만 일률 또는 가상일에서 나온 힘--관절 effort 관계이므로, DLS의 속도 역계산과 섞어 읽지 않는다.
+또 이 힘 관계를 쓸 때는 \(\bm{f}\), \(\dot{\bm{x}}\), \(\bm{J}\)의 좌표계와 힘의 부호 약속을 함께 확인해야 한다.
+
+\subsection{힘과 토크: 왜 \texorpdfstring{\(\bm{J}^{\mathsf{T}}\)}{J transpose}가 나오는가}
+\label{sec:robotics-force-torque-jacobian-transpose}
+
+자코비안은 속도만 연결하지 않는다.
+손끝 힘과 관절 effort도 연결한다.
+이때는 자코비안 자체가 아니라 전치 \(\bm{J}^{\mathsf{T}}\)가 등장한다 \cite{lynchpark2017modernrobotics}.
+
+출발점은 일률(power)이다.
+여기서 \(\bm{f}\)는 선택한 작업공간 방향에서 로봇이 만들려고 하는 힘 명령으로 두자.
+손끝에서 힘 \(\bm{f}\)가 손끝 속도 \(\dot{\bm{x}}\)와 같은 방향으로 작용하면 순간 일률은
+\begin{equation}
+  P_x
+  =
+  \bm{f}^{\mathsf{T}}\dot{\bm{x}}
+\end{equation}
+이다.
+관절 쪽에서 일반화 관절 effort \(\bm{\tau}\)가 관절 속도 \(\dot{\bm{q}}\)에 대해 하는 일률은
+\begin{equation}
+  P_q
+  =
+  \bm{\tau}^{\mathsf{T}}\dot{\bm{q}}
+\end{equation}
+이다.
+마찰이나 손실을 잠시 빼고 같은 순간의 힘 전달만 보면, 손끝에서 본 일률과 관절에서 본 일률은 같은 물리적 일을 다른 좌표로 쓴 것이다.
+따라서
+\begin{equation}
+  \bm{f}^{\mathsf{T}}\dot{\bm{x}}
+  =
+  \bm{\tau}^{\mathsf{T}}\dot{\bm{q}}
+\end{equation}
+라고 둔다.
+
+여기에 속도 관계 \(\dot{\bm{x}}=\bm{J}\dot{\bm{q}}\)를 넣으면
+\begin{equation}
+  \bm{f}^{\mathsf{T}}\bm{J}\dot{\bm{q}}
+  =
+  \bm{\tau}^{\mathsf{T}}\dot{\bm{q}}
+\end{equation}
+이다.
+왼쪽은 행렬 전치 규칙으로
+\[
+  \bm{f}^{\mathsf{T}}\bm{J}\dot{\bm{q}}
+  =
+  (\bm{J}^{\mathsf{T}}\bm{f})^{\mathsf{T}}\dot{\bm{q}}
+\]
+처럼 쓸 수 있다.
+이 관계가 어떤 관절 속도 \(\dot{\bm{q}}\)에 대해서도 맞으려면
+\begin{equation}
+  \bm{\tau}
+  =
+  \bm{J}(\bm{q})^{\mathsf{T}}\bm{f}
+  \label{eq:jacobian-transpose-foundation}
+\end{equation}
+가 된다.
+같은 이야기는 아주 작은 가상 변위로도 읽을 수 있다.
+\(\delta\bm{x}=\bm{J}\delta\bm{q}\)이면
+\[
+  \bm{f}^{\mathsf{T}}\delta\bm{x}
+  =
+  (\bm{J}^{\mathsf{T}}\bm{f})^{\mathsf{T}}\delta\bm{q}
+\]
+가 되므로, \(\bm{J}^{\mathsf{T}}\bm{f}\)는 작업공간에서 한 일을 관절공간의 일로 똑같이 읽게 해 주는 일반화 관절 effort이다.
+
+이 식의 의미는 손끝 힘을 만들기 위해 각 관절이 얼마만큼의 일반화 effort를 나눠 맡아야 하는지를 계산한다는 것이다.
+회전 관절에서는 \(\tau_i\)가 토크이고, 직선 관절에서는 해당 축 방향 힘으로 읽는다.
+좀 더 단위로 읽어 보면 다음과 같다.
+회전 관절의 자코비안 열은 손끝까지의 순간 팔길이, 즉 모멘트 암(moment arm)을 담고 있어서 대략 \(\mathrm{m/rad}\)로 읽힌다.
+여기에 손끝 힘 \(\mathrm{N}\)을 곱하면 \(\mathrm{N\,m/rad}\)가 되고, 라디안을 각도 표식으로 남겨 두면 결국 회전축에 필요한 토크 \(\mathrm{N\,m}\)로 읽는다.
+직선 관절의 자코비안 열은 축 방향으로 1 m 밀었을 때 손끝이 어느 방향으로 1 m 움직이는지를 나타내므로 \(\mathrm{m/m}\)이다.
+여기에 힘 \(\mathrm{N}\)을 곱하면 그 축을 따라 필요한 선형 힘 \(\mathrm{N}\)이 된다.
+\begin{equation}
+  \begin{aligned}
+    \text{회전 관절:}\quad
+    &\tau_i
+    =
+    \bm{j}_i^{\mathsf{T}}\bm{f}
+    \sim
+    (\mathrm{m/rad})\cdot\mathrm{N}
+    \rightarrow
+    \mathrm{N\,m},
+    \\
+    \text{직선 관절:}\quad
+    &\tau_i
+    =
+    \bm{j}_i^{\mathsf{T}}\bm{f}
+    \sim
+    (\mathrm{m/m})\cdot\mathrm{N}
+    \rightarrow
+    \mathrm{N}.
+  \end{aligned}
+  \label{eq:joint-effort-unit-check}
+\end{equation}
+예를 들어 손끝에 수직 방향 \(10~\mathrm{N}\)의 힘을 만들고, 어떤 회전 관절의 모멘트 암이 \(0.4~\mathrm{m}\)라면 그 관절은 대략 \(4~\mathrm{N\,m}\)의 토크를 맡는다.
+반대로 직선 관절 축이 힘 방향과 정확히 같다면 같은 \(10~\mathrm{N}\)은 그대로 \(10~\mathrm{N}\)의 축 방향 힘으로 읽힌다.
+가장 단순한 1차원 직선 관절로 검산하면 더 쉽다.
+슬라이더 축을 \(x\) 방향으로 잡고 스칼라 좌표를 \(x=q\)로 두면 \(\bm{J}=[1]\), \(\dot{x}=\dot{q}\), \(\tau=\bm{J}^{\mathsf{T}}f=f\)가 된다.
+따라서 이때의 \(\tau\)는 토크가 아니라 \(q\)와 짝을 이루는 축 방향 선형 힘이다.
+3차원 힘으로 쓰면 \(+x\) 방향 슬라이더의 자코비안 열은 \(\bm{j}=[1\ 0\ 0]^{\mathsf{T}}\)이고,
+\[
+  \tau
+  =
+  \bm{j}^{\mathsf{T}}\bm{f}
+  =
+  f_x
+\]
+이다.
+즉 축에 수직인 힘 성분은 사라지는 것이 아니라, 그 이상적인 슬라이더 자유도에 일을 하지 않기 때문에 actuator의 일반화 effort로 투영되지 않는다.
+단, \(\bm{f}\), \(\dot{\bm{x}}\), \(\bm{J}\)는 같은 좌표계에서 표현되어야 한다.
+손끝 좌표계에서 측정한 힘을 월드 좌표계 자코비안에 바로 넣으면 부호와 방향이 틀어질 수 있다.
+또 환경이 로봇에 가하는 외력 \(\bm{f}_{\mathrm{ext}}\)을 그대로 쓰는 문맥에서는 부호가 달라진다.
+정적 평형을 단순히 쓰면 \(\bm{\tau}_{\mathrm{cmd}}+\bm{J}^{\mathsf{T}}\bm{f}_{\mathrm{ext}}\approx\bm{0}\)처럼 읽을 수 있다.
+따라서 \(\bm{J}^{\mathsf{T}}\bm{f}\)를 볼 때는 이 \(\bm{f}\)가 로봇이 만들려는 힘인지, 환경이 로봇에 가하는 힘인지 먼저 확인해야 한다.
+또 식 \eqref{eq:jacobian-transpose-foundation}은 이상적인 순간 관계이지, 실제 구동기가 그 힘을 항상 정확히 만들 수 있다는 보증은 아니다.
+구동기 effort 제한, 마찰, 제어 대역폭, 특이점, 모델 오차가 모두 영향을 준다.
+
+\(\bm{J}\)의 열을 \(\bm{j}_1,\bm{j}_2,\ldots,\bm{j}_n\)이라고 쓰면 이 식은
+\[
+  \tau_i
+  =
+  \bm{j}_i^{\mathsf{T}}\bm{f}
+\]
+라고 읽을 수 있다.
+즉 \(i\)번째 관절 effort는 \(i\)번째 관절이 만들 수 있는 손끝 속도 방향과 원하는 손끝 힘이 얼마나 같은 방향을 보는지에 의해 정해진다.
+회전 관절이면 이 effort가 토크이고, 직선 관절이면 축 방향 힘이다.
+
+\subsection{경로와 궤적: 어디로 갈지와 언제 갈지}
+\label{sec:robotics-path-trajectory}
+
+로봇이 움직인다는 말도 두 단계로 나누어 읽어야 한다.
+첫째는 어디를 지나갈 것인가이고, 둘째는 그 길을 시간에 따라 얼마나 빠르게 지나갈 것인가이다.
+Modern Robotics에서는 이 둘을 경로(path)와 궤적(trajectory)으로 구분한다 \cite{lynchpark2017modernrobotics}.
+지도 위에 그은 선이 경로라면, 그 선을 몇 초에 어느 지점까지 갈지 적어 둔 시간표가 궤적이다.
+같은 직선 \(10~\mathrm{cm}\)를 움직이더라도 5초에 걸쳐 천천히 가는 경우와 1초 안에 가는 경우는 같은 경로를 지난다.
+하지만 속도와 가속도는 다르고, 접촉 직전에 빠르게 접근하면 같은 강성에서도 힘 피크와 진동이 더 크게 보일 수 있다.
+
+경로는 시간표가 빠진 기하학적 길이다.
+보통 \(s\in[0,1]\)이라는 경로 파라미터를 두고
+\begin{equation}
+  \bm{q}=\bm{q}(s)
+  \quad \text{또는} \quad
+  \bm{x}=\bm{x}(s)
+\end{equation}
+처럼 쓴다.
+\(s=0\)이면 시작점, \(s=1\)이면 끝점이다.
+이때는 아직 몇 초에 어디에 있을지가 정해지지 않았다.
+
+궤적은 경로에 시간을 붙인 것이다.
+시간 스케일링(time scaling) \(s(t)\)를 정하면
+\begin{equation}
+  \bm{q}(t)=\bm{q}(s(t))
+  \label{eq:trajectory-time-scaling-foundation}
+\end{equation}
+이 된다.
+즉 같은 경로라도 \(s(t)\)를 천천히 바꾸면 느린 궤적이 되고, 빠르게 바꾸면 빠른 궤적이 된다.
+
+속도와 가속도는 연쇄법칙으로 연결된다.
+\begin{align}
+  \dot{\bm{q}}(t)
+  &=
+  \frac{\dd \bm{q}}{\dd s}\dot{s}(t),
+  \\
+  \ddot{\bm{q}}(t)
+  &=
+  \frac{\dd \bm{q}}{\dd s}\ddot{s}(t)
+  +
+  \frac{\dd^2 \bm{q}}{\dd s^2}\dot{s}(t)^2.
+\end{align}
+여기서 초보자가 가장 자주 놓치는 지점은 \(\bm{q}(s)\)나 \(\bm{x}(s)\)가 부드러워 보여도, 시간표 \(s(t)\)를 급하게 만들면 실제 속도와 가속도 요구가 커진다는 점이다.
+가장 단순한 예로 손끝이 직선으로 \(10~\mathrm{cm}\) 움직인다고 하자.
+\begin{equation}
+  \bm{x}(s)
+  =
+  \bm{x}_0+s\Delta\bm{x},
+  \qquad
+  \|\Delta\bm{x}\|=0.10~\mathrm{m},
+  \qquad
+  0\le s\le 1.
+  \label{eq:straight-path-time-scaling-checkpoint}
+\end{equation}
+이 식은 어디를 지나가는지만 정한 경로이다.
+시간표를 붙이면 \(\bm{x}(t)=\bm{x}(s(t))\)가 되고,
+\begin{equation}
+  \dot{\bm{x}}
+  =
+  \Delta\bm{x}\dot{s},
+  \qquad
+  \ddot{\bm{x}}
+  =
+  \Delta\bm{x}\ddot{s},
+  \qquad
+  \dddot{\bm{x}}
+  =
+  \Delta\bm{x}\dddot{s}
+  \label{eq:straight-path-time-derivatives}
+\end{equation}
+가 된다.
+경로가 직선이라 \(\dd^2\bm{x}/\dd s^2=\bm{0}\)인 특별히 쉬운 경우에도, 시간표의 \(\dot{s}\), \(\ddot{s}\), \(\dddot{s}\)가 그대로 실제 속도, 가속도, 저크 요구로 들어온다.
+
+같은 모양의 시간 스케일링을 단지 전체 시간 \(T\) 안에 압축한다고 생각해 보자.
+즉 \(s(t)=\hat{s}(t/T)\)라 두면
+\[
+  \dot{s}\propto \frac{1}{T},
+  \qquad
+  \ddot{s}\propto \frac{1}{T^2},
+  \qquad
+  \dddot{s}\propto \frac{1}{T^3}
+\]
+처럼 커진다.
+따라서 같은 \(10~\mathrm{cm}\) 경로라도 \(5~\mathrm{s}\)짜리 움직임을 \(1~\mathrm{s}\)로 압축하면, 같은 형태의 시간표에서는 대표 속도 요구가 약 \(5\)배, 가속도 요구가 약 \(25\)배, 저크 요구가 약 \(125\)배까지 커질 수 있다.
+이 숫자는 특정 로봇의 정확한 힘을 예측하기 위한 공식이라기보다, 왜 같은 경로가 전혀 다른 effort와 접촉감을 만들 수 있는지 보여 주는 계산 체크포인트이다.
+
+\begin{table}[!htbp]
+  \centering
+  \caption{같은 경로를 다른 시간표로 움직일 때 먼저 보는 차이}
+  \label{tab:same-path-different-timing}
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \renewcommand{\arraystretch}{1.12}
+  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.20\linewidth}>{\raggedright\arraybackslash}p{0.30\linewidth}>{\raggedright\arraybackslash}X@{}}
+    \toprule
+    비교 & 같은 점 & 달라지는 점 \\
+    \midrule
+    느린 \(5~\mathrm{s}\) 이동 & \(\|\Delta\bm{x}\|=0.10~\mathrm{m}\)인 같은 직선 경로 & 대표 속도, 가속도, 저크 요구가 작아 접촉 직전 과도응답과 effort 피크가 완만해지기 쉽다 \\
+    빠른 \(1~\mathrm{s}\) 이동 & 시작점과 끝점, 지나가는 공간 길은 같다 & 시간표가 압축되어 속도와 가속도 요구가 커지고, 벽에 접근할 때 감쇠력과 effort 피크가 커질 수 있다 \\
+    접촉 실험에서의 질문 & 경로만 보면 둘 다 같은 목표로 간다 & 접촉 직전 속도, 가속도, 저크가 벽 힘, 튕김, 목표 후퇴, actuator effort를 어떻게 바꾸는지 함께 봐야 한다 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+따라서 궤적을 설계할 때는 위치만 부드러우면 끝나는 것이 아니라, 속도와 가속도도 구동기가 감당할 수 있는지 확인해야 한다.
+접촉 작업에서는 더 조심해야 한다.
+벽에 닿기 직전 속도와 가속도가 크면, 같은 강성이라도 접촉 순간 힘과 진동이 크게 나타날 수 있다.
+
+\subsection{Trapezoidal, S-curve, 그리고 jerk}
+\label{sec:robotics-trajectory-profiles}
+
+가장 흔한 점대점(point-to-point) 궤적 중 하나는 사다리꼴 속도 프로파일(trapezoidal velocity profile)이다.
+속도 그래프를 그리면 처음에는 일정한 가속도로 속도가 증가하고, 중간에는 일정한 속도로 움직이며, 마지막에는 일정한 감속도로 멈춘다.
+그래서 속도 그래프가 사다리꼴처럼 보인다.
+여기서 꼭 붙잡아야 할 직관은 속도 그래프 아래 면적이 이동거리라는 점이다.
+예를 들어 \(L=0.10~\mathrm{m}\)를 움직이고, 최고 속도 \(v_{\max}=0.05~\mathrm{m/s}\), 최대 가속도 \(a_{\max}=0.10~\mathrm{m/s^2}\)로 제한한다고 하자.
+가속에 걸리는 시간은
+\begin{equation}
+  t_{\mathrm{acc}}
+  =
+  \frac{v_{\max}}{a_{\max}}
+  =
+  \frac{0.05}{0.10}
+  =
+  0.5~\mathrm{s}
+  \label{eq:trapezoid-accel-time}
+\end{equation}
+이고, 이때 가속 구간에서 이동한 거리는
+\begin{equation}
+  d_{\mathrm{acc}}
+  =
+  \frac{1}{2}a_{\max}t_{\mathrm{acc}}^2
+  =
+  \frac{1}{2}\cdot0.10\cdot0.5^2
+  =
+  0.0125~\mathrm{m}
+  \label{eq:trapezoid-accel-distance}
+\end{equation}
+이다.
+가속과 감속 구간을 합쳐도 \(0.025~\mathrm{m}\)만 쓰므로, 남은 \(0.075~\mathrm{m}\)는 최고 속도로 움직이는 등속 구간이 된다.
+따라서
+\begin{equation}
+  t_{\mathrm{flat}}
+  =
+  \frac{L-2d_{\mathrm{acc}}}{v_{\max}}
+  =
+  \frac{0.10-2\cdot0.0125}{0.05}
+  =
+  1.5~\mathrm{s},
+  \qquad
+  T
+  =
+  2t_{\mathrm{acc}}+t_{\mathrm{flat}}
+  =
+  2.5~\mathrm{s}.
+  \label{eq:trapezoid-total-time}
+\end{equation}
+이 예제는 사다리꼴 속도 프로파일이 단순히 예쁜 그래프 이름이 아니라, 속도 그래프의 면적으로 이동거리를 맞추는 계산이라는 점을 보여 준다.
+만약 \(L<2d_{\mathrm{acc}}\)이면 최고 속도에 도달하기 전에 감속해야 하므로, 속도 그래프는 사다리꼴이 아니라 삼각형(triangular profile)이 된다.
+
+이 방법은 이해하기 쉽고 구현도 단순하다.
+하지만 가속도는 구간 경계에서 갑자기 바뀐다.
+저크는 속도가 얼마나 빠른지가 아니라, 가속도가 얼마나 갑자기 바뀌는지를 보는 값이다.
+그래서 같은 최고 속도에 도달하더라도 가속도를 단번에 켜면 저크가 크고, 가속도를 서서히 올리면 저크가 작다.
+이상적인 사다리꼴 속도 프로파일에서는 가속도가 불연속으로 점프하므로, 저크는 전환 순간에 임펄스처럼 나타난다.
+실제 로봇에서는 필터, 모터 대역폭, 제어 주기 때문에 무한대가 되지는 않지만, 여전히 큰 저크로 완화되어 진동과 effort 피크를 만들 수 있다.
+강체 하나를 아주 천천히 움직일 때는 큰 문제가 아닐 수 있지만, 유연한 구조물, 무거운 부하, 빠른 산업용 로봇, 접촉 직전의 로봇에서는 이런 급격한 변화가 진동과 effort 피크를 만들 수 있다.
+
+S-curve 궤적은 이 문제를 줄이기 위해 가속도 자체도 부드럽게 바꾸려는 방식이다.
+전형적인 S-curve는 저크의 크기를 제한하여 가속도가 서서히 올라가고, 필요하면 일정 가속 구간을 지나고, 다시 서서히 내려가게 만든다.
+간단히 첫 구간만 보면, 최대 저크를 \(j_{\max}=0.4~\mathrm{m/s^3}\)로 제한하고 \(a_{\max}=0.10~\mathrm{m/s^2}\)까지 가속도를 올리고 싶을 때 걸리는 시간은
+\begin{equation}
+  t_j
+  =
+  \frac{a_{\max}}{j_{\max}}
+  =
+  \frac{0.10}{0.4}
+  =
+  0.25~\mathrm{s}
+  \label{eq:s-curve-jerk-ramp-time}
+\end{equation}
+이다.
+이 \(0.25~\mathrm{s}\) 동안 가속도는 갑자기 \(0.10~\mathrm{m/s^2}\)로 튀는 대신 \(0\)에서 \(0.10~\mathrm{m/s^2}\)까지 선형으로 올라간다.
+그 구간에서 속도가 늘어나는 양은 가속도-시간 그래프의 삼각형 면적이므로
+\begin{equation}
+  \Delta v_j
+  =
+  \frac{1}{2}j_{\max}t_j^2
+  =
+  \frac{1}{2}\cdot0.4\cdot0.25^2
+  =
+  0.0125~\mathrm{m/s}.
+  \label{eq:s-curve-jerk-ramp-dv}
+\end{equation}
+이고, 같은 구간에서 위치가 늘어나는 양은
+\begin{equation}
+  \Delta x_j
+  =
+  \frac{1}{6}j_{\max}t_j^3
+  =
+  \frac{1}{6}\cdot0.4\cdot0.25^3
+  \approx
+  0.00104~\mathrm{m}
+  \label{eq:s-curve-jerk-ramp-dx}
+\end{equation}
+이다.
+이 작은 계산은 전체 S-curve를 다 설계했다는 뜻이 아니라, S-curve가 왜 더 부드럽게 느껴지는지를 보여 주는 첫 단추이다.
+Modern Robotics의 궤적 생성 장도 다항식 시간 스케일링, 사다리꼴, S-curve 같은 시간 스케일링을 경로를 궤적으로 바꾸는 방법으로 소개한다 \cite{lynchpark2017modernrobotics}.
+최근에는 여러 자유도에 대해 속도, 가속도, 저크 제한을 만족시키며 온라인으로 궤적을 생성하는 방법도 활발히 쓰이며, Ruckig는 그런 jerk-limited online trajectory generation의 대표적인 예로 소개된다 \cite{berscheid2021ruckig}.
+
+\paragraph{프로파일 선택 체크포인트.}
+처음 고를 때는 사다리꼴을 기본값으로 두고, 속도와 가속도 제한만으로 충분한지 먼저 확인하면 된다.
+전환 순간의 진동, 소음, 접촉 충격, 무거운 부하가 문제가 되면 그때 저크를 제한하거나 더 완만하게 만드는 S-curve 계열 프로파일을 고려한다.
+다만 S-curve라는 이름이 항상 모든 속도, 가속도, 저크 제한을 엄밀히 만족하는 온라인 생성기라는 뜻은 아니다.
+교육용 실험에서는 S-curve-shaped smooth polynomial target을 비교 신호로 쓰기도 하므로, 로그의 jerk나 effort는 같은 시뮬레이터와 컨트롤러 안에서 읽는 진단 신호이지 실제 접촉력이나 하드웨어 성능 검증값은 아니다.
+
+다음 그림에서는 먼저 같은 경로가 유지되는지 보고, 그다음 속도와 가속도 모양이 어떻게 달라지는지 비교하면 된다.
+읽는 순서는 단순하다.
+먼저 속도 그래프의 면적이 이동거리라는 점을 확인하고, 다음으로 가속도 그래프가 계단처럼 끊기는지, 마지막으로 저크가 큰 전환점을 갖는지 본다.
+
+\input{figures/fig_path_trajectory_profiles}
+
+\begin{table}[!htbp]
+  \centering
+  \caption{경로와 궤적을 처음 구분할 때 보는 기준}
+  \label{tab:path-trajectory-profile}
+  \small
+  \renewcommand{\arraystretch}{1.12}
+  \begin{tabularx}{\linewidth}{@{}p{0.18\linewidth}p{0.35\linewidth}X@{}}
+    \toprule
+    이름 & 뜻 & 플롯에서 보는 것 \\
+    \midrule
+    경로(path) & 시간표가 없는 기하학적 길 & 손끝이나 관절이 어느 점들을 지나가는가 \\
+    궤적(trajectory) & 경로에 시간 스케일링을 붙인 것 & 위치, 속도, 가속도가 시간에 따라 어떻게 변하는가 \\
+    사다리꼴 속도 & 가속--등속--감속 구간을 갖는 단순 프로파일 & 속도는 사다리꼴, 가속도는 계단처럼 바뀜 \\
+    S-curve & 저크를 제한해 가속도를 부드럽게 바꾸는 프로파일 & 가속도가 갑자기 튀지 않고 완만히 변함 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+여기서 중요한 것은 사다리꼴이 나쁘고 S-curve가 항상 좋다는 식의 단순한 결론이 아니다.
+목표는 로봇과 작업에 맞는 부드러움, 속도, 제한 조건의 균형을 잡는 것이다.
+실험실에서는 먼저 단순한 궤적으로 시작해도 된다.
+다만 속도, 가속도, 저크가 접촉 힘과 진동에 영향을 줄 수 있다는 감각을 갖고 있어야 한다.
+
+\subsection{다관절 제어와 접촉으로 가는 길}
+\label{sec:robotics-multijoint-contact-bridge}
+
+이제 1차원 질량--스프링--댐퍼 직관이 왜 바로 로봇 끝단으로 옮겨지지 않는지 보인다.
+1차원에서는 위치 \(x\), 속도 \(\dot{x}\), 힘 \(f\)가 같은 축 위에 있었다.
+하지만 다관절 로봇에서는 관절 변수 \(\bm{q}\), 손끝 위치 \(\bm{x}\), 관절 속도 \(\dot{\bm{q}}\), 손끝 속도 \(\dot{\bm{x}}\), 관절 effort \(\bm{\tau}\) (회전 관절에서는 토크), 손끝 힘 \(\bm{f}\)가 서로 연결되어 있다.
+그 연결의 중심에 정기구학과 자코비안이 있다.
+
+자유공간에서는 주로 목표 궤적을 얼마나 잘 따라가는지가 중요하다.
+어느 경로를 택할지, 관절공간에서 보간할지 작업공간에서 보간할지, 속도와 가속도 제한을 어떻게 지킬지가 핵심 질문이 된다.
+하지만 접촉이 시작되면 질문이 바뀐다.
+로봇이 목표 위치를 끝까지 밀고 들어가야 하는가, 아니면 어느 정도 힘이 생기면 부드럽게 물러나야 하는가?
+벽 방향은 부드럽게 하고, 벽을 따라 움직이는 방향은 단단하게 유지할 수 있는가?
+이 질문은 단순한 위치 추종이 아니라 힘과 운동의 관계를 설계하는 문제이다.
+
+그래서 다음 장의 임피던스 제어가 필요하다.
+관절공간과 작업공간의 언어, 자코비안의 속도 변환, \(\bm{J}^{\mathsf{T}}\)의 힘--관절 effort 관계, 궤적의 속도/가속도/저크 감각을 알고 나면, 임피던스 제어는 갑자기 튀어나온 고급 제어가 아니라 자연스러운 다음 질문이 된다.
+흐름만 아주 짧게 쓰면 다음과 같다.
+\[
+  \text{손끝 오차}
+  \rightarrow
+  \text{가상 스프링-댐퍼 힘}
+  \rightarrow
+  \bm{J}^{\mathsf{T}}\text{를 통한 관절 effort}
+  \rightarrow
+  \text{접촉 중 힘과 운동}
+\]
+여기에 접근 속도, 가속도, 저크가 더해지면 접촉 순간의 튐과 구동기 부담 또는 관절 effort 피크가 달라진다.
+손끝에 어떤 가상 스프링과 댐퍼를 걸고, 그 힘-운동 관계를 실제 관절 명령과 플롯에서 어떻게 읽을 것인가?
+이것이 다음 장의 주제이다.

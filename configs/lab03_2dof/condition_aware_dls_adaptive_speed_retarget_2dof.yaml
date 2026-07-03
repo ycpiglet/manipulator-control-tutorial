@@ -1,0 +1,47 @@
+plant: two_link_arm
+model_path: models/lab03_2dof/two_link.xml
+mode: condition_aware_dls
+sim_time: 5.0
+dt: 0.002
+link_lengths: [0.6, 0.45]
+initial_q: [0.25, -0.75]
+target_xy: [1.049, 0.0]
+target_xy_waypoints:
+  - time: 0.0
+    position: [0.976, -0.067]
+  - time: 2.0
+    position: [1.049, 0.0]
+  - time: 4.2
+    position: [1.049, 0.0]
+torque_constant: 1.0
+plots: dls
+trajectory:
+  type: step
+  start: 1.0
+  end: 1.0
+  start_time: 0.0
+tracking_controller:
+  dls_gain: 4.2
+  dls_damping: 0.08
+  condition_aware_damping: true
+  condition_damping_threshold: 10.0
+  condition_damping_full: 40.0
+  max_dls_damping: 0.3
+  max_task_speed: 0.45
+  max_task_speed_schedule:
+    - time: 0.0
+      speed: 0.62
+    - time: 1.4
+      speed: 0.22
+    - time: 2.8
+      speed: 0.22
+    - time: 4.2
+      speed: 0.45
+  max_joint_speed: 2.2
+  max_joint_error: 0.28
+  kp: [85.0, 62.0]
+  kd: [9.5, 6.5]
+  torque_limit: [42.0, 32.0]
+viewer_guides:
+  target_path: true
+  condition_threshold: 18.0

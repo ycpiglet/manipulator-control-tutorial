@@ -1,0 +1,110 @@
+\begin{figure}[!htbp]
+  \centering
+  \resizebox{\linewidth}{!}{%
+  \begin{tikzpicture}[
+      axis/.style={-{Latex[length=1.6mm]}, draw=black!65, line width=0.45pt},
+      curve/.style={line width=0.95pt},
+      target/.style={densely dashed, draw=black!55, line width=0.45pt},
+      band/.style={densely dotted, draw=black!35, line width=0.4pt},
+      paneltitle/.style={font=\scriptsize\bfseries, align=center},
+      lab/.style={font=\scriptsize, align=center},
+      note/.style={draw=black!35, rounded corners=2pt, fill=black!3, align=center, font=\scriptsize, inner sep=4pt}
+    ]
+
+    \begin{scope}[shift={(0,3.0)}]
+      \draw[axis] (0,0) -- (3.35,0) node[right, lab] {$t$};
+      \draw[axis] (0,0) -- (0,2.25);
+      \draw[target] (0,1.25) -- (3.2,1.25);
+      \draw[band] (0,1.31) -- (3.2,1.31);
+      \draw[band] (0,1.19) -- (3.2,1.19);
+      \node[paneltitle] at (1.6,2.45) {$\zeta=0$\\무감쇠};
+    \end{scope}
+
+    \begin{scope}[shift={(4.0,3.0)}]
+      \draw[axis] (0,0) -- (3.35,0) node[right, lab] {$t$};
+      \draw[axis] (0,0) -- (0,2.25);
+      \draw[target] (0,1.25) -- (3.2,1.25);
+      \draw[band] (0,1.31) -- (3.2,1.31);
+      \draw[band] (0,1.19) -- (3.2,1.19);
+      \node[paneltitle] at (1.6,2.45) {$\zeta=0.2$\\부족감쇠};
+    \end{scope}
+
+    \begin{scope}[shift={(8.0,3.0)}]
+      \draw[axis] (0,0) -- (3.35,0) node[right, lab] {$t$};
+      \draw[axis] (0,0) -- (0,2.25);
+      \draw[target] (0,1.25) -- (3.2,1.25);
+      \draw[band] (0,1.31) -- (3.2,1.31);
+      \draw[band] (0,1.19) -- (3.2,1.19);
+      \node[paneltitle] at (1.6,2.45) {$\zeta=0.7$\\부족감쇠};
+    \end{scope}
+
+    \begin{scope}[shift={(2.0,0)}]
+      \draw[axis] (0,0) -- (3.35,0) node[right, lab] {$t$};
+      \draw[axis] (0,0) -- (0,2.25);
+      \draw[target] (0,1.25) -- (3.2,1.25);
+      \draw[band] (0,1.31) -- (3.2,1.31);
+      \draw[band] (0,1.19) -- (3.2,1.19);
+      \node[paneltitle] at (1.6,2.45) {$\zeta=1$\\임계감쇠};
+    \end{scope}
+
+    \begin{scope}[shift={(6.0,0)}]
+      \draw[axis] (0,0) -- (3.35,0) node[right, lab] {$t$};
+      \draw[axis] (0,0) -- (0,2.25);
+      \draw[target] (0,1.25) -- (3.2,1.25);
+      \draw[band] (0,1.31) -- (3.2,1.31);
+      \draw[band] (0,1.19) -- (3.2,1.19);
+      \node[paneltitle] at (1.6,2.45) {$\zeta=1.5$\\과감쇠 예};
+    \end{scope}
+
+    \begin{scope}[shift={(0,3.0)}]
+      \draw[curve, black!55] plot[smooth] coordinates {
+        (0,0) (0.35,0.45) (0.7,1.25) (1.05,1.95) (1.4,1.75)
+        (1.75,0.95) (2.1,0.25) (2.45,0.48) (2.8,1.28) (3.15,1.92)
+      };
+      \node[lab, text=black!60] at (1.62,0.58) {에너지 소산 없음\\정착하지 않음};
+    \end{scope}
+
+    \begin{scope}[shift={(4.0,3.0)}]
+      \draw[curve, red!70!black] plot[smooth] coordinates {
+        (0,0) (0.35,0.32) (0.7,0.95) (1.05,1.62) (1.35,1.86)
+        (1.7,1.62) (2.05,1.2) (2.45,1.05) (2.8,1.18) (3.15,1.28)
+      };
+      \draw[-{Latex[length=1.6mm]}, red!70!black, line width=0.7pt] (1.35,1.25) -- (1.35,1.86);
+      \node[lab, text=red!70!black] at (2.27,1.75) {큰 오버슈트};
+    \end{scope}
+
+    \begin{scope}[shift={(8.0,3.0)}]
+      \draw[curve, blue!70!black] plot[smooth] coordinates {
+        (0,0) (0.35,0.22) (0.75,0.67) (1.15,1.05) (1.55,1.25)
+        (1.95,1.31) (2.35,1.28) (2.75,1.25) (3.15,1.25)
+      };
+      \node[lab, text=blue!70!black] at (2.2,1.72) {작은 오버슈트\\빠른 정착 경향};
+    \end{scope}
+
+    \begin{scope}[shift={(2.0,0)}]
+      \draw[curve, green!45!black] plot[smooth] coordinates {
+        (0,0) (0.35,0.12) (0.75,0.38) (1.15,0.68) (1.55,0.93)
+        (1.95,1.1) (2.35,1.19) (2.75,1.23) (3.15,1.25)
+      };
+      \node[lab, text=green!45!black] at (2.2,0.65) {비진동 응답의\\경계};
+    \end{scope}
+
+    \begin{scope}[shift={(6.0,0)}]
+      \draw[curve, orange!80!black] plot[smooth] coordinates {
+        (0,0) (0.45,0.08) (0.9,0.22) (1.35,0.4) (1.8,0.58)
+        (2.25,0.76) (2.7,0.92) (3.15,1.04)
+      };
+      \node[lab, text=orange!80!black] at (2.15,0.35) {진동은 없지만\\느린 수렴};
+    \end{scope}
+
+    \node[lab, anchor=west] at (11.35,4.25) {목표값};
+    \draw[target] (10.85,4.25) -- (11.25,4.25);
+    \node[lab, anchor=west, text=black!55] at (11.35,3.9) {$\pm2\%$ 정착 범위};
+    \draw[band] (10.85,3.9) -- (11.25,3.9);
+
+    \node[note, align=left] at (10.2,1.25) {표준 2차 모델의\\정규화 단위계단 응답\\$m,k$ 고정, $b$ 변화};
+  \end{tikzpicture}%
+  }
+  \caption{감쇠비 $\zeta$가 달라질 때 표준 2차 질량-스프링-댐퍼 모델의 정규화된 단위계단 응답이 어떻게 달라지는지 보여주는 응답 아틀라스이다. 여기서는 $m$과 $k$를 고정하고 $b$를 바꾸어 $\zeta=b/(2\sqrt{mk})$가 달라지는 상황을 그렸다. 낮은 감쇠비는 오버슈트와 진동을 만들고, 임계감쇠는 비진동 응답의 경계이며, 과감쇠 응답은 이 예에서 더 느리게 수렴할 수 있다.}
+  \label{fig:damping-ratio-atlas}
+\end{figure}

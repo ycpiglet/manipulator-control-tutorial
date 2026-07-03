@@ -1,0 +1,40 @@
+model_path: models/lab01_msd/scene.xml
+sim_time: 120.0
+dt: 0.002
+mass: 1.0
+damping: 0.8
+stiffness: 30.0
+spring_reference: 0.0
+initial_position: 0.0
+initial_velocity: 0.0
+force_input:
+  type: step
+  magnitude: 0.0
+  start_time: 0.0
+interaction:
+  key_force: true
+  panel: true
+  live_tuning: true
+  force: 80.0
+  duration: 0.35
+  tuning_presets:
+    - label: Lightly damped
+      purpose: More oscillation after a pull.
+      values:
+        mass: 1.0
+        damping: 0.3
+        stiffness: 35.0
+    - label: Heavy damping
+      purpose: Faster decay with less overshoot.
+      values:
+        mass: 1.0
+        damping: 6.0
+        stiffness: 35.0
+    - label: Stiff spring
+      purpose: Higher restoring force and frequency.
+      values:
+        mass: 1.0
+        damping: 1.0
+        stiffness: 90.0
+viewer_guides:
+  enabled: true

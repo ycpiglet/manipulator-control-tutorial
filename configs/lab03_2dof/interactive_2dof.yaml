@@ -1,0 +1,55 @@
+plant: two_link_arm
+model_path: models/lab03_2dof/two_link.xml
+mode: task_space
+sim_time: 120.0
+dt: 0.002
+link_lengths: [0.6, 0.45]
+initial_q: [0.25, -1.05]
+target_xy: [0.62, 0.42]
+torque_constant: 1.0
+plots: task_disturbance
+trajectory:
+  type: minimum_jerk
+  start: 0.0
+  end: 1.0
+  duration: 2.6
+  start_time: 0.4
+tracking_controller:
+  task_kp: 95.0
+  task_kd: 18.0
+  joint_damping: 0.8
+  torque_limit: [50.0, 38.0]
+interaction:
+  panel: true
+  live_tuning: true
+  joint_disturbance: true
+  joint_disturbance_torque: [0.14, 0.16]
+  joint_disturbance_duration: 0.3
+  tuning_presets:
+    - label: Soft reach
+      purpose: Lower effort and slower hand motion.
+      values:
+        target_x: 0.52
+        target_y: 0.34
+        task_kp: 45.0
+        task_kd: 14.0
+        torque_limit: 35.0
+    - label: Default reach
+      purpose: Balanced tracking and torque.
+      values:
+        target_x: 0.62
+        target_y: 0.42
+        task_kp: 95.0
+        task_kd: 18.0
+        torque_limit: 50.0
+    - label: Near edge
+      purpose: Push toward poorer conditioning.
+      values:
+        target_x: 0.88
+        target_y: 0.18
+        task_kp: 120.0
+        task_kd: 22.0
+        torque_limit: 60.0
+viewer_guides:
+  enabled: true
+  condition_threshold: 20.0

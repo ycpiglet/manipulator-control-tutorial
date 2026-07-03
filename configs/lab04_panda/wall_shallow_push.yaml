@@ -1,0 +1,41 @@
+model_path: third_party/mujoco_menagerie/franka_emika_panda/scene.xml
+mode: impedance_wall
+sim_time: 5.0
+dt: 0.002
+home_q: [0.0, 0.0, 0.0, -1.57079, 0.0, 1.57079, -0.7853]
+finger_q: [0.04, 0.04]
+gripper_ctrl: 255.0
+torque_constant: 1.0
+controlled_joint_index: 1
+trajectory:
+  type: minimum_jerk
+  start: 0.0
+  end: 0.0
+  duration: 1.0
+  start_time: 0.0
+cartesian_target:
+  gain: 0.95
+  max_step: 0.055
+  max_joint_offset: 0.11
+  damped_least_squares: 0.08
+  waypoints:
+    - time: 0.0
+      position: [0.525, 0.0, 0.58]
+    - time: 0.7
+      position: [0.525, 0.0, 0.58]
+    - time: 1.8
+      position: [0.590, 0.0, 0.58]
+    - time: 4.7
+      position: [0.590, 0.0, 0.58]
+wall_target_offset_scale: 1.0
+wall_target_max_offset: 0.14
+virtual_wall:
+  wall_x: 0.57
+  stiffness: 320.0
+  damping: 16.0
+  cartesian_retreat_gain: 0.45
+  force_retreat_gain: 0.00008
+  max_cartesian_retreat: 0.018
+  damped_least_squares: 0.08
+viewer_guides:
+  enabled: true

@@ -1,0 +1,108 @@
+model_path: third_party/mujoco_menagerie/franka_emika_panda/scene.xml
+mode: impedance_wall
+sim_time: 120.0
+dt: 0.002
+home_q: [0.0, 0.0, 0.0, -1.57079, 0.0, 1.57079, -0.7853]
+finger_q: [0.04, 0.04]
+gripper_ctrl: 255.0
+torque_constant: 1.0
+controlled_joint_index: 1
+trajectory:
+  type: minimum_jerk
+  start: 0.0
+  end: 0.3
+  duration: 2.0
+  start_time: 0.5
+cartesian_target:
+  position: [0.61, 0.0, 0.58]
+  gain: 0.85
+  max_step: 0.05
+  max_joint_offset: 0.10
+  damped_least_squares: 0.08
+wall_target_offset_scale: 1.0
+wall_target_max_offset: 0.12
+virtual_wall:
+  wall_x: 0.57
+  stiffness: 260.0
+  damping: 12.0
+  cartesian_retreat_gain: 0.4
+  force_retreat_gain: 0.00008
+  max_cartesian_retreat: 0.015
+  damped_least_squares: 0.08
+interaction:
+  panel: true
+  target_nudge: true
+  target_step: 0.04
+  target_limit: 0.25
+  target_unit: m
+  target_event_name: target_x_nudge
+  target_left_label: Target X - away  A / Left
+  target_right_label: Target X + into wall  D / Right
+  target_description: 'Target X nudge step: 0.04 m, left moves away from the wall, right moves deeper into the wall.'
+  live_tuning: true
+  tuning_presets:
+    - label: Soft wall
+      purpose: Lower contact force and penetration risk.
+      values:
+        target_x: 0.59
+        target_y: 0.00
+        target_z: 0.59
+        cartesian_gain: 0.65
+        joint_target_offset: 0.00
+        wall_x: 0.58
+        wall_stiffness: 150.0
+        wall_damping: 8.0
+        wall_retreat_gain: 0.25
+    - label: Stiff wall
+      purpose: Stronger virtual contact response.
+      values:
+        target_x: 0.62
+        target_y: 0.00
+        target_z: 0.58
+        cartesian_gain: 0.90
+        joint_target_offset: 0.00
+        wall_x: 0.56
+        wall_stiffness: 520.0
+        wall_damping: 22.0
+        wall_retreat_gain: 0.70
+    - label: Close wall
+      purpose: Put target deeper into the wall.
+      required: true
+      values:
+        target_x: 0.64
+        target_y: 0.00
+        target_z: 0.57
+        cartesian_gain: 1.05
+        joint_target_offset: 0.08
+        wall_x: 0.53
+        wall_stiffness: 320.0
+        wall_damping: 14.0
+        wall_retreat_gain: 0.55
+    - label: Back away
+      purpose: Move the target before the wall so learners can observe contact release.
+      required: true
+      values:
+        target_x: 0.52
+        target_y: 0.00
+        target_z: 0.58
+        cartesian_gain: 0.85
+        joint_target_offset: 0.00
+        wall_x: 0.58
+        wall_stiffness: 260.0
+        wall_damping: 12.0
+        wall_retreat_gain: 0.40
+    - label: Re-enter wall
+      purpose: Push the target through the wall again after release to create a second contact episode.
+      required: true
+      values:
+        target_x: 0.65
+        target_y: 0.00
+        target_z: 0.57
+        cartesian_gain: 1.00
+        joint_target_offset: 0.06
+        wall_x: 0.56
+        wall_stiffness: 320.0
+        wall_damping: 14.0
+        wall_retreat_gain: 0.55
+viewer_guides:
+  enabled: true

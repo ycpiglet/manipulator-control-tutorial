@@ -1,0 +1,49 @@
+\begin{figure}[!htbp]
+  \centering
+  \small
+  \renewcommand{\arraystretch}{1.35}
+  \begin{tabularx}{\linewidth}{
+      >{\raggedright\arraybackslash}p{0.17\linewidth}
+      >{\raggedright\arraybackslash}p{0.18\linewidth}
+      >{\raggedright\arraybackslash}p{0.18\linewidth}
+      >{\raggedright\arraybackslash}p{0.21\linewidth}
+      >{\raggedright\arraybackslash}X}
+    \toprule
+    영역 & Effort & Flow & Power & Impedance \\
+    \midrule
+    전기 회로
+      & 전압 $v$
+      & 전류 $i$
+      & $p_e=vi$
+      & $Z_e(s)=V(s)/I(s)$ \\
+    병진 기계
+      & 힘 $f$
+      & 속도 $\dot{x}$
+      & $p_m=f\dot{x}$
+      & $Z_m(s)=F(s)/V_x(s)$ \\
+    단일 회전축
+      & 토크 $\tau$
+      & 각속도 $\dot{\theta}$
+      & $p_r=\tau\dot{\theta}$
+      & $Z_r(s)=\mathcal{L}\{\tau\}/\mathcal{L}\{\dot{\theta}\}$ \\
+    \bottomrule
+  \end{tabularx}
+
+  \vspace{2mm}
+  \begin{tikzpicture}[
+      box/.style={draw=black!40, rounded corners=2pt, fill=black!3, align=center, inner xsep=8pt, inner ysep=4pt, font=\small},
+      arr/.style={-{Latex[length=2mm]}, thick, draw=black!60}
+    ]
+    \node[box] (effort) {밀어붙이는 양\\effort};
+    \node[box, right=11mm of effort] (system) {시스템\\$Z=\mathrm{effort}/\mathrm{flow}$};
+    \node[box, right=11mm of system] (flow) {실제로 흐르는 양\\flow};
+    \node[box, below=6mm of system] (power) {에너지 전달률\\$p=\mathrm{effort}\times\mathrm{flow}$};
+    \draw[arr] (effort) -- (system);
+    \draw[arr] (system) -- (flow);
+    \draw[arr] (effort.south) |- (power.west);
+    \draw[arr] (flow.south) |- (power.east);
+  \end{tikzpicture}
+
+  \caption{임피던스는 선택한 포트 방향에서 effort 변수와 flow 변수의 비율이고, 두 변수의 곱은 시간영역에서 순간적인 에너지 전달률인 power가 된다. 전기 회로에서는 전압과 전류, 기계 시스템에서는 힘과 속도, 단일 회전축에서는 토크와 각속도가 같은 역할을 한다. 그림의 화살표는 설명을 위한 포트 방향이며, 항상 effort가 원인이고 flow가 결과라는 뜻은 아니다. 다자유도 로봇 관절에서는 스칼라 나눗셈보다 $p_q=\bm{\tau}^{\mathsf T}\dot{\bm q}$, $\mathcal{L}\{\bm{\tau}(t)\}=\bm{Z}_q(s)\bm{\Omega}_q(s)$처럼 벡터와 행렬 관계로 보는 편이 안전하다. 여기서 $\bm{\Omega}_q(s)=\mathcal{L}\{\dot{\bm{q}}(t)\}$이다.}
+  \label{fig:effort-flow-power}
+\end{figure}

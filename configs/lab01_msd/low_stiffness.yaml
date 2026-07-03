@@ -1,0 +1,14 @@
+model_path: models/lab01_msd/scene.xml
+sim_time: 6.0
+dt: 0.002
+mass: 1.0
+damping: 2.0
+stiffness: 15.0
+spring_reference: 0.0
+initial_position: 0.1
+initial_velocity: 0.0
+force_input:
+  type: step
+  magnitude: 0.0
+  start_time: 0.0
+

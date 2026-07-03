@@ -1,0 +1,56 @@
+model_path: third_party/mujoco_menagerie/franka_emika_panda/scene.xml
+mode: cartesian_reach
+sim_time: 120.0
+dt: 0.002
+home_q: [0.0, 0.0, 0.0, -1.57079, 0.0, 1.57079, -0.7853]
+finger_q: [0.04, 0.04]
+gripper_ctrl: 255.0
+torque_constant: 1.0
+controlled_joint_index: 3
+trajectory:
+  type: minimum_jerk
+  start: 0.0
+  end: 1.0
+  duration: 2.6
+  start_time: 0.4
+cartesian_target:
+  position: [0.60, 0.10, 0.59]
+  gain: 1.0
+  max_step: 0.06
+  max_joint_offset: 0.12
+  damped_least_squares: 0.08
+interaction:
+  panel: true
+  target_nudge: true
+  target_step: 0.025
+  target_limit: 0.10
+  target_unit: m
+  target_event_name: target_x_nudge
+  target_left_label: Target X -  A / Left
+  target_right_label: Target X +  D / Right
+  target_description: 'Target X nudge step: 0.025 m, limit: +/-0.10 m'
+  live_tuning: true
+  tuning_presets:
+    - label: Soft reach
+      purpose: Slow reach with lower effort.
+      values:
+        target_x: 0.57
+        target_y: 0.08
+        target_z: 0.60
+        cartesian_gain: 0.50
+    - label: Default reach
+      purpose: Balanced Cartesian tracking.
+      values:
+        target_x: 0.60
+        target_y: 0.10
+        target_z: 0.59
+        cartesian_gain: 1.00
+    - label: Far target
+      purpose: Larger hand move and error.
+      values:
+        target_x: 0.66
+        target_y: 0.16
+        target_z: 0.55
+        cartesian_gain: 1.20
+viewer_guides:
+  enabled: true

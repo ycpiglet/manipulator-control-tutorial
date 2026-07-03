@@ -1,0 +1,22 @@
+model_path: models/lab02_pid/scene.xml
+sim_time: 5.0
+dt: 0.002
+mass: 1.0
+damping: 1.0
+stiffness: 0.0
+initial_position: 0.0
+initial_velocity: 0.0
+target:
+  type: step
+  start: 0.0
+  end: 0.4
+  start_time: 0.2
+controller:
+  kp: 90.0
+  ki: 6.0
+  kd: 14.0
+  output_limit: 5.0
+  integral_min: -0.25
+  integral_max: 0.25
+  anti_windup: true
+

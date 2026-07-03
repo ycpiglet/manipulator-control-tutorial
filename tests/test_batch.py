@@ -1,0 +1,735 @@
+from __future__ import annotations
+
+import json
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
+from mclab import batch  # noqa: E402
+from mclab.config import load_config  # noqa: E402
+
+
+class BatchTests(unittest.TestCase):
+    def test_batch_sets_reference_valid_configs(self) -> None:
+        self.assertNotIn(batch.ALL_BATCH_NAME, batch.list_batch_sets())
+        self.assertIn(batch.ALL_BATCH_NAME, batch.list_batch_sets(include_all=True))
+        self.assertIn("lab01_msd_compare", batch.list_batch_sets())
+        self.assertIn("lab02_pid_compare", batch.list_batch_sets())
+        self.assertIn("lab03_2dof_compare", batch.list_batch_sets())
+        self.assertIn("lab04_wall_compare", batch.list_batch_sets())
+        self.assertIn("lab04_cartesian_compare", batch.list_batch_sets())
+        lab03_labels = {scenario.label for scenario in batch.BATCH_SETS["lab03_2dof_compare"]}
+        self.assertIn("condition_aware_dls", lab03_labels)
+        self.assertIn("condition_aware_early", lab03_labels)
+        self.assertIn("condition_aware_late", lab03_labels)
+        self.assertIn("condition_aware_inner_target", lab03_labels)
+        self.assertIn("condition_aware_edge_target", lab03_labels)
+        self.assertIn("condition_aware_upper_path", lab03_labels)
+        self.assertIn("condition_aware_lower_path", lab03_labels)
+        self.assertIn("condition_aware_shoulder_disturbance", lab03_labels)
+        self.assertIn("condition_aware_elbow_disturbance", lab03_labels)
+        self.assertIn("condition_aware_staggered_disturbance", lab03_labels)
+        self.assertIn("condition_aware_low_torque", lab03_labels)
+        self.assertIn("condition_aware_high_torque", lab03_labels)
+        self.assertIn("condition_aware_slow_command", lab03_labels)
+        self.assertIn("condition_aware_fast_command", lab03_labels)
+        self.assertIn("condition_aware_low_joint_speed", lab03_labels)
+        self.assertIn("condition_aware_high_joint_speed", lab03_labels)
+        self.assertIn("condition_aware_direct_retarget", lab03_labels)
+        self.assertIn("condition_aware_inward_retarget", lab03_labels)
+        self.assertIn("condition_aware_fixed_speed_retarget", lab03_labels)
+        self.assertIn("condition_aware_adaptive_speed_retarget", lab03_labels)
+        lab04_wall_labels = {scenario.label for scenario in batch.BATCH_SETS["lab04_wall_compare"]}
+        self.assertIn("low_damping_wall", lab04_wall_labels)
+        self.assertIn("high_damping_wall", lab04_wall_labels)
+        self.assertIn("near_wall", lab04_wall_labels)
+        self.assertIn("far_wall", lab04_wall_labels)
+        self.assertIn("low_retreat_wall", lab04_wall_labels)
+        self.assertIn("high_retreat_wall", lab04_wall_labels)
+        self.assertIn("slow_approach_wall", lab04_wall_labels)
+        self.assertIn("fast_approach_wall", lab04_wall_labels)
+        self.assertIn("shallow_push_wall", lab04_wall_labels)
+        self.assertIn("deep_push_wall", lab04_wall_labels)
+        self.assertIn("contact_cycle_wall", lab04_wall_labels)
+        lab04_guide = batch.BATCH_GUIDES["lab04_wall_compare"]
+        self.assertTrue(
+            any("force-to-retreat gain" in question for question in lab04_guide.questions)
+        )
+        self.assertTrue(any("approach speed" in question for question in lab04_guide.questions))
+        self.assertTrue(any("target push depth" in question for question in lab04_guide.questions))
+        self.assertTrue(any("repeated target crossings" in question for question in lab04_guide.questions))
+        self.assertIn("max_hand_x_speed", lab04_guide.metric_keys)
+        self.assertIn("max_target_wall_gap_cm", lab04_guide.metric_keys)
+        self.assertIn("first_target_wall_cross_time", lab04_guide.metric_keys)
+        self.assertIn("first_wall_release_time", lab04_guide.metric_keys)
+        self.assertIn("first_target_wall_return_time", lab04_guide.metric_keys)
+        self.assertIn("peak_wall_force_time", lab04_guide.metric_keys)
+        self.assertIn("peak_wall_damping_force_time", lab04_guide.metric_keys)
+        self.assertIn("target_wall_cross_episodes", lab04_guide.metric_keys)
+        self.assertIn("wall_contact_episodes", lab04_guide.metric_keys)
+        self.assertIn(
+            ("hand_x_speed_compare.png", "Panda Hand X Speed Comparison", "x speed [m/s]", "xdot_ee_0"),
+            lab04_guide.comparison_specs,
+        )
+        self.assertIn(
+            ("target_wall_gap_compare.png", "Target-Wall Gap Comparison", "gap [cm]", "target_wall_gap_cm"),
+            lab04_guide.comparison_specs,
+        )
+        self.assertIn(
+            (
+                "wall_key_moment_timing_compare.png",
+                "Wall Key Moment Timing Comparison",
+                "time [s]",
+                (
+                    "first_target_wall_cross_time",
+                    "first_wall_contact_time",
+                    "first_wall_release_time",
+                    "first_target_wall_return_time",
+                    "peak_wall_penetration_time",
+                    "peak_wall_force_time",
+                    "peak_wall_damping_force_time",
+                    "peak_hand_speed_time",
+                ),
+            ),
+            lab04_guide.summary_comparison_specs,
+        )
+        self.assertIn("max_dls_condition_scale", batch.BATCH_GUIDES["lab03_2dof_compare"].metric_keys)
+        self.assertIn("max_dls_task_speed", batch.BATCH_GUIDES["lab03_2dof_compare"].metric_keys)
+        self.assertIn("min_dls_task_speed_limit", batch.BATCH_GUIDES["lab03_2dof_compare"].metric_keys)
+        self.assertIn("max_dls_task_speed_limit", batch.BATCH_GUIDES["lab03_2dof_compare"].metric_keys)
+        lab03_guide = batch.BATCH_GUIDES["lab03_2dof_compare"]
+        self.assertTrue(
+            any("lower torque limit increase task error" in question for question in lab03_guide.questions)
+        )
+        self.assertTrue(
+            any("faster hand command" in question for question in lab03_guide.questions)
+        )
+        self.assertTrue(
+            any("joint-speed limit" in question for question in lab03_guide.questions)
+        )
+        self.assertTrue(
+            any("retargeting through an inner waypoint" in question for question in lab03_guide.questions)
+        )
+        self.assertTrue(
+            any("slowing the task-speed limit" in question for question in lab03_guide.questions)
+        )
+        self.assertTrue(
+            any("inner workspace to the edge" in question for question in lab03_guide.questions)
+        )
+        self.assertTrue(
+            any("elbow-up and elbow-down paths" in question for question in lab03_guide.questions)
+        )
+        self.assertTrue(
+            any("shoulder, elbow, or staggered disturbances" in question for question in lab03_guide.questions)
+        )
+        self.assertIn("max_abs_tau_disturbance", lab03_guide.metric_keys)
+        self.assertIn("max_task_error_during_disturbance", lab03_guide.metric_keys)
+        self.assertIn("disturbance_recovery_duration", lab03_guide.metric_keys)
+        self.assertIn(
+            ("dls_task_speed_compare.png", "DLS Task Speed Comparison", "task speed", "dls_task_speed"),
+            lab03_guide.comparison_specs,
+        )
+        self.assertIn(
+            (
+                "dls_task_speed_limit_compare.png",
+                "DLS Task Speed Limit Comparison",
+                "task speed limit",
+                "dls_task_speed_limit",
+            ),
+            lab03_guide.comparison_specs,
+        )
+        self.assertIn(
+            ("hand_y_compare.png", "End-Effector Y Comparison", "y [m]", "x_ee_1"),
+            lab03_guide.comparison_specs,
+        )
+        self.assertIn(
+            ("shoulder_torque_compare.png", "Shoulder Torque Comparison", "torque [N m]", "tau_cmd_0"),
+            lab03_guide.comparison_specs,
+        )
+        self.assertIn(
+            ("elbow_torque_compare.png", "Elbow Torque Comparison", "torque [N m]", "tau_cmd_1"),
+            lab03_guide.comparison_specs,
+        )
+        self.assertIn(
+            ("elbow_disturbance_compare.png", "Elbow Disturbance Comparison", "torque [N m]", "tau_disturbance_1"),
+            lab03_guide.comparison_specs,
+        )
+        self.assertIn(
+            (
+                "disturbance_recovery_time_compare.png",
+                "Disturbance Recovery Time Comparison",
+                "time [s]",
+                ("disturbance_recovery_duration",),
+            ),
+            lab03_guide.summary_comparison_specs,
+        )
+
+        for batch_name, scenarios in batch.BATCH_SETS.items():
+            with self.subTest(batch=batch_name):
+                self.assertGreaterEqual(len(scenarios), 2)
+                self.assertIn(batch_name, batch.BATCH_GUIDES)
+                self.assertTrue(batch.BATCH_GUIDES[batch_name].comparison_specs)
+            for scenario in scenarios:
+                with self.subTest(batch=batch_name, scenario=scenario.label):
+                    self.assertIn(scenario.lab_name, batch.LAB_RUNNERS)
+                    config = load_config(scenario.config_path)
+                    self.assertIn("model_path", config)
+                    self.assertTrue(scenario.plots)
+
+    def test_lab03_joint_speed_configs_isolate_joint_speed_limit(self) -> None:
+        low = load_config("configs/lab03_2dof/condition_aware_dls_low_joint_speed_2dof.yaml")
+        high = load_config("configs/lab03_2dof/condition_aware_dls_high_joint_speed_2dof.yaml")
+
+        low_controller = dict(low["tracking_controller"])
+        high_controller = dict(high["tracking_controller"])
+        low_speed = low_controller.pop("max_joint_speed")
+        high_speed = high_controller.pop("max_joint_speed")
+
+        self.assertLess(low_speed, 0.5)
+        self.assertGreater(high_speed, low_speed)
+        self.assertEqual(low_controller, high_controller)
+        for key in ("mode", "sim_time", "dt", "initial_q", "target_xy", "trajectory"):
+            self.assertEqual(low[key], high[key])
+
+    def test_lab03_adaptive_speed_schedule_configs_isolate_speed_schedule(self) -> None:
+        fixed = load_config("configs/lab03_2dof/condition_aware_dls_fixed_speed_retarget_2dof.yaml")
+        adaptive = load_config("configs/lab03_2dof/condition_aware_dls_adaptive_speed_retarget_2dof.yaml")
+
+        fixed_controller = dict(fixed["tracking_controller"])
+        adaptive_controller = dict(adaptive["tracking_controller"])
+        schedule = adaptive_controller.pop("max_task_speed_schedule")
+
+        self.assertNotIn("max_task_speed_schedule", fixed_controller)
+        self.assertEqual(fixed_controller, adaptive_controller)
+        self.assertEqual(fixed["target_xy_waypoints"], adaptive["target_xy_waypoints"])
+        self.assertLess(min(point["speed"] for point in schedule), adaptive_controller["max_task_speed"])
+        for key in ("mode", "sim_time", "dt", "initial_q", "target_xy", "trajectory"):
+            self.assertEqual(fixed[key], adaptive[key])
+
+    def test_lab04_push_depth_configs_isolate_target_waypoint_depth(self) -> None:
+        shallow = load_config("configs/lab04_panda/wall_shallow_push.yaml")
+        deep = load_config("configs/lab04_panda/wall_deep_push.yaml")
+
+        shallow_waypoints = shallow["cartesian_target"].pop("waypoints")
+        deep_waypoints = deep["cartesian_target"].pop("waypoints")
+
+        self.assertEqual(shallow["cartesian_target"], deep["cartesian_target"])
+        for key in ("mode", "sim_time", "dt", "home_q", "trajectory", "virtual_wall"):
+            self.assertEqual(shallow[key], deep[key])
+        self.assertEqual([point["time"] for point in shallow_waypoints], [point["time"] for point in deep_waypoints])
+        self.assertLess(shallow_waypoints[2]["position"][0], deep_waypoints[2]["position"][0])
+        self.assertLess(shallow_waypoints[-1]["position"][0], deep_waypoints[-1]["position"][0])
+
+    def test_run_batch_creates_child_runs_and_index(self) -> None:
+        calls: list[dict[str, object]] = []
+        scenario = batch.BatchScenario(
+            label="demo scenario",
+            lab_name="lab01",
+            config_path="configs/lab01_msd/default.yaml",
+            plots="essential",
+        )
+
+        def fake_runner(config: dict[str, object], **kwargs: object) -> Path:
+            output = Path(kwargs["output_dir"])
+            output.mkdir(parents=True, exist_ok=True)
+            config_path = Path(kwargs["config_path"])
+            (output / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "lab01_msd",
+                        "config_path": config_path.as_posix(),
+                        "config_name": config_path.stem,
+                        "duration": 1.0,
+                        "samples": 3,
+                        "max_abs_position": 0.5,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (output / "report.html").write_text("<html></html>", encoding="utf-8")
+            (output / "worksheet.md").write_text("# Scenario Worksheet\n", encoding="utf-8")
+            (output / "plots").mkdir()
+            (output / "plots" / "position.png").write_bytes(b"fake-png")
+            calls.append({"config": config, **kwargs})
+            return output
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with (
+                patch.dict(batch.BATCH_SETS, {"unit_compare": (scenario,)}, clear=False),
+                patch.dict(batch.LAB_RUNNERS, {"lab01": fake_runner}, clear=False),
+            ):
+                output = batch.run_batch(
+                    "unit_compare",
+                    output_dir=Path(tmp) / "batch_output",
+                    plot=False,
+                    seed=11,
+                )
+
+            self.assertEqual(len(calls), 1)
+            self.assertEqual(calls[0]["plot"], False)
+            self.assertEqual(calls[0]["viewer"], False)
+            self.assertEqual(calls[0]["headless"], True)
+            self.assertEqual(calls[0]["plot_selection"], "essential")
+            self.assertEqual(calls[0]["seed"], 11)
+            self.assertTrue((output / "demo_scenario" / "summary.json").exists())
+            self.assertTrue((output / "batch_summary.json").exists())
+            self.assertTrue((output / "summary.json").exists())
+            self.assertTrue((output / "report.html").exists())
+            self.assertTrue((output / "worksheet.md").exists())
+            self.assertIn("demo_scenario/report.html", (output / "index.html").read_text(encoding="utf-8"))
+            self.assertTrue((output / "demo_scenario" / "worksheet.md").exists())
+            report_html = (output / "report.html").read_text(encoding="utf-8")
+            self.assertIn("Learning Focus", report_html)
+            self.assertIn("Open the batch worksheet", report_html)
+            self.assertIn("Next Experiments", report_html)
+            self.assertIn("Reproduce Commands", report_html)
+            self.assertIn("python -m mclab batch unit_compare --open-report", report_html)
+            self.assertIn(
+                "python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot --plots essential",
+                report_html,
+            )
+            self.assertIn("Viewer rerun command", report_html)
+            self.assertIn(
+                "python -m mclab run lab01 --config configs/lab01_msd/default.yaml "
+                "--viewer --realtime --pause-at-end --plot --plots essential",
+                report_html,
+            )
+            self.assertIn("Headless rerun", report_html)
+            self.assertIn("Viewer rerun", report_html)
+            self.assertIn("Viewer Handoff", report_html)
+            self.assertIn('id="viewer-handoff"', report_html)
+            self.assertIn("Start with demo scenario", report_html)
+            self.assertIn("only saved scenario; inspect the motion before editing YAML", report_html)
+            self.assertIn("Open the scenario report, priority plot, worksheet, or folder first", report_html)
+            self.assertIn("demo scenario", report_html)
+            self.assertIn("Start steps", report_html)
+            self.assertIn("Predict -&gt; Run scenario -&gt; Review priority plot and worksheet.", report_html)
+            self.assertIn("Challenge", report_html)
+            self.assertIn("verify it in the saved plot and worksheet", report_html)
+            self.assertIn("Predict", report_html)
+            self.assertNotIn("predict how How", report_html)
+            self.assertIn("Question", report_html)
+            self.assertIn("Watch", report_html)
+            self.assertIn("Control surface", report_html)
+            self.assertIn("Auto run; edit YAML before rerunning.", report_html)
+            self.assertIn("What baseline motion", report_html)
+            self.assertIn("Open report", report_html)
+            self.assertIn("Open position.png", report_html)
+            self.assertIn("Open worksheet", report_html)
+            self.assertIn("Open folder", report_html)
+            self.assertIn("Plot review", report_html)
+            self.assertIn("Position: Compare actual motion against target", report_html)
+            self.assertIn('href="demo_scenario/plots/position.png"', report_html)
+            self.assertIn('href="demo_scenario/worksheet.md"', report_html)
+            self.assertIn('href="demo_scenario/"', report_html)
+            self.assertIn("Changed from baseline", report_html)
+            self.assertIn("Baseline reference", report_html)
+            self.assertIn("Metric change from baseline", report_html)
+            self.assertIn("Baseline metric reference", report_html)
+            self.assertIn("max abs position", report_html)
+            self.assertIn("Parameter Differences", report_html)
+            self.assertIn("Plot Previews", report_html)
+            self.assertIn("demo_scenario/plots/position.png", report_html)
+            worksheet = (output / "worksheet.md").read_text(encoding="utf-8")
+            self.assertIn("# MCLab Batch Worksheet", worksheet)
+            self.assertIn("## Scenario Review", worksheet)
+            self.assertIn("demo scenario", worksheet)
+            self.assertIn("Folder: demo_scenario/", worksheet)
+            self.assertIn("Worksheet: demo_scenario/worksheet.md", worksheet)
+            self.assertIn("Start steps: Predict -> Run scenario -> Review priority plot and worksheet.", worksheet)
+            self.assertIn("Challenge: Explain how mass, damping, stiffness", worksheet)
+            self.assertIn("Priority plot: demo_scenario/plots/position.png", worksheet)
+            self.assertIn("Plot review: Position - Compare actual motion against target", worksheet)
+            self.assertIn("Batch command: python -m mclab batch unit_compare --open-report", worksheet)
+            self.assertIn("Scenario command: python -m mclab run lab01 --config configs/lab01_msd/default.yaml", worksheet)
+            self.assertIn(
+                "Viewer rerun: python -m mclab run lab01 --config configs/lab01_msd/default.yaml "
+                "--viewer --realtime --pause-at-end --plot --plots essential",
+                worksheet,
+            )
+            self.assertIn("## Viewer Handoff", worksheet)
+            self.assertIn("Start with: demo scenario", worksheet)
+            self.assertIn("Why: only saved scenario; inspect the motion before editing YAML", worksheet)
+            self.assertIn("Report: demo_scenario/report.html", worksheet)
+            self.assertIn("Priority plot: demo_scenario/plots/position.png", worksheet)
+            self.assertIn("Worksheet: demo_scenario/worksheet.md", worksheet)
+            self.assertIn("Folder: demo_scenario/", worksheet)
+            self.assertIn("- [ ] Write which scenario best supports your prediction.", worksheet)
+            parent_index = output.parent / "index.html"
+            self.assertIn("batch_output/report.html", parent_index.read_text(encoding="utf-8"))
+            self.assertIn("batch_output/worksheet.md", parent_index.read_text(encoding="utf-8"))
+
+    def test_run_all_batches_creates_group_report(self) -> None:
+        def fake_run_batch(batch_name: str, **kwargs: object) -> Path:
+            output = Path(kwargs["output_dir"])
+            output.mkdir(parents=True, exist_ok=True)
+            (output / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "batch",
+                        "config_name": batch_name,
+                        "samples": len(batch.BATCH_SETS[batch_name]),
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (output / "report.html").write_text("<html></html>", encoding="utf-8")
+            (output / "worksheet.md").write_text("# Batch Worksheet\n", encoding="utf-8")
+            return output
+
+        expected_batches = list(batch.list_batch_sets())
+        expected_scenarios = sum(len(scenarios) for scenarios in batch.BATCH_SETS.values())
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch("mclab.batch.run_batch", side_effect=fake_run_batch) as runner:
+                output = batch.run_all_batches(
+                    output_dir=Path(tmp) / "all_output",
+                    plot=False,
+                    seed=23,
+                )
+
+            self.assertEqual([call.args[0] for call in runner.call_args_list], expected_batches)
+            for call in runner.call_args_list:
+                self.assertFalse(call.kwargs["plot"])
+                self.assertEqual(call.kwargs["seed"], 23)
+            self.assertTrue((output / "report.html").exists())
+            self.assertTrue((output / "worksheet.md").exists())
+            self.assertTrue((output / "index.html").exists())
+            summary = json.loads((output / "summary.json").read_text(encoding="utf-8"))
+            self.assertEqual(summary["batch_name"], batch.ALL_BATCH_NAME)
+            self.assertEqual(summary["scenario_runs"], expected_scenarios)
+            batch_summary = json.loads((output / "batch_summary.json").read_text(encoding="utf-8"))
+            self.assertEqual(len(batch_summary["batches"]), len(expected_batches))
+            report_html = (output / "report.html").read_text(encoding="utf-8")
+            self.assertIn("All Comparison Batches", report_html)
+            self.assertIn("lab01_msd_compare/report.html", report_html)
+            self.assertIn("lab04_cartesian_compare/report.html", report_html)
+            self.assertIn("lab04_wall_compare/report.html", report_html)
+            self.assertIn("Compare how damping and stiffness change free response", report_html)
+            self.assertIn("Which case oscillates the most before settling?", report_html)
+            self.assertIn("<th>Worksheet</th>", report_html)
+            self.assertIn("<th>Folder</th>", report_html)
+            self.assertIn("Open viewer handoff", report_html)
+            self.assertIn('href="lab01_msd_compare/report.html#viewer-handoff"', report_html)
+            self.assertIn("Open worksheet", report_html)
+            self.assertIn("Open folder", report_html)
+            self.assertIn("lab01_msd_compare/worksheet.md", report_html)
+            self.assertIn('href="lab01_msd_compare/"', report_html)
+            self.assertIn("Open the course worksheet", report_html)
+            worksheet = (output / "worksheet.md").read_text(encoding="utf-8")
+            self.assertIn("# MCLab Course Batch Worksheet", worksheet)
+            self.assertIn("lab01_msd_compare", worksheet)
+            self.assertIn("Focus: Compare how damping and stiffness change free response", worksheet)
+            self.assertIn("First question: Which case oscillates the most before settling?", worksheet)
+            self.assertIn("Worksheet: lab01_msd_compare/worksheet.md", worksheet)
+            self.assertIn("Viewer handoff: lab01_msd_compare/report.html#viewer-handoff", worksheet)
+            self.assertIn("- [ ] Identify one idea that stayed the same from Lab01 to Lab04.", worksheet)
+            self.assertIn("lab01_msd_compare/report.html", (output / "index.html").read_text(encoding="utf-8"))
+
+    def test_run_batch_rejects_unknown_batch_name(self) -> None:
+        with self.assertRaises(ValueError):
+            batch.run_batch("missing_batch")
+
+    def test_display_metric_keys_skip_unrelated_all_zero_fallback_metrics(self) -> None:
+        guide = batch.BATCH_GUIDES["lab04_cartesian_compare"]
+        rows = [
+            {
+                "summary": {
+                    "final_cartesian_error_cm": 0.6,
+                    "max_wall_penetration_cm": 0.0,
+                    "max_wall_retreat_cm": 0.0,
+                    "max_abs_virtual_wall_force": 0.0,
+                }
+            }
+        ]
+
+        keys = batch._display_metric_keys(guide, rows)
+
+        self.assertIn("final_cartesian_error_cm", keys)
+        self.assertNotIn("max_wall_penetration_cm", keys)
+        self.assertNotIn("max_wall_retreat_cm", keys)
+        self.assertNotIn("max_abs_virtual_wall_force", keys)
+
+    def test_viewer_handoff_picks_largest_metric_change_from_baseline(self) -> None:
+        rows = [
+            {"label": "baseline", "summary": {"tracking_error": 1.0, "control_effort": 10.0}},
+            {"label": "small_change", "summary": {"tracking_error": 1.2, "control_effort": 11.0}},
+            {"label": "large_change", "summary": {"tracking_error": 3.0, "control_effort": 10.5}},
+        ]
+
+        picked, reason = batch._viewer_handoff_pick(
+            rows,
+            ["tracking_error", "control_effort"],
+            rows[0]["summary"],
+        )
+
+        self.assertEqual(picked["label"], "large_change")
+        self.assertIn("largest tracking error change from baseline", reason)
+
+    def test_viewer_handoff_section_includes_artifact_links(self) -> None:
+        row = {
+            "label": "demo",
+            "lab_name": "lab01",
+            "config_path": "configs/lab01_msd/default.yaml",
+            "plot_selection": "essential",
+            "report": "demo/report.html",
+            "worksheet": "demo/worksheet.md",
+            "folder": "demo/",
+            "plots": {"position.png": "demo/plots/position.png"},
+            "summary": {"max_abs_position": 0.1},
+        }
+
+        html = batch._viewer_handoff_section([row], ["max_abs_position"], row["summary"])
+
+        self.assertIn('href="demo/report.html">Open report</a>', html)
+        self.assertIn('href="demo/plots/position.png">Open position.png</a>', html)
+        self.assertIn('href="demo/worksheet.md">Open worksheet</a>', html)
+        self.assertIn('href="demo/">Open folder</a>', html)
+
+    def test_comparison_takeaways_rank_error_metrics_by_magnitude(self) -> None:
+        rows = [
+            {"label": "near_zero", "summary": {"steady_state_error": -0.01}},
+            {"label": "far_negative", "summary": {"steady_state_error": -0.5}},
+            {"label": "positive", "summary": {"steady_state_error": 0.2}},
+        ]
+
+        html = batch._comparison_takeaways(rows, ["steady_state_error"])
+
+        self.assertIn("near_zero</strong> has the smallest error magnitude", html)
+        self.assertIn("far_negative</strong> has the largest", html)
+
+    def test_prediction_check_ranks_error_metrics_by_magnitude(self) -> None:
+        rows = [
+            {"label": "near_zero", "summary": {"steady_state_error": -0.01}},
+            {"label": "far_negative", "summary": {"steady_state_error": -0.5}},
+            {"label": "positive", "summary": {"steady_state_error": 0.2}},
+        ]
+
+        items = batch._prediction_check_items(rows, ["steady_state_error"])
+        html = batch._prediction_check(rows, ["steady_state_error"])
+        worksheet_lines = batch._batch_worksheet_prediction_check_lines(rows, ["steady_state_error"])
+
+        self.assertEqual(len(items), 1)
+        self.assertIn("near_zero (", items[0][1])
+        self.assertIn("far_negative (", items[0][1])
+        self.assertIn("Matched / Partly matched / Surprised", html)
+        self.assertTrue(any("## Prediction Check" in line for line in worksheet_lines))
+
+    def test_comparison_plots_are_written_from_run_logs(self) -> None:
+        scenarios = (
+            batch.BatchScenario("baseline", "lab02", "configs/lab02_pid/default.yaml"),
+            batch.BatchScenario("high gain", "lab02", "configs/lab02_pid/p_high_gain.yaml"),
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "batch_output"
+            for scenario in scenarios:
+                run_dir = output / scenario.label.replace(" ", "_")
+                run_dir.mkdir(parents=True)
+                (run_dir / "log.csv").write_text(
+                    (
+                        "time,position,position_error,control_force\n"
+                        "0.0,0.0,0.2,12.0\n"
+                        "0.1,0.1,0.1,6.0\n"
+                        "0.2,0.2,0.0,0.0\n"
+                    ),
+                    encoding="utf-8",
+                )
+                (run_dir / "summary.json").write_text(
+                    json.dumps(
+                        {
+                            "lab_name": "lab02_pid",
+                            "overshoot_percent": 0.0 if scenario.label == "baseline" else 12.5,
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+                (run_dir / "report.html").write_text("<html></html>", encoding="utf-8")
+
+            written = batch.write_comparison_plots(output, "lab02_pid_compare", scenarios)
+            batch.write_batch_report(output, "lab02_pid_compare", scenarios)
+
+            self.assertTrue(written)
+            self.assertTrue((output / "comparison_plots" / "position_compare.png").exists())
+            self.assertTrue((output / "comparison_plots" / "error_compare.png").exists())
+            report_html = (output / "report.html").read_text(encoding="utf-8")
+            self.assertIn("Comparison Takeaways", report_html)
+            self.assertIn("Prediction Check", report_html)
+            self.assertIn("Outcome prompt", report_html)
+            self.assertIn(
+                "Mark your prediction outcome for overshoot percent: Matched / Partly matched / Surprised.",
+                report_html,
+            )
+            self.assertIn("Predict", report_html)
+            self.assertIn("Which controller reaches the target fastest", report_html)
+            self.assertIn("python -m mclab batch lab02_pid_compare --open-report", report_html)
+            self.assertIn(
+                "python -m mclab run lab02 --config configs/lab02_pid/default.yaml --headless --plot --plots essential",
+                report_html,
+            )
+            self.assertIn("Changed from baseline", report_html)
+            self.assertIn("controller.kp", report_html)
+            self.assertIn("Metric change from baseline", report_html)
+            self.assertIn("overshoot percent", report_html)
+            self.assertIn("baseline</strong> has the least overshoot", report_html)
+            self.assertIn("high gain</strong> overshoots most", report_html)
+            self.assertIn("Metric Highlights", report_html)
+            self.assertIn("overshoot percent", report_html)
+            self.assertIn("high gain", report_html)
+            self.assertIn("Baseline Changes", report_html)
+            self.assertIn("+12.5", report_html)
+            self.assertIn("raise `controller.kd`", report_html)
+            self.assertIn("Parameter Differences", report_html)
+            self.assertIn("controller.kp", report_html)
+            self.assertIn("Comparison Plot Guide", report_html)
+            self.assertIn("Position", report_html)
+            self.assertIn("Compare actual motion against target", report_html)
+            self.assertIn("Checkpoint:", report_html)
+            self.assertIn("Comparison Plots", report_html)
+            self.assertIn("comparison_plots/position_compare.png", report_html)
+            worksheet = (output / "worksheet.md").read_text(encoding="utf-8")
+            self.assertIn("# MCLab Batch Worksheet", worksheet)
+            self.assertIn("## Prediction Check", worksheet)
+            self.assertIn(
+                "- [ ] Mark your prediction outcome for overshoot percent: Matched / Partly matched / Surprised.",
+                worksheet,
+            )
+            self.assertIn("Comparison Notes", worksheet)
+            self.assertIn("overshoot percent", worksheet)
+            self.assertIn("## Comparison Plot Guide", worksheet)
+            self.assertIn("comparison_plots/position_compare.png: Position - Compare actual motion against target", worksheet)
+            self.assertIn("- [ ] Name which scenario changes motion most visibly", worksheet)
+            self.assertIn("comparison_plots/position_compare.png", worksheet)
+
+    def test_summary_comparison_plots_are_written_from_scenario_summaries(self) -> None:
+        scenarios = (
+            batch.BatchScenario("soft_wall", "lab04", "configs/lab04_panda/wall_soft.yaml", "wall_compare"),
+            batch.BatchScenario("fast_wall", "lab04", "configs/lab04_panda/wall_fast_approach.yaml", "wall_compare"),
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "batch_output"
+            for index, scenario in enumerate(scenarios):
+                run_dir = output / scenario.label
+                run_dir.mkdir(parents=True)
+                (run_dir / "summary.json").write_text(
+                    json.dumps(
+                        {
+                            "lab_name": "lab04_panda",
+                            "first_wall_contact_time": 0.8 + index,
+                            "peak_wall_penetration_time": 2.0 + index,
+                            "peak_wall_force_time": 2.1 + index,
+                            "peak_wall_damping_force_time": 0.9 + index,
+                            "peak_hand_speed_time": 1.1 + index,
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+                (run_dir / "report.html").write_text("<html></html>", encoding="utf-8")
+
+            written = batch.write_comparison_plots(output, "lab04_wall_compare", scenarios)
+            (output / "comparison_plots" / "wall_penetration_compare.png").write_bytes(b"fake-png")
+            batch.write_batch_report(output, "lab04_wall_compare", scenarios)
+
+            timing_plot = output / "comparison_plots" / "wall_key_moment_timing_compare.png"
+            self.assertIn(timing_plot, written)
+            self.assertTrue(timing_plot.exists())
+            report_html = (output / "report.html").read_text(encoding="utf-8")
+            worksheet = (output / "worksheet.md").read_text(encoding="utf-8")
+            self.assertIn("wall_key_moment_timing_compare.png", report_html)
+            self.assertIn("Comparison Plot Guide", report_html)
+            self.assertIn("Wall Timing", report_html)
+            self.assertIn("Compare when contact, peak penetration", report_html)
+            self.assertIn("Name which scenario contacts first", report_html)
+            self.assertIn("Wall Penetration", report_html)
+            self.assertIn("Name which scenario penetrates deepest", report_html)
+            self.assertIn("peak wall force time", report_html)
+            self.assertIn("wall_key_moment_timing_compare.png", worksheet)
+            self.assertIn("## Comparison Plot Guide", worksheet)
+            self.assertIn("comparison_plots/wall_key_moment_timing_compare.png: Wall Timing", worksheet)
+            self.assertIn("- [ ] Name which scenario contacts first", worksheet)
+            self.assertIn("comparison_plots/wall_penetration_compare.png: Wall Penetration", worksheet)
+            self.assertIn("- [ ] Name which scenario penetrates deepest", worksheet)
+
+    def test_scenario_card_reports_missing_plot_links_without_failing(self) -> None:
+        html = batch._scenario_card(
+            {
+                "label": "no plot",
+                "lab_name": "lab01",
+                "config_path": "configs/lab01_msd/default.yaml",
+                "report": "no_plot/report.html",
+                "plots": {},
+                "summary": {"max_abs_position": 0.2},
+                "config": load_config("configs/lab01_msd/default.yaml"),
+            },
+            ["max_abs_position"],
+        )
+
+        self.assertIn("Open report", html)
+        self.assertIn("No plot link saved", html)
+        self.assertIn("No worksheet link saved", html)
+        self.assertIn("Control surface", html)
+        self.assertIn("Auto run; edit YAML before rerunning.", html)
+
+    def test_scenario_card_shows_interactive_control_surface(self) -> None:
+        html = batch._scenario_card(
+            {
+                "label": "interactive",
+                "lab_name": "lab01",
+                "config_path": "configs/lab01_msd/interactive_pull.yaml",
+                "report": "interactive/report.html",
+                "plots": {},
+                "summary": {"max_abs_position": 0.2},
+                "config": load_config("configs/lab01_msd/interactive_pull.yaml"),
+            },
+            ["max_abs_position"],
+        )
+
+        self.assertIn("Control surface", html)
+        self.assertIn("MCLab Interaction window", html)
+        self.assertIn("Pull/Push buttons and A/D keys", html)
+        self.assertIn("live sliders with Changed values", html)
+        self.assertIn("quick presets (Lightly damped, Heavy damping, Stiff spring)", html)
+        self.assertIn("Counts as control: experiment buttons, live sliders, Quick presets", html)
+        self.assertIn("Pause/Step", html)
+        self.assertIn("Reset plant", html)
+        self.assertIn("Mark observation", html)
+
+    def test_priority_plot_link_uses_index_plot_priority(self) -> None:
+        selected = batch._priority_plot_link(
+            {
+                "torque.png": "run/plots/torque.png",
+                "position.png": "run/plots/position.png",
+            }
+        )
+
+        self.assertEqual(selected, ("position.png", "run/plots/position.png"))
+
+    def test_scenario_change_summary_compares_against_baseline(self) -> None:
+        html = batch._scenario_change_summary(
+            {"config": {"controller": {"kp": 120.0, "kd": 0.0}}},
+            {"controller": {"kp": 60.0, "kd": 12.0}},
+        )
+
+        self.assertIn("Changed from baseline", html)
+        self.assertIn("controller.kp", html)
+        self.assertIn("60", html)
+        self.assertIn("120", html)
+
+    def test_scenario_metric_change_summary_compares_against_baseline(self) -> None:
+        html = batch._scenario_metric_change_summary(
+            {"summary": {"overshoot_percent": 12.5, "settling_time": 1.8}},
+            ["overshoot_percent", "settling_time"],
+            {"overshoot_percent": 0.0, "settling_time": 2.0},
+        )
+
+        self.assertIn("Metric change from baseline", html)
+        self.assertIn("overshoot percent", html)
+        self.assertIn("+12.5", html)
+        self.assertIn("n/a", html)
+
+
+if __name__ == "__main__":
+    unittest.main()

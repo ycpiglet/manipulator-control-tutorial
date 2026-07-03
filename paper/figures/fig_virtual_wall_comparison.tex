@@ -1,0 +1,69 @@
+\begin{figure}[!htbp]
+  \centering
+  \resizebox{\linewidth}{!}{%
+  \begin{tikzpicture}[
+      axis/.style={-{Latex[length=2.0mm]}, draw=black!55},
+      wall/.style={draw=black!70, line width=1.1pt},
+      force/.style={-{Latex[length=2.2mm]}, draw=red!75!black, line width=1.2pt},
+      motion/.style={-{Latex[length=1.9mm]}, draw=blue!55!black, line width=1.0pt},
+      guide/.style={draw=black!40, dashed},
+      soft/.style={draw=blue!60!black, line width=1.0pt},
+      stiff/.style={draw=red!70!black, line width=1.0pt},
+      damped/.style={draw=green!45!black, line width=1.0pt},
+      lab/.style={font=\scriptsize, align=center},
+      title/.style={font=\small\bfseries, align=center},
+      note/.style={font=\scriptsize, align=center, text=black!70}
+    ]
+
+    \begin{scope}[shift={(0,0)}]
+      \node[title] at (0,2.25) {1D 가상 벽 단면};
+      \draw[axis] (-2.05,0) -- (2.35,0) node[right, lab] {$+x$};
+      \draw[wall] (0,-1.15) -- (0,1.35);
+      \node[lab] at (0,-1.45) {$x_{\mathrm{wall}}$};
+      \fill[black!10] (0,-1.15) rectangle (2.0,1.35);
+      \node[lab, text=black!65] at (1.20,1.05) {벽 안쪽};
+      \node[lab, text=black!65] at (-1.25,1.05) {자유 공간};
+      \coordinate (tip) at (1.18,0);
+      \fill[blue!55!black] (tip) circle (2.2pt);
+      \node[lab] at (1.20,-0.35) {끝단 위치\\$x$};
+      \draw[guide] (tip) -- (1.18,0.78);
+      \draw[<->, draw=black!55] (0,0.62) -- node[above, lab] {$\delta=x-x_{\mathrm{wall}}$} (1.18,0.62);
+      \draw[force] (tip) -- ++(-0.88,0)
+        node[midway, below, lab, text=red!75!black] {$f_{\mathrm{wall}}<0$};
+      \draw[motion] (0.45,-0.85) -- ++(0.65,0)
+        node[midway, below, lab, text=blue!55!black] {침투 중\\$\dot{x}>0$};
+      \node[note] at (0,-2.00) {$\delta=\max(0,x-x_{\mathrm{wall}})$\\가상 스프링을 계산하는 침투 거리};
+    \end{scope}
+
+    \begin{scope}[shift={(5.4,0)}]
+      \node[title] at (0,2.25) {침투 시간 응답};
+      \draw[axis] (-0.15,0) -- (3.45,0) node[right, lab] {$t$};
+      \draw[axis] (0,-0.15) -- (0,1.55) node[above, lab] {$\delta(t)$};
+      \draw[guide] (0,1.0) -- (3.25,1.0);
+      \node[lab] at (3.05,1.20) {목표 침투};
+      \draw[soft]
+        plot[smooth] coordinates {(0,0) (0.45,0.45) (0.85,1.20) (1.25,0.72) (1.70,1.12) (2.15,0.88) (2.70,1.02) (3.15,1.00)};
+      \draw[damped]
+        plot[smooth] coordinates {(0,0) (0.45,0.55) (0.90,0.90) (1.35,1.02) (1.85,1.01) (2.45,1.00) (3.15,1.00)};
+      \node[lab, text=blue!60!black] at (2.65,0.63) {감쇠 작음\\튕김 큼};
+      \node[lab, text=green!45!black] at (1.60,1.35) {감쇠 큼\\진동 감소};
+      \node[note] at (1.65,-0.58) {감쇠는 기울기를 바꾸기보다\\침투 속도에 브레이크를 건다.};
+    \end{scope}
+
+    \begin{scope}[shift={(10.15,0)}]
+      \node[title] at (0,2.25) {힘-침투 관계};
+      \draw[axis] (-0.15,0) -- (3.25,0) node[right, lab] {$\delta$};
+      \draw[axis] (0,-0.15) -- (0,1.75) node[above, lab] {$|f_{\mathrm{wall}}|$};
+      \draw[soft] (0,0) -- (3.0,0.85);
+      \draw[stiff] (0,0) -- (2.05,1.55);
+      \node[lab, text=blue!60!black] at (2.45,0.56) {부드러운 벽\\작은 $k_{\mathrm{wall}}$};
+      \node[lab, text=red!70!black] at (2.15,1.35) {단단한 벽\\큰 $k_{\mathrm{wall}}$};
+      \node[lab] at (1.30,-0.48) {$\dot{x}=0$이면\\$|f_{\mathrm{wall}}|=k_{\mathrm{wall}}\delta$};
+      \draw[guide] (1.35,0) -- (1.35,1.05);
+      \draw[<->, draw=black!55] (1.48,0.38) -- node[right, lab] {같은 $\delta$에서\\더 큰 힘} (1.48,1.02);
+    \end{scope}
+  \end{tikzpicture}%
+  }
+  \caption{결정론적 가상 벽의 핵심 관계. 이 글의 부호 규약에서는 $+x$ 방향이 벽 안쪽이므로, 침투 깊이는 $\delta=\max(0,x-x_{\mathrm{wall}})$이고 벽이 로봇에 가하는 부호 있는 힘은 $-x$ 방향이다. 초심자에게 힘-침투 관계를 보일 때는 부호 있는 $f_{\mathrm{wall}}$보다 크기 $|f_{\mathrm{wall}}|$를 그리는 편이 직관적이다. 정지 상태에서는 $|f_{\mathrm{wall}}|=k_{\mathrm{wall}}\delta$이므로 기울기가 벽 강성이고, 감쇠항은 기울기를 바꾸는 값이 아니라 접근 방향 침투 속도 $\dot{\delta}_+>0$에 저항해 튕김과 진동을 줄이는 값이다.}
+  \label{fig:virtual-wall-comparison}
+\end{figure}

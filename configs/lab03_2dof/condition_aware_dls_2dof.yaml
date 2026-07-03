@@ -1,0 +1,65 @@
+plant: two_link_arm
+model_path: models/lab03_2dof/two_link.xml
+mode: condition_aware_dls
+sim_time: 5.0
+dt: 0.002
+link_lengths: [0.6, 0.45]
+initial_q: [0.25, -0.75]
+target_xy: [1.049, 0.0]
+torque_constant: 1.0
+plots: dls_disturbance
+trajectory:
+  type: minimum_jerk
+  start: 0.0
+  end: 1.0
+  duration: 3.0
+  start_time: 0.4
+tracking_controller:
+  dls_gain: 4.2
+  dls_damping: 0.08
+  condition_aware_damping: true
+  condition_damping_threshold: 10.0
+  condition_damping_full: 40.0
+  max_dls_damping: 0.3
+  max_task_speed: 0.45
+  max_joint_speed: 2.2
+  max_joint_error: 0.28
+  kp: [85.0, 62.0]
+  kd: [9.5, 6.5]
+  torque_limit: [42.0, 32.0]
+interaction:
+  panel: true
+  live_tuning: true
+  joint_disturbance: true
+  joint_disturbance_torque: [0.14, 0.16]
+  joint_disturbance_duration: 0.3
+  tuning_presets:
+    - label: Early damping
+      purpose: Damping activates before the edge.
+      values:
+        dls_gain: 4.2
+        dls_damping: 0.08
+        condition_damping_threshold: 6.0
+        condition_damping_full: 18.0
+        max_dls_damping: 0.36
+        torque_limit: 42.0
+    - label: Balanced schedule
+      purpose: Default condition-aware tradeoff.
+      values:
+        dls_gain: 4.2
+        dls_damping: 0.08
+        condition_damping_threshold: 10.0
+        condition_damping_full: 40.0
+        max_dls_damping: 0.3
+        torque_limit: 42.0
+    - label: Late damping
+      purpose: Delays damping until conditioning is poor.
+      values:
+        dls_gain: 4.2
+        dls_damping: 0.08
+        condition_damping_threshold: 24.0
+        condition_damping_full: 90.0
+        max_dls_damping: 0.18
+        torque_limit: 42.0
+viewer_guides:
+  condition_threshold: 18.0

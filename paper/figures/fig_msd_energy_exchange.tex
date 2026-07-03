@@ -1,0 +1,75 @@
+\begin{figure}[!htbp]
+  \centering
+  \resizebox{\linewidth}{!}{%
+  \begin{tikzpicture}[
+      snap/.style={draw=black!35, rounded corners=2pt, fill=black!2, minimum width=4.25cm, minimum height=2.55cm},
+      cart/.style={draw=black!70, fill=blue!8, minimum width=0.85cm, minimum height=0.55cm},
+      label/.style={font=\scriptsize, align=center},
+      axis/.style={-{Latex[length=2mm]}, draw=black!65},
+      curve/.style={thick},
+      wall/.style={draw=black!70, line width=0.5pt}
+    ]
+    \node[snap] (a) at (0,0) {};
+    \node[snap] (b) at (4.8,0) {};
+    \node[snap] (c) at (9.6,0) {};
+
+    \foreach \x/\title in {0/{최대 변위},4.8/{평형점 통과},9.6/{감쇠 후}} {
+      \node[label, font=\small\bfseries] at (\x,1.05) {\title};
+      \draw[wall] (\x-1.75,-0.65) -- (\x-1.75,0.55);
+      \draw[black!40] (\x-1.95,-0.65) -- (\x-1.55,-0.65);
+      \draw[black!40] (\x-1.95,-0.45) -- (\x-1.55,-0.45);
+      \draw[black!40] (\x-1.95,-0.25) -- (\x-1.55,-0.25);
+      \draw[black!45] (\x-1.8,-0.8) -- (\x+1.85,-0.8);
+    }
+
+    \node[cart] (cartA) at (0.85,-0.35) {$m$};
+
+    \draw[black!70] (-1.75,-0.1)
+      -- (-1.35,-0.1) -- (-1.2,0.12) -- (-0.95,-0.32) -- (-0.7,0.12)
+      -- (-0.45,-0.32) -- (-0.2,0.12) -- (0.05,-0.32) -- (0.3,0.12)
+      -- (0.55,-0.1) -- (0.42,-0.1);
+    \draw[black!60] (-1.75,-0.52) -- (-1.25,-0.52) -- (-1.25,-0.28) -- (-0.95,-0.28) -- (-0.95,-0.76) -- (-0.65,-0.76) -- (-0.65,-0.52) -- (0.42,-0.52);
+    \node[label] at (0,-1.14) {스프링 에너지 큼\\운동 에너지 작음};
+
+    \node[cart] (cartB) at (4.8,-0.35) {$m$};
+    \draw[black!70] (3.05,-0.1)
+      -- (3.38,-0.1) -- (3.5,0.08) -- (3.68,-0.28) -- (3.86,0.08)
+      -- (4.04,-0.28) -- (4.22,0.08) -- (4.4,-0.28) -- (4.58,-0.1);
+    \draw[black!60] (3.05,-0.52) -- (3.45,-0.52) -- (3.45,-0.28) -- (3.72,-0.28) -- (3.72,-0.76) -- (3.99,-0.76) -- (3.99,-0.52) -- (4.38,-0.52);
+    \draw[-{Latex[length=2mm]}, thick, red!65!black] (5.35,-0.35) -- (6.15,-0.35) node[right, label] {$\dot{x}$ 큼};
+    \node[label] at (4.8,-1.14) {스프링 에너지 작음\\운동 에너지 큼};
+
+    \node[cart] (cartC) at (9.78,-0.35) {$m$};
+    \draw[black!70] (7.85,-0.1)
+      -- (8.15,-0.1) -- (8.28,0.05) -- (8.45,-0.24) -- (8.62,0.05)
+      -- (8.79,-0.24) -- (8.96,0.05) -- (9.13,-0.24) -- (9.3,-0.1);
+    \draw[black!60] (7.85,-0.52) -- (8.23,-0.52) -- (8.23,-0.28) -- (8.48,-0.28) -- (8.48,-0.76) -- (8.73,-0.76) -- (8.73,-0.52) -- (9.3,-0.52);
+    \node[label] at (9.6,-1.17) {감쇠가 에너지를\\열과 손실로 소산};
+
+    \begin{scope}[shift={(0,-4.85)}]
+      \draw[axis] (0,0) -- (10.2,0) node[right, label] {시간 $t$};
+      \draw[axis] (0,0) -- (0,2.75) node[above, label] {에너지};
+      \draw[curve, blue!70!black] plot[smooth] coordinates {
+        (0.15,2.15) (0.8,0.55) (1.45,1.75) (2.1,0.45) (2.75,1.35)
+        (3.4,0.35) (4.05,1.0) (4.7,0.28) (5.35,0.72) (6.0,0.22)
+        (6.65,0.52) (7.3,0.17) (8.0,0.36) (8.8,0.13) (9.7,0.22)
+      };
+      \draw[curve, red!70!black, dashed] plot[smooth] coordinates {
+        (0.15,0.2) (0.8,1.75) (1.45,0.45) (2.1,1.35) (2.75,0.32)
+        (3.4,1.0) (4.05,0.25) (4.7,0.72) (5.35,0.18) (6.0,0.52)
+        (6.65,0.13) (7.3,0.36) (8.0,0.1) (8.8,0.22) (9.7,0.08)
+      };
+      \draw[curve, black!70] plot[smooth] coordinates {
+        (0.15,2.35) (1.0,2.18) (2.0,1.85) (3.0,1.5) (4.0,1.18)
+        (5.0,0.92) (6.0,0.7) (7.0,0.52) (8.0,0.38) (9.7,0.25)
+      };
+      \node[label, text=blue!70!black] at (1.25,2.45) {$U_s(t)$: 스프링 에너지};
+      \node[label, text=red!70!black] at (6.9,1.15) {$T(t)$: 운동 에너지};
+      \node[label, text=black!70] at (8.15,0.75) {$E(t)=T+U_s$};
+      \node[label, align=left] at (4.0,2.45) {감쇠가 있으면\\총 에너지가 감소};
+    \end{scope}
+  \end{tikzpicture}%
+  }
+  \caption{질량-스프링-댐퍼 시스템의 자유진동은 운동 에너지 $T(t)=\frac{1}{2}m\dot{x}^2$와 탄성 퍼텐셜 에너지 $U_s(t)=\frac{1}{2}kx^2$가 서로 교환되는 과정으로 볼 수 있다. 외력이 없는 자유응답에서 댐퍼가 있으면 $b\dot{x}^2$의 일률로 에너지가 소산되므로 총 기계 에너지 $E(t)$가 줄어들고, 그 결과 진동 진폭도 점차 작아진다.}
+  \label{fig:msd-energy-exchange}
+\end{figure}

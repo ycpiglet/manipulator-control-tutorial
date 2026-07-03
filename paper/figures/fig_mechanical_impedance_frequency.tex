@@ -1,0 +1,40 @@
+\begin{figure}[!htbp]
+  \centering
+  \resizebox{0.92\linewidth}{!}{%
+  \begin{tikzpicture}[
+      axis/.style={-{Latex[length=2.2mm]}, draw=black!70, thick},
+      curve/.style={line width=1.0pt},
+      region/.style={font=\scriptsize, align=center, text=black!70},
+      callout/.style={draw=black!35, rounded corners=2pt, fill=black!3, align=center, font=\scriptsize, inner sep=4pt}
+    ]
+    \draw[axis] (0,0) -- (9.0,0) node[right, font=\small] {각주파수 $\omega$};
+    \draw[axis] (0,0) -- (0,4.9) node[above, font=\small] {개별 항 크기};
+    \node[region] at (1.45,-0.35) {느린 변화\\저주파};
+    \node[region] at (4.5,-0.35) {중간 영역};
+    \node[region] at (7.6,-0.35) {빠른 변화\\고주파};
+
+    \fill[blue!5] (0.2,0.05) rectangle (2.8,4.55);
+    \fill[green!5] (2.8,0.05) rectangle (6.0,4.55);
+    \fill[red!5] (6.0,0.05) rectangle (8.8,4.55);
+
+    \draw[curve, blue!70!black] plot[smooth] coordinates {
+      (0.55,4.35) (1.05,3.55) (1.75,2.72) (2.55,2.02)
+      (3.55,1.35) (4.75,0.9) (6.0,0.65) (8.45,0.42)
+    };
+    \draw[curve, green!55!black, dashed] (0.55,2.05) -- (8.45,2.05);
+    \draw[curve, red!70!black] plot[smooth] coordinates {
+      (0.55,0.42) (1.45,0.62) (2.45,0.95) (3.6,1.45)
+      (4.9,2.12) (6.25,2.95) (7.45,3.65) (8.45,4.25)
+    };
+    \draw[densely dashed, black!45] (4.45,0.1) -- (4.45,4.35);
+    \node[region] at (4.45,4.65) {$\omega_n$ 근처};
+
+    \node[callout, text=blue!70!black] at (1.55,4.55) {스프링 항\\$k/\omega$};
+    \node[callout, text=green!45!black] at (4.55,2.48) {감쇠 항\\$b$};
+    \node[callout, text=red!70!black] at (7.25,4.45) {질량 항\\$\omega m$};
+    \node[callout] at (4.35,0.58) {스프링 항과 질량 항은\\허수부에서 반대 부호\\전체 $|Z_m|$는 단순 합이 아님};
+  \end{tikzpicture}%
+  }
+  \caption{질량-스프링-댐퍼 시스템의 기계적 임피던스는 하나의 강성값으로 고정되지 않는다. 낮은 주파수에서는 스프링 항 $k/\omega$가 크게 보이고, 높은 주파수에서는 질량 항 $\omega m$이 크게 보이며, 감쇠 항 $b$는 에너지 소산을 담당한다. 이 그림은 전체 임피던스 크기 $|Z_m(\jj\omega)|$가 아니라 개별 항 크기를 보여주는 정성적 지도이다. 실제 전체 크기는 $b$와 반응성 성분 $\omega m-k/\omega$가 함께 결정한다.}
+  \label{fig:mechanical-impedance-frequency}
+\end{figure}
