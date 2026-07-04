@@ -1,0 +1,4 @@
+interface:
+  display_name: "Paper Version Manager"
+  short_description: "Track manuscript versions"
+  default_prompt: "Use $paper-version-manager to label a paper draft and record revision status."

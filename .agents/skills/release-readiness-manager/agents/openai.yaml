@@ -1,0 +1,4 @@
+interface:
+  display_name: "Release Readiness Manager"
+  short_description: "Assess release or submission gates"
+  default_prompt: "Use $release-readiness-manager to decide whether the current state is ready for release or submission."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Paper Technical Reviewer"
+  short_description: "Review equations and claims"
+  default_prompt: "Use $paper-technical-reviewer to check technical correctness and assumptions."

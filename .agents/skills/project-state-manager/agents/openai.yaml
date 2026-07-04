@@ -1,0 +1,4 @@
+interface:
+  display_name: "Project State Manager"
+  short_description: "Record project state snapshots"
+  default_prompt: "Use $project-state-manager to record the current project state and next actions."

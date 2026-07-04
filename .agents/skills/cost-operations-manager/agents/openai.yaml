@@ -1,0 +1,4 @@
+interface:
+  display_name: "Cost Operations Manager"
+  short_description: "Track and reduce operational cost"
+  default_prompt: "Use $cost-operations-manager to identify cost drivers and safe optimizations."

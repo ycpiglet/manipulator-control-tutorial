@@ -3806,14 +3806,16 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(replay_button.state_calls[-1], ["disabled"])
 
     def test_parse_run_output_path_detects_completed_run(self) -> None:
-        parsed = parse_run_output_path(r"Run complete: C:\tmp\outputs\20260627_150117_lab04_panda")
+        run_dir = Path("outputs") / "20260627_150117_lab04_panda"
+        parsed = parse_run_output_path(f"Run complete: {run_dir}")
 
         self.assertIsNotNone(parsed)
         assert parsed is not None
         self.assertEqual(parsed.name, "20260627_150117_lab04_panda")
 
     def test_parse_run_output_path_detects_completed_batch(self) -> None:
-        parsed = parse_run_output_path(r"Batch complete: C:\tmp\outputs\20260627_151000_lab02_pid_compare")
+        batch_dir = Path("outputs") / "20260627_151000_lab02_pid_compare"
+        parsed = parse_run_output_path(f"Batch complete: {batch_dir}")
 
         self.assertIsNotNone(parsed)
         assert parsed is not None

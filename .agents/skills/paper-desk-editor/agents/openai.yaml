@@ -1,0 +1,4 @@
+interface:
+  display_name: "Paper Desk Editor"
+  short_description: "Simulate editorial desk screening"
+  default_prompt: "Use $paper-desk-editor to check venue fit and desk-rejection risks."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Artifact Provenance Manager"
+  short_description: "Track generated artifact origins"
+  default_prompt: "Use $artifact-provenance-manager to record how an artifact was produced."

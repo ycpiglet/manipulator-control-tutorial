@@ -1,0 +1,4 @@
+interface:
+  display_name: "Paper Handling Editor"
+  short_description: "Synthesize reviewer feedback"
+  default_prompt: "Use $paper-handling-editor to prioritize reviewer feedback and revision strategy."

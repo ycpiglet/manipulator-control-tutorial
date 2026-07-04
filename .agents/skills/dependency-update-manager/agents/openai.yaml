@@ -1,0 +1,4 @@
+interface:
+  display_name: "Dependency Update Manager"
+  short_description: "Plan safe dependency and lockfile updates"
+  default_prompt: "Use $dependency-update-manager to update dependencies safely and document risk."

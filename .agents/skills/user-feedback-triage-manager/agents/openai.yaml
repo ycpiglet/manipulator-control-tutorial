@@ -1,0 +1,4 @@
+interface:
+  display_name: "User Feedback Triage Manager"
+  short_description: "Turn feedback into prioritized product work"
+  default_prompt: "Use $user-feedback-triage-manager to triage these user reports into actions."

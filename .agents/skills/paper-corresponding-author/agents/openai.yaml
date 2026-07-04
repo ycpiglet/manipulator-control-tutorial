@@ -1,0 +1,4 @@
+interface:
+  display_name: "Paper Corresponding Author"
+  short_description: "Manage submission communication"
+  default_prompt: "Use $paper-corresponding-author to prepare submission materials or reviewer responses."

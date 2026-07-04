@@ -1,0 +1,4 @@
+interface:
+  display_name: "Backup Retention Manager"
+  short_description: "Plan backup, retention, and restore tests"
+  default_prompt: "Use $backup-retention-manager to define retention and restore checks for these artifacts."

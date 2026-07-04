@@ -1,0 +1,4 @@
+interface:
+  display_name: "Product Analytics Manager"
+  short_description: "Design events, KPIs, funnels, and cohorts"
+  default_prompt: "Use $product-analytics-manager to define metrics and an event taxonomy."

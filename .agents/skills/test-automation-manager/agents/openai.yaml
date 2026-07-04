@@ -1,0 +1,4 @@
+interface:
+  display_name: "Test Automation Manager"
+  short_description: "Plan tests and reduce release risk"
+  default_prompt: "Use $test-automation-manager to choose and add the right automated tests."

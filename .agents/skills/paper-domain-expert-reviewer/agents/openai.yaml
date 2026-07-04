@@ -1,0 +1,4 @@
+interface:
+  display_name: "Paper Domain Expert Reviewer"
+  short_description: "Check expert-level accuracy"
+  default_prompt: "Use $paper-domain-expert-reviewer to catch domain errors and missing distinctions."

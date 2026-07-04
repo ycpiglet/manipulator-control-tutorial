@@ -1,0 +1,4 @@
+interface:
+  display_name: "Paper Reference Manager"
+  short_description: "Clean citations and BibTeX"
+  default_prompt: "Use $paper-reference-manager to add, verify, or clean manuscript references."

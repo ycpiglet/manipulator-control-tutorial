@@ -1,0 +1,4 @@
+interface:
+  display_name: "Paper Research Director"
+  short_description: "Set paper direction and scope"
+  default_prompt: "Use $paper-research-director to define the paper direction, contribution, and target reader."

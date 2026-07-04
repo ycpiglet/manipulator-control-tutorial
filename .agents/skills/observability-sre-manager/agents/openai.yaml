@@ -1,0 +1,4 @@
+interface:
+  display_name: "Observability SRE Manager"
+  short_description: "Define logs, metrics, SLOs, and alerts"
+  default_prompt: "Use $observability-sre-manager to design observability for this product workflow."

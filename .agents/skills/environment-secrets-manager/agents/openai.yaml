@@ -1,0 +1,4 @@
+interface:
+  display_name: "Environment Secrets Manager"
+  short_description: "Manage env vars and secret hygiene"
+  default_prompt: "Use $environment-secrets-manager to audit environment variables and secret handling."
