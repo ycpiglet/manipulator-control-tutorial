@@ -13,10 +13,28 @@ Iteratively improve the Korean review/tutorial paper on impedance, impedance con
 - Current focus sources: `paper/sections/01_introduction.tex`, `paper/sections/02_impedance.tex`, `paper/sections/04_electric_system.tex`, `paper/sections/05_mechanical_system.tex`, `paper/sections/05b_robotics_foundations.tex`, `paper/sections/06_impedance_control.tex`, `paper/sections/07_mujoco_lab_design.tex`, `paper/sections/08_discussion.tex`, `paper/sections/09_conclusion.tex`, `paper/sections/A_notation_checklist.tex`, `paper/main.tex`, `paper/figures/*.tex`, and `.agents/*`
 - Bibliography: `paper/references/refs.bib`
 - Latest PDF: `paper/main.pdf`
-- Current length: 119 PDF pages
-- Latest PDF size: 973262 bytes
+- Current length: 120 PDF pages
+- Latest PDF size: 976795 bytes
 
 ## Completed Since Last Snapshot
+
+### 2026-07-05 Derivation-Gap Medium Pass (Iteration 2)
+
+Version label: `draft-20260705-derivation-gaps-medium1`. Closed backlog items
+C2 (serial stiffness force split with combined-stiffness derivation and
+5 N / 10 N numeric contrast), B4 (RLC zeta isolation algebra), B6 (overshoot
+substitution chain; verified as mostly false positive first). Reviewer
+`Euler`: all CORRECT/FOLLOWABLE, no duplication. Guarded by
+`manuscript_derivation_gap_medium_checkpoint` (4 anchors) plus
+`series_stiffness_checkpoint` and `overshoot_formula_checkpoint`.
+
+| Gate | Threshold | Measured | Evidence |
+|---|---:|---:|---|
+| LaTeX compile | exit 0 | 0 | `tmp/latex_compile_derivation_gaps/compile_iter2.json` |
+| Final segment warnings | all 0 | 0/0/0, 0 over/underfull | same log |
+| PDF | generated | 120 pages (+1), 976795 bytes, SHA-256 `70A0F58B...2583FDF9` | `Get-FileHash` |
+| Validation script | failures 0 | exit 0 | `validate_robotics_foundations.py` |
+| Ruff (.agents) | exit 0 | all checks passed | `.venv/Scripts/ruff.exe check .agents` |
 
 ### 2026-07-05 Derivation-Gap High-Severity Pass
 
@@ -253,10 +271,10 @@ latest snapshot only; archive before it grows past roughly 500 lines.
 ## Next Recommended Action
 
 Continue the derivation-completeness loop from
-`.agents/DERIVATION_COMPLETENESS_PLAN.md`: all High items are closed; the
-next iteration should take the top Medium items (C2 serial-stiffness force
-split, B4 RLC standard-form coefficient algebra, B6 overshoot numeric
-example), each hand-verified before editing. Keep CI green as the standing
-gate. The later compression pass must carry the 15 new derivation anchors
+`.agents/DERIVATION_COMPLETENESS_PLAN.md`: all High items and the top Medium
+items (C2, B4, B6) are closed. The next iteration should take the remaining
+Medium items (C3 trajectory product-rule step, C4 m_d normalization, A5-A8
+complex-variable/convolution introductions), each hand-verified before
+editing. Keep CI green as the standing gate. The later compression pass must carry the 15 new derivation anchors
 into surviving text. Preserving reviewer full texts under `.agents/reviews/`
 should start with the next review pass.

@@ -1135,6 +1135,26 @@ $\zeta \approx 0.7$은 빠른 과도응답의 대표값이고, $\zeta \approx 1$
 목표 오프셋 전체가 로봇 쪽 스프링 변형으로만 들어가는 것이 아니라, 일부는 로봇의 위치 오차로, 일부는 환경의 변형으로 나뉜다.
 그래서 부드러운 물체를 누를 때는 같은 목표 오프셋을 주어도 벽이 강체일 때보다 힘이 작게 나오거나, 변형 분포가 전혀 다르게 보일 수 있다.
 이때는 로봇 강성, 환경 강성, 목표 오프셋이 직렬로 연결된 두 스프링 문제처럼 함께 힘의 균형을 이룬다고 생각하면 좋다.
+이 균형을 수식 한 줄로 적어 보자.
+환경을 강성 $k_{\mathrm{env}}$의 스프링으로 보면, 정지 근처 평형에서는 하나의 접촉력 $f$가 로봇 가상 스프링과 환경 스프링을 동시에 누르므로
+\[
+  f
+  =
+  k_d\,\delta_{\mathrm{robot}}
+  =
+  k_{\mathrm{env}}\,\delta_{\mathrm{env}}
+\vmark{contact-series-stiffness-split}%
+\]
+이고, 목표 오프셋은 두 변형으로 나뉘어 $\delta_{\mathrm{robot}}+\delta_{\mathrm{env}}\approx\delta_d$가 된다.
+첫 식에서 $\delta_{\mathrm{robot}}=f/k_d$, $\delta_{\mathrm{env}}=f/k_{\mathrm{env}}$로 풀어 합 식에 넣으면 $f(1/k_d+1/k_{\mathrm{env}})\approx\delta_d$이므로
+\[
+  f
+  \approx
+  \frac{k_d\,k_{\mathrm{env}}}{k_d+k_{\mathrm{env}}}\,\delta_d.
+\]
+즉 직렬 합성 강성은 두 강성 중 작은 쪽에 끌려간다.
+숫자로 보면, 위의 $k_d=500~\mathrm{N/m}$, $\delta_d=2~\mathrm{cm}$ 예제에서 벽이 강체에 가까우면($k_{\mathrm{env}}\to\infty$) $f\to k_d\delta_d=10~\mathrm{N}$이지만, 부드러운 물체 $k_{\mathrm{env}}=500~\mathrm{N/m}$이면 합성 강성이 $250~\mathrm{N/m}$라 같은 목표 오프셋에서 $f\approx5~\mathrm{N}$으로 절반이 된다.
+\vmark{contact-series-stiffness-numeric}%
 
 접촉 튜닝에서는 기호도 한 번 정리해 두는 편이 좋다.
 \begin{table}[!htbp]

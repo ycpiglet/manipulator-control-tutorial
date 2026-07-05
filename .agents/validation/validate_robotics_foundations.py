@@ -190,6 +190,70 @@ def manuscript_derivation_gap_high_checkpoint() -> dict[str, int]:
     }
 
 
+def manuscript_derivation_gap_medium_checkpoint() -> dict[str, int]:
+    """Check anchors for the 2026-07-05 Medium-severity derivation-gap fixes.
+
+    Covers the serial robot/environment stiffness force split (Section 6),
+    the RLC damping-ratio isolation algebra (Section 4), and the overshoot
+    substitution example (Section 5).
+    """
+    electric = ELECTRIC_SYSTEM_TEX.read_text(encoding="utf-8")
+    mechanical = MECHANICAL_SYSTEM_TEX.read_text(encoding="utf-8")
+    impedance_control = IMPEDANCE_CONTROL_TEX.read_text(encoding="utf-8")
+    return {
+        "contact_series_stiffness_split_marker_count": impedance_control.count(
+            "\\vmark{contact-series-stiffness-split}"
+        ),
+        "contact_series_stiffness_numeric_marker_count": impedance_control.count(
+            "\\vmark{contact-series-stiffness-numeric}"
+        ),
+        "rlc_zeta_isolation_marker_count": electric.count(
+            "\\vmark{rlc-zeta-isolation}"
+        ),
+        "overshoot_zeta07_substitution_marker_count": mechanical.count(
+            "\\vmark{overshoot-zeta07-substitution}"
+        ),
+    }
+
+
+def series_stiffness_checkpoint() -> dict[str, float]:
+    """Verify the Section 6 serial-stiffness numeric example.
+
+    k_d = k_env = 500 N/m with delta_d = 2 cm must give ~5 N, and a
+    near-rigid environment must approach the k_d*delta_d = 10 N limit.
+    """
+    k_d, delta_d = 500.0, 0.02
+    k_env_soft = 500.0
+    k_env_rigid = 1.0e9
+    f_soft = (k_d * k_env_soft) / (k_d + k_env_soft) * delta_d
+    f_rigid = (k_d * k_env_rigid) / (k_d + k_env_rigid) * delta_d
+    return {
+        "soft_contact_force_n": f_soft,
+        "rigid_limit_force_n": f_rigid,
+        "max_series_stiffness_error": max(
+            abs(f_soft - 5.0), abs(f_rigid - k_d * delta_d)
+        ),
+    }
+
+
+def overshoot_formula_checkpoint() -> dict[str, float]:
+    """Verify the Section 5 overshoot substitution examples.
+
+    The manuscript claims M_p(zeta=0.7) ~ 4.6 percent and
+    M_p(zeta=0.2) ~ 53 percent.
+    """
+    def m_p(zeta: float) -> float:
+        return math.exp(-zeta * math.pi / math.sqrt(1.0 - zeta * zeta))
+
+    return {
+        "overshoot_zeta_07": m_p(0.7),
+        "overshoot_zeta_02": m_p(0.2),
+        "max_overshoot_claim_error": max(
+            abs(m_p(0.7) - 0.046), abs(m_p(0.2) - 0.53)
+        ),
+    }
+
+
 def charroot_standard_form_checkpoint() -> dict[str, float]:
     """Verify the Section 5 characteristic-root numeric check (m=1, b=2, k=4).
 
@@ -1056,6 +1120,11 @@ def main() -> int:
         ),
         "charroot_standard_form_checkpoint": charroot_standard_form_checkpoint(),
         "effective_mass_direction_checkpoint": effective_mass_direction_checkpoint(),
+        "manuscript_derivation_gap_medium_checkpoint": (
+            manuscript_derivation_gap_medium_checkpoint()
+        ),
+        "series_stiffness_checkpoint": series_stiffness_checkpoint(),
+        "overshoot_formula_checkpoint": overshoot_formula_checkpoint(),
         "manuscript_generalized_effort_bridge_marker_checkpoint": (
             manuscript_generalized_effort_bridge_marker_checkpoint()
         ),
@@ -1098,6 +1167,10 @@ def main() -> int:
         "max_determinant_formula_error": 1.0e-12,
         "charroot_standard_form_checkpoint.max_root_component_error": 1.0e-12,
         "effective_mass_direction_checkpoint.max_effective_mass_error": 1.0e-12,
+        # The rigid-limit branch uses a finite 1e9 N/m proxy for k_env -> inf,
+        # which leaves an expected ~5e-6 N asymptotic residual.
+        "series_stiffness_checkpoint.max_series_stiffness_error": 1.0e-4,
+        "overshoot_formula_checkpoint.max_overshoot_claim_error": 5.0e-3,
     }
     failures: list[str] = []
     for key, threshold in thresholds.items():
@@ -1172,6 +1245,15 @@ def main() -> int:
         )
     else:
         for key, value in derivation_gap_markers.items():
+            if int(value) < 1:
+                failures.append(f"{key}={value} < 1")
+    derivation_gap_medium_markers = metrics["manuscript_derivation_gap_medium_checkpoint"]
+    if not isinstance(derivation_gap_medium_markers, dict):
+        failures.append(
+            "manuscript_derivation_gap_medium_checkpoint did not return a dictionary"
+        )
+    else:
+        for key, value in derivation_gap_medium_markers.items():
             if int(value) < 1:
                 failures.append(f"{key}={value} < 1")
     effort_bridge_markers = metrics[

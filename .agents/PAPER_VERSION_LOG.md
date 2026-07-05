@@ -4,6 +4,44 @@ This file records manuscript-facing draft states. It complements
 `.agents/CURRENT_STATE.md` by keeping durable paper version labels, source/PDF
 paths, change intent, verification, and open risks.
 
+## draft-20260705-derivation-gaps-medium1
+
+- Type: derivation-completeness pass (top Medium items) over Sections 4--6
+- Main source: `paper/sections/04_electric_system.tex`,
+  `05_mechanical_system.tex`, `06_impedance_control.tex`
+- Main PDF: `paper/main.pdf`
+- Plan/backlog record: `.agents/DERIVATION_COMPLETENESS_PLAN.md` (Iteration 2)
+- Version purpose:
+  - Continue the derivation-completeness loop: close backlog items C2
+    (serial robot/environment stiffness force split), B4 (RLC damping-ratio
+    isolation algebra), and B6 (overshoot substitution example).
+- Audit verification before editing:
+  - C2 confirmed (equations absent); B4 partially confirmed (only the zeta
+    isolation step missing); B6 mostly a false positive (numeric examples
+    and the ln 50 log step already exist; only the M_p(0.7) substitution
+    was unexpanded).
+- Major changes represented (additive only):
+  - Section 6: series-stiffness balance equations, combined-stiffness
+    derivation, and the 5 N / 10 N numeric contrast tied to the existing
+    500 N/m, 2 cm example.
+  - Section 4: four-step isolation of \(\zeta=(R/2)\sqrt{C/L}\) from the
+    velocity-term comparison.
+  - Section 5: explicit substitution chain for \(M_p(\zeta=0.7)\approx4.6\%\).
+  - 4 new `\vmark` anchors under `manuscript_derivation_gap_medium_checkpoint`;
+    numeric validator checkpoints `series_stiffness_checkpoint` and
+    `overshoot_formula_checkpoint`.
+- Review: combined reviewer `Euler` — all technical items CORRECT, all
+  passages FOLLOWABLE, no duplication with surrounding prose.
+- Review or submission status: internal working draft, not submission-ready
+- Verification:
+  - LaTeX compile exit code: 0 (bundled Tectonic)
+  - Final segment citation/reference/rerun warnings: 0/0/0
+  - Final overfull/underfull boxes: 0/0
+  - PDF: `paper/main.pdf`, 120 pages (was 119), 976795 bytes
+  - PDF SHA-256: `70A0F58BED3A7DD74E8902DC76B7A3FE1FFFA6857DA33239CBEEADA02583FDF9`
+  - Validator: exit 0, failures 0 (after widening the rigid-limit tolerance
+    to absorb the finite 1e9 N/m proxy's ~5e-6 N asymptotic residual)
+
 ## draft-20260705-derivation-gaps-high
 
 - Type: derivation-completeness pass (High-severity gaps) over Sections 2--6

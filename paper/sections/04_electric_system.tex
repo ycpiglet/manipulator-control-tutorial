@@ -627,7 +627,22 @@ RLC 회로 방정식
 표준형으로 바꾸는 일은 물리 시스템을 바꾸는 것이 아니라 눈금을 바꾸는 일이다.
 전하, 위치, 힘처럼 단위가 다른 시스템도 $\omega_n$과 $\zeta$라는 두 눈금으로 옮겨 놓으면 얼마나 빠르게 흔들리는가와 얼마나 빨리 사라지는가를 같은 그래프 언어로 비교할 수 있다.
 $u=Cv_{\mathrm{in}}$ 같은 입력 스케일링도 실제 전압을 다른 장치로 바꾼다는 뜻이 아니라, 비교하기 쉬운 기준 입력으로 다시 표현하는 과정이다.
-RLC 회로를 이 표준형과 비교하면
+위치항 비교에서 $\omega_n^2=1/(LC)$이므로 $\omega_n=1/\sqrt{LC}$이다.
+속도항 비교 $2\zeta\omega_n=R/L$에서 $\zeta$만 남기면
+\[
+  \zeta
+  =
+  \frac{R/L}{2\omega_n}
+  =
+  \frac{R}{2L}\sqrt{LC}
+  =
+  \frac{R}{2}\sqrt{\frac{LC}{L^2}}
+  =
+  \frac{R}{2}\sqrt{\frac{C}{L}}
+\vmark{rlc-zeta-isolation}%
+\]
+가 된다.
+정리하면 RLC 회로의 표준 파라미터는
 \begin{align}
   \omega_n &= \frac{1}{\sqrt{LC}}, \\
   \zeta &= \frac{R}{2} \sqrt{\frac{C}{L}}.

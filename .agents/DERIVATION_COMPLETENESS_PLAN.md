@@ -124,6 +124,25 @@ Medium 중 같은 문단에 붙은 B3(ω_d)는 B2 수정과 물리적으로 한 
 남은 backlog: A5-A8, B4-B7, C2-C5 (Medium/Low) — 다음 이터레이션 후보 최우선은
 C2(직렬 강성 분배 관계식)와 B4(RLC 표준형 계수 비교), B6(오버슈트 숫자 예제).
 
+### Iteration 2 결과 (2026-07-05, version `draft-20260705-derivation-gaps-medium1`)
+
+| 항목 | 검증 판정 | 조치 | 상태 |
+|---|---|---|---|
+| C2 | 확정 Medium — 직렬 강성 관계식 부재 | 06장에 \(f=k_d\delta_{\mathrm{robot}}=k_{\mathrm{env}}\delta_{\mathrm{env}}\), 변형 합, 합성 강성 \(f\approx\frac{k_dk_{\mathrm{env}}}{k_d+k_{\mathrm{env}}}\delta_d\) 유도 + 500/500/2cm→5N, 강체 극한→10N 숫자 예시 | **closed** |
+| B4 | 부분 확정 — 계수 비교는 이미 단계적, \(\zeta\) 분리 한 단계만 생략 | 04장에 \(\zeta=(R/L)/(2\omega_n)=\frac{R}{2}\sqrt{C/L}\) 4단계 전개 추가 | **closed** |
+| B6 | 대부분 오탐 — \(\zeta=0.2/0.7\) 숫자 예시와 \(\ln 50\) 로그 단계 이미 존재; \(M_p(0.7)\) 대입 계산만 미전개 | 05장에 \(\sqrt{0.51}\approx0.714\), \(e^{-3.08}\approx0.046\) 대입 과정 추가 | **closed** |
+
+리뷰: 통합 리뷰어 Euler — 기술 검증 3건 전부 CORRECT, 가독성 FOLLOWABLE,
+주변 문단과의 중복 없음(서사→수식 진행 구조 확인).
+
+검증: 앵커 4개(`manuscript_derivation_gap_medium_checkpoint`) + 숫자 검산
+2건(`series_stiffness_checkpoint`, `overshoot_formula_checkpoint`) 추가.
+교훈: 강체 극한을 유한 대체값(1e9)으로 검사할 때 점근 잔차(~5e-6)를 허용
+오차에 반영해야 함 — 첫 실행에서 1e-6 임계값이 이 잔차로 실패했음.
+
+남은 backlog: A5-A8(03장 복소변수 의미, 컨볼루션 적분 도입 등), B5(무감쇠
+해 대입 검산), B7/C5(Low 묶음), C3(궤적 곱의 미분 규칙), C4(\(m_d\) 정규화).
+
 ## Lessons (compound learning)
 
 - 이전 패스에서 확립: phrase-count 마커는 깨지기 쉬움 → `\vmark` 앵커 사용 (2026-07-05 완료)
