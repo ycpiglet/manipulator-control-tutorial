@@ -4,6 +4,170 @@ This file records manuscript-facing draft states. It complements
 `.agents/CURRENT_STATE.md` by keeping durable paper version labels, source/PDF
 paths, change intent, verification, and open risks.
 
+## draft-20260705-derivation-gaps-medium2
+
+- Type: derivation-completeness pass (remaining Medium tier) over Sections
+  2, 3, 4, 5b, 6
+- Main source: `paper/sections/02_impedance.tex`, `03_lti_system.tex`,
+  `04_electric_system.tex`, `05b_robotics_foundations.tex`,
+  `06_impedance_control.tex`
+- Main PDF: `paper/main.pdf`
+- Plan/backlog record: `.agents/DERIVATION_COMPLETENESS_PLAN.md` (Iteration 3)
+- Version purpose:
+  - Exhaust the Medium tier of the derivation backlog: A5 (imaginary-unit
+    first-use definition), A6 (sinusoid velocity derivative + RLC series-sum
+    bridge), A7 (charge-current correspondence), B5 (undamped-solution
+    substitution check), C3 (trajectory product-rule origin), C4 (impedance
+    error normalization). A8 was already resolved by the iteration-1 Laplace
+    definition insert.
+- Major changes represented (additive only): 7 short derivation bridges,
+  each anchored; 7 new `\vmark` anchors under
+  `manuscript_derivation_gap_medium2_checkpoint`.
+- Review: combined reviewer `Noether` — all 7 items CORRECT/FOLLOWABLE, no
+  duplication (forward-first j definition accepted).
+- Review or submission status: internal working draft, not submission-ready
+- Verification:
+  - LaTeX compile exit code: 0 (bundled Tectonic)
+  - Final segment citation/reference/rerun warnings: 0/0/0
+  - Final overfull/underfull boxes: 0/0
+  - PDF: `paper/main.pdf`, 120 pages (unchanged), 979698 bytes
+  - PDF SHA-256: `22DBA0FD376B75EF99E4BB124A4266B2D02286DAA327EF5979CAB9480B47761C`
+  - Validator: exit 0, failures 0 (7/7 new anchors present)
+
+## draft-20260705-derivation-gaps-medium1
+
+- Type: derivation-completeness pass (top Medium items) over Sections 4--6
+- Main source: `paper/sections/04_electric_system.tex`,
+  `05_mechanical_system.tex`, `06_impedance_control.tex`
+- Main PDF: `paper/main.pdf`
+- Plan/backlog record: `.agents/DERIVATION_COMPLETENESS_PLAN.md` (Iteration 2)
+- Version purpose:
+  - Continue the derivation-completeness loop: close backlog items C2
+    (serial robot/environment stiffness force split), B4 (RLC damping-ratio
+    isolation algebra), and B6 (overshoot substitution example).
+- Audit verification before editing:
+  - C2 confirmed (equations absent); B4 partially confirmed (only the zeta
+    isolation step missing); B6 mostly a false positive (numeric examples
+    and the ln 50 log step already exist; only the M_p(0.7) substitution
+    was unexpanded).
+- Major changes represented (additive only):
+  - Section 6: series-stiffness balance equations, combined-stiffness
+    derivation, and the 5 N / 10 N numeric contrast tied to the existing
+    500 N/m, 2 cm example.
+  - Section 4: four-step isolation of \(\zeta=(R/2)\sqrt{C/L}\) from the
+    velocity-term comparison.
+  - Section 5: explicit substitution chain for \(M_p(\zeta=0.7)\approx4.6\%\).
+  - 4 new `\vmark` anchors under `manuscript_derivation_gap_medium_checkpoint`;
+    numeric validator checkpoints `series_stiffness_checkpoint` and
+    `overshoot_formula_checkpoint`.
+- Review: combined reviewer `Euler` — all technical items CORRECT, all
+  passages FOLLOWABLE, no duplication with surrounding prose.
+- Review or submission status: internal working draft, not submission-ready
+- Verification:
+  - LaTeX compile exit code: 0 (bundled Tectonic)
+  - Final segment citation/reference/rerun warnings: 0/0/0
+  - Final overfull/underfull boxes: 0/0
+  - PDF: `paper/main.pdf`, 120 pages (was 119), 976795 bytes
+  - PDF SHA-256: `70A0F58BED3A7DD74E8902DC76B7A3FE1FFFA6857DA33239CBEEADA02583FDF9`
+  - Validator: exit 0, failures 0 (after widening the rigid-limit tolerance
+    to absorb the finite 1e9 N/m proxy's ~5e-6 N asymptotic residual)
+
+## draft-20260705-derivation-gaps-high
+
+- Type: derivation-completeness pass (High-severity gaps) over Sections 2--6
+- Main source: `paper/main.tex`, `paper/sections/02_impedance.tex`,
+  `03_lti_system.tex`, `04_electric_system.tex`, `05_mechanical_system.tex`,
+  `06_impedance_control.tex`
+- Main PDF: `paper/main.pdf`
+- Plan/backlog record: `.agents/DERIVATION_COMPLETENESS_PLAN.md`
+- Version purpose:
+  - Execute the standing beginner-accessibility goal: expand every
+    High-severity derivation jump (steps a high-schooler/first-year/non-major
+    cannot follow without external material) directly in-text.
+- Audit findings (3 parallel read-only auditors, then hand-verified):
+  - Confirmed High: Laplace integral definition absent from the whole paper
+    and differentiation rule used underived (A1+B1); characteristic-root
+    standard-form substitution skipped (B2); workspace inertia
+    \(\bm{\Lambda}=(\bm{J}_v\bm{M}_q^{-1}\bm{J}_v^{\mathsf{T}})^{-1}\)
+    presented without derivation (C1).
+  - False positives closed without edits: telegrapher partial-derivative
+    intuition (A2) and final-value-theorem conditions (A3) already exist.
+  - Medium backlog (A5-A8, B4-B7, C2-C5) recorded for later iterations.
+- Major changes represented (additive only; no prose deleted):
+  - Section 3: new `\paragraph{라플라스 변환의 정의.}` with the integral
+    definition, a product-rule derivation of
+    \(\mathcal{L}\{\dot{x}\}=sX(s)-x(0)\), a constant-function check
+    (\(X(s)=1/s\)), double application for \(\ddot{x}\), term-by-term
+    substitution into the MSD equation, and a complex magnitude/angle
+    explainer with the \(H=1-\jj\) example.
+  - Section 2: forward pointer at first \(\mathcal{L}\) use; term-by-term
+    velocity-based substitution before the mechanical impedance result.
+  - Section 4: term-by-term Laplace substitution for the RLC equation.
+  - Section 5: two-piece algebra expansion of the characteristic-root
+    substitution (\(-b/2m=-\zeta\omega_n\); \(b^2-4mk=4mk(\zeta^2-1)\)),
+    numeric check (m=1, b=2, k=4), and explicit
+    \(\sqrt{\zeta^2-1}=\jj\sqrt{1-\zeta^2}\) factorization for \(\omega_d\).
+  - Section 6: force-to-acceleration derivation of
+    \(\bm{J}_v\bm{M}_q^{-1}\bm{J}_v^{\mathsf{T}}\) and a directional
+    effective-mass toy check on the Section 5b two-link pose
+    (\(m_{\mathrm{eff},x}=0.5\), \(m_{\mathrm{eff},y}=1\)).
+  - 15 new `\vmark` anchors; new validator checkpoints
+    `manuscript_derivation_gap_high_checkpoint`,
+    `charroot_standard_form_checkpoint`,
+    `effective_mass_direction_checkpoint`.
+- Review: novice reviewer `Poincare` (4 findings, 3 applied), technical
+  reviewer `Gauss` (all 6 items CORRECT).
+- Review or submission status: internal working draft, not submission-ready
+- Verification:
+  - LaTeX compile exit code: 0 (bundled Tectonic)
+  - Final segment citation/reference/rerun warnings: 0/0/0
+  - Final overfull/underfull boxes: 0/0 (2 known Korean italic font warnings)
+  - PDF: `paper/main.pdf`, 119 pages (was 118), 973262 bytes
+  - PDF SHA-256: `16C0DD5892583640B5729FEE6D42CF62ECC5B2D7E44A6FDE66391BCC53EA7883`
+  - Validator: exit 0, failures 0 (all 15 new anchors present, numeric
+    checkpoint errors 0.0)
+  - Citation coverage: 29/29 used keys, 0 duplicates
+  - PDF content markers via pypdf: pages 17, 21, 51, 79
+  - Visual layout: renderer unavailable this session; compensated by 0
+    overfull/underfull boxes and additive-only edits
+
+## draft-20260705-section5b-density-nav
+
+- Type: page-density/navigation pass over Section 5b (PDF pages 55--68)
+- Main source: `paper/main.tex`, `paper/sections/05b_robotics_foundations.tex`
+- Main PDF: `paper/main.pdf`
+- Version purpose:
+  - Execute the standing next-action item: review Section 5b rendered pages
+    for density and navigation before the compression pass.
+- Review findings (rendered-page inspection of pages 55--68):
+  - Overall layout healthy: tables 16--22 and figures 5--8 break up density;
+    no clipping or overfull boxes.
+  - The previously suggested small 2-link geometry figure already exists as
+    Figure 6 (IK branches) and Figure 7 (Jacobian columns); no new figure
+    needed.
+  - Page 59 was the densest full-text page: IK branch caveats, calculation
+    order, and the numeric example ran together without visual anchors.
+  - The `IK에서 자코비안으로 넘어가는 다리` paragraph heading started two
+    lines from the bottom of page 60 and broke across the page turn.
+- Major changes represented (additive only; no prose reworded):
+  - Added `\paragraph{계산 순서.}` and `\paragraph{숫자로 확인.}` signposts on
+    page 59 with new anchors `ik-branch-calculation-order` and
+    `ik-branch-numeric-example`.
+  - Added `\usepackage{needspace}` and `\needspace{4\baselineskip}` before the
+    IK-to-Jacobian bridge heading, which now starts complete at the top of
+    page 61.
+  - Added `manuscript_section5b_density_nav_checkpoint` to
+    `validate_robotics_foundations.py` guarding the two new anchors.
+- Review or submission status: internal working draft, not submission-ready
+- Verification:
+  - LaTeX compile exit code: 0 (bundled Tectonic)
+  - Final segment citation/reference/rerun warnings: 0/0/0
+  - Final overfull/underfull boxes: 0/0
+  - PDF: `paper/main.pdf`, 118 pages (unchanged), 961293 bytes
+  - Validation script exit 0 with the new density-nav checkpoint enforced
+  - Rendered pages 59, 60, 61 inspected: signposts render, no stranded
+    heading, no awkward bottom gap on page 60
+
 ## draft-20260705-vmark-stable-anchors
 
 - Type: validation-harness migration with output-neutral manuscript anchors

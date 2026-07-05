@@ -1,6 +1,6 @@
 # Current State
 
-Updated: 2026-07-05 18:00 KST
+Updated: 2026-07-05 21:40 KST
 
 ## Current Objective
 
@@ -13,10 +13,113 @@ Iteratively improve the Korean review/tutorial paper on impedance, impedance con
 - Current focus sources: `paper/sections/01_introduction.tex`, `paper/sections/02_impedance.tex`, `paper/sections/04_electric_system.tex`, `paper/sections/05_mechanical_system.tex`, `paper/sections/05b_robotics_foundations.tex`, `paper/sections/06_impedance_control.tex`, `paper/sections/07_mujoco_lab_design.tex`, `paper/sections/08_discussion.tex`, `paper/sections/09_conclusion.tex`, `paper/sections/A_notation_checklist.tex`, `paper/main.tex`, `paper/figures/*.tex`, and `.agents/*`
 - Bibliography: `paper/references/refs.bib`
 - Latest PDF: `paper/main.pdf`
-- Current length: 118 PDF pages
-- Latest PDF size: 961208 bytes
+- Current length: 120 PDF pages
+- Latest PDF size: 979698 bytes
 
 ## Completed Since Last Snapshot
+
+### 2026-07-05 Derivation-Gap Medium Pass 2 (Iteration 3)
+
+Version label: `draft-20260705-derivation-gaps-medium2`. Exhausted the
+Medium tier of the derivation backlog: A5 (j first-use definition), A6
+(sinusoid velocity derivative + RLC series-sum bridge), A7 (i = q-dot
+correspondence), B5 (undamped-solution substitution check), C3 (trajectory
+product-rule origin of the two q-double-dot terms), C4 (impedance error
+normalization and coefficient matching, cross-checked against the original
+equation at 06:360). A8 confirmed already resolved by iteration 1. Reviewer
+`Noether`: all 7 CORRECT/FOLLOWABLE, no duplication. Guarded by
+`manuscript_derivation_gap_medium2_checkpoint` (7 anchors). Only Low-tier
+bundles (B7, C5) remain in the backlog.
+
+| Gate | Threshold | Measured | Evidence |
+|---|---:|---:|---|
+| LaTeX compile | exit 0 | 0 | `tmp/latex_compile_derivation_gaps/compile_iter3.json` |
+| Final segment warnings | all 0 | 0/0/0, 0 over/underfull | same log |
+| PDF | generated | 120 pages (unchanged), 979698 bytes, SHA-256 `22DBA0FD...B47761C` | `Get-FileHash` |
+| Validation script | failures 0 | exit 0 (7/7 new anchors) | `validate_robotics_foundations.py` |
+| Ruff (.agents) | exit 0 | all checks passed | `.venv/Scripts/ruff.exe check .agents` |
+
+### 2026-07-05 Derivation-Gap Medium Pass (Iteration 2)
+
+Version label: `draft-20260705-derivation-gaps-medium1`. Closed backlog items
+C2 (serial stiffness force split with combined-stiffness derivation and
+5 N / 10 N numeric contrast), B4 (RLC zeta isolation algebra), B6 (overshoot
+substitution chain; verified as mostly false positive first). Reviewer
+`Euler`: all CORRECT/FOLLOWABLE, no duplication. Guarded by
+`manuscript_derivation_gap_medium_checkpoint` (4 anchors) plus
+`series_stiffness_checkpoint` and `overshoot_formula_checkpoint`.
+
+| Gate | Threshold | Measured | Evidence |
+|---|---:|---:|---|
+| LaTeX compile | exit 0 | 0 | `tmp/latex_compile_derivation_gaps/compile_iter2.json` |
+| Final segment warnings | all 0 | 0/0/0, 0 over/underfull | same log |
+| PDF | generated | 120 pages (+1), 976795 bytes, SHA-256 `70A0F58B...2583FDF9` | `Get-FileHash` |
+| Validation script | failures 0 | exit 0 | `validate_robotics_foundations.py` |
+| Ruff (.agents) | exit 0 | all checks passed | `.venv/Scripts/ruff.exe check .agents` |
+
+### 2026-07-05 Derivation-Gap High-Severity Pass
+
+Executed the standing beginner-accessibility goal (derivation steps fully
+decomposed, especially Jacobian-adjacent math). Version label:
+`draft-20260705-derivation-gaps-high`. New standing plan/backlog:
+`.agents/DERIVATION_COMPLETENESS_PLAN.md` (reader model, D1-D4 metrics,
+severity rubric, iteration loop, compound lessons).
+
+- Multi-agent flow: 3 parallel read-only auditors (Sections 2-3, 4-5, 6+5b)
+  -> owner hand-verified every High finding against the source (2 of 5
+  auditor "High" findings were false positives; recorded as a lesson) ->
+  additive fixes -> novice (`Poincare`) + technical (`Gauss`) dual review ->
+  3 review fixes applied -> revalidate/recompile.
+- Fixed (all confirmed High gaps closed):
+  - Section 3: Laplace integral definition, product-rule derivation of the
+    differentiation rule, constant-function check, double application for
+    second derivatives, term-by-term MSD substitution, complex
+    magnitude/angle explainer.
+  - Sections 2/4: term-by-term Laplace substitutions + forward pointer.
+  - Section 5: characteristic-root standard-form substitution in two algebra
+    pieces + numeric check + imaginary-unit factorization for omega_d.
+  - Section 6: force-to-acceleration derivation of J M^-1 J^T and a
+    directional effective-mass toy check (x: 0.5 kg, y: 1 kg) on the 5b pose.
+- Guarded: 15 new `\vmark` anchors under
+  `manuscript_derivation_gap_high_checkpoint`; two new numeric checkpoints
+  (`charroot_standard_form_checkpoint`, `effective_mass_direction_checkpoint`)
+  keep the manuscript's numeric examples machine-verified.
+- Registry: added `paper_tutorial.derivation_step_completeness` durable gate
+  to `.agents/VALIDATION_METRICS.yaml`.
+
+| Gate | Threshold | Measured | Evidence |
+|---|---:|---:|---|
+| LaTeX compile | exit 0 | 0 | bundled Tectonic, `tmp/latex_compile_derivation_gaps/compile_final.json` |
+| Final segment warnings | all 0 | 0 citation/reference/rerun, 0 overfull/underfull | same log |
+| PDF | generated | 119 pages (+1), 973262 bytes, SHA-256 `16C0DD58...53EA7883` | pypdf page count, `Get-FileHash` |
+| Validation script | failures 0 | exit 0 (15/15 anchors, numeric errors 0.0) | `validate_robotics_foundations.py` |
+| Citation coverage | exit 0 | 29/29 used keys, 0 duplicates | `check_citation_coverage.py` |
+| Ruff (.agents) | exit 0 | all checks passed | `.venv/Scripts/ruff.exe check .agents` |
+| PDF content markers | present | pages 17, 21, 51, 79 | pypdf text search |
+| Visual layout | no breakage | not run (no renderer); compensated by 0 over/underfull | recorded in validation summary |
+| High-severity gaps | 0 open | 0 open (4 closed by edits, 2 closed as false positives) | `.agents/DERIVATION_COMPLETENESS_PLAN.md` |
+
+### 2026-07-05 Section 5b Density/Navigation Pass
+
+Reviewed all rendered Section 5b pages (55--68) and applied additive-only
+navigation fixes. Version label: `draft-20260705-section5b-density-nav`
+(details in `.agents/PAPER_VERSION_LOG.md`).
+
+- Finding: layout healthy overall; the suggested 2-link geometry figure
+  already exists (Figures 6 and 7), so that standing suggestion is closed.
+- Fixed: page 59 text wall split with `\paragraph{계산 순서.}` and
+  `\paragraph{숫자로 확인.}` signposts (anchored); stranded IK-to-Jacobian
+  bridge heading moved whole to page 61 top via `needspace`.
+- Guarded: new `manuscript_section5b_density_nav_checkpoint` in the
+  validation script.
+
+| Gate | Threshold | Measured | Evidence |
+|---|---:|---:|---|
+| LaTeX compile | exit 0 | 0 | bundled Tectonic, `tmp/latex_compile_s5b_density/compile.json` |
+| Final segment warnings | all 0 | 0 citation/reference/rerun, 0 overfull/underfull | same log |
+| PDF | 118 pages | 118 pages, 961293 bytes | bundled pypdf |
+| Validation script | failures 0 | exit 0 (incl. new checkpoint) | `validate_robotics_foundations.py` |
+| Visual layout | no stranded heading, no clipping | pages 59/60/61 rendered and inspected | Poppler PNG inspection |
 
 ### 2026-07-05 Test Coverage Baseline Pass
 
@@ -188,12 +291,14 @@ latest snapshot only; archive before it grows past roughly 500 lines.
 
 ## Next Recommended Action
 
-Keep CI green as the standing gate. The stable-anchor migration is done, so
-the compression pass is no longer blocked by marker fragility. Next in order:
-finish the test-coverage baseline gate (measure, record threshold in
-`VALIDATION_METRICS.yaml`, enforce in CI), then continue the
-robotics-foundation loop: a page-density/navigation review around Section 5b
-pages 58--65, a small 2-link geometry figure if readers still struggle with
-IK/Jacobian branch intuition, and a cleanup pass that shortens duplicated
-setup in Section 6 while preserving the beginner bridge and carrying
-`\vmark` anchors into surviving text.
+The derivation-completeness loop
+(`.agents/DERIVATION_COMPLETENESS_PLAN.md`) has closed all High and Medium
+items across three iterations; only Low-tier bundles (B7, C5 — single
+skipped steps that do not block a beginner) remain and can be batched into a
+future iteration or absorbed by the compression pass. Next milestones: push
+the `claude/derivation-gaps-high` branch and open a PR when the user asks
+(branch stacks on the unpushed Section 5b density commit), then the
+compression pass — which must carry the 26 new derivation anchors into
+surviving text. Keep CI green as the standing gate. The later compression pass must carry the 15 new derivation anchors
+into surviving text. Preserving reviewer full texts under `.agents/reviews/`
+should start with the next review pass.

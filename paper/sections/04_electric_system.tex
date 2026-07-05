@@ -35,6 +35,9 @@ $x>0$이면 $\ddot{x}<0$이므로 왼쪽으로 가속되고, $x<0$이면 $\ddot{
   x(t)=A\cos(\omega_n t)+B\sin(\omega_n t)
 \end{equation}
 이다.
+이 해가 정말 맞는지는 대입으로 바로 검산할 수 있다.
+한 번 미분하면 $\dot{x}=-A\omega_n\sin(\omega_n t)+B\omega_n\cos(\omega_n t)$이고, 한 번 더 미분하면 $\ddot{x}=-\omega_n^2\left(A\cos(\omega_n t)+B\sin(\omega_n t)\right)=-\omega_n^2 x$이므로, 원래 식 $\ddot{x}+\omega_n^2x=0$을 만족한다.
+\vmark{undamped-solution-substitution-check}%
 $\omega_n$은 얼마나 빠르게 흔들리는지를 정한다.
 값이 크면 짧은 시간 안에 여러 번 흔들리고, 값이 작으면 천천히 흔들린다.
 진동의 주기는
@@ -508,7 +511,9 @@ $\omega_n$은 얼마나 빠르게 흔들리는지를 정한다.
 물리적 핵심은 바로 뒤의 에너지 해석에서 다시 확인한다.
 이를 위해 먼저 라플라스 변환을 사용한다.
 영 초기조건은 시작 순간에 인덕터 전류와 커패시터 전압 같은 저장 상태가 0이라고 두는 계산 조건이다.
-영 초기조건에서 라플라스 변환을 적용하면
+LTI 시스템 장에서 유도한 규칙대로 영 초기조건에서는 미분마다 $s$가 하나씩 붙으므로, 각 항을 하나씩 바꾸면 $L\ddot{q}\to Ls^2Q(s)$, $R\dot{q}\to RsQ(s)$, $\frac{1}{C}q\to\frac{1}{C}Q(s)$, $v_{\mathrm{in}}\to V_{\mathrm{in}}(s)$이다.
+\vmark{rlc-laplace-term-by-term}%
+따라서
 \begin{equation}
   \left(Ls^2 + Rs + \frac{1}{C}\right) Q(s) = V_{\mathrm{in}}(s)
 \end{equation}
@@ -625,7 +630,22 @@ RLC 회로 방정식
 표준형으로 바꾸는 일은 물리 시스템을 바꾸는 것이 아니라 눈금을 바꾸는 일이다.
 전하, 위치, 힘처럼 단위가 다른 시스템도 $\omega_n$과 $\zeta$라는 두 눈금으로 옮겨 놓으면 얼마나 빠르게 흔들리는가와 얼마나 빨리 사라지는가를 같은 그래프 언어로 비교할 수 있다.
 $u=Cv_{\mathrm{in}}$ 같은 입력 스케일링도 실제 전압을 다른 장치로 바꾼다는 뜻이 아니라, 비교하기 쉬운 기준 입력으로 다시 표현하는 과정이다.
-RLC 회로를 이 표준형과 비교하면
+위치항 비교에서 $\omega_n^2=1/(LC)$이므로 $\omega_n=1/\sqrt{LC}$이다.
+속도항 비교 $2\zeta\omega_n=R/L$에서 $\zeta$만 남기면
+\[
+  \zeta
+  =
+  \frac{R/L}{2\omega_n}
+  =
+  \frac{R}{2L}\sqrt{LC}
+  =
+  \frac{R}{2}\sqrt{\frac{LC}{L^2}}
+  =
+  \frac{R}{2}\sqrt{\frac{C}{L}}
+\vmark{rlc-zeta-isolation}%
+\]
+가 된다.
+정리하면 RLC 회로의 표준 파라미터는
 \begin{align}
   \omega_n &= \frac{1}{\sqrt{LC}}, \\
   \zeta &= \frac{R}{2} \sqrt{\frac{C}{L}}.

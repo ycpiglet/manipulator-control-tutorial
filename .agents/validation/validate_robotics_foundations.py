@@ -17,6 +17,10 @@ ROBOTICS_FOUNDATIONS_TEX = REPO_ROOT / "paper" / "sections" / "05b_robotics_foun
 INTRODUCTION_TEX = REPO_ROOT / "paper" / "sections" / "01_introduction.tex"
 IMPEDANCE_CONTROL_TEX = REPO_ROOT / "paper" / "sections" / "06_impedance_control.tex"
 NOTATION_CHECKLIST_TEX = REPO_ROOT / "paper" / "sections" / "A_notation_checklist.tex"
+IMPEDANCE_TEX = REPO_ROOT / "paper" / "sections" / "02_impedance.tex"
+LTI_SYSTEM_TEX = REPO_ROOT / "paper" / "sections" / "03_lti_system.tex"
+ELECTRIC_SYSTEM_TEX = REPO_ROOT / "paper" / "sections" / "04_electric_system.tex"
+MECHANICAL_SYSTEM_TEX = REPO_ROOT / "paper" / "sections" / "05_mechanical_system.tex"
 
 
 def fk(q1: float, q2: float, l1: float = 0.84, l2: float = 0.67) -> tuple[float, float]:
@@ -109,6 +113,225 @@ def manuscript_section_reading_map_checkpoint() -> dict[str, int]:
         "path_trajectory_timetable_marker_count": text.count(
             "\\vmark{map-path-trajectory-timetable}"
         ),
+    }
+
+
+def manuscript_section5b_density_nav_checkpoint() -> dict[str, int]:
+    """Check anchors for the Section 5b density/navigation signposts."""
+    text = ROBOTICS_FOUNDATIONS_TEX.read_text(encoding="utf-8")
+    return {
+        "ik_branch_calculation_order_marker_count": text.count(
+            "\\vmark{ik-branch-calculation-order}"
+        ),
+        "ik_branch_numeric_example_marker_count": text.count(
+            "\\vmark{ik-branch-numeric-example}"
+        ),
+    }
+
+
+def manuscript_derivation_gap_high_checkpoint() -> dict[str, int]:
+    """Check anchors for the 2026-07-05 High-severity derivation-gap fixes.
+
+    Covers the Laplace definition/rule derivation (Sections 2-4), the
+    characteristic-root standard-form substitution (Section 5), and the
+    workspace-inertia force-to-acceleration derivation (Section 6).
+    """
+    impedance = IMPEDANCE_TEX.read_text(encoding="utf-8")
+    lti = LTI_SYSTEM_TEX.read_text(encoding="utf-8")
+    electric = ELECTRIC_SYSTEM_TEX.read_text(encoding="utf-8")
+    mechanical = MECHANICAL_SYSTEM_TEX.read_text(encoding="utf-8")
+    impedance_control = IMPEDANCE_CONTROL_TEX.read_text(encoding="utf-8")
+    return {
+        "laplace_definition_integral_marker_count": lti.count(
+            "\\vmark{laplace-definition-integral}"
+        ),
+        "laplace_rule_product_rule_derivation_marker_count": lti.count(
+            "\\vmark{laplace-rule-product-rule-derivation}"
+        ),
+        "laplace_rule_constant_check_marker_count": lti.count(
+            "\\vmark{laplace-rule-constant-check}"
+        ),
+        "laplace_second_derivative_twice_marker_count": lti.count(
+            "\\vmark{laplace-second-derivative-twice}"
+        ),
+        "laplace_term_by_term_msd_marker_count": lti.count(
+            "\\vmark{laplace-term-by-term-msd}"
+        ),
+        "freq_magnitude_angle_complex_marker_count": lti.count(
+            "\\vmark{freq-magnitude-angle-complex}"
+        ),
+        "laplace_forward_pointer_marker_count": impedance.count(
+            "\\vmark{laplace-forward-pointer}"
+        ),
+        "msd_impedance_term_by_term_marker_count": impedance.count(
+            "\\vmark{msd-impedance-term-by-term}"
+        ),
+        "rlc_laplace_term_by_term_marker_count": electric.count(
+            "\\vmark{rlc-laplace-term-by-term}"
+        ),
+        "charroot_substitution_decay_piece_marker_count": mechanical.count(
+            "\\vmark{charroot-substitution-decay-piece}"
+        ),
+        "charroot_substitution_radical_piece_marker_count": mechanical.count(
+            "\\vmark{charroot-substitution-radical-piece}"
+        ),
+        "charroot_numeric_check_marker_count": mechanical.count(
+            "\\vmark{charroot-numeric-check}"
+        ),
+        "charroot_imaginary_unit_factorization_marker_count": mechanical.count(
+            "\\vmark{charroot-imaginary-unit-factorization}"
+        ),
+        "lambda_force_to_acceleration_derivation_marker_count": impedance_control.count(
+            "\\vmark{lambda-force-to-acceleration-derivation}"
+        ),
+        "lambda_directional_mass_numeric_check_marker_count": impedance_control.count(
+            "\\vmark{lambda-directional-mass-numeric-check}"
+        ),
+    }
+
+
+def manuscript_derivation_gap_medium_checkpoint() -> dict[str, int]:
+    """Check anchors for the 2026-07-05 Medium-severity derivation-gap fixes.
+
+    Covers the serial robot/environment stiffness force split (Section 6),
+    the RLC damping-ratio isolation algebra (Section 4), and the overshoot
+    substitution example (Section 5).
+    """
+    electric = ELECTRIC_SYSTEM_TEX.read_text(encoding="utf-8")
+    mechanical = MECHANICAL_SYSTEM_TEX.read_text(encoding="utf-8")
+    impedance_control = IMPEDANCE_CONTROL_TEX.read_text(encoding="utf-8")
+    return {
+        "contact_series_stiffness_split_marker_count": impedance_control.count(
+            "\\vmark{contact-series-stiffness-split}"
+        ),
+        "contact_series_stiffness_numeric_marker_count": impedance_control.count(
+            "\\vmark{contact-series-stiffness-numeric}"
+        ),
+        "rlc_zeta_isolation_marker_count": electric.count(
+            "\\vmark{rlc-zeta-isolation}"
+        ),
+        "overshoot_zeta07_substitution_marker_count": mechanical.count(
+            "\\vmark{overshoot-zeta07-substitution}"
+        ),
+    }
+
+
+def manuscript_derivation_gap_medium2_checkpoint() -> dict[str, int]:
+    """Check anchors for the iteration-3 Medium/Low derivation-gap fixes.
+
+    Covers imaginary-unit first-use definition, sinusoid velocity derivative,
+    RLC series-sum bridge (Section 2), charge-current note (Section 3),
+    undamped-solution substitution check (Section 4), trajectory product-rule
+    bridge (Section 5b), and impedance error normalization (Section 6).
+    """
+    impedance = IMPEDANCE_TEX.read_text(encoding="utf-8")
+    lti = LTI_SYSTEM_TEX.read_text(encoding="utf-8")
+    electric = ELECTRIC_SYSTEM_TEX.read_text(encoding="utf-8")
+    foundations = ROBOTICS_FOUNDATIONS_TEX.read_text(encoding="utf-8")
+    impedance_control = IMPEDANCE_CONTROL_TEX.read_text(encoding="utf-8")
+    return {
+        "jj_first_use_definition_marker_count": impedance.count(
+            "\\vmark{jj-first-use-definition}"
+        ),
+        "spring_sinusoid_velocity_derivative_marker_count": impedance.count(
+            "\\vmark{spring-sinusoid-velocity-derivative}"
+        ),
+        "rlc_series_sum_bridge_marker_count": impedance.count(
+            "\\vmark{rlc-series-sum-bridge}"
+        ),
+        "charge_current_derivative_note_marker_count": lti.count(
+            "\\vmark{charge-current-derivative-note}"
+        ),
+        "undamped_solution_substitution_check_marker_count": electric.count(
+            "\\vmark{undamped-solution-substitution-check}"
+        ),
+        "trajectory_product_rule_qddot_marker_count": foundations.count(
+            "\\vmark{trajectory-product-rule-qddot}"
+        ),
+        "impedance_error_normalization_marker_count": impedance_control.count(
+            "\\vmark{impedance-error-normalization}"
+        ),
+    }
+
+
+def series_stiffness_checkpoint() -> dict[str, float]:
+    """Verify the Section 6 serial-stiffness numeric example.
+
+    k_d = k_env = 500 N/m with delta_d = 2 cm must give ~5 N, and a
+    near-rigid environment must approach the k_d*delta_d = 10 N limit.
+    """
+    k_d, delta_d = 500.0, 0.02
+    k_env_soft = 500.0
+    k_env_rigid = 1.0e9
+    f_soft = (k_d * k_env_soft) / (k_d + k_env_soft) * delta_d
+    f_rigid = (k_d * k_env_rigid) / (k_d + k_env_rigid) * delta_d
+    return {
+        "soft_contact_force_n": f_soft,
+        "rigid_limit_force_n": f_rigid,
+        "max_series_stiffness_error": max(
+            abs(f_soft - 5.0), abs(f_rigid - k_d * delta_d)
+        ),
+    }
+
+
+def overshoot_formula_checkpoint() -> dict[str, float]:
+    """Verify the Section 5 overshoot substitution examples.
+
+    The manuscript claims M_p(zeta=0.7) ~ 4.6 percent and
+    M_p(zeta=0.2) ~ 53 percent.
+    """
+    def m_p(zeta: float) -> float:
+        return math.exp(-zeta * math.pi / math.sqrt(1.0 - zeta * zeta))
+
+    return {
+        "overshoot_zeta_07": m_p(0.7),
+        "overshoot_zeta_02": m_p(0.2),
+        "max_overshoot_claim_error": max(
+            abs(m_p(0.7) - 0.046), abs(m_p(0.2) - 0.53)
+        ),
+    }
+
+
+def charroot_standard_form_checkpoint() -> dict[str, float]:
+    """Verify the Section 5 characteristic-root numeric check (m=1, b=2, k=4).
+
+    The quadratic-formula roots and the standard-form roots
+    -zeta*omega_n +/- j*omega_n*sqrt(1-zeta^2) must agree.
+    """
+    m, b, k = 1.0, 2.0, 4.0
+    omega_n = math.sqrt(k / m)
+    zeta = b / (2.0 * math.sqrt(m * k))
+    quad_real = -b / (2.0 * m)
+    quad_imag = math.sqrt(4.0 * m * k - b * b) / (2.0 * m)
+    std_real = -zeta * omega_n
+    std_imag = omega_n * math.sqrt(1.0 - zeta * zeta)
+    return {
+        "omega_n_rad_s": omega_n,
+        "zeta": zeta,
+        "max_root_component_error": max(
+            abs(quad_real - std_real), abs(quad_imag - std_imag)
+        ),
+    }
+
+
+def effective_mass_direction_checkpoint() -> dict[str, float]:
+    """Verify the Section 6 directional effective-mass toy example.
+
+    At l1=l2=1, q1=0, q2=pi/2 with unit joint inertia, the manuscript claims
+    m_eff = 1/2 along x and m_eff = 1 along y.
+    """
+    j = jacobian(0.0, math.pi / 2.0, l1=1.0, l2=1.0)
+    # J M^{-1} J^T with M = I reduces to J J^T.
+    jjt = (
+        (dot(j[0], j[0]), dot(j[0], j[1])),
+        (dot(j[1], j[0]), dot(j[1], j[1])),
+    )
+    m_eff_x = 1.0 / jjt[0][0]
+    m_eff_y = 1.0 / jjt[1][1]
+    return {
+        "m_eff_x_kg": m_eff_x,
+        "m_eff_y_kg": m_eff_y,
+        "max_effective_mass_error": max(abs(m_eff_x - 0.5), abs(m_eff_y - 1.0)),
     }
 
 
@@ -927,6 +1150,22 @@ def main() -> int:
         "manuscript_ik_to_jacobian_handoff_marker_checkpoint": (
             manuscript_ik_to_jacobian_handoff_marker_checkpoint()
         ),
+        "manuscript_section5b_density_nav_checkpoint": (
+            manuscript_section5b_density_nav_checkpoint()
+        ),
+        "manuscript_derivation_gap_high_checkpoint": (
+            manuscript_derivation_gap_high_checkpoint()
+        ),
+        "charroot_standard_form_checkpoint": charroot_standard_form_checkpoint(),
+        "effective_mass_direction_checkpoint": effective_mass_direction_checkpoint(),
+        "manuscript_derivation_gap_medium_checkpoint": (
+            manuscript_derivation_gap_medium_checkpoint()
+        ),
+        "manuscript_derivation_gap_medium2_checkpoint": (
+            manuscript_derivation_gap_medium2_checkpoint()
+        ),
+        "series_stiffness_checkpoint": series_stiffness_checkpoint(),
+        "overshoot_formula_checkpoint": overshoot_formula_checkpoint(),
         "manuscript_generalized_effort_bridge_marker_checkpoint": (
             manuscript_generalized_effort_bridge_marker_checkpoint()
         ),
@@ -967,6 +1206,12 @@ def main() -> int:
         "acceleration_kinematics_checkpoint.max_acceleration_identity_error_m_s2": 1.0e-5,
         "max_virtual_work_error": 1.0e-12,
         "max_determinant_formula_error": 1.0e-12,
+        "charroot_standard_form_checkpoint.max_root_component_error": 1.0e-12,
+        "effective_mass_direction_checkpoint.max_effective_mass_error": 1.0e-12,
+        # The rigid-limit branch uses a finite 1e9 N/m proxy for k_env -> inf,
+        # which leaves an expected ~5e-6 N asymptotic residual.
+        "series_stiffness_checkpoint.max_series_stiffness_error": 1.0e-4,
+        "overshoot_formula_checkpoint.max_overshoot_claim_error": 5.0e-3,
     }
     failures: list[str] = []
     for key, threshold in thresholds.items():
@@ -1022,6 +1267,47 @@ def main() -> int:
                 "old_exact_position_handoff_count="
                 f"{ik_handoff_markers['old_exact_position_handoff_count']} != 0"
             )
+    density_nav_markers = metrics["manuscript_section5b_density_nav_checkpoint"]
+    if not isinstance(density_nav_markers, dict):
+        failures.append(
+            "manuscript_section5b_density_nav_checkpoint did not return a dictionary"
+        )
+    else:
+        for key in (
+            "ik_branch_calculation_order_marker_count",
+            "ik_branch_numeric_example_marker_count",
+        ):
+            if int(density_nav_markers[key]) < 1:
+                failures.append(f"{key}={density_nav_markers[key]} < 1")
+    derivation_gap_markers = metrics["manuscript_derivation_gap_high_checkpoint"]
+    if not isinstance(derivation_gap_markers, dict):
+        failures.append(
+            "manuscript_derivation_gap_high_checkpoint did not return a dictionary"
+        )
+    else:
+        for key, value in derivation_gap_markers.items():
+            if int(value) < 1:
+                failures.append(f"{key}={value} < 1")
+    derivation_gap_medium_markers = metrics["manuscript_derivation_gap_medium_checkpoint"]
+    if not isinstance(derivation_gap_medium_markers, dict):
+        failures.append(
+            "manuscript_derivation_gap_medium_checkpoint did not return a dictionary"
+        )
+    else:
+        for key, value in derivation_gap_medium_markers.items():
+            if int(value) < 1:
+                failures.append(f"{key}={value} < 1")
+    derivation_gap_medium2_markers = metrics[
+        "manuscript_derivation_gap_medium2_checkpoint"
+    ]
+    if not isinstance(derivation_gap_medium2_markers, dict):
+        failures.append(
+            "manuscript_derivation_gap_medium2_checkpoint did not return a dictionary"
+        )
+    else:
+        for key, value in derivation_gap_medium2_markers.items():
+            if int(value) < 1:
+                failures.append(f"{key}={value} < 1")
     effort_bridge_markers = metrics[
         "manuscript_generalized_effort_bridge_marker_checkpoint"
     ]
