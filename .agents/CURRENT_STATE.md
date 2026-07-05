@@ -295,10 +295,11 @@ The derivation-completeness loop
 (`.agents/DERIVATION_COMPLETENESS_PLAN.md`) has closed all High and Medium
 items across three iterations; only Low-tier bundles (B7, C5 — single
 skipped steps that do not block a beginner) remain and can be batched into a
-future iteration or absorbed by the compression pass. Next milestones: push
-the `claude/derivation-gaps-high` branch and open a PR when the user asks
-(branch stacks on the unpushed Section 5b density commit), then the
-compression pass — which must carry the 26 new derivation anchors into
-surviving text. Keep CI green as the standing gate. The later compression pass must carry the 15 new derivation anchors
+future iteration or absorbed by the compression pass. All of this work,
+including the Section 5b density pass, was merged to main via PR #5
+(merge commit `1f5f6fe8`, CI green: simulator, paper-gates, paper-build;
+merged branch deleted). Next milestone: the compression pass — which must
+carry the 26 new derivation anchors into surviving text. Keep CI green as
+the standing gate. The later compression pass must carry the 15 new derivation anchors
 into surviving text. Preserving reviewer full texts under `.agents/reviews/`
 should start with the next review pass.
