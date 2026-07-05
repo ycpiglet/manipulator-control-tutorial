@@ -302,6 +302,21 @@ def manuscript_failure_gallery_checkpoint() -> dict[str, int]:
     }
 
 
+def manuscript_m4_review_checkpoint() -> dict[str, int]:
+    """Check anchors for the M4 full-manuscript review fixes."""
+    impedance_control = IMPEDANCE_CONTROL_TEX.read_text(encoding="utf-8")
+    lab_design = REPO_ROOT / "paper" / "sections" / "07_mujoco_lab_design.tex"
+    lab_text = lab_design.read_text(encoding="utf-8")
+    return {
+        "m4_moving_target_damping_marker_count": impedance_control.count(
+            "\\vmark{m4-moving-target-damping}"
+        ),
+        "m4_damping_three_layers_marker_count": lab_text.count(
+            "\\vmark{m4-damping-three-layers}"
+        ),
+    }
+
+
 def manuscript_notation_sweep_checkpoint() -> dict[str, int]:
     """Check the M5 notation-sweep fix: V_d defined in the appendix."""
     notation = NOTATION_CHECKLIST_TEX.read_text(encoding="utf-8")
@@ -1353,6 +1368,7 @@ def main() -> int:
         "manuscript_notation_sweep_checkpoint": (
             manuscript_notation_sweep_checkpoint()
         ),
+        "manuscript_m4_review_checkpoint": manuscript_m4_review_checkpoint(),
         "stiffness_starting_value_checkpoint": stiffness_starting_value_checkpoint(),
         "manuscript_generalized_effort_bridge_marker_checkpoint": (
             manuscript_generalized_effort_bridge_marker_checkpoint()
@@ -1497,6 +1513,13 @@ def main() -> int:
         )
     else:
         for key, value in derivation_gap_medium2_markers.items():
+            if int(value) < 1:
+                failures.append(f"{key}={value} < 1")
+    m4_review_markers = metrics["manuscript_m4_review_checkpoint"]
+    if not isinstance(m4_review_markers, dict):
+        failures.append("manuscript_m4_review_checkpoint did not return a dictionary")
+    else:
+        for key, value in m4_review_markers.items():
             if int(value) < 1:
                 failures.append(f"{key}={value} < 1")
     notation_sweep_markers = metrics["manuscript_notation_sweep_checkpoint"]

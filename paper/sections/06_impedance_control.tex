@@ -162,6 +162,9 @@ $k_x$를 작게 하고 $k_y$, $k_z$를 크게 하면 한 방향으로는 잘 밀
   \label{eq:virtual_spring_damper}
 \end{equation}
 가 된다.
+목표점이 움직이는 일반형에서는 감쇠항이 절대속도가 아니라 상대속도를 봐서 $-\bm{D}_d(\dot{\bm{x}}-\dot{\bm{x}}_d)$가 된다는 점만 기억해 두자.
+뒤에서 목표가 움직이는 문맥이 나오면 이 형태로 읽는다.
+\vmark{m4-moving-target-damping}%
 식 \eqref{eq:task_impedance}은 제어기까지 포함한 로봇이 외력에 대해 보여 주길 원하는 닫힌루프 행동이다.
 반면 식 \eqref{eq:virtual_spring_damper}의 $\bm{f}_{\mathrm{cmd}}$는 그 행동에 가까워지도록 제어기가 위치 오차와 속도에서 계산하는 복원 힘이다.
 두 식은 같은 종류의 식이 아니다.
