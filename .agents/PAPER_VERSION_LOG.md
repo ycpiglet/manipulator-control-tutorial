@@ -4,6 +4,25 @@ This file records manuscript-facing draft states. It complements
 `.agents/CURRENT_STATE.md` by keeping durable paper version labels, source/PDF
 paths, change intent, verification, and open risks.
 
+## draft-20260706-full-review-m4
+
+- Type: full-manuscript dual review round (M4) — final manuscript DoD item
+- Reviewers: four combined novice+technical agents covering 01-02, 03-04,
+  05-05b, 06-09+A. Full texts preserved under `.agents/reviews/20260706_m4_*`
+  (starts the standing reviewer-text-preservation practice).
+- Verdicts: R-A HIGH=0, R-B HIGH=0, R-C HIGH=0, R-D HIGH=2 — owner
+  verification found one partially overstated (stationary-target assumption
+  is stated in display math directly above the equation); both adopted as
+  one-sentence clarity fixes: the moving-target relative-velocity damping
+  form in Section 6, and the three-layer damping disambiguation in
+  Section 7. Residual HIGH = 0 -> M4 gate met.
+- Anchors: m4-moving-target-damping, m4-damping-three-layers
+  (`manuscript_m4_review_checkpoint`).
+- Verification: compile exit 0, 0/0/0 warnings, 0 boxes; PDF 122 pages;
+  validator exit 0.
+- Milestone: with M4 done, the manuscript Definition of Done (M1-M7) in
+  `.agents/MISSION.md` is fully closed.
+
 ## draft-20260706-notation-sweep-m5
 
 - Type: notation-consistency sweep (M5)
