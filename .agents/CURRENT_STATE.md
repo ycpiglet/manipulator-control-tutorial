@@ -1,6 +1,6 @@
 # Current State
 
-Updated: 2026-07-05 21:40 KST
+Updated: 2026-07-06 01:30 KST
 
 ## Current Objective
 
@@ -14,9 +14,34 @@ Iteratively improve the Korean review/tutorial paper on impedance, impedance con
 - Bibliography: `paper/references/refs.bib`
 - Latest PDF: `paper/main.pdf`
 - Current length: 122 PDF pages
-- Latest PDF size: 998404 bytes
+- Latest PDF size: 1002110 bytes
 
 ## Completed Since Last Snapshot
+
+### 2026-07-06 MILESTONE: Manuscript Definition of Done (M1-M7) complete
+
+Across PRs #7-#15 (all CI-green merges), the autonomous two-track loop
+closed every manuscript DoD item in `.agents/MISSION.md`:
+
+- M1 selection guide (env-stiffness axis + starting values) — PR #11
+- M2 failure gallery F1/F2/F3 from the owner's real failures, each with
+  reproducible sim evidence and numeric gates — PRs #7, #9, #10
+- M3 low derivation bundle (4 bridges + recorded rejections) — PR #13
+- M4 full-manuscript dual review, residual HIGH=0, review texts preserved
+  under `.agents/reviews/` — PR #15
+- M5 notation sweep (one genuine finding fixed) — PR #14
+- M7 first-read skip permission + shortest path — PR #12
+- Track A in parallel: JOSE package (README.en.md, CC BY 4.0, jose/paper.md,
+  CONTRIBUTING) — PR #8
+
+Manuscript: 122 pages, 1002110 bytes, SHA-256
+`29E47B3F6C29B00CF7A2DFCB4DC2DC98039A2327364D2D7F491EB9E6B576168A`.
+Validator: 13 marker checkpoints + 9 numeric checkpoints, exit 0.
+Anchors: 130+ (all enforced). Version labels for every pass in
+PAPER_VERSION_LOG.
+
+Remaining blocked-on-user items live in `.agents/USER_ACTIONS.md`
+(inquiry sends A1-A3, KROS membership B1, JOSE author name/ORCID C4).
 
 ### 2026-07-06 Selection Guide M1 Pass + Gallery F1 (Track B)
 
@@ -364,22 +389,11 @@ latest snapshot only; archive before it grows past roughly 500 lines.
 
 ## Next Recommended Action
 
-The derivation-completeness loop
-(`.agents/DERIVATION_COMPLETENESS_PLAN.md`) has closed all High and Medium
-items across three iterations; only Low-tier bundles (B7, C5 — single
-skipped steps that do not block a beginner) remain and can be batched into a
-future iteration. All derivation work, including the Section 5b density
-pass, was merged to main via PR #5 (merge commit `1f5f6fe8`, CI green).
-The Tier-1 compression pass is also complete
-(`draft-20260705-compression-tier1`): Sections 2-6 audited, 3 genuine
-duplications compressed, 113/113 anchors preserved. Tier-2 compression
-(appendix relocation, table shortening, reorganization) is blocked on a
-target-venue/length decision. The two-track venue search is done
-(`.agents/VENUE_SEARCH.md`, 2026-07-05): immediate JOSE submission for the
-MuJoCo lab (free, rolling, verified), ACC 2027 tutorial-session track
-(proposals 2026-10-16, tutorial papers 2026-10-30, verified), KROS journal
-as the domestic first choice (editorial inquiry about review-type needed),
-and IEEE CSM vs MDPI Robotics as the international main-manuscript fork
-(SCIE requirement decides). The user's three open decisions are listed at
-the end of that record; the chosen scenario sets the Tier-2 budget. Preserving reviewer full texts under `.agents/reviews/` should
-start with the next review pass. Keep CI green as the standing gate.
+The manuscript DoD is complete, so per `.agents/SUBMISSION_PLAN.md` the
+derivative-writing track is unblocked. Next loop iteration: draft U3 (the
+KROS-targeted Korean review, 10-15 pages derived from Sections 2-5) as a
+separate LaTeX document — submission itself still waits on the A1 editorial
+inquiry and B1 membership (user actions). JOSE submission waits only on C4
+(author name/ORCID) plus the A3 policy check. Keep CI green; carry no
+anchors into derivative files (anchor gates apply to the canonical
+manuscript only, per plan G6).
