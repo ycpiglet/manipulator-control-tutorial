@@ -323,6 +323,12 @@ The Tier-1 compression pass is also complete
 (`draft-20260705-compression-tier1`): Sections 2-6 audited, 3 genuine
 duplications compressed, 113/113 anchors preserved. Tier-2 compression
 (appendix relocation, table shortening, reorganization) is blocked on a
-target-venue/length decision — that decision is the next open question for
-the user. Preserving reviewer full texts under `.agents/reviews/` should
+target-venue/length decision. The two-track venue search is done
+(`.agents/VENUE_SEARCH.md`, 2026-07-05): immediate JOSE submission for the
+MuJoCo lab (free, rolling, verified), ACC 2027 tutorial-session track
+(proposals 2026-10-16, tutorial papers 2026-10-30, verified), KROS journal
+as the domestic first choice (editorial inquiry about review-type needed),
+and IEEE CSM vs MDPI Robotics as the international main-manuscript fork
+(SCIE requirement decides). The user's three open decisions are listed at
+the end of that record; the chosen scenario sets the Tier-2 budget. Preserving reviewer full texts under `.agents/reviews/` should
 start with the next review pass. Keep CI green as the standing gate.
