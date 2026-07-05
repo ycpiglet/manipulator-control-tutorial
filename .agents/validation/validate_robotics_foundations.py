@@ -302,6 +302,28 @@ def manuscript_failure_gallery_checkpoint() -> dict[str, int]:
     }
 
 
+def manuscript_low_bundle_checkpoint() -> dict[str, int]:
+    """Check anchors for the M3 low-severity derivation bundle fixes."""
+    mechanical = MECHANICAL_SYSTEM_TEX.read_text(encoding="utf-8")
+    foundations = ROBOTICS_FOUNDATIONS_TEX.read_text(encoding="utf-8")
+    impedance_control = IMPEDANCE_CONTROL_TEX.read_text(encoding="utf-8")
+    electric = ELECTRIC_SYSTEM_TEX.read_text(encoding="utf-8")
+    return {
+        "low_bc_positive_root_marker_count": mechanical.count(
+            "\\vmark{low-bc-positive-root}"
+        ),
+        "low_straight_path_derivative_marker_count": foundations.count(
+            "\\vmark{low-straight-path-derivative}"
+        ),
+        "low_dd_sqrt_step_marker_count": impedance_control.count(
+            "\\vmark{low-dd-sqrt-step}"
+        ),
+        "low_capacitor_energy_sketch_marker_count": electric.count(
+            "\\vmark{low-capacitor-energy-sketch}"
+        ),
+    }
+
+
 def manuscript_firstread_path_checkpoint() -> dict[str, int]:
     """Check anchors for the M7 shortest-first-read guidance in the intro."""
     intro = INTRODUCTION_TEX.read_text(encoding="utf-8")
@@ -1316,6 +1338,7 @@ def main() -> int:
         "manuscript_firstread_path_checkpoint": (
             manuscript_firstread_path_checkpoint()
         ),
+        "manuscript_low_bundle_checkpoint": manuscript_low_bundle_checkpoint(),
         "stiffness_starting_value_checkpoint": stiffness_starting_value_checkpoint(),
         "manuscript_generalized_effort_bridge_marker_checkpoint": (
             manuscript_generalized_effort_bridge_marker_checkpoint()
@@ -1460,6 +1483,15 @@ def main() -> int:
         )
     else:
         for key, value in derivation_gap_medium2_markers.items():
+            if int(value) < 1:
+                failures.append(f"{key}={value} < 1")
+    low_bundle_markers = metrics["manuscript_low_bundle_checkpoint"]
+    if not isinstance(low_bundle_markers, dict):
+        failures.append(
+            "manuscript_low_bundle_checkpoint did not return a dictionary"
+        )
+    else:
+        for key, value in low_bundle_markers.items():
             if int(value) < 1:
                 failures.append(f"{key}={value} < 1")
     firstread_markers = metrics["manuscript_firstread_path_checkpoint"]
