@@ -112,6 +112,19 @@ def manuscript_section_reading_map_checkpoint() -> dict[str, int]:
     }
 
 
+def manuscript_section5b_density_nav_checkpoint() -> dict[str, int]:
+    """Check anchors for the Section 5b density/navigation signposts."""
+    text = ROBOTICS_FOUNDATIONS_TEX.read_text(encoding="utf-8")
+    return {
+        "ik_branch_calculation_order_marker_count": text.count(
+            "\\vmark{ik-branch-calculation-order}"
+        ),
+        "ik_branch_numeric_example_marker_count": text.count(
+            "\\vmark{ik-branch-numeric-example}"
+        ),
+    }
+
+
 def manuscript_ik_to_jacobian_handoff_marker_checkpoint() -> dict[str, int]:
     """Check source markers for the IK-branch to Jacobian handoff."""
     text = ROBOTICS_FOUNDATIONS_TEX.read_text(encoding="utf-8")
@@ -927,6 +940,9 @@ def main() -> int:
         "manuscript_ik_to_jacobian_handoff_marker_checkpoint": (
             manuscript_ik_to_jacobian_handoff_marker_checkpoint()
         ),
+        "manuscript_section5b_density_nav_checkpoint": (
+            manuscript_section5b_density_nav_checkpoint()
+        ),
         "manuscript_generalized_effort_bridge_marker_checkpoint": (
             manuscript_generalized_effort_bridge_marker_checkpoint()
         ),
@@ -1022,6 +1038,18 @@ def main() -> int:
                 "old_exact_position_handoff_count="
                 f"{ik_handoff_markers['old_exact_position_handoff_count']} != 0"
             )
+    density_nav_markers = metrics["manuscript_section5b_density_nav_checkpoint"]
+    if not isinstance(density_nav_markers, dict):
+        failures.append(
+            "manuscript_section5b_density_nav_checkpoint did not return a dictionary"
+        )
+    else:
+        for key in (
+            "ik_branch_calculation_order_marker_count",
+            "ik_branch_numeric_example_marker_count",
+        ):
+            if int(density_nav_markers[key]) < 1:
+                failures.append(f"{key}={density_nav_markers[key]} < 1")
     effort_bridge_markers = metrics[
         "manuscript_generalized_effort_bridge_marker_checkpoint"
     ]

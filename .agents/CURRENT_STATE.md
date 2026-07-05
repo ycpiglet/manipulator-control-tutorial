@@ -14,9 +14,31 @@ Iteratively improve the Korean review/tutorial paper on impedance, impedance con
 - Bibliography: `paper/references/refs.bib`
 - Latest PDF: `paper/main.pdf`
 - Current length: 118 PDF pages
-- Latest PDF size: 961208 bytes
+- Latest PDF size: 961293 bytes
 
 ## Completed Since Last Snapshot
+
+### 2026-07-05 Section 5b Density/Navigation Pass
+
+Reviewed all rendered Section 5b pages (55--68) and applied additive-only
+navigation fixes. Version label: `draft-20260705-section5b-density-nav`
+(details in `.agents/PAPER_VERSION_LOG.md`).
+
+- Finding: layout healthy overall; the suggested 2-link geometry figure
+  already exists (Figures 6 and 7), so that standing suggestion is closed.
+- Fixed: page 59 text wall split with `\paragraph{계산 순서.}` and
+  `\paragraph{숫자로 확인.}` signposts (anchored); stranded IK-to-Jacobian
+  bridge heading moved whole to page 61 top via `needspace`.
+- Guarded: new `manuscript_section5b_density_nav_checkpoint` in the
+  validation script.
+
+| Gate | Threshold | Measured | Evidence |
+|---|---:|---:|---|
+| LaTeX compile | exit 0 | 0 | bundled Tectonic, `tmp/latex_compile_s5b_density/compile.json` |
+| Final segment warnings | all 0 | 0 citation/reference/rerun, 0 overfull/underfull | same log |
+| PDF | 118 pages | 118 pages, 961293 bytes | bundled pypdf |
+| Validation script | failures 0 | exit 0 (incl. new checkpoint) | `validate_robotics_foundations.py` |
+| Visual layout | no stranded heading, no clipping | pages 59/60/61 rendered and inspected | Poppler PNG inspection |
 
 ### 2026-07-05 Test Coverage Baseline Pass
 
@@ -188,12 +210,11 @@ latest snapshot only; archive before it grows past roughly 500 lines.
 
 ## Next Recommended Action
 
-Keep CI green as the standing gate. The stable-anchor migration is done, so
-the compression pass is no longer blocked by marker fragility. Next in order:
-finish the test-coverage baseline gate (measure, record threshold in
-`VALIDATION_METRICS.yaml`, enforce in CI), then continue the
-robotics-foundation loop: a page-density/navigation review around Section 5b
-pages 58--65, a small 2-link geometry figure if readers still struggle with
-IK/Jacobian branch intuition, and a cleanup pass that shortens duplicated
-setup in Section 6 while preserving the beginner bridge and carrying
-`\vmark` anchors into surviving text.
+Keep CI green as the standing gate. The stable-anchor migration, coverage
+floor, and Section 5b density/navigation review are all done; the standing
+2-link-figure suggestion is closed (Figures 6 and 7 already cover it). The
+next manuscript milestone is the compression pass: shorten duplicated setup
+in Section 6 while preserving the beginner bridge and carrying `\vmark`
+anchors into surviving text. Deciding the target venue/length first will set
+the compression budget; preserving reviewer full texts under
+`.agents/reviews/` should start with the next review pass.

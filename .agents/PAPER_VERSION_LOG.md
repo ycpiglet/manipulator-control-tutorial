@@ -4,6 +4,43 @@ This file records manuscript-facing draft states. It complements
 `.agents/CURRENT_STATE.md` by keeping durable paper version labels, source/PDF
 paths, change intent, verification, and open risks.
 
+## draft-20260705-section5b-density-nav
+
+- Type: page-density/navigation pass over Section 5b (PDF pages 55--68)
+- Main source: `paper/main.tex`, `paper/sections/05b_robotics_foundations.tex`
+- Main PDF: `paper/main.pdf`
+- Version purpose:
+  - Execute the standing next-action item: review Section 5b rendered pages
+    for density and navigation before the compression pass.
+- Review findings (rendered-page inspection of pages 55--68):
+  - Overall layout healthy: tables 16--22 and figures 5--8 break up density;
+    no clipping or overfull boxes.
+  - The previously suggested small 2-link geometry figure already exists as
+    Figure 6 (IK branches) and Figure 7 (Jacobian columns); no new figure
+    needed.
+  - Page 59 was the densest full-text page: IK branch caveats, calculation
+    order, and the numeric example ran together without visual anchors.
+  - The `IK에서 자코비안으로 넘어가는 다리` paragraph heading started two
+    lines from the bottom of page 60 and broke across the page turn.
+- Major changes represented (additive only; no prose reworded):
+  - Added `\paragraph{계산 순서.}` and `\paragraph{숫자로 확인.}` signposts on
+    page 59 with new anchors `ik-branch-calculation-order` and
+    `ik-branch-numeric-example`.
+  - Added `\usepackage{needspace}` and `\needspace{4\baselineskip}` before the
+    IK-to-Jacobian bridge heading, which now starts complete at the top of
+    page 61.
+  - Added `manuscript_section5b_density_nav_checkpoint` to
+    `validate_robotics_foundations.py` guarding the two new anchors.
+- Review or submission status: internal working draft, not submission-ready
+- Verification:
+  - LaTeX compile exit code: 0 (bundled Tectonic)
+  - Final segment citation/reference/rerun warnings: 0/0/0
+  - Final overfull/underfull boxes: 0/0
+  - PDF: `paper/main.pdf`, 118 pages (unchanged), 961293 bytes
+  - Validation script exit 0 with the new density-nav checkpoint enforced
+  - Rendered pages 59, 60, 61 inspected: signposts render, no stranded
+    heading, no awkward bottom gap on page 60
+
 ## draft-20260705-vmark-stable-anchors
 
 - Type: validation-harness migration with output-neutral manuscript anchors
