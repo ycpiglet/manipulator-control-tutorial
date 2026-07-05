@@ -20,6 +20,10 @@ code_quality:
     metric: "pytest exit code"
     threshold: 0
     command: "python -m pytest -q"
+  coverage:
+    metric: "statement coverage of src/mclab"
+    threshold: ">= 80 percent (regression floor; local baseline 84 percent over 11212 statements, measured 2026-07-05)"
+    command: "python -m pytest -q --cov=mclab --cov-report=term --cov-fail-under=80"
   lint:
     metric: "ruff check exit code"
     threshold: 0

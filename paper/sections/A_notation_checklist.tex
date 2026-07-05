@@ -54,6 +54,8 @@ $E(t)$는 에너지로, $E(s)$는 오차 $e(t)$의 라플라스 변환으로 쓰
     용어 & 처음에는 이렇게 읽기 & 돌아갈 곳과 주의점 \\
     \midrule
     자코비안 전치와 힘--관절 effort 변환 & 손끝 힘을 각 관절이 나눠 맡을 일반화 effort 쪽으로 옮길 때 $\bm{J}^{\mathsf T}$가 등장한다. 회전 관절에서는 이 값이 토크이다 & 절~\ref{sec:robotics-force-torque-jacobian-transpose}, 식~\eqref{eq:jacobian-transpose-foundation}, 표~\ref{tab:jacobian-recap-for-impedance}. 좌표계와 힘 부호를 함께 확인한다 \\
+\vmark{scope-notation-effort-transform}%
+\vmark{scope-notation-generalized-effort}%
     평형점, 목표점, anchor point & 가상 스프링이 묶인 기준 위치이다. 힘이 균형을 이루는 곳으로 읽으면 된다 & 식~\eqref{eq:steady_position_under_force}, \eqref{eq:virtual_spring_damper}. 목표점 오프셋과 실제 벽 침투 깊이를 섞지 않는다 \\
     강성 & 위치가 목표에서 벗어날수록 되돌리려는 힘이 얼마나 빨리 커지는지를 나타낸다 & 식~\eqref{eq:virtual_spring_damper}. 접촉 방향 강성을 키우면 정적 힘이 커질 수 있지만 토크 포화와 안전 한계도 같이 본다 \\
     감쇠와 감쇠비 & 감쇠는 속도에 저항해 흔들림을 줄이는 효과이고, 감쇠비는 질량과 강성까지 함께 본 흔들림 모양의 기준이다 & 식~\eqref{eq:damping_from_ratio}. DLS damping, virtual wall damping, 물리 감쇠비를 같은 값으로 읽지 않는다 \\

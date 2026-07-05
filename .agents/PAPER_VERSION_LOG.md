@@ -4,6 +4,40 @@ This file records manuscript-facing draft states. It complements
 `.agents/CURRENT_STATE.md` by keeping durable paper version labels, source/PDF
 paths, change intent, verification, and open risks.
 
+## draft-20260705-vmark-stable-anchors
+
+- Type: validation-harness migration with output-neutral manuscript anchors
+- Main source: `paper/main.tex`
+- Main PDF: `paper/main.pdf`
+- Durable validation summary: `.agents/validation/robotics_foundations_validation_summary.yaml`
+- Version purpose:
+  - Convert all 85 required manuscript content markers in
+    `validate_robotics_foundations.py` from exact Korean phrase counts to
+    `\vmark{key}` anchor checks so the planned compression pass can reword
+    prose without breaking validation.
+  - Keep forbidden stale-phrase absence checks and the two
+    vocabulary-frequency checks (`configuration space`, `C-space`) as literal
+    text checks.
+- Major changes represented:
+  - Added `\newcommand{\vmark}[1]{}` to the `main.tex` preamble with a
+    durability comment (anchors move with content; deletion requires retiring
+    the corresponding gate).
+  - Inserted 85 anchor lines (`\vmark{key}%`) directly below their tracked
+    content: 69 in Section 5b, 13 in Section 6, 2 in Appendix A, 1 in the
+    Introduction. No prose was changed.
+  - Rewrote the ten `manuscript_*_marker_checkpoint` functions to count
+    anchors instead of phrases; `main()` thresholds unchanged.
+- Review or submission status: internal working draft, not submission-ready
+- Verification:
+  - LaTeX compile exit code: 0 (bundled Tectonic)
+  - Final segment citation/reference/rerun warnings: 0/0/0
+  - Final overfull/underfull boxes: 0/0
+  - Known residual font warnings: Korean italic bibliography substitutions only
+  - PDF: `paper/main.pdf`, 118 pages (unchanged), 961208 bytes
+  - Validation script exit 0; negative test: deleting one anchor makes the
+    script exit 1, restoring it returns exit 0
+  - Citation/provenance coverage: 29/29 used keys, 0 duplicates
+
 ## draft-20260703-section6-effort-torque-scope
 
 - Type: working draft validation and version record

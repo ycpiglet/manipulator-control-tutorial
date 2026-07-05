@@ -47,8 +47,8 @@ jobs:
       - name: Ruff lint
         run: python -m ruff check src tests scripts .agents/validation
 
-      - name: Pytest
-        run: python -m pytest -q
+      - name: Pytest with coverage floor
+        run: python -m pytest -q --cov=mclab --cov-report=term --cov-fail-under=80
 
   paper-gates:
     name: Paper citation and formula gates
