@@ -42,3 +42,5 @@ paper/references/papers/*.pdf
 
 third_party/mujoco_menagerie/
 !third_party/.gitkeep
+paper/derivatives/**/*.pdf
+paper/derivatives/**/build/
