@@ -4,6 +4,30 @@ This file records manuscript-facing draft states. It complements
 `.agents/CURRENT_STATE.md` by keeping durable paper version labels, source/PDF
 paths, change intent, verification, and open risks.
 
+## draft-20260706-selection-guide-m1
+
+- Type: new content pass — M1 control-method selection guide extension
+- Main source: `paper/sections/06_impedance_control.tex` (extends the
+  impedance/admittance/force comparison subsection after its two tables)
+- Version purpose: close the owner's failure case 4 ("which method when,
+  and with what first numbers"). Verification against the source found the
+  original audit overstated the gap — two selection tables already existed;
+  the genuinely missing axes were (1) environment stiffness (the
+  impedance/admittance duality: admittance chatters on stiff contact,
+  impedance leaves friction unmasked in free space) and (2) per-method
+  starting-value principles (k_d ~ f_allow/delta_tol with the 10 N / 2 cm
+  -> 500 N/m example tying into the existing serial-stiffness numbers;
+  zeta ~ 0.7 dependence; admittance static-feel inversion; force-loop gain
+  scaled by environment stiffness).
+- Anchors: select-env-stiffness-axis / duality-oneliner /
+  param-starting-principles; numeric `stiffness_starting_value_checkpoint`
+  (error 0.0).
+- Review: `Astrom` — see CURRENT_STATE for verdicts.
+- Verification: compile exit 0, 0/0/0 warnings, 0 boxes; PDF 122 pages
+  (+1), 998404 bytes, SHA-256
+  `E1D112AE377B58801F5474DD104CC2D1CA2C7EAB71E18E0E9383C111D5E372E4`;
+  validator exit 0.
+
 ## draft-20260706-failure-gallery-f1
 
 - Type: new content pass — failure gallery case F1 (unplanned parameter

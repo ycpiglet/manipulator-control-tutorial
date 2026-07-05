@@ -13,10 +13,26 @@ Iteratively improve the Korean review/tutorial paper on impedance, impedance con
 - Current focus sources: `paper/sections/01_introduction.tex`, `paper/sections/02_impedance.tex`, `paper/sections/04_electric_system.tex`, `paper/sections/05_mechanical_system.tex`, `paper/sections/05b_robotics_foundations.tex`, `paper/sections/06_impedance_control.tex`, `paper/sections/07_mujoco_lab_design.tex`, `paper/sections/08_discussion.tex`, `paper/sections/09_conclusion.tex`, `paper/sections/A_notation_checklist.tex`, `paper/main.tex`, `paper/figures/*.tex`, and `.agents/*`
 - Bibliography: `paper/references/refs.bib`
 - Latest PDF: `paper/main.pdf`
-- Current length: 121 PDF pages
-- Latest PDF size: 990255 bytes
+- Current length: 122 PDF pages
+- Latest PDF size: 998404 bytes
 
 ## Completed Since Last Snapshot
+
+### 2026-07-06 Selection Guide M1 Pass + Gallery F1 (Track B)
+
+`draft-20260706-failure-gallery-f1` completed the M2 gallery (parameter-sweep
+case; reviewer Curie 4/4; merged as PR #10 with CI green). Then
+`draft-20260706-selection-guide-m1` closed M1: source verification showed the
+audit had overstated the gap (two selection tables already existed), so the
+pass added only the genuinely missing axes — environment stiffness
+(impedance/admittance duality) and per-method starting-value principles
+(k_d ~ f_allow/delta_tol, 10 N / 2 cm -> 500 N/m example; zeta ~ 0.7;
+admittance static-feel inversion; force-loop gain vs environment stiffness).
+Reviewer Astrom 4/4 PASS. PDF 122 pages. Validator gains
+manuscript_selection_guide_checkpoint + stiffness_starting_value_checkpoint
+(error 0.0). Remaining DoD: M3 (Low derivation bundles), M4 (full-manuscript
+dual review), M5 (notation sweep), M7 (shortest first-read path); S4 author
+TODO is a user action (C4).
 
 ### 2026-07-06 Failure Gallery F3 Pass (Track B / M2)
 
