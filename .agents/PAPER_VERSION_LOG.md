@@ -4,6 +4,21 @@ This file records manuscript-facing draft states. It complements
 `.agents/CURRENT_STATE.md` by keeping durable paper version labels, source/PDF
 paths, change intent, verification, and open risks.
 
+## draft-20260706-notation-sweep-m5
+
+- Type: notation-consistency sweep (M5)
+- Audit: `Leibniz` compared the Appendix A checklist against all body
+  sections (very thorough). Verdict: exactly one genuine inconsistency —
+  V_d(s) (moving-target velocity Laplace transform, used at the error/
+  motion admittance passage) was absent from the checklist. All other
+  candidate pairs (b vs d_d, k/k_d/K_d, J vs J_v, f_ext signs, omega_n/d,
+  delta family) verified consistent with explicit bridging sentences.
+- Fix: V_d added to the appendix common-rules sentence and the mechanical
+  symbol table, anchored (`manuscript_notation_sweep_checkpoint`, which
+  also counts the literal $V_d(s)$ table entries >= 1).
+- Verification: compile exit 0, 0/0/0 warnings, 0 boxes; PDF 122 pages;
+  validator exit 0. M5 gate: inconsistencies now 0.
+
 ## draft-20260706-low-bundle-m3
 
 - Type: derivation-completeness pass — M3 low-severity bundle closed

@@ -302,6 +302,17 @@ def manuscript_failure_gallery_checkpoint() -> dict[str, int]:
     }
 
 
+def manuscript_notation_sweep_checkpoint() -> dict[str, int]:
+    """Check the M5 notation-sweep fix: V_d defined in the appendix."""
+    notation = NOTATION_CHECKLIST_TEX.read_text(encoding="utf-8")
+    return {
+        "notation_vd_target_velocity_marker_count": notation.count(
+            "\\vmark{notation-vd-target-velocity}"
+        ),
+        "notation_vd_table_entry_count": notation.count("$V_d(s)$"),
+    }
+
+
 def manuscript_low_bundle_checkpoint() -> dict[str, int]:
     """Check anchors for the M3 low-severity derivation bundle fixes."""
     mechanical = MECHANICAL_SYSTEM_TEX.read_text(encoding="utf-8")
@@ -1339,6 +1350,9 @@ def main() -> int:
             manuscript_firstread_path_checkpoint()
         ),
         "manuscript_low_bundle_checkpoint": manuscript_low_bundle_checkpoint(),
+        "manuscript_notation_sweep_checkpoint": (
+            manuscript_notation_sweep_checkpoint()
+        ),
         "stiffness_starting_value_checkpoint": stiffness_starting_value_checkpoint(),
         "manuscript_generalized_effort_bridge_marker_checkpoint": (
             manuscript_generalized_effort_bridge_marker_checkpoint()
@@ -1483,6 +1497,15 @@ def main() -> int:
         )
     else:
         for key, value in derivation_gap_medium2_markers.items():
+            if int(value) < 1:
+                failures.append(f"{key}={value} < 1")
+    notation_sweep_markers = metrics["manuscript_notation_sweep_checkpoint"]
+    if not isinstance(notation_sweep_markers, dict):
+        failures.append(
+            "manuscript_notation_sweep_checkpoint did not return a dictionary"
+        )
+    else:
+        for key, value in notation_sweep_markers.items():
             if int(value) < 1:
                 failures.append(f"{key}={value} < 1")
     low_bundle_markers = metrics["manuscript_low_bundle_checkpoint"]
