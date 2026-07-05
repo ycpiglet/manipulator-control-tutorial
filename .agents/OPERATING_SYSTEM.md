@@ -61,6 +61,11 @@ Next recommended action:
   registered yet, the watch returns "no checks reported", and the chain
   merges unguarded (observed 2026-07-06, PR #9 — harmless but wrong).
   Verify checks are listed, then watch, then merge.
+- `gh pr merge --delete-branch` leaves the working tree on `main`. The very
+  first command of the next iteration must be `git checkout -b <branch>`;
+  committing while still on main forces a branch-move + hard-reset repair
+  (observed 2026-07-06 before the M1 push — repaired without pushing to
+  main, but avoid it).
 
 ## Validation Gate
 
