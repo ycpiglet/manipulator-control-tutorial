@@ -345,6 +345,14 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
         NextRunSuggestion("configs/lab01_msd/high_stiffness.yaml", "Compare frequency and force against the stiff spring."),
         NextRunSuggestion("configs/lab01_msd/interactive_pull.yaml", "Raise stiffness live and watch the response change."),
     ),
+    "configs/lab01_msd/f2_launch_high_energy.yaml": (
+        NextRunSuggestion("configs/lab01_msd/f2_launch_precheck.yaml", "See the same displacement with a safe energy budget."),
+        NextRunSuggestion("configs/lab01_msd/underdamped.yaml", "Isolate how low damping alone changes settling."),
+    ),
+    "configs/lab01_msd/f2_launch_precheck.yaml": (
+        NextRunSuggestion("configs/lab01_msd/f2_launch_high_energy.yaml", "Revisit the dangerous setting and compare the peak speed."),
+        NextRunSuggestion("configs/lab01_msd/interactive_pull.yaml", "Tune stiffness live and watch stored energy react."),
+    ),
     "configs/lab01_msd/interactive_pull.yaml": (
         NextRunSuggestion("configs/lab01_msd/underdamped.yaml", "Save a deterministic low-damping comparison."),
         NextRunSuggestion("configs/lab01_msd/over_damped.yaml", "Save a deterministic high-damping comparison."),

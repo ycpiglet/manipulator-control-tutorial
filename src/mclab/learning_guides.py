@@ -537,6 +537,22 @@ RUN_GUIDES: dict[str, RunGuide] = {
         "Lower motion frequency and slower return.",
         "Raise stiffness one step at a time and compare peak force.",
     ),
+    "configs/lab01_msd/f2_launch_high_energy.yaml": RunGuide(
+        "Lab01 Failure F2: Stored-Energy Launch",
+        "A far target with high stiffness stores 0.5*k*delta^2 of spring energy before motion even starts.",
+        "Predict the peak speed with delta*sqrt(k/m) first, then check the velocity plot against your number.",
+        "stiffness, damping, initial_position",
+        "A velocity spike near 10 m/s and an oscillation that barely decays within the run.",
+        "Run f2_launch_precheck to see the same displacement made safe by a smaller energy budget.",
+    ),
+    "configs/lab01_msd/f2_launch_precheck.yaml": RunGuide(
+        "Lab01 Failure F2: Safe Counterpart",
+        "The same 0.5 m displacement commanded with low stiffness and enough damping.",
+        "Compare stored energy (3.75 J vs 50 J) and peak speed against the launch case.",
+        "stiffness, damping, initial_position",
+        "A small velocity peak and a clean settle with almost no residual energy.",
+        "Do your own energy precheck (0.5*k*delta^2, k*delta) before commanding any large offset.",
+    ),
     "configs/lab01_msd/interactive_pull.yaml": RunGuide(
         "Lab01 Interactive",
         "Push the mass and tune physical parameters while the viewer runs.",
