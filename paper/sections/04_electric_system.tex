@@ -35,6 +35,9 @@ $x>0$이면 $\ddot{x}<0$이므로 왼쪽으로 가속되고, $x<0$이면 $\ddot{
   x(t)=A\cos(\omega_n t)+B\sin(\omega_n t)
 \end{equation}
 이다.
+이 해가 정말 맞는지는 대입으로 바로 검산할 수 있다.
+한 번 미분하면 $\dot{x}=-A\omega_n\sin(\omega_n t)+B\omega_n\cos(\omega_n t)$이고, 한 번 더 미분하면 $\ddot{x}=-\omega_n^2\left(A\cos(\omega_n t)+B\sin(\omega_n t)\right)=-\omega_n^2 x$이므로, 원래 식 $\ddot{x}+\omega_n^2x=0$을 만족한다.
+\vmark{undamped-solution-substitution-check}%
 $\omega_n$은 얼마나 빠르게 흔들리는지를 정한다.
 값이 크면 짧은 시간 안에 여러 번 흔들리고, 값이 작으면 천천히 흔들린다.
 진동의 주기는

@@ -873,6 +873,10 @@ Modern Robotics에서는 이 둘을 경로(path)와 궤적(trajectory)으로 구
   +
   \frac{\dd^2 \bm{q}}{\dd s^2}\dot{s}(t)^2.
 \end{align}
+둘째 식의 두 항이 어디서 오는지도 곱의 미분 규칙으로 볼 수 있다.
+속도 식은 $\frac{\dd\bm{q}}{\dd s}$와 $\dot{s}$의 곱이므로, 시간으로 한 번 더 미분하면 앞 인자를 미분한 항과 뒤 인자를 미분한 항이 하나씩 나온다.
+앞 인자 $\frac{\dd\bm{q}}{\dd s}$는 $s$의 함수라서 연쇄법칙으로 $\frac{\dd^2\bm{q}}{\dd s^2}\dot{s}$가 되고 여기에 남아 있던 $\dot{s}$가 곱해져 $\dot{s}^2$ 항이 되며, 뒤 인자 $\dot{s}$의 미분에서 $\ddot{s}$ 항이 나온다.
+\vmark{trajectory-product-rule-qddot}%
 여기서 초보자가 가장 자주 놓치는 지점은 \(\bm{q}(s)\)나 \(\bm{x}(s)\)가 부드러워 보여도, 시간표 \(s(t)\)를 급하게 만들면 실제 속도와 가속도 요구가 커진다는 점이다.
 가장 단순한 예로 손끝이 직선으로 \(10~\mathrm{cm}\) 움직인다고 하자.
 \begin{equation}

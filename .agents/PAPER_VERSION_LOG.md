@@ -4,6 +4,36 @@ This file records manuscript-facing draft states. It complements
 `.agents/CURRENT_STATE.md` by keeping durable paper version labels, source/PDF
 paths, change intent, verification, and open risks.
 
+## draft-20260705-derivation-gaps-medium2
+
+- Type: derivation-completeness pass (remaining Medium tier) over Sections
+  2, 3, 4, 5b, 6
+- Main source: `paper/sections/02_impedance.tex`, `03_lti_system.tex`,
+  `04_electric_system.tex`, `05b_robotics_foundations.tex`,
+  `06_impedance_control.tex`
+- Main PDF: `paper/main.pdf`
+- Plan/backlog record: `.agents/DERIVATION_COMPLETENESS_PLAN.md` (Iteration 3)
+- Version purpose:
+  - Exhaust the Medium tier of the derivation backlog: A5 (imaginary-unit
+    first-use definition), A6 (sinusoid velocity derivative + RLC series-sum
+    bridge), A7 (charge-current correspondence), B5 (undamped-solution
+    substitution check), C3 (trajectory product-rule origin), C4 (impedance
+    error normalization). A8 was already resolved by the iteration-1 Laplace
+    definition insert.
+- Major changes represented (additive only): 7 short derivation bridges,
+  each anchored; 7 new `\vmark` anchors under
+  `manuscript_derivation_gap_medium2_checkpoint`.
+- Review: combined reviewer `Noether` — all 7 items CORRECT/FOLLOWABLE, no
+  duplication (forward-first j definition accepted).
+- Review or submission status: internal working draft, not submission-ready
+- Verification:
+  - LaTeX compile exit code: 0 (bundled Tectonic)
+  - Final segment citation/reference/rerun warnings: 0/0/0
+  - Final overfull/underfull boxes: 0/0
+  - PDF: `paper/main.pdf`, 120 pages (unchanged), 979698 bytes
+  - PDF SHA-256: `22DBA0FD376B75EF99E4BB124A4266B2D02286DAA327EF5979CAB9480B47761C`
+  - Validator: exit 0, failures 0 (7/7 new anchors present)
+
 ## draft-20260705-derivation-gaps-medium1
 
 - Type: derivation-completeness pass (top Medium items) over Sections 4--6

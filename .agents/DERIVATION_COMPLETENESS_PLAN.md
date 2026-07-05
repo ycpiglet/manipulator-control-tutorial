@@ -143,6 +143,27 @@ C2(직렬 강성 분배 관계식)와 B4(RLC 표준형 계수 비교), B6(오버
 남은 backlog: A5-A8(03장 복소변수 의미, 컨볼루션 적분 도입 등), B5(무감쇠
 해 대입 검산), B7/C5(Low 묶음), C3(궤적 곱의 미분 규칙), C4(\(m_d\) 정규화).
 
+### Iteration 3 결과 (2026-07-05, version `draft-20260705-derivation-gaps-medium2`)
+
+| 항목 | 검증 판정 | 조치 | 상태 |
+|---|---|---|---|
+| A5 | 확정 — \(\jj\)가 02장 첫 사용(s=\(\jj\omega\)) 시점에 미정의 (03장 \(\sigma\), \(\omega\) 의미는 이미 존재) | 02장 첫 사용부에 허수 단위 정의 추가 | **closed** |
+| A6 | 부분 확정 — 정현파 속도 미분 단계와 직렬 합 브리지만 부재 (RLC 소자 임피던스 자체는 343-348행에 존재) | \(\dot{x}=-\omega X_0\sin\) 미분 단계 + 직렬(같은 전류, 전압 합) 브리지 추가 | **closed** |
+| A7 | 확정 Low | \(i=\dot{q}\), \(\dot{i}=\ddot{q}\) 대응 문장 추가 | **closed** |
+| A8 | 오탐(해소됨) — Iteration 1의 라플라스 정의 문단이 적분 기호를 먼저 도입 | 수정 불필요 | closed (resolved by iter 1) |
+| B5 | 확정 | 무감쇠 해의 2회 미분 대입 검산 추가 | **closed** |
+| C3 | 확정 | \(\ddot{\bm{q}}\) 두 항의 곱의 미분 규칙 기원 설명 추가 | **closed** |
+| C4 | 확정 | \(m_d\) 정규화 + 계수 매칭(\(\omega_n^2=k_d/m_d\), \(2\zeta\omega_n=d_d/m_d\)) 브리지 추가, 360행 원 방정식과 일치 확인 | **closed** |
+
+리뷰: 통합 리뷰어 Noether — 7건 전부 CORRECT/FOLLOWABLE, 중복 없음
+(\(\jj\) 선행 정의는 후행 언급과 역할이 달라 허용).
+
+검증: 앵커 7개(`manuscript_derivation_gap_medium2_checkpoint`) 추가, 전체
+게이트 통과(컴파일 clean, 120페이지 유지, validator failures 0).
+
+**Medium 티어 전체 소진.** 남은 backlog: B7, C5 (Low 묶음 — 한 단계 생략
+수준으로 초보자 진행을 막지 않음; 필요 시 후속 이터레이션에서 처리).
+
 ## Lessons (compound learning)
 
 - 이전 패스에서 확립: phrase-count 마커는 깨지기 쉬움 → `\vmark` 앵커 사용 (2026-07-05 완료)

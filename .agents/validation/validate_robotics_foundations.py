@@ -216,6 +216,44 @@ def manuscript_derivation_gap_medium_checkpoint() -> dict[str, int]:
     }
 
 
+def manuscript_derivation_gap_medium2_checkpoint() -> dict[str, int]:
+    """Check anchors for the iteration-3 Medium/Low derivation-gap fixes.
+
+    Covers imaginary-unit first-use definition, sinusoid velocity derivative,
+    RLC series-sum bridge (Section 2), charge-current note (Section 3),
+    undamped-solution substitution check (Section 4), trajectory product-rule
+    bridge (Section 5b), and impedance error normalization (Section 6).
+    """
+    impedance = IMPEDANCE_TEX.read_text(encoding="utf-8")
+    lti = LTI_SYSTEM_TEX.read_text(encoding="utf-8")
+    electric = ELECTRIC_SYSTEM_TEX.read_text(encoding="utf-8")
+    foundations = ROBOTICS_FOUNDATIONS_TEX.read_text(encoding="utf-8")
+    impedance_control = IMPEDANCE_CONTROL_TEX.read_text(encoding="utf-8")
+    return {
+        "jj_first_use_definition_marker_count": impedance.count(
+            "\\vmark{jj-first-use-definition}"
+        ),
+        "spring_sinusoid_velocity_derivative_marker_count": impedance.count(
+            "\\vmark{spring-sinusoid-velocity-derivative}"
+        ),
+        "rlc_series_sum_bridge_marker_count": impedance.count(
+            "\\vmark{rlc-series-sum-bridge}"
+        ),
+        "charge_current_derivative_note_marker_count": lti.count(
+            "\\vmark{charge-current-derivative-note}"
+        ),
+        "undamped_solution_substitution_check_marker_count": electric.count(
+            "\\vmark{undamped-solution-substitution-check}"
+        ),
+        "trajectory_product_rule_qddot_marker_count": foundations.count(
+            "\\vmark{trajectory-product-rule-qddot}"
+        ),
+        "impedance_error_normalization_marker_count": impedance_control.count(
+            "\\vmark{impedance-error-normalization}"
+        ),
+    }
+
+
 def series_stiffness_checkpoint() -> dict[str, float]:
     """Verify the Section 6 serial-stiffness numeric example.
 
@@ -1123,6 +1161,9 @@ def main() -> int:
         "manuscript_derivation_gap_medium_checkpoint": (
             manuscript_derivation_gap_medium_checkpoint()
         ),
+        "manuscript_derivation_gap_medium2_checkpoint": (
+            manuscript_derivation_gap_medium2_checkpoint()
+        ),
         "series_stiffness_checkpoint": series_stiffness_checkpoint(),
         "overshoot_formula_checkpoint": overshoot_formula_checkpoint(),
         "manuscript_generalized_effort_bridge_marker_checkpoint": (
@@ -1254,6 +1295,17 @@ def main() -> int:
         )
     else:
         for key, value in derivation_gap_medium_markers.items():
+            if int(value) < 1:
+                failures.append(f"{key}={value} < 1")
+    derivation_gap_medium2_markers = metrics[
+        "manuscript_derivation_gap_medium2_checkpoint"
+    ]
+    if not isinstance(derivation_gap_medium2_markers, dict):
+        failures.append(
+            "manuscript_derivation_gap_medium2_checkpoint did not return a dictionary"
+        )
+    else:
+        for key, value in derivation_gap_medium2_markers.items():
             if int(value) < 1:
                 failures.append(f"{key}={value} < 1")
     effort_bridge_markers = metrics[

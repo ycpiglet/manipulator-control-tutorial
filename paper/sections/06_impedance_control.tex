@@ -491,6 +491,9 @@ $k_d=0$인 경우, 불안정한 이득, 지속 진동, 포화, 시간에 따라 
   \frac{1}{m_d}f_{\mathrm{ext}}
 \end{equation}
 이고,
+이 표준형은 목표 임피던스 오차 방정식 $m_d\ddot{e}+d_d\dot{e}+k_de=f_{\mathrm{ext}}$의 양변을 $m_d$로 나눈 것이다.
+계수를 표준형과 맞추면 $\omega_n^2=k_d/m_d$, $2\zeta\omega_n=d_d/m_d$이고, 전기 시스템 장의 RLC 계수 비교와 똑같은 계산으로 $\zeta$를 분리하면
+\vmark{impedance-error-normalization}%
 \begin{align}
   \omega_n &= \sqrt{\frac{k_d}{m_d}}, \\
   \zeta &= \frac{d_d}{2\sqrt{m_d k_d}}.

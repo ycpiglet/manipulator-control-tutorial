@@ -14,9 +14,30 @@ Iteratively improve the Korean review/tutorial paper on impedance, impedance con
 - Bibliography: `paper/references/refs.bib`
 - Latest PDF: `paper/main.pdf`
 - Current length: 120 PDF pages
-- Latest PDF size: 976795 bytes
+- Latest PDF size: 979698 bytes
 
 ## Completed Since Last Snapshot
+
+### 2026-07-05 Derivation-Gap Medium Pass 2 (Iteration 3)
+
+Version label: `draft-20260705-derivation-gaps-medium2`. Exhausted the
+Medium tier of the derivation backlog: A5 (j first-use definition), A6
+(sinusoid velocity derivative + RLC series-sum bridge), A7 (i = q-dot
+correspondence), B5 (undamped-solution substitution check), C3 (trajectory
+product-rule origin of the two q-double-dot terms), C4 (impedance error
+normalization and coefficient matching, cross-checked against the original
+equation at 06:360). A8 confirmed already resolved by iteration 1. Reviewer
+`Noether`: all 7 CORRECT/FOLLOWABLE, no duplication. Guarded by
+`manuscript_derivation_gap_medium2_checkpoint` (7 anchors). Only Low-tier
+bundles (B7, C5) remain in the backlog.
+
+| Gate | Threshold | Measured | Evidence |
+|---|---:|---:|---|
+| LaTeX compile | exit 0 | 0 | `tmp/latex_compile_derivation_gaps/compile_iter3.json` |
+| Final segment warnings | all 0 | 0/0/0, 0 over/underfull | same log |
+| PDF | generated | 120 pages (unchanged), 979698 bytes, SHA-256 `22DBA0FD...B47761C` | `Get-FileHash` |
+| Validation script | failures 0 | exit 0 (7/7 new anchors) | `validate_robotics_foundations.py` |
+| Ruff (.agents) | exit 0 | all checks passed | `.venv/Scripts/ruff.exe check .agents` |
 
 ### 2026-07-05 Derivation-Gap Medium Pass (Iteration 2)
 
@@ -270,11 +291,14 @@ latest snapshot only; archive before it grows past roughly 500 lines.
 
 ## Next Recommended Action
 
-Continue the derivation-completeness loop from
-`.agents/DERIVATION_COMPLETENESS_PLAN.md`: all High items and the top Medium
-items (C2, B4, B6) are closed. The next iteration should take the remaining
-Medium items (C3 trajectory product-rule step, C4 m_d normalization, A5-A8
-complex-variable/convolution introductions), each hand-verified before
-editing. Keep CI green as the standing gate. The later compression pass must carry the 15 new derivation anchors
+The derivation-completeness loop
+(`.agents/DERIVATION_COMPLETENESS_PLAN.md`) has closed all High and Medium
+items across three iterations; only Low-tier bundles (B7, C5 — single
+skipped steps that do not block a beginner) remain and can be batched into a
+future iteration or absorbed by the compression pass. Next milestones: push
+the `claude/derivation-gaps-high` branch and open a PR when the user asks
+(branch stacks on the unpushed Section 5b density commit), then the
+compression pass — which must carry the 26 new derivation anchors into
+surviving text. Keep CI green as the standing gate. The later compression pass must carry the 15 new derivation anchors
 into surviving text. Preserving reviewer full texts under `.agents/reviews/`
 should start with the next review pass.
