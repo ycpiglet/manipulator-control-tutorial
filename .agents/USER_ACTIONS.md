@@ -25,7 +25,8 @@ Updated: 2026-07-05 (KST)
 |---|---|---|
 | C1 | 해외 본편 SCIE 필수 여부 | MDPI Robotics (비SCIE)로 진행 |
 | C2 | 실패 사례의 1인칭 서사 수위 | "저자가 실제 로봇에서 겪은 실수" 익명 일반 서사 (현재 적용됨) |
-| C3 | README 언어 구조 | 한국어 README.md 유지 + README.en.md 병행 (현재 적용 예정) |
+| C3 | README 언어 구조 | 한국어 README.md 유지 + README.en.md 병행 (2026-07-05 적용됨) |
+| C4 | JOSE 논문 저자 표기 | `jose/paper.md`의 TODO-AUTHOR-NAME / TODO-ORCID — 출판용 실명(영문)과 ORCID 필요. 없으면 ORCID 무료 발급(orcid.org) 권장 |
 
 ## 발송 초안
 

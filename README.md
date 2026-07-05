@@ -4,6 +4,9 @@
 
 이 저장소의 목표는 “산업용 로봇과 정량적으로 동일한 디지털 트윈”이 아니라, 제어 파라미터가 로봇의 움직임에 어떤 영향을 주는지 눈으로 확인하는 **교육용 동역학 시뮬레이션 실험실**을 만드는 것입니다.
 
+> English README: [README.en.md](README.en.md) — install, labs, reuse guide, and licenses for international educators.
+> 교육 콘텐츠(문서·가이드 텍스트)는 [CC BY 4.0](LICENSE-docs), 코드는 [Apache-2.0](LICENSE)입니다.
+
 ---
 
 ## Recommended repository name
