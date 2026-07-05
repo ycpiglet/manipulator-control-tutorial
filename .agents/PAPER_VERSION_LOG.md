@@ -4,6 +4,28 @@ This file records manuscript-facing draft states. It complements
 `.agents/CURRENT_STATE.md` by keeping durable paper version labels, source/PDF
 paths, change intent, verification, and open risks.
 
+## draft-20260706-firstread-path-m7
+
+- Type: new content pass — M7 shortest first-read path (intro)
+- Main source: `paper/sections/01_introduction.tex` (읽는 순서 subsection)
+- Version purpose: close the owner's failure case 5 (prerequisite burden).
+  Adds explicit skip permission (SE(3)/SO(3)/twist/wrench/Lagrangian appear
+  only as previews; translational Jacobian + force-effort transpose carry
+  the whole path), a hurried-reader shortest route (Section 5 standard-form
+  feel -> Section 6 core/equilibrium/parameters/failure gallery -> Lab04),
+  the Laplace "take the s-rule and move on" allowance, and the no-broken-
+  chain guarantee (derivations are complete, so returns always reconnect).
+- Anchors: firstread-skip-permission / shortest-path / no-broken-chain
+  (`manuscript_firstread_path_checkpoint`).
+- Review: `Polya` — promises spot-checked against 5b/06/03 sources, all
+  PASS; its one note ("Section 3 actually derives the rule") is consistent
+  with the passage's intent — skipping is allowed *because* the derivation
+  exists to return to.
+- Verification: compile exit 0, 0/0/0 warnings, 0 boxes; PDF 122 pages,
+  1000218 bytes, SHA-256
+  `D70EE609BD440B37ADE4BA9A16F966EE583DCB9E577D48AA565E57BED69E7190`;
+  validator exit 0.
+
 ## draft-20260706-selection-guide-m1
 
 - Type: new content pass — M1 control-method selection guide extension
