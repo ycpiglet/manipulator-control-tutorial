@@ -290,6 +290,15 @@ def manuscript_failure_gallery_checkpoint() -> dict[str, int]:
         "f3_wall_config_exists": int(
             (REPO_ROOT / "configs" / "lab04_panda" / "impedance_wall.yaml").is_file()
         ),
+        "fail_f1_sweep_narrative_marker_count": impedance_control.count(
+            "\\vmark{fail-f1-sweep-narrative}"
+        ),
+        "fail_f1_one_factor_method_marker_count": impedance_control.count(
+            "\\vmark{fail-f1-one-factor-method}"
+        ),
+        "fail_f1_config_pairs_marker_count": impedance_control.count(
+            "\\vmark{fail-f1-config-pairs}"
+        ),
     }
 
 

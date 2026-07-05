@@ -56,6 +56,11 @@ Next recommended action:
 - Do not call a task complete until evidence exists.
 - Record both successful checks and checks that could not be run.
 - If the same blocker appears in three consecutive iterations, stop and mark the blocker explicitly.
+- PR merges require confirmed-green CI. Do not chain `gh pr checks --watch`
+  immediately after `gh pr create` in one command: checks may not be
+  registered yet, the watch returns "no checks reported", and the chain
+  merges unguarded (observed 2026-07-06, PR #9 — harmless but wrong).
+  Verify checks are listed, then watch, then merge.
 
 ## Validation Gate
 

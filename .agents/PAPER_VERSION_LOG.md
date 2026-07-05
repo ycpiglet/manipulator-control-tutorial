@@ -4,6 +4,30 @@ This file records manuscript-facing draft states. It complements
 `.agents/CURRENT_STATE.md` by keeping durable paper version labels, source/PDF
 paths, change intent, verification, and open risks.
 
+## draft-20260706-failure-gallery-f1
+
+- Type: new content pass — failure gallery case F1 (unplanned parameter
+  sweeping); completes the M2 gallery (F1+F2+F3 all shipped)
+- Main source: `paper/sections/06_impedance_control.tex`
+- Version purpose: the owner's trial-and-error-on-expensive-hardware
+  failure — why blind multi-parameter sweeps destroy both equipment and
+  learning (parameters are coupled via zeta = d/(2 sqrt(mk))), and the
+  one-factor-at-a-time + prediction-first method as the vaccine, with a
+  one-line back-reference to the tuning subsection.
+- Reproduction: existing single-axis contrast pairs (lab01
+  underdamped/over_damped 0.4 vs 18.0 damping, high/low_stiffness 120 vs
+  15, lab04 wall_low/high_damping 2 vs 36) — reviewer-verified that each
+  pair differs in exactly one axis.
+- Anchors: fail-f1-sweep-narrative / one-factor-method / config-pairs.
+- Review: `Curie` — claims, no-duplication, escapes, tone all PASS.
+- Process note: fixed a validator escaping slip (single-backslash mark
+  string = vertical-tab escape, count silently 0) caught immediately by the
+  anchor gate failing — the gate worked as designed.
+- Verification: compile exit 0, 0/0/0 warnings, 0 boxes; PDF 121 pages,
+  992769 bytes, SHA-256
+  `4069478C0B6F064D6B4578DD8218CFA7D714998E2B2B3AA9380F3FAD874FA585`;
+  validator exit 0.
+
 ## draft-20260706-failure-gallery-f3
 
 - Type: new content pass — failure gallery case F3 (equilibrium misread)
