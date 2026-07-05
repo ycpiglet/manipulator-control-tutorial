@@ -4,6 +4,39 @@ This file records manuscript-facing draft states. It complements
 `.agents/CURRENT_STATE.md` by keeping durable paper version labels, source/PDF
 paths, change intent, verification, and open risks.
 
+## draft-20260705-failure-gallery-f2
+
+- Type: new content pass — failure gallery (M2) opened with case F2
+- Main source: `paper/sections/06_impedance_control.tex` (new subsection
+  `sec:failure-gallery` before the chapter recap), plus simulator scenario
+  assets: `configs/lab01_msd/f2_launch_high_energy.yaml`,
+  `f2_launch_precheck.yaml`, guide/next-run registrations in
+  `src/mclab/learning_guides.py` and `src/mclab/sim/reporting.py`
+- Plan record: `.agents/MISSION.md` (M2-F2, S3)
+- Version purpose:
+  - Start the mission's misconfiguration-to-damage gallery with the owner's
+    real stored-elastic-energy launch failure, tied 1:1 to reproducible
+    Lab01 scenarios.
+- Content: narrative -> principle (U = k d^2/2, f = k d, energy-conservation
+  one-liner for v_peak = d sqrt(k/m)) -> numeric contrast (50 J / 200 N /
+  10 m/s predicted, 9.8 m/s measured vs 3.75 J / 15 N / 1.4 m/s measured;
+  13x energy) -> reproduction configs -> pre-command precheck habit.
+- Simulation evidence: both configs executed headless; high-energy run
+  measured v_peak 9.81 m/s with 3.66 m/s residual at 4 s (zeta = 0.0125),
+  safe run settled to ~1e-10 J residual energy.
+- Review: `Feynman` — physics/readability/consistency/tone all PASS,
+  including an independent decay-envelope cross-check of the 3.7 m/s
+  residual claim.
+- Verification:
+  - LaTeX compile exit 0; final segment 0/0/0 warnings, 0 over/underfull
+  - PDF: 120 pages, 986095 bytes, SHA-256
+    `B02173666D928D4BCB34E68317AB1A8CF6BA435F3F06D5C0EF9AA4162C9E1776`
+  - Validator exit 0: 4 new anchors + config-existence gates + numeric
+    `launch_energy_checkpoint` (error 0.0)
+  - Learning-guide and next-run-suggestion gates pass after registering the
+    two scenarios (the simulator's own tests enforce guides for every
+    config)
+
 ## draft-20260705-compression-tier1
 
 - Type: conservative compression pass (Tier 1: pure duplication removal)

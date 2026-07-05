@@ -254,6 +254,64 @@ def manuscript_derivation_gap_medium2_checkpoint() -> dict[str, int]:
     }
 
 
+def manuscript_failure_gallery_checkpoint() -> dict[str, int]:
+    """Check anchors and reproduction configs for the failure gallery (M2).
+
+    Case F2 (stored elastic energy launch) ships with two lab01 configs that
+    the manuscript names verbatim; their existence is part of the gate.
+    """
+    impedance_control = IMPEDANCE_CONTROL_TEX.read_text(encoding="utf-8")
+    high = REPO_ROOT / "configs" / "lab01_msd" / "f2_launch_high_energy.yaml"
+    safe = REPO_ROOT / "configs" / "lab01_msd" / "f2_launch_precheck.yaml"
+    return {
+        "fail_gallery_intro_marker_count": impedance_control.count(
+            "\\vmark{fail-gallery-intro}"
+        ),
+        "fail_f2_energy_precheck_marker_count": impedance_control.count(
+            "\\vmark{fail-f2-energy-precheck}"
+        ),
+        "fail_f2_numeric_contrast_marker_count": impedance_control.count(
+            "\\vmark{fail-f2-numeric-contrast}"
+        ),
+        "fail_f2_repro_configs_marker_count": impedance_control.count(
+            "\\vmark{fail-f2-repro-configs}"
+        ),
+        "f2_high_energy_config_exists": int(high.is_file()),
+        "f2_precheck_config_exists": int(safe.is_file()),
+    }
+
+
+def launch_energy_checkpoint() -> dict[str, float]:
+    """Verify the F2 failure-case numbers quoted in the manuscript.
+
+    High-energy setting: m=1 kg, k=400 N/m, delta=0.5 m -> 50 J stored,
+    200 N initial force, 10 m/s undamped peak speed. Safe setting:
+    k=30 N/m -> 3.75 J, 15 N. Energy ratio ~13x.
+    """
+    m, delta = 1.0, 0.5
+    k_high, k_safe = 400.0, 30.0
+    e_high = 0.5 * k_high * delta * delta
+    e_safe = 0.5 * k_safe * delta * delta
+    f_high = k_high * delta
+    f_safe = k_safe * delta
+    v_peak = delta * math.sqrt(k_high / m)
+    return {
+        "stored_energy_high_j": e_high,
+        "stored_energy_safe_j": e_safe,
+        "initial_force_high_n": f_high,
+        "initial_force_safe_n": f_safe,
+        "undamped_peak_speed_m_s": v_peak,
+        "energy_ratio": e_high / e_safe,
+        "max_launch_claim_error": max(
+            abs(e_high - 50.0),
+            abs(e_safe - 3.75),
+            abs(f_high - 200.0),
+            abs(f_safe - 15.0),
+            abs(v_peak - 10.0),
+        ),
+    }
+
+
 def series_stiffness_checkpoint() -> dict[str, float]:
     """Verify the Section 6 serial-stiffness numeric example.
 
@@ -1166,6 +1224,10 @@ def main() -> int:
         ),
         "series_stiffness_checkpoint": series_stiffness_checkpoint(),
         "overshoot_formula_checkpoint": overshoot_formula_checkpoint(),
+        "manuscript_failure_gallery_checkpoint": (
+            manuscript_failure_gallery_checkpoint()
+        ),
+        "launch_energy_checkpoint": launch_energy_checkpoint(),
         "manuscript_generalized_effort_bridge_marker_checkpoint": (
             manuscript_generalized_effort_bridge_marker_checkpoint()
         ),
@@ -1211,6 +1273,7 @@ def main() -> int:
         # The rigid-limit branch uses a finite 1e9 N/m proxy for k_env -> inf,
         # which leaves an expected ~5e-6 N asymptotic residual.
         "series_stiffness_checkpoint.max_series_stiffness_error": 1.0e-4,
+        "launch_energy_checkpoint.max_launch_claim_error": 1.0e-12,
         "overshoot_formula_checkpoint.max_overshoot_claim_error": 5.0e-3,
     }
     failures: list[str] = []
@@ -1306,6 +1369,15 @@ def main() -> int:
         )
     else:
         for key, value in derivation_gap_medium2_markers.items():
+            if int(value) < 1:
+                failures.append(f"{key}={value} < 1")
+    failure_gallery_markers = metrics["manuscript_failure_gallery_checkpoint"]
+    if not isinstance(failure_gallery_markers, dict):
+        failures.append(
+            "manuscript_failure_gallery_checkpoint did not return a dictionary"
+        )
+    else:
+        for key, value in failure_gallery_markers.items():
             if int(value) < 1:
                 failures.append(f"{key}={value} < 1")
     effort_bridge_markers = metrics[

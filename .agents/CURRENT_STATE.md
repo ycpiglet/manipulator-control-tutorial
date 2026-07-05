@@ -14,9 +14,32 @@ Iteratively improve the Korean review/tutorial paper on impedance, impedance con
 - Bibliography: `paper/references/refs.bib`
 - Latest PDF: `paper/main.pdf`
 - Current length: 120 PDF pages
-- Latest PDF size: 979540 bytes
+- Latest PDF size: 986095 bytes
 
 ## Completed Since Last Snapshot
+
+### 2026-07-05 Failure Gallery F2 Pass (Track B / M2)
+
+Version label: `draft-20260705-failure-gallery-f2` (full details in
+PAPER_VERSION_LOG). Opened the mission's failure gallery with the owner's
+stored-elastic-energy launch case: new `sec:failure-gallery` subsection in
+Section 6, two reproducible Lab01 scenarios (dangerous vs safe energy
+budget), guide/next-run registrations required by the simulator's own test
+gates, 4 anchors + config-existence + numeric checkpoints in the validator.
+Simulation evidence: predicted 10 m/s vs measured 9.81 m/s peak; 13x stored
+energy contrast. Reviewer `Feynman`: 4/4 PASS with independent
+decay-envelope cross-check. This pass intentionally edited simulator
+registries (learning_guides.py, reporting.py) — scenario metadata only, no
+control logic.
+
+| Gate | Threshold | Measured |
+|---|---:|---:|
+| LaTeX compile / final warnings | 0, 0/0/0, 0 boxes | pass |
+| PDF | generated | 120 pages, 986095 bytes, SHA-256 `B0217366...C9E1776` |
+| Validator | failures 0 | exit 0 (anchors 4/4, launch numeric error 0.0) |
+| Targeted tests (guides/logging) | exit 0 | 53 passed + 74 subtests |
+| Ruff (src, tests, .agents) | exit 0 | pass |
+| Full pytest | exit 0 | 340 passed + 764 subtests (230 s) |
 
 ### 2026-07-05 Compression Pass Tier 1
 
