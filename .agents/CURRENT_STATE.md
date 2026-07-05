@@ -13,10 +13,22 @@ Iteratively improve the Korean review/tutorial paper on impedance, impedance con
 - Current focus sources: `paper/sections/01_introduction.tex`, `paper/sections/02_impedance.tex`, `paper/sections/04_electric_system.tex`, `paper/sections/05_mechanical_system.tex`, `paper/sections/05b_robotics_foundations.tex`, `paper/sections/06_impedance_control.tex`, `paper/sections/07_mujoco_lab_design.tex`, `paper/sections/08_discussion.tex`, `paper/sections/09_conclusion.tex`, `paper/sections/A_notation_checklist.tex`, `paper/main.tex`, `paper/figures/*.tex`, and `.agents/*`
 - Bibliography: `paper/references/refs.bib`
 - Latest PDF: `paper/main.pdf`
-- Current length: 120 PDF pages
-- Latest PDF size: 986095 bytes
+- Current length: 121 PDF pages
+- Latest PDF size: 990255 bytes
 
 ## Completed Since Last Snapshot
+
+### 2026-07-06 Failure Gallery F3 Pass (Track B / M2)
+
+Version label: `draft-20260706-failure-gallery-f3` (details in
+PAPER_VERSION_LOG). Second gallery case from the owner's real failures:
+"commanded a displacement, robot stopped short" reframed as the loaded
+equilibrium x_ss = x_d + f_ext/k_d working as designed; Lab04
+impedance_wall run measured 3.32 cm penetration with 8.629 N wall force =
+k_wall*delta exactly (wall_balance_checkpoint error 0.0). Reviewer `Bode`:
+4/4 PASS. PDF 121 pages. Also merged this date: PR #7 (F2 case) and PR #8
+(JOSE package: README.en.md, LICENSE-docs CC BY 4.0, jose/paper.md draft,
+CONTRIBUTING.md).
 
 ### 2026-07-05 Failure Gallery F2 Pass (Track B / M2)
 

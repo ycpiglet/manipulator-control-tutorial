@@ -4,6 +4,31 @@ This file records manuscript-facing draft states. It complements
 `.agents/CURRENT_STATE.md` by keeping durable paper version labels, source/PDF
 paths, change intent, verification, and open risks.
 
+## draft-20260706-failure-gallery-f3
+
+- Type: new content pass — failure gallery case F3 (equilibrium misread)
+- Main source: `paper/sections/06_impedance_control.tex`
+  (`sec:failure-gallery`, second case)
+- Version purpose: the owner's "commanded a displacement, robot stopped
+  short" failure — impedance x_d is an anchor, not a position command;
+  contact stops the robot at the loaded equilibrium
+  x_ss = x_d + f_ext/k_d; the target-hand gap times stiffness IS the
+  contact force. Includes the joint-vs-Cartesian coordinate one-liner.
+- Simulation evidence: Lab04 `impedance_wall.yaml` headless run — hand
+  stops 3.32 cm past the wall face while the target keeps going; measured
+  virtual wall spring force 8.629 N equals k_wall*penetration
+  (260 * 0.0331887) exactly; contact persists 76 % of the run.
+- Anchors: fail-f3-equilibrium-narrative / wall-balance-numeric /
+  repro-config (+ config-existence gate); numeric `wall_balance_checkpoint`
+  error 0.0.
+- Review: `Bode` — physics/sign-convention, no-duplication (one-line
+  back-reference to the equilibrium subsection), reproduction path, and
+  joint-vs-Cartesian fairness all PASS.
+- Verification: compile exit 0, 0/0/0 warnings, 0 boxes; PDF 121 pages
+  (+1), 990255 bytes, SHA-256
+  `F84DD1D9D3F8E982B6C14F291E5A80BC0F9816E81A74E748C3F663B5B89EEEF2`;
+  validator exit 0.
+
 ## draft-20260705-failure-gallery-f2
 
 - Type: new content pass — failure gallery (M2) opened with case F2

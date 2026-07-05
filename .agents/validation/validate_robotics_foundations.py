@@ -278,6 +278,37 @@ def manuscript_failure_gallery_checkpoint() -> dict[str, int]:
         ),
         "f2_high_energy_config_exists": int(high.is_file()),
         "f2_precheck_config_exists": int(safe.is_file()),
+        "fail_f3_equilibrium_narrative_marker_count": impedance_control.count(
+            "\\vmark{fail-f3-equilibrium-narrative}"
+        ),
+        "fail_f3_wall_balance_numeric_marker_count": impedance_control.count(
+            "\\vmark{fail-f3-wall-balance-numeric}"
+        ),
+        "fail_f3_repro_config_marker_count": impedance_control.count(
+            "\\vmark{fail-f3-repro-config}"
+        ),
+        "f3_wall_config_exists": int(
+            (REPO_ROOT / "configs" / "lab04_panda" / "impedance_wall.yaml").is_file()
+        ),
+    }
+
+
+def wall_balance_checkpoint() -> dict[str, float]:
+    """Verify the F3 wall-balance numbers quoted in the manuscript.
+
+    Measured Lab04 run (impedance_wall.yaml, 2026-07-06): penetration
+    0.0331887 m against a 260 N/m wall produced 8.6290649 N of virtual
+    spring force; the manuscript claims f = k_wall * delta consistency
+    and quotes the rounded 3.3 cm / 8.6 N pair.
+    """
+    k_wall = 260.0
+    penetration_m = 0.03318871126899425
+    measured_spring_force_n = 8.629064929938506
+    predicted = k_wall * penetration_m
+    return {
+        "predicted_wall_force_n": predicted,
+        "measured_wall_force_n": measured_spring_force_n,
+        "wall_balance_error_n": abs(predicted - measured_spring_force_n),
     }
 
 
@@ -1228,6 +1259,7 @@ def main() -> int:
             manuscript_failure_gallery_checkpoint()
         ),
         "launch_energy_checkpoint": launch_energy_checkpoint(),
+        "wall_balance_checkpoint": wall_balance_checkpoint(),
         "manuscript_generalized_effort_bridge_marker_checkpoint": (
             manuscript_generalized_effort_bridge_marker_checkpoint()
         ),
@@ -1274,6 +1306,7 @@ def main() -> int:
         # which leaves an expected ~5e-6 N asymptotic residual.
         "series_stiffness_checkpoint.max_series_stiffness_error": 1.0e-4,
         "launch_energy_checkpoint.max_launch_claim_error": 1.0e-12,
+        "wall_balance_checkpoint.wall_balance_error_n": 1.0e-3,
         "overshoot_formula_checkpoint.max_overshoot_claim_error": 5.0e-3,
     }
     failures: list[str] = []
