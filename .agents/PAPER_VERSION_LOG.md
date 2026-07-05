@@ -4,6 +4,65 @@ This file records manuscript-facing draft states. It complements
 `.agents/CURRENT_STATE.md` by keeping durable paper version labels, source/PDF
 paths, change intent, verification, and open risks.
 
+## draft-20260705-derivation-gaps-high
+
+- Type: derivation-completeness pass (High-severity gaps) over Sections 2--6
+- Main source: `paper/main.tex`, `paper/sections/02_impedance.tex`,
+  `03_lti_system.tex`, `04_electric_system.tex`, `05_mechanical_system.tex`,
+  `06_impedance_control.tex`
+- Main PDF: `paper/main.pdf`
+- Plan/backlog record: `.agents/DERIVATION_COMPLETENESS_PLAN.md`
+- Version purpose:
+  - Execute the standing beginner-accessibility goal: expand every
+    High-severity derivation jump (steps a high-schooler/first-year/non-major
+    cannot follow without external material) directly in-text.
+- Audit findings (3 parallel read-only auditors, then hand-verified):
+  - Confirmed High: Laplace integral definition absent from the whole paper
+    and differentiation rule used underived (A1+B1); characteristic-root
+    standard-form substitution skipped (B2); workspace inertia
+    \(\bm{\Lambda}=(\bm{J}_v\bm{M}_q^{-1}\bm{J}_v^{\mathsf{T}})^{-1}\)
+    presented without derivation (C1).
+  - False positives closed without edits: telegrapher partial-derivative
+    intuition (A2) and final-value-theorem conditions (A3) already exist.
+  - Medium backlog (A5-A8, B4-B7, C2-C5) recorded for later iterations.
+- Major changes represented (additive only; no prose deleted):
+  - Section 3: new `\paragraph{라플라스 변환의 정의.}` with the integral
+    definition, a product-rule derivation of
+    \(\mathcal{L}\{\dot{x}\}=sX(s)-x(0)\), a constant-function check
+    (\(X(s)=1/s\)), double application for \(\ddot{x}\), term-by-term
+    substitution into the MSD equation, and a complex magnitude/angle
+    explainer with the \(H=1-\jj\) example.
+  - Section 2: forward pointer at first \(\mathcal{L}\) use; term-by-term
+    velocity-based substitution before the mechanical impedance result.
+  - Section 4: term-by-term Laplace substitution for the RLC equation.
+  - Section 5: two-piece algebra expansion of the characteristic-root
+    substitution (\(-b/2m=-\zeta\omega_n\); \(b^2-4mk=4mk(\zeta^2-1)\)),
+    numeric check (m=1, b=2, k=4), and explicit
+    \(\sqrt{\zeta^2-1}=\jj\sqrt{1-\zeta^2}\) factorization for \(\omega_d\).
+  - Section 6: force-to-acceleration derivation of
+    \(\bm{J}_v\bm{M}_q^{-1}\bm{J}_v^{\mathsf{T}}\) and a directional
+    effective-mass toy check on the Section 5b two-link pose
+    (\(m_{\mathrm{eff},x}=0.5\), \(m_{\mathrm{eff},y}=1\)).
+  - 15 new `\vmark` anchors; new validator checkpoints
+    `manuscript_derivation_gap_high_checkpoint`,
+    `charroot_standard_form_checkpoint`,
+    `effective_mass_direction_checkpoint`.
+- Review: novice reviewer `Poincare` (4 findings, 3 applied), technical
+  reviewer `Gauss` (all 6 items CORRECT).
+- Review or submission status: internal working draft, not submission-ready
+- Verification:
+  - LaTeX compile exit code: 0 (bundled Tectonic)
+  - Final segment citation/reference/rerun warnings: 0/0/0
+  - Final overfull/underfull boxes: 0/0 (2 known Korean italic font warnings)
+  - PDF: `paper/main.pdf`, 119 pages (was 118), 973262 bytes
+  - PDF SHA-256: `16C0DD5892583640B5729FEE6D42CF62ECC5B2D7E44A6FDE66391BCC53EA7883`
+  - Validator: exit 0, failures 0 (all 15 new anchors present, numeric
+    checkpoint errors 0.0)
+  - Citation coverage: 29/29 used keys, 0 duplicates
+  - PDF content markers via pypdf: pages 17, 21, 51, 79
+  - Visual layout: renderer unavailable this session; compensated by 0
+    overfull/underfull boxes and additive-only edits
+
 ## draft-20260705-section5b-density-nav
 
 - Type: page-density/navigation pass over Section 5b (PDF pages 55--68)

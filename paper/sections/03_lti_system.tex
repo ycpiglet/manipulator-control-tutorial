@@ -167,12 +167,63 @@ $1~\mathrm{N}$과 $2~\mathrm{N}$을 따로 생각한 뒤 변형을 더하면 $3~
 시간을 없애는 마법이라기보다, 시간에 따라 계속 갱신해야 하는 미분 장부를 한 장의 대수 장부로 바꾸는 도구에 가깝다.
 이렇게 바꾸면 같은 시스템에 다른 입력을 넣어도 매번 운동방정식을 처음부터 풀지 않고, $H(s)$라는 입력-출력 변환표를 재사용할 수 있다.
 $X(s)$는 $x(t)$를 라플라스 변환한 것이고, $F(s)$는 $f(t)$를 라플라스 변환한 것이다.
+
+\paragraph{라플라스 변환의 정의.}
+이 변환이 정확히 무엇인지 한 번은 정의로 적어 두자.
+\begin{equation}
+  X(s)
+  =
+  \mathcal{L}\{x(t)\}
+  =
+  \int_{0}^{\infty} x(t)\,e^{-st}\,\dd t.
+  \label{eq:laplace-definition}
+\vmark{laplace-definition-integral}%
+\end{equation}
+말로 풀면, 시간 함수 $x(t)$에 $e^{-st}$라는 점점 작아지는 추를 곱해서 $t=0$부터 끝까지 모두 더한(적분한) 값이다.
+적분 기호 $\int$는 아주 잘게 나눈 조각 값들의 합으로 읽으면 된다.
+$s$를 하나 고를 때마다 숫자가 하나 나오므로, 시간 파형 전체가 $s$의 함수 $X(s)$ 한 장으로 요약된다.
+
+\paragraph{미분 규칙은 곱의 미분에서 나온다.}
 아주 거칠게 말하면, 미분은 $s$를 곱하는 연산처럼 바뀐다.
+이 규칙은 외워야 하는 별개의 공식이 아니라, 위 정의와 곱의 미분 규칙만으로 나온다.
+한 단계씩 보자.
+$s$는 $t$와 무관한 상수 취급이므로, 곱의 미분 규칙에 따라
+\[
+  \frac{\dd}{\dd t}\left[x(t)\,e^{-st}\right]
+  =
+  \dot{x}(t)\,e^{-st}
+  -
+  s\,x(t)\,e^{-st}
+\vmark{laplace-rule-product-rule-derivation}%
+\]
+이다.
+양변을 $t=0$부터 $\infty$까지 적분하자.
+왼쪽은 미분한 것을 다시 적분하는 것이므로 끝값 빼기 시작값, 즉 $x(t)e^{-st}$의 $t\to\infty$ 값에서 $t=0$ 값 $x(0)$을 뺀 것이 된다.
+응답이 발산하지 않아 $t\to\infty$에서 $x(t)e^{-st}\to0$이 되는 $s$에서 보면 왼쪽은 $0-x(0)=-x(0)$이다.
+오른쪽의 두 적분은 정의 \eqref{eq:laplace-definition}에 따라 각각 $\mathcal{L}\{\dot{x}\}$와 $-sX(s)$이다.
+따라서 $-x(0)=\mathcal{L}\{\dot{x}\}-sX(s)$이고, 정리하면
 \begin{equation}
   \mathcal{L}\{\dot{x}(t)\}=sX(s)-x(0)
 \end{equation}
 이고, 초기조건을 0으로 두면 $\dot{x}$는 $sX(s)$처럼 다룰 수 있다.
-마찬가지로 $\ddot{x}$는 $s^2X(s)$처럼 다룰 수 있으므로
+간단한 검산도 해 보자.
+$x(t)=1$(상수)이면 정의에서 $X(s)=\int_0^\infty e^{-st}\dd t=\left[-e^{-st}/s\right]_0^\infty=0-\left(-\tfrac{1}{s}\right)=\tfrac{1}{s}$이다.
+$\dot{x}=0$이므로 규칙의 왼쪽은 $\mathcal{L}\{0\}=0$이고, 오른쪽도 $sX(s)-x(0)=s\cdot(1/s)-1=0$으로 일치한다.
+\vmark{laplace-rule-constant-check}%
+
+두 번 미분한 항은 같은 규칙을 두 번 적용하면 된다.
+$\dot{x}$를 새 함수로 보고 규칙을 다시 쓰면
+\[
+  \mathcal{L}\{\ddot{x}\}
+  =
+  s\,\mathcal{L}\{\dot{x}\}-\dot{x}(0)
+  =
+  s^2X(s)-s\,x(0)-\dot{x}(0)
+\vmark{laplace-second-derivative-twice}%
+\]
+이고, 초기조건을 0으로 두면 $\ddot{x}$는 $s^2X(s)$처럼 다룰 수 있다.
+이제 $m\ddot{x}+b\dot{x}+kx=f$의 각 항을 하나씩 바꾸면 $m\ddot{x}\to ms^2X(s)$, $b\dot{x}\to bsX(s)$, $kx\to kX(s)$, $f\to F(s)$이므로
+\vmark{laplace-term-by-term-msd}%
 \begin{equation}
   (ms^2+bs+k)X(s)=F(s)
 \end{equation}
@@ -300,6 +351,10 @@ LTI 시스템의 중요한 성질은 정현파 입력에 대한 응답이다.
   A|H(\jj\omega)|
   \cos\left(\omega t + \angle H(\jj\omega)\right).
 \end{equation}
+여기서 $|H(\jj\omega)|$와 $\angle H(\jj\omega)$는 복소수 $H(\jj\omega)$의 크기와 각도이다.
+복소수 $a+\jj b$를 평면 위의 점 $(a,b)$로 그리면, 크기 $|a+\jj b|=\sqrt{a^2+b^2}$는 원점에서 그 점까지의 거리이고, 각도 $\angle(a+\jj b)$는 양의 실수축에서 그 점 방향까지 잰 회전각이다.
+예를 들어 어떤 주파수에서 $H(\jj\omega)=1-\jj$라면 크기는 $\sqrt{1^2+(-1)^2}=\sqrt{2}$, 각도는 $-45^\circ$이므로, 출력 진폭은 입력의 약 1.41배가 되고 위상은 $45^\circ$만큼 늦는다.
+\vmark{freq-magnitude-angle-complex}%
 따라서 $H(\jj\omega)$는 입력 주파수에 대해 시스템이 얼마나 증폭하거나 감쇠하는지, 그리고 얼마나 늦거나 빠르게 반응하는지를 알려준다.
 예를 들어 어떤 주파수에서 $|H(\jj\omega)|=0.5$라면 출력 진폭은 입력 진폭의 절반이다.
 $\angle H(\jj\omega)=-90^\circ$라면 출력은 같은 주파수로 흔들리지만 입력보다 한 주기의 1/4만큼 늦게 나타난다.

@@ -143,6 +143,11 @@ paper_tutorial:
     metric: "important equations explained in prose"
     threshold: "all key equations"
     evidence: "paper/*.tex"
+  derivation_step_completeness:
+    metric: "High-severity derivation gaps (beginner blocked without external material)"
+    threshold: "0 open High items in the derivation backlog; anchor checkpoint passes"
+    command: "python .agents/validation/validate_robotics_foundations.py  # manuscript_derivation_gap_high_checkpoint"
+    evidence: ".agents/DERIVATION_COMPLETENESS_PLAN.md backlog status"
   historical_pass_gates:
     metric: "pass-specific manuscript gates from previous multi-agent passes"
     threshold: "archived, not re-enforced"

@@ -508,7 +508,9 @@ $\omega_n$은 얼마나 빠르게 흔들리는지를 정한다.
 물리적 핵심은 바로 뒤의 에너지 해석에서 다시 확인한다.
 이를 위해 먼저 라플라스 변환을 사용한다.
 영 초기조건은 시작 순간에 인덕터 전류와 커패시터 전압 같은 저장 상태가 0이라고 두는 계산 조건이다.
-영 초기조건에서 라플라스 변환을 적용하면
+LTI 시스템 장에서 유도한 규칙대로 영 초기조건에서는 미분마다 $s$가 하나씩 붙으므로, 각 항을 하나씩 바꾸면 $L\ddot{q}\to Ls^2Q(s)$, $R\dot{q}\to RsQ(s)$, $\frac{1}{C}q\to\frac{1}{C}Q(s)$, $v_{\mathrm{in}}\to V_{\mathrm{in}}(s)$이다.
+\vmark{rlc-laplace-term-by-term}%
+따라서
 \begin{equation}
   \left(Ls^2 + Rs + \frac{1}{C}\right) Q(s) = V_{\mathrm{in}}(s)
 \end{equation}

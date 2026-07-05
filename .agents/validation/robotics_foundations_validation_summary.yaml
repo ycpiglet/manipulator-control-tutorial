@@ -1,43 +1,48 @@
 schema_version: 1
-validation_id: robotics_foundations_vmark_stable_anchor_migration_pass
+validation_id: derivation_gap_high_severity_pass
 scope: paper_and_validation_harness
-validated_at_kst: "2026-07-05T17:50:00+09:00"
+validated_at_kst: "2026-07-05T21:30:00+09:00"
 status: pass
 
 main_reflection:
   source: paper/main.tex
-  includes_robotics_foundations: true
-  includes_impedance_control: true
-  includes_notation_appendix: true
-  preamble_macro: "\\newcommand{\\vmark}[1]{} defined in main.tex with a durability comment"
   compiled_pdf: paper/main.pdf
   result: >
-    All 85 required manuscript content markers are now tracked through
-    \vmark{key} anchors inserted next to their content instead of exact
-    Korean phrase counts, so prose rewording no longer breaks the gate.
-    Forbidden stale-phrase absence checks and the two vocabulary-frequency
-    checks (configuration space, C-space) remain literal text checks.
+    All confirmed High-severity derivation gaps from the three-auditor
+    derivation-completeness audit are closed: the Laplace transform now has
+    an explicit integral definition, a product-rule-based derivation of the
+    differentiation rule, a constant-function numeric check, and term-by-term
+    substitutions (Sections 2-4); the characteristic-root standard-form
+    substitution is expanded in two algebra pieces with a numeric check and
+    an explicit imaginary-unit factorization (Section 5); the workspace
+    inertia Lambda has a force-to-acceleration derivation and a directional
+    effective-mass numeric check tied to the Section 5b two-link example
+    (Section 6). Two audit findings (A2 telegrapher partials, A3 final value
+    theorem) were verified as false positives and closed without edits.
 
-anchor_migration:
+derivation_gap_pass:
+  plan: .agents/DERIVATION_COMPLETENESS_PLAN.md
+  auditors: "3 read-only agents (Sections 2-3, 4-5, 6+5b)"
+  reviewers:
+    novice: "Poincare - 4 findings, 3 applied, 1 declined (metaphor taste)"
+    technical: "Gauss - 6 verification items, all CORRECT"
   anchors_inserted:
-    total: 85
+    total: 15
     by_file:
-      paper/sections/05b_robotics_foundations.tex: 69
-      paper/sections/01_introduction.tex: 1
-      paper/sections/06_impedance_control.tex: 13
-      paper/sections/A_notation_checklist.tex: 2
-  anchor_form: "own line `\\vmark{key}%` directly below the content it tracks; expands to nothing"
-  output_neutrality: "PDF page count unchanged at 118 pages before and after insertion"
-  negative_test:
-    deleted_anchor: traj-trapezoid-default
-    exit_with_anchor_deleted: 1
-    exit_after_restore: 0
-  missing_phrases_during_migration: 0
+      paper/sections/02_impedance.tex: 2
+      paper/sections/03_lti_system.tex: 6
+      paper/sections/04_electric_system.tex: 1
+      paper/sections/05_mechanical_system.tex: 4
+      paper/sections/06_impedance_control.tex: 2
+  new_checkpoints:
+    - "manuscript_derivation_gap_high_checkpoint (15 anchors, all >= 1)"
+    - "charroot_standard_form_checkpoint (max_root_component_error 0.0)"
+    - "effective_mass_direction_checkpoint (m_eff_x 0.5 kg, m_eff_y 1.0 kg, error 0.0)"
 
 compile:
   tool: compile_latex.py
   compiler: tectonic
-  command: "python C:/Users/ycpig/.codex/plugins/cache/openai-bundled/latex/0.2.4/scripts/compile_latex.py C:/Users/ycpig/manipulator-control-tutorial/paper/main.tex --compiler tectonic --output-directory C:/Users/ycpig/manipulator-control-tutorial/paper --json"
+  command: "python C:/Users/ycpig/.codex/plugins/cache/openai-bundled/latex/0.2.4/scripts/compile_latex.py paper/main.tex --compiler tectonic --output-directory paper --json"
   portable_equivalent: "tectonic --keep-logs paper/main.tex (CI paper-build job)"
   exit_code: 0
   final_segment_warnings:
@@ -46,41 +51,49 @@ compile:
     rerun: 0
     overfull_boxes: 0
     underfull_boxes: 0
-    known_residual_font_warnings: 1
+    known_residual_font_warnings: 2
 
 pdf:
   path: paper/main.pdf
-  pages: 118
-  bytes: 961208
-  note: "page count identical to pre-migration build; anchors are output-neutral"
+  pages: 119
+  note: "+1 page versus previous 118-page build from added derivation content"
 
 formula_validation:
   script: .agents/validation/validate_robotics_foundations.py
   exit_code: 0
   failures: 0
-  note: >
-    Numeric formula checkpoints (FK/Jacobian finite difference, velocity and
-    virtual-work identities, DLS, IK branches, trajectory profiles, effort
-    units) are unchanged by this migration.
 
-marker_checks:
-  required_markers: "85 \\vmark anchors, each required count >= 1"
-  vocabulary_frequency_markers:
-    - "configuration space (count >= 2)"
-    - "C-space (count >= 1)"
-  forbidden_stale_phrases: "unchanged literal absence checks (counts == 0)"
+gates:
   citation_provenance:
-    command: python .agents/validation/check_citation_coverage.py
+    command: "python .agents/validation/check_citation_coverage.py"
     status: PASS
     used_keys: 29
     missing: 0
     duplicates: 0
+  ruff:
+    command: ".venv/Scripts/ruff.exe check .agents"
+    status: PASS
+  pdf_content_markers:
+    tool: "pypdf (installed into .venv this pass)"
+    found_pages:
+      laplace_definition: 17
+      laplace_rule_derivation: 21
+      charroot_two_piece_expansion: 51
+      lambda_directional_toy_numeric: 79
+  visual_layout:
+    status: not_run
+    reason: >
+      No Poppler/Ghostscript renderer available in this session. Compensating
+      evidence: 0 overfull/underfull boxes in the final compile segment and
+      additive-only prose/equation insertions using existing macros.
 
 change_record:
-  version_label: draft-20260705-vmark-stable-anchors
+  version_label: draft-20260705-derivation-gaps-high
   state_record: .agents/CURRENT_STATE.md
   version_log: .agents/PAPER_VERSION_LOG.md
+  plan_record: .agents/DERIVATION_COMPLETENESS_PLAN.md
   rationale: >
-    Unblocks the planned compression pass: the validation gate now survives
-    prose rewording and fails only when anchored content (or its anchor) is
-    actually removed.
+    Executes the standing beginner-accessibility goal: every High-severity
+    derivation jump a beginner cannot follow without external material is
+    now expanded in-text, with anchors and numeric checkpoints guarding the
+    new content against future compression passes.

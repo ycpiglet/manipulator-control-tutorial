@@ -793,7 +793,36 @@ $e^{st}$를 한 번 미분하면 $se^{st}$, 두 번 미분하면 $s^2e^{st}$가 
   \frac{-b\pm\sqrt{b^2-4mk}}{2m}
 \end{equation}
 이다.
-여기에 표준 파라미터 $\omega_n=\sqrt{k/m}$, $\zeta=b/(2\sqrt{mk})$를 넣으면 특성근은
+여기에 표준 파라미터 $\omega_n=\sqrt{k/m}$, $\zeta=b/(2\sqrt{mk})$를 넣으면 특성근이 훨씬 읽기 좋은 모양으로 정리된다.
+이 대입은 논문에서 보통 한 줄로 건너뛰지만, 두 조각으로 나누면 손으로 따라갈 수 있다.
+먼저 $\zeta=b/(2\sqrt{mk})$를 $b$에 대해 뒤집으면 $b=2\zeta\sqrt{mk}$이다.
+첫 조각인 분수 앞부분 $-b/(2m)$은
+\[
+  -\frac{b}{2m}
+  =
+  -\frac{2\zeta\sqrt{mk}}{2m}
+  =
+  -\zeta\frac{\sqrt{mk}}{m}
+  =
+  -\zeta\sqrt{\frac{mk}{m^2}}
+  =
+  -\zeta\sqrt{\frac{k}{m}}
+  =
+  -\zeta\omega_n
+\vmark{charroot-substitution-decay-piece}%
+\]
+이 된다.
+둘째 조각인 근호 안은 $b^2=4\zeta^2mk$이므로
+\[
+  b^2-4mk
+  =
+  4\zeta^2mk-4mk
+  =
+  4mk(\zeta^2-1)
+\vmark{charroot-substitution-radical-piece}%
+\]
+이고, 제곱근을 취하면 $\sqrt{b^2-4mk}=2\sqrt{mk}\sqrt{\zeta^2-1}$, 이를 분모 $2m$으로 나누면 첫 조각과 같은 계산으로 $\sqrt{k/m}\,\sqrt{\zeta^2-1}=\omega_n\sqrt{\zeta^2-1}$이 된다.
+두 조각을 합치면 특성근은
 \begin{equation}
   s_{1,2}
   =
@@ -802,10 +831,28 @@ $e^{st}$를 한 번 미분하면 $se^{st}$, 두 번 미분하면 $s^2e^{st}$가 
   \omega_n\sqrt{\zeta^2-1}
 \end{equation}
 이다.
+숫자로 검산해 보자.
+$m=1~\mathrm{kg}$, $b=2~\mathrm{N\,s/m}$, $k=4~\mathrm{N/m}$이면 $\omega_n=\sqrt{4/1}=2~\mathrm{rad/s}$, $\zeta=2/(2\sqrt{4})=0.5$이다.
+이차방정식 공식으로 직접 풀면 $s_{1,2}=(-2\pm\sqrt{4-16})/2=-1\pm\sqrt{-3}$이고, 표준형으로 계산하면 $-\zeta\omega_n=-1$, $\omega_n\sqrt{\zeta^2-1}=2\sqrt{-0.75}=\sqrt{-3}$이므로 두 계산이 정확히 일치한다.
+\vmark{charroot-numeric-check}%
 이 식에서 앞의 $-\zeta\omega_n$은 응답이 공통적으로 줄어드는 속도와 관련되고, 제곱근이 붙은 뒤쪽 항은 근이 실수인지 복소수인지, 즉 흔들리는지 아닌지를 가른다.
 따라서 특성근은 그래프의 감소 속도와 진동 여부를 담은 응답 모양의 지문처럼 읽으면 된다.
 
 부족감쇠 조건 $0<\zeta<1$에서는 루트 안의 값이 음수가 되므로 근이 복소수가 된다.
+$\jj$는 제곱하면 $-1$이 되는 허수 단위이다.
+음수의 제곱근은 이 $\jj$를 밖으로 꺼내 쓸 수 있다.
+일반적으로 양수 $y$에 대해 $\sqrt{-y}=\sqrt{(-1)\,y}=\sqrt{-1}\,\sqrt{y}=\jj\sqrt{y}$로 읽으면 된다.
+$\zeta^2-1<0$이므로 $\zeta^2-1=(-1)(1-\zeta^2)$로 쪼개면
+\[
+  \sqrt{\zeta^2-1}
+  =
+  \sqrt{(-1)(1-\zeta^2)}
+  =
+  \jj\sqrt{1-\zeta^2}
+\vmark{charroot-imaginary-unit-factorization}%
+\]
+이고, 여기서 $1-\zeta^2>0$이라 마지막 제곱근은 보통의 양수 제곱근이다.
+따라서 특성근의 뒤쪽 항은 $\omega_n\sqrt{\zeta^2-1}=\jj\,\omega_n\sqrt{1-\zeta^2}$가 되고, 이 허수부의 크기에 이름을 붙인 것이 감쇠 진동수이다.
 \begin{equation}
   s_{1,2}
   =
@@ -818,7 +865,6 @@ $e^{st}$를 한 번 미분하면 $se^{st}$, 두 번 미분하면 $s^2e^{st}$가 
   \omega_d=\omega_n\sqrt{1-\zeta^2}
 \end{equation}
 는 감쇠 진동수(damped natural frequency)이다.
-$\jj$는 제곱하면 $-1$이 되는 허수 단위이다.
 특성근에 허수부가 있다는 것은 시간응답에 사인과 코사인 형태의 흔들림이 생긴다는 뜻이다.
 부족감쇠 자유응답은
 \begin{equation}

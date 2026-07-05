@@ -17,6 +17,10 @@ ROBOTICS_FOUNDATIONS_TEX = REPO_ROOT / "paper" / "sections" / "05b_robotics_foun
 INTRODUCTION_TEX = REPO_ROOT / "paper" / "sections" / "01_introduction.tex"
 IMPEDANCE_CONTROL_TEX = REPO_ROOT / "paper" / "sections" / "06_impedance_control.tex"
 NOTATION_CHECKLIST_TEX = REPO_ROOT / "paper" / "sections" / "A_notation_checklist.tex"
+IMPEDANCE_TEX = REPO_ROOT / "paper" / "sections" / "02_impedance.tex"
+LTI_SYSTEM_TEX = REPO_ROOT / "paper" / "sections" / "03_lti_system.tex"
+ELECTRIC_SYSTEM_TEX = REPO_ROOT / "paper" / "sections" / "04_electric_system.tex"
+MECHANICAL_SYSTEM_TEX = REPO_ROOT / "paper" / "sections" / "05_mechanical_system.tex"
 
 
 def fk(q1: float, q2: float, l1: float = 0.84, l2: float = 0.67) -> tuple[float, float]:
@@ -122,6 +126,110 @@ def manuscript_section5b_density_nav_checkpoint() -> dict[str, int]:
         "ik_branch_numeric_example_marker_count": text.count(
             "\\vmark{ik-branch-numeric-example}"
         ),
+    }
+
+
+def manuscript_derivation_gap_high_checkpoint() -> dict[str, int]:
+    """Check anchors for the 2026-07-05 High-severity derivation-gap fixes.
+
+    Covers the Laplace definition/rule derivation (Sections 2-4), the
+    characteristic-root standard-form substitution (Section 5), and the
+    workspace-inertia force-to-acceleration derivation (Section 6).
+    """
+    impedance = IMPEDANCE_TEX.read_text(encoding="utf-8")
+    lti = LTI_SYSTEM_TEX.read_text(encoding="utf-8")
+    electric = ELECTRIC_SYSTEM_TEX.read_text(encoding="utf-8")
+    mechanical = MECHANICAL_SYSTEM_TEX.read_text(encoding="utf-8")
+    impedance_control = IMPEDANCE_CONTROL_TEX.read_text(encoding="utf-8")
+    return {
+        "laplace_definition_integral_marker_count": lti.count(
+            "\\vmark{laplace-definition-integral}"
+        ),
+        "laplace_rule_product_rule_derivation_marker_count": lti.count(
+            "\\vmark{laplace-rule-product-rule-derivation}"
+        ),
+        "laplace_rule_constant_check_marker_count": lti.count(
+            "\\vmark{laplace-rule-constant-check}"
+        ),
+        "laplace_second_derivative_twice_marker_count": lti.count(
+            "\\vmark{laplace-second-derivative-twice}"
+        ),
+        "laplace_term_by_term_msd_marker_count": lti.count(
+            "\\vmark{laplace-term-by-term-msd}"
+        ),
+        "freq_magnitude_angle_complex_marker_count": lti.count(
+            "\\vmark{freq-magnitude-angle-complex}"
+        ),
+        "laplace_forward_pointer_marker_count": impedance.count(
+            "\\vmark{laplace-forward-pointer}"
+        ),
+        "msd_impedance_term_by_term_marker_count": impedance.count(
+            "\\vmark{msd-impedance-term-by-term}"
+        ),
+        "rlc_laplace_term_by_term_marker_count": electric.count(
+            "\\vmark{rlc-laplace-term-by-term}"
+        ),
+        "charroot_substitution_decay_piece_marker_count": mechanical.count(
+            "\\vmark{charroot-substitution-decay-piece}"
+        ),
+        "charroot_substitution_radical_piece_marker_count": mechanical.count(
+            "\\vmark{charroot-substitution-radical-piece}"
+        ),
+        "charroot_numeric_check_marker_count": mechanical.count(
+            "\\vmark{charroot-numeric-check}"
+        ),
+        "charroot_imaginary_unit_factorization_marker_count": mechanical.count(
+            "\\vmark{charroot-imaginary-unit-factorization}"
+        ),
+        "lambda_force_to_acceleration_derivation_marker_count": impedance_control.count(
+            "\\vmark{lambda-force-to-acceleration-derivation}"
+        ),
+        "lambda_directional_mass_numeric_check_marker_count": impedance_control.count(
+            "\\vmark{lambda-directional-mass-numeric-check}"
+        ),
+    }
+
+
+def charroot_standard_form_checkpoint() -> dict[str, float]:
+    """Verify the Section 5 characteristic-root numeric check (m=1, b=2, k=4).
+
+    The quadratic-formula roots and the standard-form roots
+    -zeta*omega_n +/- j*omega_n*sqrt(1-zeta^2) must agree.
+    """
+    m, b, k = 1.0, 2.0, 4.0
+    omega_n = math.sqrt(k / m)
+    zeta = b / (2.0 * math.sqrt(m * k))
+    quad_real = -b / (2.0 * m)
+    quad_imag = math.sqrt(4.0 * m * k - b * b) / (2.0 * m)
+    std_real = -zeta * omega_n
+    std_imag = omega_n * math.sqrt(1.0 - zeta * zeta)
+    return {
+        "omega_n_rad_s": omega_n,
+        "zeta": zeta,
+        "max_root_component_error": max(
+            abs(quad_real - std_real), abs(quad_imag - std_imag)
+        ),
+    }
+
+
+def effective_mass_direction_checkpoint() -> dict[str, float]:
+    """Verify the Section 6 directional effective-mass toy example.
+
+    At l1=l2=1, q1=0, q2=pi/2 with unit joint inertia, the manuscript claims
+    m_eff = 1/2 along x and m_eff = 1 along y.
+    """
+    j = jacobian(0.0, math.pi / 2.0, l1=1.0, l2=1.0)
+    # J M^{-1} J^T with M = I reduces to J J^T.
+    jjt = (
+        (dot(j[0], j[0]), dot(j[0], j[1])),
+        (dot(j[1], j[0]), dot(j[1], j[1])),
+    )
+    m_eff_x = 1.0 / jjt[0][0]
+    m_eff_y = 1.0 / jjt[1][1]
+    return {
+        "m_eff_x_kg": m_eff_x,
+        "m_eff_y_kg": m_eff_y,
+        "max_effective_mass_error": max(abs(m_eff_x - 0.5), abs(m_eff_y - 1.0)),
     }
 
 
@@ -943,6 +1051,11 @@ def main() -> int:
         "manuscript_section5b_density_nav_checkpoint": (
             manuscript_section5b_density_nav_checkpoint()
         ),
+        "manuscript_derivation_gap_high_checkpoint": (
+            manuscript_derivation_gap_high_checkpoint()
+        ),
+        "charroot_standard_form_checkpoint": charroot_standard_form_checkpoint(),
+        "effective_mass_direction_checkpoint": effective_mass_direction_checkpoint(),
         "manuscript_generalized_effort_bridge_marker_checkpoint": (
             manuscript_generalized_effort_bridge_marker_checkpoint()
         ),
@@ -983,6 +1096,8 @@ def main() -> int:
         "acceleration_kinematics_checkpoint.max_acceleration_identity_error_m_s2": 1.0e-5,
         "max_virtual_work_error": 1.0e-12,
         "max_determinant_formula_error": 1.0e-12,
+        "charroot_standard_form_checkpoint.max_root_component_error": 1.0e-12,
+        "effective_mass_direction_checkpoint.max_effective_mass_error": 1.0e-12,
     }
     failures: list[str] = []
     for key, threshold in thresholds.items():
@@ -1050,6 +1165,15 @@ def main() -> int:
         ):
             if int(density_nav_markers[key]) < 1:
                 failures.append(f"{key}={density_nav_markers[key]} < 1")
+    derivation_gap_markers = metrics["manuscript_derivation_gap_high_checkpoint"]
+    if not isinstance(derivation_gap_markers, dict):
+        failures.append(
+            "manuscript_derivation_gap_high_checkpoint did not return a dictionary"
+        )
+    else:
+        for key, value in derivation_gap_markers.items():
+            if int(value) < 1:
+                failures.append(f"{key}={value} < 1")
     effort_bridge_markers = metrics[
         "manuscript_generalized_effort_bridge_marker_checkpoint"
     ]

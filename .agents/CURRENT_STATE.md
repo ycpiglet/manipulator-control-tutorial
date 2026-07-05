@@ -1,6 +1,6 @@
 # Current State
 
-Updated: 2026-07-05 18:00 KST
+Updated: 2026-07-05 21:40 KST
 
 ## Current Objective
 
@@ -13,10 +13,52 @@ Iteratively improve the Korean review/tutorial paper on impedance, impedance con
 - Current focus sources: `paper/sections/01_introduction.tex`, `paper/sections/02_impedance.tex`, `paper/sections/04_electric_system.tex`, `paper/sections/05_mechanical_system.tex`, `paper/sections/05b_robotics_foundations.tex`, `paper/sections/06_impedance_control.tex`, `paper/sections/07_mujoco_lab_design.tex`, `paper/sections/08_discussion.tex`, `paper/sections/09_conclusion.tex`, `paper/sections/A_notation_checklist.tex`, `paper/main.tex`, `paper/figures/*.tex`, and `.agents/*`
 - Bibliography: `paper/references/refs.bib`
 - Latest PDF: `paper/main.pdf`
-- Current length: 118 PDF pages
-- Latest PDF size: 961293 bytes
+- Current length: 119 PDF pages
+- Latest PDF size: 973262 bytes
 
 ## Completed Since Last Snapshot
+
+### 2026-07-05 Derivation-Gap High-Severity Pass
+
+Executed the standing beginner-accessibility goal (derivation steps fully
+decomposed, especially Jacobian-adjacent math). Version label:
+`draft-20260705-derivation-gaps-high`. New standing plan/backlog:
+`.agents/DERIVATION_COMPLETENESS_PLAN.md` (reader model, D1-D4 metrics,
+severity rubric, iteration loop, compound lessons).
+
+- Multi-agent flow: 3 parallel read-only auditors (Sections 2-3, 4-5, 6+5b)
+  -> owner hand-verified every High finding against the source (2 of 5
+  auditor "High" findings were false positives; recorded as a lesson) ->
+  additive fixes -> novice (`Poincare`) + technical (`Gauss`) dual review ->
+  3 review fixes applied -> revalidate/recompile.
+- Fixed (all confirmed High gaps closed):
+  - Section 3: Laplace integral definition, product-rule derivation of the
+    differentiation rule, constant-function check, double application for
+    second derivatives, term-by-term MSD substitution, complex
+    magnitude/angle explainer.
+  - Sections 2/4: term-by-term Laplace substitutions + forward pointer.
+  - Section 5: characteristic-root standard-form substitution in two algebra
+    pieces + numeric check + imaginary-unit factorization for omega_d.
+  - Section 6: force-to-acceleration derivation of J M^-1 J^T and a
+    directional effective-mass toy check (x: 0.5 kg, y: 1 kg) on the 5b pose.
+- Guarded: 15 new `\vmark` anchors under
+  `manuscript_derivation_gap_high_checkpoint`; two new numeric checkpoints
+  (`charroot_standard_form_checkpoint`, `effective_mass_direction_checkpoint`)
+  keep the manuscript's numeric examples machine-verified.
+- Registry: added `paper_tutorial.derivation_step_completeness` durable gate
+  to `.agents/VALIDATION_METRICS.yaml`.
+
+| Gate | Threshold | Measured | Evidence |
+|---|---:|---:|---|
+| LaTeX compile | exit 0 | 0 | bundled Tectonic, `tmp/latex_compile_derivation_gaps/compile_final.json` |
+| Final segment warnings | all 0 | 0 citation/reference/rerun, 0 overfull/underfull | same log |
+| PDF | generated | 119 pages (+1), 973262 bytes, SHA-256 `16C0DD58...53EA7883` | pypdf page count, `Get-FileHash` |
+| Validation script | failures 0 | exit 0 (15/15 anchors, numeric errors 0.0) | `validate_robotics_foundations.py` |
+| Citation coverage | exit 0 | 29/29 used keys, 0 duplicates | `check_citation_coverage.py` |
+| Ruff (.agents) | exit 0 | all checks passed | `.venv/Scripts/ruff.exe check .agents` |
+| PDF content markers | present | pages 17, 21, 51, 79 | pypdf text search |
+| Visual layout | no breakage | not run (no renderer); compensated by 0 over/underfull | recorded in validation summary |
+| High-severity gaps | 0 open | 0 open (4 closed by edits, 2 closed as false positives) | `.agents/DERIVATION_COMPLETENESS_PLAN.md` |
 
 ### 2026-07-05 Section 5b Density/Navigation Pass
 
@@ -210,11 +252,11 @@ latest snapshot only; archive before it grows past roughly 500 lines.
 
 ## Next Recommended Action
 
-Keep CI green as the standing gate. The stable-anchor migration, coverage
-floor, and Section 5b density/navigation review are all done; the standing
-2-link-figure suggestion is closed (Figures 6 and 7 already cover it). The
-next manuscript milestone is the compression pass: shorten duplicated setup
-in Section 6 while preserving the beginner bridge and carrying `\vmark`
-anchors into surviving text. Deciding the target venue/length first will set
-the compression budget; preserving reviewer full texts under
-`.agents/reviews/` should start with the next review pass.
+Continue the derivation-completeness loop from
+`.agents/DERIVATION_COMPLETENESS_PLAN.md`: all High items are closed; the
+next iteration should take the top Medium items (C2 serial-stiffness force
+split, B4 RLC standard-form coefficient algebra, B6 overshoot numeric
+example), each hand-verified before editing. Keep CI green as the standing
+gate. The later compression pass must carry the 15 new derivation anchors
+into surviving text. Preserving reviewer full texts under `.agents/reviews/`
+should start with the next review pass.

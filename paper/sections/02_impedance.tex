@@ -82,6 +82,9 @@
   \frac{\mathcal{L}\{\tau(t)\}}{s\Theta(s)}.
 \end{align}
 여기서 $V_x(s)$는 병진 속도 $\dot{x}(t)$의 라플라스 변환이고, $\Omega_\theta(s)=\mathcal{L}\{\dot{\theta}(t)\}$는 단일 회전축의 각속도 라플라스 변환이다.
+라플라스 변환 $\mathcal{L}\{\cdot\}$가 정확히 무엇인지, 그리고 미분이 $s$를 곱하는 연산으로 바뀌는 규칙이 어디서 나오는지는 LTI 시스템 장에서 정의부터 한 단계씩 유도한다.
+지금은 시간 파형 전체를 $s$의 함수 하나로 요약한 값이라고만 읽어 두면 충분하다.
+\vmark{laplace-forward-pointer}%
 회전 임피던스는 토크의 라플라스 변환을 각속도의 라플라스 변환으로 나눈 값이다.
 여기서 기계 포트의 힘 $F(s)$는 선택한 양의 속도 방향으로 외부가 포트에 주입해야 하는 힘을 뜻한다.
 수동부호약속은 이렇게 선택한 effort와 flow의 곱이 양수일 때 에너지가 포트 안쪽 요소로 들어간다고 정하는 부호 기준이다.
@@ -533,7 +536,9 @@ LTI는 선형 시불변(linear time-invariant)의 줄임말이다.
   \mathcal{L}\{\ddot{x}\}=s^2X(s)=sV_x(s), \qquad X(s)=\frac{V_x(s)}{s}
 \end{equation}
 이다.
-라플라스 변환을 적용하면
+이 규칙 자체가 어디서 나오는지는 LTI 시스템 장에서 라플라스 변환의 정의로부터 한 단계씩 유도한다.
+운동방정식의 각 항을 속도 기준으로 하나씩 바꾸면 $m\ddot{x}\to m\,sV_x(s)$, $b\dot{x}\to b\,V_x(s)$, $kx\to k\,V_x(s)/s$, $f\to F(s)$이므로
+\vmark{msd-impedance-term-by-term}%
 \begin{equation}
   F(s) = \left(ms + b + \frac{k}{s}\right) V_x(s)
 \end{equation}
