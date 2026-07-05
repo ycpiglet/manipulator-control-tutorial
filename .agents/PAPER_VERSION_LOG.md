@@ -4,6 +4,22 @@ This file records manuscript-facing draft states. It complements
 `.agents/CURRENT_STATE.md` by keeping durable paper version labels, source/PDF
 paths, change intent, verification, and open risks.
 
+## draft-20260706-low-bundle-m3
+
+- Type: derivation-completeness pass — M3 low-severity bundle closed
+- Main source: sections 04, 05, 05b, 06 (one-line bridges)
+- Fixes: b_c positive-root choice; straight-path second-derivative one-liner;
+  d_d intermediate sqrt(500)~22.36 step; capacitor-energy power sketch
+  (parallel to the inductor derivation, not verbatim).
+- Rejections recorded in DERIVATION_COMPLETENESS_PLAN Iteration 4 (single
+  skipped steps recoverable from surrounding prose; time-scaling exponents
+  already resolved in-text).
+- Anchors: 4 under `manuscript_low_bundle_checkpoint`.
+- Review: `Gauss-2` — 4/4 PASS (grammar flow, rounding consistency,
+  parallel-not-duplicate structure).
+- Verification: compile exit 0, 0/0/0 warnings, 0 boxes; PDF 122 pages;
+  validator exit 0. Hash recorded at merge time in CURRENT_STATE.
+
 ## draft-20260706-firstread-path-m7
 
 - Type: new content pass — M7 shortest first-read path (intro)
