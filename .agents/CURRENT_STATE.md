@@ -1,6 +1,6 @@
 # Current State
 
-Updated: 2026-07-04 02:20 KST
+Updated: 2026-07-05 18:00 KST
 
 ## Current Objective
 
@@ -14,9 +14,38 @@ Iteratively improve the Korean review/tutorial paper on impedance, impedance con
 - Bibliography: `paper/references/refs.bib`
 - Latest PDF: `paper/main.pdf`
 - Current length: 118 PDF pages
-- Latest PDF size: 961187 bytes
+- Latest PDF size: 961208 bytes
 
 ## Completed Since Last Snapshot
+
+### 2026-07-05 Stable Marker Anchor Migration Pass
+
+Converted the fragile phrase-count manuscript gates to durable anchors,
+unblocking the planned compression pass. Version label:
+`draft-20260705-vmark-stable-anchors` (details in
+`.agents/PAPER_VERSION_LOG.md` and
+`.agents/validation/robotics_foundations_validation_summary.yaml`).
+
+- Added `\newcommand{\vmark}[1]{}` to `paper/main.tex` with a durability
+  comment; anchors expand to nothing in the PDF.
+- Inserted 85 anchor lines (`\vmark{key}%`) directly below their tracked
+  content (69 in Section 5b, 13 in Section 6, 2 in Appendix A, 1 in the
+  Introduction). No prose changed; PDF stays 118 pages.
+- Rewrote the ten `manuscript_*_marker_checkpoint` functions in
+  `validate_robotics_foundations.py` to count anchors; forbidden stale-phrase
+  absence checks and the `configuration space`/`C-space` vocabulary-frequency
+  checks stay literal.
+
+| Gate | Threshold | Measured | Evidence |
+|---|---:|---:|---|
+| Anchor migration | 85 anchors, 0 missing phrases | 85 inserted, 0 missing | migration script output |
+| LaTeX compile | exit 0 | 0 | bundled Tectonic via `compile_latex.py` |
+| Final segment warnings | 0 citation/reference/rerun, 0 overfull/underfull | 0/0/0, 0/0 | `tmp/latex_compile_vmark_migration/compile.json` |
+| PDF | 118 pages | 118 pages, 961208 bytes | bundled pypdf page count |
+| Validation script | failures 0 | exit 0 | `validate_robotics_foundations.py` |
+| Negative test | deleting one anchor fails the gate | delete -> exit 1, restore -> exit 0 | scratch negative test on `traj-trapezoid-default` |
+| Citation coverage | exit 0 | 29/29 used keys, 0 duplicates | `check_citation_coverage.py` |
+| Ruff | exit 0 | 0 errors | `python -m ruff check .agents` |
 
 ### 2026-07-04 Agent System Hardening Pass
 
@@ -127,17 +156,24 @@ latest snapshot only; archive before it grows past roughly 500 lines.
 - Section 6 is intentionally long and tutorial-style. A later compression pass should tighten repetition, shorten tables, and move some explanatory material to an appendix if targeting formal publication.
 - The paper figures are conceptual teaching figures, not simulator validation outputs.
 - `paper/` and `.agents/` are now tracked in git (commit `8b3b7aa`, merged to main via PR #1). Generated `paper/main.pdf`, LaTeX intermediates, and `paper/references/papers/*.pdf` remain ignored.
-- Manuscript marker checks in `validate_robotics_foundations.py` still count exact phrases; a compression pass will break them unless markers are converted to stable keys first.
-- The CI `paper-build` job is new; the first runs may need iteration if the Tectonic bundle resolves Korean fonts differently on Linux than the local bundled build.
+- Manuscript content gates now use `\vmark{key}` anchors (85 total). Anchors
+  must move with their content during rewrites; deleting one without retiring
+  its gate fails validation. Editors compressing sections must carry anchors
+  into the surviving text.
+- The two vocabulary-frequency checks (`configuration space` >= 2, `C-space`
+  >= 1) are still literal term counts by design; heavy compression of that
+  subsection could underrun them.
 - Paper validation scratch such as `tmp/latex_compile_*` and `tmp/pdfs/*_review` is local-only. Remove only artifacts created by the active pass after path verification. Existing local `tmp/index.html` and Lab03 retarget-check artifacts remain because they were not created by this pass and may be user-authored or from another workflow.
 - Two BibTeX entries remain uncited intentionally for possible advanced related-work expansion or later pruning: `howell2022predictivesampling` and `mistry2011operationalspace`.
 
 ## Next Recommended Action
 
-Keep CI green as the standing gate. Before the planned compression pass,
-run a dedicated iteration that converts manuscript marker checks to stable keys
-(LaTeX labels or marker macros). Then continue the robotics-foundation loop:
-a page-density/navigation review around Section 5b pages 58--65, a small 2-link
-geometry figure if readers still struggle with IK/Jacobian branch intuition,
-and a cleanup pass that shortens duplicated setup in Section 6 while preserving
-the beginner bridge.
+Keep CI green as the standing gate. The stable-anchor migration is done, so
+the compression pass is no longer blocked by marker fragility. Next in order:
+finish the test-coverage baseline gate (measure, record threshold in
+`VALIDATION_METRICS.yaml`, enforce in CI), then continue the
+robotics-foundation loop: a page-density/navigation review around Section 5b
+pages 58--65, a small 2-link geometry figure if readers still struggle with
+IK/Jacobian branch intuition, and a cleanup pass that shortens duplicated
+setup in Section 6 while preserving the beginner bridge and carrying
+`\vmark` anchors into surviving text.

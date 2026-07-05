@@ -74,18 +74,22 @@ def determinant(matrix: tuple[tuple[float, float], tuple[float, float]]) -> floa
 
 
 def manuscript_navigation_marker_checkpoint() -> dict[str, int]:
-    """Check source markers for the Jacobian/DLS/J^T navigation checkpoint."""
+    """Check anchor markers for the Jacobian/DLS/J^T navigation checkpoint.
+
+    Required content is tracked through \\vmark{...} anchors that survive
+    prose rewording; forbidden stale phrases stay as literal text checks.
+    """
     text = ROBOTICS_FOUNDATIONS_TEX.read_text(encoding="utf-8")
     return {
-        "jacobian_navigation_checkpoint_count": text.count("\\paragraph{체크포인트.}"),
-        "dls_velocity_ik_relief_marker_count": text.count("속도 IK 완화식"),
+        "jacobian_navigation_checkpoint_count": text.count("\\vmark{nav-jacobian-checkpoint}"),
+        "dls_velocity_ik_relief_marker_count": text.count("\\vmark{nav-dls-velocity-ik-relief}"),
         "dls_jtranspose_distinction_marker_count": text.count(
-            "DLS의 속도 역계산과 섞어 읽지 않는다"
+            "\\vmark{nav-dls-jtranspose-distinction}"
         ),
-        "same_frame_sign_marker_count": text.count(
-            "좌표계와 힘의 부호 약속을 함께 확인"
+        "same_frame_sign_marker_count": text.count("\\vmark{nav-same-frame-sign}"),
+        "friendly_task_space_direction_marker_count": text.count(
+            "\\vmark{nav-friendly-task-space-direction}"
         ),
-        "friendly_task_space_direction_marker_count": text.count("선택한 작업공간 방향"),
         "old_task_space_port_count": text.count("작업공간 포트"),
     }
 
@@ -94,26 +98,16 @@ def manuscript_section_reading_map_checkpoint() -> dict[str, int]:
     """Check source markers for the Section 5b learning-navigation map."""
     text = ROBOTICS_FOUNDATIONS_TEX.read_text(encoding="utf-8")
     return {
-        "section_reading_map_count": text.count("\\paragraph{이 장을 읽는 순서.}"),
-        "learning_navigation_marker_count": text.count("학습 내비게이션"),
-        "not_pipeline_marker_count": text.count(
-            "실제 제어기가 반드시 따르는 계산 파이프라인이 아니라"
-        ),
-        "joint_language_fk_marker_count": text.count(
-            "관절 언어를 정하고, 정기구학"
-        ),
-        "jacobian_small_change_marker_count": text.count(
-            "작은 변화와 속도를 번역"
-        ),
-        "dls_expanded_first_use_marker_count": text.count(
-            "감쇠 최소제곱(DLS)은 특이점 근처"
-        ),
-        "dls_relief_marker_count": text.count("관절속도 폭주를 줄이는 완화식"),
-        "jtf_force_translation_marker_count": text.count(
-            "속도 역계산이 아니라 손끝 힘을 관절 effort로 읽는 힘 번역"
-        ),
+        "section_reading_map_count": text.count("\\vmark{map-section-reading-order}"),
+        "learning_navigation_marker_count": text.count("\\vmark{map-learning-navigation}"),
+        "not_pipeline_marker_count": text.count("\\vmark{map-not-pipeline}"),
+        "joint_language_fk_marker_count": text.count("\\vmark{map-joint-language-fk}"),
+        "jacobian_small_change_marker_count": text.count("\\vmark{map-jacobian-small-change}"),
+        "dls_expanded_first_use_marker_count": text.count("\\vmark{map-dls-expanded-first-use}"),
+        "dls_relief_marker_count": text.count("\\vmark{map-dls-relief}"),
+        "jtf_force_translation_marker_count": text.count("\\vmark{map-jtf-force-translation}"),
         "path_trajectory_timetable_marker_count": text.count(
-            "관절공간 또는 작업공간 명령에 시간표"
+            "\\vmark{map-path-trajectory-timetable}"
         ),
     }
 
@@ -122,32 +116,18 @@ def manuscript_ik_to_jacobian_handoff_marker_checkpoint() -> dict[str, int]:
     """Check source markers for the IK-branch to Jacobian handoff."""
     text = ROBOTICS_FOUNDATIONS_TEX.read_text(encoding="utf-8")
     return {
-        "handoff_paragraph_count": text.count(
-            "\\paragraph{IK에서 자코비안으로 넘어가는 다리.}"
-        ),
-        "branch_reading_order_marker_count": text.count(
-            "가지 선택 뒤의 읽기 순서"
-        ),
-        "current_branch_q_marker_count": text.count(
-            "선택된 현재 branch의 \\(\\bm{q}\\)"
-        ),
-        "jacobian_at_that_q_marker_count": text.count(
-            "그 \\(\\bm{q}\\)에서 \\(\\bm{J}(\\bm{q})\\)"
-        ),
+        "handoff_paragraph_count": text.count("\\vmark{handoff-ik-jacobian-bridge}"),
+        "branch_reading_order_marker_count": text.count("\\vmark{handoff-branch-reading-order}"),
+        "current_branch_q_marker_count": text.count("\\vmark{handoff-current-branch-q}"),
+        "jacobian_at_that_q_marker_count": text.count("\\vmark{handoff-jacobian-at-that-q}"),
         "different_branch_metrics_marker_count": text.count(
-            "branch가 다르면 자코비안, 조건수, 관절속도, effort"
+            "\\vmark{handoff-different-branch-metrics}"
         ),
-        "dls_not_branch_magic_marker_count": text.count(
-            "DLS는 branch를 고르는 마법이 아니라"
-        ),
-        "same_pose_effort_marker_count": text.count(
-            "같은 현재 자세에서 힘을 관절 effort로 읽는다"
-        ),
-        "branch_pose_framing_marker_count": text.count(
-            "손끝 목표와 선택된 현재 branch의 \\(\\bm{q}\\)를 정한 뒤"
-        ),
+        "dls_not_branch_magic_marker_count": text.count("\\vmark{handoff-dls-not-branch-magic}"),
+        "same_pose_effort_marker_count": text.count("\\vmark{handoff-same-pose-effort}"),
+        "branch_pose_framing_marker_count": text.count("\\vmark{handoff-branch-pose-framing}"),
         "velocity_force_translation_marker_count": text.count(
-            "그 자세 근처에서 속도와 힘이 어떻게 번역되는지"
+            "\\vmark{handoff-velocity-force-translation}"
         ),
         "old_exact_position_handoff_count": text.count(
             "손끝 위치 하나를 맞춘 다음"
@@ -159,29 +139,19 @@ def manuscript_generalized_effort_bridge_marker_checkpoint() -> dict[str, int]:
     """Check source markers that keep J^T f as generalized joint effort."""
     text = ROBOTICS_FOUNDATIONS_TEX.read_text(encoding="utf-8")
     return {
-        "dls_force_effort_handoff_marker_count": text.count(
-            "손끝 힘을 관절 effort로 옮기는"
-        ),
-        "force_effort_intro_marker_count": text.count(
-            "손끝 힘과 관절 effort도 연결한다"
-        ),
-        "generalized_effort_power_marker_count": text.count(
-            "일반화 관절 effort \\(\\bm{\\tau}\\)"
-        ),
-        "effort_sharing_marker_count": text.count(
-            "얼마만큼의 일반화 effort를 나눠 맡아야"
-        ),
-        "actuator_effort_limit_marker_count": text.count("구동기 effort 제한"),
-        "closing_joint_effort_tau_marker_count": text.count(
-            "관절 effort \\(\\bm{\\tau}\\) (회전 관절에서는 토크)"
-        ),
+        "dls_force_effort_handoff_marker_count": text.count("\\vmark{effort-dls-force-handoff}"),
+        "force_effort_intro_marker_count": text.count("\\vmark{effort-force-intro}"),
+        "generalized_effort_power_marker_count": text.count("\\vmark{effort-generalized-power}"),
+        "effort_sharing_marker_count": text.count("\\vmark{effort-sharing}"),
+        "actuator_effort_limit_marker_count": text.count("\\vmark{effort-actuator-limit}"),
+        "closing_joint_effort_tau_marker_count": text.count("\\vmark{effort-closing-joint-tau}"),
         "closing_force_effort_relation_marker_count": text.count(
-            "\\(\\bm{J}^{\\mathsf{T}}\\)의 힘--관절 effort 관계"
+            "\\vmark{effort-closing-relation}"
         ),
         "closing_jtf_joint_effort_flow_marker_count": text.count(
-            "\\bm{J}^{\\mathsf{T}}\\text{를 통한 관절 effort}"
+            "\\vmark{effort-closing-jtf-flow}"
         ),
-        "closing_effort_peak_marker_count": text.count("관절 effort 피크"),
+        "closing_effort_peak_marker_count": text.count("\\vmark{effort-closing-peak}"),
         "old_force_joint_torque_handoff_count": text.count(
             "손끝 힘을 관절 토크로"
         ),
@@ -207,49 +177,49 @@ def manuscript_section6_effort_torque_scope_marker_checkpoint() -> dict[str, int
     combined_scope_text = "\n".join((introduction, section6, notation))
     return {
         "intro_force_effort_transform_marker_count": introduction.count(
-            "힘--관절 effort 변환"
+            "\\vmark{scope-intro-force-effort-transform}"
         ),
         "section6_general_tau_effort_scope_marker_count": section6.count(
-            "\\(\\bm{\\tau}\\)를 관절좌표와 짝을 이루는 일반화 관절 effort"
+            "\\vmark{scope-s6-general-tau-effort}"
         ),
         "section6_revolute_torque_context_marker_count": section6.count(
-            "회전 관절 중심의 토크 제어 구현"
+            "\\vmark{scope-s6-revolute-torque-context}"
         ),
         "section6_jtf_effort_back_marker_count": section6.count(
-            "병진 힘을 관절 effort 쪽으로 되돌린다"
+            "\\vmark{scope-s6-jtf-effort-back}"
         ),
         "section6_revolute_read_as_torque_marker_count": section6.count(
-            "그 effort는 토크로 읽으면 된다"
+            "\\vmark{scope-s6-read-as-torque}"
         ),
         "section6_effort_table_label_marker_count": section6.count(
-            "힘--관절 effort 변환"
+            "\\vmark{scope-s6-effort-table-label}"
         ),
         "section6_generalized_effort_contribution_marker_count": section6.count(
-            "일반화 effort 기여"
+            "\\vmark{scope-s6-generalized-contribution}"
         ),
         "section6_revolute_table_torque_marker_count": section6.count(
-            "회전 관절에서는 이 값이 토크이다"
+            "\\vmark{scope-s6-revolute-table-torque}"
         ),
         "section6_actual_joint_effort_marker_count": section6.count(
-            "실제 관절 effort로 바꾸기"
+            "\\vmark{scope-s6-actual-joint-effort}"
         ),
         "section6_force_to_generalized_effort_marker_count": section6.count(
-            "힘도 각 관절에서 필요한 일반화 effort로 바뀌어야"
+            "\\vmark{scope-s6-force-to-generalized}"
         ),
         "section6_n_joint_effort_marker_count": section6.count(
-            "n$개의 관절 effort"
+            "\\vmark{scope-s6-n-joint-effort}"
         ),
         "section6_torque_control_ladder_preserved_marker_count": section6.count(
-            "토크 제어 구현"
+            "\\vmark{scope-s6-torque-ladder-preserved}"
         ),
         "section6_lab04_caveat_preserved_marker_count": section6.count(
-            "완전한 운영공간 임피던스 검증이 아니다"
+            "\\vmark{scope-s6-lab04-caveat}"
         ),
         "notation_effort_transform_marker_count": notation.count(
-            "자코비안 전치와 힘--관절 effort 변환"
+            "\\vmark{scope-notation-effort-transform}"
         ),
         "notation_generalized_effort_marker_count": notation.count(
-            "일반화 effort 쪽으로 옮길 때"
+            "\\vmark{scope-notation-generalized-effort}"
         ),
         "old_section6_force_torque_transform_count": section6.count("힘-토크 변환"),
         "old_section6_joint_torque_back_count": section6.count(
@@ -258,7 +228,7 @@ def manuscript_section6_effort_torque_scope_marker_checkpoint() -> dict[str, int
         "old_notation_force_torque_transform_count": notation.count("힘--토크 변환"),
         "old_intro_force_torque_transform_count": introduction.count("힘-토크 변환"),
         "combined_valid_pose_wrench_phrase_count": combined_scope_text.count(
-            "힘-토크를 합친 렌치"
+            "\\vmark{scope-pose-wrench}"
         ),
     }
 
@@ -269,24 +239,20 @@ def manuscript_configuration_space_marker_checkpoint() -> dict[str, int]:
     return {
         "configuration_space_marker_count": text.count("configuration space"),
         "c_space_marker_count": text.count("C-space"),
-        "fixed_base_serial_marker_count": text.count(
-            "고정 베이스 직렬 매니퓰레이터"
-        ),
+        "fixed_base_serial_marker_count": text.count("\\vmark{cspace-fixed-base-serial}"),
         "configuration_joint_space_scope_marker_count": text.count(
-            "관절공간을 그 로봇 팔의 configuration space"
+            "\\vmark{cspace-joint-space-scope}"
         ),
         "not_universal_identity_marker_count": text.count(
-            "언제나 configuration space와 joint space가 같은 말이라는 뜻은 아니다"
+            "\\vmark{cspace-not-universal-identity}"
         ),
         "base_object_constraints_marker_count": text.count(
-            "base/object pose 또는 constraints"
+            "\\vmark{cspace-base-object-constraints}"
         ),
-        "task_space_output_marker_count": text.count("선택한 출력 변수"),
-        "workspace_reachable_marker_count": text.count(
-            "도달 가능한 작업 위치들의 집합"
-        ),
+        "task_space_output_marker_count": text.count("\\vmark{cspace-task-space-output}"),
+        "workspace_reachable_marker_count": text.count("\\vmark{cspace-workspace-reachable}"),
         "q_space_x_space_translation_marker_count": text.count(
-            "\\(\\bm{q}\\)-공간과 \\(\\bm{x}\\)-공간"
+            "\\vmark{cspace-q-x-translation}"
         ),
     }
 
@@ -296,31 +262,25 @@ def manuscript_state_configuration_marker_checkpoint() -> dict[str, int]:
     text = ROBOTICS_FOUNDATIONS_TEX.read_text(encoding="utf-8")
     return {
         "configuration_pose_coordinate_marker_count": text.count(
-            "Configuration은 기하학적 자세를 정하는 좌표"
+            "\\vmark{state-configuration-pose-coordinate}"
         ),
         "fixed_base_q_configuration_marker_count": text.count(
-            "고정 베이스 직렬 매니퓰레이터에서는 보통 \\(\\bm{q}\\)가 configuration"
+            "\\vmark{state-fixed-base-q-configuration}"
         ),
-        "state_q_qdot_marker_count": text.count(
-            "상태(state)는 보통 \\(\\bm{q}\\)와 \\(\\dot{\\bm{q}}\\)"
-        ),
+        "state_q_qdot_marker_count": text.count("\\vmark{state-q-qdot}"),
         "future_motion_position_velocity_marker_count": text.count(
-            "미래 운동은 위치와 속도에 의존"
+            "\\vmark{state-future-motion}"
         ),
-        "qddot_input_dynamics_marker_count": text.count(
-            "\\(\\ddot{\\bm{q}}\\)는 동역학과 제어 입력으로 정해지는 값"
-        ),
+        "qddot_input_dynamics_marker_count": text.count("\\vmark{state-qddot-input-dynamics}"),
         "minimal_first_order_state_marker_count": text.count(
-            "최소 first-order state에 보통 따로 넣지 않는다"
+            "\\vmark{state-minimal-first-order}"
         ),
-        "augmented_state_caveat_marker_count": text.count(
-            "구동기 동역학, 필터, 접촉 모드, 유연체, 추정기"
-        ),
+        "augmented_state_caveat_marker_count": text.count("\\vmark{state-augmented-caveat}"),
         "jerk_smoothness_requirement_marker_count": text.count(
-            "저크는 궤적의 부드러움 요구"
+            "\\vmark{state-jerk-smoothness}"
         ),
         "not_geometric_coordinate_marker_count": text.count(
-            "기하학적 자세를 정하는 새 좌표는 아니다"
+            "\\vmark{state-not-geometric-coordinate}"
         ),
     }
 
@@ -330,25 +290,17 @@ def manuscript_acceleration_kinematics_marker_checkpoint() -> dict[str, int]:
     text = ROBOTICS_FOUNDATIONS_TEX.read_text(encoding="utf-8")
     return {
         "fixed_frame_translation_marker_count": text.count(
-            "고정 좌표계에서 본 손끝의 병진 위치"
+            "\\vmark{accel-fixed-frame-translation}"
         ),
         "jacobian_not_fixed_table_marker_count": text.count(
-            "고정된 숫자표가 아니다"
+            "\\vmark{accel-jacobian-not-fixed-table}"
         ),
-        "product_rule_marker_count": text.count(
-            "곱을 미분한다고 읽어야 한다"
-        ),
-        "jdot_definition_marker_count": text.count(
-            "\\frac{\\dd}{\\dd t}\\bm{J}(\\bm{q}(t))"
-        ),
-        "jdot_not_independent_marker_count": text.count(
-            "독립적으로 새로 생긴 행렬이 아니라"
-        ),
-        "acceleration_unit_marker_count": text.count(
-            "(\\mathrm{m/(rad\\,s)})(\\mathrm{rad/s})=\\mathrm{m/s^2}"
-        ),
+        "product_rule_marker_count": text.count("\\vmark{accel-product-rule}"),
+        "jdot_definition_marker_count": text.count("\\vmark{accel-jdot-definition}"),
+        "jdot_not_independent_marker_count": text.count("\\vmark{accel-jdot-not-independent}"),
+        "acceleration_unit_marker_count": text.count("\\vmark{accel-unit-check}"),
         "sign_direction_caveat_marker_count": text.count(
-            "항상 목표 쪽이나 반대쪽으로 작용하는 항으로 외우면 안 된다"
+            "\\vmark{accel-sign-direction-caveat}"
         ),
     }
 
@@ -358,22 +310,22 @@ def manuscript_prismatic_sanity_marker_checkpoint() -> dict[str, int]:
     text = ROBOTICS_FOUNDATIONS_TEX.read_text(encoding="utf-8")
     return {
         "one_dimensional_slider_marker_count": text.count(
-            "가장 단순한 1차원 직선 관절"
+            "\\vmark{prism-one-dimensional-slider}"
         ),
-        "scalar_x_equals_q_marker_count": text.count("스칼라 좌표를 \\(x=q\\)"),
-        "scalar_j_equals_one_marker_count": text.count("\\bm{J}=[1]"),
+        "scalar_x_equals_q_marker_count": text.count("\\vmark{prism-scalar-x-equals-q}"),
+        "scalar_j_equals_one_marker_count": text.count("\\vmark{prism-scalar-j-equals-one}"),
         "scalar_tau_equals_force_marker_count": text.count(
-            "\\tau=\\bm{J}^{\\mathsf{T}}f=f"
+            "\\vmark{prism-scalar-tau-equals-force}"
         ),
         "three_dimensional_axis_marker_count": text.count(
-            "\\bm{j}=[1\\ 0\\ 0]^{\\mathsf{T}}"
+            "\\vmark{prism-three-dimensional-axis}"
         ),
-        "projection_fx_marker_count": text.count("f_x\n\\]"),
+        "projection_fx_marker_count": text.count("\\vmark{prism-projection-fx}"),
         "perpendicular_projection_marker_count": text.count(
-            "일반화 effort로 투영되지 않는다"
+            "\\vmark{prism-perpendicular-projection}"
         ),
         "joint_effort_not_torque_marker_count": text.count(
-            "관절 effort는"
+            "\\vmark{prism-joint-effort-reading}"
         ),
     }
 
@@ -383,18 +335,18 @@ def manuscript_trajectory_profile_marker_checkpoint() -> dict[str, int]:
     text = ROBOTICS_FOUNDATIONS_TEX.read_text(encoding="utf-8")
     return {
         "profile_selection_checkpoint_count": text.count(
-            "\\paragraph{프로파일 선택 체크포인트.}"
+            "\\vmark{traj-profile-selection-checkpoint}"
         ),
-        "trapezoid_default_marker_count": text.count("사다리꼴을 기본값"),
-        "transition_shock_marker_count": text.count("전환 순간의 진동, 소음, 접촉 충격"),
+        "trapezoid_default_marker_count": text.count("\\vmark{traj-trapezoid-default}"),
+        "transition_shock_marker_count": text.count("\\vmark{traj-transition-shock}"),
         "s_curve_not_always_generator_marker_count": text.count(
-            "S-curve라는 이름이 항상 모든 속도, 가속도, 저크 제한을 엄밀히 만족하는 온라인 생성기라는 뜻은 아니다"
+            "\\vmark{traj-scurve-not-always-generator}"
         ),
         "smooth_polynomial_target_marker_count": text.count(
-            "S-curve-shaped smooth polynomial target"
+            "\\vmark{traj-smooth-polynomial-target}"
         ),
         "diagnostic_not_hardware_marker_count": text.count(
-            "실제 접촉력이나 하드웨어 성능 검증값은 아니다"
+            "\\vmark{traj-diagnostic-not-hardware}"
         ),
     }
 

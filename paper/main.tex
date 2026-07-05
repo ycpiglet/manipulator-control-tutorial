@@ -32,6 +32,12 @@
 \newcommand{\R}{\mathbb{R}}
 \newcommand{\diag}{\mathrm{diag}}
 
+% Durable validation anchor: expands to nothing in the PDF. Keys are checked
+% by .agents/validation/validate_robotics_foundations.py, so anchors must move
+% with their surrounding content when sections are rewritten, and must not be
+% deleted unless the corresponding validation gate is retired.
+\newcommand{\vmark}[1]{}
+
 \title{임피던스와 로봇 임피던스 제어를 위한 교육용 시뮬레이션 튜토리얼}
 \author{초안}
 \date{\today}

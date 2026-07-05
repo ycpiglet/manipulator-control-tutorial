@@ -133,6 +133,7 @@ $k_x$를 작게 하고 $k_y$, $k_z$를 크게 하면 한 방향으로는 잘 밀
 힘(force)은 병진 방향으로 미는 작용이고, 토크(torque)는 회전시키는 작용이다.
 렌치(wrench)는 힘과 토크를 한 벡터로 묶은 것이다.
 따라서 자세까지 포함한 6차원 임피던스는 별도의 회전 오차 표현과 힘-토크를 합친 렌치를 사용해야 하므로, 이 글에서는 먼저 병진 위치 임피던스에 집중한다.
+\vmark{scope-pose-wrench}%
 이 단순화는 자세가 별도 제어기로 충분히 유지되거나, 접촉 모멘트를 잠시 무시해도 되는 교육용 장면에 맞춘 것이다.
 문손잡이를 돌리거나 공구의 각도를 정밀하게 맞추는 작업처럼 자세와 모멘트가 작업 성공을 좌우하는 경우에는 6차원 렌치와 자세 임피던스를 함께 다루어야 한다.
 
@@ -783,6 +784,9 @@ $f=kx$를 이용하면 같은 식을
 앞에서는 손끝에서 원하는 힘과 움직임을 말했지만, 실제 로봇은 관절 모터를 통해 움직인다.
 따라서 손끝에서 정의한 힘과 움직임은 실제 모터가 이해하는 관절각, 관절속도, 관절토크로 변환되어야 한다.
 앞 절의 표기처럼 더 일반적으로는 \(\bm{\tau}\)를 관절좌표와 짝을 이루는 일반화 관절 effort로 읽고, 이 절에서는 회전 관절 중심의 토크 제어 구현을 설명하므로 그 effort를 관절 토크라고 부른다.
+\vmark{scope-s6-general-tau-effort}%
+\vmark{scope-s6-revolute-torque-context}%
+\vmark{scope-s6-torque-ladder-preserved}%
 이 변환의 중심에 자코비안이 있다.
 
 임피던스 제어는 큰 범주이다.
@@ -794,7 +798,9 @@ $f=kx$를 이용하면 같은 식을
 손끝 자세까지 포함한 포즈를 다루려면 회전 오차, 렌치, 기하학적 자코비안이 따로 필요하다.
 둘째, 병진 자코비안 $\bm{J}_v$는 관절 속도를 손끝 병진 속도로 옮긴다.
 셋째, 자코비안 전치 $\bm{J}_v^{\mathsf{T}}$는 손끝에 만들려는 병진 힘을 관절 effort 쪽으로 되돌린다.
+\vmark{scope-s6-jtf-effort-back}%
 이 절의 2자유도 팔과 Panda처럼 회전 관절만 보면 그 effort는 토크로 읽으면 된다.
+\vmark{scope-s6-read-as-torque}%
 이 세 줄이 관절 임피던스와 직교 임피던스를 나누는 실질적인 기준이다.
 
 \begin{table}[!htbp]
@@ -810,6 +816,9 @@ $f=kx$를 이용하면 같은 식을
     \midrule
     속도 변환 & $\dot{\bm{x}}=\bm{J}_v(\bm{q})\dot{\bm{q}}$ & 관절이 움직일 때 손끝이 어느 방향으로 얼마나 빨리 움직이는지 읽는다. \\
     힘--관절 effort 변환 & $\bm{\tau}=\bm{J}_v(\bm{q})^{\mathsf{T}}\bm{f}$ & 손끝에 만들고 싶은 병진 힘을 각 관절의 일반화 effort 기여로 나눈다. 회전 관절에서는 이 값이 토크이다. \\
+\vmark{scope-s6-effort-table-label}%
+\vmark{scope-s6-generalized-contribution}%
+\vmark{scope-s6-revolute-table-torque}%
     좌표계 확인 & $\bm{f}$, $\dot{\bm{x}}$, $\bm{J}_v$의 기준 좌표계 일치 & 힘 센서값이나 목표 힘이 tool frame에 있으면 먼저 같은 Cartesian frame으로 회전 변환한다. \\
     \bottomrule
   \end{tabularx}
@@ -862,13 +871,16 @@ $f=kx$를 이용하면 같은 식을
 를 계산한다.
 목표점이 정지해 있다면 $\dot{\bm{x}}_d=\bm{0}$이므로 감쇠항은 보통 $-\bm{D}_d\dot{\bm{x}}$처럼 보인다.
 이 힘을 실제 관절 effort로 바꾸기 위해 표~\ref{tab:jacobian-recap-for-impedance}의 자코비안 전치 관계를 사용한다.
+\vmark{scope-s6-actual-joint-effort}%
 여기서 $\bm{f}_{\mathrm{cmd}}$는 제어기가 로봇 끝단에 가하려는 힘이다.
 로봇이 환경에 가하는 힘을 양수로 쓰는 표기에서는 작용-반작용 때문에 같은 접촉의 부호가 반대로 보일 수 있으므로, 센서 힘이나 벽 힘을 이 식에 넣기 전에 기준을 맞추어야 한다.
 문손잡이를 미는 힘이 경첩 토크로 바뀌는 것처럼, 로봇 손끝에 만들고 싶은 힘도 각 관절에서 필요한 일반화 effort로 바뀌어야 한다.
+\vmark{scope-s6-force-to-generalized}%
 회전 관절만 놓고 보면 이 effort가 관절 토크이다.
 절~\ref{sec:robotics-foundations}의 식~\eqref{eq:jacobian-transpose-foundation}이 그 유도이고, 이 절에서는 병진 자코비안 $\bm{J}_v$에 대해 그 결과만 사용한다.
 따라서 이 단계에서는 자코비안을 거꾸로 푸는 것이 아니라, 손끝 힘이 각 관절에 요구하는 일반화 effort 기여분을 나누어 계산한다고 보면 된다.
 관절이 $n$개이고 병진 힘만 다루면 $\bm{J}_v$는 보통 $3\times n$ 행렬이고, $\bm{J}_v^{\mathsf{T}}\bm{f}_{\mathrm{cmd}}$는 $n$개의 관절 effort를 만든다.
+\vmark{scope-s6-n-joint-effort}%
 이 절의 회전 관절 예제에서는 이 값들을 관절 토크로 읽는다.
 2자유도 평면 팔에서는 이 말이 더 작게 보인다.
 손끝 힘 \([f_x\ f_y]^{\mathsf{T}}\)가 두 관절 토크 \([\tau_1\ \tau_2]^{\mathsf{T}}\)로 바뀌며, 각 관절 토크는 해당 자코비안 열과 손끝 힘의 내적으로 정해진다.
@@ -1188,6 +1200,7 @@ Lab04에서는 이 $d_d$가 실제 끝단 물리 감쇠계수라는 보증값이
 \end{table}
 
 따라서 Lab04는 $\bm{\tau}=\bm{J}_v^{\mathsf{T}}\bm{f}$를 그대로 실현하는 완전한 운영공간 임피던스 검증이 아니다.
+\vmark{scope-s6-lab04-caveat}%
 대신 같은 강성-감쇠 직관을 position actuator, DLS 목표 오프셋, 계산된 가상 벽 신호 위에서 관찰하게 만든 교육용 구현이다.
 즉, $k_d$는 힘을 받을 때 얼마나 밀려도 되는지를, $\delta_d$는 정적 접촉에서 얼마나 누르고 싶은지를, $\zeta$는 가는 동안 얼마나 출렁여도 되는지를 정하는 값이다.
 토크나 힘을 직접 명령할 수 있으면 이 관계를 임피던스 제어의 힘/토크 명령으로 구현한다.
