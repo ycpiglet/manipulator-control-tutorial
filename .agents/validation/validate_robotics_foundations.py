@@ -302,6 +302,22 @@ def manuscript_failure_gallery_checkpoint() -> dict[str, int]:
     }
 
 
+def manuscript_firstread_path_checkpoint() -> dict[str, int]:
+    """Check anchors for the M7 shortest-first-read guidance in the intro."""
+    intro = INTRODUCTION_TEX.read_text(encoding="utf-8")
+    return {
+        "firstread_skip_permission_marker_count": intro.count(
+            "\\vmark{firstread-skip-permission}"
+        ),
+        "firstread_shortest_path_marker_count": intro.count(
+            "\\vmark{firstread-shortest-path}"
+        ),
+        "firstread_no_broken_chain_marker_count": intro.count(
+            "\\vmark{firstread-no-broken-chain}"
+        ),
+    }
+
+
 def manuscript_selection_guide_checkpoint() -> dict[str, int]:
     """Check anchors for the M1 control-method selection guide extension."""
     impedance_control = IMPEDANCE_CONTROL_TEX.read_text(encoding="utf-8")
@@ -1297,6 +1313,9 @@ def main() -> int:
         "manuscript_selection_guide_checkpoint": (
             manuscript_selection_guide_checkpoint()
         ),
+        "manuscript_firstread_path_checkpoint": (
+            manuscript_firstread_path_checkpoint()
+        ),
         "stiffness_starting_value_checkpoint": stiffness_starting_value_checkpoint(),
         "manuscript_generalized_effort_bridge_marker_checkpoint": (
             manuscript_generalized_effort_bridge_marker_checkpoint()
@@ -1441,6 +1460,15 @@ def main() -> int:
         )
     else:
         for key, value in derivation_gap_medium2_markers.items():
+            if int(value) < 1:
+                failures.append(f"{key}={value} < 1")
+    firstread_markers = metrics["manuscript_firstread_path_checkpoint"]
+    if not isinstance(firstread_markers, dict):
+        failures.append(
+            "manuscript_firstread_path_checkpoint did not return a dictionary"
+        )
+    else:
+        for key, value in firstread_markers.items():
             if int(value) < 1:
                 failures.append(f"{key}={value} < 1")
     selection_guide_markers = metrics["manuscript_selection_guide_checkpoint"]
