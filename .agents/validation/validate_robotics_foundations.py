@@ -302,6 +302,31 @@ def manuscript_failure_gallery_checkpoint() -> dict[str, int]:
     }
 
 
+def manuscript_selection_guide_checkpoint() -> dict[str, int]:
+    """Check anchors for the M1 control-method selection guide extension."""
+    impedance_control = IMPEDANCE_CONTROL_TEX.read_text(encoding="utf-8")
+    return {
+        "select_env_stiffness_axis_marker_count": impedance_control.count(
+            "\\vmark{select-env-stiffness-axis}"
+        ),
+        "select_duality_oneliner_marker_count": impedance_control.count(
+            "\\vmark{select-duality-oneliner}"
+        ),
+        "select_param_starting_principles_marker_count": impedance_control.count(
+            "\\vmark{select-param-starting-principles}"
+        ),
+    }
+
+
+def stiffness_starting_value_checkpoint() -> dict[str, float]:
+    """Verify the M1 starting-value example: 10 N / 2 cm -> 500 N/m."""
+    k = 10.0 / 0.02
+    return {
+        "starting_stiffness_n_m": k,
+        "stiffness_start_error": abs(k - 500.0),
+    }
+
+
 def wall_balance_checkpoint() -> dict[str, float]:
     """Verify the F3 wall-balance numbers quoted in the manuscript.
 
@@ -1269,6 +1294,10 @@ def main() -> int:
         ),
         "launch_energy_checkpoint": launch_energy_checkpoint(),
         "wall_balance_checkpoint": wall_balance_checkpoint(),
+        "manuscript_selection_guide_checkpoint": (
+            manuscript_selection_guide_checkpoint()
+        ),
+        "stiffness_starting_value_checkpoint": stiffness_starting_value_checkpoint(),
         "manuscript_generalized_effort_bridge_marker_checkpoint": (
             manuscript_generalized_effort_bridge_marker_checkpoint()
         ),
@@ -1316,6 +1345,7 @@ def main() -> int:
         "series_stiffness_checkpoint.max_series_stiffness_error": 1.0e-4,
         "launch_energy_checkpoint.max_launch_claim_error": 1.0e-12,
         "wall_balance_checkpoint.wall_balance_error_n": 1.0e-3,
+        "stiffness_starting_value_checkpoint.stiffness_start_error": 1.0e-12,
         "overshoot_formula_checkpoint.max_overshoot_claim_error": 5.0e-3,
     }
     failures: list[str] = []
@@ -1411,6 +1441,15 @@ def main() -> int:
         )
     else:
         for key, value in derivation_gap_medium2_markers.items():
+            if int(value) < 1:
+                failures.append(f"{key}={value} < 1")
+    selection_guide_markers = metrics["manuscript_selection_guide_checkpoint"]
+    if not isinstance(selection_guide_markers, dict):
+        failures.append(
+            "manuscript_selection_guide_checkpoint did not return a dictionary"
+        )
+    else:
+        for key, value in selection_guide_markers.items():
             if int(value) < 1:
                 failures.append(f"{key}={value} < 1")
     failure_gallery_markers = metrics["manuscript_failure_gallery_checkpoint"]
