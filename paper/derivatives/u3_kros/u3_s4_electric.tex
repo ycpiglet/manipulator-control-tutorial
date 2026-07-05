@@ -1,0 +1,134 @@
+% U3 4절 — 전기 임피던스: RLC 회로 (정본: paper/sections/04_electric_system.tex 발췌 재구성)
+\section{전기 임피던스: RLC 회로}
+\label{sec:u3-electric}
+
+앞 절에서 준비한 문법을 첫 번째 실물에 적용한다.
+저항 $R$, 인덕터 $L$, 커패시터 $C$가 한 전류 경로에 놓인 직렬 RLC 회로는
+2차 미분방정식으로 쓸 수 있는 가장 작은 전기 시스템이다.
+세 소자의 역할에서 시작해 3절의 규칙으로 전달함수와 표준 2차 형식까지
+유도 생략 없이 내려간다.
+
+\subsection{세 소자의 역할: 소산과 두 저장}
+
+저항은 전류가 지나가는 동안 전기 에너지를 열로 바꾸는 소자이다.
+전류가 들어가는 단자를 전압의 $+$로 잡는 수동부호약속에서 $v_R = R i$이므로,
+저항이 흡수하는 순간 전력은 $p_R = v_R\,i = R\,i^2$이다.
+전류 방향이 바뀌어도 $i^2$는 항상 양수이므로, 저항은 에너지를 되돌려주지
+않고 계속 소산한다.
+
+인덕터는 전류가 만드는 자기장에 에너지를 저장하는 소자로,
+\begin{equation}
+  v_L(t) = L\frac{\dd i(t)}{\dd t}
+  \label{eq:u3-ind-v}
+\end{equation}
+를 만족한다.
+전류를 빠르게 바꿀수록 큰 전압이 필요하므로, 인덕터는 전류의 변화에 버틴다.
+순간 전력에 \eqref{eq:u3-ind-v}를 넣고 곱의 미분 규칙으로 정리하면
+$p_L = v_L\,i = L\,i\frac{\dd i}{\dd t}
+= \frac{\dd}{\dd t}\bigl(\tfrac{1}{2}L i^2\bigr)$이므로,
+인덕터에 들어간 전력은 열로 사라지는 대신 자기장 에너지
+$E_L = \frac{1}{2}Li^2$의 변화율로 쌓인다.
+전류가 줄어드는 구간에서는 $p_L<0$이 되어 저장했던 에너지를 회로로 되돌려준다.
+
+커패시터는 반대 방향의 저장 소자로, 분리된 전하 $q = C v_C$에서 전류는
+전하의 변화율이므로
+\begin{equation}
+  i_C(t) = C\frac{\dd v_C(t)}{\dd t}
+  \label{eq:u3-cap-i}
+\end{equation}
+이고, 전압을 빠르게 바꾸려면 많은 전하를 짧은 시간에 옮겨야 하므로 커패시터는 전압의 변화에 버틴다.
+같은 곱의 미분 계산을 반복하면
+$p_C = v_C\,i_C = C\,v_C\frac{\dd v_C}{\dd t}
+= \frac{\dd}{\dd t}\bigl(\tfrac{1}{2}C v_C^2\bigr)$이므로,
+커패시터의 저장 에너지는 전기장 에너지 $E_C = \frac{1}{2}Cv_C^2$이다.
+정현파에서 미분이 $\jj\omega$ 곱으로 바뀐다는 3절의 관찰을 적용하면
+세 소자의 임피던스는 $Z_R = R$, $Z_L = \jj\omega L$, $Z_C = 1/(\jj\omega C)$이고,
+$\jj$의 유무가 곧 소산과 저장의 차이, 전압-전류 위상이 $\pm 90^\circ$
+어긋나는가의 차이로 나타난다.
+
+\subsection{직렬 RLC 방정식과 전달함수}
+
+회로를 한 방향으로 도는 기준 전류를 $i(t)$, 그 전류가 들어가는 커패시터
+판의 전하를 $q(t)$라 하면 $i = \dot{q}$이다.
+키르히호프 전압 법칙에 따라 한 바퀴를 돌며 만나는 전압 변화의 합은 0,
+즉 $v_{\mathrm{in}} - v_L - v_R - v_C = 0$이다.
+각 소자 관계 $v_L = L\ddot{q}$, $v_R = R\dot{q}$, $v_C = q/C$를 대입하면
+\begin{equation}
+  L\ddot{q}(t) + R\dot{q}(t) + \frac{1}{C}q(t) = v_{\mathrm{in}}(t)
+  \label{eq:u3-rlc-ode}
+\end{equation}
+를 얻는다.
+이 한 줄에서 $L\ddot{q}$는 전류 변화에 대한 인덕터 전압, $R\dot{q}$는
+소산 전압, $q/C$는 쌓인 전하에 비례해 커지는 복원 성격의 전압이다.
+
+이제 3절의 미분 규칙 \eqref{eq:u3-deriv-rule}대로 영 초기조건에서 각 항을
+하나씩 바꾼다.
+$L\ddot{q} \to L s^2 Q(s)$, $R\dot{q} \to R s Q(s)$,
+$q/C \to Q(s)/C$, $v_{\mathrm{in}} \to V_{\mathrm{in}}(s)$이므로
+\begin{equation}
+  \left(L s^2 + R s + \frac{1}{C}\right) Q(s) = V_{\mathrm{in}}(s),
+  \qquad
+  \frac{Q(s)}{V_{\mathrm{in}}(s)} = \frac{1}{L s^2 + R s + \frac{1}{C}}
+  \label{eq:u3-rlc-tf}
+\end{equation}
+이다.
+전하를 출력으로 잡으면 $i = \dot{q}$와 $v_C = q/C$로 전류와 커패시터
+전압을 바로 얻을 수 있고, 출력 선택이 바뀌어도 분모는 같다.
+
+\subsection{표준 2차 형식과 두 파라미터}
+
+서로 다른 물리 시스템을 같은 눈금으로 비교하기 위해 2차 시스템은 보통
+\begin{equation}
+  \ddot{x} + 2\zeta\omega_n\dot{x} + \omega_n^2 x = \omega_n^2 u
+  \label{eq:u3-std-2nd}
+\end{equation}
+로 쓴다.
+$\omega_n$은 고유진동수, $\zeta$는 감쇠비이고, $x$는 두 번 미분되는 대표
+상태를 임시로 부르는 이름이다.
+식 \eqref{eq:u3-rlc-ode}의 양변을 $L$로 나누면
+\begin{equation}
+  \ddot{q} + \frac{R}{L}\dot{q} + \frac{1}{LC}q = \frac{1}{L}v_{\mathrm{in}}
+\end{equation}
+이고, \eqref{eq:u3-std-2nd}와 항별로 계수를 비교하면
+\begin{equation}
+  2\zeta\omega_n = \frac{R}{L},
+  \qquad
+  \omega_n^2 = \frac{1}{LC},
+  \qquad
+  \omega_n^2 u = \frac{1}{L}v_{\mathrm{in}}
+\end{equation}
+이다.
+마지막 식에 $\omega_n^2 = 1/(LC)$를 넣으면 $u = C v_{\mathrm{in}}$,
+즉 표준형의 입력은 전압에 커패시턴스를 곱한 전하 단위의 계산용 입력으로,
+표준형이 물리가 아니라 눈금을 바꾸는 일임이 여기서 잘 보인다.
+위치항에서 $\omega_n = 1/\sqrt{LC}$이고, 속도항 비교에서 $\zeta$만 남기면
+\begin{equation}
+  \zeta
+  = \frac{R/L}{2\omega_n}
+  = \frac{R}{2L}\sqrt{LC}
+  = \frac{R}{2}\sqrt{\frac{LC}{L^2}}
+  = \frac{R}{2}\sqrt{\frac{C}{L}}
+\end{equation}
+이다.
+저항을 키우면 감쇠비가 커지고, $L$과 $C$는 자기장 에너지와 전기장
+에너지가 서로 오가는 리듬 $\omega_n$을 정한다.
+
+숫자로 확인해 보자.
+$L = 10~\mathrm{mH} = 0.01~\mathrm{H}$,
+$C = 100~\mu\mathrm{F} = 0.0001~\mathrm{F}$이고, 임계감쇠 $\zeta = 1$에
+해당하는 저항을 $R_c$라 하면
+\begin{equation}
+  \omega_n = \frac{1}{\sqrt{LC}} = 1000~\mathrm{rad/s},
+  \quad
+  f_n = \frac{\omega_n}{2\pi} \approx 159~\mathrm{Hz},
+  \quad
+  R_c = 2\sqrt{\frac{L}{C}} = 20~\Omega
+\end{equation}
+이다.
+$R$이 이보다 작으면 부족감쇠로 흔들리며 수렴하고, 크면 과감쇠 쪽으로 간다.
+LC 자유진동의 에너지 왕복, 직렬 공진 $\omega L = 1/(\omega C)$와 튜닝
+응용, 소자들의 역사적 배경 등 여기서 줄인 내용은 공개 확장판을 참고한다.
+
+다음 절에서는 같은 2차 구조가 눈에 보이는 운동으로 다시 나타나,
+$L\ddot{q} + R\dot{q} + q/C = v_{\mathrm{in}}$의 각 자리에
+$m\ddot{x} + b\dot{x} + kx = f$가 그대로 겹쳐지는 것을 본다.

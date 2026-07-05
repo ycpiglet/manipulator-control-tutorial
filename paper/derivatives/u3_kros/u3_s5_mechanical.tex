@@ -1,0 +1,154 @@
+% U3 5절 — 기계 임피던스: 질량-스프링-댐퍼 (정본: paper/sections/05_mechanical_system.tex 발췌 재구성)
+\section{기계 임피던스: 질량-스프링-댐퍼}
+\label{sec:u3-mechanical}
+
+앞 절의 문법을 첫 실물에 적용했으니, 이제 같은 2차 구조를 눈에 보이는 운동으로 다시
+읽는다.
+질량-스프링-댐퍼(mass-spring-damper)는 진동과 임피던스를 설명하는 가장 작은 기계
+모델이다.
+질량 $m$은 속도 변화를 싫어하는 관성, 강성 $k$는 변위를 평형점으로 되돌리는 복원력의
+기울기, 감쇠계수 $b$는 속도에 비례해 운동 에너지를 빼내는 저항이다.
+전기 쪽으로 보면 질량은 인덕터, 스프링은 커패시터, 댐퍼는 저항에 대응한다.
+
+\subsection{운동방정식: 힘의 장부}
+
+평형점을 $x=0$으로 두고 외력을 $f(t)$라 하자.
+물체에 실제로 작용하는 스프링 힘과 댐퍼 힘은 변위와 속도를 줄이는 방향이므로
+$f_s=-kx$, $f_d=-b\dot{x}$이다.
+뉴턴의 제2법칙을 $m\ddot{x}=f+f_s+f_d=f-kx-b\dot{x}$로 쓰고 스프링항과 감쇠항을
+왼쪽으로 옮기면
+\begin{equation}
+  m\ddot{x}(t)+b\dot{x}(t)+kx(t)=f(t)
+  \label{eq:u3m-msd}
+\end{equation}
+가 된다.
+이는 외울 공식이라기보다 외력 $f$가 감당할 부담을 관성항 $m\ddot{x}$, 감쇠항
+$b\dot{x}$, 스프링항 $kx$로 나누어 적은 장부이다.
+
+\subsection{고유진동수}
+
+감쇠와 외력이 없는 $m\ddot{x}+kx=0$, 즉 $\ddot{x}+(k/m)x=0$을 먼저 본다.
+감쇠 없는 왕복 운동은 일정한 모양으로 반복되므로 $x(t)=A\cos(\omega t)$로 시험한다.
+두 번 미분하면 $\ddot{x}=-\omega^2 x$이므로 $-m\omega^2 x+kx=0$, $x\neq0$인 진동에서는
+$\omega^2=k/m$, 따라서 $\omega_n=\sqrt{k/m}$이다.
+단위로도 확인된다.
+\begin{equation}
+  \frac{\mathrm{N/m}}{\mathrm{kg}}
+  =
+  \frac{\mathrm{kg\,m/s^2}/\mathrm{m}}{\mathrm{kg}}
+  =
+  \frac{1}{\mathrm{s^2}}
+\end{equation}
+이므로 제곱근을 취하면 $1/\mathrm{s}$가 되고, rad를 무차원으로 취급해 rad/s라 부른다.
+고유진동수는 되돌리려는 성질과 둔감함의 비율이라, 강성 4배는 $\omega_n$ 2배, 질량 4배는
+$\omega_n$ 절반이라는 제곱근 관계를 가진다.
+
+\subsection{표준형과 계수 맞추기}
+
+식 \eqref{eq:u3m-msd}의 양변을 $m$으로 나누고 표준 2차 시스템
+\begin{equation}
+  \ddot{x}(t)+2\zeta\omega_n\dot{x}(t)+\omega_n^2 x(t)=\frac{1}{m}f(t)
+  \label{eq:u3m-standard}
+\end{equation}
+과 계수를 견주면, $x$ 항에서 $\omega_n^2=k/m$, $\dot{x}$ 항에서 $2\zeta\omega_n=b/m$이므로
+\begin{equation}
+  \omega_n=\sqrt{\frac{k}{m}}, \qquad \zeta=\frac{b}{2\sqrt{mk}}
+\end{equation}
+이다.
+$\omega_n^2$은 위치를 되돌리는 항의 세기, $2\zeta\omega_n$은 속도에 비례해 진동을 줄이는
+항의 세기이다.
+감쇠비 $\zeta$가 무차원인 것은 뒤의 임계감쇠 $b_c=2\sqrt{mk}$로 $b$를 나눈 값이라,
+같은 댐퍼라도 $m$과 $k$가 다르면 효과가 달라진다는 사실을 한 숫자에 담기 때문이다.
+
+\subsection{특성근과 응답 형태}
+
+자유응답 $f=0$에서 $x(t)=e^{st}$를 넣으면 특성방정식 $ms^2+bs+k=0$을 얻고,
+$s_{1,2}=(-b\pm\sqrt{b^2-4mk})/(2m)$이다.
+논문에서 한 줄로 건너뛰는 표준 파라미터 대입을 두 조각으로 나눠 보자.
+$\zeta=b/(2\sqrt{mk})$를 뒤집으면 $b=2\zeta\sqrt{mk}$이므로 분수 앞부분은
+\begin{equation}
+  -\frac{b}{2m}=-\frac{2\zeta\sqrt{mk}}{2m}=-\zeta\sqrt{\frac{k}{m}}=-\zeta\omega_n,
+\end{equation}
+근호 안은 $b^2=4\zeta^2 mk$이므로
+\begin{equation}
+  b^2-4mk=4\zeta^2 mk-4mk=4mk(\zeta^2-1)
+\end{equation}
+이다.
+$\sqrt{b^2-4mk}=2\sqrt{mk}\sqrt{\zeta^2-1}$을 $2m$으로 나누면 $\omega_n\sqrt{\zeta^2-1}$
+이 되어, 두 조각을 합치면
+\begin{equation}
+  s_{1,2}=-\zeta\omega_n\pm\omega_n\sqrt{\zeta^2-1}
+  \label{eq:u3m-roots}
+\end{equation}
+이다.
+$m=1$, $b=2$, $k=4$로 검산하면 $\omega_n=\sqrt{4}=2$, $\zeta=2/(2\sqrt{4})=0.5$이고,
+공식으로는 $s_{1,2}=(-2\pm\sqrt{4-16})/2=-1\pm\sqrt{-3}$, 표준형으로도 $-\zeta\omega_n=-1$,
+$\omega_n\sqrt{\zeta^2-1}=2\sqrt{-0.75}=\sqrt{-3}$이라 정확히 일치한다.
+
+부족감쇠 $0<\zeta<1$에서는 근호 안이 음수가 되어 근이 복소수이다.
+$\jj$가 제곱하면 $-1$인 허수 단위이므로 $\zeta^2-1=(-1)(1-\zeta^2)$로 쪼개면
+$\sqrt{\zeta^2-1}=\jj\sqrt{1-\zeta^2}$이고($1-\zeta^2>0$이라 마지막은 보통의 양수 제곱근),
+특성근은 $s_{1,2}=-\zeta\omega_n\pm\jj\omega_d$가 된다.
+여기서 $\omega_d=\omega_n\sqrt{1-\zeta^2}$는 감쇠 진동수(damped natural frequency)이며,
+부족감쇠 자유응답은 줄어드는 포락선 $e^{-\zeta\omega_n t}$ 안에서 $\omega_d$로 흔들리는
+$x(t)=e^{-\zeta\omega_n t}(A\cos\omega_d t+B\sin\omega_d t)$ 형태가 된다.
+
+\subsection{감쇠 영역과 임계감쇠}
+
+실수부 $-\zeta\omega_n$은 응답이 공통으로 줄어드는 속도를, 제곱근 항은 근이 실수인지
+복소수인지를 가른다.
+판별식 $b^2-4mk$가 음수이면 흔들리고 양수이면 흔들리지 않으므로, 경계는
+$b^2-4mk=0$, 즉 $b=\pm2\sqrt{mk}$이다.
+감쇠계수는 물리적으로 양수이므로 양수 근을 택해 $b_c=2\sqrt{mk}$가 된다.
+$\zeta=0$이면 진동이 계속되고, $0<\zeta<1$이면 흔들리며 줄어들며, $\zeta=1$이면 두 근이
+$s=-\omega_n$으로 겹쳐 반복 진동 없이 돌아오는 경계 응답이 되고, $\zeta>1$이면 서로 다른
+두 음의 실수근 중 더 느린 항이 전체 수렴을 지배해 오히려 둔해질 수 있다.
+
+\subsection{오버슈트와 정착시간}
+
+일정한 힘 $F_0$가 계속 걸리면 오래 뒤 $\dot{x}=\ddot{x}=0$이 되어 스프링 항만 남으므로
+최종값은 $x_{\mathrm{ss}}=F_0/k$이다.
+이 값을 얼마나 지나치는지가 오버슈트이며, 표준 2차 시스템, 영 초기조건, 양의 단위계단
+입력, $0<\zeta<1$ 조건에서 최대 오버슈트 비율은
+\begin{equation}
+  M_p=\exp\!\left(-\frac{\zeta\pi}{\sqrt{1-\zeta^2}}\right)
+  \label{eq:u3m-overshoot}
+\end{equation}
+이다.
+$\zeta$가 작으면 남은 에너지가 많아 크게 지나치는데, $\zeta=0.2$이면 약 $53\%$를
+예측한다.
+$\zeta=0.7$이면 $\sqrt{1-\zeta^2}=\sqrt{0.51}\approx0.714$, 지수 안은
+$-0.7\pi/0.714\approx-3.08$이므로 $M_p=e^{-3.08}\approx0.046$, 즉 약 $4.6\%$로 줄어든다.
+
+정착시간은 응답이 목표 주변의 작은 띠 안에 들어간 뒤 계속 머무는 시간이다.
+진폭 포락선이 대략 $e^{-\zeta\omega_n t}$처럼 줄어든다고 보고 $\pm2\%$ 기준, 즉
+$0.02=1/50$까지 줄어드는 시간을 잡으면 $e^{-\zeta\omega_n t}\approx0.02$, 양변에 로그를
+취해 $\zeta\omega_n t\approx\ln 50\approx3.9$가 된다.
+$e^{3.9}\approx50$이므로 포락선이 약 50분의 1로 줄었다고 읽을 수 있고, 여기서
+$T_s\approx 4/(\zeta\omega_n)$라는 기억하기 쉬운 근사가 나온다.
+$\omega_n=10$, $\zeta=0.7$이면 $T_s\approx4/(0.7\cdot10)\approx0.57~\mathrm{s}$이다.
+이 근사는 대략 $0.4\lesssim\zeta\lesssim0.8$에서 유용하며, 5\% 기준을 쓰면 상수가 대략
+3에 가까워진다.
+힘의 관점으로 본 진동을 운동 에너지와 탄성 퍼텐셜 에너지의 교환으로 다시 읽는 에너지
+장부와 응답 그래프의 세부는 확장판을 참고한다.
+
+\subsection{기계적 임피던스}
+
+같은 운동방정식이라도 무엇을 출력과 비율로 잡느냐에 따라 이름이 달라진다.
+식 \eqref{eq:u3m-msd}를 영 초기조건에서 라플라스 변환하면 $F(s)=(ms^2+bs+k)X(s)$,
+속도는 $V_x(s)=sX(s)$이므로 힘을 속도로 나누면 기계적 임피던스
+\begin{equation}
+  Z_m(s)=\frac{F(s)}{sX(s)}=ms+b+\frac{k}{s}
+  \label{eq:u3m-impedance}
+\end{equation}
+를 얻는다.
+$s=\jj\omega$를 넣으면 $Z_m(\jj\omega)=b+\jj(\omega m-k/\omega)$로, 감쇠항 $b$는 주파수와
+무관한 소산 성분으로 남고, 질량항 $\omega m$은 빠르게 흔들수록, 스프링항 $k/\omega$는
+천천히 밀어 위치를 바꿀수록 커진다.
+2절에서 전기 임피던스 $Z=R+\jj(\omega L-1/\omega C)$를 예고편으로 두었던 자리에, 이제
+저항 대신 댐퍼, 인덕턴스 대신 질량, 커패시턴스 대신 스프링이 같은 형태로 들어선다.
+임피던스는 얼마나 딱딱한가만이 아니라, 주파수에 따라 스프링처럼, 질량처럼, 감쇠처럼
+다르게 보이는 힘-운동 관계임을 보여준다.
+
+이 2차 언어 --- $\omega_n$, $\zeta$, 그리고 강성ㆍ감쇠ㆍ관성으로 나뉘는 임피던스 --- 가
+바로 다음 절에서 로봇의 접촉 거동을 설계할 때 쓰는 그 언어이다.
