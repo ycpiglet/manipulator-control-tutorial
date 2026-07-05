@@ -14,9 +14,31 @@ Iteratively improve the Korean review/tutorial paper on impedance, impedance con
 - Bibliography: `paper/references/refs.bib`
 - Latest PDF: `paper/main.pdf`
 - Current length: 120 PDF pages
-- Latest PDF size: 979698 bytes
+- Latest PDF size: 979540 bytes
 
 ## Completed Since Last Snapshot
+
+### 2026-07-05 Compression Pass Tier 1
+
+Version label: `draft-20260705-compression-tier1`. New standing plan:
+`.agents/COMPRESSION_PASS_PLAN.md` (tier definitions, hard constraints,
+K1-K6 metrics, full disposition tables, lessons). Three duplication auditors
+(Occam-A/B/C) swept Sections 2-6; after hand-verification only 3 Section 6
+duplications were genuine and compressed (stiffness-first recommendation,
+nominal-mass damping caveat back-reference, joint/Cartesian classification
+merge); all Section 2-5 candidates were rejected as deliberate parallel
+structure, protected bridges, or auditor errors — dispositions recorded.
+Reviewer `Hilbert`: 3/3 PASS. All 113 anchors preserved (validator exit 0).
+Tier 2 (relocation/reorganization) stays blocked on a venue/length decision.
+
+| Gate | Threshold | Measured | Evidence |
+|---|---:|---:|---|
+| LaTeX compile | exit 0 | 0 | `tmp/latex_compile_derivation_gaps/compile_comp1.json` |
+| Final segment warnings | all 0 | 0/0/0, 0 over/underfull | same log |
+| PDF | generated | 120 pages, 979540 bytes, SHA-256 `7B86A33D...F99779B0` | `Get-FileHash` |
+| Anchor preservation | 113/113 | validator exit 0, failures 0 | `validate_robotics_foundations.py` |
+| K1 dispositions | 100% processed | 3 compressed + 12 rejected with reasons | `.agents/COMPRESSION_PASS_PLAN.md` |
+| Meaning/flow/beginner review | all PASS | 3/3 PASS | reviewer `Hilbert` |
 
 ### 2026-07-05 Derivation-Gap Medium Pass 2 (Iteration 3)
 
@@ -295,11 +317,12 @@ The derivation-completeness loop
 (`.agents/DERIVATION_COMPLETENESS_PLAN.md`) has closed all High and Medium
 items across three iterations; only Low-tier bundles (B7, C5 — single
 skipped steps that do not block a beginner) remain and can be batched into a
-future iteration or absorbed by the compression pass. All of this work,
-including the Section 5b density pass, was merged to main via PR #5
-(merge commit `1f5f6fe8`, CI green: simulator, paper-gates, paper-build;
-merged branch deleted). Next milestone: the compression pass — which must
-carry the 26 new derivation anchors into surviving text. Keep CI green as
-the standing gate. The later compression pass must carry the 15 new derivation anchors
-into surviving text. Preserving reviewer full texts under `.agents/reviews/`
-should start with the next review pass.
+future iteration. All derivation work, including the Section 5b density
+pass, was merged to main via PR #5 (merge commit `1f5f6fe8`, CI green).
+The Tier-1 compression pass is also complete
+(`draft-20260705-compression-tier1`): Sections 2-6 audited, 3 genuine
+duplications compressed, 113/113 anchors preserved. Tier-2 compression
+(appendix relocation, table shortening, reorganization) is blocked on a
+target-venue/length decision — that decision is the next open question for
+the user. Preserving reviewer full texts under `.agents/reviews/` should
+start with the next review pass. Keep CI green as the standing gate.

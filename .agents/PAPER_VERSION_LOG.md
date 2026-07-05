@@ -4,6 +4,40 @@ This file records manuscript-facing draft states. It complements
 `.agents/CURRENT_STATE.md` by keeping durable paper version labels, source/PDF
 paths, change intent, verification, and open risks.
 
+## draft-20260705-compression-tier1
+
+- Type: conservative compression pass (Tier 1: pure duplication removal)
+- Main source: `paper/sections/06_impedance_control.tex`
+- Main PDF: `paper/main.pdf`
+- Plan/backlog record: `.agents/COMPRESSION_PASS_PLAN.md`
+- Version purpose:
+  - Execute the standing compression milestone at its safe tier: merge
+    statements duplicated at similar depth, preserving all 113 `\vmark`
+    anchors, all beginner derivation bridges, and all pedagogical recaps.
+- Audit result (3 auditors Occam-A/B/C over Sections 2-6, hand-verified):
+  - Confirmed and compressed (Section 6 only, 3 items): duplicate
+    stiffness-first tuning recommendation (651 vs 656); repeated
+    nominal-mass damping caveat (596 vs 1113) shortened to a back-reference;
+    joint/Cartesian classification restatement (798-801 vs 816-818) merged.
+  - Rejected with recorded reasons: all Section 2-5 candidates (0 Tier-1
+    duplications confirmed) — deliberate cross-domain standard-form
+    parallelism, element-specific sign-convention contexts, pre/post-formula
+    depth differences, protected derivation bridges, and several auditor
+    line-number errors. Full disposition table in the plan record.
+- Review: `Hilbert` — 3/3 compressions PASS (meaning, flow, beginner timing).
+- Review or submission status: internal working draft, not submission-ready
+- Verification:
+  - LaTeX compile exit code: 0 (bundled Tectonic)
+  - Final segment citation/reference/rerun warnings: 0/0/0
+  - Final overfull/underfull boxes: 0/0
+  - PDF: `paper/main.pdf`, 120 pages (unchanged), 979540 bytes
+  - PDF SHA-256: `7B86A33D2B011335195937744D6A95F664622413BF365FDD92864C6BF99779B0`
+  - Validator: exit 0, failures 0 — all 113 anchors preserved
+  - Section 6 source: 1561 -> 1559 lines
+- Open note: Tier 2 (appendix relocation, table shortening, reorganization)
+  stays blocked on a target-venue/length decision; Tier-2 candidate recorded
+  (move the formal passive-sign-convention definition before its first use).
+
 ## draft-20260705-derivation-gaps-medium2
 
 - Type: derivation-completeness pass (remaining Medium tier) over Sections
