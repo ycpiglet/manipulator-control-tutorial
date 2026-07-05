@@ -18,6 +18,26 @@ Iteratively improve the Korean review/tutorial paper on impedance, impedance con
 
 ## Completed Since Last Snapshot
 
+### 2026-07-05 Test Coverage Baseline Pass
+
+Measured the simulator coverage baseline and turned it into an enforced
+regression floor.
+
+- Baseline: 84 percent statement coverage of `src/mclab` (11,212 statements,
+  1,795 missed) with all 340 tests + 760 subtests passing.
+- Added `pytest-cov` to the dev extras in `pyproject.toml`.
+- CI simulator job now runs `pytest --cov=mclab --cov-fail-under=80`; the
+  floor is 80 percent to absorb platform-specific branch differences on
+  Linux runners while still catching real regressions.
+- Registered the gate in `.agents/VALIDATION_METRICS.yaml` under
+  `code_quality.coverage`.
+
+| Gate | Threshold | Measured | Evidence |
+|---|---:|---:|---|
+| Coverage baseline | recorded | 84 percent (11,212 stmts) | `pytest --cov=mclab --cov-report=term` |
+| Coverage floor | >= 80 percent | enforced in CI | `.github/workflows/ci.yml` simulator job |
+| Tests | exit 0 | 340 passed + 760 subtests | same run |
+
 ### 2026-07-05 Stable Marker Anchor Migration Pass
 
 Converted the fragile phrase-count manuscript gates to durable anchors,
