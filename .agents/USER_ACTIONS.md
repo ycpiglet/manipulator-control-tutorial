@@ -18,6 +18,7 @@ Updated: 2026-07-05 (KST)
 |---|---|---|---|
 | P1 | Zenodo DOI 발급 | zenodo.org GitHub 로그인 → 레포 토글 ON → GitHub 릴리스 생성 (`.agents/PORTFOLIO_PACKAGE.md` 절차) | 레포가 인용 가능한 영구 학술 산출물이 됨. DOI 알려주면 배지·CITATION.cff 반영 대행 |
 | P2 | 블로그 게시 | `outreach/blog_failure_gallery_ko.md` 를 velog/tistory/GitHub Pages 등에 게시 | 초보자 도달 + "설명 능력" 포트폴리오. 플랫폼 정하면 포맷 조정 대행 |
+| A4 | KROS 투고 시스템(journal.kros.org) 회원가입·로그인 → 논문 견본(docx)+커버레터 양식 다운로드 | A1 회신 무관하게 미리 가능 | U3 DOCX 변환 착수 가능(변환은 대행) |
 | P3 (선택) | engrXiv/EdArXiv 프리프린트 | U3(한국어) 또는 U5(영문) 완성본 업로드 (무료 DOI) | 무게이트 "첫 단독 논문" 경험 |
 
 ## B. 결제·가입 필요
