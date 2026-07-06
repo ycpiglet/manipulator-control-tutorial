@@ -1,0 +1,33 @@
+cff-version: 1.2.0
+title: >-
+  MuJoCo Manipulator Control Lab: a failure-driven laboratory
+  for learning impedance control safely
+message: >-
+  If you use this software or its accompanying tutorial in
+  teaching or research, please cite it using these metadata.
+type: software
+authors:
+  - given-names: Youncheol
+    family-names: Jung
+    orcid: 'https://orcid.org/0009-0000-5282-881X'
+    affiliation: Independent Researcher, Republic of Korea
+repository-code: 'https://github.com/ycpiglet/manipulator-control-tutorial'
+abstract: >-
+  An open-source, local-first MuJoCo teaching laboratory that
+  takes beginners from a 1-D mass-spring-damper system through
+  PID control and a 2-DOF arm up to 7-DOF manipulator control
+  with Cartesian impedance and virtual-wall contact. Every
+  configuration ships with a learning guide and reproduces
+  real misconfiguration accidents (a "failure gallery") so that
+  expensive trial-and-error can be experienced safely. The
+  companion Korean tutorial/review manuscript develops the full
+  theory with no skipped derivation steps, anchored to
+  machine-checked numeric examples.
+keywords:
+  - robotics
+  - impedance control
+  - control education
+  - MuJoCo
+  - simulation
+  - open educational resources
+license: Apache-2.0
