@@ -1,0 +1,408 @@
+% U5-EN Sections 4-7 — English adaptation of the reviewed Korean U3
+% (sources: u3_kros/u3_s4_electric.tex, u3_s5_mechanical.tex, u3_s6_s7.tex)
+\section{Electrical Impedance: the RLC Circuit}
+\label{sec:u5-electric}
+
+We now apply the grammar prepared in the previous section to its first
+physical embodiment.
+A series RLC circuit --- a resistor $R$, an inductor $L$, and a capacitor
+$C$ placed on a single current path --- is the smallest electrical system
+that can be written as a second-order differential equation.
+Starting from the roles of the three elements, we work our way down to the
+transfer function and the standard second-order form using the rules of
+Section~3, with no derivation steps skipped.
+
+\subsection{The Three Elements: One Dissipation and Two Storages}
+
+The resistor converts electrical energy into heat as current passes through
+it.
+Under the passive sign convention, in which the terminal where the current
+enters is taken as the $+$ of the voltage, we have $v_R = R i$, so the
+instantaneous power absorbed by the resistor is $p_R = v_R\,i = R\,i^2$.
+Because $i^2$ is always positive regardless of the direction of the
+current, the resistor never returns energy: it dissipates continuously.
+
+The inductor stores energy in the magnetic field created by the current,
+and satisfies
+\begin{equation}
+  v_L(t) = L\frac{\dd i(t)}{\dd t}.
+  \label{eq:u5-ind-v}
+\end{equation}
+The faster we try to change the current, the larger the voltage required,
+so the inductor resists changes in current.
+Substituting \eqref{eq:u5-ind-v} into the instantaneous power and applying
+the product rule of differentiation gives
+$p_L = v_L\,i = L\,i\frac{\dd i}{\dd t}
+= \frac{\dd}{\dd t}\bigl(\tfrac{1}{2}L i^2\bigr)$:
+the power flowing into the inductor does not vanish as heat but
+accumulates as the rate of change of the magnetic-field energy
+$E_L = \frac{1}{2}Li^2$.
+During intervals where the current decreases, $p_L<0$ and the stored
+energy is returned to the circuit.
+
+The capacitor is the storage element of the opposite kind.
+From the separated charge $q = C v_C$, the current is the rate of change
+of charge, so
+\begin{equation}
+  i_C(t) = C\frac{\dd v_C(t)}{\dd t},
+  \label{eq:u5-cap-i}
+\end{equation}
+and since changing the voltage quickly requires moving a large amount of
+charge in a short time, the capacitor resists changes in voltage.
+Repeating the same product-rule calculation gives
+$p_C = v_C\,i_C = C\,v_C\frac{\dd v_C}{\dd t}
+= \frac{\dd}{\dd t}\bigl(\tfrac{1}{2}C v_C^2\bigr)$,
+so the energy stored in the capacitor is the electric-field energy
+$E_C = \frac{1}{2}Cv_C^2$.
+Applying the observation from Section~3 that differentiation of a sinusoid
+becomes multiplication by $\jj\omega$, the impedances of the three
+elements are $Z_R = R$, $Z_L = \jj\omega L$, and $Z_C = 1/(\jj\omega C)$:
+the presence or absence of $\jj$ is precisely the difference between
+dissipation and storage --- whether the voltage and current are shifted in
+phase by $\pm 90^\circ$.
+
+\subsection{The Series RLC Equation and Its Transfer Function}
+
+Let $i(t)$ be the reference current circulating around the loop in one
+direction, and let $q(t)$ be the charge on the capacitor plate that this
+current enters, so that $i = \dot{q}$.
+By Kirchhoff's voltage law, the voltage changes encountered in one full
+trip around the loop sum to zero:
+$v_{\mathrm{in}} - v_L - v_R - v_C = 0$.
+Substituting the element relations $v_L = L\ddot{q}$, $v_R = R\dot{q}$,
+and $v_C = q/C$ yields
+\begin{equation}
+  L\ddot{q}(t) + R\dot{q}(t) + \frac{1}{C}q(t) = v_{\mathrm{in}}(t).
+  \label{eq:u5-rlc-ode}
+\end{equation}
+In this single line, $L\ddot{q}$ is the inductor voltage opposing changes
+in current, $R\dot{q}$ is the dissipative voltage, and $q/C$ is a
+restoring-type voltage that grows in proportion to the accumulated charge.
+
+We now transform each term, one at a time, using the Laplace
+differentiation rule of Section~3 under zero initial conditions:
+$L\ddot{q} \to L s^2 Q(s)$, $R\dot{q} \to R s Q(s)$,
+$q/C \to Q(s)/C$, and $v_{\mathrm{in}} \to V_{\mathrm{in}}(s)$, so that
+\begin{equation}
+  \left(L s^2 + R s + \frac{1}{C}\right) Q(s) = V_{\mathrm{in}}(s),
+  \qquad
+  \frac{Q(s)}{V_{\mathrm{in}}(s)} = \frac{1}{L s^2 + R s + \frac{1}{C}}.
+  \label{eq:u5-rlc-tf}
+\end{equation}
+Choosing the charge as the output is convenient because $i = \dot{q}$ and
+$v_C = q/C$ then give the current and the capacitor voltage immediately;
+whatever output we pick, the denominator stays the same.
+
+\subsection{The Standard Second-Order Form and Its Two Parameters}
+
+To compare physically different systems on the same scale, second-order
+systems are usually written as
+\begin{equation}
+  \ddot{x} + 2\zeta\omega_n\dot{x} + \omega_n^2 x = \omega_n^2 u,
+  \label{eq:u5-std-2nd}
+\end{equation}
+where $\omega_n$ is the natural frequency, $\zeta$ is the damping ratio,
+and $x$ is a temporary name for whichever representative state is being
+differentiated twice.
+Dividing both sides of \eqref{eq:u5-rlc-ode} by $L$ gives
+\begin{equation}
+  \ddot{q} + \frac{R}{L}\dot{q} + \frac{1}{LC}q = \frac{1}{L}v_{\mathrm{in}},
+\end{equation}
+and matching coefficients term by term against \eqref{eq:u5-std-2nd}
+yields
+\begin{equation}
+  2\zeta\omega_n = \frac{R}{L},
+  \qquad
+  \omega_n^2 = \frac{1}{LC},
+  \qquad
+  \omega_n^2 u = \frac{1}{L}v_{\mathrm{in}}.
+\end{equation}
+Substituting $\omega_n^2 = 1/(LC)$ into the last relation gives
+$u = C v_{\mathrm{in}}$: the input of the standard form is the voltage
+multiplied by the capacitance, a bookkeeping input in units of charge.
+This is a good place to see that the standard form changes the scale, not
+the physics.
+The position term gives $\omega_n = 1/\sqrt{LC}$, and isolating $\zeta$
+from the velocity-term comparison,
+\begin{equation}
+  \zeta
+  = \frac{R/L}{2\omega_n}
+  = \frac{R}{2L}\sqrt{LC}
+  = \frac{R}{2}\sqrt{\frac{LC}{L^2}}
+  = \frac{R}{2}\sqrt{\frac{C}{L}}.
+\end{equation}
+Increasing the resistance increases the damping ratio, while $L$ and $C$
+set the rhythm $\omega_n$ at which magnetic-field energy and
+electric-field energy trade places.
+
+Let us check this with numbers.
+Take $L = 10~\mathrm{mH} = 0.01~\mathrm{H}$ and
+$C = 100~\mu\mathrm{F} = 0.0001~\mathrm{F}$, and let $R_c$ denote the
+resistance corresponding to critical damping, $\zeta = 1$.
+Then
+\begin{equation}
+  \omega_n = \frac{1}{\sqrt{LC}} = 1000~\mathrm{rad/s},
+  \quad
+  f_n = \frac{\omega_n}{2\pi} \approx 159~\mathrm{Hz},
+  \quad
+  R_c = 2\sqrt{\frac{L}{C}} = 20~\Omega.
+\end{equation}
+If $R$ is smaller than this, the response is underdamped and converges
+with oscillation; if larger, it moves toward the overdamped side.
+Material trimmed here --- the energy exchange of the free LC oscillation,
+series resonance $\omega L = 1/(\omega C)$ and its tuning applications,
+and the historical background of the elements --- can be found in the open
+expanded manuscript.
+
+In the next section, the same second-order structure reappears as visible
+motion: each slot of
+$L\ddot{q} + R\dot{q} + q/C = v_{\mathrm{in}}$
+is occupied, one for one, by
+$m\ddot{x} + b\dot{x} + kx = f$.
+
+\section{Mechanical Impedance: the Mass-Spring-Damper}
+\label{sec:u5-mechanical}
+
+Having applied the grammar to its first physical embodiment, we now read
+the same second-order structure again as motion we can see.
+The mass-spring-damper is the smallest mechanical model for explaining
+vibration and impedance.
+The mass $m$ is inertia --- a reluctance to change velocity; the stiffness
+$k$ is the slope of the restoring force that pulls the displacement back
+toward equilibrium; and the damping coefficient $b$ is a resistance that
+extracts kinetic energy in proportion to velocity.
+Read electrically, the mass corresponds to the inductor, the spring to the
+capacitor, and the damper to the resistor.
+
+\subsection{The Equation of Motion: a Ledger of Forces}
+
+Place the equilibrium point at $x=0$ and let $f(t)$ be the external force.
+The spring force and the damper force actually acting on the body point in
+the directions that reduce the displacement and the velocity, so
+$f_s=-kx$ and $f_d=-b\dot{x}$.
+Writing Newton's second law \cite{newton1687principia} as
+$m\ddot{x}=f+f_s+f_d=f-kx-b\dot{x}$ (the spring force $f_s=-kx$ is
+Hooke's law \cite{hooke1678depotentiarestitutiva}) and moving the spring
+and damping terms to the left-hand side gives
+\begin{equation}
+  m\ddot{x}(t)+b\dot{x}(t)+kx(t)=f(t).
+  \label{eq:u5m-msd}
+\end{equation}
+This is less a formula to memorize than a ledger: the burden carried by
+the external force $f$ is itemized into the inertia term $m\ddot{x}$, the
+damping term $b\dot{x}$, and the spring term $kx$.
+
+\subsection{The Natural Frequency}
+
+We first look at the case with no damping and no external force,
+$m\ddot{x}+kx=0$, that is, $\ddot{x}+(k/m)x=0$.
+An undamped back-and-forth motion repeats with a fixed shape, so we try
+$x(t)=A\cos(\omega t)$.
+Differentiating twice gives $\ddot{x}=-\omega^2 x$, so
+$-m\omega^2 x+kx=0$; for an oscillation with $x\neq0$ this requires
+$\omega^2=k/m$, and therefore $\omega_n=\sqrt{k/m}$.
+The units confirm it:
+\begin{equation}
+  \frac{\mathrm{N/m}}{\mathrm{kg}}
+  =
+  \frac{\mathrm{kg\,m/s^2}/\mathrm{m}}{\mathrm{kg}}
+  =
+  \frac{1}{\mathrm{s^2}},
+\end{equation}
+so taking the square root yields $1/\mathrm{s}$, and treating the radian
+as dimensionless we call it rad/s.
+The natural frequency is the ratio of the tendency to restore to the
+reluctance to move, hence the square-root scaling: quadrupling the
+stiffness doubles $\omega_n$, and quadrupling the mass halves it.
+
+\subsection{Standard Form and Coefficient Matching}
+
+Dividing both sides of \eqref{eq:u5m-msd} by $m$ and comparing
+coefficients with the standard second-order system
+\begin{equation}
+  \ddot{x}(t)+2\zeta\omega_n\dot{x}(t)+\omega_n^2 x(t)=\frac{1}{m}f(t)
+  \label{eq:u5m-standard}
+\end{equation}
+gives $\omega_n^2=k/m$ from the $x$ term and $2\zeta\omega_n=b/m$ from the
+$\dot{x}$ term, so
+\begin{equation}
+  \omega_n=\sqrt{\frac{k}{m}}, \qquad \zeta=\frac{b}{2\sqrt{mk}}.
+\end{equation}
+Here $\omega_n^2$ is the strength of the term that restores position, and
+$2\zeta\omega_n$ is the strength of the term that suppresses oscillation
+in proportion to velocity.
+The damping ratio $\zeta$ is dimensionless because it is $b$ divided by
+the critical damping $b_c=2\sqrt{mk}$ introduced below: it packs into a
+single number the fact that the same damper acts differently when $m$ and
+$k$ differ.
+
+\subsection{Characteristic Roots and the Shape of the Response}
+
+For the free response with $f=0$, substituting $x(t)=e^{st}$ gives the
+characteristic equation $ms^2+bs+k=0$, with roots
+$s_{1,2}=(-b\pm\sqrt{b^2-4mk})/(2m)$.
+The substitution of the standard parameters, which papers usually skip in
+one line, we split into two pieces.
+Inverting $\zeta=b/(2\sqrt{mk})$ gives $b=2\zeta\sqrt{mk}$, so the front
+of the fraction is
+\begin{equation}
+  -\frac{b}{2m}=-\frac{2\zeta\sqrt{mk}}{2m}=-\zeta\sqrt{\frac{k}{m}}=-\zeta\omega_n,
+\end{equation}
+and inside the radical, since $b^2=4\zeta^2 mk$,
+\begin{equation}
+  b^2-4mk=4\zeta^2 mk-4mk=4mk(\zeta^2-1).
+\end{equation}
+Dividing $\sqrt{b^2-4mk}=2\sqrt{mk}\sqrt{\zeta^2-1}$ by $2m$ gives
+$\omega_n\sqrt{\zeta^2-1}$, and assembling the two pieces,
+\begin{equation}
+  s_{1,2}=-\zeta\omega_n\pm\omega_n\sqrt{\zeta^2-1}.
+  \label{eq:u5m-roots}
+\end{equation}
+Checking with $m=1$, $b=2$, $k=4$: we get $\omega_n=\sqrt{4}=2$ and
+$\zeta=2/(2\sqrt{4})=0.5$; the quadratic formula gives
+$s_{1,2}=(-2\pm\sqrt{4-16})/2=-1\pm\sqrt{-3}$, and the standard form gives
+$-\zeta\omega_n=-1$ and $\omega_n\sqrt{\zeta^2-1}=2\sqrt{-0.75}=\sqrt{-3}$
+--- an exact match.
+
+In the underdamped case $0<\zeta<1$, the quantity under the radical is
+negative and the roots are complex.
+Since $\jj$ is the imaginary unit whose square is $-1$, splitting
+$\zeta^2-1=(-1)(1-\zeta^2)$ gives
+$\sqrt{\zeta^2-1}=\jj\sqrt{1-\zeta^2}$ (with $1-\zeta^2>0$, the last
+radical is an ordinary positive square root), and the characteristic
+roots become $s_{1,2}=-\zeta\omega_n\pm\jj\omega_d$.
+Here $\omega_d=\omega_n\sqrt{1-\zeta^2}$ is the damped natural frequency,
+and the underdamped free response oscillates at $\omega_d$ inside a
+shrinking envelope $e^{-\zeta\omega_n t}$:
+$x(t)=e^{-\zeta\omega_n t}(A\cos\omega_d t+B\sin\omega_d t)$.
+
+\subsection{Damping Regimes and Critical Damping}
+
+The real part $-\zeta\omega_n$ sets the common rate at which the response
+decays, while the square-root term decides whether the roots are real or
+complex.
+The response oscillates when the discriminant $b^2-4mk$ is negative and
+does not when it is positive, so the boundary is $b^2-4mk=0$, that is,
+$b=\pm2\sqrt{mk}$.
+Since a damping coefficient is physically positive, we take the positive
+root: $b_c=2\sqrt{mk}$.
+If $\zeta=0$ the oscillation continues indefinitely; if $0<\zeta<1$ the
+response oscillates while decaying; if $\zeta=1$ the two roots coincide at
+$s=-\omega_n$, giving the boundary response that returns without repeated
+oscillation; and if $\zeta>1$ there are two distinct negative real roots,
+of which the slower one dominates the overall convergence --- the response
+can actually become sluggish.
+
+\subsection{Overshoot and Settling Time}
+
+If a constant force $F_0$ is applied and held, then long afterwards
+$\dot{x}=\ddot{x}=0$ and only the spring term remains, so the final value
+is $x_{\mathrm{ss}}=F_0/k$.
+Overshoot measures how far the response passes this value; for the
+standard second-order system with zero initial conditions, a positive
+unit-step input, and $0<\zeta<1$, the maximum overshoot ratio is
+\begin{equation}
+  M_p=\exp\!\left(-\frac{\zeta\pi}{\sqrt{1-\zeta^2}}\right).
+  \label{eq:u5m-overshoot}
+\end{equation}
+When $\zeta$ is small, plenty of energy remains and the response
+overshoots strongly: $\zeta=0.2$ predicts about $53\%$.
+For $\zeta=0.7$ we get $\sqrt{1-\zeta^2}=\sqrt{0.51}\approx0.714$, the
+exponent is $-0.7\pi/0.714\approx-3.08$, and so
+$M_p=e^{-3.08}\approx0.046$ --- about $4.6\%$.
+
+The settling time is how long it takes for the response to enter a small
+band around the target and stay there.
+Treating the amplitude envelope as decaying roughly like
+$e^{-\zeta\omega_n t}$ and adopting the $\pm2\%$ criterion --- decay to
+$0.02=1/50$ --- we set $e^{-\zeta\omega_n t}\approx0.02$ and take
+logarithms of both sides to get
+$\zeta\omega_n t\approx\ln 50\approx3.9$.
+Since $e^{3.9}\approx50$, this reads as the envelope having shrunk to
+about one fiftieth, and from it comes the easy-to-remember approximation
+$T_s\approx 4/(\zeta\omega_n)$.
+With $\omega_n=10$ and $\zeta=0.7$,
+$T_s\approx4/(0.7\cdot10)\approx0.57~\mathrm{s}$.
+The approximation is useful roughly for $0.4\lesssim\zeta\lesssim0.8$;
+with a 5\% criterion the constant is closer to 3.
+The energy ledger that rereads this force-viewpoint vibration as an
+exchange between kinetic and elastic potential energy, and the detailed
+response plots, are left to the expanded manuscript.
+
+\subsection{Mechanical Impedance}
+
+The same equation of motion goes by different names depending on which
+output and which ratio we choose.
+Laplace-transforming \eqref{eq:u5m-msd} under zero initial conditions
+gives $F(s)=(ms^2+bs+k)X(s)$, and since the velocity is $V_x(s)=sX(s)$,
+dividing force by velocity yields the mechanical impedance
+\begin{equation}
+  Z_m(s)=\frac{F(s)}{sX(s)}=ms+b+\frac{k}{s}.
+  \label{eq:u5m-impedance}
+\end{equation}
+Setting $s=\jj\omega$ gives
+$Z_m(\jj\omega)=b+\jj(\omega m-k/\omega)$: the damping term $b$ remains as
+a frequency-independent dissipative component, the mass term $\omega m$
+grows the faster we shake, and the spring term $k/\omega$ grows the more
+slowly we push to change position.
+Into the slot where Section~2 previewed the electrical impedance
+$Z=R+\jj(\omega L-1/\omega C)$, the damper now steps in for the resistor,
+the mass for the inductance, and the spring for the capacitance, in
+exactly the same form.
+Impedance is therefore not merely a measure of how stiff something is; it
+is a force-motion relation that looks spring-like, mass-like, or
+damper-like depending on frequency.
+
+This second-order language --- $\omega_n$, $\zeta$, and an impedance that
+separates into stiffness, damping, and inertia --- is precisely the
+language used in the next section to design the contact behavior of a
+robot.
+
+\section{Toward Robot Contact Control}
+\label{sec:u5-outlook}
+
+The journey so far compresses into one line.
+Impedance is a dynamic relation between force and flow, and that relation
+takes the same second-order structure --- two storages and one dissipation
+--- in the electrical and the mechanical domains alike.
+Robot contact control is the natural next scene for this language.
+In impedance control, where a virtual spring and damper are attached to
+the robot's fingertip to shape the desired force-motion relation, the
+stiffness $k_d$ and the damping ratio $\zeta$ are read on exactly the
+scales prepared in this review \cite{hogan1985impedancepart1}.
+For example, deciding how much force and how much give to allow at contact
+produces a starting value for the stiffness, and the calculation that
+switching the stiffness on with a distant target instantly loads
+$\frac{1}{2}k_d\delta^2$ of energy is the same spring-energy intuition as
+in Section~\ref{sec:u5-mechanical}.
+
+That next scene --- the derivation of impedance control, the criteria for
+choosing between it and admittance control, and safe parameter-setting
+principles grounded in real accident cases --- is the subject of Part~2 of
+this review.
+Every numeric example in Parts 1 and 2 can be reproduced in an open
+MuJoCo \cite{todorov2012mujoco} teaching simulator.
+For instance, the launch accident caused by commanding a large stiffness
+without first computing the stored energy can be experienced safely with a
+single configuration file in the repository,
+\path{configs/lab01_msd/f2_launch_high_energy.yaml}.
+The expanded manuscript with all derivations, the simulator code, and the
+run guide are provided in the open
+repository\footnote{\url{https://github.com/ycpiglet/manipulator-control-tutorial}}.
+
+\section{Conclusion}
+\label{sec:u5-conclusion}
+
+Part~1 of this review has organized the language of impedance with no
+skipped derivations, in a single notation, and together with its
+historical motivation.
+Starting from a real problem --- the signal distortion of long telegraph
+lines --- we derived the Laplace transform from its definition and
+confirmed, by coefficient matching and numeric checks, that the RLC
+circuit and the mass-spring-damper share the same second-order structure.
+What the reader should take from this journey is not a list of formulas
+but the ability to read any second-order system on two scales: the
+natural frequency and the damping ratio.
+Part~2 carries this ability to the robot's fingertip, addressing the
+choice of contact-control scheme and safe parameter setting
+\cite{lynchpark2017modernrobotics}.

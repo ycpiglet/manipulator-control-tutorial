@@ -1,0 +1,43 @@
+% U5-EN — English review, part 1 (adapted from the reviewed Korean U3)
+% Purpose: engrXiv/arXiv preprint + IEEE CSM base (free-first strategy)
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,bm}
+\usepackage[margin=25mm]{geometry}
+\usepackage{booktabs}
+\usepackage{xurl}
+\usepackage{hyperref}
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\jj}{\mathrm{j}}
+
+\title{Impedance from Telegraph Lines to Robot Contact Control:\\
+a Tutorial Review with No Skipped Derivations --- Part 1: Foundations}
+\author{Youncheol Jung\\
+\small Independent Researcher, Republic of Korea\\
+\small ORCID: 0009-0000-5282-881X}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+% (abstract inserted from producer's comment block at assembly)
+Collaborative robots and humanoids are reaching users who are not control
+engineers, yet the language of safe physical interaction --- impedance ---
+is usually taught with skipped derivation steps and inconsistent notation.
+This tutorial review develops impedance from its historical origin (the
+distortion problem of long telegraph lines) through the Laplace transform,
+electrical impedance in the RLC circuit, and mechanical impedance in the
+mass-spring-damper, with every derivation chain complete and every numeric
+example machine-verified and reproducible in an accompanying open-source
+MuJoCo teaching laboratory. Part 2 builds robot impedance control and safe
+parameter-setting principles on these foundations.
+\end{abstract}
+
+\input{u5_s1_s3}
+
+\input{u5_s4_s7}
+
+\bibliographystyle{unsrt}
+\bibliography{../../references/refs}
+\end{document}

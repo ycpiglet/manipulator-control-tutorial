@@ -1,0 +1,358 @@
+% U5-EN — English review manuscript, part 1 (Sections 1–3)
+% Derivative of the reviewed Korean manuscript at ../u3_kros/ (adaptation, not literal translation).
+% Body only: no preamble. Macros used: \jj, \dd (defined in the main file).
+%
+% ABSTRACT: With the spread of collaborative robots and humanoids, users who
+% are not control specialists increasingly need to configure how a robot
+% behaves in contact. The core language of contact behavior is impedance, yet
+% most of the literature presents it at an expert level with derivations
+% omitted, forcing newcomers to hop between references to reconstruct a
+% single concept. Part 1 of this review starts from the historical problem in
+% which the language of impedance grew up --- signal distortion on long
+% telegraph lines --- and then develops, without skipping derivation steps and
+% in a single consistent notation, the definition and differentiation rule of
+% the Laplace transform, the electrical impedance of RLC circuits, and the
+% mechanical impedance of the mass-spring-damper system. Every numerical
+% example can be reproduced in an open educational MuJoCo simulator, and an
+% extended manuscript containing all intermediate steps is provided in a
+% public repository together with the simulator. Part 2 builds on this
+% foundation to treat robot impedance control and the principles of safe
+% parameter selection.
+
+\section{Introduction}\label{sec:u5-intro}
+
+Robots have left the factory floor. In homes, hospitals, and small workshops
+it is becoming routine for a robot to pick up objects, wipe surfaces, and
+insert parts in spaces shared with people \cite{nvidia_physical_ai_2025}.
+For such contact tasks, quality and safety are not determined by positioning
+accuracy alone; they depend on how the robot has been configured to relate
+force to motion --- that is, on its impedance
+\cite{hogan1985impedancepart1,abudakka2020variableimpedance}.
+The difficulty is that this configuration is not easy even for specialists.
+Combine a stiffness with a target offset carelessly and the elastic energy
+stored in the virtual spring is released all at once, sending the robot
+flying; misunderstand the notion of an equilibrium point and perfectly normal
+behavior gets misread as a malfunction.
+The author went through exactly this kind of trial and error in front of an
+expensive physical robot.
+
+There are two reasons why the existing literature offers little relief.
+The first is omitted derivations.
+Papers and textbooks skip intermediate steps because of page limits and
+assumptions about the reader, and a newcomer ends up wandering across several
+references in search of the one step that was left out.
+The second is inconsistent notation.
+The same physical quantity appears under different symbols in different
+sources, so study time is spent matching symbols rather than understanding
+concepts.
+
+This review confronts both problems head-on.
+It begins at a historical entrance --- showing that impedance is a language
+that grew out of a real engineering problem, the signal distortion of
+nineteenth-century long-distance telegraph lines --- then derives the Laplace
+transform from its definition, and connects electrical (RLC) and mechanical
+(mass-spring-damper) impedance in one consistent notation.
+For reasons of space, the body of the paper carries the essential
+derivations; an extended manuscript (122 pages) containing every intermediate
+step, together with an educational MuJoCo simulator that reproduces all
+numerical examples, is provided in a public repository.
+Part 2 builds on this foundation to cover impedance control, criteria for
+choosing between impedance and admittance control, and principles of safe
+parameter selection grounded in failure cases.
+
+\section{The Historical Origin of Impedance}\label{sec:u5-history}
+
+Etymologically, the word \emph{impedance} carries the flavor of hindering
+progress, but in engineering it means more than simple obstruction: it is a
+quantity that expresses both how a system resists an applied flow and how it
+stores energy and gives it back.
+Why such a concept became necessary is clearest if we return to the problems
+of long-distance telegraph and telephone lines in the late nineteenth
+century.
+
+\subsection{The long line that broke the resistance-only picture}
+
+For a short DC circuit on a benchtop, one can pack the entire notion of
+opposition to flow into a single resistance and explain a great deal with
+Ohm's law $V=IR$ alone.
+But a telegram is a signal of short pulses switching on and off, and a
+telephone call, like a human voice, is a signal that changes continuously;
+neither is DC.
+On real long cables something strange happened.
+Pulses sent over great distances arrived late and rounded off; voices had
+their high and low components transmitted differently, so that far away
+they arrived smeared and hard to understand.
+The sharper the edge of a pulse, the more high-frequency content it needs,
+so if the line weakens the high components more, or makes different
+frequencies arrive at different times, the distinction between dots and
+dashes blurs.
+The DC-style intuition --- just lower the wire resistance --- could not
+explain this.
+
+The reason is that a long wire is not a simple resistance.
+Along a long line there are, distributed with position, a resistance per
+unit length $R'~[\Omega/\mathrm{m}]$, an inductance $L'~[\mathrm{H/m}]$, a
+capacitance $C'~[\mathrm{F/m}]$, and a conductance $G'~[\mathrm{S/m}]$
+representing insulation leakage.
+$R'$ and $G'$ are loss elements through which energy disappears as heat and
+leakage; $L'$ and $C'$ are storage elements that hold energy briefly in
+magnetic and electric fields and return it.
+Unlike a lumped-element model that gathers all effects at a single point, a
+long line must be viewed as a distributed system in which these small
+effects repeat along its length and accumulate.
+Writing this idea in terms of the voltage $v(x,t)$ and current $i(x,t)$ at
+position $x$ and time $t$ gives the basic form of the telegrapher's
+equations,
+\begin{align}
+  \frac{\partial v}{\partial x} &= -R'i - L'\frac{\partial i}{\partial t}, \\
+  \frac{\partial i}{\partial x} &= -G'v - C'\frac{\partial v}{\partial t}.
+\end{align}
+The first equation says that the voltage changes along the line because of
+series resistive loss and the series inductance voltage; the second says
+that the current changes because of shunt leakage current and capacitor
+charging current.
+There is no need to solve these equations here.
+It is enough to read them as a sign that a long wire is not one lump of
+resistance but an endless chain of small storage and loss elements.
+
+\subsection{Heaviside and the distortionless condition}
+
+Oliver Heaviside encountered this problem first-hand while working as a
+telegraph operator, and by applying Maxwell's electromagnetic theory to the
+communication-line problem he treated the distortion of long lines
+mathematically \cite{heaviside_electrical_papers,donaghyspargo2018heaviside}.
+His insight was that the goal is not to send the signal as strongly as
+possible, but to make the various frequency components weaken and delay
+according to similar rules.
+A waveform is a sum of frequency components, so if only some components are
+attenuated more or delayed more, the overall shape collapses.
+For an idealized line that is uniform and linear, with $R'$, $L'$, $C'$, and
+$G'$ nearly independent of frequency, the condition for distortion-free
+transmission is
+\begin{equation}
+  \frac{R'}{L'} = \frac{G'}{C'}.
+\end{equation}
+$R'/L'$ measures, on the series side, how large the loss is relative to
+magnetic-field storage; $G'/C'$ measures, on the shunt side, how large the
+leakage is relative to electric-field storage.
+Both quantities have units of $\mathrm{s}^{-1}$, so this condition is an
+equation matching time scales of the same kind.
+Old telephone lines had small leakage $G'$, hence a small $G'/C'$, but
+lacked inductance, so $R'/L'$ was comparatively large; adding coils at
+regular intervals raised the effective $L'$ and brought the two ratios close
+together over the voice band.
+Adding inductance --- the very element that opposes changes in current ---
+actually improved the signal; this is not an increase in obstruction but a
+design that balances loss against storage to reduce waveform distortion.
+So the word \emph{impedance} that Heaviside used in the 1880s was not a mere
+coinage: it was a working engineer's language for explaining signal
+transmission by taking into account inductive and capacitive effects that
+resistance alone could not capture
+\cite{ethw_heaviside,ptb_impedance_history}.
+
+\subsection{Resistance, reactance, impedance}
+
+For DC, it is often enough to describe the difficulty of flow by a single
+resistance.
+For AC, however, one must look not only at how much the signal shrinks, but
+also at how much the oscillations of voltage and current lead or lag each
+other in time.
+Picture a practical test: send a pure tone of a single frequency into one
+end of a telephone line and measure, at the other end, how much smaller it
+has become and how much later it oscillates.
+Inductors store energy in magnetic fields and capacitors in electric
+fields, and in doing so they shift the phase between voltage and current in
+a frequency-dependent way; the frequency-dependent opposition created by
+such storage elements is called \emph{reactance}.
+Reactance is also measured in ohms ($\Omega$), but unlike resistance it does
+not mean that energy is, on average, destroyed as heat.
+The AC notion of opposition therefore carries the dissipative component and
+the storage component together, written as
+\begin{equation}
+  Z = R + \jj X.
+\end{equation}
+The real part $R$ is the resistance that dissipates energy, the imaginary
+part $X$ is the reactance that shifts phase, and $\jj$ is the imaginary unit
+marking a $90^\circ$ phase difference.
+In the sinusoidal steady state the impedances of the three basic elements
+are
+\begin{equation}
+  Z_R = R, \qquad
+  Z_L = \jj\omega L, \qquad
+  Z_C = \frac{1}{\jj\omega C} = -\frac{\jj}{\omega C},
+\end{equation}
+where $\omega=2\pi f$ is the angular frequency.
+The inductor demands a larger voltage for fast current changes as $\omega$
+grows, while the capacitor passes high-frequency currents relatively
+easily.
+In a series connection the same current flows through all three elements
+and the source must supply the sum of the three element voltages, so the
+total impedance is the sum of the three impedances,
+\begin{equation}
+  Z(\jj\omega) = Z_R + Z_L + Z_C
+  = R + \jj\left(\omega L - \frac{1}{\omega C}\right).
+\end{equation}
+The positive reactance of the inductor and the negative reactance of the
+capacitor point in opposite phase directions and subtract, and at some
+frequency they cancel, leaving the circuit looking as if only the
+resistance remained.
+This cancellation is the seed of resonance; the detailed development of
+resonance itself is treated in the open extended manuscript.
+In this way, an AC circuit that would otherwise demand a differential
+equation can be handled with the algebraic relation $V=IZ$, an equation
+shaped like Ohm's law.
+For the detailed derivation of the telegraph-line analysis and the extended
+discussion of phasor notation, see the open extended manuscript.
+
+The question the telegraph story leaves behind is how the magnitude and
+phase of a time-varying input change as it passes through a system --- and to
+write that question down, and to compare electrical circuits and mechanical
+systems in the same sentences, we first need the grammar of the Laplace
+transform and of linear time-invariant systems.
+
+\section{A Minimal Grammar of the Laplace Transform}\label{sec:u5-laplace}
+
+To turn the question left by the telegraph line --- why and how do a
+signal's magnitude and phase change? --- into something computable, two
+preparations are needed.
+One is an assumption about the system; the other is a transform that turns
+differential equations into algebraic ones.
+This section lays out that minimal grammar without skipping any derivation
+steps.
+
+Start with the assumption.
+A system is \emph{linear} when the rule $\mathcal{S}$ that maps an input
+$u(t)$ to an output $y(t)$ satisfies
+$\mathcal{S}\{a u_1 + b u_2\} = a\,\mathcal{S}\{u_1\} + b\,\mathcal{S}\{u_2\}$
+for arbitrary inputs $u_1$, $u_2$ and scalars $a$, $b$.
+Double the input and the output doubles; feed in the sum of two inputs and
+the result equals the sum of the individual outputs.
+A system is \emph{time-invariant} when applying the same input $t_0$ later
+merely delays the output by the same $t_0$ without changing its shape,
+that is, $\mathcal{S}\{u(t-t_0)\} = y(t-t_0)$.
+A real robot is neither perfectly linear nor time-invariant, but for small
+motions near a single operating point this linear time-invariant (LTI)
+assumption explains a great many phenomena well enough, and it unlocks the
+powerful tools of transfer functions and frequency responses.
+
+\subsection{From the definition to the differentiation rule}
+
+The Laplace transform is an integral that summarizes a time function $x(t)$
+as a function of a complex variable $s$:
+\begin{equation}
+  X(s) = \mathcal{L}\{x(t)\}
+  = \int_{0}^{\infty} x(t)\,e^{-st}\,\dd t.
+  \label{eq:u5-laplace-def}
+\end{equation}
+In words: multiply $x(t)$ by the steadily shrinking weight $e^{-st}$ and add
+everything up from $t=0$ onward.
+Each choice of $s$ produces one number, so the entire time waveform is
+summarized on the single sheet $X(s)$.
+
+What makes this transform useful is that differentiation turns into
+multiplication by $s$ --- and this rule is not a formula to memorize but a
+consequence of the definition \eqref{eq:u5-laplace-def} and the product rule
+alone.
+Since $s$ does not depend on $t$,
+\begin{equation}
+  \frac{\dd}{\dd t}\left[x(t)\,e^{-st}\right]
+  = \dot{x}(t)\,e^{-st} - s\,x(t)\,e^{-st}.
+\end{equation}
+Integrate both sides from $t=0$ to $\infty$.
+The left side integrates a derivative, so it equals the end value minus the
+start value: the value of $x(t)e^{-st}$ as $t\to\infty$ minus its value
+$x(0)$ at $t=0$.
+For values of $s$ at which the response does not blow up, so that
+$x(t)e^{-st}\to 0$ as $t\to\infty$, the left side is $0 - x(0) = -x(0)$.
+The two integrals on the right side are, by the definition,
+$\mathcal{L}\{\dot{x}\}$ and $-sX(s)$ respectively, so
+$-x(0) = \mathcal{L}\{\dot{x}\} - sX(s)$, and rearranging gives
+\begin{equation}
+  \mathcal{L}\{\dot{x}(t)\} = sX(s) - x(0).
+  \label{eq:u5-deriv-rule}
+\end{equation}
+With the initial condition set to zero, $\dot{x}$ can be handled as
+$sX(s)$.
+
+Let us run a simple check.
+If $x(t)=1$ (a constant), the definition gives
+$X(s)=\int_0^\infty e^{-st}\dd t
+=\left[-e^{-st}/s\right]_0^\infty
+=0-\left(-\tfrac{1}{s}\right)=\tfrac{1}{s}$.
+Since $\dot{x}=0$, the left side of rule \eqref{eq:u5-deriv-rule} is
+$\mathcal{L}\{0\}=0$, and the right side is
+$sX(s)-x(0)=s\cdot(1/s)-1=0$ as well --- they agree.
+
+For a twice-differentiated term, apply the same rule twice.
+Treating $\dot{x}$ as a new function and applying
+\eqref{eq:u5-deriv-rule} again,
+\begin{equation}
+  \mathcal{L}\{\ddot{x}\}
+  = s\,\mathcal{L}\{\dot{x}\} - \dot{x}(0)
+  = s^2 X(s) - s\,x(0) - \dot{x}(0),
+\end{equation}
+and with zero initial conditions $\ddot{x}$ can be handled as $s^2 X(s)$.
+
+\subsection{From differential equation to transfer function}
+
+Now take the equation of motion of the mass-spring-damper,
+$m\ddot{x}+b\dot{x}+kx=f$, and transform it term by term under zero initial
+conditions:
+$m\ddot{x}\to m s^2 X(s)$, $b\dot{x}\to b s X(s)$, $kx\to kX(s)$, and
+$f\to F(s)$, so that
+\begin{equation}
+  (m s^2 + b s + k)\,X(s) = F(s).
+\end{equation}
+A differential ledger that had to be updated continuously in time has become
+a single page of algebra.
+Arranging it as a ratio of output to input gives the \emph{transfer
+function},
+\begin{equation}
+  H(s) = \frac{X(s)}{F(s)} = \frac{1}{m s^2 + b s + k}.
+  \label{eq:u5-msd-tf}
+\end{equation}
+In the denominator, the $ms^2$ term carries the influence of inertia, the
+$bs$ term that of damping, and the $k$ term that of the spring's restoring
+action.
+A transfer function is an input-output relation with the initially stored
+energy set to zero (zero-state), and it is worth remembering that the same
+physical device presents different transfer functions depending on what is
+chosen as input and output.
+
+Here $s$ is not a mere letter of the alphabet but a complex variable that
+encodes the character of the time response, usually thought of as
+$s=\sigma+\jj\omega$.
+$\sigma$ relates to how fast the response grows or decays, and $\omega$ to
+how fast it oscillates.
+This does not mean that physical inputs are literally complex numbers; it is
+a representation that lets decay and oscillation be computed together
+inside one symbol.
+
+\subsection{Reading the frequency response}
+
+Feed a stable LTI system the sinusoidal input $u(t)=A\cos(\omega t)$, and
+the steady-state output has the same frequency, with only its magnitude and
+phase changed:
+\begin{equation}
+  y_{\mathrm{ss}}(t)
+  = A\,|H(\jj\omega)|\cos\!\left(\omega t + \angle H(\jj\omega)\right).
+\end{equation}
+$|H(\jj\omega)|$ and $\angle H(\jj\omega)$ are the magnitude and angle of
+the complex number $H(\jj\omega)$.
+Plot a complex number $a+\jj b$ as the point $(a,b)$ in the plane: its
+magnitude is the distance from the origin, $\sqrt{a^2+b^2}$, and its angle
+is the rotation measured from the positive real axis.
+For example, if at some frequency $H(\jj\omega)=1-\jj$, then the magnitude
+is $\sqrt{1^2+(-1)^2}=\sqrt{2}$ and the angle is $-45^\circ$, so the output
+amplitude is about 1.41 times the input and the phase lags by $45^\circ$.
+In other words, the single object $H(\jj\omega)$, obtained by substituting
+$s=\jj\omega$, tells us at each frequency how much the system amplifies or
+attenuates and how late it responds.
+For the relation between poles and response shape, convolution, the
+final-value theorem, and other material abbreviated here, see the extended
+manuscript.
+
+We are now ready to apply this grammar to its first physical object: in the
+next section we transform the equations of the RLC circuit --- resistor,
+inductor, capacitor --- by the same procedure and see how electrical
+impedance is read from the result.
