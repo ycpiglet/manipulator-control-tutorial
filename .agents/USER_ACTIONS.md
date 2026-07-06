@@ -12,6 +12,14 @@ Updated: 2026-07-05 (KST)
 | A2 | IEEE CSM Editor-in-Chief | 임피던스 튜토리얼 기사 사전 문의(pre-submission inquiry) | 초안 ↓ (영문) |
 | A3 | JOSE 편집팀(필요 시) | 공개 이력 요건(레포 공개 2026-06-26) 적용 여부 | 초안 ↓ (영문) — 우선 공식 문서 재확인 후 필요 시만 발송 |
 
+## P. 포트폴리오 패키지 (Track C — 전부 무료, 3분 내외)
+
+| # | 항목 | 방법 | 효과 |
+|---|---|---|---|
+| P1 | Zenodo DOI 발급 | zenodo.org GitHub 로그인 → 레포 토글 ON → GitHub 릴리스 생성 (`.agents/PORTFOLIO_PACKAGE.md` 절차) | 레포가 인용 가능한 영구 학술 산출물이 됨. DOI 알려주면 배지·CITATION.cff 반영 대행 |
+| P2 | 블로그 게시 | `outreach/blog_failure_gallery_ko.md` 를 velog/tistory/GitHub Pages 등에 게시 | 초보자 도달 + "설명 능력" 포트폴리오. 플랫폼 정하면 포맷 조정 대행 |
+| P3 (선택) | engrXiv/EdArXiv 프리프린트 | U3(한국어) 또는 U5(영문) 완성본 업로드 (무료 DOI) | 무게이트 "첫 단독 논문" 경험 |
+
 ## B. 결제·가입 필요
 
 | # | 항목 | 시점 |

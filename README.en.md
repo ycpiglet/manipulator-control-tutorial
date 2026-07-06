@@ -94,6 +94,7 @@ CI (GitHub Actions) enforces lint, the full test suite with a coverage floor
 
 ## Citing
 
-If you use these labs in teaching or research, please cite this repository
-(a JOSE submission is in preparation; a DOI will be added here once
-available).
+If you use these labs in teaching or research, please cite this repository.
+Machine-readable metadata is in [`CITATION.cff`](CITATION.cff) — GitHub shows
+a "Cite this repository" button from it. A JOSE submission is in preparation
+and an archival Zenodo DOI will be added here once the first release is cut.
