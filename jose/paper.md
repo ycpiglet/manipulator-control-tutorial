@@ -7,8 +7,8 @@ tags:
   - MuJoCo
   - simulation
 authors:
-  - name: TODO-AUTHOR-NAME (see .agents/USER_ACTIONS.md C4)
-    orcid: TODO-ORCID
+  - name: Youncheol Jung
+    orcid: 0009-0000-5282-881X
     affiliation: 1
 affiliations:
   - name: Independent Researcher, Republic of Korea
