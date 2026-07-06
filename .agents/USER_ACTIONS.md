@@ -28,46 +28,91 @@ Updated: 2026-07-05 (KST)
 | C3 | README 언어 구조 | 한국어 README.md 유지 + README.en.md 병행 (2026-07-05 적용됨) |
 | C4 | JOSE 논문 저자 표기 | `jose/paper.md`의 TODO-AUTHOR-NAME / TODO-ORCID — 출판용 실명(영문)과 ORCID 필요. 없으면 ORCID 무료 발급(orcid.org) 권장 |
 
-## 발송 초안
+## 발송 최종본 (2026-07-06 다듬음 — 복사해서 그대로 발송 가능)
 
-### A1. KROS 편집위 문의 (국문)
+### A1. KROS 편집국 → **journal@kros.org** (검증됨: journal.kros.org 안내)
 
-> 제목: 총설(리뷰) 논문 투고 가능 여부 및 독립연구자 투고 절차 문의
+> **제목: [투고 전 문의] 총설(리뷰) 논문 게재 가능 여부 및 독립연구자 투고 절차**
 >
-> 안녕하세요. 임피던스 제어를 초보자 눈높이에서 다루는 한국어
-> 튜토리얼/총설 원고(로봇 기초–임피던스 이론–공개 MuJoCo 교육 시뮬레이터
-> 연동)를 준비 중인 연구자입니다. 세 가지를 여쭙습니다.
-> 1. 로봇학회 논문지에 총설/튜토리얼 성격의 논문 유형이 접수 가능한지,
->    가능하다면 권장 분량이 있는지요.
-> 2. 기관 소속이 없는 독립연구자의 소속 표기는 어떻게 처리하면 되는지요.
-> 3. 투고자·공동저자의 회원 요건과 심사료·게재료 일정을 안내 부탁드립니다.
-> 감사합니다.
-
-### A2. IEEE CSM 사전 문의 (영문)
-
-> Subject: Pre-submission inquiry — tutorial feature on impedance and
-> impedance control for newcomers
+> 안녕하세요, 한국로봇학회 논문지 편집국 담당자님.
 >
-> Dear Editor, I am preparing a tutorial-style feature that walks
-> non-experts from the historical origins of impedance (Heaviside,
-> telegrapher's equations) through mechanical impedance to modern impedance
-> control, paired with an open-source MuJoCo teaching lab (tested, CI,
-> Apache-2.0). Before preparing a full manuscript to CSM's magazine format,
-> I would appreciate your guidance on whether this scope fits CSM's
-> tutorial mission, and any length/structure constraints you would advise.
-> The Korean-language full draft and the simulator are available for
-> inspection. Thank you.
-
-### A3. JOSE 문의 (영문, 필요 시)
-
-> Subject: Eligibility question — public development history requirement
+> 임피던스 및 임피던스 제어를 초보자 눈높이에서 다루는 한국어 총설 원고를
+> 준비 중인 독립 연구자 정윤철입니다. 원고는 임피던스의 역사적 배경부터
+> 전기·기계 임피던스의 기초를 유도 생략 없이 정리한 1부(약 10쪽)로, 공개
+> MuJoCo 교육용 시뮬레이터(테스트·CI 포함, Apache-2.0)와 연동되어 모든 수치
+> 예제를 독자가 재현할 수 있도록 구성했습니다.
 >
-> Dear JOSE editors, I plan to submit an educational MuJoCo-based robotics
-> control lab (four labs, pytest+CI, Apache-2.0 code). The repository was
-> made public on 2026-06-26 after private development. Does JOSE apply a
-> minimum public-history requirement similar to JOSS's 2026 policy, or is
-> the submission evaluated on the materials as they stand? Thank you.
+> 투고 전에 세 가지를 여쭙고자 합니다.
+>
+> 1. 로봇학회 논문지에 총설/튜토리얼 성격의 논문 유형이 접수 가능한지요.
+>    가능하다면 권장 분량이나 별도 규정이 있는지 안내 부탁드립니다.
+> 2. 기관 소속이 없는 독립 연구자의 소속 표기는 어떻게 처리하면 되는지요.
+> 3. 투고자 회원 가입 요건과 심사료·게재료의 금액 및 납부 시점을 안내
+>    부탁드립니다.
+>
+> 참고로 전체 유도를 담은 확장판 원고와 시뮬레이터는 공개 저장소
+> (https://github.com/ycpiglet/manipulator-control-tutorial)에서 확인하실 수
+> 있습니다. 감사합니다.
+>
+> 정윤철 드림
+> 독립 연구자 | ORCID: 0009-0000-5282-881X | ycpiglet@gmail.com
+
+### A2. IEEE CSM 사전 문의 → EIC **Anuradha Annaswamy, aanna@mit.edu** (검증됨: ieeecss.org 편집위 명단; 정식 투고는 css.paperplaza.net)
+
+> **Subject: Pre-submission inquiry — tutorial feature on impedance, from telegraph lines to robot contact control**
+>
+> Dear Professor Annaswamy,
+>
+> I am an independent researcher preparing a tutorial-style feature aimed at
+> CSM's mission of introducing non-experts to a field. The article traces
+> impedance from its historical origin (Heaviside and the distortion problem
+> of long telegraph lines) through electrical and mechanical impedance to
+> modern robot impedance control, with two distinguishing features: (1) no
+> derivation step is skipped — every equation chain is followable by a
+> first-year student, and (2) every numeric example is reproducible in an
+> accompanying open-source MuJoCo teaching laboratory (tested, CI,
+> Apache-2.0), including a "failure gallery" that safely reproduces real
+> hardware accidents caused by misconfigured stiffness.
+>
+> Before preparing a manuscript to CSM's magazine format, I would greatly
+> appreciate your guidance on whether this scope fits CSM, and any length or
+> structural constraints you would advise. The laboratory and a full-length
+> Korean draft are available for inspection at
+> https://github.com/ycpiglet/manipulator-control-tutorial.
+>
+> Thank you for your time.
+>
+> Youncheol Jung
+> Independent Researcher, Republic of Korea | ORCID: 0009-0000-5282-881X
+
+### A3. JOSE 정책 확인 → **admin@theoj.org** (검증됨: jose.theoj.org/about; 대안: github.com/openjournals/jose 이슈)
+
+> **Subject: Eligibility question — public development history requirement**
+>
+> Dear JOSE editors,
+>
+> I plan to submit an educational MuJoCo-based robot-control laboratory
+> (four graduated labs, pytest+CI, Apache-2.0 code, CC-BY-4.0 content,
+> per-config learning guides enforced by the test suite). The repository
+> (https://github.com/ycpiglet/manipulator-control-tutorial) was developed
+> privately and made public on 2026-06-26. Does JOSE apply a minimum
+> public-history requirement similar to JOSS's recent policy, or is the
+> submission evaluated on the materials as they stand? Thank you.
+>
+> Youncheol Jung
+> Independent Researcher, Republic of Korea | ORCID: 0009-0000-5282-881X
+
+### 발송 순서 권고
+
+A3(JOSE)를 먼저 — 회신이 오면 U1 투고가 그날 가능. A1(KROS)은 같은 날 발송
+권장(회신까지 수 주 걸릴 수 있음). A2(CSM)는 여유 있게 — U5 착수는 10월.
 
 ## 처리 로그
 
-- (비어 있음 — 발송/결정 시 여기에 기록)
+- 2026-07-06: C4 해소 — Youncheol Jung / 정윤철 / ORCID 0009-0000-5282-881X /
+  Independent Researcher. jose/paper.md, u3_main.tex 반영.
+- 2026-07-06: C1 확정 — SCIE 불요, 무료 우선. U5 1차 = IEEE CSM(무료),
+  MDPI는 승인 후 최후 옵션.
+- 2026-07-06: C2 확정 — 익명 유지.
+- 2026-07-06: B2 갱신 — MDPI APC는 무료 경로 소진 후에만 재상정.
+- 2026-07-06: A1~A3 발송문 다듬기 요청 접수 — 채널 조사 후 최종본 제공 예정.
