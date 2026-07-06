@@ -18,6 +18,25 @@ Iteratively improve the Korean review/tutorial paper on impedance, impedance con
 
 ## Completed Since Last Snapshot
 
+### 2026-07-07 Night Autonomous Run (PRs #22-#25) + Track C
+
+While the owner slept, the loop exhausted all work not requiring user
+input: author identity applied everywhere (Youncheol Jung, ORCID
+0009-0000-5282-881X — C4 resolved); free-first cost re-baseline (CSM
+primary for U5, MDPI demoted to approved-only); send-ready inquiry
+package with web-verified channels (journal@kros.org / CSM EIC / JOSE);
+weekly deadline-watch scheduled task; Track C zero-cost portfolio
+(CITATION.cff, publish-ready KR+EN failure-gallery blog posts,
+PORTFOLIO_PACKAGE.md with verified free venues — engrXiv/EdArXiv/Zenodo;
+Papers-with-Code defunct warning); U7 KRoC 1-page short-paper draft
+(simulator axis, compiles 0/0); U5-EN part 1 English review (11 pages,
+0 warnings, fidelity reviewer Turing: CLEAN); KROS template discovered to
+be Word/HWP behind author login → U3 final step re-scoped to DOCX
+conversion (user action A4). All merges CI-green.
+
+Critical path is now entirely user actions (A1-A4, P1-P3, B1) and
+external events (KRoC CFP, inquiry replies).
+
 ### 2026-07-06 MILESTONE: Manuscript Definition of Done (M1-M7) complete
 
 Across PRs #7-#15 (all CI-green merges), the autonomous two-track loop
