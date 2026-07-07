@@ -9,6 +9,63 @@
 
 ---
 
+## 🚀 빠른 시작
+
+**[`START_HERE.cmd`](START_HERE.cmd) 파일을 더블클릭하세요.** 메뉴가 열리면 번호를 골라 4개 시뮬레이터를 모두 체험할 수 있습니다. (첫 실행은 자동 설치 때문에 몇 분 걸릴 수 있습니다. 필요 조건은 Python 3.10 이상뿐입니다.)
+
+이게 전부입니다. 아래 표는 특정 상황을 **직접** 골라 보고 싶을 때만 참고하세요.
+
+### 상황별 시나리오 (메뉴에서 골라도 되고, 표의 파일명으로 직접 실행해도 됩니다)
+
+메뉴 대신 직접 실행하려면 터미널에서
+`.venv\Scripts\python.exe -m mclab run <랩> --config configs\<랩폴더>\<파일>.yaml --viewer --plot` 형식으로 실행합니다.
+
+**Lab01 — 질량-스프링-댐퍼 (진동의 기초)**
+
+| 보고 싶은 것 | config 파일 |
+|---|---|
+| 기본 응답 | `default` |
+| 진동이 오래 남을 때 (감쇠 부족) | `underdamped` |
+| 둔하고 느릴 때 (과감쇠) | `over_damped` |
+| 강성 세기 비교 | `high_stiffness` / `low_stiffness` |
+| 직접 밀고 당기며 튜닝 | `interactive_pull` |
+| ⚠️ 강성 오설정으로 로봇이 튀어나가는 사고 | `f2_launch_high_energy` ↔ `f2_launch_precheck` |
+
+**Lab02 — PID 제어**
+
+| 보고 싶은 것 | config 파일 |
+|---|---|
+| 기본 | `default` |
+| P 게인 낮음/높음 | `p_low_gain` / `p_high_gain` |
+| D로 진동 잡기 | `pd_damped` |
+| 구동기 포화 | `saturation_limit` |
+| 적분 와인드업과 방지 | `pid_with_windup` / `pid_anti_windup` |
+| 센서 노이즈 / 제어 지연 | `measurement_noise` / `control_delay` |
+| 직접 외란 주며 튜닝 | `interactive_disturbance` |
+
+**Lab03 — 2축 팔 (기구학·궤적)**
+
+| 보고 싶은 것 | config 파일 |
+|---|---|
+| 관절공간 vs 작업공간 제어 | `joint_space_2dof` / `task_space_2dof` |
+| 궤적 종류 비교 | `step` / `trapezoidal` / `s_curve` / `minimum_jerk` |
+| 특이점과 DLS 완화 | `singularity_2dof` / `dls_singularity_2dof` |
+| 직접 조작 | `interactive_2dof` |
+
+**Lab04 — 7축 Panda (임피던스·접촉)**
+
+| 보고 싶은 것 | config 파일 |
+|---|---|
+| 자세 유지 | `neutral_hold` |
+| 데카르트 도달 (부드럽게/단단하게) | `cartesian_soft` / `cartesian_stiff` |
+| 가상 벽 임피던스 접촉 | `impedance_wall` |
+| 벽 강성/감쇠 비교 | `wall_soft` / `wall_stiff`, `wall_low_damping` / `wall_high_damping` |
+| 직접 벽 밀기 | `interactive_virtual_wall` |
+
+> 각 실행은 그래프(`plots/*.png`)와 HTML 리포트를 남기고, 리포트에는 "무엇을 먼저 볼지" 안내가 붙습니다. 메뉴에는 위 표에 없는 전체 시나리오와 자동 비교 실험도 들어 있습니다.
+
+---
+
 ## Recommended repository name
 
 ```text

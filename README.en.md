@@ -37,7 +37,66 @@ with `v ≈ δ√(k/m)`, then watch it happen), and `f2_launch_precheck.yaml`
 shows the same displacement made safe. The companion manuscript explains the
 physics behind each case.
 
-## Install and run
+## Quick start
+
+**Double-click [`START_HERE.cmd`](START_HERE.cmd)** (Windows). A menu opens;
+pick a number to try any of the four simulators. The first launch auto-installs
+what it needs (a few minutes) — the only prerequisite is Python ≥ 3.10.
+
+That's it. The table below is only for picking a specific scenario **directly**.
+
+### Scenarios by situation
+
+Pick from the menu, or run a file directly:
+`python -m mclab run <lab> --config configs/<lab_folder>/<file>.yaml --viewer --plot`
+
+**Lab01 — mass-spring-damper (second-order basics)**
+
+| What you want to see | config |
+|---|---|
+| Baseline response | `default` |
+| Lingering oscillation (too little damping) | `underdamped` |
+| Sluggish return (over-damped) | `over_damped` |
+| Stiffness comparison | `high_stiffness` / `low_stiffness` |
+| Push/pull and tune live | `interactive_pull` |
+| ⚠️ The stiffness-misconfig launch accident | `f2_launch_high_energy` ↔ `f2_launch_precheck` |
+
+**Lab02 — PID control**
+
+| What you want to see | config |
+|---|---|
+| Baseline | `default` |
+| Low/high P gain | `p_low_gain` / `p_high_gain` |
+| Calm overshoot with D | `pd_damped` |
+| Actuator saturation | `saturation_limit` |
+| Integral windup and anti-windup | `pid_with_windup` / `pid_anti_windup` |
+| Sensor noise / control delay | `measurement_noise` / `control_delay` |
+| Disturb and tune live | `interactive_disturbance` |
+
+**Lab03 — 2-DOF arm (kinematics & trajectories)**
+
+| What you want to see | config |
+|---|---|
+| Joint- vs task-space control | `joint_space_2dof` / `task_space_2dof` |
+| Trajectory profiles | `step` / `trapezoidal` / `s_curve` / `minimum_jerk` |
+| Singularity and DLS relief | `singularity_2dof` / `dls_singularity_2dof` |
+| Live control | `interactive_2dof` |
+
+**Lab04 — 7-DOF Panda (impedance & contact)**
+
+| What you want to see | config |
+|---|---|
+| Posture hold | `neutral_hold` |
+| Cartesian reach (soft/stiff) | `cartesian_soft` / `cartesian_stiff` |
+| Virtual-wall impedance contact | `impedance_wall` |
+| Wall stiffness/damping comparison | `wall_soft` / `wall_stiff`, `wall_low_damping` / `wall_high_damping` |
+| Push the wall yourself | `interactive_virtual_wall` |
+
+Every run saves plots (`plots/*.png`) and an HTML report that tells you what to
+look at first. The menu also contains full scenario lists and automatic
+comparison experiments beyond this table.
+
+## Manual install (advanced)
 
 Requires Python ≥ 3.10.
 
@@ -46,23 +105,11 @@ git clone https://github.com/ycpiglet/manipulator-control-tutorial.git
 cd manipulator-control-tutorial
 python -m venv .venv
 .venv/Scripts/pip install -e ".[dev]"      # Windows; use .venv/bin/pip on Linux/macOS
+python -m mclab menu                        # same guided launcher as START_HERE.cmd
 ```
 
-Run a lab headless with plots and a report:
-
-```bash
-python -m mclab run lab01 --config configs/lab01_msd/default.yaml --plot
-```
-
-Or open the interactive viewer with live parameter tuning:
-
-```bash
-python -m mclab run lab01 --config configs/lab01_msd/interactive_pull.yaml --viewer --realtime --plot
-```
-
-On Windows, the `run_lab0*.cmd` scripts bootstrap the virtual environment
-automatically (Lab04 also fetches the MuJoCo Menagerie Panda model into
-`third_party/`; see the license note below).
+Lab04 also fetches the MuJoCo Menagerie Panda model into `third_party/`
+(see the license note below).
 
 ## Verify your installation
 
