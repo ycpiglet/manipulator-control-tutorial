@@ -61,6 +61,16 @@ Next recommended action:
   registered yet, the watch returns "no checks reported", and the chain
   merges unguarded (observed 2026-07-06, PR #9 — harmless but wrong).
   Verify checks are listed, then watch, then merge.
+- NEVER chain `gh pr merge` in the same command as `gh pr checks --watch`.
+  `--watch` exits 0 when checks *finish*, not when they *pass*, so a chained
+  merge fires even on failure — this merged a red PR to main (2026-07-11,
+  PR #29: a launcher test failed and main went red). Watch, read the final
+  pass/fail for every job, and only then issue `gh pr merge` as a separate
+  command. This repo has no branch protection, so `gh pr merge` will happily
+  merge a red PR — the green check is the agent's responsibility.
+- When adding or editing a `*.cmd` launcher, run `pytest
+  tests/test_launch_scripts.py` locally: it requires the exact single-line
+  guard `if errorlevel 1 exit /b %errorlevel%` and pure-ASCII content.
 - `gh pr merge --delete-branch` leaves the working tree on `main`. The very
   first command of the next iteration must be `git checkout -b <branch>`;
   committing while still on main forces a branch-move + hard-reset repair
