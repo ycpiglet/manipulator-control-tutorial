@@ -202,6 +202,22 @@ def build_parser() -> argparse.ArgumentParser:
     index_parser.add_argument("--output-dir", default="outputs", help="Outputs root directory.")
     index_parser.add_argument("--open", action="store_true", help="Open the generated index after completion.")
 
+    clean_parser = subparsers.add_parser(
+        "clean", help="Delete old run folders under outputs/ to reclaim disk space."
+    )
+    clean_parser.add_argument("--output-dir", default="outputs", help="Outputs root directory.")
+    clean_parser.add_argument(
+        "--keep",
+        type=int,
+        default=20,
+        help="Keep the N most recent run folders (default: 20). Use 0 to remove all.",
+    )
+    clean_parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="Delete without the confirmation prompt.",
+    )
+
     run_parser = subparsers.add_parser("run", help="Run a lab.")
     run_parser.add_argument("lab_name", choices=sorted(LABS), help="Lab to run.")
     run_parser.add_argument("--config", required=True, help="YAML config path.")
@@ -298,6 +314,9 @@ def main(argv: list[str] | None = None) -> int:
         if args.open:
             _open_path(index_path)
         return 0
+
+    if args.command == "clean":
+        return _clean_outputs(Path(args.output_dir), keep=args.keep, assume_yes=args.yes)
 
     if args.command == "run":
         _validate_run_args(parser, args)
@@ -1128,6 +1147,39 @@ def _plot_artifact_lines(output_path: Path, directory_name: str, label: str) -> 
         return []
     first_plot = plots[0]
     return [f"{label}: {plot_dir} ({len(plots)} PNG; first: {first_plot.name})"]
+
+
+def _clean_outputs(output_dir: Path, *, keep: int, assume_yes: bool) -> int:
+    """Delete old run folders under outputs/, keeping the N most recent."""
+    import shutil
+
+    if not output_dir.exists():
+        print(f"Nothing to clean: {output_dir} does not exist.")
+        return 0
+    # Run folders are timestamp-named directories; the aggregate index.html and
+    # any non-directory entries are left alone. Newest-first by name (timestamps
+    # sort chronologically) so --keep retains the most recent runs.
+    runs = sorted(
+        (p for p in output_dir.iterdir() if p.is_dir()),
+        key=lambda p: p.name,
+        reverse=True,
+    )
+    to_remove = runs[max(keep, 0):]
+    if not to_remove:
+        print(f"Nothing to remove: {len(runs)} run folder(s), keeping {keep}.")
+        return 0
+    print(f"Found {len(runs)} run folder(s) in {output_dir}; removing {len(to_remove)}, keeping {min(keep, len(runs))}.")
+    if not assume_yes:
+        reply = input("Delete these run folders? [y/N] ").strip().lower()
+        if reply not in {"y", "yes"}:
+            print("Cancelled.")
+            return 0
+    removed = 0
+    for path in to_remove:
+        shutil.rmtree(path, ignore_errors=True)
+        removed += 1
+    print(f"Removed {removed} run folder(s).")
+    return 0
 
 
 def _open_path(path: Path) -> None:
