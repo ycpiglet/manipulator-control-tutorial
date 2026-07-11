@@ -1277,3 +1277,31 @@ class CliImportTests(unittest.TestCase):
                 "--viewer --realtime --pause-at-end --plot --open-report",
                 printed,
             )
+
+
+class CleanCommandTests(unittest.TestCase):
+    def test_clean_keeps_most_recent_and_removes_the_rest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "outputs"
+            root.mkdir()
+            names = [f"2026070{i}_120000_lab01_msd" for i in range(1, 8)]
+            for name in names:
+                (root / name).mkdir()
+                (root / name / "summary.json").write_text("{}", encoding="utf-8")
+            (root / "index.html").write_text("<html></html>", encoding="utf-8")
+
+            output = StringIO()
+            with redirect_stdout(output):
+                self.assertEqual(main(["clean", "--output-dir", str(root), "--keep", "3", "--yes"]), 0)
+
+            remaining = sorted(p.name for p in root.iterdir() if p.is_dir())
+            self.assertEqual(remaining, sorted(names[-3:]))
+            self.assertTrue((root / "index.html").exists())
+
+    def test_clean_missing_dir_is_noop(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            missing = Path(tmp) / "nope"
+            output = StringIO()
+            with redirect_stdout(output):
+                self.assertEqual(main(["clean", "--output-dir", str(missing), "--yes"]), 0)
+            self.assertIn("does not exist", output.getvalue())

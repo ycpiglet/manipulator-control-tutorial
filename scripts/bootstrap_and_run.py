@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 from datetime import datetime
@@ -115,7 +116,20 @@ def ensure_menagerie() -> None:
     if (MENAGERIE / "franka_emika_panda" / "scene.xml").exists():
         return
     target = str(MENAGERIE).replace("\\", "/")
-    run(["git", "clone", "--depth", "1", "https://github.com/google-deepmind/mujoco_menagerie.git", target])
+    url = "https://github.com/google-deepmind/mujoco_menagerie.git"
+    # Only the Franka Panda model is used. A full clone is ~2.3 GB; a sparse
+    # checkout of just that one folder is ~36 MB, so bootstrap stays small and
+    # fast. Fall back to a plain shallow clone if sparse checkout is unavailable.
+    try:
+        run(["git", "clone", "--depth", "1", "--filter=blob:none", "--sparse", url, target])
+        run(["git", "-C", target, "sparse-checkout", "set", "franka_emika_panda"])
+        if not (MENAGERIE / "franka_emika_panda" / "scene.xml").exists():
+            raise RuntimeError("sparse checkout did not materialize the Panda model")
+    except (subprocess.CalledProcessError, RuntimeError):
+        # Older git or a partial-clone-hostile mirror: fall back to full shallow clone.
+        if MENAGERIE.exists():
+            shutil.rmtree(MENAGERIE, ignore_errors=True)
+        run(["git", "clone", "--depth", "1", url, target])
 
 
 def run(command: list[str]) -> None:

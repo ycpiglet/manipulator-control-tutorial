@@ -64,6 +64,17 @@
 
 > 각 실행은 그래프(`plots/*.png`)와 HTML 리포트를 남기고, 리포트에는 "무엇을 먼저 볼지" 안내가 붙습니다. 메뉴에는 위 표에 없는 전체 시나리오와 자동 비교 실험도 들어 있습니다.
 
+### 디스크 정리 (실행 결과가 쌓였을 때)
+
+실행할 때마다 `outputs/`에 로그·그래프·리포트가 쌓입니다. 오래된 실행 결과를 지워 공간을 되찾으려면:
+
+```
+.venv\Scripts\python.exe -m mclab clean            # 최근 20개만 남기고 정리 (확인 후 삭제)
+.venv\Scripts\python.exe -m mclab clean --keep 5   # 최근 5개만 남기기
+```
+
+> 참고: 첫 설치 시 Franka Panda 모델만 내려받습니다(약 44MB). `outputs/`와 `third_party/`, `.venv/`는 git에 포함되지 않는 로컬 폴더라, 지워도 다음 실행에서 필요한 만큼 다시 만들어집니다.
+
 ---
 
 ## Recommended repository name
