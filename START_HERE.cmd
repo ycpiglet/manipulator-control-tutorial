@@ -16,13 +16,9 @@ goto run
 :setup
 echo [Setup] First run: installing what the labs need...
 python "scripts\bootstrap_and_run.py" --setup-only
-if errorlevel 1 (
-  echo.
-  echo [Error] Setup failed. Please check the message above.
-  echo Make sure Python 3.10 or newer is installed first.
-  pause
-  exit /b %errorlevel%
-)
+if errorlevel 1 echo [Error] Setup failed. Make sure Python 3.10 or newer is installed, then try again.
+if errorlevel 1 pause
+if errorlevel 1 exit /b %errorlevel%
 
 :run
 ".venv\Scripts\python.exe" -m mclab menu
