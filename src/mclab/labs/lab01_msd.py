@@ -59,12 +59,13 @@ def run(
     plot_selection: PlotSelection = None,
     seed: int | None = None,
 ) -> Path:
-    del seed
     lab_name = "lab01_msd"
     model_path = config.get("model_path", "models/lab01_msd/scene.xml")
     mujoco, model, data = load_model_and_data(model_path)
     handles = configure_slider_plant(mujoco, model, data, config)
-    logger = RunLogger(lab_name, config, config_path=config_path, output_dir=output_dir)
+    logger = RunLogger(
+        lab_name, config, config_path=config_path, output_dir=output_dir, seed=seed
+    )
 
     sim_time = float(config.get("sim_time", 5.0))
     mass = float(config.get("mass", 1.0))
@@ -178,6 +179,15 @@ def run(
                 potential_energy=potential,
                 total_energy=total,
             )
+            logger.record_physics_state(
+                data,
+                semantic={
+                    "position": position,
+                    "velocity": velocity,
+                    "force": force,
+                    "reference_position": spring_reference,
+                },
+            )
             update_slider_viewer_guides(
                 mujoco,
                 viewer_handle,
@@ -215,9 +225,11 @@ def run(
             playback_control=playback_control,
         ),
         learner_tuned_config=learner_tuned_config(config, _learner_tuned_updates(live_tuning)),
+        run_status="completed" if completed and data.time >= sim_time else "stopped",
     )
     if plot:
         _save_plots(output_path, logger.rows, plot_selection or config.get("plots"))
+        logger.finalize_artifacts()
     return resolve_project_path(output_path)
 
 

@@ -63,7 +63,6 @@ def run(
     plot_selection: PlotSelection = None,
     seed: int | None = None,
 ) -> Path:
-    del seed
     lab_name = "lab04_panda"
     model_path = config.get(
         "model_path",
@@ -73,7 +72,9 @@ def run(
     _configure_timestep(model, config)
 
     handles = _build_handles(mujoco, model, config)
-    logger = RunLogger(lab_name, config, config_path=config_path, output_dir=output_dir)
+    logger = RunLogger(
+        lab_name, config, config_path=config_path, output_dir=output_dir, seed=seed
+    )
 
     sim_time = float(config.get("sim_time", 5.0))
     home_q = _float_list(config.get("home_q", DEFAULT_HOME_Q), 7)
@@ -298,6 +299,19 @@ def run(
                     float(dict(config.get("cartesian_target", {})).get("gain", 1.0)),
                 ),
             )
+            logger.record_physics_state(
+                data,
+                semantic={
+                    "hand_x": ee_position[0],
+                    "hand_y": ee_position[1],
+                    "hand_z": ee_position[2],
+                    "target_x": target_x_ee[0],
+                    "target_y": target_x_ee[1],
+                    "target_z": target_x_ee[2],
+                    "wall_x": wall_x,
+                    "wall_force_x": wall_force[0],
+                },
+            )
             _update_viewer_guides(
                 mujoco,
                 viewer_handle,
@@ -342,9 +356,11 @@ def run(
             config,
             _learner_tuned_updates(config, live_tuning, target_offset, cartesian_target_nudge=cartesian_target_nudge),
         ),
+        run_status="completed" if completed and data.time >= sim_time else "stopped",
     )
     if plot:
         _save_plots(output_path, logger.rows, plot_selection or config.get("plots"))
+        logger.finalize_artifacts()
     return resolve_project_path(output_path)
 
 

@@ -58,6 +58,7 @@ def reset_slider_plant_state(
     *,
     control_force: float = 0.0,
 ) -> None:
+    data.time = 0.0
     data.qpos[handles.qpos_adr] = float(config.get("initial_position", 0.0))
     data.qvel[handles.dof_adr] = float(config.get("initial_velocity", 0.0))
     data.ctrl[handles.actuator_id] = float(control_force)

@@ -15,7 +15,7 @@ interaction:
   key_force: true
   panel: true
   live_tuning: true
-  force: 80.0
+  force: 12.0
   duration: 0.35
   tuning_presets:
     - label: Lightly damped

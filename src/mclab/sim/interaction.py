@@ -95,6 +95,13 @@ class InteractionLog:
         with self._lock:
             return [dict(event) for event in self._events]
 
+    def clear(self) -> None:
+        """Discard evidence when an experiment recording is restarted."""
+
+        with self._lock:
+            self._events.clear()
+            self._current_time = None
+
     def summary(self) -> dict[str, Any]:
         events = self.events()
         if not events:

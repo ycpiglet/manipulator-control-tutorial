@@ -1,0 +1,88 @@
+name: Desktop app smoke and unsigned builds
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    name: Unsigned development build (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2025, ubuntu-24.04, macos-15]
+    runs-on: ${{ matrix.os }}
+    env:
+      QT_QPA_PLATFORM: offscreen
+      MPLBACKEND: Agg
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install desktop, test, and packaging dependencies
+        run: python -m pip install -e ".[app,dev,package]"
+
+      - name: Cache pinned Panda assets
+        id: panda-cache
+        uses: actions/cache@v4
+        with:
+          path: third_party/mujoco_menagerie/franka_emika_panda
+          key: panda-71f066ad-${{ runner.os }}
+
+      - name: Install verified Panda assets
+        if: steps.panda-cache.outputs.cache-hit != 'true'
+        run: python -m mclab assets install
+
+      - name: Desktop catalog and Qt offscreen smoke
+        run: python -m mclab app --self-test --lang en
+
+      - name: Lab01 headless replay artifact smoke
+        run: >-
+          python -m mclab run lab01
+          --config configs/lab01_msd/default.yaml
+          --headless --output-dir outputs/ci_lab01
+
+      - name: Report responsive and axe audit
+        if: runner.os == 'Linux'
+        run: >-
+          python scripts/audit_report_ui.py
+          --report run=outputs/ci_lab01/report.html
+          --report index=outputs/index.html
+          --output /tmp/mclab-report-ui-audit
+
+      - name: Desktop foundation tests
+        run: python -m pytest -q tests/test_application.py
+
+      - name: Build unsigned one-folder app
+        run: python scripts/build_desktop.py --clean
+
+      - name: Verify packaged app and diagnostics
+        shell: bash
+        run: |
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            app="dist/MCLab/MCLab.exe"
+          else
+            app="dist/MCLab/MCLab"
+          fi
+          "$app" app --self-test --lang en
+          "$app" doctor --json
+
+      - name: Mark build as unsigned development artifact
+        shell: bash
+        run: echo "UNSIGNED DEVELOPMENT BUILD - NOT FOR PRODUCTION" > dist/MCLab/UNSIGNED-DEVELOPMENT-BUILD.txt
+
+      - name: Upload unsigned development bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: MCLab-${{ runner.os }}-unsigned-development
+          path: dist/MCLab
+          retention-days: 7

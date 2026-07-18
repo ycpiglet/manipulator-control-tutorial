@@ -3,14 +3,18 @@
 from __future__ import annotations
 
 import argparse
+import json
+import os
 import subprocess
 import sys
+import tempfile
 from collections.abc import Callable
 from pathlib import Path
 
+from .application.batch_runs import BATCH_PROGRESS_PREFIX
 from .batch import ALL_BATCH_NAME, BATCH_SETS, run_all_batches, run_batch
-from .config import load_config
-from .doctor import doctor_exit_code, format_doctor_report, run_doctor_checks
+from .config import default_outputs_root, is_frozen_bundle, load_config
+from .doctor import doctor_exit_code, doctor_report_json, format_doctor_report, run_doctor_checks
 from .learner_menu import (
     BATCH_ACTIONS,
     BatchMenuAction,
@@ -69,7 +73,6 @@ from .learner_menu import (
     learning_path_progress_text,
     learning_path_summary_text,
     learning_path_target,
-    main as learner_menu_main,
     next_learning_path_step,
     next_review_output,
     next_review_status_text,
@@ -105,6 +108,7 @@ LABS: dict[str, LabRunner] = {
 
 
 def build_parser() -> argparse.ArgumentParser:
+    default_outputs = str(default_outputs_root()) if is_frozen_bundle() else "outputs"
     parser = argparse.ArgumentParser(
         prog="mclab",
         description="MuJoCo Manipulator Control Lab command-line interface.",
@@ -126,14 +130,61 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command")
 
     subparsers.add_parser("list", help="List available labs.")
-    subparsers.add_parser("menu", help="Open the learner launcher menu.")
-    subparsers.add_parser("doctor", help="Check local setup, packages, configs, assets, and outputs.")
+    subparsers.add_parser("menu", help="Open the integrated MCLab desktop app.")
+    app_parser = subparsers.add_parser("app", help="Open the integrated MCLab desktop app.")
+    app_parser.add_argument(
+        "--lang", choices=("ko", "en"), help="UI language; defaults to the OS locale."
+    )
+    app_parser.add_argument(
+        "--scenario", help="Stable scenario ID to select, for example lab01.interactive-pull."
+    )
+    app_parser.add_argument(
+        "--safe-mode", action="store_true", help="Disable GPU scene rendering for recovery."
+    )
+    app_parser.add_argument(
+        "--self-test",
+        action="store_true",
+        help="Check app imports and catalog integrity, then exit.",
+    )
+
+    replay_parser = subparsers.add_parser(
+        "replay", help="Replay saved MuJoCo states without recomputing physics."
+    )
+    replay_parser.add_argument(
+        "run_dir", help="Saved run folder containing replay.npz and manifest.json."
+    )
+    replay_parser.add_argument(
+        "--lang", choices=("ko", "en"), help="UI language; defaults to the OS locale."
+    )
+    replay_parser.add_argument(
+        "--safe-mode", action="store_true", help="Disable GPU scene rendering for recovery."
+    )
+
+    doctor_parser = subparsers.add_parser(
+        "doctor", help="Check local setup, packages, configs, assets, outputs, and desktop app."
+    )
+    doctor_parser.add_argument(
+        "--json", action="store_true", help="Print machine-readable diagnostic JSON."
+    )
+
+    assets_parser = subparsers.add_parser(
+        "assets", help="Install or inspect pinned third-party assets."
+    )
+    assets_subparsers = assets_parser.add_subparsers(dest="assets_command")
+    assets_install = assets_subparsers.add_parser(
+        "install", help="Install the verified Panda model archive."
+    )
+    assets_install.add_argument(
+        "--force", action="store_true", help="Replace an existing Panda model folder."
+    )
 
     coverage_parser = subparsers.add_parser(
         "coverage",
         help="Show course experience coverage and the next learner command.",
     )
-    coverage_parser.add_argument("--output-dir", default="outputs", help="Outputs root directory.")
+    coverage_parser.add_argument(
+        "--output-dir", default=default_outputs, help="Outputs root directory."
+    )
     coverage_parser.add_argument(
         "--details",
         action="store_true",
@@ -144,23 +195,37 @@ def build_parser() -> argparse.ArgumentParser:
         "path",
         help="Show recommended learning path progress and the next learner command.",
     )
-    path_parser.add_argument("--output-dir", default="outputs", help="Outputs root directory.")
-    path_parser.add_argument("--all", action="store_true", help="Print one status line for every path step.")
+    path_parser.add_argument(
+        "--output-dir", default=default_outputs, help="Outputs root directory."
+    )
+    path_parser.add_argument(
+        "--all", action="store_true", help="Print one status line for every path step."
+    )
 
     next_parser = subparsers.add_parser(
         "next",
         help="Run the next recommended learning path step.",
     )
-    next_parser.add_argument("--output-dir", default="outputs", help="Outputs root directory used to choose the step.")
-    next_parser.add_argument("--preview", action="store_true", help="Print the next step without running it.")
+    next_parser.add_argument(
+        "--output-dir",
+        default=default_outputs,
+        help="Outputs root directory used to choose the step.",
+    )
+    next_parser.add_argument(
+        "--preview", action="store_true", help="Print the next step without running it."
+    )
     next_parser.add_argument("--seed", type=int, help="Random seed for noisy experiments.")
 
     review_parser = subparsers.add_parser(
         "review",
         help="Show the saved-run review queue and next report to inspect.",
     )
-    review_parser.add_argument("--output-dir", default="outputs", help="Outputs root directory.")
-    review_parser.add_argument("--open", action="store_true", help="Open the next pending review report.")
+    review_parser.add_argument(
+        "--output-dir", default=default_outputs, help="Outputs root directory."
+    )
+    review_parser.add_argument(
+        "--open", action="store_true", help="Open the next pending review report."
+    )
     review_parser.add_argument(
         "--limit",
         type=int,
@@ -172,9 +237,15 @@ def build_parser() -> argparse.ArgumentParser:
         "scenarios",
         help="Search learner guided scenarios and print ready-to-run commands.",
     )
-    scenarios_parser.add_argument("query", nargs="*", help="Search terms, for example: wall stiffness.")
-    scenarios_parser.add_argument("--filter", default="all", help="Experience filter such as hands-on, compare, wall.")
-    scenarios_parser.add_argument("--limit", type=int, default=8, help="Maximum matches to print; 0 prints all.")
+    scenarios_parser.add_argument(
+        "query", nargs="*", help="Search terms, for example: wall stiffness."
+    )
+    scenarios_parser.add_argument(
+        "--filter", default="all", help="Experience filter such as hands-on, compare, wall."
+    )
+    scenarios_parser.add_argument(
+        "--limit", type=int, default=8, help="Maximum matches to print; 0 prints all."
+    )
     scenarios_parser.add_argument(
         "--details",
         action="store_true",
@@ -185,27 +256,43 @@ def build_parser() -> argparse.ArgumentParser:
         "params",
         help="Search guided scenarios and print editable parameters, current values, and commands.",
     )
-    params_parser.add_argument("query", nargs="*", help="Search terms, for example: wall stiffness.")
-    params_parser.add_argument("--filter", default="all", help="Experience filter such as hands-on, compare, wall.")
-    params_parser.add_argument("--limit", type=int, default=6, help="Maximum matches to print; 0 prints all.")
-    params_parser.add_argument("--values", type=int, default=8, help="Maximum current YAML values per scenario.")
+    params_parser.add_argument(
+        "query", nargs="*", help="Search terms, for example: wall stiffness."
+    )
+    params_parser.add_argument(
+        "--filter", default="all", help="Experience filter such as hands-on, compare, wall."
+    )
+    params_parser.add_argument(
+        "--limit", type=int, default=6, help="Maximum matches to print; 0 prints all."
+    )
+    params_parser.add_argument(
+        "--values", type=int, default=8, help="Maximum current YAML values per scenario."
+    )
 
     batches_parser = subparsers.add_parser(
         "batches",
         help="Search learner comparison batches and print ready-to-run commands.",
     )
     batches_parser.add_argument("query", nargs="*", help="Search terms, for example: wall damping.")
-    batches_parser.add_argument("--limit", type=int, default=8, help="Maximum matches to print; 0 prints all.")
+    batches_parser.add_argument(
+        "--limit", type=int, default=8, help="Maximum matches to print; 0 prints all."
+    )
     batches_parser.add_argument("--details", action="store_true", help="Include readiness details.")
 
     index_parser = subparsers.add_parser("index", help="Generate the outputs review index.")
-    index_parser.add_argument("--output-dir", default="outputs", help="Outputs root directory.")
-    index_parser.add_argument("--open", action="store_true", help="Open the generated index after completion.")
+    index_parser.add_argument(
+        "--output-dir", default=default_outputs, help="Outputs root directory."
+    )
+    index_parser.add_argument(
+        "--open", action="store_true", help="Open the generated index after completion."
+    )
 
     clean_parser = subparsers.add_parser(
         "clean", help="Delete old run folders under outputs/ to reclaim disk space."
     )
-    clean_parser.add_argument("--output-dir", default="outputs", help="Outputs root directory.")
+    clean_parser.add_argument(
+        "--output-dir", default=default_outputs, help="Outputs root directory."
+    )
     clean_parser.add_argument(
         "--keep",
         type=int,
@@ -222,17 +309,25 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("lab_name", choices=sorted(LABS), help="Lab to run.")
     run_parser.add_argument("--config", required=True, help="YAML config path.")
     run_mode = run_parser.add_mutually_exclusive_group()
-    run_mode.add_argument("--viewer", action="store_true", help="Open MuJoCo viewer without side panels.")
+    run_mode.add_argument(
+        "--viewer", action="store_true", help="Open MuJoCo viewer without side panels."
+    )
     run_mode.add_argument("--headless", action="store_true", help="Run without viewer.")
-    run_parser.add_argument("--realtime", action="store_true", help="Pace viewer runs near wall-clock time.")
-    run_parser.add_argument("--pause-at-end", action="store_true", help="Keep viewer open after the run completes.")
+    run_parser.add_argument(
+        "--realtime", action="store_true", help="Pace viewer runs near wall-clock time."
+    )
+    run_parser.add_argument(
+        "--pause-at-end", action="store_true", help="Keep viewer open after the run completes."
+    )
     run_parser.add_argument("--plot", action="store_true", help="Save standard plots.")
     run_parser.add_argument(
         "--plots",
         help="Plot preset or comma-separated plot names, for example: essential or position,error.",
     )
     run_parser.add_argument("--output-dir", help="Output directory override.")
-    run_parser.add_argument("--open-report", action="store_true", help="Open the run report after completion.")
+    run_parser.add_argument(
+        "--open-report", action="store_true", help="Open the run report after completion."
+    )
     run_parser.add_argument("--seed", type=int, help="Random seed for noisy experiments.")
 
     batch_parser = subparsers.add_parser("batch", help="Run a learner comparison batch.")
@@ -243,7 +338,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     batch_parser.add_argument("--output-dir", help="Output directory override.")
     batch_parser.add_argument("--no-plot", action="store_true", help="Skip plot image generation.")
-    batch_parser.add_argument("--open-report", action="store_true", help="Open the batch report after completion.")
+    batch_parser.add_argument(
+        "--open-report", action="store_true", help="Open the batch report after completion."
+    )
     batch_parser.add_argument("--seed", type=int, help="Random seed for noisy experiments.")
 
     return parser
@@ -273,13 +370,60 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  {name}")
         return 0
 
-    if args.command == "menu":
-        return learner_menu_main()
+    if args.command in {"menu", "app"}:
+        from mclab.application.qt_app import qt_available, run_app
+
+        if args.command == "app" and args.self_test:
+            available, detail = qt_available()
+            from mclab.application.catalog import ScenarioCatalog
+
+            errors = ScenarioCatalog.default().integrity_errors()
+            print(
+                json.dumps({"qt": available, "detail": detail, "catalog_errors": errors}, indent=2)
+            )
+            if not available or errors:
+                return 1
+            os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+            os.environ["MCLAB_APP_AUTO_QUIT_MS"] = "250"
+            os.environ["MCLAB_SELF_TEST"] = "1"
+            previous_lock = os.environ.get("MCLAB_INSTANCE_LOCK")
+            try:
+                with tempfile.TemporaryDirectory(prefix="mclab-self-test-") as tmp:
+                    os.environ["MCLAB_INSTANCE_LOCK"] = str(Path(tmp) / "instance.lock")
+                    return run_app(language=args.lang, safe_mode=True)
+            finally:
+                if previous_lock is None:
+                    os.environ.pop("MCLAB_INSTANCE_LOCK", None)
+                else:
+                    os.environ["MCLAB_INSTANCE_LOCK"] = previous_lock
+        return run_app(
+            language=getattr(args, "lang", None),
+            scenario_id=getattr(args, "scenario", None),
+            safe_mode=getattr(args, "safe_mode", False),
+        )
+
+    if args.command == "replay":
+        from mclab.application.qt_app import run_app
+
+        return run_app(
+            language=args.lang,
+            safe_mode=args.safe_mode,
+            replay_dir=Path(args.run_dir),
+        )
 
     if args.command == "doctor":
         checks = run_doctor_checks()
-        print(format_doctor_report(checks))
+        print(doctor_report_json(checks) if args.json else format_doctor_report(checks))
         return doctor_exit_code(checks)
+
+    if args.command == "assets":
+        if args.assets_command != "install":
+            parser.error("assets requires a command; use `mclab assets install`.")
+        from mclab.application.assets import install_assets
+
+        target = install_assets(force=args.force)
+        print(f"Assets ready: {target}")
+        return 0
 
     if args.command == "coverage":
         _print_experience_coverage(Path(args.output_dir), details=args.details)
@@ -297,11 +441,21 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "scenarios":
-        _print_scenarios(" ".join(args.query), experience_filter=args.filter, limit=args.limit, details=args.details)
+        _print_scenarios(
+            " ".join(args.query),
+            experience_filter=args.filter,
+            limit=args.limit,
+            details=args.details,
+        )
         return 0
 
     if args.command == "params":
-        _print_params(" ".join(args.query), experience_filter=args.filter, limit=args.limit, max_values=args.values)
+        _print_params(
+            " ".join(args.query),
+            experience_filter=args.filter,
+            limit=args.limit,
+            max_values=args.values,
+        )
         return 0
 
     if args.command == "batches":
@@ -320,6 +474,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "run":
         _validate_run_args(parser, args)
+        relaunch_code = _maybe_relaunch_macos_viewer(args, argv)
+        if relaunch_code is not None:
+            return relaunch_code
         config = load_config(args.config)
         runner = LABS[args.lab_name]
         output_path = runner(
@@ -346,7 +503,12 @@ def main(argv: list[str] | None = None) -> int:
             "seed": args.seed,
         }
         if args.batch_name == ALL_BATCH_NAME:
-            output_path = run_all_batches(**batch_kwargs)
+            output_path = run_all_batches(
+                **batch_kwargs,
+                on_progress=lambda current, total, name: print(
+                    f"{BATCH_PROGRESS_PREFIX}{current}/{total} {name}", flush=True
+                ),
+            )
         else:
             output_path = run_batch(args.batch_name, **batch_kwargs)
         _print_output_summary("Batch", output_path)
@@ -370,6 +532,29 @@ def _validate_run_args(parser: argparse.ArgumentParser, args: argparse.Namespace
         joined = " and ".join(viewer_only_flags)
         verb = "requires" if len(viewer_only_flags) == 1 else "require"
         parser.error(f"{joined} {verb} --viewer.")
+
+
+def _maybe_relaunch_macos_viewer(args: argparse.Namespace, argv: list[str] | None) -> int | None:
+    if (
+        not args.viewer
+        or sys.platform != "darwin"
+        or os.environ.get("MCLAB_MJPYTHON_RELAUNCH") == "1"
+    ):
+        return None
+    if Path(sys.executable).name.startswith("mjpython"):
+        return None
+    from mclab.application.platform import PlatformServices
+
+    arguments = list(argv) if argv is not None else sys.argv[1:]
+    command = PlatformServices().viewer_command(arguments)
+    environment = dict(os.environ)
+    environment["MCLAB_MJPYTHON_RELAUNCH"] = "1"
+    try:
+        return subprocess.call(command, env=environment)
+    except FileNotFoundError as exc:
+        raise RuntimeError(
+            "MuJoCo viewer on macOS requires mjpython. Reinstall mujoco or run with --headless."
+        ) from exc
 
 
 def _preferred_output_entry(output_path: Path) -> Path:
@@ -420,7 +605,9 @@ def _print_coverage_review_hint(outputs_root: Path) -> None:
     lines = review_queue_action_lines(outputs_root, limit=3)
     if not lines:
         return
-    print("Evidence repair queue: run python -m mclab review --limit 3 to fix saved hands-on evidence.")
+    print(
+        "Evidence repair queue: run python -m mclab review --limit 3 to fix saved hands-on evidence."
+    )
     print(f"Top repair: {lines[0]}")
 
 
@@ -431,12 +618,16 @@ def _print_learning_path_after_coverage_complete(outputs_root: Path) -> None:
     next_step = next_learning_path_step(progress_items)
     if next_step is None:
         print("Next path step: Course path complete")
-        print("Next command: open outputs/index.html or rerun a comparison batch for deeper review.")
+        print(
+            "Next command: open outputs/index.html or rerun a comparison batch for deeper review."
+        )
         return
     target = learning_path_target(next_step)
     print(f"Next path step: {learning_path_next_label(outputs_root)}")
     print(f"Next command: {learning_path_next_command(outputs_root)}")
-    _print_next_target_guide(target, outputs_root, include_viewer=_target_default_opens_viewer(target))
+    _print_next_target_guide(
+        target, outputs_root, include_viewer=_target_default_opens_viewer(target)
+    )
 
 
 def _print_learning_path(outputs_root: Path, *, show_all: bool = False) -> None:
@@ -448,10 +639,14 @@ def _print_learning_path(outputs_root: Path, *, show_all: bool = False) -> None:
         target = learning_path_target(next_step)
         print(f"Next step: {learning_path_next_label(outputs_root)}")
         print(f"Next command: {learning_path_next_command(outputs_root)}")
-        _print_next_target_guide(target, outputs_root, include_viewer=_target_default_opens_viewer(target))
+        _print_next_target_guide(
+            target, outputs_root, include_viewer=_target_default_opens_viewer(target)
+        )
     else:
         print("Next step: Course path complete")
-        print("Next command: open outputs/index.html or rerun a comparison batch for deeper review.")
+        print(
+            "Next command: open outputs/index.html or rerun a comparison batch for deeper review."
+        )
     if show_all:
         print("Path map:")
         for step, progress in progress_items:
@@ -466,20 +661,26 @@ def _learning_path_status_line(step: object, progress: object) -> str:
     return "Status unavailable"
 
 
-def _run_next_learning_path(outputs_root: Path, *, preview: bool = False, seed: int | None = None) -> int:
+def _run_next_learning_path(
+    outputs_root: Path, *, preview: bool = False, seed: int | None = None
+) -> int:
     progress_items = learning_path_progress_items(outputs_root)
     next_step = next_learning_path_step(progress_items)
     print(learning_path_summary_text(progress_items))
     print(learning_path_milestone_text(progress_items))
     if next_step is None:
         print("Next step: Course path complete")
-        print("Next command: open outputs/index.html or rerun a comparison batch for deeper review.")
+        print(
+            "Next command: open outputs/index.html or rerun a comparison batch for deeper review."
+        )
         return 0
 
     target = learning_path_target(next_step)
     print(f"Next step: {next_step.title}")
     print(f"Next command: {default_command_for_target(target)}")
-    _print_next_target_guide(target, outputs_root, include_viewer=_target_default_opens_viewer(target))
+    _print_next_target_guide(
+        target, outputs_root, include_viewer=_target_default_opens_viewer(target)
+    )
     if preview:
         return 0
 
@@ -577,7 +778,9 @@ def _run_next_batch_target(target: BatchMenuAction, *, seed: int | None = None) 
     return run_batch(target.batch_name, seed=seed)
 
 
-def _print_review_queue(outputs_root: Path, *, open_next: bool = False, action_limit: int = 5) -> None:
+def _print_review_queue(
+    outputs_root: Path, *, open_next: bool = False, action_limit: int = 5
+) -> None:
     print(review_queue_summary_text(outputs_root))
     next_output = next_review_output(outputs_root)
     if next_output is None:
@@ -629,7 +832,9 @@ def _print_review_path_context(outputs_root: Path) -> None:
     next_step = next_learning_path_step(progress_items)
     if next_step is None:
         print("Course path next: Course path complete")
-        print("Course path command: open outputs/index.html or rerun a comparison batch for deeper review.")
+        print(
+            "Course path command: open outputs/index.html or rerun a comparison batch for deeper review."
+        )
         return
     print(f"Course path next: {learning_path_next_label(outputs_root)}")
     print(f"Course path command: {learning_path_next_command(outputs_root)}")
@@ -650,7 +855,9 @@ def _print_discovery_review_footer() -> None:
     print("All reports: reopen the cumulative browser index with `python -m mclab index --open`.")
 
 
-def _print_scenarios(query: str, *, experience_filter: str = "all", limit: int = 8, details: bool = False) -> None:
+def _print_scenarios(
+    query: str, *, experience_filter: str = "all", limit: int = 8, details: bool = False
+) -> None:
     matches = filter_menu_actions(query, experience_filter=experience_filter)
     shown = matches if limit <= 0 else matches[: max(0, limit)]
     query_text = query.strip() or "all"
@@ -659,7 +866,9 @@ def _print_scenarios(query: str, *, experience_filter: str = "all", limit: int =
         f"for query '{query_text}' with filter '{experience_filter}'."
     )
     if not matches:
-        print("No guided scenarios matched. Try: intro, hands-on, wall, PID, 2DOF, singularity, or compare.")
+        print(
+            "No guided scenarios matched. Try: intro, hands-on, wall, PID, 2DOF, singularity, or compare."
+        )
         _print_discovery_review_footer()
         return
     print(
@@ -674,7 +883,9 @@ def _print_scenarios(query: str, *, experience_filter: str = "all", limit: int =
     _print_discovery_review_footer()
 
 
-def _print_params(query: str, *, experience_filter: str = "all", limit: int = 6, max_values: int = 8) -> None:
+def _print_params(
+    query: str, *, experience_filter: str = "all", limit: int = 6, max_values: int = 8
+) -> None:
     matches = filter_menu_actions(query, experience_filter=experience_filter)
     shown = matches if limit <= 0 else matches[: max(0, limit)]
     query_text = query.strip() or "all"
@@ -683,7 +894,9 @@ def _print_params(query: str, *, experience_filter: str = "all", limit: int = 6,
         f"for query '{query_text}' with filter '{experience_filter}'."
     )
     if not matches:
-        print("No guided scenarios matched. Try: wall, PID, DLS, damping, stiffness, target, torque, or hands-on.")
+        print(
+            "No guided scenarios matched. Try: wall, PID, DLS, damping, stiffness, target, torque, or hands-on."
+        )
         _print_discovery_review_footer()
         return
     print(
@@ -845,7 +1058,9 @@ def _print_batches(query: str, *, limit: int = 8, details: bool = False) -> None
     query_text = query.strip() or "all"
     print(f"Batches: showing {len(shown)} of {len(matches)} match(es) for query '{query_text}'.")
     if not matches:
-        print("No comparison batches matched. Try: all, lab01, PID, 2DOF, Panda, wall, Cartesian, or compare.")
+        print(
+            "No comparison batches matched. Try: all, lab01, PID, 2DOF, Panda, wall, Cartesian, or compare."
+        )
         _print_discovery_review_footer()
         return
     print(
@@ -996,12 +1211,18 @@ def _worksheet_review_artifact_lines(output_path: Path) -> list[str]:
     if priority_plot:
         lines.append(f"Priority plot: {_worksheet_relative_path(output_path, priority_plot)}")
     if read_first or what_to_check:
-        focus = f"{read_first} - {what_to_check}" if read_first and what_to_check else read_first or what_to_check
+        focus = (
+            f"{read_first} - {what_to_check}"
+            if read_first and what_to_check
+            else read_first or what_to_check
+        )
         lines.append(f"Review focus: {focus}")
     if next_proof_step:
         lines.append(f"Next proof step: {next_proof_step}")
     if has_prediction_check:
-        lines.append("Prediction check: Mark Matched, Partly matched, or Surprised in worksheet.md.")
+        lines.append(
+            "Prediction check: Mark Matched, Partly matched, or Surprised in worksheet.md."
+        )
     if viewer_handoff_command:
         handoff = (
             f"{viewer_handoff_start} -> {viewer_handoff_command}"
@@ -1041,7 +1262,9 @@ def _course_batch_handoff_detail(output_path: Path) -> str:
         child_output = output_path / batch_name
         start, command = _worksheet_viewer_handoff(child_output)
         if command:
-            handoff = f"{batch_name} / {start} -> {command}" if start else f"{batch_name} -> {command}"
+            handoff = (
+                f"{batch_name} / {start} -> {command}" if start else f"{batch_name} -> {command}"
+            )
             return f"Handoff: {handoff}"
     return "Handoff: Open the course worksheet, then follow a linked batch Viewer Handoff."
 
@@ -1164,11 +1387,13 @@ def _clean_outputs(output_dir: Path, *, keep: int, assume_yes: bool) -> int:
         key=lambda p: p.name,
         reverse=True,
     )
-    to_remove = runs[max(keep, 0):]
+    to_remove = runs[max(keep, 0) :]
     if not to_remove:
         print(f"Nothing to remove: {len(runs)} run folder(s), keeping {keep}.")
         return 0
-    print(f"Found {len(runs)} run folder(s) in {output_dir}; removing {len(to_remove)}, keeping {min(keep, len(runs))}.")
+    print(
+        f"Found {len(runs)} run folder(s) in {output_dir}; removing {len(to_remove)}, keeping {min(keep, len(runs))}."
+    )
     if not assume_yes:
         reply = input("Delete these run folders? [y/N] ").strip().lower()
         if reply not in {"y", "yes"}:

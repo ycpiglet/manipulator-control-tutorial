@@ -1502,6 +1502,8 @@ def _standard_artifact_names() -> tuple[str, ...]:
         "worksheet.md",
         "log.csv",
         "states.npz",
+        "replay.npz",
+        "manifest.json",
         "interaction_events.json",
         "learner_snapshot.json",
         "learner_tuned_config.yaml",
@@ -1543,11 +1545,23 @@ def _render_report(
     learner_snapshot: dict[str, Any],
 ) -> str:
     title = _report_title(output, summary)
+    report_language = str(config.get("language", "en"))
+    if report_language not in {"ko", "en"}:
+        report_language = "en"
+    title = _localized_report_title(summary, fallback=title, language=report_language)
+    overview = _result_overview_section(output, summary, plots, language=report_language)
     learning_guide = _learning_guide_section(guide_for_run_summary(summary), summary, config)
     course_position = _course_position_section(summary)
     course_coverage = _course_experience_coverage_section(output)
     worksheet = _worksheet_section(output)
-    next_actions = _next_actions_section(output, summary, config, plots, interaction_events)
+    next_actions = _next_actions_section(
+        output,
+        summary,
+        config,
+        plots,
+        interaction_events,
+        language=report_language,
+    )
     reproduce_section = _reproduce_section(summary)
     tuned_replay = _learner_tuned_config_section(output, summary)
     next_runs = _suggested_next_runs_section(summary, config)
@@ -1595,18 +1609,21 @@ def _render_report(
 
     notes_html = f"<pre>{escape(notes.strip())}</pre>" if notes.strip() else "<p>No notes were saved.</p>"
 
+    document_title = f"{title} 실행 보고서" if report_language == "ko" else f"{title} report"
+    advanced_label = "고급 세부정보" if report_language == "ko" else "Advanced details"
+
     return f"""<!doctype html>
-<html lang="en">
+<html lang="{report_language}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{escape(title)} report</title>
+  <title>{escape(document_title)}</title>
   <style>
     :root {{
       color-scheme: light;
-      font-family: "Segoe UI", Arial, sans-serif;
-      color: #202124;
-      background: #f6f7f9;
+      font-family: "Noto Sans KR", "Segoe UI", Arial, sans-serif;
+      color: #172033;
+      background: #f5f7fb;
     }}
     body {{
       margin: 0;
@@ -1632,7 +1649,7 @@ def _render_report(
     section {{
       background: #ffffff;
       border: 1px solid #d9dde3;
-      border-radius: 8px;
+      border-radius: 12px;
       margin-top: 16px;
       padding: 16px;
     }}
@@ -1645,6 +1662,7 @@ def _render_report(
       padding: 8px 10px;
       text-align: left;
       vertical-align: top;
+      overflow-wrap: anywhere;
     }}
     th {{
       width: 260px;
@@ -1718,6 +1736,7 @@ def _render_report(
       border-radius: 8px;
       padding: 12px;
       background: #fbfcfd;
+      min-width: 0;
     }}
     .command-block strong {{
       display: block;
@@ -1817,10 +1836,16 @@ def _render_report(
       border-radius: 8px;
       padding: 12px;
       background: #fbfcfd;
+      min-width: 0;
     }}
     .action-card > strong {{
       display: block;
       margin-bottom: 6px;
+    }}
+    .action-card li > a {{
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
     }}
     .action-wide {{
       grid-column: 1 / -1;
@@ -1889,11 +1914,69 @@ def _render_report(
     }}
     pre {{
       white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      max-width: 100%;
       margin: 0;
       line-height: 1.45;
     }}
     a {{
-      color: #0b57d0;
+      color: #2563eb;
+    }}
+    a:focus-visible, summary:focus-visible, .table-wrap:focus-visible {{
+      outline: 3px solid #ffdd00;
+      outline-offset: 3px;
+      box-shadow: 0 0 0 2px #000000;
+    }}
+    .result-overview {{
+      border-top: 6px solid #2563eb;
+    }}
+    .result-sentence {{
+      font-size: 19px;
+      line-height: 1.5;
+      margin: 0 0 16px;
+    }}
+    .priority-plot {{
+      max-width: 820px;
+      margin: 0 auto 18px;
+    }}
+    .key-change-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 12px;
+    }}
+    .key-change {{
+      border: 1px solid #dce2ec;
+      border-radius: 12px;
+      padding: 14px;
+      background: #f8faff;
+    }}
+    .key-change strong, .key-change span {{
+      display: block;
+    }}
+    .key-change span {{
+      margin-top: 6px;
+      font-size: 18px;
+    }}
+    details.advanced {{
+      margin-top: 18px;
+      border: 1px solid #d9dde3;
+      border-radius: 12px;
+      background: #ffffff;
+    }}
+    details.advanced > summary {{
+      cursor: pointer;
+      font-size: 18px;
+      font-weight: 700;
+      padding: 16px;
+    }}
+    details.advanced > .advanced-body {{
+      padding: 0 16px 16px;
+    }}
+    @media (max-width: 640px) {{
+      body {{ padding: 12px; }}
+      .plots, .command-grid {{ grid-template-columns: 1fr; }}
+      th {{ width: auto; }}
     }}
     .empty {{
       margin: 0;
@@ -1903,51 +1986,128 @@ def _render_report(
 </head>
 <body>
   <main>
-    <h1>{escape(title)} report</h1>
-    {learning_guide}
-    {course_position}
-    {course_coverage}
-    {worksheet}
+    <h1>{escape(document_title)}</h1>
+    {overview}
     {next_actions}
-    {reproduce_section}
-    {tuned_replay}
-    {next_runs}
-    {comparison_batch}
-    {control_surface}
-    {config_highlights}
-    {configured_presets}
-    {result_check}
-    {key_moments}
-    {mission_evidence}
-    {challenge_evidence}
-    {hands_on_evidence}
-    {learner_action_summary}
-    {learner_snapshot_section}
-    {observation_timeline}
-    {observation_markers}
-    {interaction_section}
-    <section>
-      <h2>Summary</h2>
-      <table>{rows}</table>
-    </section>
-    <section>
-      <h2>Plots</h2>
-      {plot_guide}
-      <div class="plots">{plot_cards}</div>
-    </section>
-    <section>
-      <h2>Notes</h2>
-      {notes_html}
-    </section>
-    <section>
-      <h2>Files</h2>
-      <p class="empty"><a href="./">Open output folder</a></p>
-      <ul>{file_links}</ul>
-    </section>
+    <details class="advanced">
+      <summary>{advanced_label}</summary>
+      <div class="advanced-body">
+        {learning_guide}
+        {course_position}
+        {course_coverage}
+        {worksheet}
+        {reproduce_section}
+        {tuned_replay}
+        {next_runs}
+        {comparison_batch}
+        {control_surface}
+        {config_highlights}
+        {configured_presets}
+        {result_check}
+        {key_moments}
+        {mission_evidence}
+        {challenge_evidence}
+        {hands_on_evidence}
+        {learner_action_summary}
+        {learner_snapshot_section}
+        {observation_timeline}
+        {observation_markers}
+        {interaction_section}
+        <section>
+          <h2>Summary</h2>
+          <table>{rows}</table>
+        </section>
+        <section>
+          <h2>Plots</h2>
+          {plot_guide}
+          <div class="plots">{plot_cards}</div>
+        </section>
+        <section>
+          <h2>Notes</h2>
+          {notes_html}
+        </section>
+        <section>
+          <h2>Files</h2>
+          <p class="empty"><a href="./">Open output folder</a></p>
+          <ul>{file_links}</ul>
+        </section>
+      </div>
+    </details>
   </main>
 </body>
 </html>
 """
+
+
+def _result_overview_section(
+    output: Path, summary: dict[str, Any], plots: list[Path], *, language: str = "en"
+) -> str:
+    samples = _format_value(summary.get("samples", 0))
+    duration = _format_value(summary.get("duration", 0.0))
+    priority = sorted(plots, key=_index_plot_sort_key)[0] if plots else None
+    priority_name = (
+        _localized_plot_label(priority, language=language)
+        if priority
+        else ("저장된 지표" if language == "ko" else "saved metrics")
+    )
+    if language == "ko":
+        sentence = (
+            f"이 실행은 {duration}초 동안 {samples}개 샘플을 저장했습니다. "
+            f"가장 중요한 응답은 {priority_name} 플롯부터 설명해 보세요."
+        )
+    else:
+        sentence = (
+            f"This run saved {samples} samples across {duration} s; start with {priority_name} "
+            "to explain the most important response."
+        )
+    priority_html = ""
+    if priority is not None:
+        guidance_pair = plot_guidance(priority.name)
+        guidance = guidance_pair[1] if guidance_pair else "Review this plot against your prediction."
+        if language == "ko":
+            guidance = "이 플롯을 실행 전 예측과 비교하세요."
+        priority_html = (
+            '<figure class="plot priority-plot">'
+            f'<img src="{escape(_relative(output, priority))}" '
+            f'alt="{escape("우선 증거 플롯" if language == "ko" else "Priority evidence plot")}: '
+            f'{escape(priority.stem)}">'
+            f"<figcaption>{'우선 플롯' if language == 'ko' else 'Priority plot'} · "
+            f"{escape(priority.name)} · {escape(guidance)}</figcaption>"
+            "</figure>"
+        )
+    ignored = {
+        "lab_name",
+        "config_name",
+        "config_path",
+        "samples",
+        "duration",
+        "interaction_events",
+    }
+    changes = [(key, value) for key, value in summary.items() if key not in ignored][:3]
+    if not changes:
+        changes = (
+            [("샘플 수", samples), ("실행 시간 [초]", duration), ("실행 상태", "저장됨")]
+            if language == "ko"
+            else [("Samples", samples), ("Duration [s]", duration), ("Run status", "Saved")]
+        )
+    change_cards = "".join(
+        (
+            '<div class="key-change">'
+            f"<strong>{escape(_localized_metric_label(str(key), language=language))}</strong>"
+            f"<span>{escape(_format_value(value))}</span>"
+            "</div>"
+        )
+        for key, value in changes
+    )
+    return (
+        '<section class="result-overview" aria-labelledby="result-overview-title">'
+        f'<h2 id="result-overview-title">{"한눈에 보는 결과" if language == "ko" else "Result at a glance"}</h2>'
+        f'<p class="result-sentence">{escape(sentence)}</p>'
+        f"{priority_html}"
+        f'<h3>{"설명할 핵심 값 3개" if language == "ko" else "Three values to explain"}</h3>'
+        f'<div class="key-change-grid">{change_cards}</div>'
+        "</section>"
+    )
 
 
 def _worksheet_section(output: Path) -> str:
@@ -2204,32 +2364,36 @@ def _next_actions_section(
     current_config: dict[str, Any],
     plots: list[Path],
     events: list[dict[str, Any]],
+    *,
+    language: str = "en",
 ) -> str:
     cards: list[str] = []
-    evidence_card = _next_action_evidence_card(summary, events)
+    evidence_card = _next_action_evidence_card(summary, events, language=language)
     if evidence_card:
         cards.append(evidence_card)
-    plot_card = _next_action_plot_card(output, plots)
+    plot_card = _next_action_plot_card(output, plots, language=language)
     if plot_card:
         cards.append(plot_card)
-    artifact_card = _next_action_artifacts_card(output)
+    artifact_card = _next_action_artifacts_card(output, language=language)
     if artifact_card:
         cards.append(artifact_card)
-    replay_card = _next_action_replay_card(output, summary)
+    replay_card = _next_action_replay_card(output, summary, language=language)
     if replay_card:
         cards.append(replay_card)
-    suggested_card = _next_action_suggestion_card(summary, current_config)
+    suggested_card = _next_action_suggestion_card(summary, current_config, language=language)
     if suggested_card:
         cards.append(suggested_card)
-    comparison_card = _next_action_comparison_card(summary)
+    comparison_card = _next_action_comparison_card(summary, language=language)
     if comparison_card:
         cards.append(comparison_card)
     if not cards:
         return ""
     return (
         "<section>"
-        "<h2>Next Actions</h2>"
-        '<p class="empty">Use these shortcuts right after reading this report.</p>'
+        f'<h2>{"다음 행동" if language == "ko" else "Next Actions"}</h2>'
+        '<p class="empty">'
+        f'{"결과를 읽은 직후 아래 순서로 이어가세요." if language == "ko" else "Use these shortcuts right after reading this report."}'
+        "</p>"
         '<div class="action-grid">'
         f"{''.join(cards[:6])}"
         "</div>"
@@ -2237,50 +2401,82 @@ def _next_actions_section(
     )
 
 
-def _next_action_evidence_card(summary: dict[str, Any], events: list[dict[str, Any]]) -> str:
+def _next_action_evidence_card(
+    summary: dict[str, Any], events: list[dict[str, Any]], *, language: str = "en"
+) -> str:
     markers, predictions, notes, outcomes = _observation_evidence_counts_from_events(events)
     if markers <= 0 and not _summary_requires_hands_on_evidence(summary):
         return ""
     if markers > 0 and predictions > outcomes:
-        title = "Judge prediction outcome"
-        description = "Repeat or review this hands-on run and mark whether the prediction matched, partly matched, or surprised you."
+        title = "예측 결과 판단하기" if language == "ko" else "Judge prediction outcome"
+        description = (
+            "직접 조작 실행을 다시 보거나 반복한 뒤 예측이 일치, 일부 일치, 예상 밖인지 표시하세요."
+            if language == "ko"
+            else "Repeat or review this hands-on run and mark whether the prediction matched, partly matched, or surprised you."
+        )
     elif markers > 0 and predictions > 0:
-        title = "Review saved evidence"
-        description = "Compare the saved prediction and note against the plots below."
+        title = "저장된 증거 복습하기" if language == "ko" else "Review saved evidence"
+        description = (
+            "저장된 예측과 메모를 아래 플롯과 비교하세요."
+            if language == "ko"
+            else "Compare the saved prediction and note against the plots below."
+        )
     elif markers > 0:
-        title = "Add prediction evidence"
-        description = "Repeat this hands-on run and fill Prediction before Mark observation."
+        title = "예측 증거 추가하기" if language == "ko" else "Add prediction evidence"
+        description = (
+            "직접 조작 실험을 반복하고 관찰 기록 전에 예측을 작성하세요."
+            if language == "ko"
+            else "Repeat this hands-on run and fill Prediction before Mark observation."
+        )
     else:
-        title = "Mark one observation"
-        description = "Run the interactive demo, write a prediction, then save one observation."
+        title = "관찰 한 번 기록하기" if language == "ko" else "Mark one observation"
+        description = (
+            "직접 조작 데모를 실행하고 예측을 작성한 뒤 관찰 한 번을 저장하세요."
+            if language == "ko"
+            else "Run the interactive demo, write a prediction, then save one observation."
+        )
     return _action_card(
         title,
         description,
         _action_value_list(
             (
-                ("Observation markers", markers),
-                ("Predictions", predictions),
-                ("Prediction outcomes", outcomes),
-                ("Learner notes", notes),
+                ("관찰 기록" if language == "ko" else "Observation markers", markers),
+                ("예측" if language == "ko" else "Predictions", predictions),
+                ("예측 결과" if language == "ko" else "Prediction outcomes", outcomes),
+                ("학습자 메모" if language == "ko" else "Learner notes", notes),
             )
         ),
     )
 
 
-def _next_action_plot_card(output: Path, plots: list[Path]) -> str:
+def _next_action_plot_card(output: Path, plots: list[Path], *, language: str = "en") -> str:
     if not plots:
         return ""
     plot = sorted(plots, key=_index_plot_sort_key)[0]
-    label = _index_plot_label(plot)
+    label = _localized_plot_label(plot, language=language)
     href = _relative(output, plot)
     body = (
-        _action_value_list((("Priority plot", label), ("File", plot.name)))
-        + f'<p class="empty"><a href="{escape(href)}">Open {escape(plot.name)}</a></p>'
+        _action_value_list(
+            (
+                ("우선 플롯" if language == "ko" else "Priority plot", label),
+                ("파일" if language == "ko" else "File", plot.name),
+            )
+        )
+        + f'<p class="empty"><a href="{escape(href)}">'
+        f'{"열기" if language == "ko" else "Open"} {escape(plot.name)}</a></p>'
     )
-    return _action_card("Open the key plot", "Start with the highest-priority plot for this run.", body)
+    return _action_card(
+        "핵심 플롯 열기" if language == "ko" else "Open the key plot",
+        (
+            "이 실행에서 우선순위가 가장 높은 플롯부터 확인하세요."
+            if language == "ko"
+            else "Start with the highest-priority plot for this run."
+        ),
+        body,
+    )
 
 
-def _next_action_artifacts_card(output: Path) -> str:
+def _next_action_artifacts_card(output: Path, *, language: str = "en") -> str:
     names = _raw_artifact_names_for_report(output)
     if not names:
         return ""
@@ -2295,19 +2491,26 @@ def _next_action_artifacts_card(output: Path) -> str:
     if not links:
         links = "<li>report.html</li>"
     body = (
-        '<p class="empty"><a href="./">Open output folder</a></p>'
+        '<p class="empty"><a href="./">'
+        f'{"결과 폴더 열기" if language == "ko" else "Open output folder"}</a></p>'
         "<ul>"
         f"{links}"
         "</ul>"
     )
     return _action_card(
-        "Open raw artifacts",
-        "Inspect the saved config, logs, states, snapshots, and learner events behind this report.",
+        "원본 산출물 열기" if language == "ko" else "Open raw artifacts",
+        (
+            "이 보고서의 저장된 설정, 로그, 상태, 스냅샷, 학습자 이벤트를 확인하세요."
+            if language == "ko"
+            else "Inspect the saved config, logs, states, snapshots, and learner events behind this report."
+        ),
         body,
     )
 
 
-def _next_action_replay_card(output: Path, summary: dict[str, Any]) -> str:
+def _next_action_replay_card(
+    output: Path, summary: dict[str, Any], *, language: str = "en"
+) -> str:
     tuned_config = output / "learner_tuned_config.yaml"
     lab_name = _cli_lab_name(str(summary.get("lab_name") or ""))
     if not tuned_config.exists() or not lab_name:
@@ -2316,11 +2519,23 @@ def _next_action_replay_card(output: Path, summary: dict[str, Any]) -> str:
         f"python -m mclab run {lab_name} --config {tuned_config} "
         "--viewer --realtime --pause-at-end --plot --open-report"
     )
-    body = _action_value_list((("Config", tuned_config.name),)) + f"<pre>{escape(command)}</pre>"
-    return _action_card("Replay tuned values", "Watch the final slider values again without live controls.", body)
+    body = _action_value_list(
+        (("설정" if language == "ko" else "Config", tuned_config.name),)
+    ) + f"<pre>{escape(command)}</pre>"
+    return _action_card(
+        "마지막 튜닝 재실행" if language == "ko" else "Replay tuned values",
+        (
+            "실시간 제어 없이 마지막 슬라이더 값을 다시 확인하세요."
+            if language == "ko"
+            else "Watch the final slider values again without live controls."
+        ),
+        body,
+    )
 
 
-def _next_action_suggestion_card(summary: dict[str, Any], current_config: dict[str, Any]) -> str:
+def _next_action_suggestion_card(
+    summary: dict[str, Any], current_config: dict[str, Any], *, language: str = "en"
+) -> str:
     config_path = _normalize_path(str(summary.get("config_path") or ""))
     suggestions = NEXT_RUN_SUGGESTIONS.get(config_path, ())
     if not suggestions:
@@ -2328,32 +2543,63 @@ def _next_action_suggestion_card(summary: dict[str, Any], current_config: dict[s
     suggestion = suggestions[0]
     guide = guide_for_config(config_path=suggestion.config_path)
     title = guide.title if guide is not None else Path(suggestion.config_path).stem.replace("_", " ").title()
+    if language == "ko":
+        title = _localized_scenario_title(suggestion.config_path, fallback=title)
     lab_name = _cli_lab_name(suggestion.config_path)
     command = (
         f"python -m mclab run {lab_name} --config {suggestion.config_path} "
         f"--viewer --realtime --pause-at-end --plot --plots {suggestion.plots} --open-report"
     )
-    key_changes = _suggested_config_changes(current_config, suggestion.config_path)
-    guide_action = _suggested_guide_action_html(guide, suggestion.config_path)
-    control_summary = _suggested_control_surface_summary(suggestion.config_path)
+    key_changes = _suggested_config_changes(
+        current_config, suggestion.config_path, language=language
+    )
+    guide_action = (
+        ""
+        if language == "ko"
+        else _suggested_guide_action_html(guide, suggestion.config_path)
+    )
+    control_summary = (
+        ""
+        if language == "ko"
+        else _suggested_control_surface_summary(suggestion.config_path)
+    )
     body = (
-        _action_value_list((("Config", suggestion.config_path), ("Plots", suggestion.plots)))
+        _action_value_list(
+            (
+                ("설정" if language == "ko" else "Config", suggestion.config_path),
+                ("플롯" if language == "ko" else "Plots", suggestion.plots),
+            )
+        )
         + guide_action
         + control_summary
         + key_changes
         + f"<pre>{escape(command)}</pre>"
     )
-    return _action_card(f"Try next: {title}", suggestion.reason, body)
+    return _action_card(
+        f'{"다음 실험" if language == "ko" else "Try next"}: {title}',
+        (
+            "한 가지 조건만 바꿔 결과 차이를 확인하세요."
+            if language == "ko"
+            else suggestion.reason
+        ),
+        body,
+    )
 
 
-def _next_action_comparison_card(summary: dict[str, Any]) -> str:
+def _next_action_comparison_card(summary: dict[str, Any], *, language: str = "en") -> str:
     comparison = _comparison_batch_for_summary(summary)
     if comparison is None:
         return ""
     batch_name, title, reason = comparison
+    if language == "ko":
+        title, reason = _localized_comparison_text(batch_name, title)
     command = f"python -m mclab batch {batch_name} --open-report"
-    body = _action_value_list((("Batch", batch_name),)) + f"<pre>{escape(command)}</pre>"
-    return _action_card(f"Compare batch: {title}", reason, body)
+    body = _action_value_list(
+        (("비교 배치" if language == "ko" else "Batch", batch_name),)
+    ) + f"<pre>{escape(command)}</pre>"
+    return _action_card(
+        f'{"비교 배치" if language == "ko" else "Compare batch"}: {title}', reason, body
+    )
 
 
 def _suggested_next_runs_section(summary: dict[str, Any], current_config: dict[str, Any]) -> str:
@@ -2677,13 +2923,16 @@ def _interaction_config(config: dict[str, Any] | None) -> dict[str, Any]:
     return interaction if isinstance(interaction, dict) else {}
 
 
-def _suggested_config_changes(current_config: dict[str, Any], suggested_config_path: str) -> str:
+def _suggested_config_changes(
+    current_config: dict[str, Any], suggested_config_path: str, *, language: str = "en"
+) -> str:
     rows = _suggested_config_change_rows(current_config, suggested_config_path)
 
     if not rows:
         return ""
     return (
-        '<p class="empty"><strong>Key changes:</strong></p>'
+        '<p class="empty"><strong>'
+        f'{"핵심 변경값" if language == "ko" else "Key changes"}:</strong></p>'
         f"{_action_value_list(rows)}"
     )
 
@@ -4924,11 +5173,11 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MuJoCo Control Lab outputs</title>
+  <title>MCLab results</title>
   <style>
     :root {{
       color-scheme: light;
-      font-family: "Segoe UI", Arial, sans-serif;
+      font-family: "Noto Sans KR", "Segoe UI", Arial, sans-serif;
       color: #202124;
       background: #f6f7f9;
     }}
@@ -4957,6 +5206,26 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
     }}
     .table-wrap {{
       overflow-x: auto;
+    }}
+    a:focus-visible, summary:focus-visible, .table-wrap:focus-visible {{
+      outline: 3px solid #ffdd00;
+      outline-offset: 3px;
+      box-shadow: 0 0 0 2px #000000;
+    }}
+    details.advanced {{
+      margin-top: 16px;
+      border: 1px solid #d9dde3;
+      border-radius: 8px;
+      background: #ffffff;
+    }}
+    details.advanced > summary {{
+      cursor: pointer;
+      padding: 16px;
+      font-size: 18px;
+      font-weight: 700;
+    }}
+    details.advanced > .advanced-body {{
+      padding: 0 16px 16px;
     }}
     .progress-grid {{
       display: grid;
@@ -5069,17 +5338,17 @@ def _render_outputs_index(root: Path, runs: list[dict[str, Any]]) -> str:
 </head>
 <body>
   <main>
-    <h1>MuJoCo Control Lab outputs</h1>
-    {_starter_commands_section()}
-    {experience_coverage}
-    {learning_path}
+    <h1>MCLab results</h1>
     <section>
-      <h2>Progress Snapshot</h2>
+      <h2>Saved evidence overview</h2>
       <p>Open a run report to inspect the learning guide, summary values, notes, plots, and saved artifacts.</p>
       {progress_cards}
     </section>
+    {learning_path}
+    {experience_coverage}
+    {_starter_commands_section()}
     <section>
-      <div class="table-wrap">
+      <div class="table-wrap" tabindex="0" aria-label="Scrollable data table">
         <table>
           <thead><tr><th>Run</th><th>Lab</th><th>Folder</th><th>Config</th><th>Lesson</th><th>Next</th><th>Next cue</th><th>Repeat command</th><th>Evidence</th><th>Activity</th><th>Mission evidence</th><th>Challenge evidence</th><th>Worksheet</th><th>Replay</th><th>Plots</th><th>Plot review</th><th>Duration [s]</th><th>Samples</th>{metric_headers}</tr></thead>
           <tbody>{rows}</tbody>
@@ -5100,9 +5369,9 @@ def _starter_commands_section() -> str:
             "python -m mclab doctor",
         ),
         (
-            "Open learner menu",
-            "Best first step: browse scenarios, filters, reports, plots, and worksheets with buttons.",
-            r".\run_mclab.cmd",
+            "Open the MCLab app",
+            "Best first step: continue the recommended path or browse saved reports with buttons.",
+            "python -m mclab app",
         ),
         (
             "See next experience",
@@ -5174,13 +5443,15 @@ def _starter_commands_section() -> str:
         for title, description, command in items
     )
     return (
-        "<section>"
-        "<h2>Starter Commands</h2>"
-        '<p class="muted">Use these when this page is empty or when a learner just needs the shortest safe start.</p>'
+        '<details class="advanced">'
+        "<summary>Commands and terminal tools</summary>"
+        '<div class="advanced-body">'
+        '<p class="muted">Open these when you need setup, discovery, repair, or low-level rerun commands.</p>'
         '<div class="path-grid">'
         f"{cards}"
         "</div>"
-        "</section>"
+        "</div>"
+        "</details>"
     )
 
 
@@ -6162,7 +6433,13 @@ def _latest_learning_path_run(step: IndexPathStep, runs: list[dict[str, Any]]) -
 
 def _progress_cards(runs: list[dict[str, Any]]) -> str:
     if not runs:
-        return '<p class="muted">No saved runs yet. Start with `run_mclab.cmd` or one of the `run_lab*.cmd` launchers.</p>'
+        return (
+            '<article class="progress-card">'
+            "<strong>No saved evidence yet</strong>"
+            '<p class="muted">Open MCLab and use Start next experiment. Results appear here automatically.</p>'
+            '<pre class="path-command">python -m mclab app</pre>'
+            "</article>"
+        )
     categories = (
         ("Lab01", "lab01"),
         ("Lab02", "lab02"),
@@ -6362,6 +6639,152 @@ def _has_display_value(value: Any) -> bool:
 
 def _metric_label(key: str) -> str:
     return key.replace("_", " ")
+
+
+def _localized_metric_label(key: str, *, language: str) -> str:
+    label = _metric_label(key)
+    if language != "ko":
+        return {
+            "samples": "Samples",
+            "duration": "Run time [s]",
+            "max abs position": "Peak position [m]",
+            "max abs velocity": "Peak velocity [m/s]",
+            "max abs force": "Peak force [N]",
+            "max abs control force": "Peak control force [N]",
+            "max joint error norm": "Peak joint error [rad]",
+            "final joint error norm": "Final joint error [rad]",
+            "max task error norm": "Peak task-space error [m]",
+            "final task error norm": "Final task-space error [m]",
+            "max cartesian error cm": "Peak Cartesian error [cm]",
+            "final cartesian error cm": "Final Cartesian error [cm]",
+            "max abs qdot": "Peak joint speed [rad/s]",
+            "max abs tau cmd": "Peak commanded torque [N·m]",
+            "max abs tau total": "Peak total torque [N·m]",
+            "max jacobian condition": "Peak Jacobian condition number",
+            "min manipulability": "Minimum manipulability",
+            "max wall penetration": "Peak wall penetration [m]",
+            "max abs virtual wall force": "Peak virtual-wall force [N]",
+            "max hand speed": "Peak hand speed [m/s]",
+            "settling time": "Settling time [s]",
+            "overshoot": "Overshoot [%]",
+        }.get(label, label.title())
+    return {
+        "samples": "샘플 수",
+        "duration": "실행 시간 [초]",
+        "max abs position": "최대 위치 절댓값",
+        "max abs velocity": "최대 속도 절댓값",
+        "max abs force": "최대 힘 절댓값",
+        "max abs control force": "최대 제어력 절댓값",
+        "max joint error norm": "최대 관절 오차 [rad]",
+        "final joint error norm": "최종 관절 오차 [rad]",
+        "max task error norm": "최대 작업공간 오차 [m]",
+        "final task error norm": "최종 작업공간 오차 [m]",
+        "max cartesian error cm": "최대 데카르트 오차 [cm]",
+        "final cartesian error cm": "최종 데카르트 오차 [cm]",
+        "max abs qdot": "최대 관절 속도 [rad/s]",
+        "max abs tau cmd": "최대 명령 토크 [N·m]",
+        "max abs tau total": "최대 총 토크 [N·m]",
+        "max jacobian condition": "최대 자코비안 조건수",
+        "min manipulability": "최소 조작성",
+        "max wall penetration": "최대 벽 침투량 [m]",
+        "max abs virtual wall force": "최대 가상 벽 힘 [N]",
+        "max hand speed": "최대 손끝 속도 [m/s]",
+        "settling time": "정착 시간 [s]",
+        "overshoot": "오버슈트 [%]",
+    }.get(label, label)
+
+
+def _localized_plot_label(plot: Path, *, language: str) -> str:
+    label = _index_plot_label(plot)
+    if language != "ko":
+        return label
+    return {
+        "Position": "위치",
+        "Error": "오차",
+        "Cartesian Error": "데카르트 오차",
+        "End Effector": "손끝 위치",
+        "Wall Timing": "가상 벽 주요 시점",
+        "Target-Wall Gap": "목표-벽 간격",
+        "Virtual Wall": "가상 벽 응답",
+        "Wall Parameters": "가상 벽 파라미터",
+        "Wall Penetration": "가상 벽 침투량",
+        "Wall Retreat": "가상 벽 후퇴",
+        "Hand X Speed": "손끝 X 속도",
+        "Hand X Position": "손끝 X 위치",
+        "Hand Y Position": "손끝 Y 위치",
+        "Singularity": "특이점",
+        "DLS": "DLS 응답",
+        "Disturbance": "외란 응답",
+        "Torque": "토크",
+        "Control Force": "제어력",
+        "Force": "힘",
+        "PID Terms": "PID 항",
+        "Velocity": "속도",
+        "Energy": "에너지",
+    }.get(label, label)
+
+
+def _localized_scenario_title(
+    config_path: str, *, fallback: str, language: str = "ko"
+) -> str:
+    try:
+        from mclab.application.catalog import ScenarioCatalog
+        from mclab.application.i18n import localized_scenario_text
+
+        scenario = ScenarioCatalog.default().find_by_config(config_path)
+    except Exception:
+        return fallback
+    if scenario is None:
+        return fallback
+    return localized_scenario_text(
+        language=language,
+        scenario_id=scenario.id,
+        title=scenario.title,
+        purpose=scenario.purpose,
+        lab_name=scenario.lab_name,
+    )[0]
+
+
+def _localized_report_title(
+    summary: dict[str, Any], *, fallback: str, language: str = "ko"
+) -> str:
+    config_path = _normalize_path(str(summary.get("config_path") or ""))
+    scenario_title = _localized_scenario_title(
+        config_path, fallback="", language=language
+    )
+    if not scenario_title:
+        return fallback
+    lab_name = _cli_lab_name(str(summary.get("lab_name") or config_path))
+    lab_titles = {
+        "ko": {
+            "lab01": "Lab01 질량·스프링·감쇠",
+            "lab02": "Lab02 PID 제어",
+            "lab03": "Lab03 2DOF 로봇",
+            "lab04": "Lab04 Panda 매니퓰레이터",
+        },
+        "en": {
+            "lab01": "Lab01 Mass-spring-damper",
+            "lab02": "Lab02 PID control",
+            "lab03": "Lab03 2DOF robot",
+            "lab04": "Lab04 Panda manipulator",
+        },
+    }
+    lab_title = lab_titles.get(language, lab_titles["en"]).get(lab_name, lab_name)
+    return f"{lab_title} · {scenario_title}" if lab_title else scenario_title
+
+
+def _localized_comparison_text(batch_name: str, fallback: str) -> tuple[str, str]:
+    titles = {
+        "lab01_msd_compare": "Lab01 질량·스프링·감쇠 비교",
+        "lab02_pid_compare": "Lab02 PID 비교",
+        "lab03_2dof_compare": "Lab03 2DOF 비교",
+        "lab04_wall_compare": "Lab04 Panda 가상 벽 비교",
+        "lab04_cartesian_compare": "Lab04 Panda 데카르트 이동 비교",
+    }
+    return (
+        titles.get(batch_name, fallback),
+        "제어된 여러 조건을 한 보고서에서 비교해 파라미터 변화의 영향을 확인하세요.",
+    )
 
 
 def _report_title(output: Path, summary: dict[str, Any]) -> str:

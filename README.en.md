@@ -1,147 +1,126 @@
-# MuJoCo Manipulator Control Lab
+# MCLab
 
-**MuJoCo Manipulator Control Lab** (`mclab`) is an educational robot-control
-simulator built entirely on MuJoCo: it walks a beginner from a 1-D
-mass-spring-damper system through PID control and a 2-DOF arm up to
-6/7-DOF manipulator control with Cartesian impedance and a virtual wall.
+[한국어 README](README.md)
 
-The goal is not a quantitatively identical digital twin of an industrial
-robot. It is a **teaching dynamics laboratory** where you can *see* how each
-control parameter changes the robot's motion — and where expensive
-trial-and-error mistakes (like launching an arm by misconfiguring stiffness)
-can be experienced safely and for free.
+MCLab is a local MuJoCo robot-control learning app. It carries one predict–manipulate–review workflow from a 1D mass–spring–damper plant through PID, 2DOF Jacobian/DLS, and the Franka Panda virtual wall.
 
-> 한국어 문서: [README.md](README.md) (전체 개발 명세 포함).
-> A companion Korean tutorial/review manuscript with full step-by-step
-> derivations lives under [`paper/`](paper/).
+![MCLab English home](docs/assets/mclab-home-en.png)
 
-## The four labs
+## Start in three steps
 
-| Lab | Topic | What you learn |
-|---|---|---|
-| `lab01` mass-spring-damper | 2nd-order dynamics | stiffness, damping, mass, overshoot, oscillation, energy |
-| `lab02` PID control | feedback tuning | Kp/Ki/Kd trade-offs, saturation, windup, noise, delay |
-| `lab03` 2-DOF arm | kinematics | FK, IK branches, Jacobian, singularities, trajectory profiles |
-| `lab04` Panda (7-DOF) | manipulator control | joint/Cartesian control, impedance parameters, virtual wall contact |
+1. Select **Start next experiment**.
+2. Select **Push**, change **Damping**, then select **Play**.
+3. Select **Replay recording**, then explain the priority plot.
 
-Every config ships with a learning guide (focus, what to try, what to watch,
-suggested next runs) and every run produces plots plus an HTML report, so the
-labs can be used for self-study without an instructor.
-
-### Failure gallery
-
-Selected configs reproduce *real* misconfiguration accidents so you can study
-them safely, e.g. `configs/lab01_msd/f2_launch_high_energy.yaml` stores
-50 J in the virtual spring before motion starts (predict the ~10 m/s launch
-with `v ≈ δ√(k/m)`, then watch it happen), and `f2_launch_precheck.yaml`
-shows the same displacement made safe. The companion manuscript explains the
-physics behind each case.
-
-## Quick start
-
-**Double-click [`START_HERE.cmd`](START_HERE.cmd)** (Windows). A menu opens;
-pick a number to try any of the four simulators. The first launch auto-installs
-what it needs (a few minutes) — the only prerequisite is Python ≥ 3.10.
-
-That's it. The table below is only for picking a specific scenario **directly**.
-
-### Scenarios by situation
-
-Pick from the menu, or run a file directly:
-`python -m mclab run <lab> --config configs/<lab_folder>/<file>.yaml --viewer --plot`
-
-**Lab01 — mass-spring-damper (second-order basics)**
-
-| What you want to see | config |
+| OS | Source launcher |
 |---|---|
-| Baseline response | `default` |
-| Lingering oscillation (too little damping) | `underdamped` |
-| Sluggish return (over-damped) | `over_damped` |
-| Stiffness comparison | `high_stiffness` / `low_stiffness` |
-| Push/pull and tune live | `interactive_pull` |
-| ⚠️ The stiffness-misconfig launch accident | `f2_launch_high_energy` ↔ `f2_launch_precheck` |
+| Windows 11 x64 | Double-click `START_HERE.cmd` |
+| Ubuntu 24.04 x64 | `./start_here.sh` |
+| macOS arm64/Intel | `./START_HERE.command` |
 
-**Lab02 — PID control**
+The first launch prepares a virtual environment and the licensed Panda assets.
 
-| What you want to see | config |
-|---|---|
-| Baseline | `default` |
-| Low/high P gain | `p_low_gain` / `p_high_gain` |
-| Calm overshoot with D | `pd_damped` |
-| Actuator saturation | `saturation_limit` |
-| Integral windup and anti-windup | `pid_with_windup` / `pid_anti_windup` |
-| Sensor noise / control delay | `measurement_noise` / `control_delay` |
-| Disturb and tune live | `interactive_disturbance` |
+## Manual installation
 
-**Lab03 — 2-DOF arm (kinematics & trajectories)**
-
-| What you want to see | config |
-|---|---|
-| Joint- vs task-space control | `joint_space_2dof` / `task_space_2dof` |
-| Trajectory profiles | `step` / `trapezoidal` / `s_curve` / `minimum_jerk` |
-| Singularity and DLS relief | `singularity_2dof` / `dls_singularity_2dof` |
-| Live control | `interactive_2dof` |
-
-**Lab04 — 7-DOF Panda (impedance & contact)**
-
-| What you want to see | config |
-|---|---|
-| Posture hold | `neutral_hold` |
-| Cartesian reach (soft/stiff) | `cartesian_soft` / `cartesian_stiff` |
-| Virtual-wall impedance contact | `impedance_wall` |
-| Wall stiffness/damping comparison | `wall_soft` / `wall_stiff`, `wall_low_damping` / `wall_high_damping` |
-| Push the wall yourself | `interactive_virtual_wall` |
-
-Every run saves plots (`plots/*.png`) and an HTML report that tells you what to
-look at first. The menu also contains full scenario lists and automatic
-comparison experiments beyond this table.
-
-## Manual install (advanced)
-
-Requires Python ≥ 3.10.
+Python 3.10+ is required.
 
 ```bash
-git clone https://github.com/ycpiglet/manipulator-control-tutorial.git
-cd manipulator-control-tutorial
 python -m venv .venv
-.venv/Scripts/pip install -e ".[dev]"      # Windows; use .venv/bin/pip on Linux/macOS
-python -m mclab menu                        # same guided launcher as START_HERE.cmd
+source .venv/bin/activate             # Windows: .venv\Scripts\activate
+python -m pip install -e '.[app]'
+python -m mclab assets install
+python -m mclab doctor
+python -m mclab app
 ```
 
-Lab04 also fetches the MuJoCo Menagerie Panda model into `third_party/`
-(see the license note below).
+MCLab runs one desktop process per user. Launching it again restores and raises the existing window instead of creating a second GPU process.
 
-## Verify your installation
+Headless use does not require Qt:
 
 ```bash
-python -m pytest -q          # 340 tests + 760+ subtests
-python -m mclab --help
+python -m pip install -e .
+python -m mclab run lab01 \
+  --config configs/lab01_msd/default.yaml \
+  --headless --plot --plots essential
 ```
 
-CI (GitHub Actions) enforces lint, the full test suite with a coverage floor
-(≥80 %; local baseline 84 %), and the manuscript's formula/marker gates.
+## App
 
-## Reuse and extension
+The four top-level destinations are Home, Learning path, Explore, and Results. Explore combines text search with directly labeled Level and Mode filters, a live result count, and a keyboard-reachable reset when no experiment matches. Multi-word searches such as `lab04 wall` match every word in any order. The experiment screen keeps the goal stages, MuJoCo scene, at most five core controls, and Pause/Step/Reset/speed/timeline visible. Physics waits for the learner's prediction and then starts at 0.00 s, so thinking time cannot change the result.
 
-- Add a scenario: drop a YAML into `configs/<lab>/` and register its
-  learning guide (`src/mclab/learning_guides.py`) and next-run suggestions
-  (`src/mclab/sim/reporting.py`); the test suite enforces both.
-- Lab documentation for educators lives in [`docs/`](docs/) (English).
-- The Korean manuscript under `paper/` provides the full theory with
-  no skipped derivation steps, anchored to machine-checked numeric examples.
+On first launch, Home keeps **Start → Change → Replay** and **Start next experiment** together in the first 640×360 viewport. Skipping moves keyboard focus to the primary action, and **Show tour again** beside the Home title restores the guide. If setup is not ready, its cause and recovery action take priority over the tour.
 
-## Licenses
+The first Lab01 opens paused at 0.00 s with keyboard focus on **Push**. Its default panel shows only Pull/Push and one highlighted **Damping** control, so the tour can be completed literally. This app-only prepared state does not pause the same YAML when it runs through CLI/headless physics.
 
-- **Code**: [Apache-2.0](LICENSE)
-- **Educational content** (`docs/`, lab guides, manuscript text):
-  [CC BY 4.0](LICENSE-docs)
-- **Third-party models** (`third_party/mujoco_menagerie`): keep each model
-  directory's own license file; the Panda model is from
-  [MuJoCo Menagerie](https://github.com/google-deepmind/mujoco_menagerie).
+If the run ends before its evidence is complete, **Restart** becomes the only primary action. Enter restarts at 0.00 s and returns focus to prediction; **View saved results** becomes primary only after prediction, one control, and observation are saved.
 
-## Citing
+Prediction examples match each experiment and put the observable first—Damping, P gain, tracking error, singularity, hand or joint target, or contact force—so the key quantity remains visible at 200% zoom.
 
-If you use these labs in teaching or research, please cite this repository.
-Machine-readable metadata is in [`CITATION.cff`](CITATION.cff) — GitHub shows
-a "Cite this repository" button from it. A JOSE submission is in preparation
-and an archival Zenodo DOI will be added here once the first release is cut.
+Lab01/02 directly label the spring, damper, mass block, and equilibrium, alongside a bright floor, scale ticks, current circle, and target diamond. GPU safe mode keeps the same responsive teaching diagram instead of falling back to an empty scene.
+
+Lab03/04 safe mode also remains instructional: it draws a 1D tracking rail, numbered 2DOF arm and workspace, simplified Panda arm, and virtual-wall grid with the same current/target semantics.
+
+Leaving the experiment automatically pauses physics and recording. A persistent session bar on Home, Learning path, Explore, and Results lets the learner return to the experiment or end and save it explicitly.
+While that bar is visible, starting, replaying, rerunning, and deleting are disabled; reports and folders remain available for safe review.
+
+Learning path presents one recommended next action and advances only after a successful saved run. When the app path is complete, its primary action changes to **Review results** instead of rerunning the final experiment.
+
+The last of 12 recommended steps runs all five comparison sets in a separate process. The app stays
+usable, and a comparison bar on Explore and Results shows the current topic with 1/5–5/5 progress
+and cancellation. Until it finishes, new experiments, recording playback, and reruns are disabled;
+existing reports, folders, and cleanup of unrelated saved runs remain available. The combined report
+and worksheet then appear in Results.
+
+The semantic visual system is consistent: current is cyan/solid/circle, target is violet/dashed/diamond, force is rose/arrow, and a wall or constraint is amber/patterned.
+
+Prediction examples follow the active physics context: damping, P gain, tracking, singularity, joint or hand targets, and virtual-wall contact force each receive a short Korean/English hypothesis instead of reusing the Lab01 oscillation example.
+
+Keyboard users can complete the core flow with Tab, Shift+Tab, Enter, Space, and arrow keys. Space pauses an experiment and Right Arrow steps once.
+
+## Commands
+
+```text
+mclab app [--lang ko|en] [--scenario ID] [--safe-mode]
+mclab replay <run-dir>
+mclab doctor [--json]
+mclab assets install
+mclab run ...
+mclab batch ...
+mclab coverage
+mclab review
+mclab index --open
+```
+
+`mclab menu` aliases the new app. The existing `run --viewer` route remains available for compatibility; macOS viewer commands select `mjpython` automatically.
+
+## Reproducible evidence
+
+Every new CLI run automatically saves:
+
+- resolved YAML, 100 Hz CSV, and compressed numeric states;
+- a default 60 fps qpos/qvel/ctrl/semantic replay;
+- schema-v1 provenance with scenario, status, seed, runtime, model/license, and artifact hashes;
+- plots, a result-first HTML report, and worksheet;
+- learner events, final snapshot, and tuned YAML when applicable.
+
+Replay recording uses saved states without recomputing physics. Run again with same settings performs a new calculation. Run last tuning uses `learner_tuned_config.yaml` for a new calculation.
+
+Results presents a one-sentence outcome, three important values, and the recommended next action before the primary **View report** action. Advanced reruns, tuned settings, folder access, and permanent deletion stay under **Manage**. MCLab never deletes saved runs automatically; cleanup shows the size and exact folder first.
+
+Legacy outputs stay readable. Recording replay is disabled with a reason when the old run lacks complete MuJoCo state.
+
+## Development
+
+```bash
+python -m pip install -e '.[app,dev]'
+python -m pytest -q
+python -m ruff check src tests scripts
+QT_QPA_PLATFORM=offscreen python -m mclab app --self-test
+# after installing dev extras: python scripts/audit_report_ui.py --help
+```
+
+See [installation](docs/installation.md), [learner guide](docs/learner_guide.md), [educator guide](docs/educator_guide.md), [architecture](docs/developer_guide.md), and [troubleshooting](docs/troubleshooting.md).
+
+## License
+
+Project code is Apache-2.0. The MuJoCo Menagerie Panda model keeps its original license. Asset installation verifies the pinned archive SHA-256 before extracting the Panda folder and license.

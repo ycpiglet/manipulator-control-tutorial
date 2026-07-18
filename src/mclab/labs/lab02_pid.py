@@ -61,7 +61,9 @@ def run(
     model_path = config.get("model_path", "models/lab02_pid/scene.xml")
     mujoco, model, data = load_model_and_data(model_path)
     handles = configure_slider_plant(mujoco, model, data, config)
-    logger = RunLogger(lab_name, config, config_path=config_path, output_dir=output_dir)
+    logger = RunLogger(
+        lab_name, config, config_path=config_path, output_dir=output_dir, seed=seed
+    )
 
     dt = float(config.get("dt", model.opt.timestep))
     sim_time = float(config.get("sim_time", 5.0))
@@ -209,6 +211,15 @@ def run(
                 pid_d=command.derivative,
                 saturated=float(command.saturated),
             )
+            logger.record_physics_state(
+                data,
+                semantic={
+                    "position": position,
+                    "velocity": velocity,
+                    "target_position": target_position,
+                    "force": total_force,
+                },
+            )
             update_slider_viewer_guides(
                 mujoco,
                 viewer_handle,
@@ -246,9 +257,11 @@ def run(
             playback_control=playback_control,
         ),
         learner_tuned_config=learner_tuned_config(config, _learner_tuned_updates(live_tuning)),
+        run_status="completed" if completed and data.time >= sim_time else "stopped",
     )
     if plot:
         _save_plots(output_path, logger.rows, plot_selection or config.get("plots"))
+        logger.finalize_artifacts()
     return resolve_project_path(output_path)
 
 

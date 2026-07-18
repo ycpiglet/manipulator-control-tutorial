@@ -6,6 +6,7 @@ import json
 import re
 import csv
 import math
+import time
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from datetime import datetime
@@ -13,7 +14,15 @@ from html import escape
 from pathlib import Path
 from typing import Any
 
-from mclab.config import PROJECT_ROOT, load_config, resolve_project_path
+from mclab.application.artifacts import write_manifest
+from mclab.application.batch_runs import ALL_COMPARE_ID
+from mclab.config import (
+    PROJECT_ROOT,
+    default_outputs_root,
+    is_frozen_bundle,
+    load_config,
+    resolve_output_path,
+)
 from mclab.labs import lab01_msd, lab02_pid, lab03_2dof, lab04_panda
 from mclab.learning_guides import (
     challenge_prompt_for_guide,
@@ -84,11 +93,22 @@ BATCH_SETS: dict[str, tuple[BatchScenario, ...]] = {
         BatchScenario("control_delay", "lab02", "configs/lab02_pid/control_delay.yaml"),
     ),
     "lab03_2dof_compare": (
-        BatchScenario("joint_space", "lab03", "configs/lab03_2dof/joint_space_2dof.yaml", "essential"),
+        BatchScenario(
+            "joint_space", "lab03", "configs/lab03_2dof/joint_space_2dof.yaml", "essential"
+        ),
         BatchScenario("task_space", "lab03", "configs/lab03_2dof/task_space_2dof.yaml", "task"),
-        BatchScenario("singularity", "lab03", "configs/lab03_2dof/singularity_2dof.yaml", "singularity"),
-        BatchScenario("dls_singularity", "lab03", "configs/lab03_2dof/dls_singularity_2dof.yaml", "dls"),
-        BatchScenario("condition_aware_dls", "lab03", "configs/lab03_2dof/condition_aware_dls_2dof.yaml", "dls"),
+        BatchScenario(
+            "singularity", "lab03", "configs/lab03_2dof/singularity_2dof.yaml", "singularity"
+        ),
+        BatchScenario(
+            "dls_singularity", "lab03", "configs/lab03_2dof/dls_singularity_2dof.yaml", "dls"
+        ),
+        BatchScenario(
+            "condition_aware_dls",
+            "lab03",
+            "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
+            "dls",
+        ),
         BatchScenario(
             "condition_aware_early",
             "lab03",
@@ -207,22 +227,64 @@ BATCH_SETS: dict[str, tuple[BatchScenario, ...]] = {
     "lab04_wall_compare": (
         BatchScenario("soft_wall", "lab04", "configs/lab04_panda/wall_soft.yaml", "wall_compare"),
         BatchScenario("stiff_wall", "lab04", "configs/lab04_panda/wall_stiff.yaml", "wall_compare"),
-        BatchScenario("low_damping_wall", "lab04", "configs/lab04_panda/wall_low_damping.yaml", "wall_compare"),
-        BatchScenario("high_damping_wall", "lab04", "configs/lab04_panda/wall_high_damping.yaml", "wall_compare"),
+        BatchScenario(
+            "low_damping_wall", "lab04", "configs/lab04_panda/wall_low_damping.yaml", "wall_compare"
+        ),
+        BatchScenario(
+            "high_damping_wall",
+            "lab04",
+            "configs/lab04_panda/wall_high_damping.yaml",
+            "wall_compare",
+        ),
         BatchScenario("near_wall", "lab04", "configs/lab04_panda/wall_near.yaml", "wall_compare"),
         BatchScenario("far_wall", "lab04", "configs/lab04_panda/wall_far.yaml", "wall_compare"),
-        BatchScenario("low_retreat_wall", "lab04", "configs/lab04_panda/wall_low_retreat.yaml", "wall_compare"),
-        BatchScenario("high_retreat_wall", "lab04", "configs/lab04_panda/wall_high_retreat.yaml", "wall_compare"),
-        BatchScenario("slow_approach_wall", "lab04", "configs/lab04_panda/wall_slow_approach.yaml", "wall_compare"),
-        BatchScenario("fast_approach_wall", "lab04", "configs/lab04_panda/wall_fast_approach.yaml", "wall_compare"),
-        BatchScenario("shallow_push_wall", "lab04", "configs/lab04_panda/wall_shallow_push.yaml", "wall_compare"),
-        BatchScenario("deep_push_wall", "lab04", "configs/lab04_panda/wall_deep_push.yaml", "wall_compare"),
-        BatchScenario("contact_cycle_wall", "lab04", "configs/lab04_panda/wall_contact_cycle.yaml", "wall_compare"),
+        BatchScenario(
+            "low_retreat_wall", "lab04", "configs/lab04_panda/wall_low_retreat.yaml", "wall_compare"
+        ),
+        BatchScenario(
+            "high_retreat_wall",
+            "lab04",
+            "configs/lab04_panda/wall_high_retreat.yaml",
+            "wall_compare",
+        ),
+        BatchScenario(
+            "slow_approach_wall",
+            "lab04",
+            "configs/lab04_panda/wall_slow_approach.yaml",
+            "wall_compare",
+        ),
+        BatchScenario(
+            "fast_approach_wall",
+            "lab04",
+            "configs/lab04_panda/wall_fast_approach.yaml",
+            "wall_compare",
+        ),
+        BatchScenario(
+            "shallow_push_wall",
+            "lab04",
+            "configs/lab04_panda/wall_shallow_push.yaml",
+            "wall_compare",
+        ),
+        BatchScenario(
+            "deep_push_wall", "lab04", "configs/lab04_panda/wall_deep_push.yaml", "wall_compare"
+        ),
+        BatchScenario(
+            "contact_cycle_wall",
+            "lab04",
+            "configs/lab04_panda/wall_contact_cycle.yaml",
+            "wall_compare",
+        ),
     ),
     "lab04_cartesian_compare": (
-        BatchScenario("baseline_reach", "lab04", "configs/lab04_panda/cartesian_reach.yaml", "cartesian_reach"),
-        BatchScenario("soft_reach", "lab04", "configs/lab04_panda/cartesian_soft.yaml", "cartesian_reach"),
-        BatchScenario("stiff_reach", "lab04", "configs/lab04_panda/cartesian_stiff.yaml", "cartesian_reach"),
+        BatchScenario(
+            "baseline_reach", "lab04", "configs/lab04_panda/cartesian_reach.yaml", "cartesian_reach"
+        ),
+        BatchScenario(
+            "soft_reach", "lab04", "configs/lab04_panda/cartesian_soft.yaml", "cartesian_reach"
+        ),
+        BatchScenario(
+            "stiff_reach", "lab04", "configs/lab04_panda/cartesian_stiff.yaml", "cartesian_reach"
+        ),
     ),
 }
 
@@ -341,25 +403,75 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
         ),
         preview_plots=("dls.png", "end_effector.png", "singularity.png", "error.png"),
         comparison_specs=(
-            ("joint_error_compare.png", "Joint Error Norm Comparison", "error norm", "joint_error_norm"),
-            ("task_error_compare.png", "Task Error Norm Comparison", "error norm", "task_error_norm"),
+            (
+                "joint_error_compare.png",
+                "Joint Error Norm Comparison",
+                "error norm",
+                "joint_error_norm",
+            ),
+            (
+                "task_error_compare.png",
+                "Task Error Norm Comparison",
+                "error norm",
+                "task_error_norm",
+            ),
             ("hand_x_compare.png", "End-Effector X Comparison", "x [m]", "x_ee_0"),
             ("hand_y_compare.png", "End-Effector Y Comparison", "y [m]", "x_ee_1"),
-            ("manipulability_compare.png", "Manipulability Comparison", "manipulability", "manipulability"),
-            ("dls_task_speed_compare.png", "DLS Task Speed Comparison", "task speed", "dls_task_speed"),
+            (
+                "manipulability_compare.png",
+                "Manipulability Comparison",
+                "manipulability",
+                "manipulability",
+            ),
+            (
+                "dls_task_speed_compare.png",
+                "DLS Task Speed Comparison",
+                "task speed",
+                "dls_task_speed",
+            ),
             (
                 "dls_task_speed_limit_compare.png",
                 "DLS Task Speed Limit Comparison",
                 "task speed limit",
                 "dls_task_speed_limit",
             ),
-            ("dls_joint_speed_compare.png", "DLS Joint Speed Comparison", "joint speed", "dls_joint_speed"),
-            ("dls_damping_compare.png", "DLS Damping Schedule Comparison", "damping / scale", "dls_damping"),
-            ("shoulder_torque_compare.png", "Shoulder Torque Comparison", "torque [N m]", "tau_cmd_0"),
+            (
+                "dls_joint_speed_compare.png",
+                "DLS Joint Speed Comparison",
+                "joint speed",
+                "dls_joint_speed",
+            ),
+            (
+                "dls_damping_compare.png",
+                "DLS Damping Schedule Comparison",
+                "damping / scale",
+                "dls_damping",
+            ),
+            (
+                "shoulder_torque_compare.png",
+                "Shoulder Torque Comparison",
+                "torque [N m]",
+                "tau_cmd_0",
+            ),
             ("elbow_torque_compare.png", "Elbow Torque Comparison", "torque [N m]", "tau_cmd_1"),
-            ("shoulder_disturbance_compare.png", "Shoulder Disturbance Comparison", "torque [N m]", "tau_disturbance_0"),
-            ("elbow_disturbance_compare.png", "Elbow Disturbance Comparison", "torque [N m]", "tau_disturbance_1"),
-            ("total_elbow_torque_compare.png", "Total Elbow Torque Comparison", "torque [N m]", "tau_total_1"),
+            (
+                "shoulder_disturbance_compare.png",
+                "Shoulder Disturbance Comparison",
+                "torque [N m]",
+                "tau_disturbance_0",
+            ),
+            (
+                "elbow_disturbance_compare.png",
+                "Elbow Disturbance Comparison",
+                "torque [N m]",
+                "tau_disturbance_1",
+            ),
+            (
+                "total_elbow_torque_compare.png",
+                "Total Elbow Torque Comparison",
+                "torque [N m]",
+                "tau_total_1",
+            ),
         ),
         summary_comparison_specs=(
             (
@@ -427,13 +539,43 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
         preview_plots=("virtual_wall.png", "end_effector.png", "error.png"),
         comparison_specs=(
             ("hand_x_compare.png", "Panda Hand X Comparison", "x [m]", "x_ee_0"),
-            ("target_wall_gap_compare.png", "Target-Wall Gap Comparison", "gap [cm]", "target_wall_gap_cm"),
-            ("wall_penetration_compare.png", "Wall Penetration Comparison", "penetration [cm]", "wall_penetration_cm"),
+            (
+                "target_wall_gap_compare.png",
+                "Target-Wall Gap Comparison",
+                "gap [cm]",
+                "target_wall_gap_cm",
+            ),
+            (
+                "wall_penetration_compare.png",
+                "Wall Penetration Comparison",
+                "penetration [cm]",
+                "wall_penetration_cm",
+            ),
             ("wall_force_compare.png", "Virtual Wall Force Comparison", "force", "force_virtual_0"),
-            ("wall_spring_force_compare.png", "Virtual Wall Spring Force Comparison", "force", "force_virtual_spring_0"),
-            ("wall_damping_force_compare.png", "Virtual Wall Damping Force Comparison", "force", "force_virtual_damping_0"),
-            ("wall_retreat_compare.png", "Wall Retreat Comparison", "retreat [cm]", "wall_retreat_cm"),
-            ("hand_x_speed_compare.png", "Panda Hand X Speed Comparison", "x speed [m/s]", "xdot_ee_0"),
+            (
+                "wall_spring_force_compare.png",
+                "Virtual Wall Spring Force Comparison",
+                "force",
+                "force_virtual_spring_0",
+            ),
+            (
+                "wall_damping_force_compare.png",
+                "Virtual Wall Damping Force Comparison",
+                "force",
+                "force_virtual_damping_0",
+            ),
+            (
+                "wall_retreat_compare.png",
+                "Wall Retreat Comparison",
+                "retreat [cm]",
+                "wall_retreat_cm",
+            ),
+            (
+                "hand_x_speed_compare.png",
+                "Panda Hand X Speed Comparison",
+                "x speed [m/s]",
+                "xdot_ee_0",
+            ),
         ),
         summary_comparison_specs=(
             (
@@ -479,10 +621,20 @@ BATCH_GUIDES: dict[str, BatchGuide] = {
         ),
         preview_plots=("cartesian_error.png", "end_effector.png", "torque.png"),
         comparison_specs=(
-            ("cartesian_error_compare.png", "Cartesian Error Comparison", "error [cm]", "cartesian_error_cm"),
+            (
+                "cartesian_error_compare.png",
+                "Cartesian Error Comparison",
+                "error [cm]",
+                "cartesian_error_cm",
+            ),
             ("hand_x_compare.png", "Panda Hand X Comparison", "x [m]", "x_ee_0"),
             ("hand_y_compare.png", "Panda Hand Y Comparison", "y [m]", "x_ee_1"),
-            ("shoulder_actuator_compare.png", "Shoulder Actuator Force Comparison", "force / torque proxy", "tau_cmd_0"),
+            (
+                "shoulder_actuator_compare.png",
+                "Shoulder Actuator Force Comparison",
+                "force / torque proxy",
+                "tau_cmd_0",
+            ),
         ),
     ),
 }
@@ -556,10 +708,16 @@ def run_all_batches(
     output_dir: str | Path | None = None,
     plot: bool = True,
     seed: int | None = None,
+    on_progress: Callable[[int, int, str], None] | None = None,
 ) -> Path:
+    started = time.perf_counter()
+    started_at = datetime.now().astimezone().isoformat()
     group_output = create_batch_output_path("all_batches", output_dir)
     completed: list[dict[str, Any]] = []
-    for batch_name in list_batch_sets():
+    batch_names = list_batch_sets()
+    for index, batch_name in enumerate(batch_names, start=1):
+        if on_progress is not None:
+            on_progress(index, len(batch_names), batch_name)
         batch_output = run_batch(
             batch_name,
             output_dir=group_output / batch_name,
@@ -598,10 +756,10 @@ def run_all_batches(
                 "lab_name": "batch_group",
                 "config_name": ALL_BATCH_NAME,
                 "samples": scenario_runs,
-                "duration": "",
                 "batch_name": ALL_BATCH_NAME,
                 "child_batches": len(completed),
                 "scenario_runs": scenario_runs,
+                "duration": time.perf_counter() - started,
             },
             indent=2,
         ),
@@ -610,17 +768,26 @@ def run_all_batches(
     write_outputs_index(group_output)
     write_all_batches_report(group_output, completed)
     write_outputs_index(group_output.parent)
+    write_manifest(
+        group_output,
+        scenario_id=ALL_COMPARE_ID,
+        status="completed",
+        config={"batch_name": ALL_BATCH_NAME, "plot": plot},
+        seed=seed,
+        started_at=started_at,
+    )
     return group_output
 
 
 def create_batch_output_path(batch_name: str, output_dir: str | Path | None = None) -> Path:
     if output_dir is not None:
-        path = resolve_project_path(output_dir)
+        path = resolve_output_path(output_dir)
         path.mkdir(parents=True, exist_ok=True)
         return path
 
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    base_path = PROJECT_ROOT / "outputs" / f"{stamp}_{batch_name}"
+    root = default_outputs_root() if is_frozen_bundle() else PROJECT_ROOT / "outputs"
+    base_path = root / f"{stamp}_{batch_name}"
     return _create_unique_directory(base_path)
 
 
@@ -636,22 +803,30 @@ def write_batch_report(
             title=batch_name.replace("_", " ").title(),
             focus="Compare the scenario reports and summary metrics.",
             questions=("Open each run report and compare the response plots.",),
-            followups=("Copy one scenario config, change a single parameter, and rerun the batch.",),
+            followups=(
+                "Copy one scenario config, change a single parameter, and rerun the batch.",
+            ),
             metric_keys=INDEX_METRIC_KEYS,
             preview_plots=("position.png",),
             comparison_specs=(),
         ),
     )
     rows = _batch_rows(output, scenarios)
-    (output / "worksheet.md").write_text(_render_batch_worksheet(output, batch_name, guide, rows), encoding="utf-8")
+    (output / "worksheet.md").write_text(
+        _render_batch_worksheet(output, batch_name, guide, rows), encoding="utf-8"
+    )
     report = output / "report.html"
     report.write_text(_render_batch_report(output, batch_name, guide, rows), encoding="utf-8")
     return report
 
 
-def write_all_batches_report(batch_output: str | Path, completed_batches: list[dict[str, Any]]) -> Path:
+def write_all_batches_report(
+    batch_output: str | Path, completed_batches: list[dict[str, Any]]
+) -> Path:
     output = Path(batch_output)
-    (output / "worksheet.md").write_text(_render_all_batches_worksheet(completed_batches), encoding="utf-8")
+    (output / "worksheet.md").write_text(
+        _render_all_batches_worksheet(completed_batches), encoding="utf-8"
+    )
     report = output / "report.html"
     report.write_text(_render_all_batches_report(completed_batches), encoding="utf-8")
     return report
@@ -686,9 +861,13 @@ def _batch_rows(output: Path, scenarios: tuple[BatchScenario, ...]) -> list[dict
                 "plot_selection": scenario.plots,
                 "config": _load_config_for_report(run_dir, scenario.config_path),
                 "run_dir": run_dir.name,
-                "report": f"{run_dir.name}/report.html" if (run_dir / "report.html").exists() else run_dir.name,
+                "report": f"{run_dir.name}/report.html"
+                if (run_dir / "report.html").exists()
+                else run_dir.name,
                 "folder": f"{run_dir.name}/",
-                "worksheet": f"{run_dir.name}/worksheet.md" if (run_dir / "worksheet.md").exists() else "",
+                "worksheet": f"{run_dir.name}/worksheet.md"
+                if (run_dir / "worksheet.md").exists()
+                else "",
                 "summary": summary,
                 "plots": _available_plot_paths(run_dir),
             }
@@ -696,7 +875,9 @@ def _batch_rows(output: Path, scenarios: tuple[BatchScenario, ...]) -> list[dict
     return rows
 
 
-def _render_batch_worksheet(output: Path, batch_name: str, guide: BatchGuide, rows: list[dict[str, Any]]) -> str:
+def _render_batch_worksheet(
+    output: Path, batch_name: str, guide: BatchGuide, rows: list[dict[str, Any]]
+) -> str:
     metric_keys = _display_metric_keys(guide, rows)
     lines: list[str] = [
         "# MCLab Batch Worksheet",
@@ -726,7 +907,9 @@ def _render_batch_worksheet(output: Path, batch_name: str, guide: BatchGuide, ro
     return "\n".join(lines).rstrip() + "\n"
 
 
-def _batch_worksheet_scenario_lines(rows: list[dict[str, Any]], metric_keys: list[str]) -> list[str]:
+def _batch_worksheet_scenario_lines(
+    rows: list[dict[str, Any]], metric_keys: list[str]
+) -> list[str]:
     lines = ["## Scenario Review", ""]
     if not rows:
         return [*lines, "- No scenario runs were saved.", ""]
@@ -755,12 +938,16 @@ def _batch_worksheet_scenario_lines(rows: list[dict[str, Any]], metric_keys: lis
                 lines.append(f"- Plot review: {title} - {detail}")
         for key in metric_keys[:8]:
             lines.append(f"- {_label(key)}: {_format_value(row.get('summary', {}).get(key))}")
-        lines.append("- Review prompt: compare this scenario against the baseline before changing another parameter.")
+        lines.append(
+            "- Review prompt: compare this scenario against the baseline before changing another parameter."
+        )
         lines.append("")
     return lines
 
 
-def _batch_worksheet_comparison_lines(rows: list[dict[str, Any]], metric_keys: list[str]) -> list[str]:
+def _batch_worksheet_comparison_lines(
+    rows: list[dict[str, Any]], metric_keys: list[str]
+) -> list[str]:
     lines = ["## Comparison Notes", ""]
     if len(rows) < 2 or not metric_keys:
         lines.append("- Add at least two scenario summaries to compare metrics.")
@@ -770,8 +957,7 @@ def _batch_worksheet_comparison_lines(rows: list[dict[str, Any]], metric_keys: l
     lines.append(f"- Baseline scenario: {baseline['label']}")
     for key in metric_keys[:6]:
         values = [
-            (str(row["label"]), _as_finite_float(row.get("summary", {}).get(key)))
-            for row in rows
+            (str(row["label"]), _as_finite_float(row.get("summary", {}).get(key))) for row in rows
         ]
         values = [(label, value) for label, value in values if value is not None]
         if len(values) < 2:
@@ -786,7 +972,9 @@ def _batch_worksheet_comparison_lines(rows: list[dict[str, Any]], metric_keys: l
     return lines
 
 
-def _batch_worksheet_prediction_check_lines(rows: list[dict[str, Any]], metric_keys: list[str]) -> list[str]:
+def _batch_worksheet_prediction_check_lines(
+    rows: list[dict[str, Any]], metric_keys: list[str]
+) -> list[str]:
     items = _prediction_check_items(rows, metric_keys)
     if not items:
         return []
@@ -802,7 +990,9 @@ def _batch_worksheet_prediction_check_lines(rows: list[dict[str, Any]], metric_k
     return lines
 
 
-def _batch_worksheet_viewer_handoff_lines(rows: list[dict[str, Any]], metric_keys: list[str]) -> list[str]:
+def _batch_worksheet_viewer_handoff_lines(
+    rows: list[dict[str, Any]], metric_keys: list[str]
+) -> list[str]:
     baseline_summary = rows[0].get("summary", {}) if rows else {}
     pick = _viewer_handoff_pick(rows, metric_keys, baseline_summary)
     if pick is None:
@@ -845,8 +1035,14 @@ def _batch_worksheet_comparison_plot_lines(output: Path) -> list[str]:
     return lines
 
 
-def _batch_worksheet_followup_lines(batch_name: str, guide: BatchGuide, rows: list[dict[str, Any]]) -> list[str]:
-    lines = ["## Reproduce And Extend", "", f"- Batch command: python -m mclab batch {batch_name} --open-report"]
+def _batch_worksheet_followup_lines(
+    batch_name: str, guide: BatchGuide, rows: list[dict[str, Any]]
+) -> list[str]:
+    lines = [
+        "## Reproduce And Extend",
+        "",
+        f"- Batch command: python -m mclab batch {batch_name} --open-report",
+    ]
     for row in rows:
         lines.append(f"- Scenario command: {_scenario_run_command(row)}")
         lines.append(f"  - Viewer rerun: {_scenario_viewer_command(row)}")
@@ -861,7 +1057,14 @@ def _batch_worksheet_followup_lines(batch_name: str, guide: BatchGuide, rows: li
 
 
 def _batch_worksheet_artifact_lines(output: Path, rows: list[dict[str, Any]]) -> list[str]:
-    lines = ["## Artifacts", "", "- report.html", "- index.html", "- batch_summary.json", "- summary.json"]
+    lines = [
+        "## Artifacts",
+        "",
+        "- report.html",
+        "- index.html",
+        "- batch_summary.json",
+        "- summary.json",
+    ]
     if (output / "comparison_plots").exists():
         lines.append("- comparison_plots:")
         for plot in _comparison_plot_paths(output):
@@ -900,7 +1103,13 @@ def _render_all_batches_worksheet(completed_batches: list[dict[str, Any]]) -> st
         batch_name = str(row.get("batch_name", ""))
         guide = _all_batch_guide(row)
         report = str(row.get("report", ""))
-        worksheet = f"{report.rsplit('/', 1)[0]}/worksheet.md" if "/" in report else "worksheet.md" if report else ""
+        worksheet = (
+            f"{report.rsplit('/', 1)[0]}/worksheet.md"
+            if "/" in report
+            else "worksheet.md"
+            if report
+            else ""
+        )
         viewer_handoff = _all_batch_viewer_handoff(row)
         lines.extend(
             [
@@ -928,7 +1137,9 @@ def _render_all_batches_worksheet(completed_batches: list[dict[str, Any]]) -> st
     return "\n".join(lines).rstrip() + "\n"
 
 
-def _render_batch_report(output: Path, batch_name: str, guide: BatchGuide, rows: list[dict[str, Any]]) -> str:
+def _render_batch_report(
+    output: Path, batch_name: str, guide: BatchGuide, rows: list[dict[str, Any]]
+) -> str:
     metric_keys = _display_metric_keys(guide, rows)
     question_items = "\n".join(f"<li>{escape(question)}</li>" for question in guide.questions)
     next_experiments = _next_experiments(guide)
@@ -956,7 +1167,9 @@ def _render_batch_report(output: Path, batch_name: str, guide: BatchGuide, rows:
     metric_headers = "".join(f"<th>{escape(_label(key))}</th>" for key in metric_keys)
     metric_rows = "\n".join(_metric_row(row, metric_keys) for row in rows)
     if not metric_rows:
-        metric_rows = f'<tr><td colspan="{3 + len(metric_keys)}">No scenario summaries were found.</td></tr>'
+        metric_rows = (
+            f'<tr><td colspan="{3 + len(metric_keys)}">No scenario summaries were found.</td></tr>'
+        )
 
     return f"""<!doctype html>
 <html lang="en">
@@ -967,7 +1180,7 @@ def _render_batch_report(output: Path, batch_name: str, guide: BatchGuide, rows:
   <style>
     :root {{
       color-scheme: light;
-      font-family: "Segoe UI", Arial, sans-serif;
+      font-family: "Noto Sans KR", "Segoe UI", Arial, sans-serif;
       color: #202124;
       background: #f6f7f9;
     }}
@@ -1115,6 +1328,11 @@ def _render_batch_report(output: Path, batch_name: str, guide: BatchGuide, rows:
     .table-wrap {{
       overflow-x: auto;
     }}
+    .table-wrap:focus-visible {{
+      outline: 3px solid #ffdd00;
+      outline-offset: 3px;
+      box-shadow: 0 0 0 2px #000000;
+    }}
     table {{
       border-collapse: collapse;
       width: 100%;
@@ -1161,7 +1379,7 @@ def _render_batch_report(output: Path, batch_name: str, guide: BatchGuide, rows:
     {plot_previews}
     <section>
       <h2>Metric Table</h2>
-      <div class="table-wrap">
+      <div class="table-wrap" tabindex="0" aria-label="Scrollable data table">
         <table>
           <thead><tr><th>Scenario</th><th>Lab</th><th>Config</th>{metric_headers}</tr></thead>
           <tbody>{metric_rows}</tbody>
@@ -1190,7 +1408,7 @@ def _render_all_batches_report(completed_batches: list[dict[str, Any]]) -> str:
   <style>
     :root {{
       color-scheme: light;
-      font-family: "Segoe UI", Arial, sans-serif;
+      font-family: "Noto Sans KR", "Segoe UI", Arial, sans-serif;
       color: #202124;
       background: #f6f7f9;
     }}
@@ -1243,6 +1461,11 @@ def _render_all_batches_report(completed_batches: list[dict[str, Any]]) -> str:
     .table-wrap {{
       overflow-x: auto;
     }}
+    .table-wrap:focus-visible {{
+      outline: 3px solid #ffdd00;
+      outline-offset: 3px;
+      box-shadow: 0 0 0 2px #000000;
+    }}
     table {{
       border-collapse: collapse;
       width: 100%;
@@ -1278,7 +1501,7 @@ def _render_all_batches_report(completed_batches: list[dict[str, Any]]) -> str:
     </section>
     <section>
       <h2>Summary Table</h2>
-      <div class="table-wrap">
+      <div class="table-wrap" tabindex="0" aria-label="Scrollable data table">
         <table>
           <thead><tr><th>Batch</th><th>Scenarios</th><th>Report</th><th>Worksheet</th><th>Folder</th></tr></thead>
           <tbody>{rows}</tbody>
@@ -1311,7 +1534,7 @@ def _all_batch_card(row: dict[str, Any]) -> str:
         if viewer_handoff
         else '<span class="muted">No viewer handoff</span>'
     )
-    focus = f'<p>{escape(guide.focus)}</p>' if guide is not None else ""
+    focus = f"<p>{escape(guide.focus)}</p>" if guide is not None else ""
     question = (
         f'<p class="muted"><strong>Question:</strong> {escape(guide.questions[0])}</p>'
         if guide is not None and guide.questions
@@ -1321,7 +1544,7 @@ def _all_batch_card(row: dict[str, Any]) -> str:
         '<article class="batch-card">'
         f'<h3><a href="{escape(str(row["report"]))}">{escape(str(row["title"]))}</a></h3>'
         f'<p class="muted">{escape(str(row["batch_name"]))}</p>'
-        f'<p>{escape(str(row["scenario_count"]))} scenarios</p>'
+        f"<p>{escape(str(row['scenario_count']))} scenarios</p>"
         f"{focus}"
         f"{question}"
         f'<p class="muted"><a href="{escape(str(row["report"]))}">Open report</a> | '
@@ -1555,11 +1778,15 @@ def _priority_plot_link(plots: Any, row: dict[str, Any] | None = None) -> tuple[
     plot_names = sorted(str(name) for name in plots if str(name).endswith(".png"))
     if not plot_names:
         return None
-    selected = min(plot_names, key=lambda name: _plot_priority_key(name, _plot_priorities_for_row(row)))
+    selected = min(
+        plot_names, key=lambda name: _plot_priority_key(name, _plot_priorities_for_row(row))
+    )
     return selected, str(plots[selected])
 
 
-def _plot_priority_key(name: str, priorities: tuple[str, ...] = INDEX_PLOT_PRIORITY) -> tuple[int, str]:
+def _plot_priority_key(
+    name: str, priorities: tuple[str, ...] = INDEX_PLOT_PRIORITY
+) -> tuple[int, str]:
     stem = Path(name).stem
     for index, priority in enumerate(priorities):
         if stem == priority or stem.startswith(f"{priority}_") or stem.endswith(f"_{priority}"):
@@ -1600,7 +1827,7 @@ def _reproduce_commands(batch_name: str, rows: list[dict[str, Any]]) -> str:
         "<h2>Reproduce Commands</h2>"
         '<p class="muted">Run the whole comparison again, or rerun one scenario before editing its YAML.</p>'
         f'<code class="command">{escape(batch_command)}</code>'
-        '<div class="table-wrap">'
+        '<div class="table-wrap" tabindex="0" aria-label="Scrollable data table">'
         "<table>"
         "<thead><tr><th>Scenario</th><th>Headless run command</th><th>Viewer rerun command</th></tr></thead>"
         f"<tbody>{scenario_commands}</tbody>"
@@ -1625,7 +1852,7 @@ def _viewer_handoff_section(
         "<h2>Viewer Handoff</h2>"
         "<p>After comparing plots, reopen one scenario in the side-panel-free viewer and inspect the motion live.</p>"
         f"<p><strong>Start with {escape(label)}</strong>: {escape(reason)}.</p>"
-        "<p class=\"muted\">Open the scenario report, priority plot, worksheet, or folder first, then run the viewer command.</p>"
+        '<p class="muted">Open the scenario report, priority plot, worksheet, or folder first, then run the viewer command.</p>'
         f"{_scenario_quick_links(row)}"
         f'<code class="command">{escape(_scenario_viewer_command(row))}</code>'
         "</section>"
@@ -1665,7 +1892,9 @@ def _viewer_handoff_pick(
         return row, reason
 
     if len(rows) > 1:
-        return rows[1], "first non-baseline scenario; compare its live response against the saved baseline"
+        return rows[
+            1
+        ], "first non-baseline scenario; compare its live response against the saved baseline"
 
     return rows[0], "only saved scenario; inspect the motion before editing YAML"
 
@@ -1693,7 +1922,9 @@ def _scenario_viewer_command(row: dict[str, Any]) -> str:
 
 
 def _scenario_learning_cues(row: dict[str, Any]) -> str:
-    guide = guide_for_config(config_path=str(row.get("config_path", "")), lab_name=str(row.get("lab_name", "")))
+    guide = guide_for_config(
+        config_path=str(row.get("config_path", "")), lab_name=str(row.get("lab_name", ""))
+    )
     if guide is None:
         return ""
     start_steps, challenge = _scenario_action_cues(row)
@@ -1705,19 +1936,16 @@ def _scenario_learning_cues(row: dict[str, Any]) -> str:
         ("Watch", str(getattr(guide, "watch", "") or "").strip()),
     ]
     return "".join(
-        (
-            '<div class="cue">'
-            f"<strong>{escape(label)}</strong>"
-            f"{escape(text)}"
-            "</div>"
-        )
+        (f'<div class="cue"><strong>{escape(label)}</strong>{escape(text)}</div>')
         for label, text in cues
         if text
     )
 
 
 def _scenario_action_cues(row: dict[str, Any]) -> tuple[str, str]:
-    guide = guide_for_config(config_path=str(row.get("config_path", "")), lab_name=str(row.get("lab_name", "")))
+    guide = guide_for_config(
+        config_path=str(row.get("config_path", "")), lab_name=str(row.get("lab_name", ""))
+    )
     if guide is None:
         return "", ""
     start_steps = start_steps_for_guide(guide).removeprefix("Start steps:").strip()
@@ -1729,12 +1957,7 @@ def _scenario_control_surface(row: dict[str, Any]) -> str:
     summary = _control_surface_summary(row.get("config", {}))
     if not summary:
         return ""
-    return (
-        '<div class="cue">'
-        "<strong>Control surface</strong>"
-        f"{escape(summary)}"
-        "</div>"
-    )
+    return f'<div class="cue"><strong>Control surface</strong>{escape(summary)}</div>'
 
 
 def _control_surface_summary(config: Any) -> str:
@@ -1804,14 +2027,7 @@ def _next_experiments(guide: BatchGuide) -> str:
     if not guide.followups:
         return ""
     items = "\n".join(f"<li>{escape(item)}</li>" for item in guide.followups)
-    return (
-        "<section>"
-        "<h2>Next Experiments</h2>"
-        "<ul>"
-        f"{items}"
-        "</ul>"
-        "</section>"
-    )
+    return f"<section><h2>Next Experiments</h2><ul>{items}</ul></section>"
 
 
 def _comparison_takeaways(rows: list[dict[str, Any]], metric_keys: list[str]) -> str:
@@ -1837,9 +2053,7 @@ def _comparison_takeaways(rows: list[dict[str, Any]], metric_keys: list[str]) ->
         "<section>"
         "<h2>Comparison Takeaways</h2>"
         '<p class="muted">Use these as starting hypotheses, then confirm the story in the plots and YAML differences.</p>'
-        '<div class="takeaway-grid">'
-        + "\n".join(cards)
-        + "</div>"
+        '<div class="takeaway-grid">' + "\n".join(cards) + "</div>"
         "</section>"
     )
 
@@ -1863,7 +2077,7 @@ def _prediction_check(rows: list[dict[str, Any]], metric_keys: list[str]) -> str
         "<h2>Prediction Check</h2>"
         '<p class="muted">After making a prediction, use this table to decide whether the saved evidence '
         "matched, partly matched, or surprised you.</p>"
-        '<div class="table-wrap">'
+        '<div class="table-wrap" tabindex="0" aria-label="Scrollable data table">'
         "<table>"
         "<thead><tr><th>Metric</th><th>Saved evidence</th><th>Outcome prompt</th></tr></thead>"
         f"<tbody>{rows_html}</tbody>"
@@ -1942,12 +2156,7 @@ def _takeaway_card(
             f"({_format_value(min_value)}) to <strong>{escape(max_label)}</strong> "
             f"({_format_value(max_value)})."
         )
-    return (
-        '<article class="takeaway">'
-        f"<h3>{label}</h3>"
-        f"<p>{body}</p>"
-        "</article>"
-    )
+    return f'<article class="takeaway"><h3>{label}</h3><p>{body}</p></article>'
 
 
 def _lower_metric_takeaway_body(
@@ -2025,10 +2234,7 @@ def _takeaway_rank_value(key: str, value: float) -> float:
 def _parameter_differences(rows: list[dict[str, Any]]) -> str:
     if not rows:
         return ""
-    flattened = [
-        (str(row["label"]), _flatten_config(row.get("config", {})))
-        for row in rows
-    ]
+    flattened = [(str(row["label"]), _flatten_config(row.get("config", {}))) for row in rows]
     keys = sorted(
         {
             key
@@ -2057,7 +2263,7 @@ def _parameter_differences(rows: list[dict[str, Any]]) -> str:
         "<section>"
         "<h2>Parameter Differences</h2>"
         '<p class="muted">Only YAML values that differ across scenarios are shown. n/a means the value is omitted in that YAML file.</p>'
-        '<div class="table-wrap">'
+        '<div class="table-wrap" tabindex="0" aria-label="Scrollable data table">'
         "<table>"
         f"<thead><tr><th>Parameter</th>{headers}</tr></thead>"
         f"<tbody>{body}</tbody>"
@@ -2094,7 +2300,7 @@ def _metric_highlights(rows: list[dict[str, Any]], metric_keys: list[str]) -> st
         "<section>"
         "<h2>Metric Highlights</h2>"
         '<p class="muted">Min/max values are descriptive comparisons, not automatic grades.</p>'
-        '<div class="table-wrap">'
+        '<div class="table-wrap" tabindex="0" aria-label="Scrollable data table">'
         "<table>"
         "<thead><tr><th>Metric</th><th>Minimum scenario</th><th>Minimum</th><th>Maximum scenario</th><th>Maximum</th></tr></thead>"
         f"<tbody>{''.join(highlight_rows)}</tbody>"
@@ -2139,7 +2345,7 @@ def _baseline_metric_changes(rows: list[dict[str, Any]], metric_keys: list[str])
         "<h2>Baseline Changes</h2>"
         f'<p class="muted">Each row compares a scenario against the first scenario, {escape(baseline_label)}. '
         "Use this as a quick direction-of-change view before inspecting the plots.</p>"
-        '<div class="table-wrap">'
+        '<div class="table-wrap" tabindex="0" aria-label="Scrollable data table">'
         "<table>"
         "<thead><tr><th>Scenario</th><th>Metric</th><th>Baseline</th><th>Scenario</th><th>Delta</th><th>Change</th></tr></thead>"
         f"<tbody>{''.join(change_rows)}</tbody>"
@@ -2191,7 +2397,7 @@ def _plot_previews(rows: list[dict[str, Any]], preview_plots: tuple[str, ...]) -
                     f'<a href="{escape(str(row["report"]))}">'
                     f'<img src="{escape(str(plot_path))}" alt="{escape(str(row["label"]))} {escape(plot_name)}">'
                     "</a>"
-                    f'<figcaption>{escape(str(row["label"]))} - {escape(plot_name)}</figcaption>'
+                    f"<figcaption>{escape(str(row['label']))} - {escape(plot_name)}</figcaption>"
                     "</figure>"
                 )
             )
@@ -2201,9 +2407,7 @@ def _plot_previews(rows: list[dict[str, Any]], preview_plots: tuple[str, ...]) -
     return (
         "<section>"
         "<h2>Plot Previews</h2>"
-        '<div class="preview-grid">'
-        + "\n".join(figures)
-        + "</div>"
+        '<div class="preview-grid">' + "\n".join(figures) + "</div>"
         "</section>"
     )
 
@@ -2218,7 +2422,7 @@ def _comparison_plot_guide(output: Path) -> str:
             f"<h3>{escape(title)}</h3>"
             f'<p class="muted">{escape(plot.name)}</p>'
             f"<p>{escape(detail)}</p>"
-            f'<p><strong>Checkpoint:</strong> {escape(_plot_checkpoint(plot.name, title))}</p>'
+            f"<p><strong>Checkpoint:</strong> {escape(_plot_checkpoint(plot.name, title))}</p>"
             "</article>"
         )
         for plot, title, detail in guided
@@ -2267,7 +2471,9 @@ def _plot_checkpoint(filename: str, title: str) -> str:
     if "disturbance" in name:
         return "Name which scenario receives the larger disturbance pulse and compare the recovery error."
     if "error" in name:
-        return "Name which scenario leaves the largest error and cite the matching metric table value."
+        return (
+            "Name which scenario leaves the largest error and cite the matching metric table value."
+        )
     if "force" in name or "torque" in name or "effort" in normalized_title:
         return "Name which scenario demands the largest effort and identify the parameter change behind the peak."
     if "position" in name or "end_effector" in name:
@@ -2298,19 +2504,14 @@ def _comparison_plots(output: Path) -> str:
     return (
         "<section>"
         "<h2>Comparison Plots</h2>"
-        '<div class="comparison-grid">'
-        + figures
-        + "</div>"
+        '<div class="comparison-grid">' + figures + "</div>"
         "</section>"
     )
 
 
 def _metric_row(row: dict[str, Any], metric_keys: list[str]) -> str:
     summary = row.get("summary", {})
-    values = "".join(
-        f"<td>{escape(_format_value(summary.get(key)))}</td>"
-        for key in metric_keys
-    )
+    values = "".join(f"<td>{escape(_format_value(summary.get(key)))}</td>" for key in metric_keys)
     return (
         "<tr>"
         f'<td><a href="{escape(str(row["report"]))}">{escape(str(row["label"]))}</a></td>'
@@ -2331,7 +2532,8 @@ def _display_metric_keys(guide: BatchGuide, rows: list[dict[str, Any]]) -> list[
     extra_keys = [
         key
         for key in INDEX_METRIC_KEYS
-        if key not in guide.metric_keys and any(_has_interesting_metric_value(summary.get(key)) for summary in summaries)
+        if key not in guide.metric_keys
+        and any(_has_interesting_metric_value(summary.get(key)) for summary in summaries)
     ]
     return primary_keys + extra_keys
 
@@ -2341,8 +2543,7 @@ def _available_plot_paths(run_dir: Path) -> dict[str, str]:
     if not plots_dir.exists():
         return {}
     return {
-        path.name: f"{run_dir.name}/plots/{path.name}"
-        for path in sorted(plots_dir.glob("*.png"))
+        path.name: f"{run_dir.name}/plots/{path.name}" for path in sorted(plots_dir.glob("*.png"))
     }
 
 
@@ -2367,6 +2568,9 @@ def write_comparison_plots(
         import matplotlib
 
         matplotlib.use("Agg")
+        from mclab.sim.plotting import configure_matplotlib_font
+
+        configure_matplotlib_font(matplotlib)
         import matplotlib.pyplot as plt  # type: ignore
     except ModuleNotFoundError as exc:
         raise RuntimeError("matplotlib is required when batch plots are enabled.") from exc

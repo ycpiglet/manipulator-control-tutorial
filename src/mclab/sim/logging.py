@@ -4,23 +4,29 @@ from __future__ import annotations
 
 import csv
 import json
-import shutil
 from collections.abc import Mapping
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from mclab.config import PROJECT_ROOT, resolve_project_path
+from mclab.application.artifacts import ReplayRecorder, write_manifest
+from mclab.config import (
+    PROJECT_ROOT,
+    default_outputs_root,
+    is_frozen_bundle,
+    resolve_output_path,
+)
 from mclab.sim.reporting import write_run_report
 
 
 def create_output_path(lab_name: str, output_dir: str | Path | None = None) -> Path:
     if output_dir is not None:
-        path = resolve_project_path(output_dir)
+        path = resolve_output_path(output_dir)
         path.mkdir(parents=True, exist_ok=True)
     else:
         stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        path = _create_unique_output_directory(PROJECT_ROOT / "outputs" / f"{stamp}_{lab_name}")
+        root = default_outputs_root() if is_frozen_bundle() else PROJECT_ROOT / "outputs"
+        path = _create_unique_output_directory(root / f"{stamp}_{lab_name}")
     (path / "plots").mkdir(exist_ok=True)
     return path
 
@@ -46,15 +52,47 @@ class RunLogger:
         *,
         config_path: str | Path | None = None,
         output_dir: str | Path | None = None,
+        seed: int | None = None,
     ) -> None:
         self.lab_name = lab_name
         self.config = dict(config)
         self.config_path = Path(config_path) if config_path else None
+        self.seed = seed
         self.output_path = create_output_path(lab_name, output_dir)
         self.rows: list[dict[str, Any]] = []
+        self.log_sample_hz = float(self.config.get("log_sample_hz", 100.0))
+        self._next_log_time = 0.0
+        self.replay = ReplayRecorder(float(self.config.get("replay_sample_hz", 60.0)))
+        self.started_at = datetime.now(timezone.utc).isoformat()
+        self.run_status = "completed"
 
     def record(self, **row: Any) -> None:
-        self.rows.append(_flatten_mapping(row))
+        flattened = _flatten_mapping(row)
+        try:
+            timestamp = float(flattened.get("time", self._next_log_time))
+        except (TypeError, ValueError):
+            timestamp = self._next_log_time
+        if self.rows and self.log_sample_hz > 0 and timestamp + 1e-12 < self._next_log_time:
+            return
+        self.rows.append(flattened)
+        if self.log_sample_hz > 0:
+            self._next_log_time = timestamp + 1.0 / self.log_sample_hz
+
+    def record_physics_state(
+        self,
+        data: Any,
+        *,
+        semantic: Mapping[str, float] | None = None,
+    ) -> bool:
+        """Record a compact MuJoCo state without changing physics stepping."""
+
+        return self.replay.record(
+            time=float(data.time),
+            qpos=data.qpos,
+            qvel=data.qvel,
+            ctrl=data.ctrl,
+            semantic=dict(semantic or {}),
+        )
 
     def save(self, summary: Mapping[str, Any] | None = None, notes: str = "") -> Path:
         return self.save_with_artifacts(summary=summary, notes=notes)
@@ -67,25 +105,48 @@ class RunLogger:
         interaction_events: list[Mapping[str, Any]] | None = None,
         learner_snapshot: Mapping[str, Any] | None = None,
         learner_tuned_config: Mapping[str, Any] | None = None,
+        run_status: str = "completed",
     ) -> Path:
+        self.run_status = run_status
         self._save_config_snapshot()
         self._save_csv()
         self._save_states()
+        self._save_replay()
         self._save_summary(summary or {})
         self._save_notes(notes)
         self._save_interaction_events(interaction_events)
         self._save_learner_snapshot(learner_snapshot)
         self._save_learner_tuned_config(learner_tuned_config)
-        write_run_report(self.output_path)
+        self.finalize_artifacts()
         return self.output_path
+
+    def finalize_artifacts(self) -> Path:
+        """Refresh manifest hashes after optional plots have been written."""
+
+        write_manifest(
+            self.output_path,
+            scenario_id=_scenario_id(self.lab_name, self.config_path),
+            status=self.run_status,
+            config=self.config,
+            config_path=self.config_path,
+            seed=self.seed,
+            started_at=self.started_at,
+            finished_at=datetime.now(timezone.utc).isoformat(),
+        )
+        write_run_report(self.output_path)
+        return write_manifest(
+            self.output_path,
+            scenario_id=_scenario_id(self.lab_name, self.config_path),
+            status=self.run_status,
+            config=self.config,
+            config_path=self.config_path,
+            seed=self.seed,
+            started_at=self.started_at,
+            finished_at=datetime.now(timezone.utc).isoformat(),
+        )
 
     def _save_config_snapshot(self) -> None:
         target = self.output_path / "config.yaml"
-        if self.config_path:
-            source = resolve_project_path(self.config_path)
-            if source.exists():
-                shutil.copyfile(source, target)
-                return
         target.write_text(_dump_basic_yaml(self.config), encoding="utf-8")
 
     def _save_csv(self) -> None:
@@ -125,7 +186,12 @@ class RunLogger:
                 columns.setdefault(key, []).append(number)
 
         arrays = {key: np.asarray(values, dtype=float) for key, values in columns.items()}
-        np.savez(self.output_path / "states.npz", **arrays)
+        np.savez_compressed(self.output_path / "states.npz", **arrays)
+
+    def _save_replay(self) -> None:
+        archive = self.replay.archive()
+        if archive.frame_count:
+            archive.save(self.output_path / "replay.npz")
 
     def _save_summary(self, summary: Mapping[str, Any]) -> None:
         payload = {
@@ -200,3 +266,15 @@ def _dump_basic_yaml(data: Mapping[str, Any], indent: int = 0) -> str:
         else:
             lines.append(f"{prefix}{key}: {value}")
     return "\n".join(lines) + "\n"
+
+
+def _scenario_id(lab_name: str, config_path: Path | None) -> str:
+    prefix = {
+        "lab01_msd": "lab01",
+        "lab02_pid": "lab02",
+        "lab03_trajectory": "lab03",
+        "lab03_2dof": "lab03",
+        "lab04_panda": "lab04",
+    }.get(lab_name, lab_name)
+    suffix = config_path.stem if config_path else "custom"
+    return f"{prefix}.{suffix.replace('_', '-')}"
