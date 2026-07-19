@@ -8,11 +8,15 @@ compositor modules to this fixed UI.
 
 from pathlib import Path
 
+import PySide6
 from PyInstaller.utils.hooks.qt import add_qt6_dependencies, pyside6_library_info
 
 hiddenimports, binaries, datas = add_qt6_dependencies(__file__)
 
-qml_root = Path(pyside6_library_info.location["QmlImportsPath"])
+qml_root = Path(pyside6_library_info.location["QmlImportsPath"]).resolve()
+# The bundled QML tree must mirror the wheel layout Qt searches at runtime:
+# PySide6/Qt/qml on Linux/macOS but PySide6/qml on Windows.
+_dest_root = Path("PySide6") / qml_root.relative_to(Path(PySide6.__file__).resolve().parent)
 modules = (
     "QtQml/Models",
     "QtQml/WorkerScript",
@@ -25,7 +29,7 @@ modules = (
 
 
 def _add_file(source: Path) -> None:
-    destination = Path("PySide6/Qt/qml") / source.relative_to(qml_root).parent
+    destination = _dest_root / source.relative_to(qml_root).parent
     entry = (str(source), str(destination))
     if source.suffix in {".so", ".dll", ".dylib"}:
         binaries.append(entry)
