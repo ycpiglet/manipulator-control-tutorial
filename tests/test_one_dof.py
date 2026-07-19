@@ -16,7 +16,7 @@ class OneDofViewerGuideTests(unittest.TestCase):
     def test_reset_slider_plant_state_restores_initial_position_velocity_and_control(self) -> None:
         fake_mujoco = types.SimpleNamespace(mj_forward=Mock())
         model = types.SimpleNamespace()
-        data = types.SimpleNamespace(qpos=[0.9], qvel=[-2.0], ctrl=[18.0])
+        data = types.SimpleNamespace(time=3.2, qpos=[0.9], qvel=[-2.0], ctrl=[18.0])
         handles = SliderHandles(joint_id=0, body_id=0, actuator_id=0, qpos_adr=0, dof_adr=0)
 
         reset_slider_plant_state(
@@ -27,6 +27,7 @@ class OneDofViewerGuideTests(unittest.TestCase):
             {"initial_position": -0.2, "initial_velocity": 0.35},
         )
 
+        self.assertEqual(data.time, 0.0)
         self.assertEqual(data.qpos[0], -0.2)
         self.assertEqual(data.qvel[0], 0.35)
         self.assertEqual(data.ctrl[0], 0.0)

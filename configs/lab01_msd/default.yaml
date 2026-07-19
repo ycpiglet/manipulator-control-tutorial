@@ -11,4 +11,6 @@ force_input:
   type: step
   magnitude: 0.0
   start_time: 0.0
-
+application:
+  start_paused: true
+  core_controls: [damping]

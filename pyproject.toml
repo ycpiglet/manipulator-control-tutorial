@@ -20,11 +20,19 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+app = [
+  "PySide6-Essentials==6.11.1",
+]
 dev = [
+  "axe-playwright-python==0.1.7",
+  "playwright==1.61.0",
   "pytest",
   "pytest-cov",
   "ruff",
   "mypy",
+]
+package = [
+  "pyinstaller>=6.15,<7",
 ]
 
 [project.scripts]
@@ -33,11 +41,25 @@ mclab = "mclab.cli:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+mclab = ["application/qml/*.qml"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
 
+[tool.coverage.run]
+# Qt binding/factory modules are exercised by the cross-platform desktop
+# workflow. The main simulator coverage gate measures dependency-light code.
+omit = [
+  "src/mclab/application/qt_app.py",
+  "src/mclab/application/qt_batch.py",
+  "src/mclab/application/qt_evidence.py",
+  "src/mclab/application/qt_frame.py",
+  "src/mclab/application/qt_smoke.py",
+  "src/mclab/application/qt_worker.py",
+]
+
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-

@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import importlib
+import json
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from mclab.config import PROJECT_ROOT, load_config
+from mclab.config import PROJECT_ROOT, default_outputs_root, is_frozen_bundle, load_config
 
 DEFAULT_REQUIRED_MODULES = ("mujoco", "numpy", "matplotlib", "yaml")
 REQUIRED_PROJECT_PATHS = ("pyproject.toml", "src/mclab", "configs", "models")
@@ -33,7 +34,10 @@ def run_doctor_checks(
         _project_layout_check(project_root),
         _config_and_model_check(project_root),
         _learner_menu_readiness_check(project_root),
-        _outputs_writable_check(project_root),
+        _desktop_app_check(project_root),
+        _outputs_writable_check(
+            default_outputs_root() if is_frozen_bundle() else project_root / "outputs"
+        ),
     ]
     return checks
 
@@ -54,6 +58,26 @@ def format_doctor_report(checks: list[DoctorCheck]) -> str:
 
 def doctor_exit_code(checks: list[DoctorCheck]) -> int:
     return 1 if any(check.status == "FAIL" for check in checks) else 0
+
+
+def doctor_report_json(checks: list[DoctorCheck]) -> str:
+    payload = {
+        "checks": [
+            {
+                "name": check.name,
+                "status": check.status,
+                "detail": check.detail,
+                "fix": check.fix,
+            }
+            for check in checks
+        ],
+        "summary": {
+            "ok": sum(check.status == "OK" for check in checks),
+            "warn": sum(check.status == "WARN" for check in checks),
+            "fail": sum(check.status == "FAIL" for check in checks),
+        },
+    }
+    return json.dumps(payload, indent=2, ensure_ascii=False)
 
 
 def _doctor_next_step_lines(fail_count: int) -> list[str]:
@@ -108,6 +132,14 @@ def _required_modules_check(required_modules: tuple[str, ...]) -> DoctorCheck:
 
 
 def _project_layout_check(root: Path) -> DoctorCheck:
+    if is_frozen_bundle():
+        missing_assets = [
+            relative for relative in ("configs", "models") if not (root / relative).exists()
+        ]
+        if not missing_assets:
+            return DoctorCheck(
+                "Project layout", "OK", "Packaged configs and model resources are present."
+            )
     missing = [relative for relative in REQUIRED_PROJECT_PATHS if not (root / relative).exists()]
     if missing:
         return DoctorCheck(
@@ -174,11 +206,43 @@ def _config_and_model_check(root: Path) -> DoctorCheck:
 
 
 def _learner_menu_readiness_check(root: Path) -> DoctorCheck:
+    if is_frozen_bundle():
+        try:
+            from mclab.application.catalog import ScenarioCatalog
+
+            catalog = ScenarioCatalog.default()
+            errors = catalog.integrity_errors()
+        except Exception as exc:
+            return DoctorCheck(
+                "Scenario catalog",
+                "FAIL",
+                f"Could not load the packaged scenario catalog: {exc}",
+                "Reinstall MCLab from a verified release archive.",
+            )
+        if errors:
+            return DoctorCheck(
+                "Scenario catalog",
+                "FAIL",
+                "; ".join(errors[:4]),
+                "Reinstall MCLab from a verified release archive.",
+            )
+        return DoctorCheck(
+            "Scenario catalog", "OK", f"{len(catalog.all())} packaged scenarios are valid."
+        )
     if not (root / "src" / "mclab" / "learner_menu.py").exists():
-        return DoctorCheck("Learner menu readiness", "OK", "No learner menu source was found in this project layout.")
+        return DoctorCheck(
+            "Learner menu readiness",
+            "OK",
+            "No learner menu source was found in this project layout.",
+        )
 
     try:
-        from mclab.learner_menu import BATCH_ACTIONS, MENU_ACTIONS, action_readiness, batch_readiness
+        from mclab.learner_menu import (
+            BATCH_ACTIONS,
+            MENU_ACTIONS,
+            action_readiness,
+            batch_readiness,
+        )
     except Exception as exc:
         return DoctorCheck(
             "Learner menu readiness",
@@ -194,7 +258,9 @@ def _learner_menu_readiness_check(root: Path) -> DoctorCheck:
         readiness = action_readiness(action, root=root)
         if readiness.status == "ok":
             continue
-        scenario_failures.append(f"{action.group} / {action.label}: {readiness.label} - {readiness.detail}")
+        scenario_failures.append(
+            f"{action.group} / {action.label}: {readiness.label} - {readiness.detail}"
+        )
         if not first_fix and readiness.fix:
             first_fix = readiness.fix
 
@@ -209,9 +275,15 @@ def _learner_menu_readiness_check(root: Path) -> DoctorCheck:
     if scenario_failures or batch_failures:
         parts: list[str] = []
         if scenario_failures:
-            parts.append(_limited_list(f"{len(scenario_failures)} scenario issue(s)", scenario_failures, limit=3))
+            parts.append(
+                _limited_list(
+                    f"{len(scenario_failures)} scenario issue(s)", scenario_failures, limit=3
+                )
+            )
         if batch_failures:
-            parts.append(_limited_list(f"{len(batch_failures)} batch issue(s)", batch_failures, limit=2))
+            parts.append(
+                _limited_list(f"{len(batch_failures)} batch issue(s)", batch_failures, limit=2)
+            )
         return DoctorCheck(
             "Learner menu readiness",
             "FAIL",
@@ -226,11 +298,27 @@ def _learner_menu_readiness_check(root: Path) -> DoctorCheck:
     )
 
 
-def _outputs_writable_check(root: Path) -> DoctorCheck:
-    outputs = root / "outputs"
+def _desktop_app_check(root: Path) -> DoctorCheck:
+    app_source = root / "src" / "mclab" / "application" / "qt_app.py"
+    if not is_frozen_bundle() and not app_source.exists():
+        return DoctorCheck("Desktop app", "OK", "Desktop app is not part of this project layout.")
+    try:
+        importlib.import_module("PySide6.QtQml")
+        importlib.import_module("PySide6.QtQuick")
+    except Exception as exc:
+        return DoctorCheck(
+            "Desktop app",
+            "WARN",
+            f"Headless tools are ready, but the optional Qt app is unavailable ({exc.__class__.__name__}).",
+            "Run `python -m pip install -e '.[app]'` to enable `mclab app` and `mclab menu`.",
+        )
+    return DoctorCheck("Desktop app", "OK", "PySide6 Qt Quick runtime imports successfully.")
+
+
+def _outputs_writable_check(outputs: Path) -> DoctorCheck:
     probe = outputs / ".doctor_write_test"
     try:
-        outputs.mkdir(exist_ok=True)
+        outputs.mkdir(parents=True, exist_ok=True)
         probe.write_text("ok\n", encoding="utf-8")
         probe.unlink(missing_ok=True)
     except Exception as exc:

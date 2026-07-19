@@ -10,6 +10,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from mclab.doctor import (  # noqa: E402
     DoctorCheck,
+    _outputs_writable_check,
     doctor_exit_code,
     format_doctor_report,
     run_doctor_checks,
@@ -17,6 +18,16 @@ from mclab.doctor import (  # noqa: E402
 
 
 class DoctorTests(unittest.TestCase):
+    def test_outputs_check_creates_a_new_user_data_tree(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "new-user-data" / "outputs"
+
+            check = _outputs_writable_check(outputs)
+
+            self.assertEqual(check.status, "OK")
+            self.assertTrue(outputs.is_dir())
+            self.assertFalse((outputs / ".doctor_write_test").exists())
+
     def test_doctor_accepts_minimal_valid_project_layout(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

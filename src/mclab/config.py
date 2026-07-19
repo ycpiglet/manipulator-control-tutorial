@@ -3,11 +3,47 @@
 from __future__ import annotations
 
 import ast
+import os
+import sys
 from pathlib import Path
 from typing import Any
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[2]))
+
+
+def is_frozen_bundle() -> bool:
+    """Return whether MCLab is running from a packaged desktop build."""
+
+    return bool(getattr(sys, "frozen", False))
+
+
+def default_outputs_root() -> Path:
+    """Return a writable output location without moving source-tree runs."""
+
+    override = os.environ.get("MCLAB_DATA_DIR")
+    if override:
+        return Path(override).expanduser().resolve() / "outputs"
+    if not is_frozen_bundle():
+        return PROJECT_ROOT / "outputs"
+    if sys.platform == "win32":
+        base = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData/Local"))
+        return base / "MCLab" / "outputs"
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "MCLab" / "outputs"
+    base = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share"))
+    return base / "mclab" / "outputs"
+
+
+def resolve_output_path(path: str | Path) -> Path:
+    """Resolve a user-selected output path against a writable runtime root."""
+
+    candidate = Path(path).expanduser()
+    if candidate.is_absolute():
+        return candidate
+    if is_frozen_bundle():
+        return default_outputs_root().parent / candidate
+    return PROJECT_ROOT / candidate
 
 
 def load_config(path: str | Path) -> dict[str, Any]:
@@ -96,4 +132,3 @@ def _parse_scalar(value: str) -> Any:
         return int(value)
     except ValueError:
         return value
-

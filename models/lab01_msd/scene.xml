@@ -1,13 +1,26 @@
 <mujoco model="lab01_mass_spring_damper">
   <compiler angle="radian"/>
   <option timestep="0.002" gravity="0 0 0"/>
+  <visual><global offwidth="1280" offheight="720"/></visual>
 
   <worldbody>
-    <light name="key" pos="0 -2 2" dir="0 1 -1"/>
-    <geom name="rail" type="capsule" fromto="-1.5 0 -0.08 1.5 0 -0.08" size="0.01" rgba="0.4 0.4 0.4 1"/>
+    <light name="key" pos="0 -2 3" dir="0 1 -1" diffuse="0.9 0.9 0.9"/>
+    <geom name="floor" type="plane" size="2.2 1.2 0.05" pos="0 0 -0.2" rgba="0.72 0.76 0.82 1"/>
+    <geom name="rail" type="capsule" fromto="-1.5 0 -0.08 1.5 0 -0.08" size="0.018" rgba="0.35 0.4 0.48 1" contype="0" conaffinity="0"/>
+    <geom name="spring_anchor" type="box" pos="-1.45 0 0.08" size="0.04 0.18 0.28" rgba="0.35 0.4 0.48 1"/>
+    <geom name="spring_visual_1" type="capsule" fromto="-1.35 0 0.04 -1.15 0 0.13" size="0.018" rgba="0.75 0.52 0.14 1" contype="0" conaffinity="0"/>
+    <geom name="spring_visual_2" type="capsule" fromto="-1.15 0 0.13 -0.95 0 -0.05" size="0.018" rgba="0.75 0.52 0.14 1" contype="0" conaffinity="0"/>
+    <geom name="spring_visual_3" type="capsule" fromto="-0.95 0 -0.05 -0.75 0 0.13" size="0.018" rgba="0.75 0.52 0.14 1" contype="0" conaffinity="0"/>
+    <geom name="spring_visual_4" type="capsule" fromto="-0.75 0 0.13 -0.55 0 0.04" size="0.018" rgba="0.75 0.52 0.14 1" contype="0" conaffinity="0"/>
+    <geom name="damper_body" type="box" pos="-0.96 0 -0.13" size="0.25 0.035 0.035" rgba="0.31 0.36 0.44 1" contype="0" conaffinity="0"/>
+    <geom name="damper_rod" type="capsule" fromto="-0.72 0 -0.13 -0.45 0 -0.13" size="0.012" rgba="0.82 0.84 0.88 1" contype="0" conaffinity="0"/>
+    <geom name="equilibrium_tick" type="box" pos="0 0 -0.105" size="0.012 0.07 0.055" rgba="0.55 0.63 0.72 1" contype="0" conaffinity="0"/>
+    <geom name="tick_minus_1" type="box" pos="-1 0 -0.105" size="0.006 0.04 0.03" rgba="0.45 0.5 0.58 1" contype="0" conaffinity="0"/>
+    <geom name="tick_plus_1" type="box" pos="1 0 -0.105" size="0.006 0.04 0.03" rgba="0.45 0.5 0.58 1" contype="0" conaffinity="0"/>
     <body name="block" pos="0 0 0">
       <joint name="slider" type="slide" axis="1 0 0" damping="2" stiffness="50" springref="0" limited="true" range="-2 2"/>
-      <geom name="block_geom" type="box" size="0.05 0.05 0.05" mass="1" rgba="0.1 0.45 0.9 1"/>
+      <geom name="block_geom" type="box" size="0.18 0.24 0.18" mass="1" rgba="0.13 0.83 0.93 1" contype="0" conaffinity="0"/>
+      <site name="block_center" pos="0 0 0" size="0.018" rgba="0.13 0.83 0.93 1"/>
     </body>
   </worldbody>
 
@@ -15,4 +28,3 @@
     <motor name="force_x" joint="slider" gear="1" ctrllimited="true" ctrlrange="-500 500"/>
   </actuator>
 </mujoco>
-

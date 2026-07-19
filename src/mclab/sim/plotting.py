@@ -15,6 +15,39 @@ PlotEventMarker = tuple[float, str]
 PlotEventMarkers = Mapping[str, Sequence[PlotEventMarker]]
 PlotSelection = str | Sequence[str] | None
 
+SIGNAL_LABELS = {
+    "en": {
+        "position": "Current position [m]",
+        "measured_position": "Measured position [m]",
+        "target_position": "Target position [m]",
+        "position_error": "Position error [m]",
+        "velocity": "Velocity [m/s]",
+        "control_force": "Control force [N]",
+        "manual_force": "Disturbance force [N]",
+        "total_force": "Total applied force [N]",
+        "force_virtual_0": "Virtual-wall force X [N]",
+        "wall_penetration": "Wall penetration [m]",
+        "task_error_norm": "Hand tracking error [m]",
+        "jacobian_condition": "Jacobian condition number",
+        "manipulability": "Manipulability",
+    },
+    "ko": {
+        "position": "현재 위치 [m]",
+        "measured_position": "측정 위치 [m]",
+        "target_position": "목표 위치 [m]",
+        "position_error": "위치 오차 [m]",
+        "velocity": "속도 [m/s]",
+        "control_force": "제어 힘 [N]",
+        "manual_force": "외란 힘 [N]",
+        "total_force": "전체 작용 힘 [N]",
+        "force_virtual_0": "가상 벽 X 힘 [N]",
+        "wall_penetration": "벽 침투 깊이 [m]",
+        "task_error_norm": "손끝 추종 오차 [m]",
+        "jacobian_condition": "Jacobian 조건수",
+        "manipulability": "조작성",
+    },
+}
+
 
 def save_time_series_plots(
     output_path: str | Path,
@@ -32,16 +65,17 @@ def save_time_series_plots(
         import matplotlib
 
         matplotlib.use("Agg")
+        configure_matplotlib_font(matplotlib)
         import matplotlib.pyplot as plt  # type: ignore
     except ModuleNotFoundError as exc:
         raise RuntimeError("matplotlib is required when --plot is used.") from exc
 
     output = Path(output_path)
+    language = _plot_language(output)
     plot_dir = output / "plots"
     plot_dir.mkdir(parents=True, exist_ok=True)
     marker_map = {
-        _plot_name(plot_name): markers
-        for plot_name, markers in (event_markers or {}).items()
+        _plot_name(plot_name): markers for plot_name, markers in (event_markers or {}).items()
     }
 
     time = [_as_float(row.get("time", index)) for index, row in enumerate(rows)]
@@ -52,9 +86,18 @@ def save_time_series_plots(
         fig, axis = plt.subplots(figsize=(8, 4.5), constrained_layout=True)
         for key in available:
             values = [_as_float(row.get(key)) for row in rows]
-            axis.plot(time, values, label=key)
+            axis.plot(
+                time,
+                values,
+                label=_signal_label(key, language),
+                markevery=max(1, len(time) // 18),
+                **_signal_style(key),
+            )
+        first_key = available[0]
+        first_values = [_as_float(row.get(first_key)) for row in rows]
+        _annotate_peak(axis, time, first_values, language)
         axis.set_title(title)
-        axis.set_xlabel("time [s]")
+        axis.set_xlabel("시간 [초]" if language == "ko" else "Time [s]")
         axis.set_ylabel(ylabel)
         axis.grid(True, alpha=0.3)
         _apply_event_markers(axis, marker_map.get(_plot_name(filename), ()))
@@ -63,6 +106,22 @@ def save_time_series_plots(
         plt.close(fig)
 
     write_run_report(output)
+
+
+def configure_matplotlib_font(matplotlib: Any) -> None:
+    """Register the licensed bundled Korean font for plots and annotations."""
+
+    from mclab.config import PROJECT_ROOT
+
+    font_path = PROJECT_ROOT / "third_party" / "fonts" / "noto" / "NotoSansKR[wght].ttf"
+    if not font_path.exists():
+        return
+    from matplotlib import font_manager
+
+    font_manager.fontManager.addfont(str(font_path))
+    family = font_manager.FontProperties(fname=str(font_path)).get_name()
+    matplotlib.rcParams["font.family"] = family
+    matplotlib.rcParams["axes.unicode_minus"] = False
 
 
 def select_plot_specs(
@@ -141,3 +200,49 @@ def _as_float(value: Any) -> float:
         return float(value)
     except (TypeError, ValueError):
         return float("nan")
+
+
+def _plot_language(output: Path) -> str:
+    config_path = output / "config.yaml"
+    try:
+        for line in config_path.read_text(encoding="utf-8").splitlines():
+            if line.strip().startswith("language:"):
+                value = line.split(":", 1)[1].strip().lower()
+                return "ko" if value == "ko" else "en"
+    except OSError:
+        pass
+    return "en"
+
+
+def _signal_label(key: str, language: str) -> str:
+    return SIGNAL_LABELS[language].get(key, key.replace("_", " ").title())
+
+
+def _signal_style(key: str) -> dict[str, Any]:
+    lowered = key.lower()
+    if "target" in lowered or "reference" in lowered:
+        return {"color": "#C084FC", "linestyle": "--", "marker": "D", "linewidth": 1.8}
+    if "force" in lowered or "tau" in lowered or "disturbance" in lowered:
+        return {"color": "#E44C65", "linestyle": "-.", "marker": ">", "linewidth": 1.6}
+    if "wall" in lowered or "limit" in lowered or "saturat" in lowered:
+        return {"color": "#B77900", "linestyle": ":", "marker": "s", "linewidth": 1.8}
+    return {"color": "#008CA8", "linestyle": "-", "marker": "o", "linewidth": 1.8}
+
+
+def _annotate_peak(
+    axis: Any, time: Sequence[float], values: Sequence[float], language: str
+) -> None:
+    finite = [(index, value) for index, value in enumerate(values) if isfinite(value)]
+    if not finite:
+        return
+    index, value = max(finite, key=lambda item: abs(item[1]))
+    label = "최대값" if language == "ko" else "Peak"
+    axis.annotate(
+        f"{label}: {value:.3g}",
+        xy=(time[index], value),
+        xytext=(8, 12),
+        textcoords="offset points",
+        fontsize=8,
+        color="#172033",
+        arrowprops={"arrowstyle": "->", "color": "#5B6475", "linewidth": 0.8},
+    )

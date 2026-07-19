@@ -114,12 +114,13 @@ def _run_slider_trajectory(
     plot_selection: PlotSelection = None,
     seed: int | None = None,
 ) -> Path:
-    del seed
     lab_name = "lab03_trajectory"
     model_path = config.get("model_path", "models/lab03_2dof/scene.xml")
     mujoco, model, data = load_model_and_data(model_path)
     handles = configure_slider_plant(mujoco, model, data, config)
-    logger = RunLogger(lab_name, config, config_path=config_path, output_dir=output_dir)
+    logger = RunLogger(
+        lab_name, config, config_path=config_path, output_dir=output_dir, seed=seed
+    )
 
     sim_time = float(config.get("sim_time", 5.0))
     trajectory = build_trajectory(dict(config.get("trajectory", {})))
@@ -242,6 +243,15 @@ def _run_slider_trajectory(
                 tuned_force_limit=tuned_force_limit,
                 current_proxy=total_force / kt,
             )
+            logger.record_physics_state(
+                data,
+                semantic={
+                    "position": position,
+                    "velocity": velocity,
+                    "target_position": target_position,
+                    "force": total_force,
+                },
+            )
         completed = True
     finally:
         if interaction_panel is not None:
@@ -263,9 +273,11 @@ def _run_slider_trajectory(
             playback_control=playback_control,
         ),
         learner_tuned_config=learner_tuned_config(config, _slider_learner_tuned_updates(config, live_tuning)),
+        run_status="completed" if completed and data.time >= sim_time else "stopped",
     )
     if plot:
         _save_plots(output_path, logger.rows, plot_selection or config.get("plots"))
+        logger.finalize_artifacts()
     return resolve_project_path(output_path)
 
 
@@ -282,7 +294,6 @@ def _run_two_link_arm(
     plot_selection: PlotSelection = None,
     seed: int | None = None,
 ) -> Path:
-    del seed
     lab_name = "lab03_2dof"
     model_path = config.get("model_path", "models/lab03_2dof/two_link.xml")
     mujoco, model, data = load_model_and_data(model_path)
@@ -290,7 +301,9 @@ def _run_two_link_arm(
         model.opt.timestep = float(config["dt"])
 
     handles = _two_link_handles(mujoco, model, config)
-    logger = RunLogger(lab_name, config, config_path=config_path, output_dir=output_dir)
+    logger = RunLogger(
+        lab_name, config, config_path=config_path, output_dir=output_dir, seed=seed
+    )
 
     sim_time = float(config.get("sim_time", 5.0))
     mode = str(config.get("mode", "joint_space")).lower()
@@ -529,6 +542,16 @@ def _run_two_link_arm(
                 tuned_torque_limit=command["torque_limit"],
                 **dls_fields,
             )
+            logger.record_physics_state(
+                data,
+                semantic={
+                    "hand_x": x_ee[0],
+                    "hand_y": x_ee[1],
+                    "target_x": command["target_xy"][0],
+                    "target_y": command["target_xy"][1],
+                    "condition": condition_capped,
+                },
+            )
         completed = True
     finally:
         if interaction_panel is not None:
@@ -561,9 +584,11 @@ def _run_two_link_arm(
                 target_xy_goal=target_xy_goal,
             ),
         ),
+        run_status="completed" if completed and data.time >= sim_time else "stopped",
     )
     if plot:
         _save_two_link_plots(output_path, logger.rows, plot_selection or config.get("plots"))
+        logger.finalize_artifacts()
     return resolve_project_path(output_path)
 
 

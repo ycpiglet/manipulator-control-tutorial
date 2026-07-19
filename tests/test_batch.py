@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from mclab import batch  # noqa: E402
+from mclab.application.artifacts import verify_manifest  # noqa: E402
 from mclab.config import load_config  # noqa: E402
 
 
@@ -285,6 +286,11 @@ class BatchTests(unittest.TestCase):
             self.assertTrue((output / "demo_scenario" / "worksheet.md").exists())
             report_html = (output / "report.html").read_text(encoding="utf-8")
             self.assertIn("Learning Focus", report_html)
+            self.assertIn(
+                'class="table-wrap" tabindex="0" aria-label="Scrollable data table"',
+                report_html,
+            )
+            self.assertIn(".table-wrap:focus-visible", report_html)
             self.assertIn("Open the batch worksheet", report_html)
             self.assertIn("Next Experiments", report_html)
             self.assertIn("Reproduce Commands", report_html)
@@ -384,12 +390,16 @@ class BatchTests(unittest.TestCase):
 
         expected_batches = list(batch.list_batch_sets())
         expected_scenarios = sum(len(scenarios) for scenarios in batch.BATCH_SETS.values())
+        progress: list[tuple[int, int, str]] = []
         with tempfile.TemporaryDirectory() as tmp:
             with patch("mclab.batch.run_batch", side_effect=fake_run_batch) as runner:
                 output = batch.run_all_batches(
                     output_dir=Path(tmp) / "all_output",
                     plot=False,
                     seed=23,
+                    on_progress=lambda current, total, name: progress.append(
+                        (current, total, name)
+                    ),
                 )
 
             self.assertEqual([call.args[0] for call in runner.call_args_list], expected_batches)
@@ -402,6 +412,18 @@ class BatchTests(unittest.TestCase):
             summary = json.loads((output / "summary.json").read_text(encoding="utf-8"))
             self.assertEqual(summary["batch_name"], batch.ALL_BATCH_NAME)
             self.assertEqual(summary["scenario_runs"], expected_scenarios)
+            self.assertGreaterEqual(summary["duration"], 0.0)
+            manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["scenario_id"], "batch.all")
+            self.assertEqual(manifest["status"], "completed")
+            self.assertEqual(verify_manifest(output), [])
+            self.assertEqual(
+                progress,
+                [
+                    (index, len(expected_batches), name)
+                    for index, name in enumerate(expected_batches, start=1)
+                ],
+            )
             batch_summary = json.loads((output / "batch_summary.json").read_text(encoding="utf-8"))
             self.assertEqual(len(batch_summary["batches"]), len(expected_batches))
             report_html = (output / "report.html").read_text(encoding="utf-8")

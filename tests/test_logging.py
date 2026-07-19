@@ -125,6 +125,18 @@ class LoggingTests(unittest.TestCase):
             self.assertTrue((first / "plots").is_dir())
             self.assertTrue((second / "plots").is_dir())
 
+    def test_run_logger_resumes_sampling_after_simulation_time_rewinds(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            logger = RunLogger(
+                "lab01_msd",
+                {"log_sample_hz": 10.0},
+                output_dir=Path(temp_dir) / "run",
+            )
+            for timestamp in (0.0, 0.05, 0.1, 0.15, 0.0, 0.05, 0.1):
+                logger.record(time=timestamp, position=timestamp)
+
+        self.assertEqual([row["time"] for row in logger.rows], [0.0, 0.1, 0.0, 0.1])
+
     def test_run_logger_writes_html_report(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             logger = RunLogger(
@@ -195,7 +207,8 @@ class LoggingTests(unittest.TestCase):
             report = output / "report.html"
             self.assertTrue(report.exists())
             html = report.read_text(encoding="utf-8")
-            self.assertIn("lab01_msd - default report", html)
+            self.assertIn("Lab01 Mass-spring-damper · Auto demo report", html)
+            self.assertIn(".action-card li > a", html)
             self.assertIn("Lab01 Baseline", html)
             self.assertIn("Course Position", html)
             self.assertIn("Learning path role", html)
@@ -951,6 +964,44 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Read first: Position", worksheet_text)
             self.assertIn("Compare actual motion against target", worksheet_text)
 
+    def test_korean_report_localizes_beginner_first_screen(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "run"
+            (output / "plots").mkdir(parents=True)
+            (output / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "demo",
+                        "samples": 501,
+                        "duration": 5.0,
+                        "max_cartesian_error_cm": 3.2,
+                        "max_abs_tau_cmd": 8.4,
+                        "max_abs_qdot": 1.2,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (output / "config.yaml").write_text("language: ko\n", encoding="utf-8")
+            (output / "plots" / "position.png").write_bytes(b"fake-png")
+
+            html = write_run_report(output).read_text(encoding="utf-8")
+            first_screen = html.split('<details class="advanced">', maxsplit=1)[0]
+
+            self.assertIn('<html lang="ko">', html)
+            self.assertIn("demo 실행 보고서", first_screen)
+            self.assertIn("한눈에 보는 결과", first_screen)
+            self.assertIn("위치 플롯부터 설명해 보세요", first_screen)
+            self.assertIn("최대 데카르트 오차 [cm]", first_screen)
+            self.assertIn("최대 명령 토크", first_screen)
+            self.assertIn("최대 관절 속도", first_screen)
+            self.assertIn("다음 행동", first_screen)
+            self.assertIn("핵심 플롯 열기", first_screen)
+            self.assertIn("원본 산출물 열기", first_screen)
+            self.assertIn("고급 세부정보", html)
+            self.assertNotIn("Next Actions", first_screen)
+            self.assertNotIn("Open the key plot", first_screen)
+            self.assertNotIn("Advanced details", html)
+
     def test_run_report_renders_configured_presets_as_cards(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "run"
@@ -1482,7 +1533,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("20260627_150117_lab01_msd/report.html", html)
             self.assertIn("lab01_msd", html)
             self.assertIn("Config", html)
-            self.assertIn("Progress Snapshot", html)
+            self.assertIn("Saved evidence overview", html)
             self.assertIn("Experience Coverage", html)
             self.assertIn("Experience coverage: 1/7 types tried", html)
             self.assertIn("Done: Intro basics", html)
@@ -1652,7 +1703,7 @@ class LoggingTests(unittest.TestCase):
             html = index.read_text(encoding="utf-8")
             self.assertIn("20260627_151000_lab02_pid_compare/index.html", html)
             self.assertIn("lab02_pid_compare", html)
-            self.assertIn("Progress Snapshot", html)
+            self.assertIn("Saved evidence overview", html)
             self.assertIn("Batches", html)
             self.assertIn("1 saved run", html)
             self.assertIn("python -m mclab batch lab02_pid_compare --open-report", html)
@@ -2436,7 +2487,14 @@ class LoggingTests(unittest.TestCase):
             index = write_outputs_index(temp_dir)
 
             html = index.read_text(encoding="utf-8")
-            self.assertIn("Starter Commands", html)
+            self.assertIn("MCLab results", html)
+            self.assertIn("Saved evidence overview", html)
+            self.assertIn("Commands and terminal tools", html)
+            self.assertIn('<details class="advanced">', html)
+            self.assertLess(
+                html.index("Saved evidence overview"),
+                html.index("Commands and terminal tools"),
+            )
             self.assertIn("Experience Coverage", html)
             self.assertIn("Run next: Intro basics", html)
             self.assertIn("<strong>Next action:</strong> Run Lab01 Mass-Spring-Damper - Auto demo.", html)
@@ -2465,7 +2523,9 @@ class LoggingTests(unittest.TestCase):
             self.assertIn('<span class="status">Missing</span>', html)
             self.assertIn("Check setup", html)
             self.assertIn("python -m mclab doctor", html)
-            self.assertIn(r".\run_mclab.cmd", html)
+            self.assertIn("Open the MCLab app", html)
+            self.assertIn("python -m mclab app", html)
+            self.assertNotIn(r".\run_mclab.cmd", html)
             self.assertIn("See next experience", html)
             self.assertIn("python -m mclab coverage", html)
             self.assertIn("Compare all experiences", html)
@@ -2505,7 +2565,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Open all reports", html)
             self.assertIn("python -m mclab index --open", html)
             self.assertIn("No run reports were found yet.", html)
-            self.assertIn("No saved runs yet.", html)
+            self.assertIn("No saved evidence yet", html)
 
     def test_outputs_index_coverage_complete_points_to_learning_path(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
