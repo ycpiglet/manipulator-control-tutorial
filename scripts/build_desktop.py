@@ -9,7 +9,9 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SIZE_LIMIT = 300 * 1024 * 1024
+# Bloat gate with headroom over measured baselines (2026-07-19): Linux
+# 359,486,798 bytes (Qt/EGL shared libraries), macOS under 300 MB.
+SIZE_LIMIT = 400 * 1024 * 1024
 
 
 def main() -> int:

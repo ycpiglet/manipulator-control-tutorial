@@ -419,7 +419,9 @@ class ApplicationFoundationTests(unittest.TestCase):
         self.assertEqual((by_id["wall_x"]["digits"], by_id["wall_x"]["unit"]), (3, "m"))
         self.assertEqual(by_id["wall_stiffness"]["unit"], "N/m")
 
-        qml = (ROOT / "src/mclab/application/qml/ExperimentControls.qml").read_text()
+        qml = (ROOT / "src/mclab/application/qml/ExperimentControls.qml").read_text(
+            encoding="utf-8"
+        )
         self.assertIn("formatControlValue", qml)
         self.assertIn("onHeightChanged: Qt.callLater(panel.revealFocusedControl)", qml)
         self.assertIn("control.digits", qml)
@@ -652,20 +654,20 @@ class ApplicationFoundationTests(unittest.TestCase):
         )
         self.assertEqual((completed.current, completed.total, completed.name), (5, 5, "lab04"))
         self.assertEqual(
-            json.loads((completed_output / "manifest.json").read_text())["status"],
+            json.loads((completed_output / "manifest.json").read_text(encoding="utf-8"))["status"],
             "completed",
         )
 
         failed, failed_output = exercise("print('injected batch failure'); raise SystemExit(7)", "failed")
         self.assertIn("injected batch failure", failed._tail)  # noqa: SLF001
         self.assertEqual(
-            json.loads((failed_output / "manifest.json").read_text())["status"],
+            json.loads((failed_output / "manifest.json").read_text(encoding="utf-8"))["status"],
             "error",
         )
 
         _stopped, stopped_output = exercise("import time; time.sleep(10)", "stopped")
         self.assertEqual(
-            json.loads((stopped_output / "manifest.json").read_text())["status"],
+            json.loads((stopped_output / "manifest.json").read_text(encoding="utf-8"))["status"],
             "stopped",
         )
 
@@ -677,7 +679,9 @@ class ApplicationFoundationTests(unittest.TestCase):
         source = "\n".join(path.read_text(encoding="utf-8") for path in qml_root.glob("*.qml"))
         for token in ("#F5F7FB", "#172033", "#2563EB", "#FFDD00", "#111827"):
             self.assertIn(token, source)
-        self.assertIn("implicitHeight: 48", (qml_root / "MButton.qml").read_text())
+        self.assertIn(
+            "implicitHeight: 48", (qml_root / "MButton.qml").read_text(encoding="utf-8")
+        )
         button_source = (qml_root / "MButton.qml").read_text(encoding="utf-8")
         self.assertIn("advanceWidth(text)", button_source)
         self.assertIn("Text.ElideNone", button_source)
@@ -1162,7 +1166,7 @@ class ApplicationFoundationTests(unittest.TestCase):
                 self.assertGreaterEqual(_contrast_ratio(foreground, background), threshold)
 
     def test_explore_search_placeholder_and_outline_meet_contrast_gates(self) -> None:
-        source = (ROOT / "src/mclab/application/qml/ExplorePage.qml").read_text()
+        source = (ROOT / "src/mclab/application/qml/ExplorePage.qml").read_text(encoding="utf-8")
 
         self.assertIn('placeholderTextColor: "#5B6475"', source)
         self.assertIn('border.color: "#64748B"', source)
@@ -1443,7 +1447,9 @@ class ApplicationFoundationTests(unittest.TestCase):
         self.assertEqual(results[39]["runLabel"], "Older 40")
         self.assertEqual(len({item["runLabel"] for item in results}), 60)
         self.assertLess(elapsed, 2.0)
-        results_qml = (ROOT / "src/mclab/application/qml/ResultsPage.qml").read_text()
+        results_qml = (ROOT / "src/mclab/application/qml/ResultsPage.qml").read_text(
+            encoding="utf-8"
+        )
         self.assertIn("property int visibleLimit: 20", results_qml)
         self.assertIn("page.runs.slice(0, page.visibleLimit)", results_qml)
 
@@ -2274,7 +2280,7 @@ class PlatformAndCliTests(unittest.TestCase):
                 target = asset_module.install_assets(root, archive_path=archive)
 
             self.assertTrue((target / "scene.xml").is_file())
-            self.assertEqual((target / "LICENSE").read_text(), "BSD-3-Clause")
+            self.assertEqual((target / "LICENSE").read_text(encoding="utf-8"), "BSD-3-Clause")
             self.assertFalse((target.parent / "unrelated").exists())
 
     @unittest.skipIf(
