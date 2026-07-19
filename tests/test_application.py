@@ -1516,6 +1516,13 @@ class ApplicationFoundationTests(unittest.TestCase):
 
 
 class ReplayArtifactTests(unittest.TestCase):
+    def test_recorder_resumes_sampling_after_simulation_time_rewinds(self) -> None:
+        recorder = ReplayRecorder(sample_hz=10.0)
+        for timestamp in (0.0, 0.05, 0.1, 0.0, 0.05, 0.1):
+            recorder.record(time=timestamp, qpos=[timestamp], qvel=[0.0], ctrl=[0.0])
+
+        np.testing.assert_allclose(recorder.archive().time, [0.0, 0.1, 0.0, 0.1])
+
     def test_recording_round_trip_preserves_states_semantics_and_events(self) -> None:
         recorder = ReplayRecorder(sample_hz=60.0)
         for index in range(121):
@@ -2165,6 +2172,20 @@ class SessionTests(unittest.TestCase):
 
 
 class PlatformAndCliTests(unittest.TestCase):
+    def test_qt_self_test_ignores_only_known_font_database_warning(self) -> None:
+        from mclab.application.error_messages import self_test_qt_errors
+
+        self.assertEqual(
+            self_test_qt_errors(
+                [
+                    "QFontDatabase: Cannot find font directory /tmp/PySide6/lib/fonts.\n"
+                    "Qt no longer ships fonts.",
+                    "file:///Main.qml:42: ReferenceError: missingValue is not defined",
+                ]
+            ),
+            ["file:///Main.qml:42: ReferenceError: missingValue is not defined"],
+        )
+
     def test_public_app_replay_assets_and_json_doctor_arguments(self) -> None:
         parser = build_parser()
         app = parser.parse_args(

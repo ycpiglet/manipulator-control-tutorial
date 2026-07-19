@@ -9,7 +9,9 @@ import subprocess
 import sys
 import tempfile
 from collections.abc import Callable
+from importlib import import_module
 from pathlib import Path
+from typing import Any
 
 from .application.batch_runs import BATCH_PROGRESS_PREFIX
 from .batch import ALL_BATCH_NAME, BATCH_SETS, run_all_batches, run_batch
@@ -82,28 +84,36 @@ from .learner_menu import (
     review_queue_action_lines,
     review_queue_summary_text,
 )
-from .labs import lab01_msd, lab02_pid, lab03_2dof, lab04_panda
 from .sim.reporting import write_outputs_index
 
 
 LabRunner = Callable[..., Path]
 
+
+def _lazy_lab_runner(module_name: str) -> LabRunner:
+    def run(*args: Any, **kwargs: Any) -> Path:
+        module = import_module(f"mclab.labs.{module_name}")
+        return module.run(*args, **kwargs)
+
+    return run
+
+
 LABS: dict[str, LabRunner] = {
-    "lab01": lab01_msd.run,
-    "lab01_msd": lab01_msd.run,
-    "msd": lab01_msd.run,
-    "mass_spring_damper": lab01_msd.run,
-    "lab02": lab02_pid.run,
-    "lab02_pid": lab02_pid.run,
-    "pid": lab02_pid.run,
-    "lab03": lab03_2dof.run,
-    "lab03_trajectory": lab03_2dof.run,
-    "trajectory": lab03_2dof.run,
-    "trajectory_planning": lab03_2dof.run,
-    "lab04": lab04_panda.run,
-    "lab04_panda": lab04_panda.run,
-    "panda": lab04_panda.run,
-    "manipulator": lab04_panda.run,
+    "lab01": _lazy_lab_runner("lab01_msd"),
+    "lab01_msd": _lazy_lab_runner("lab01_msd"),
+    "msd": _lazy_lab_runner("lab01_msd"),
+    "mass_spring_damper": _lazy_lab_runner("lab01_msd"),
+    "lab02": _lazy_lab_runner("lab02_pid"),
+    "lab02_pid": _lazy_lab_runner("lab02_pid"),
+    "pid": _lazy_lab_runner("lab02_pid"),
+    "lab03": _lazy_lab_runner("lab03_2dof"),
+    "lab03_trajectory": _lazy_lab_runner("lab03_2dof"),
+    "trajectory": _lazy_lab_runner("lab03_2dof"),
+    "trajectory_planning": _lazy_lab_runner("lab03_2dof"),
+    "lab04": _lazy_lab_runner("lab04_panda"),
+    "lab04_panda": _lazy_lab_runner("lab04_panda"),
+    "panda": _lazy_lab_runner("lab04_panda"),
+    "manipulator": _lazy_lab_runner("lab04_panda"),
 }
 
 

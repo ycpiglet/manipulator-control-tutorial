@@ -125,6 +125,18 @@ class LoggingTests(unittest.TestCase):
             self.assertTrue((first / "plots").is_dir())
             self.assertTrue((second / "plots").is_dir())
 
+    def test_run_logger_resumes_sampling_after_simulation_time_rewinds(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            logger = RunLogger(
+                "lab01_msd",
+                {"log_sample_hz": 10.0},
+                output_dir=Path(temp_dir) / "run",
+            )
+            for timestamp in (0.0, 0.05, 0.1, 0.15, 0.0, 0.05, 0.1):
+                logger.record(time=timestamp, position=timestamp)
+
+        self.assertEqual([row["time"] for row in logger.rows], [0.0, 0.1, 0.0, 0.1])
+
     def test_run_logger_writes_html_report(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             logger = RunLogger(

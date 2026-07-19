@@ -48,6 +48,18 @@ mclab = ["application/qml/*.qml"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 
+[tool.coverage.run]
+# Qt binding/factory modules are exercised by the cross-platform desktop
+# workflow. The main simulator coverage gate measures dependency-light code.
+omit = [
+  "src/mclab/application/qt_app.py",
+  "src/mclab/application/qt_batch.py",
+  "src/mclab/application/qt_evidence.py",
+  "src/mclab/application/qt_frame.py",
+  "src/mclab/application/qt_smoke.py",
+  "src/mclab/application/qt_worker.py",
+]
+
 [tool.ruff]
 line-length = 100
 target-version = "py310"

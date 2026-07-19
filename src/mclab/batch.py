@@ -11,10 +11,10 @@ from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from html import escape
+from importlib import import_module
 from pathlib import Path
 from typing import Any
 
-from mclab.application.artifacts import write_manifest
 from mclab.application.batch_runs import ALL_COMPARE_ID
 from mclab.config import (
     PROJECT_ROOT,
@@ -23,7 +23,6 @@ from mclab.config import (
     load_config,
     resolve_output_path,
 )
-from mclab.labs import lab01_msd, lab02_pid, lab03_2dof, lab04_panda
 from mclab.learning_guides import (
     challenge_prompt_for_guide,
     control_credit_text_for_config,
@@ -45,11 +44,19 @@ LabRunner = Callable[..., Path]
 ALL_BATCH_NAME = "all"
 VIEWER_HANDOFF_ANCHOR = "viewer-handoff"
 
+def _lazy_lab_runner(module_name: str) -> LabRunner:
+    def run(*args: Any, **kwargs: Any) -> Path:
+        module = import_module(f"mclab.labs.{module_name}")
+        return module.run(*args, **kwargs)
+
+    return run
+
+
 LAB_RUNNERS: dict[str, LabRunner] = {
-    "lab01": lab01_msd.run,
-    "lab02": lab02_pid.run,
-    "lab03": lab03_2dof.run,
-    "lab04": lab04_panda.run,
+    "lab01": _lazy_lab_runner("lab01_msd"),
+    "lab02": _lazy_lab_runner("lab02_pid"),
+    "lab03": _lazy_lab_runner("lab03_2dof"),
+    "lab04": _lazy_lab_runner("lab04_panda"),
 }
 
 
@@ -768,6 +775,8 @@ def run_all_batches(
     write_outputs_index(group_output)
     write_all_batches_report(group_output, completed)
     write_outputs_index(group_output.parent)
+    from mclab.application.artifacts import write_manifest
+
     write_manifest(
         group_output,
         scenario_id=ALL_COMPARE_ID,

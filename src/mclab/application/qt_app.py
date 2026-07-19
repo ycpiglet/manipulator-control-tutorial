@@ -11,7 +11,7 @@ from typing import Any
 from mclab.application.adapters import replay_adapter_from_manifest
 from mclab.application.artifacts import ReplayArchive, legacy_replay_reason
 from mclab.application.catalog import ScenarioCatalog, ScenarioDefinition
-from mclab.application.error_messages import localized_error
+from mclab.application.error_messages import localized_error, self_test_qt_errors
 from mclab.application.i18n import TRANSLATIONS, Translator, normalize_language
 from mclab.application.launcher import create_scenario_adapter
 from mclab.application.platform import PlatformServices
@@ -57,6 +57,7 @@ def qt_available() -> tuple[bool, str]:
 
 
 SHUTDOWN_WAIT_MS = 30_000
+
 
 def run_app(
     *,
@@ -720,13 +721,14 @@ def run_app(
                 )
             )
 
+    font_root = PROJECT_ROOT / "third_party" / "fonts" / "noto"
+    os.environ.setdefault("QT_QPA_FONTDIR", str(font_root))
     QGuiApplication.setOrganizationName("MCLab")
     QGuiApplication.setApplicationName("MCLab")
     instance_lock = acquire_instance_lock(language)
     if instance_lock is None:
         return 6
     app = QGuiApplication.instance() or QGuiApplication(sys.argv[:1])
-    font_root = PROJECT_ROOT / "third_party" / "fonts" / "noto"
     QFontDatabase.addApplicationFont(str(font_root / "NotoSansKR[wght].ttf"))
     QFontDatabase.addApplicationFont(str(font_root / "NotoSansMono[wdth,wght].ttf"))
     app_font = QFont("Noto Sans KR", 11)
@@ -788,7 +790,7 @@ def run_app(
     engine.deleteLater()
     app.processEvents()
     result = exit_code
-    if os.environ.get("MCLAB_SELF_TEST") == "1" and qt_messages:
+    if os.environ.get("MCLAB_SELF_TEST") == "1" and self_test_qt_errors(qt_messages):
         result = 4
     elif os.environ.get("MCLAB_FAIL_ON_ERROR") == "1" and backend.errorMessage:
         result = 5

@@ -62,6 +62,7 @@ class RunLogger:
         self.rows: list[dict[str, Any]] = []
         self.log_sample_hz = float(self.config.get("log_sample_hz", 100.0))
         self._next_log_time = 0.0
+        self._last_seen_time: float | None = None
         self.replay = ReplayRecorder(float(self.config.get("replay_sample_hz", 60.0)))
         self.started_at = datetime.now(timezone.utc).isoformat()
         self.run_status = "completed"
@@ -72,7 +73,16 @@ class RunLogger:
             timestamp = float(flattened.get("time", self._next_log_time))
         except (TypeError, ValueError):
             timestamp = self._next_log_time
-        if self.rows and self.log_sample_hz > 0 and timestamp + 1e-12 < self._next_log_time:
+        rewound = self._last_seen_time is not None and timestamp + 1e-12 < self._last_seen_time
+        self._last_seen_time = timestamp
+        if rewound:
+            self._next_log_time = timestamp
+        if (
+            self.rows
+            and not rewound
+            and self.log_sample_hz > 0
+            and timestamp + 1e-12 < self._next_log_time
+        ):
             return
         self.rows.append(flattened)
         if self.log_sample_hz > 0:

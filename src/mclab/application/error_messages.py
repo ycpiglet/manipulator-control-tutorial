@@ -57,6 +57,22 @@ _KO_ACTIONS = {
 }
 
 
+_BENIGN_SELF_TEST_QT_MESSAGES = (
+    "QFontDatabase: Cannot find font directory",
+    "Qt no longer ships fonts",
+)
+
+
+def self_test_qt_errors(messages: list[str]) -> list[str]:
+    """Return Qt diagnostics that indicate a real QML/application failure."""
+
+    return [
+        message
+        for message in messages
+        if not any(marker in message for marker in _BENIGN_SELF_TEST_QT_MESSAGES)
+    ]
+
+
 def localized_error(language: str, detail: str, action: str) -> tuple[str, str]:
     if language != "ko":
         learner_detail = next(

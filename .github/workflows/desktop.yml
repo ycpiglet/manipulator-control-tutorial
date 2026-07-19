@@ -28,6 +28,10 @@ jobs:
           python-version: "3.11"
           cache: pip
 
+      - name: Install Linux Qt runtime library
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install --yes libegl1
+
       - name: Install desktop, test, and packaging dependencies
         run: python -m pip install -e ".[app,dev,package]"
 

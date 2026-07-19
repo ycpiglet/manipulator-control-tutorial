@@ -121,6 +121,7 @@ class ReplayRecorder:
         self._frames: list[ReplayFrame] = []
         self._events: list[dict[str, Any]] = []
         self._next_sample_time = 0.0
+        self._last_seen_time: float | None = None
 
     def record(
         self,
@@ -132,7 +133,11 @@ class ReplayRecorder:
         semantic: dict[str, float] | None = None,
     ) -> bool:
         timestamp = float(time)
-        if self._frames and timestamp + 1e-12 < self._next_sample_time:
+        rewound = self._last_seen_time is not None and timestamp + 1e-12 < self._last_seen_time
+        self._last_seen_time = timestamp
+        if rewound:
+            self._next_sample_time = timestamp
+        if self._frames and not rewound and timestamp + 1e-12 < self._next_sample_time:
             return False
         self._frames.append(
             ReplayFrame(
@@ -156,6 +161,7 @@ class ReplayRecorder:
         self._frames.clear()
         self._events.clear()
         self._next_sample_time = 0.0
+        self._last_seen_time = None
 
     def archive(self) -> ReplayArchive:
         if not self._frames:
