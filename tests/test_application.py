@@ -212,8 +212,8 @@ class ApplicationFoundationTests(unittest.TestCase):
         catalog = ScenarioCatalog.default()
         scenarios = catalog.all()
 
-        self.assertEqual(len(scenarios), 70)
-        self.assertEqual(len({scenario.id for scenario in scenarios}), 70)
+        self.assertEqual(len(scenarios), 72)
+        self.assertEqual(len({scenario.id for scenario in scenarios}), 72)
         self.assertEqual(catalog.get("lab01.interactive-pull").lab_name, "lab01")
         self.assertEqual(catalog.get("lab04.interactive-virtual-wall").lab_name, "lab04")
         self.assertTrue(all(len(scenario.controls) <= 5 for scenario in scenarios))
@@ -227,8 +227,8 @@ class ApplicationFoundationTests(unittest.TestCase):
                     scenario_payload(scenario, Translator(language))["displayTitle"]
                     for scenario in scenarios
                 ]
-                self.assertEqual(len(titles), 70)
-                self.assertEqual(len(set(titles)), 70)
+                self.assertEqual(len(titles), 72)
+                self.assertEqual(len(set(titles)), 72)
                 self.assertTrue(all(title.startswith("LAB0") for title in titles))
 
     def test_catalog_search_and_config_lookup_do_not_require_label_inference(self) -> None:
@@ -284,7 +284,7 @@ class ApplicationFoundationTests(unittest.TestCase):
             catalog = ScenarioCatalog.default()
 
         broken = catalog.get("lab01.default")
-        self.assertEqual(len(catalog.all()), 70)
+        self.assertEqual(len(catalog.all()), 72)
         self.assertEqual(broken.config, {})
         self.assertIn("injected invalid YAML", broken.config_error)
         self.assertTrue(any("lab01.default: invalid" in item for item in catalog.integrity_errors()))
@@ -341,7 +341,7 @@ class ApplicationFoundationTests(unittest.TestCase):
                 difficulty: sum(item.difficulty == difficulty for item in scenarios)
                 for difficulty in ("intro", "build", "deep-dive")
             },
-            {"intro": 16, "build": 8, "deep-dive": 46},
+            {"intro": 18, "build": 8, "deep-dive": 46},
         )
         self.assertEqual(
             sum(
