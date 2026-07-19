@@ -1,6 +1,6 @@
 # Current State
 
-Updated: 2026-07-06 01:30 KST
+Updated: 2026-07-19 KST
 
 ## Current Objective
 
@@ -17,6 +17,46 @@ Iteratively improve the Korean review/tutorial paper on impedance, impedance con
 - Latest PDF size: 1002110 bytes
 
 ## Completed Since Last Snapshot
+
+### 2026-07-19 Desktop app merge (PR #32) + F2 menu exposure
+
+PR #32 landed the Qt Quick desktop application (`src/mclab/application/`,
+~25k added lines, 112 files): bilingual ko/en UI with bundled Noto fonts,
+single-instance lock with window activation, in-process simulation worker,
+replay recording/playback, scenario catalog derived from
+`learner_menu.MENU_ACTIONS`, PyInstaller one-folder packaging
+(`scripts/build_desktop.py`, 400 MB bloat gate; Windows build 263.1 MB,
+Linux 342.8 MB), and a new 3-OS `desktop.yml` CI workflow. Merged only
+after three CI-fix rounds turned all six checks green (per the recorded
+never-merge-red lesson): Linux `libegl1` runtime install; the
+QFontDatabase font-directory warning treated as benign during
+`app --self-test` (pre-fix exit 4 reproduced locally on Windows offscreen);
+Qt view-shell modules omitted from the simulator coverage gate (floor holds
+at 81%); `encoding="utf-8"` on every test `read_text()` (Windows CI runs
+cp1252 and the QML contains Korean); and the custom QtQml hook now mirrors
+the wheel QML layout (`PySide6/qml` on Windows vs `PySide6/Qt/qml` on
+Unix) — the packaged Windows app previously failed with
+"QtQuick.Controls is not installed", exit 3.
+
+Follow-up on the same day: the F2 stored-energy failure-gallery pair
+(`f2_launch_high_energy.yaml` / `f2_launch_precheck.yaml`) is now exposed
+as learner menu cards (Lab01 group, chained Interactive -> launch ->
+precheck -> Lab02), closing the safety-north-star gap where menu-only
+learners never met the failure gallery. Menu/catalog counts moved
+70 -> 72. Full UX/fidelity assessment with verified metrics recorded in
+`.agents/SIM_UX_FIDELITY_ASSESSMENT.md` (measured pre-#32; scores: paper-sim
+fidelity 4.8/5, freedom 4.0/5, UI/UX, convenience, friendliness 3.5/5 each).
+UX backlog A (auto-repeat) and C (button delay) from
+`.agents/UX_IMPROVEMENTS.md` remain open for the Tk menu path; B (single
+window) is solved in the desktop app via the instance lock.
+
+### 2026-07-11 Launcher and install UX (PRs #26-#31)
+
+START_HERE.cmd one-click launcher (PR #27), cmd-parser-safe encoding fix
+(PR #28), 64x lighter install via Panda-only sparse checkout 2.3 GB ->
+44 MB plus `mclab clean` retention command (PR #29), launcher setup-guard
+fix after a red-main incident (PR #30), and the recorded CI-guard lesson
+(PR #31).
 
 ### 2026-07-07 Night Autonomous Run (PRs #22-#25) + Track C
 
