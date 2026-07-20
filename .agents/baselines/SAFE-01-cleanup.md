@@ -115,7 +115,7 @@ semantics, dependency locking, release retention policy, or B2 status.
 | Gate | Result | Measurement |
 |---|---|---|
 | Python 3.12 full regression | PASS | 528 passed, 7 skipped, 1,109 subtests |
-| Python 3.12 coverage | PASS | 80.91% total, 89% `src/mclab/output_cleanup.py`; floor 80% |
+| Python 3.12 coverage | PASS | 80.92% total, 89% `src/mclab/output_cleanup.py`; floor 80% |
 | Python 3.10 cleanup/CLI regression | PASS | 109 passed, 6 platform-only skipped, 20 subtests |
 | Relevant Qt audit | PASS | 18/18 XCB cases; final exact-head remote rerun required |
 | Ruff | PASS | 0 findings across required scopes |
@@ -196,16 +196,17 @@ NFS/SMB are outside SAFE-01; process-interruption recovery is in scope.
 | Strict planner/quarantine implementation | local PASS |
 | Mixed and fault-injection regression suite | local PASS |
 | Independent final code review | scoped local GOs; no known P0/P1 in cleanup mutation, output claim, writer publication, batch handoff, or terminal callback paths |
-| Exact candidate commit and PR | Draft PR #46 open; initial head `a56e308f2c82b3d346801905fd3bba686ab7da4b`; repaired head pending commit/push |
-| Required exact-head checks | initial head 3/6 PASS: simulator, paper gates, paper build; repaired exact head pending |
-| Remote Windows/Ubuntu/macOS validation | initial desktop matrix 0/3; macOS temp-alias fixtures, Windows rename buffer/path matching/root pin, and Ubuntu XCB runtime set repaired locally; exact-head rerun required |
+| Exact candidate commit and PR | Draft PR #46 open; initial head `a56e308f2c82b3d346801905fd3bba686ab7da4b`, second head `7e9fcf701121069be924b220510ab7a107099c0b`; final two-test repair pending commit/push |
+| Required exact-head checks | second head 4/6 PASS: simulator, paper gates, paper build, Ubuntu desktop; macOS and Windows desktop failed one foundation test each |
+| Remote Windows/Ubuntu/macOS validation | second matrix 1/3: Ubuntu full job and 18/18 XCB PASS; macOS had one unresolved temp alias and Windows rejected one junction-alias expectation; both locally repaired, final exact-head rerun required |
 | Ruleset merge and post-merge main verification | pending |
 | Real-root dry-run owner review | pending; only after post-merge verification and SAFE-01 PASS |
 | Real-root quarantine apply | prohibited until owner reviews the same dry-run plan |
 
 Initial PR run evidence is GitHub Actions CI `29776388384` and desktop matrix
-`29776388375`. Preserve those failed-run IDs as diagnosis history; acceptance
-must use the later repaired exact-head run IDs.
+`29776388375`. Second-head evidence is CI `29778026648` and desktop matrix
+`29778026653`. Preserve the failed-run IDs as diagnosis history; acceptance
+must use the final repaired exact-head run IDs.
 
 ## Rollback and Recovery
 
@@ -222,6 +223,7 @@ must use the later repaired exact-head run IDs.
 
 ## Exact Next Action
 
-Commit and push the platform-gate repair to Draft PR #46, record the new exact
-head, and require all six exact-head checks plus the three-OS desktop matrix.
+Commit and push the final macOS temp-path and Windows junction-selection repair
+to Draft PR #46, record the new exact head, and require all six exact-head
+checks plus the three-OS desktop matrix.
 Do not run `mclab clean` against the real outputs root during that validation.

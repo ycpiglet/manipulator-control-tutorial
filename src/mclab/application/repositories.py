@@ -155,7 +155,7 @@ class ArtifactRepository:
             (
                 item
                 for item in self.list_runs()
-                if _same_existing_path(
+                if _same_direct_child_path(
                     Path(os.path.abspath(os.fspath(item.path))),
                     target,
                 )
@@ -178,6 +178,12 @@ def _same_existing_path(left: Path, right: Path) -> bool:
         return left.samefile(right)
     except OSError:
         return os.path.normcase(str(left)) == os.path.normcase(str(right))
+
+
+def _same_direct_child_path(left: Path, right: Path) -> bool:
+    """Match one listed child name without accepting a junction alias."""
+
+    return left.name == right.name and _same_existing_path(left.parent, right.parent)
 
 
 class ProgressRepository:

@@ -699,7 +699,7 @@ class ApplicationFoundationTests(unittest.TestCase):
         ) -> tuple[object, Path]:
             temporary = tempfile.TemporaryDirectory()
             self.addCleanup(temporary.cleanup)
-            output = Path(temporary.name) / "batch"
+            output = Path(temporary.name).resolve() / "batch"
             output.mkdir()
             update_batch_manifest(output, status="running")
             if expected_signal == "completed" and not terminal_before_cancel:
