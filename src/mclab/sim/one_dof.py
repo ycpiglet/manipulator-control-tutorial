@@ -6,7 +6,12 @@ from dataclasses import dataclass
 from math import sin, tau
 from typing import Any
 
-from mclab.sim.mujoco_utils import add_viewer_box, reset_viewer_overlays
+from mclab.sim.mujoco_utils import (
+    add_viewer_box,
+    add_viewer_segment,
+    reset_viewer_overlays,
+    spring_polyline,
+)
 
 
 @dataclass(frozen=True)
@@ -134,6 +139,7 @@ def update_slider_viewer_guides(
         half_size=[0.006, 0.025, 0.09],
         rgba=[0.38, 0.43, 0.50, 0.70],
     )
+    _add_plant_linkage_guides(mujoco, viewer_handle, position, target_position)
     if target_position is not None:
         add_viewer_box(
             mujoco,
@@ -152,3 +158,47 @@ def update_slider_viewer_guides(
             half_size=[length, 0.018, 0.018],
             rgba=[1.0, 0.48, 0.10, 0.84],
         )
+
+
+def _add_plant_linkage_guides(
+    mujoco: Any,
+    viewer_handle: Any,
+    position: float,
+    target_position: float | None,
+) -> None:
+    """Draw the spring and damper attached to the moving block.
+
+    These track the block every frame (matching the desktop app overlays in
+    Lab01Adapter._add_slider_overlays); the model XML deliberately carries no
+    static spring/damper decoration because it could not follow the mass.
+    """
+
+    block_face = position - 0.19
+    if target_position is None:
+        spring = spring_polyline([-1.40, 0.0, 0.08], [block_face, 0.0, 0.08])
+        for start, end in zip(spring, spring[1:]):
+            add_viewer_segment(
+                mujoco,
+                viewer_handle,
+                start,
+                end,
+                width=0.014,
+                rgba=[0.98, 0.75, 0.14, 0.95],
+            )
+    damper_mid = -1.05 + 0.55 * (block_face + 1.05)
+    add_viewer_segment(
+        mujoco,
+        viewer_handle,
+        [-1.40, 0.0, -0.13],
+        [damper_mid, 0.0, -0.13],
+        width=0.035,
+        rgba=[0.38, 0.44, 0.54, 1.0],
+    )
+    add_viewer_segment(
+        mujoco,
+        viewer_handle,
+        [damper_mid, 0.0, -0.13],
+        [block_face, 0.0, -0.13],
+        width=0.014,
+        rgba=[0.92, 0.95, 0.98, 1.0],
+    )

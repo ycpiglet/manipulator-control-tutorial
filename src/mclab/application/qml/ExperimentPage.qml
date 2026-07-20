@@ -101,7 +101,10 @@ Item {
     }
 
     function legendDescription() {
-        var labels = [backend.localizedText(backend.language, "legend.current"), backend.localizedText(backend.language, "legend.target")]
+        var labels = [backend.localizedText(backend.language, "legend.current"),
+                      backend.localizedText(backend.language,
+                                            backend.selectedScenario.lab === "lab01" ? "scene.equilibrium"
+                                                                                     : "legend.target")]
         if (backend.selectedScenario.showWorkspace) labels.push(backend.localizedText(backend.language, "legend.workspace"))
         if (backend.selectedScenario.showSingularity) labels.push(backend.localizedText(backend.language, "legend.singularity"))
         if (backend.selectedScenario.showForce) labels.push(backend.localizedText(backend.language, "legend.force"))

@@ -33,26 +33,33 @@ class OneDofViewerGuideTests(unittest.TestCase):
         self.assertEqual(data.ctrl[0], 0.0)
         fake_mujoco.mj_forward.assert_called_once_with(model, data)
 
-    def test_slider_viewer_guides_draw_reference_target_and_force(self) -> None:
+    @staticmethod
+    def _fake_scene(capacity: int) -> tuple[types.SimpleNamespace, types.SimpleNamespace]:
         def init_geom(geom, geom_type, size, pos, mat, rgba):
             geom.geom_type = geom_type
             geom.size = [float(value) for value in size]
             geom.pos = [float(value) for value in pos]
             geom.rgba = [float(value) for value in rgba]
 
+        def connector(geom, geom_type, width, start, end):
+            geom.segment = ([float(v) for v in start], [float(v) for v in end])
+
         fake_mujoco = types.SimpleNamespace(
             mjv_initGeom=Mock(side_effect=init_geom),
-            mjtGeom=types.SimpleNamespace(mjGEOM_BOX="box"),
+            mjv_connector=Mock(side_effect=connector),
+            mjtGeom=types.SimpleNamespace(mjGEOM_BOX="box", mjGEOM_CAPSULE="capsule"),
             mjtCatBit=types.SimpleNamespace(mjCAT_DECOR="decor"),
         )
         scene = types.SimpleNamespace(
             ngeom=0,
             geoms=[
-                types.SimpleNamespace(category=None, transparent=0),
-                types.SimpleNamespace(category=None, transparent=0),
-                types.SimpleNamespace(category=None, transparent=0),
+                types.SimpleNamespace(category=None, transparent=0) for _ in range(capacity)
             ],
         )
+        return fake_mujoco, scene
+
+    def test_slider_viewer_guides_draw_reference_damper_target_and_force(self) -> None:
+        fake_mujoco, scene = self._fake_scene(capacity=8)
         viewer = types.SimpleNamespace(user_scn=scene)
 
         update_slider_viewer_guides(
@@ -64,13 +71,42 @@ class OneDofViewerGuideTests(unittest.TestCase):
             target_position=0.4,
         )
 
-        self.assertEqual(scene.ngeom, 3)
+        # reference tick, damper barrel + rod, target tick, force arrow.
+        self.assertEqual(scene.ngeom, 5)
         self.assertEqual(scene.geoms[0].geom_type, "box")
         self.assertEqual(scene.geoms[0].pos, [0.0, -0.11, 0.045])
-        self.assertEqual(scene.geoms[1].pos, [0.4, 0.11, 0.045])
-        self.assertEqual(scene.geoms[1].rgba, [0.1, 0.82, 0.28, 0.82])
-        self.assertGreater(scene.geoms[2].pos[0], 0.2)
-        self.assertEqual(scene.geoms[2].rgba, [1.0, 0.48, 0.1, 0.84])
+        self.assertEqual(scene.geoms[1].geom_type, "capsule")
+        self.assertEqual(scene.geoms[2].segment[1][0], 0.2 - 0.19)
+        self.assertEqual(scene.geoms[3].pos, [0.4, 0.11, 0.045])
+        self.assertEqual(scene.geoms[3].rgba, [0.1, 0.82, 0.28, 0.82])
+        self.assertGreater(scene.geoms[4].pos[0], 0.2)
+        self.assertEqual(scene.geoms[4].rgba, [1.0, 0.48, 0.1, 0.84])
+
+    def test_slider_viewer_guides_spring_tracks_the_block_without_a_target(self) -> None:
+        fake_mujoco, scene = self._fake_scene(capacity=32)
+        viewer = types.SimpleNamespace(user_scn=scene)
+
+        update_slider_viewer_guides(
+            fake_mujoco,
+            viewer,
+            position=0.5,
+            force=0.0,
+            reference_position=0.0,
+        )
+
+        springs = [
+            geom for geom in scene.geoms[: scene.ngeom]
+            if geom.geom_type == "capsule" and geom.rgba == [0.98, 0.75, 0.14, 0.95]
+        ]
+        self.assertGreater(len(springs), 4)
+        self.assertEqual(springs[0].segment[0], [-1.40, 0.0, 0.08])
+        self.assertEqual(springs[-1].segment[1], [0.5 - 0.19, 0.0, 0.08])
+        dampers = [
+            geom for geom in scene.geoms[: scene.ngeom]
+            if geom.geom_type == "capsule" and geom.rgba != [0.98, 0.75, 0.14, 0.95]
+        ]
+        self.assertEqual(len(dampers), 2)
+        self.assertEqual(dampers[-1].segment[1][0], 0.5 - 0.19)
 
     def test_slider_viewer_guides_can_be_disabled(self) -> None:
         fake_mujoco = types.SimpleNamespace(
