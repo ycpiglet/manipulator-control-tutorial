@@ -1,12 +1,14 @@
 # GOV-01 — Repository Governance Evidence
 
-- Updated: 2026-07-20 KST
-- Status: **GOV-01A PASS; GOV-01B PASS; GOV-01C candidate in validation**
+- Updated: 2026-07-21 KST
+- Status: **GOV-01A/B/C PASS; GOV-01 aggregate COMPLETE**
 - B1 subject: `f04cca16848316e227df18fe129229b515ae01c7`
 - GOV-01A merge: `9f4169f60efb32d6b6d49b9f06d985d8de9c6f70`
-- GOV-01C implementation commit: `5de658127a392f6802e5c68d099bdbab597f8371`
-- GOV-01 aggregate: **INCOMPLETE** until replacement CI, merge, and Action SHA
-  enforcement all pass
+- GOV-01C source PR: [#40](https://github.com/ycpiglet/manipulator-control-tutorial/pull/40)
+- GOV-01C exact head: `e26c1ab40d77af0d3744c217736477ef2592251c`
+- GOV-01C merge: `41be887f21bfb476507d94a089f98c0ef72453c8`
+- Ruleset: `Protect main (GOV-01B)`, ID `19209773`, active
+- Repository Action policy: `sha_pinning_required=true`
 
 ## GOV-01A — Policy Baseline
 
@@ -26,8 +28,6 @@ Private Vulnerability Reporting was enabled and read back as
 
 ## GOV-01B — Live Repository Settings
 
-Post-change API snapshot time: 2026-07-20 22:44 KST.
-
 | Control | Verified state |
 |---|---|
 | Ruleset | `Protect main (GOV-01B)`, ID `19209773`, active |
@@ -42,6 +42,7 @@ Post-change API snapshot time: 2026-07-20 22:44 KST.
 | Private vulnerability reporting | enabled |
 | Secret scanning / push protection | enabled / enabled |
 | Default Actions token | read-only; PR approval disabled |
+| Action reference policy | full-SHA pinning required |
 
 The effective-rules endpoint for `main` returned the same deletion,
 non-fast-forward, pull-request, and status-check rules. The durable settings
@@ -53,11 +54,11 @@ conversation resolution, six exact checks, CODEOWNERS routing, explicit owner
 risk acceptance, and an independent read-only review remain mandatory. This is
 not represented as formal independent human approval.
 
-## GOV-01C — Immutable Action Candidate
+## GOV-01C — Immutable Actions
 
-The candidate replaces 12 mutable action uses with these independently
-rechecked commits. Each exact-version tag resolved to the listed SHA and the
-GitHub commit API returned `verification.verified=true`.
+PR #40 replaced 12 mutable Action uses with these independently rechecked
+commits. Each exact-version tag resolved to the listed SHA and the GitHub
+commit API returned `verification.verified=true`.
 
 | Action | Version annotation | Full commit SHA |
 |---|---|---|
@@ -67,7 +68,7 @@ GitHub commit API returned `verification.verified=true`.
 | `actions/upload-artifact` | `v4.6.2` | `ea165f8d65b6e75b540449e92b4886f43607fa02` |
 | `WtfJoke/setup-tectonic` | `v3.1.5` | `8a63d072f8390efdff59da7fa08aa49e3c1f5e1b` |
 
-Additional candidate controls:
+Additional controls:
 
 - all four checkout steps set `persist-credentials: false`;
 - Tectonic is pinned to release `0.16.9`;
@@ -75,8 +76,8 @@ Additional candidate controls:
 - `.agents/validation/check_workflow_action_pins.py` requires full commit SHAs
   for repository Actions and `sha256` digests for Docker Actions, and is called
   by CI;
-- tests prove the current 12-reference inventory passes while mutable Action
-  tags and mutable Docker image tags fail.
+- tests prove the 12-reference inventory passes while mutable Action tags and
+  mutable Docker image tags fail.
 
 The audited Linux Tectonic asset is
 `tectonic-0.16.9-x86_64-unknown-linux-gnu.tar.gz`, size 21,568,986 bytes,
@@ -86,36 +87,41 @@ The third-party setup Action selects the fixed release but does not verify that
 digest. Replacing it with an explicit download-and-hash step remains a SUP-01
 hardening item; this residual risk is not hidden by the Action source pin.
 
-## Remaining GOV-01C Gate
+## Completion Evidence
 
-GOV-01C and aggregate GOV-01 pass only after all of the following are true:
+| Gate | Result | Evidence |
+|---|---|---|
+| Exact-head required checks | PASS, 6/6 | PR #40 at `e26c1ab40d77af0d3744c217736477ef2592251c` |
+| Ruleset merge | PASS | merge `41be887f21bfb476507d94a089f98c0ef72453c8` |
+| Post-merge simulator/paper CI | PASS | [run 29749432294](https://github.com/ycpiglet/manipulator-control-tutorial/actions/runs/29749432294) |
+| Post-merge desktop matrix | PASS, Windows/Ubuntu/macOS | [run 29749432322](https://github.com/ycpiglet/manipulator-control-tutorial/actions/runs/29749432322) |
+| Dependabot activation | PASS | [run 29749436873](https://github.com/ycpiglet/manipulator-control-tutorial/actions/runs/29749436873) |
+| Action SHA policy | PASS | API read-back `sha_pinning_required=true` |
+| Workflow inventory | PASS, 12/12 | post-merge full-SHA scan |
+| Final settings/evidence snapshot | PASS | [PR comment](https://github.com/ycpiglet/manipulator-control-tutorial/pull/40#issuecomment-5023234280) |
 
-1. checker, YAML parse, Ruff, targeted tests, and all six exact-head GitHub
-   checks pass;
-2. the candidate is merged through the active ruleset;
-3. repository Actions policy is changed to `sha_pinning_required=true`;
-4. the API reads that setting back as true and a fresh scan finds 12/12 full
-   SHAs on `main`.
+These results close GOV-01. They do not close SAFE-01, COMP-01/02, SUP-01, or
+the B2 safe-main gate.
 
-Until then, GOV-01 and B2 remain incomplete.
+## Residual Risk
+
+Some pinned Action releases still declare an internal Node 20 runtime while
+GitHub currently executes them through its Node 24 compatibility path. The
+references are immutable and the replacement and post-merge runs passed, so
+this does not reopen GOV-01. SUP-01 must select, review, pin, and revalidate
+newer Action releases before the compatibility path is removed.
 
 ## Rollback and Recovery
 
-- If a pinned Action or fixed Tectonic release breaks a required job, the
-  default recovery is a PR that replaces it with a previously reviewed full
-  SHA or another reviewed immutable implementation. Do not restore a mutable
-  tag merely to reproduce the old workflow.
-- Do not enable SHA enforcement before the green replacement run.
-- If an emergency requires reverting all the way to the historical mutable-tag
-  workflow, temporarily disable only `sha_pinning_required`, record the API
-  state before and after, merge the revert through the still-active ruleset,
-  then land an immutable repair and re-enable SHA enforcement after its green
-  run. The repository must remain in a degraded, explicitly recorded state
-  until enforcement is restored.
-- Actions SHA enforcement and branch ruleset `19209773` are separate controls.
-  Do not disable the ruleset to repair an Action pin. If the ruleset itself
-  blocks legitimate recovery, inspect or temporarily disable only that exact
-  ruleset, record the change, repair through a PR, and restore active
-  enforcement.
+- If a pinned Action or fixed Tectonic release breaks a required job, use a PR
+  to replace it with a previously reviewed full SHA or another reviewed
+  immutable implementation. Do not restore a mutable tag merely to reproduce
+  the old workflow.
+- If an emergency requires reverting to a historical mutable-tag workflow,
+  temporarily disable only `sha_pinning_required`, record the API state before
+  and after, merge the revert through the still-active ruleset, then land an
+  immutable repair and re-enable SHA enforcement after its green run.
+- Actions SHA enforcement and ruleset `19209773` are separate controls. Do not
+  disable the ruleset to repair an Action pin.
 - Do not disable vulnerability alerts, private reporting, secret scanning, or
   push protection to work around an unrelated workflow failure.

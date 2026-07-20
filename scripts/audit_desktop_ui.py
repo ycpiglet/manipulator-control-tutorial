@@ -17,6 +17,7 @@ from pathlib import Path
 import numpy as np
 from PySide6.QtGui import QImage
 
+from mclab.application.artifacts import write_manifest
 from mclab.application.batch_runs import ALL_COMPARE_ID
 from mclab.application.catalog import LEARNING_PATH_SCENARIO_IDS
 from mclab.application.visual_semantics import SEMANTIC_COLORS, rgb
@@ -93,6 +94,7 @@ class AuditCase:
     required_control_color_pixels: tuple[tuple[str, str, int], ...] = ()
     required_control_border_colors: tuple[tuple[str, str], ...] = ()
     required_role_border_colors: tuple[tuple[str, str, str, int], ...] = ()
+    expected_visible_dialog_names: tuple[str, ...] | None = None
     required_indicator_colors: tuple[tuple[str, str, int], ...] = ()
     required_checked_names: tuple[str, ...] = ()
     required_unchecked_names: tuple[str, ...] = ()
@@ -615,10 +617,10 @@ CASES = (
             "시나리오 검색",
             "난이도 필터",
             "방식 필터",
-            "70개 중 70개 표시",
+            "72개 중 72개 표시",
         ),
         required_descriptions=("시나리오 검색", "난이도 필터", "방식 필터"),
-        expected_scenario_starts=70,
+        expected_scenario_starts=72,
         require_no_partially_clipped_controls=True,
         required_in_window_names=("LAB01 · 저감쇠",),
         required_control_colors=(
@@ -639,7 +641,7 @@ CASES = (
         page="explore",
         actions="explore_filter_hands_on,accessibility_snapshot",
         accessibility=True,
-        required_accessible_names=("9 of 70 shown", "Mode filter"),
+        required_accessible_names=("9 of 72 shown", "Mode filter"),
         expected_scenario_starts=9,
         require_no_partially_clipped_controls=True,
     ),
@@ -652,7 +654,7 @@ CASES = (
         actions="accessibility_snapshot",
         accessibility=True,
         device_scale=2.0,
-        expected_scenario_starts=70,
+        expected_scenario_starts=72,
         require_no_partially_clipped_controls=True,
         required_control_colors=(
             ("시나리오 검색", "#5B6475"),
@@ -668,7 +670,7 @@ CASES = (
         actions="type_explore_lab04_wall,accessibility_snapshot",
         accessibility=True,
         expected_focus_names=("Search scenarios",),
-        required_accessible_names=("14 of 70 shown", "Search scenarios"),
+        required_accessible_names=("14 of 72 shown", "Search scenarios"),
         expected_scenario_starts=14,
         expect_focus_ring=True,
         require_no_partially_clipped_controls=True,
@@ -684,7 +686,7 @@ CASES = (
         actions="type_explore_lab04_wall,accessibility_snapshot",
         accessibility=True,
         expected_focus_names=("Search scenarios",),
-        required_accessible_names=("14 of 70 shown", "Search scenarios"),
+        required_accessible_names=("14 of 72 shown", "Search scenarios"),
         expected_scenario_starts=14,
         expect_focus_ring=True,
         require_no_partially_clipped_controls=True,
@@ -700,7 +702,7 @@ CASES = (
         page="explore",
         actions="explore_filter_build,explore_filter_hands_on,accessibility_snapshot",
         accessibility=True,
-        required_accessible_names=("70개 중 2개 표시", "난이도 필터", "방식 필터"),
+        required_accessible_names=("72개 중 2개 표시", "난이도 필터", "방식 필터"),
         expected_scenario_starts=2,
         require_no_partially_clipped_controls=True,
         action_interval_ms=500,
@@ -716,7 +718,7 @@ CASES = (
         actions="explore_search_none,accessibility_snapshot",
         accessibility=True,
         required_accessible_names=(
-            "70개 중 0개 표시",
+            "72개 중 0개 표시",
             "조건에 맞는 실험이 없습니다",
             "필터 초기화",
         ),
@@ -771,8 +773,8 @@ CASES = (
         actions="explore_search_none,focus_explore_clear,key_enter,accessibility_snapshot",
         accessibility=True,
         expected_focus_names=("필터 초기화", "시나리오 검색"),
-        required_accessible_names=("70개 중 70개 표시", "시나리오 검색"),
-        expected_scenario_starts=70,
+        required_accessible_names=("72개 중 72개 표시", "시나리오 검색"),
+        expected_scenario_starts=72,
         expect_focus_ring=True,
         action_interval_ms=500,
         screenshot_ms=5000,
@@ -786,7 +788,7 @@ CASES = (
         page="explore",
         actions="accessibility_snapshot",
         accessibility=True,
-        expected_scenario_starts=70,
+        expected_scenario_starts=72,
         required_control_colors=(
             ("Search scenarios", "#5B6475"),
             ("Search scenarios", "#64748B"),
@@ -811,7 +813,7 @@ CASES = (
             "시작: LAB01 · 자동 데모",
         ),
         forbidden_accessible_names=("Home", "Learning path", "Explore", "Results"),
-        expected_scenario_starts=70,
+        expected_scenario_starts=72,
     ),
     AuditCase(
         "results_640_ko",
@@ -1136,15 +1138,17 @@ CASES = (
             "같은 설정 재실행",
             "마지막 튜닝으로 실행",
             "폴더 열기",
-            "저장 실행 삭제",
+            "저장 실행을 복구 보관소로 이동",
         ),
-        required_descriptions=("저장 실행 삭제",),
+        required_descriptions=("저장 실행을 복구 보관소로 이동",),
         expected_focus_names=("닫기",),
         required_control_border_colors=(("폴더 열기", "#64748B"),),
         required_role_border_colors=((
             "Dialog", "저장 실행 상세와 정리", "#64748B", 1_000,
         ),),
-        screenshot_ms=1450,
+        expected_visible_dialog_names=("저장 실행 상세와 정리",),
+        action_interval_ms=400,
+        screenshot_ms=1900,
     ),
     AuditCase(
         "results_manage_200pct_en",
@@ -1161,13 +1165,13 @@ CASES = (
             "Rerun same settings",
             "Run last tuning",
             "Open folder",
-            "Delete saved run",
+            "Move saved run to quarantine",
         ),
-        required_descriptions=("Delete saved run",),
+        required_descriptions=("Move saved run to quarantine",),
         required_in_window_names=(
             "Rerun same settings",
             "Open folder",
-            "Delete saved run",
+            "Move saved run to quarantine",
             "Close",
         ),
         require_no_partially_clipped_controls=True,
@@ -1175,7 +1179,69 @@ CASES = (
         required_role_border_colors=((
             "Dialog", "Saved run details and cleanup", "#64748B", 2_000,
         ),),
-        screenshot_ms=1450,
+        expected_visible_dialog_names=("Saved run details and cleanup",),
+        action_interval_ms=400,
+        screenshot_ms=1900,
+    ),
+    AuditCase(
+        "results_quarantine_confirm_wrong_640_ko",
+        640,
+        360,
+        "ko",
+        page="results",
+        actions=(
+            "open_result_manager,begin_result_quarantine,"
+            "type_wrong_result_confirmation,accessibility_snapshot"
+        ),
+        accessibility=True,
+        expect_focus_ring=True,
+        fixture="valid_replay",
+        required_accessible_names=(
+            "이 실행을 옮기려면 정확한 폴더명을 입력하세요: valid_replay",
+            "복구 보관소 이동 확인",
+            "뒤로",
+        ),
+        required_disabled_names=("복구 보관소 이동 확인",),
+        required_description_texts=("정확한 저장 실행 폴더명",),
+        expected_focus_names=(
+            "이 실행을 옮기려면 정확한 폴더명을 입력하세요: valid_replay",
+        ),
+        required_in_window_names=(
+            "복구 보관소 이동 확인",
+            "뒤로",
+        ),
+        require_no_partially_clipped_controls=True,
+        action_interval_ms=400,
+        screenshot_ms=2200,
+    ),
+    AuditCase(
+        "results_quarantine_confirm_exact_200pct_en",
+        640,
+        360,
+        "en",
+        page="results",
+        actions=(
+            "open_result_manager,begin_result_quarantine,"
+            "type_result_confirmation,accessibility_snapshot"
+        ),
+        accessibility=True,
+        expect_focus_ring=True,
+        fixture="valid_replay",
+        device_scale=2.0,
+        required_accessible_names=(
+            "Type the exact folder name to move this run: valid_replay",
+            "Confirm quarantine",
+            "Back",
+        ),
+        required_enabled_names=("Confirm quarantine", "Back"),
+        required_description_texts=("Exact saved-run folder name",),
+        expected_focus_names=(
+            "Type the exact folder name to move this run: valid_replay",
+        ),
+        required_in_window_names=("Confirm quarantine", "Back"),
+        require_no_partially_clipped_controls=True,
+        action_interval_ms=400,
+        screenshot_ms=2200,
     ),
     AuditCase(
         "results_manage_focus_return_640_ko",
@@ -1193,7 +1259,7 @@ CASES = (
             "닫기",
             "같은 설정 재실행",
             "폴더 열기",
-            "저장 실행 삭제",
+            "저장 실행을 복구 보관소로 이동",
             "닫기",
             "같은 설정 재실행",
             "관리: LAB01 · 직접 조작 · 최신",
@@ -1270,7 +1336,7 @@ CASES = (
         forbidden_accessible_names=(
             "기록 재생: LAB01 · 자동 데모 · 최신",
         ),
-        expected_accessible_controls=8,
+        expected_accessible_controls=9,
     ),
     AuditCase(
         "results_missing_replay_rerun_keyboard_640_ko",
@@ -1620,8 +1686,8 @@ CASES = (
             "Mode filter",
         ),
         required_descriptions=("Return to experiment", "End & save"),
-        expected_scenario_starts=70,
-        expected_disabled_scenario_starts=70,
+        expected_scenario_starts=72,
+        expected_disabled_scenario_starts=72,
         required_description_texts=(
             "Return to or end and save the paused experiment above before starting another.",
         ),
@@ -1647,8 +1713,8 @@ CASES = (
         page="explore",
         actions="inject_batch_running,accessibility_snapshot",
         accessibility=True,
-        expected_scenario_starts=70,
-        expected_disabled_scenario_starts=70,
+        expected_scenario_starts=72,
+        expected_disabled_scenario_starts=72,
         required_description_texts=(
             "Cancel the course comparison above or wait for it to finish before starting another experiment.",
         ),
@@ -1700,14 +1766,14 @@ CASES = (
             "종료하고 저장",
             "같은 설정 재실행",
             "폴더 열기",
-            "저장 실행 삭제",
+            "저장 실행을 복구 보관소로 이동",
             "닫기",
-            "저장 결과를 재실행하거나 삭제하려면 먼저 위의 일시정지된 실험으로 돌아가거나 종료하고 저장하세요.",
+            "저장 결과를 재실행하거나 복구 보관소로 옮기려면 먼저 위의 일시정지된 실험으로 돌아가거나 종료하고 저장하세요.",
         ),
         required_enabled_names=("폴더 열기", "닫기"),
-        required_disabled_names=("같은 설정 재실행", "저장 실행 삭제"),
+        required_disabled_names=("같은 설정 재실행", "저장 실행을 복구 보관소로 이동"),
         required_description_texts=(
-            "저장 결과를 재실행하거나 삭제하려면 먼저 위의 일시정지된 실험으로 돌아가거나 종료하고 저장하세요.",
+            "저장 결과를 재실행하거나 복구 보관소로 옮기려면 먼저 위의 일시정지된 실험으로 돌아가거나 종료하고 저장하세요.",
         ),
         action_interval_ms=500,
         screenshot_ms=2300,
@@ -1724,14 +1790,14 @@ CASES = (
         required_accessible_names=(
             "같은 설정 재실행",
             "폴더 열기",
-            "저장 실행 삭제",
+            "저장 실행을 복구 보관소로 이동",
             "닫기",
-            "전체 비교 중에는 저장 결과를 재실행할 수 없습니다. 폴더 열기와 저장 실행 삭제는 계속 사용할 수 있습니다.",
+            "전체 비교 중에는 저장 결과를 재실행할 수 없습니다. 폴더 열기와 무관한 저장 실행의 복구 보관소 이동은 계속 사용할 수 있습니다.",
         ),
-        required_enabled_names=("폴더 열기", "저장 실행 삭제", "닫기"),
+        required_enabled_names=("폴더 열기", "저장 실행을 복구 보관소로 이동", "닫기"),
         required_disabled_names=("같은 설정 재실행",),
         required_description_texts=(
-            "전체 비교 중에는 저장 결과를 재실행할 수 없습니다. 폴더 열기와 저장 실행 삭제는 계속 사용할 수 있습니다.",
+            "전체 비교 중에는 저장 결과를 재실행할 수 없습니다. 폴더 열기와 무관한 저장 실행의 복구 보관소 이동은 계속 사용할 수 있습니다.",
         ),
         action_interval_ms=500,
         screenshot_ms=2300,
@@ -1765,14 +1831,14 @@ CASES = (
         "ko",
         scenario="lab01.interactive-pull",
         actions=(
-            "navigate_results,open_result_manager,delete_managed_result,"
+            "navigate_results,open_result_manager,probe_managed_result_backend_guard,"
             "accessibility_snapshot"
         ),
         accessibility=True,
         fixture="valid_replay",
         expect_error=True,
         required_accessible_names=(
-            "실험이 열려 있는 동안 저장 결과를 삭제할 수 없습니다.",
+            "실험이 열려 있는 동안 저장 결과를 복구 보관소로 옮길 수 없습니다.",
             "권장 복구 행동: 실행 중인 실험으로 돌아가거나 종료하고 저장한 뒤 다른 실험을 시작하세요.",
             "세부정보 복사",
             "닫기",
@@ -4079,6 +4145,18 @@ def _prepare_fixture(name: str, data_root: Path) -> None:
             '<html lang="ko"><h1>Replay fixture report</h1></html>',
             encoding="utf-8",
         )
+        write_manifest(
+            run,
+            scenario_id="lab01.interactive-pull",
+            status="completed",
+            config={
+                "model_path": "models/lab01_msd/scene.xml",
+                "sim_time": 1.0,
+                "mass": 1.0,
+                "damping": 0.8,
+                "stiffness": 30.0,
+            },
+        )
         return
     if name == "valid_wall_replay":
         frame_count = 61
@@ -4337,10 +4415,13 @@ def _run_case(case: AuditCase, output: Path, settings: Path) -> AuditResult:
             notes.append(
                 f"task used {task_action_count} actions; limit is {case.maximum_actions}"
             )
-    if not is_experiment and pure_black > 5_000:
+    non_scene_black_limit = round(5_000 * max(1.0, case.device_scale**2))
+    if not is_experiment and pure_black > non_scene_black_limit:
         passed = False
         notes.append(
-            f"text and focus outlines cannot explain {pure_black} black pixels on a non-scene page"
+            "text and focus outlines cannot explain "
+            f"{pure_black} black pixels on a non-scene page "
+            f"(scale-adjusted limit {non_scene_black_limit})"
         )
     if is_experiment and not case.expect_error and case.width == 640 and (viewport_run or 0) < 140:
         passed = False
@@ -4519,6 +4600,18 @@ def _run_case(case: AuditCase, output: Path, settings: Path) -> AuditResult:
             visible_by_name = {
                 item["name"]: item for item in items if item["name"] and not item["invisible"]
             }
+            if case.expected_visible_dialog_names is not None:
+                visible_dialog_names = tuple(
+                    item["name"]
+                    for item in items
+                    if item["role"] == "Dialog" and not item["invisible"]
+                )
+                if visible_dialog_names != case.expected_visible_dialog_names:
+                    passed = False
+                    notes.append(
+                        "visible dialog names are not exactly "
+                        f"{case.expected_visible_dialog_names!r}: {visible_dialog_names!r}"
+                    )
             if case.required_control_colors:
                 control_color_distance = {}
                 for name, color in case.required_control_colors:

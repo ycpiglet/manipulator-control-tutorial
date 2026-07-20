@@ -13,6 +13,13 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from mclab.sim.logging import RunLogger, create_output_path  # noqa: E402
 from mclab.learning_guides import guide_for_config  # noqa: E402
+from mclab.output_cleanup import (  # noqa: E402
+    CleanupSafetyError,
+    build_cleanup_plan,
+    quarantine_cleanup_plan,
+    quarantine_run,
+    run_identity_token,
+)
 from mclab.sim.reporting import (  # noqa: E402
     NEXT_RUN_SUGGESTIONS,
     _activity_mix_items,
@@ -518,6 +525,179 @@ class LoggingTests(unittest.TestCase):
             summary = json.loads((output / "summary.json").read_text(encoding="utf-8"))
             self.assertEqual(summary["config_path"], "configs/lab01_msd/default.yaml")
             self.assertEqual(summary["config_name"], "default")
+            manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["status"], "completed")
+            self.assertIn("report.html", manifest["artifacts"])
+            self.assertIn("worksheet.md", manifest["artifacts"])
+
+    def test_cleanup_waits_for_terminal_manifest_through_report_finalization(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir).resolve() / "outputs"
+            loggers: list[RunLogger] = []
+            outputs: list[Path] = []
+            for name in ("bulk-run", "single-run"):
+                logger = RunLogger(
+                    "lab01_msd",
+                    {"mass": 1.0},
+                    output_dir=root / name,
+                )
+                logger.record(time=0.0, position=0.1)
+                output = logger.save_with_artifacts(finalize=False)
+                manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+                self.assertEqual(manifest["status"], "running")
+                self.assertFalse((output / "report.html").exists())
+                loggers.append(logger)
+                outputs.append(output)
+
+            deferred_plan = build_cleanup_plan(root, keep=0, allowed_root=root)
+            self.assertEqual(deferred_plan.eligible, ())
+            self.assertEqual(deferred_plan.selected, ())
+            deferred_token = run_identity_token(outputs[0], allow_legacy=True)
+            with self.assertRaisesRegex(CleanupSafetyError, "Running or unknown-status"):
+                quarantine_run(
+                    root,
+                    outputs[0],
+                    confirmation=outputs[0].name,
+                    expected_token=deferred_token,
+                    allowed_root=root,
+                )
+
+            observed_during_report: list[str] = []
+
+            def write_report_while_cleanup_races(output_path: str | Path) -> Path:
+                output = Path(output_path)
+                observed_during_report.append(output.name)
+                manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+                self.assertEqual(manifest["status"], "running")
+
+                bulk_plan = build_cleanup_plan(root, keep=0, allowed_root=root)
+                self.assertNotIn(output.name, {entry.name for entry in bulk_plan.eligible})
+                skipped = {entry.name: entry.reason for entry in bulk_plan.skipped}
+                self.assertIn("terminal cleanup status", skipped[output.name])
+
+                token = run_identity_token(output, allow_legacy=True)
+                with self.assertRaisesRegex(
+                    CleanupSafetyError,
+                    "Running or unknown-status",
+                ):
+                    quarantine_run(
+                        root,
+                        output,
+                        confirmation=output.name,
+                        expected_token=token,
+                        allowed_root=root,
+                    )
+
+                report = output / "report.html"
+                report.write_text("report complete\n", encoding="utf-8")
+                return report
+
+            with patch(
+                "mclab.sim.logging.write_run_report",
+                side_effect=write_report_while_cleanup_races,
+            ):
+                for logger in loggers:
+                    logger.finalize_artifacts()
+
+            self.assertEqual(observed_during_report, ["bulk-run", "single-run"])
+            for output in outputs:
+                manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+                self.assertEqual(manifest["status"], "completed")
+                self.assertIn("report.html", manifest["artifacts"])
+
+            bulk_plan = build_cleanup_plan(root, keep=1, allowed_root=root)
+            self.assertEqual({entry.name for entry in bulk_plan.eligible}, {"bulk-run", "single-run"})
+            self.assertEqual(len(bulk_plan.selected), 1)
+            self.assertEqual(len(bulk_plan.retained), 1)
+            selected = bulk_plan.selected[0].path
+            quarantine_cleanup_plan(
+                bulk_plan,
+                expected_plan_id=bulk_plan.plan_id,
+                allowed_root=root,
+            )
+            self.assertFalse(selected.exists())
+
+            retained = bulk_plan.retained[0].path
+            token = run_identity_token(retained, allow_legacy=True)
+            quarantine_run(
+                root,
+                retained,
+                confirmation=retained.name,
+                expected_token=token,
+                allowed_root=root,
+            )
+            self.assertFalse(retained.exists())
+
+    def test_existing_saved_run_directory_is_never_reused(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir).resolve() / "outputs"
+            output = root / "reused"
+            logger = RunLogger("lab01_msd", {"mass": 1.0}, output_dir=output)
+            logger.record(time=0.0, position=0.1)
+            logger.save()
+            before = {
+                path.relative_to(output).as_posix(): path.read_bytes()
+                for path in output.rglob("*")
+                if path.is_file()
+            }
+
+            with self.assertRaisesRegex(RuntimeError, "non-empty output directory"):
+                RunLogger("lab01_msd", {"mass": 2.0}, output_dir=output)
+
+            after = {
+                path.relative_to(output).as_posix(): path.read_bytes()
+                for path in output.rglob("*")
+                if path.is_file()
+            }
+            self.assertEqual(after, before)
+            plan = build_cleanup_plan(root, keep=0, allowed_root=root)
+            self.assertEqual([entry.name for entry in plan.eligible], ["reused"])
+
+    def test_finalized_logger_rejects_every_later_write(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir).resolve() / "run"
+            logger = RunLogger("lab01_msd", {"mass": 1.0}, output_dir=output)
+            logger.record(time=0.0, position=0.1)
+            logger.save()
+            before = {
+                path.relative_to(output).as_posix(): path.read_bytes()
+                for path in output.rglob("*")
+                if path.is_file()
+            }
+
+            for operation in (logger.finalize_artifacts, logger.save_with_artifacts):
+                with self.subTest(operation=operation.__name__):
+                    with self.assertRaisesRegex(RuntimeError, "already finalized"):
+                        operation()
+
+            after = {
+                path.relative_to(output).as_posix(): path.read_bytes()
+                for path in output.rglob("*")
+                if path.is_file()
+            }
+            self.assertEqual(after, before)
+
+    def test_report_failure_leaves_run_ineligible_and_retryable(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir).resolve() / "outputs"
+            logger = RunLogger("lab01_msd", {"mass": 1.0}, output_dir=root / "failed")
+            logger.record(time=0.0, position=0.1)
+            output = logger.save_with_artifacts(finalize=False)
+
+            with patch(
+                "mclab.sim.logging.write_run_report",
+                side_effect=RuntimeError("injected report failure"),
+            ):
+                with self.assertRaisesRegex(RuntimeError, "injected report failure"):
+                    logger.finalize_artifacts()
+
+            manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["status"], "running")
+            plan = build_cleanup_plan(root, keep=0, allowed_root=root)
+            self.assertEqual(plan.eligible, ())
+            logger.finalize_artifacts()
+            terminal = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(terminal["status"], "completed")
 
     def test_run_report_course_coverage_shows_related_review_repairs(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

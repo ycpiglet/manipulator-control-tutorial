@@ -1,6 +1,6 @@
 # Current State
 
-Updated: 2026-07-20 KST
+Updated: 2026-07-21 KST
 
 ## Active Product and Release Handoff
 
@@ -22,21 +22,27 @@ Current release decision:
 
 Immediate order of work:
 
-1. pin every third-party GitHub Action to a reviewed full commit SHA and verify
-   green replacement runs as GOV-01C;
-2. fix unsafe `mclab clean` target selection without touching real learner
-   outputs;
-3. add the canonical completion contract, then connect every learner surface
-   in a separate rebased PR;
-4. declare B2 and follow gates G2 through G5 for distribution,
+1. finish independent review and exact-head remote validation of the SAFE-01
+   cleanup candidate without touching real learner outputs;
+2. merge SAFE-01 only after all required checks pass, revalidate merged main,
+   record the merge evidence, and only then declare SAFE-01 PASS;
+3. after PASS, inspect a real-root dry-run with the owner without automatically
+   applying it;
+4. add DOC-01 README/command/link contract gates, then add the canonical
+   completion contract and connect every learner surface in separate PRs;
+5. declare B2 and follow gates G2 through G5 for distribution,
    real-platform/human validation, signing, and publication.
 
-Current exact next action: validate and merge the GOV-01C candidate based on
-`main@9f4169f`, then enable and verify repository Action SHA enforcement.
-GOV-01 and B2 remain incomplete until that post-merge setting reads true. Do
-not run `mclab clean` before SAFE-01 passes.
+Current exact next action: complete the SAFE-01 review on the clean candidate
+based on `main@41be887f21bfb476507d94a089f98c0ef72453c8`, assign an exact commit,
+and run the six required exact-head checks including the three-OS desktop
+matrix. GOV-01 is complete;
+SAFE-01 and B2 are not. Do not run `mclab clean` before SAFE-01 passes
+post-merge verification. After PASS, do not apply a plan to the real outputs
+root until the owner has reviewed that exact dry-run and separately authorized
+apply.
 
-### 2026-07-20 GOV-01A/B complete; GOV-01C in validation
+### 2026-07-21 GOV-01 complete; SAFE-01 local scoped review GO
 
 PR #39 merged the policy baseline as
 `9f4169f60efb32d6b6d49b9f06d985d8de9c6f70` after 6/6 exact-head checks.
@@ -50,12 +56,52 @@ private reporting, secret scanning, and push protection enabled. The single
 direct-collaborator exception keeps required approvals at zero and is recorded
 as an exception, not independent human approval.
 
-GOV-01C implementation commit `5de6581` pins 12 Action uses to five reviewed
-full SHAs, disables checkout credential persistence, pins Tectonic 0.16.9,
-adds weekly GitHub Actions Dependabot updates, and adds a regression checker.
-Exact-head replacement CI, merge, and post-merge `sha_pinning_required=true`
-remain pending. Detailed evidence is in
+PR #40 completed GOV-01C. Its exact head
+`e26c1ab40d77af0d3744c217736477ef2592251c` passed 6/6 required checks and
+merged as `41be887f21bfb476507d94a089f98c0ef72453c8`. Post-merge CI
+`29749432294`, the three-OS desktop run `29749432322`, and Dependabot
+activation run `29749436873` passed. Repository Action SHA enforcement was
+enabled and read back as `sha_pinning_required=true`; GOV-01 verified 12/12
+workflow Action references at that merge, while the SAFE-01 candidate currently
+verifies 14/14 after adding one pinned setup step. Some pinned Action releases still declare
+Node 20 internally and are currently run through GitHub's Node 24
+compatibility path; replacing them with reviewed newer releases remains a
+SUP-01 residual. Detailed evidence is in
 `.agents/baselines/GOV-01-governance.md`.
+
+The SAFE-01 branch now implements strict configured-root and manifest
+selection, UTC retention, default dry-run, exact `--apply PLAN_ID --yes`
+authorization, recoverable quarantine receipts/list/restore, move rollback and
+interruption recovery, exact typed Qt confirmation, lexical root/ancestor
+pinning, a cross-process physical-root operation lock, bounded future receipt
+preflight, identity-checked forward moves, and identity-checked rollback. Both
+bulk and single-result cleanup now require an exact-integer schema-1 terminal
+manifest. New run and batch writers use unique claims, publish artifacts and
+reports before the terminal manifest, reject output reuse, and preserve strict
+completed/error evidence across retry, late-cancel, and process-error paths.
+The desktop all-batch handoff is token-bound and one-shot.
+Independent fault-injection and writer-boundary reviews found no P0/P1 in the
+reviewed source-swap, post-commit, rollback, root-identity, output-claim, or
+terminal-publication paths and issued scoped local GO decisions. Frozen-tree
+Python 3.12 validation passed 528 tests with 7 platform skips and 1,109
+subtests; coverage is 80.92% overall and 89% for `output_cleanup.py`. Python
+3.10 cleanup/CLI validation passed 109 tests with 6 platform-only skips and 20
+subtests. The relevant XCB Qt audit passed 18/18 cases; Ruff, compileall, 14/14
+Action pin scanning, and diff checks also passed. Draft PR #46 opened from
+initial head `a56e308f2c82b3d346801905fd3bba686ab7da4b`: simulator and both paper
+gates passed, while the three desktop jobs exposed macOS temp-path aliases,
+Windows rename-buffer/path/pin behavior, and missing Ubuntu XCB runtime
+dependencies. Those findings are repaired locally with dedicated platform
+coverage. Second head `7e9fcf701121069be924b220510ab7a107099c0b`
+passed all three CI jobs and the full Ubuntu desktop job, including 18/18 XCB;
+macOS and Windows each failed exactly one foundation test. The remaining
+macOS Qt temp path now resolves canonically, and result selection now accepts a
+physical parent short/long alias without treating a differently named junction
+child as the listed run. Those final local repairs still require a new exact
+head with all six checks and all three desktop jobs green. Run IDs are initial
+CI `29776388384`, initial desktop `29776388375`, second CI `29778026648`, and
+second desktop `29778026653`. The real `outputs/` tree was not modified. The full candidate record is
+`.agents/baselines/SAFE-01-cleanup.md`.
 
 ### 2026-07-20 B1 baseline and worktree cleanup
 
@@ -553,7 +599,7 @@ latest snapshot only; archive before it grows past roughly 500 lines.
 - Paper validation scratch such as `tmp/latex_compile_*` and `tmp/pdfs/*_review` is local-only. Remove only artifacts created by the active pass after path verification. Existing local `tmp/index.html` and Lab03 retarget-check artifacts remain because they were not created by this pass and may be user-authored or from another workflow.
 - Two BibTeX entries remain uncited intentionally for possible advanced related-work expansion or later pruning: `howell2022predictivesampling` and `mistry2011operationalspace`.
 
-## Next Recommended Action
+## Historical Next Recommended Action (2026-07-04)
 
 The manuscript DoD is complete, so per `.agents/SUBMISSION_PLAN.md` the
 derivative-writing track is unblocked. Next loop iteration: draft U3 (the

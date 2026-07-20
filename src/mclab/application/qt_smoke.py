@@ -8,9 +8,20 @@ import time
 from pathlib import Path
 from typing import Any
 
+from mclab.application.qt_smoke_input import (
+    activate_object as _activate_object,
+    type_into as _type_into,
+)
+
 
 def schedule_smoke_action(timer: Any, backend: Any, roots: list[Any] | None = None) -> None:
     """Configure a deterministic window and schedule a small beta-task sequence."""
+
+    # These hooks can drive controls and mutate saved evidence. They must never
+    # be enabled in a normal learner process merely by inheriting environment
+    # variables from a shell or launcher.
+    if os.environ.get("MCLAB_SELF_TEST") != "1":
+        return
 
     width = int(os.environ.get("MCLAB_WINDOW_WIDTH", "0"))
     height = int(os.environ.get("MCLAB_WINDOW_HEIGHT", "0"))
@@ -362,7 +373,7 @@ def _run_action(backend: Any, action: str, root: Any = None) -> None:
         backend.state_changed.emit()
     elif action == "delete_active_batch":
         active = Path(backend._batch.output)  # noqa: SLF001
-        backend.deleteRun(str(active), active.name)
+        backend.deleteRun(str(active), active.name, "")
     elif action == "startup_probe":
         _write_startup_probe()
     elif action == "replay_fixture":
@@ -406,15 +417,38 @@ def _run_action(backend: Any, action: str, root: Any = None) -> None:
         )
         if not opened:
             raise RuntimeError("Saved run manager was not found.")
-    elif action == "delete_managed_result" and root is not None:
-        from PySide6.QtCore import QMetaObject, QObject, Qt
+    elif action == "begin_result_quarantine" and root is not None:
+        _activate_object(root, "beginQuarantineButton", "Saved-run quarantine action")
+    elif action == "type_wrong_result_confirmation" and root is not None:
+        _type_into(root, "deleteConfirmationInput", "wrong-name")
+        _record_focus(action)
+    elif action == "type_result_confirmation" and root is not None:
+        from mclab.application.repositories import ArtifactRepository
 
-        page = root.findChild(QObject, "resultsPage")
-        deleted = page is not None and QMetaObject.invokeMethod(
-            page, "deleteManagedRun", Qt.ConnectionType.DirectConnection
-        )
-        if not deleted:
-            raise RuntimeError("Managed saved run could not be deleted.")
+        records = ArtifactRepository().list_runs()
+        if not records:
+            raise RuntimeError("Managed saved run was not found.")
+        _type_into(root, "deleteConfirmationInput", records[0].path.name)
+        _record_focus(action)
+    elif action == "confirm_result_quarantine" and root is not None:
+        _activate_object(root, "confirmQuarantineButton", "Confirm quarantine action")
+    elif action == "delete_managed_result" and root is not None:
+        _activate_object(root, "beginQuarantineButton", "Saved-run quarantine action")
+        from mclab.application.repositories import ArtifactRepository
+
+        records = ArtifactRepository().list_runs()
+        if not records:
+            raise RuntimeError("Managed saved run was not found.")
+        _type_into(root, "deleteConfirmationInput", records[0].path.name)
+        _activate_object(root, "confirmQuarantineButton", "Confirm quarantine action")
+    elif action == "probe_managed_result_backend_guard":
+        from mclab.application.repositories import ArtifactRepository
+
+        records = ArtifactRepository().list_runs()
+        if not records:
+            raise RuntimeError("Managed saved run was not found.")
+        record = records[0]
+        backend.deleteRun(str(record.path), record.path.name, record.cleanup_token)
     elif action == "load_more_results" and root is not None:
         from PySide6.QtCore import QMetaObject, QObject, Qt
 
@@ -449,11 +483,20 @@ def _write_accessibility_snapshot(root: Any) -> None:
             return
         state = node.state()
         rect = node.rect()
+        accessible_object = node.object()
         items.append(
             {
                 "depth": depth,
                 "role": node.role().name,
                 "name": node.text(QAccessible.Text.Name),
+                "objectClass": (
+                    accessible_object.metaObject().className()
+                    if accessible_object is not None
+                    else ""
+                ),
+                "objectName": (
+                    accessible_object.objectName() if accessible_object is not None else ""
+                ),
                 "description": node.text(QAccessible.Text.Description),
                 "value": node.text(QAccessible.Text.Value),
                 "focusable": bool(state.focusable),
@@ -471,44 +514,6 @@ def _write_accessibility_snapshot(root: Any) -> None:
     path = Path(destination)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps({"items": items}, ensure_ascii=False, indent=2), encoding="utf-8")
-
-
-def _type_into(root: Any, object_name: str, value: str) -> None:
-    """Enter beta-task text through Qt's keyboard path, not property injection."""
-
-    from PySide6.QtCore import QCoreApplication, QObject, Qt
-    from PySide6.QtGui import QInputMethodEvent
-    from PySide6.QtTest import QTest
-
-    control = root.findChild(QObject, object_name)
-    if control is None:
-        raise RuntimeError(f"Evidence input was not found: {object_name}")
-    control.forceActiveFocus()
-    if not value.isascii():
-        event = QInputMethodEvent()
-        event.setCommitString(value)
-        if not QCoreApplication.sendEvent(control, event):
-            raise RuntimeError(f"IME text commit was rejected: {object_name}")
-        return
-    special = {
-        " ": Qt.Key.Key_Space,
-        ".": Qt.Key.Key_Period,
-        ",": Qt.Key.Key_Comma,
-        "-": Qt.Key.Key_Minus,
-    }
-    for character in value:
-        modifier = Qt.KeyboardModifier.NoModifier
-        if character.isalpha():
-            key = Qt.Key.Key_A + ord(character.lower()) - ord("a")
-            if character.isupper():
-                modifier = Qt.KeyboardModifier.ShiftModifier
-        elif character.isdigit():
-            key = Qt.Key.Key_0 + int(character)
-        elif character in special:
-            key = special[character]
-        else:
-            raise RuntimeError(f"Unsupported beta-task character: {character!r}")
-        QTest.keyClick(root, key, modifier)
 
 
 def _focus_object(root: Any, object_name: str, label: str) -> None:

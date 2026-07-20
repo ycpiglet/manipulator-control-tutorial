@@ -5,6 +5,7 @@ import importlib.util
 import io
 import json
 import os
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -193,6 +194,7 @@ class ApplicationFoundationTests(unittest.TestCase):
             {
                 "MCLAB_WINDOW_WIDTH": "640",
                 "MCLAB_WINDOW_HEIGHT": "360",
+                "MCLAB_SELF_TEST": "1",
                 "MCLAB_SMOKE_ACTION": "push,control_target_x=0.88,step",
                 "MCLAB_SMOKE_ACTION_MS": "100",
             },
@@ -206,6 +208,29 @@ class ApplicationFoundationTests(unittest.TestCase):
             backend.calls,
             [("action", "push"), ("control", ("target_x", 0.88)), ("step", None)],
         )
+
+    def test_qt_smoke_hooks_are_inert_without_explicit_self_test_mode(self) -> None:
+        class Timer:
+            callbacks: list[tuple[int, object]] = []
+
+            @classmethod
+            def singleShot(cls, delay: int, callback: object) -> None:  # noqa: N802
+                cls.callbacks.append((delay, callback))
+
+        class Backend:
+            calls: list[str] = []
+
+            def applyAction(self, name: str) -> None:  # noqa: N802
+                self.calls.append(name)
+
+        with patch.dict(
+            os.environ,
+            {"MCLAB_SMOKE_ACTION": "push"},
+            clear=True,
+        ):
+            schedule_smoke_action(Timer, Backend(), [])
+        self.assertEqual(Timer.callbacks, [])
+        self.assertEqual(Backend.calls, [])
 
     def test_desktop_shutdown_allows_artifact_finalization_to_finish(self) -> None:
         self.assertGreaterEqual(SHUTDOWN_WAIT_MS, 30_000)
@@ -309,7 +334,7 @@ class ApplicationFoundationTests(unittest.TestCase):
         self.assertIn("mclab assets install", payload["readinessAction"])
 
         with tempfile.TemporaryDirectory() as tmp:
-            blocked_output = Path(tmp) / "not-a-folder"
+            blocked_output = Path(tmp).resolve() / "not-a-folder"
             blocked_output.write_text("file", encoding="utf-8")
             issues = app_readiness(
                 ScenarioCatalog((scenario,)),
@@ -526,13 +551,13 @@ class ApplicationFoundationTests(unittest.TestCase):
             for index, (scenario, status) in enumerate(
                 zip(path[:3], ("completed", "stopped", "error"), strict=True)
             ):
-                run = Path(tmp) / f"run-{index}"
+                run = Path(tmp).resolve() / f"run-{index}"
                 run.mkdir()
                 (run / "manifest.json").write_text(
                     json.dumps({"scenario_id": scenario.id, "status": status}),
                     encoding="utf-8",
                 )
-            records = ArtifactRepository(tmp).list_runs()
+            records = ArtifactRepository(Path(tmp).resolve()).list_runs()
             progress = course_progress_payload(path, Translator("ko"), records)
 
         self.assertEqual(progress["done"], 1)
@@ -543,7 +568,7 @@ class ApplicationFoundationTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             for index, scenario in enumerate(path):
-                run = Path(tmp) / f"run-{index}"
+                run = Path(tmp).resolve() / f"run-{index}"
                 run.mkdir()
                 (run / "manifest.json").write_text(
                     json.dumps({"scenario_id": scenario.id, "status": "completed"}),
@@ -552,9 +577,9 @@ class ApplicationFoundationTests(unittest.TestCase):
             ready_for_compare = course_progress_payload(
                 path,
                 Translator("en"),
-                ArtifactRepository(tmp).list_runs(),
+                ArtifactRepository(Path(tmp).resolve()).list_runs(),
             )
-            batch_run = Path(tmp) / "all-compare"
+            batch_run = Path(tmp).resolve() / "all-compare"
             batch_run.mkdir()
             (batch_run / "manifest.json").write_text(
                 json.dumps({"scenario_id": ALL_COMPARE_ID, "status": "completed"}),
@@ -563,7 +588,7 @@ class ApplicationFoundationTests(unittest.TestCase):
             complete = course_progress_payload(
                 path,
                 Translator("en"),
-                ArtifactRepository(tmp).list_runs(),
+                ArtifactRepository(Path(tmp).resolve()).list_runs(),
             )
 
         self.assertEqual(ready_for_compare["done"], len(path))
@@ -591,7 +616,12 @@ class ApplicationFoundationTests(unittest.TestCase):
         self.assertEqual(manifest["scenario_id"], ALL_COMPARE_ID)
         self.assertEqual(manifest["status"], "running")
         self.assertEqual(program, sys.executable)
-        self.assertEqual(arguments[-4:], ["batch", "all", "--output-dir", str(output)])
+        self.assertEqual(
+            arguments[-6:-2],
+            ["batch", "all", "--output-dir", str(output)],
+        )
+        self.assertEqual(arguments[-2], "--handoff-token")
+        self.assertRegex(arguments[-1], r"^[0-9a-f]{64}$")
         self.assertEqual(stopped["status"], "stopped")
         self.assertIn("finished_at", stopped)
         self.assertEqual(
@@ -602,6 +632,56 @@ class ApplicationFoundationTests(unittest.TestCase):
         self.assertIsNone(parse_batch_progress("MCLAB_BATCH_PROGRESS 6/5 invalid"))
         self.assertIsNone(parse_batch_progress("ordinary output"))
 
+    def test_course_batch_terminal_manifest_is_write_once(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp).resolve() / "all-compare"
+            output.mkdir()
+            (output / "report.html").write_text("complete", encoding="utf-8")
+            manifest = write_manifest(
+                output,
+                scenario_id=ALL_COMPARE_ID,
+                status="completed",
+                config={"batch_name": "all", "plot": True},
+            )
+            before = manifest.read_bytes()
+            (output / ".mclab-preserve").write_text("hold", encoding="utf-8")
+
+            update_batch_manifest(output, status="completed")
+            update_batch_manifest(output, status="error", error="late parent callback")
+
+            self.assertEqual(manifest.read_bytes(), before)
+
+    def test_stopped_and_error_course_batches_remain_strictly_quarantinable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"MCLAB_DATA_DIR": tmp}
+        ):
+            for status in ("stopped", "error"):
+                with self.subTest(status=status):
+                    output = create_all_compare_output()
+                    (output / "partial.log").write_text("partial evidence", encoding="utf-8")
+                    update_batch_manifest(
+                        output,
+                        status=status,
+                        error="injected failure" if status == "error" else "",
+                    )
+                    manifest = json.loads(
+                        (output / "manifest.json").read_text(encoding="utf-8")
+                    )
+                    self.assertEqual(manifest["status"], status)
+                    self.assertIn("partial.log", manifest["artifacts"])
+                    if status == "error":
+                        self.assertEqual(manifest["error"], "injected failure")
+
+                    repository = ArtifactRepository(output.parent)
+                    record = next(item for item in repository.list_runs() if item.path == output)
+                    receipt = repository.delete_path(
+                        output,
+                        confirm_path=output.name,
+                        cleanup_token=record.cleanup_token,
+                    )
+                    self.assertEqual(receipt.status, "quarantined")
+                    self.assertFalse(output.exists())
+
     @unittest.skipUnless(importlib.util.find_spec("PySide6"), "PySide6 is not installed")
     def test_qt_batch_process_reports_progress_failure_and_cancellation(self) -> None:
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -611,12 +691,26 @@ class ApplicationFoundationTests(unittest.TestCase):
         application = QGuiApplication.instance() or QGuiApplication([])
         controller_type = create_batch_controller(QObject, QProcess, QTimer, Signal)
 
-        def exercise(code: str, expected_signal: str) -> tuple[object, Path]:
+        def exercise(
+            code: str,
+            expected_signal: str,
+            *,
+            terminal_before_cancel: bool = False,
+        ) -> tuple[object, Path]:
             temporary = tempfile.TemporaryDirectory()
             self.addCleanup(temporary.cleanup)
-            output = Path(temporary.name) / "batch"
+            output = Path(temporary.name).resolve() / "batch"
             output.mkdir()
             update_batch_manifest(output, status="running")
+            if expected_signal == "completed" and not terminal_before_cancel:
+                code += (
+                    "; from pathlib import Path; "
+                    "from mclab.application.artifacts import write_manifest; "
+                    "write_manifest(Path("
+                    + repr(str(output))
+                    + "), scenario_id='batch.all', status='completed', "
+                    "config={'batch_name': 'all', 'plot': True})"
+                )
             loop = QEventLoop()
             received: list[tuple[str, tuple[object, ...]]] = []
             controller = controller_type()
@@ -640,10 +734,27 @@ class ApplicationFoundationTests(unittest.TestCase):
                 ),
             ):
                 controller.start()
-                if expected_signal == "stopped":
-                    QTimer.singleShot(100, controller.cancel)
-                QTimer.singleShot(4000, loop.quit)
-                loop.exec()
+                if terminal_before_cancel:
+                    terminal_manifest = write_manifest(
+                        output,
+                        scenario_id=ALL_COMPARE_ID,
+                        status="completed",
+                        config={"batch_name": "all", "plot": True},
+                    )
+                    terminal_bytes = terminal_manifest.read_bytes()
+                    with patch(
+                        "mclab.application.qt_batch.update_batch_manifest"
+                    ) as updater:
+                        controller.cancel()
+                        QTimer.singleShot(4000, loop.quit)
+                        loop.exec()
+                    updater.assert_not_called()
+                    self.assertEqual(terminal_manifest.read_bytes(), terminal_bytes)
+                else:
+                    if expected_signal == "stopped":
+                        QTimer.singleShot(100, controller.cancel)
+                    QTimer.singleShot(4000, loop.quit)
+                    loop.exec()
             application.processEvents()
             self.assertTrue(received, "batch controller timed out without a terminal signal")
             self.assertEqual(received[0][0], expected_signal)
@@ -660,6 +771,18 @@ class ApplicationFoundationTests(unittest.TestCase):
             "completed",
         )
 
+        _late_cancel, late_cancel_output = exercise(
+            "import time; time.sleep(10)",
+            "completed",
+            terminal_before_cancel=True,
+        )
+        self.assertEqual(
+            json.loads(
+                (late_cancel_output / "manifest.json").read_text(encoding="utf-8")
+            )["status"],
+            "completed",
+        )
+
         failed, failed_output = exercise("print('injected batch failure'); raise SystemExit(7)", "failed")
         self.assertIn("injected batch failure", failed._tail)  # noqa: SLF001
         self.assertEqual(
@@ -672,6 +795,48 @@ class ApplicationFoundationTests(unittest.TestCase):
             json.loads((stopped_output / "manifest.json").read_text(encoding="utf-8"))["status"],
             "stopped",
         )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            late_error_output = Path(tmp).resolve() / "batch"
+            late_error_output.mkdir()
+            late_error_manifest = write_manifest(
+                late_error_output,
+                scenario_id=ALL_COMPARE_ID,
+                status="completed",
+                config={"batch_name": "all", "plot": True},
+            )
+            terminal_bytes = late_error_manifest.read_bytes()
+
+            class FinishedProcess:
+                @staticmethod
+                def state() -> object:
+                    return QProcess.NotRunning
+
+                @staticmethod
+                def errorString() -> str:  # noqa: N802
+                    return "late transport error"
+
+            late_error_controller = controller_type()
+            late_error_controller.output = str(late_error_output)
+            late_error_controller.process = FinishedProcess()
+            late_error_controller._settled = False  # noqa: SLF001
+            late_error_signals: list[str] = []
+            late_error_controller.completed.connect(
+                lambda *_args: late_error_signals.append("completed")
+            )
+            late_error_controller.stopped.connect(
+                lambda *_args: late_error_signals.append("stopped")
+            )
+            late_error_controller.failed.connect(
+                lambda *_args: late_error_signals.append("failed")
+            )
+            with patch(
+                "mclab.application.qt_batch.update_batch_manifest"
+            ) as updater:
+                late_error_controller._process_error(None)  # noqa: SLF001
+            updater.assert_not_called()
+            self.assertEqual(late_error_signals, ["completed"])
+            self.assertEqual(late_error_manifest.read_bytes(), terminal_bytes)
 
     def test_qml_components_respect_component_size_gate_and_visual_tokens(self) -> None:
         qml_root = ROOT / "src/mclab/application/qml"
@@ -831,9 +996,12 @@ class ApplicationFoundationTests(unittest.TestCase):
             'backend.localizedText(backend.language, "results.report")', results
         )
         self.assertIn(
-            "backend.deleteRun(manageDialog.run.path, manageDialog.run.name)",
+            "backend.deleteRun(manageDialog.run.path, confirmation, cleanupToken)",
             results,
         )
+        self.assertIn('objectName: "deleteConfirmationInput"', manage)
+        self.assertIn('objectName: "confirmQuarantineButton"', manage)
+        self.assertIn("deleteConfirmation.text === dialog.run.name", manage)
         transport = (qml_root / "TransportBar.qml").read_text(encoding="utf-8")
         controls = (qml_root / "ExperimentControls.qml").read_text(encoding="utf-8")
         evidence = (qml_root / "EvidenceWorkflow.qml").read_text(encoding="utf-8")
@@ -1094,7 +1262,9 @@ class ApplicationFoundationTests(unittest.TestCase):
             "onEvidenceSaved: Qt.callLater(page.focusAfterEvidenceSaved)", experiment
         )
         self.assertIn("primaryTransportButton.forceActiveFocus()", transport)
-        self.assertIn("onOpened: closeButton.forceActiveFocus()", manage)
+        self.assertIn("dialog.contentItem.parent.Accessible.name = dialog.title", manage)
+        self.assertNotIn("Accessible.role: Accessible.Dialog", manage)
+        self.assertIn("closeButton.forceActiveFocus()", manage)
         self.assertIn("page.openManager(modelData, manageButton)", results)
         self.assertIn("target.forceActiveFocus()", manage)
         self.assertIn("onOpened: closeErrorButton.forceActiveFocus()", main)
@@ -1270,7 +1440,7 @@ class ApplicationFoundationTests(unittest.TestCase):
     def test_saved_results_distinguish_recording_rerun_and_last_tuning(self) -> None:
         catalog = ScenarioCatalog.default()
         with tempfile.TemporaryDirectory() as tmp:
-            run = Path(tmp) / "saved-run"
+            run = Path(tmp).resolve() / "saved-run"
             run.mkdir()
             (run / "manifest.json").write_text(
                 json.dumps(
@@ -1291,7 +1461,7 @@ class ApplicationFoundationTests(unittest.TestCase):
 
             same = resolve_saved_run_launch(run, catalog)
             tuned = resolve_saved_run_launch(run, catalog, tuned=True)
-            record = ArtifactRepository(Path(tmp)).list_runs()[0]
+            record = ArtifactRepository(Path(tmp).resolve()).list_runs()[0]
 
         self.assertEqual(same.scenario.id, "lab01.default")
         self.assertEqual(same.config["mass"], 7.0)
@@ -1307,7 +1477,7 @@ class ApplicationFoundationTests(unittest.TestCase):
 
     def test_results_disable_corrupt_recording_before_the_learner_clicks_it(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            run = Path(tmp) / "broken-replay"
+            run = Path(tmp).resolve() / "broken-replay"
             run.mkdir()
             (run / "manifest.json").write_text(
                 json.dumps({"scenario_id": "lab01.default", "status": "completed"}),
@@ -1315,7 +1485,7 @@ class ApplicationFoundationTests(unittest.TestCase):
             )
             (run / "config.yaml").write_text("mass: 1.0\n", encoding="utf-8")
             (run / "replay.npz").write_bytes(b"not a valid npz recording")
-            repository = ArtifactRepository(tmp)
+            repository = ArtifactRepository(Path(tmp).resolve())
             quick = repository.list_runs()[0]
             checked = repository.list_runs(validate_replays=True)[0]
 
@@ -1331,7 +1501,7 @@ class ApplicationFoundationTests(unittest.TestCase):
 
     def test_results_surface_localized_metrics_report_next_action_and_total_size(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            run = Path(tmp) / "friendly-result"
+            run = Path(tmp).resolve() / "friendly-result"
             run.mkdir()
             (run / "manifest.json").write_text(
                 json.dumps(
@@ -1356,7 +1526,7 @@ class ApplicationFoundationTests(unittest.TestCase):
             )
             (run / "config.yaml").write_text("sim_time: 2.0\n", encoding="utf-8")
             (run / "report.html").write_text("<html></html>", encoding="utf-8")
-            record = ArtifactRepository(tmp).list_runs(validate_replays=True)[0]
+            record = ArtifactRepository(Path(tmp).resolve()).list_runs(validate_replays=True)[0]
             result = result_payloads(
                 (record,),
                 Translator("ko"),
@@ -1374,9 +1544,33 @@ class ApplicationFoundationTests(unittest.TestCase):
             ["최종 오차", "정착 시간", "오버슈트"],
         )
 
+    def test_summary_only_legacy_run_keeps_completed_presentation_status(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run = Path(tmp).resolve() / "legacy-result"
+            run.mkdir()
+            (run / "summary.json").write_text(
+                json.dumps({"config_name": "lab01.default", "duration": 1.0}),
+                encoding="utf-8",
+            )
+
+            record = ArtifactRepository(Path(tmp).resolve()).list_runs(validate_replays=True)[0]
+            result = result_payloads((record,), Translator("en"))[0]
+            with self.assertRaisesRegex(ValueError, "Legacy saved runs"):
+                ArtifactRepository(Path(tmp).resolve()).delete_path(
+                    run,
+                    confirm_path=run.name,
+                    cleanup_token=record.cleanup_token,
+                )
+            self.assertTrue(run.is_dir())
+
+        self.assertTrue(record.legacy)
+        self.assertEqual(record.status, "completed")
+        self.assertNotEqual(result["status"], "legacy")
+        self.assertEqual(result["statusCode"], "warning")
+
     def test_course_comparison_result_has_batch_semantics_without_fake_replay_warning(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            run = Path(tmp) / "all-compare"
+            run = Path(tmp).resolve() / "all-compare"
             run.mkdir()
             (run / "manifest.json").write_text(
                 json.dumps({"scenario_id": ALL_COMPARE_ID, "status": "completed"}),
@@ -1394,7 +1588,7 @@ class ApplicationFoundationTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (run / "report.html").write_text("<html></html>", encoding="utf-8")
-            record = ArtifactRepository(tmp).list_runs(validate_replays=True)[0]
+            record = ArtifactRepository(Path(tmp).resolve()).list_runs(validate_replays=True)[0]
             result = result_payloads(
                 (record,), Translator("ko"), ScenarioCatalog.default()
             )[0]
@@ -1421,26 +1615,297 @@ class ApplicationFoundationTests(unittest.TestCase):
         self.assertEqual((active["status"], active["statusCode"]), ("Running", "running"))
         self.assertIn("keep MCLab open", active["nextAction"])
 
-    def test_saved_run_cleanup_requires_exact_confirmation_and_stays_in_outputs(self) -> None:
+    def test_saved_run_cleanup_requires_exact_confirmation_and_uses_quarantine(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            run = Path(tmp) / "delete-me"
+            run = Path(tmp).resolve() / "delete-me"
+            run.mkdir()
+            (run / "manifest.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "scenario_id": "lab01.default",
+                        "status": "completed",
+                        "started_at": "2026-07-20T11:59:00+00:00",
+                        "finished_at": "2026-07-20T12:00:00+00:00",
+                        "config": {"resolved": {"sim_time": 1.0}},
+                        "artifacts": {},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            repository = ArtifactRepository(Path(tmp).resolve())
+            record = repository.list_runs()[0]
+
+            with self.assertRaisesRegex(ValueError, "exact folder name"):
+                repository.delete_path(
+                    run,
+                    confirm_path="wrong-name",
+                    cleanup_token=record.cleanup_token,
+                )
+            self.assertTrue(run.exists())
+            receipt = repository.delete_path(
+                run,
+                confirm_path="delete-me",
+                cleanup_token=record.cleanup_token,
+            )
+            self.assertFalse(run.exists())
+            self.assertEqual(receipt.status, "quarantined")
+            self.assertTrue((receipt.path / "entries" / "delete-me").is_dir())
+
+    def test_saved_run_cleanup_skips_sibling_links_and_rejects_stale_tokens(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            run = root / "real-run"
+            run.mkdir()
+            manifest = run / "manifest.json"
+            manifest.write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "scenario_id": "lab01.default",
+                        "status": "completed",
+                        "started_at": "2026-07-20T11:59:00+00:00",
+                        "finished_at": "2026-07-20T12:00:00+00:00",
+                        "config": {"resolved": {"sim_time": 1.0}},
+                        "artifacts": {},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            alias = root / "alias"
+            try:
+                alias.symlink_to(run, target_is_directory=True)
+            except (NotImplementedError, OSError):
+                alias = None
+            repository = ArtifactRepository(root)
+            records = repository.list_runs()
+            self.assertEqual([record.path.name for record in records], ["real-run"])
+            record = records[0]
+            manifest.write_text(manifest.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "changed"):
+                repository.delete_path(
+                    run,
+                    confirm_path="real-run",
+                    cleanup_token=record.cleanup_token,
+                )
+            self.assertTrue(run.exists())
+            if alias is not None:
+                self.assertTrue(alias.is_symlink())
+
+    def test_saved_run_listing_rejects_linked_metadata_and_nested_links(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            external_summary = root / "external-summary.json"
+            external_summary.write_text(
+                json.dumps({"config_name": "external", "duration": 999.0}),
+                encoding="utf-8",
+            )
+            external_blob = root / "external-blob.bin"
+            external_blob.write_bytes(b"x" * 123_456)
+
+            linked_summary = root / "linked-summary"
+            linked_summary.mkdir()
+            (linked_summary / "manifest.json").write_text(
+                json.dumps({"scenario_id": "lab01.default", "status": "completed"}),
+                encoding="utf-8",
+            )
+            nested_link = root / "nested-link"
+            nested_link.mkdir()
+            (nested_link / "manifest.json").write_text(
+                json.dumps({"scenario_id": "lab02.default", "status": "completed"}),
+                encoding="utf-8",
+            )
+            replay_link = root / "replay-link"
+            replay_link.mkdir()
+            (replay_link / "manifest.json").write_text(
+                json.dumps({"scenario_id": "lab03.default", "status": "completed"}),
+                encoding="utf-8",
+            )
+            try:
+                (linked_summary / "summary.json").symlink_to(external_summary)
+                (nested_link / "external.bin").symlink_to(external_blob)
+                (replay_link / "replay.npz").symlink_to(external_blob)
+            except (NotImplementedError, OSError):
+                self.skipTest("filesystem symlink fixture is unavailable")
+
+            with patch("mclab.application.artifacts.np.load") as replay_loader:
+                records = ArtifactRepository(root).list_runs(validate_replays=True)
+
+            self.assertEqual(records, ())
+            replay_loader.assert_not_called()
+            self.assertEqual(
+                json.loads(external_summary.read_text(encoding="utf-8"))["config_name"],
+                "external",
+            )
+            self.assertEqual(external_blob.stat().st_size, 123_456)
+
+    @unittest.skipUnless(hasattr(os, "mkfifo"), "FIFO fixture requires POSIX")
+    def test_saved_run_listing_rejects_fifo_metadata_without_blocking(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            run = root / "fifo-summary"
             run.mkdir()
             (run / "manifest.json").write_text(
                 json.dumps({"scenario_id": "lab01.default", "status": "completed"}),
                 encoding="utf-8",
             )
-            repository = ArtifactRepository(tmp)
+            os.mkfifo(run / "summary.json")
 
-            with self.assertRaisesRegex(ValueError, "exact folder name"):
-                repository.delete_path(run, confirm_path="wrong-name")
+            started = time.perf_counter()
+            records = ArtifactRepository(root).list_runs(validate_replays=True)
+
+            self.assertEqual(records, ())
+            self.assertLess(time.perf_counter() - started, 0.5)
+
+    def test_saved_run_listing_rejects_manifest_swap_after_bounded_read(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            run = root / "swap-run"
+            run.mkdir()
+            manifest = run / "manifest.json"
+            manifest.write_text(
+                json.dumps({"scenario_id": "lab01.default", "status": "completed"}),
+                encoding="utf-8",
+            )
+            external = root / "external-manifest.json"
+            external.write_text(
+                json.dumps({"scenario_id": "external", "status": "completed"}),
+                encoding="utf-8",
+            )
+            from mclab import output_inventory
+
+            original_reader = output_inventory.read_json_mapping_rooted
+            swapped = False
+
+            def swap_after_read(*args: object, **kwargs: object) -> object:
+                nonlocal swapped
+                result = original_reader(*args, **kwargs)
+                relative = args[1]
+                if not swapped and tuple(relative)[-1] == manifest.name:
+                    try:
+                        manifest.unlink()
+                        manifest.symlink_to(external)
+                    except (NotImplementedError, OSError):
+                        self.skipTest("filesystem symlink fixture is unavailable")
+                    swapped = True
+                return result
+
+            with patch.object(output_inventory, "read_json_mapping_rooted", swap_after_read):
+                records = ArtifactRepository(root).list_runs()
+
+            self.assertTrue(swapped)
+            self.assertEqual(records, ())
+            self.assertEqual(
+                json.loads(external.read_text(encoding="utf-8"))["scenario_id"],
+                "external",
+            )
+
+    def test_saved_run_listing_returns_nothing_if_outputs_root_is_replaced(self) -> None:
+        if os.name == "nt":
+            self.skipTest("Windows root handles block the replacement itself")
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp).resolve()
+            root = base / "outputs"
+            root.mkdir()
+            original_run = root / "original-run"
+            original_run.mkdir()
+            (original_run / "manifest.json").write_text(
+                json.dumps({"scenario_id": "lab01.default", "status": "completed"}),
+                encoding="utf-8",
+            )
+            outside = base / "outside"
+            outside.mkdir()
+            external = outside / "external-secret"
+            external.mkdir()
+            (external / "manifest.json").write_text(
+                json.dumps({"scenario_id": "external.secret", "status": "completed"}),
+                encoding="utf-8",
+            )
+            detached = base / "detached-outputs"
+            from mclab.output_root import PinnedOutputRoot
+
+            original_list = PinnedOutputRoot.list_names
+            swapped = False
+
+            def swap_before_inventory(
+                root_pin: PinnedOutputRoot,
+                relative: tuple[str, ...] = (),
+            ) -> tuple[str, ...]:
+                nonlocal swapped
+                if not swapped and not relative:
+                    root.rename(detached)
+                    root.symlink_to(outside, target_is_directory=True)
+                    swapped = True
+                return original_list(root_pin, relative)
+
+            try:
+                with patch.object(
+                    PinnedOutputRoot,
+                    "list_names",
+                    swap_before_inventory,
+                ):
+                    records = ArtifactRepository(root).list_runs()
+            finally:
+                if root.is_symlink():
+                    root.unlink()
+                if detached.exists():
+                    detached.rename(root)
+            self.assertTrue(swapped)
+            self.assertEqual(records, ())
+            self.assertTrue(external.is_dir())
+            self.assertFalse((outside / ".mclab-trash").exists())
+
+    @unittest.skipUnless(os.name == "nt", "Windows junction cleanup fixture")
+    def test_saved_run_cleanup_skips_windows_junction_alias(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            real = root / "real-run"
+            real.mkdir()
+            (real / "manifest.json").write_text(
+                json.dumps({"scenario_id": "lab01.default", "status": "completed"}),
+                encoding="utf-8",
+            )
+            alias = root / "junction-alias"
+            subprocess.run(
+                ["cmd", "/c", "mklink", "/J", str(alias), str(real)],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+
+            repository = ArtifactRepository(root)
+            self.assertEqual([record.path.name for record in repository.list_runs()], ["real-run"])
+            with self.assertRaisesRegex(ValueError, "no longer available"):
+                repository.delete_path(
+                    alias,
+                    confirm_path=alias.name,
+                    cleanup_token="0" * 64,
+                )
+            self.assertTrue(real.is_dir())
+
+    def test_running_saved_run_cannot_be_quarantined(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run = Path(tmp).resolve() / "running-run"
+            run.mkdir()
+            (run / "manifest.json").write_text(
+                json.dumps({"scenario_id": "batch.all", "status": "running"}),
+                encoding="utf-8",
+            )
+            repository = ArtifactRepository(Path(tmp).resolve())
+            record = repository.list_runs()[0]
+            with self.assertRaisesRegex(ValueError, "Running or unknown-status"):
+                repository.delete_path(
+                    run,
+                    confirm_path=run.name,
+                    cleanup_token=record.cleanup_token,
+                )
             self.assertTrue(run.exists())
-            repository.delete_path(run, confirm_path="delete-me")
-            self.assertFalse(run.exists())
 
     def test_sixty_saved_runs_load_quickly_with_unique_progressive_labels(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             for index in range(60):
-                run = Path(tmp) / f"saved-{index:03d}"
+                run = Path(tmp).resolve() / f"saved-{index:03d}"
                 run.mkdir()
                 (run / "manifest.json").write_text(
                     json.dumps(
@@ -1457,7 +1922,7 @@ class ApplicationFoundationTests(unittest.TestCase):
                     encoding="utf-8",
                 )
             started = time.perf_counter()
-            records = ArtifactRepository(tmp).list_runs(validate_replays=True)
+            records = ArtifactRepository(Path(tmp).resolve()).list_runs(validate_replays=True)
             results = result_payloads(records, Translator("en"), ScenarioCatalog.default())
             elapsed = time.perf_counter() - started
 
@@ -1488,7 +1953,7 @@ class ApplicationFoundationTests(unittest.TestCase):
                     adapter = create_scenario_adapter(
                         scenario,
                         dict(scenario.config),
-                        output_dir=Path(tmp) / scenario_id,
+                        output_dir=Path(tmp).resolve() / scenario_id,
                         safe_mode=True,
                     )
                     session = SimulationSession(adapter, duration=0.02)
@@ -1507,7 +1972,7 @@ class ApplicationFoundationTests(unittest.TestCase):
             adapter = create_scenario_adapter(
                 scenario,
                 dict(scenario.config),
-                output_dir=Path(tmp),
+                output_dir=Path(tmp).resolve(),
                 safe_mode=True,
             )
             session = SimulationSession(adapter, duration=0.02)
@@ -1524,7 +1989,7 @@ class ApplicationFoundationTests(unittest.TestCase):
             adapter = create_scenario_adapter(
                 scenario,
                 dict(scenario.config),
-                output_dir=Path(tmp),
+                output_dir=Path(tmp).resolve(),
                 safe_mode=True,
             )
             session = SimulationSession(adapter, duration=0.02)
@@ -1562,7 +2027,7 @@ class ReplayArtifactTests(unittest.TestCase):
         recorder.event(time=0.25, kind="button", name="push", value=80.0)
 
         with tempfile.TemporaryDirectory() as tmp:
-            path = recorder.archive().save(Path(tmp) / "replay.npz")
+            path = recorder.archive().save(Path(tmp).resolve() / "replay.npz")
             loaded = ReplayArchive.load(path)
 
         self.assertGreaterEqual(loaded.frame_count, 59)
@@ -1574,14 +2039,14 @@ class ReplayArtifactTests(unittest.TestCase):
 
     def test_corrupt_replay_is_rejected_with_a_reason(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "replay.npz"
+            path = Path(tmp).resolve() / "replay.npz"
             path.write_bytes(b"not an npz")
             with self.assertRaisesRegex(ValueError, "Could not read replay"):
                 ReplayArchive.load(path)
 
     def test_manifest_hashes_detect_mutated_artifact(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            output = Path(tmp)
+            output = Path(tmp).resolve()
             (output / "log.csv").write_text("time\n0\n", encoding="utf-8")
             write_manifest(
                 output,
@@ -1590,12 +2055,19 @@ class ReplayArtifactTests(unittest.TestCase):
                 config={"sim_time": 1.0},
             )
             self.assertEqual(verify_manifest(output), [])
+            manifest = output / "manifest.json"
+            payload = json.loads(manifest.read_text(encoding="utf-8"))
+            payload["schema_version"] = True
+            manifest.write_text(json.dumps(payload), encoding="utf-8")
+            self.assertIn("Unsupported manifest schema.", verify_manifest(output))
+            payload["schema_version"] = 1
+            manifest.write_text(json.dumps(payload), encoding="utf-8")
             (output / "log.csv").write_text("changed", encoding="utf-8")
             self.assertIn("Artifact hash mismatch: log.csv", verify_manifest(output))
 
     def test_legacy_output_explains_why_recording_replay_is_disabled(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            output = Path(tmp)
+            output = Path(tmp).resolve()
             (output / "log.csv").write_text("time\n", encoding="utf-8")
             self.assertIn("legacy run", legacy_replay_reason(output))
 
@@ -1962,10 +2434,13 @@ class SessionTests(unittest.TestCase):
         )
         detail, action = localized_error(
             "ko",
-            "Saved evidence cannot be deleted while an experiment is active.",
+            "Saved evidence cannot be moved to quarantine while an experiment is active.",
             "Return to the active experiment, or end and save it before starting another.",
         )
-        self.assertEqual(detail, "실험이 열려 있는 동안 저장 결과를 삭제할 수 없습니다.")
+        self.assertEqual(
+            detail,
+            "실험이 열려 있는 동안 저장 결과를 복구 보관소로 옮길 수 없습니다.",
+        )
         self.assertIn("종료하고 저장", action)
         qt_batch = (ROOT / "src/mclab/application/qt_batch.py").read_text(encoding="utf-8")
         self.assertIn("if reject_running_experiment(self):", qt_batch)
@@ -2336,7 +2811,7 @@ class PlatformAndCliTests(unittest.TestCase):
         from mclab.application import assets as asset_module
 
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
+            root = Path(tmp).resolve()
             archive = root / "assets.tar.gz"
             prefix = asset_module.PANDA_PREFIX
             with tarfile.open(archive, "w:gz") as bundle:
@@ -2364,7 +2839,7 @@ class PlatformAndCliTests(unittest.TestCase):
 
         output = io.StringIO()
         with tempfile.TemporaryDirectory() as tmp:
-            occupied_path = str(Path(tmp) / "occupied.lock")
+            occupied_path = str(Path(tmp).resolve() / "occupied.lock")
             occupied = QLockFile(occupied_path)
             occupied.setStaleLockTime(0)
             self.assertTrue(occupied.tryLock(0))
@@ -2402,7 +2877,7 @@ class IntegratedManipulatorAdapterTests(unittest.TestCase):
                 with self.subTest(scenario=scenario_id):
                     adapter = adapter_type(
                         catalog.get(scenario_id),
-                        output_dir=Path(tmp) / scenario_id,
+                        output_dir=Path(tmp).resolve() / scenario_id,
                         safe_mode=True,
                     )
                     adapter.prepare()

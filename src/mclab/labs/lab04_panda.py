@@ -357,10 +357,11 @@ def run(
             _learner_tuned_updates(config, live_tuning, target_offset, cartesian_target_nudge=cartesian_target_nudge),
         ),
         run_status="completed" if completed and data.time >= sim_time else "stopped",
+        finalize=False,
     )
     if plot:
         _save_plots(output_path, logger.rows, plot_selection or config.get("plots"))
-        logger.finalize_artifacts()
+    logger.finalize_artifacts()
     return resolve_project_path(output_path)
 
 

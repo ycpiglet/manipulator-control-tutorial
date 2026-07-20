@@ -17,14 +17,23 @@ from mclab.sim.reporting import write_run_report
 def create_output_path(lab_name: str, output_dir: str | Path | None = None) -> Path:
     if output_dir is not None:
         path = resolve_output_path(output_dir)
-        path.mkdir(parents=True, exist_ok=True)
+        try:
+            path.mkdir(parents=True, exist_ok=False)
+        except FileExistsError:
+            if not path.is_dir() or any(path.iterdir()):
+                raise RuntimeError(
+                    f"Refusing to reuse a non-empty output directory: {path}"
+                ) from None
     else:
         stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         # Course progress and readiness read default_outputs_root(); runs must
         # be written under the same root or completions never advance the path
         # (MCLAB_DATA_DIR overrides and frozen bundles diverged here before).
         path = _create_unique_output_directory(default_outputs_root() / f"{stamp}_{lab_name}")
-    (path / "plots").mkdir(exist_ok=True)
+    try:
+        (path / "plots").mkdir(exist_ok=False)
+    except FileExistsError:
+        raise RuntimeError(f"Output directory is already in use: {path}") from None
     return path
 
 
@@ -63,6 +72,7 @@ class RunLogger:
         self.replay = ReplayRecorder(float(self.config.get("replay_sample_hz", 60.0)))
         self.started_at = datetime.now(timezone.utc).isoformat()
         self.run_status = "completed"
+        self._finalized = False
 
     def record(self, **row: Any) -> None:
         flattened = _flatten_mapping(row)
@@ -113,8 +123,11 @@ class RunLogger:
         learner_snapshot: Mapping[str, Any] | None = None,
         learner_tuned_config: Mapping[str, Any] | None = None,
         run_status: str = "completed",
+        finalize: bool = True,
     ) -> Path:
+        self._require_unfinalized()
         self.run_status = run_status
+        self._write_manifest(status="running")
         self._save_config_snapshot()
         self._save_csv()
         self._save_states()
@@ -124,27 +137,31 @@ class RunLogger:
         self._save_interaction_events(interaction_events)
         self._save_learner_snapshot(learner_snapshot)
         self._save_learner_tuned_config(learner_tuned_config)
-        self.finalize_artifacts()
+        if finalize:
+            self.finalize_artifacts()
+        else:
+            self._write_manifest(status="running")
         return self.output_path
 
     def finalize_artifacts(self) -> Path:
-        """Refresh manifest hashes after optional plots have been written."""
+        """Write reports while cleanup is blocked, then publish terminal state last."""
 
-        write_manifest(
-            self.output_path,
-            scenario_id=_scenario_id(self.lab_name, self.config_path),
-            status=self.run_status,
-            config=self.config,
-            config_path=self.config_path,
-            seed=self.seed,
-            started_at=self.started_at,
-            finished_at=datetime.now(timezone.utc).isoformat(),
-        )
+        self._require_unfinalized()
+        self._write_manifest(status="running")
         write_run_report(self.output_path)
+        manifest = self._write_manifest(status=self.run_status)
+        self._finalized = True
+        return manifest
+
+    def _require_unfinalized(self) -> None:
+        if self._finalized:
+            raise RuntimeError("This saved run is already finalized and cannot be rewritten.")
+
+    def _write_manifest(self, *, status: str) -> Path:
         return write_manifest(
             self.output_path,
             scenario_id=_scenario_id(self.lab_name, self.config_path),
-            status=self.run_status,
+            status=status,
             config=self.config,
             config_path=self.config_path,
             seed=self.seed,

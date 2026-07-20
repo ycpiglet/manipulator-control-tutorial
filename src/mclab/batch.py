@@ -15,7 +15,11 @@ from importlib import import_module
 from pathlib import Path
 from typing import Any
 
-from mclab.application.batch_runs import ALL_COMPARE_ID
+from mclab.application.batch_runs import (
+    ALL_COMPARE_ID,
+    claim_all_compare_handoff,
+    release_all_compare_handoff,
+)
 from mclab.config import (
     default_outputs_root,
     load_config,
@@ -663,48 +667,77 @@ def run_batch(
     if scenarios is None:
         raise ValueError(f"Unknown batch set: {batch_name}")
 
+    started_at = datetime.now().astimezone().isoformat()
     batch_output = create_batch_output_path(batch_name, output_dir)
-    completed: list[dict[str, Any]] = []
-    for scenario in scenarios:
-        config = load_config(scenario.config_path)
-        runner = LAB_RUNNERS[scenario.lab_name]
-        scenario_output = batch_output / _safe_name(scenario.label)
-        result_path = runner(
-            config,
-            config_path=Path(scenario.config_path),
-            output_dir=scenario_output,
-            plot=plot,
-            viewer=False,
-            headless=True,
-            realtime=False,
-            pause_at_end=False,
-            plot_selection=scenario.plots,
-            seed=seed,
-        )
-        completed.append({**asdict(scenario), "output_path": str(result_path)})
+    from mclab.application.artifacts import write_manifest
 
-    (batch_output / "batch_summary.json").write_text(
-        json.dumps({"batch_name": batch_name, "scenarios": completed}, indent=2),
-        encoding="utf-8",
+    try:
+        completed: list[dict[str, Any]] = []
+        for scenario in scenarios:
+            config = load_config(scenario.config_path)
+            runner = LAB_RUNNERS[scenario.lab_name]
+            scenario_output = batch_output / _safe_name(scenario.label)
+            result_path = runner(
+                config,
+                config_path=Path(scenario.config_path),
+                output_dir=scenario_output,
+                plot=plot,
+                viewer=False,
+                headless=True,
+                realtime=False,
+                pause_at_end=False,
+                plot_selection=scenario.plots,
+                seed=seed,
+            )
+            completed.append({**asdict(scenario), "output_path": str(result_path)})
+
+        (batch_output / "batch_summary.json").write_text(
+            json.dumps({"batch_name": batch_name, "scenarios": completed}, indent=2),
+            encoding="utf-8",
+        )
+        (batch_output / "summary.json").write_text(
+            json.dumps(
+                {
+                    "lab_name": "batch",
+                    "config_name": batch_name,
+                    "samples": len(completed),
+                    "duration": "",
+                    "batch_name": batch_name,
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+        write_outputs_index(batch_output)
+        if plot:
+            write_comparison_plots(batch_output, batch_name, scenarios)
+        write_batch_report(batch_output, batch_name, scenarios)
+        write_outputs_index(batch_output.parent)
+    except Exception as exc:
+        try:
+            write_manifest(
+                batch_output,
+                scenario_id=f"batch.{batch_name}",
+                status="error",
+                config={"batch_name": batch_name, "plot": plot},
+                seed=seed,
+                started_at=started_at,
+                run_kind="comparison_batch",
+                error=str(exc),
+            )
+        except Exception:
+            pass
+        raise
+
+    write_manifest(
+        batch_output,
+        scenario_id=f"batch.{batch_name}",
+        status="completed",
+        config={"batch_name": batch_name, "plot": plot},
+        seed=seed,
+        started_at=started_at,
+        run_kind="comparison_batch",
     )
-    (batch_output / "summary.json").write_text(
-        json.dumps(
-            {
-                "lab_name": "batch",
-                "config_name": batch_name,
-                "samples": len(completed),
-                "duration": "",
-                "batch_name": batch_name,
-            },
-            indent=2,
-        ),
-        encoding="utf-8",
-    )
-    write_outputs_index(batch_output)
-    if plot:
-        write_comparison_plots(batch_output, batch_name, scenarios)
-    write_batch_report(batch_output, batch_name, scenarios)
-    write_outputs_index(batch_output.parent)
     return batch_output
 
 
@@ -714,10 +747,15 @@ def run_all_batches(
     plot: bool = True,
     seed: int | None = None,
     on_progress: Callable[[int, int, str], None] | None = None,
+    handoff_token: str | None = None,
 ) -> Path:
     started = time.perf_counter()
     started_at = datetime.now().astimezone().isoformat()
-    group_output = create_batch_output_path("all_batches", output_dir)
+    group_output = create_batch_output_path(
+        "all_batches",
+        output_dir,
+        handoff_token=handoff_token,
+    )
     completed: list[dict[str, Any]] = []
     batch_names = list_batch_sets()
     for index, batch_name in enumerate(batch_names, start=1):
@@ -775,6 +813,8 @@ def run_all_batches(
     write_outputs_index(group_output.parent)
     from mclab.application.artifacts import write_manifest
 
+    if handoff_token is not None:
+        release_all_compare_handoff(group_output)
     write_manifest(
         group_output,
         scenario_id=ALL_COMPARE_ID,
@@ -782,20 +822,45 @@ def run_all_batches(
         config={"batch_name": ALL_BATCH_NAME, "plot": plot},
         seed=seed,
         started_at=started_at,
+        run_kind="comparison_batch",
     )
     return group_output
 
 
-def create_batch_output_path(batch_name: str, output_dir: str | Path | None = None) -> Path:
+def create_batch_output_path(
+    batch_name: str,
+    output_dir: str | Path | None = None,
+    *,
+    handoff_token: str | None = None,
+) -> Path:
     if output_dir is not None:
         path = resolve_output_path(output_dir)
-        path.mkdir(parents=True, exist_ok=True)
-        return path
+        if handoff_token is not None:
+            if _is_desktop_running_batch_handoff(path, batch_name, handoff_token):
+                return path
+            raise RuntimeError("The course-comparison output handoff is invalid or already used.")
+        try:
+            path.mkdir(parents=True, exist_ok=False)
+            return path
+        except FileExistsError:
+            raise RuntimeError(
+                f"Refusing to reuse an existing batch output directory: {path}"
+            ) from None
 
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     # Same root as course progress/readiness (honors MCLAB_DATA_DIR + frozen).
     base_path = default_outputs_root() / f"{stamp}_{batch_name}"
     return _create_unique_directory(base_path)
+
+
+def _is_desktop_running_batch_handoff(
+    path: Path,
+    batch_name: str,
+    handoff_token: str,
+) -> bool:
+    if batch_name not in {ALL_BATCH_NAME, "all_batches"}:
+        return False
+    return claim_all_compare_handoff(path, handoff_token)
 
 
 def write_batch_report(

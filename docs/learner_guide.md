@@ -25,8 +25,21 @@ while **Run again with same settings** performs new physics.
 
 On Results, read the one-sentence outcome, three important values, and recommended next action
 before opening **View report**. **Replay recording** is the secondary evidence action. Advanced
-reruns, the saved tuning, the output folder, and permanent cleanup stay under **Manage**. MCLab
-never deletes saved runs automatically; permanent cleanup shows the folder and warning first.
+reruns, the saved tuning, the output folder, and recoverable cleanup stay under **Manage**. MCLab
+never removes saved runs automatically. Cleanup requires you to type the exact folder name, then
+moves that run to quarantine instead of permanently deleting it. In a source or virtual
+environment, use `python -m mclab clean --list-trash`, then replace `RECEIPT_ID_FROM_LIST` in
+`python -m mclab clean --restore RECEIPT_ID_FROM_LIST` with a receipt ID marked `restorable` if you
+need to restore it. The list also keeps `history-only` entries for already restored or fully
+rolled-back operations. A `busy` receipt cannot be restored until the active cleanup or restore
+finishes. The installed GUI bundle currently has neither a cleanup/receipt console nor a
+receipt-restore button. Cleanup and restore are supported only on local filesystems; do not run them
+on NFS, SMB, or another network filesystem. To recover a run quarantined by the packaged GUI, set
+`MCLAB_DATA_DIR` in the source/venv terminal to the same packaged data parent first: `%LOCALAPPDATA%\MCLab`
+via PowerShell on Windows, `$HOME/Library/Application Support/MCLab` on macOS, or
+`${XDG_DATA_HOME:-$HOME/.local/share}/mclab` on Linux. If the GUI used a custom value, reuse that
+exact parent. Then list receipts and restore; otherwise the source checkout searches its own
+`outputs/`. Copyable OS-specific commands are in the KR/EN README cleanup section.
 
 The default learning path moves from 1D dynamics to PID, 2DOF Jacobian/DLS, Panda Cartesian control, and the virtual wall. Explore contains optional comparisons and advanced variants. Combine its search field with the directly labeled Level and Mode filters; the count updates immediately. Multiple search words all have to match but can appear in any order, so `lab04 wall` and `wall lab04` find the same set. If nothing matches, **Reset filters** clears all three conditions and returns focus to search.
 

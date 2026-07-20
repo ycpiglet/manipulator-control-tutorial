@@ -18,7 +18,7 @@ SPEC.loader.exec_module(CHECKER)
 class WorkflowActionPinTests(unittest.TestCase):
     def test_repository_workflows_pin_every_external_action(self) -> None:
         references = CHECKER.external_action_references(CHECKER.workflow_files())
-        self.assertEqual(len(references), 12)
+        self.assertEqual(len(references), 14)
         self.assertEqual(CHECKER.unpinned_references(references), [])
 
     def test_mutable_refs_and_docker_tags_fail_while_immutable_refs_pass(self) -> None:

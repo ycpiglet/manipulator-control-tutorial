@@ -8,6 +8,7 @@ import os
 import subprocess
 import sys
 import tempfile
+from collections import Counter
 from collections.abc import Callable
 from importlib import import_module
 from pathlib import Path
@@ -83,6 +84,15 @@ from .learner_menu import (
     reflection_question,
     review_queue_action_lines,
     review_queue_summary_text,
+)
+from .output_cleanup import (
+    CleanupOperationError,
+    CleanupPlan,
+    CleanupSafetyError,
+    build_cleanup_plan,
+    list_cleanup_receipts,
+    quarantine_cleanup_plan,
+    restore_cleanup_receipt,
 )
 from .sim.reporting import write_outputs_index
 
@@ -298,21 +308,44 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     clean_parser = subparsers.add_parser(
-        "clean", help="Delete old run folders under outputs/ to reclaim disk space."
+        "clean", help="Plan or restore recoverable cleanup of old saved runs."
     )
     clean_parser.add_argument(
-        "--output-dir", default=default_outputs, help="Outputs root directory."
+        "--output-dir",
+        default=str(default_outputs_root()),
+        help="Configured outputs root; arbitrary cleanup roots are rejected.",
     )
     clean_parser.add_argument(
         "--keep",
         type=int,
         default=20,
-        help="Keep the N most recent run folders (default: 20). Use 0 to remove all.",
+        help="Keep the N most recent eligible runs (default: 20). Use 0 to quarantine all.",
+    )
+    clean_mode = clean_parser.add_mutually_exclusive_group()
+    clean_mode.add_argument(
+        "--apply",
+        metavar="PLAN_ID",
+        help="Apply one unchanged dry-run plan to recoverable quarantine.",
+    )
+    clean_mode.add_argument(
+        "--restore",
+        metavar="RECEIPT_ID",
+        help="Restore every saved run in one quarantine receipt.",
+    )
+    clean_mode.add_argument(
+        "--list-trash",
+        action="store_true",
+        help="List quarantine receipt history and current states without changing files.",
     )
     clean_parser.add_argument(
         "--yes",
         action="store_true",
-        help="Delete without the confirmation prompt.",
+        help="Required with --apply; alone it never changes files.",
+    )
+    clean_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Print the plan or receipt as machine-readable JSON.",
     )
 
     run_parser = subparsers.add_parser("run", help="Run a lab.")
@@ -347,6 +380,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Batch set to run.",
     )
     batch_parser.add_argument("--output-dir", help="Output directory override.")
+    batch_parser.add_argument("--handoff-token", help=argparse.SUPPRESS)
     batch_parser.add_argument("--no-plot", action="store_true", help="Skip plot image generation.")
     batch_parser.add_argument(
         "--open-report", action="store_true", help="Open the batch report after completion."
@@ -481,7 +515,15 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "clean":
-        return _clean_outputs(Path(args.output_dir), keep=args.keep, assume_yes=args.yes)
+        return _clean_outputs(
+            Path(args.output_dir),
+            keep=args.keep,
+            assume_yes=args.yes,
+            apply_plan_id=args.apply,
+            restore_receipt=args.restore,
+            list_trash=args.list_trash,
+            json_output=args.json,
+        )
 
     if args.command == "run":
         _validate_run_args(parser, args)
@@ -516,6 +558,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.batch_name == ALL_BATCH_NAME:
             output_path = run_all_batches(
                 **batch_kwargs,
+                handoff_token=args.handoff_token,
                 on_progress=lambda current, total, name: print(
                     f"{BATCH_PROGRESS_PREFIX}{current}/{total} {name}", flush=True
                 ),
@@ -1383,39 +1426,121 @@ def _plot_artifact_lines(output_path: Path, directory_name: str, label: str) -> 
     return [f"{label}: {plot_dir} ({len(plots)} PNG; first: {first_plot.name})"]
 
 
-def _clean_outputs(output_dir: Path, *, keep: int, assume_yes: bool) -> int:
-    """Delete old run folders under outputs/, keeping the N most recent."""
-    import shutil
+def _clean_outputs(
+    output_dir: Path,
+    *,
+    keep: int,
+    assume_yes: bool,
+    apply_plan_id: str | None,
+    restore_receipt: str | None,
+    list_trash: bool,
+    json_output: bool,
+) -> int:
+    """Plan, quarantine, list, or restore saved runs without direct deletion."""
 
-    if not output_dir.exists():
-        print(f"Nothing to clean: {output_dir} does not exist.")
-        return 0
-    # Run folders are timestamp-named directories; the aggregate index.html and
-    # any non-directory entries are left alone. Newest-first by name (timestamps
-    # sort chronologically) so --keep retains the most recent runs.
-    runs = sorted(
-        (p for p in output_dir.iterdir() if p.is_dir()),
-        key=lambda p: p.name,
-        reverse=True,
-    )
-    to_remove = runs[max(keep, 0) :]
-    if not to_remove:
-        print(f"Nothing to remove: {len(runs)} run folder(s), keeping {keep}.")
-        return 0
-    print(
-        f"Found {len(runs)} run folder(s) in {output_dir}; removing {len(to_remove)}, keeping {min(keep, len(runs))}."
-    )
-    if not assume_yes:
-        reply = input("Delete these run folders? [y/N] ").strip().lower()
-        if reply not in {"y", "yes"}:
-            print("Cancelled.")
+    configured_root = default_outputs_root()
+    try:
+        if list_trash:
+            receipts = list_cleanup_receipts(output_dir, allowed_root=configured_root)
+            if json_output:
+                print(json.dumps([item.to_dict() for item in receipts], indent=2))
+            elif not receipts:
+                print(f"No cleanup receipt history: {configured_root}")
+            else:
+                print(f"Cleanup receipt history in {configured_root}:")
+                for receipt in receipts:
+                    receipt_data = receipt.to_dict()
+                    if receipt_data["operation_active"]:
+                        recovery_label = "busy"
+                    elif receipt_data["recoverable"]:
+                        recovery_label = "restorable"
+                    else:
+                        recovery_label = "history-only"
+                    print(
+                        f"- {receipt.receipt_id} | {receipt.status} | {recovery_label} | "
+                        f"{len(receipt.names)} run(s) | {', '.join(receipt.names)}"
+                    )
             return 0
-    removed = 0
-    for path in to_remove:
-        shutil.rmtree(path, ignore_errors=True)
-        removed += 1
-    print(f"Removed {removed} run folder(s).")
-    return 0
+        if restore_receipt:
+            receipt = restore_cleanup_receipt(
+                output_dir,
+                restore_receipt,
+                allowed_root=configured_root,
+            )
+            if json_output:
+                print(json.dumps(receipt.to_dict(), indent=2))
+            else:
+                print(
+                    f"Restored {len(receipt.names)} run(s) from receipt {receipt.receipt_id}."
+                )
+            return 0
+
+        plan = build_cleanup_plan(output_dir, keep=keep, allowed_root=configured_root)
+        if json_output and not apply_plan_id:
+            print(json.dumps(plan.to_dict(), indent=2))
+        elif not json_output:
+            _print_cleanup_plan(plan)
+        if not apply_plan_id:
+            if assume_yes:
+                print(
+                    "Safety stop: --yes alone cannot change files. "
+                    "Re-run with the exact --apply PLAN_ID shown above.",
+                    file=sys.stderr,
+                )
+                return 2
+            return 0
+        if not assume_yes:
+            print(
+                "Safety stop: applying a cleanup plan also requires --yes. No run was moved.",
+                file=sys.stderr,
+            )
+            return 2
+        if apply_plan_id != plan.plan_id:
+            raise CleanupSafetyError("The supplied cleanup plan ID does not match this plan.")
+        if not plan.selected:
+            print("Nothing selected for quarantine; no run was moved.")
+            return 0
+        receipt = quarantine_cleanup_plan(
+            plan,
+            expected_plan_id=apply_plan_id,
+            allowed_root=configured_root,
+        )
+        if json_output:
+            print(json.dumps(receipt.to_dict(), indent=2))
+        else:
+            print(f"Quarantined {len(receipt.names)} run(s); nothing was permanently deleted.")
+            print(f"Receipt: {receipt.receipt_id}")
+            print(f"Restore: python -m mclab clean --restore {receipt.receipt_id}")
+        return 0
+    except CleanupSafetyError as exc:
+        print(f"Cleanup safety error: {exc}", file=sys.stderr)
+        return 2
+    except CleanupOperationError as exc:
+        print(f"Cleanup operation failed: {exc}", file=sys.stderr)
+        return 1
+
+
+def _print_cleanup_plan(plan: CleanupPlan) -> None:
+    print("Cleanup dry-run (no files moved)")
+    print(f"Root: {plan.root}")
+    print(f"Plan ID: {plan.plan_id}")
+    if not plan.root_exists:
+        print("Configured outputs root does not exist; the plan is empty.")
+        return
+    print(
+        f"Eligible: {len(plan.eligible)} | Keep: {len(plan.retained)} | "
+        f"Quarantine: {len(plan.selected)} | Skipped: {len(plan.skipped)}"
+    )
+    for entry in plan.retained:
+        print(f"KEEP {entry.path}")
+    for entry in plan.selected:
+        print(f"QUARANTINE {entry.path}")
+    reason_counts = Counter(item.reason for item in plan.skipped)
+    for reason, count in sorted(reason_counts.items()):
+        print(f"SKIP {count} | {reason}")
+    if plan.selected:
+        print("Apply this exact unchanged plan with:")
+        print(f"python -m mclab clean --keep {plan.keep} --apply {plan.plan_id} --yes")
 
 
 def _open_path(path: Path) -> None:

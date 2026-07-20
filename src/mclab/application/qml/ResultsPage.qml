@@ -23,10 +23,10 @@ Item {
         if (firstPrimaryButton)
             firstPrimaryButton.forceActiveFocus()
     }
-    function deleteManagedRun() {
+    function deleteManagedRun(confirmation, cleanupToken) {
         if (manageDialog.run.path) {
-            backend.deleteRun(manageDialog.run.path, manageDialog.run.name)
-            manageDialog.close()
+            if (backend.deleteRun(manageDialog.run.path, confirmation, cleanupToken))
+                manageDialog.close()
         }
     }
     function loadMoreResults() {
@@ -388,6 +388,8 @@ Item {
                                   : backend.localizedText(backend.language,
                                                           "active.manage_blocked")
         deleteBlocked: backend.hasActiveExperiment
-        onDeleteRequested: page.deleteManagedRun()
+        onDeleteRequested: function(confirmation, cleanupToken) {
+            page.deleteManagedRun(confirmation, cleanupToken)
+        }
     }
 }

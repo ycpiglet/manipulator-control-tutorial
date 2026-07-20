@@ -226,10 +226,11 @@ def run(
         ),
         learner_tuned_config=learner_tuned_config(config, _learner_tuned_updates(live_tuning)),
         run_status="completed" if completed and data.time >= sim_time else "stopped",
+        finalize=False,
     )
     if plot:
         _save_plots(output_path, logger.rows, plot_selection or config.get("plots"))
-        logger.finalize_artifacts()
+    logger.finalize_artifacts()
     return resolve_project_path(output_path)
 
 

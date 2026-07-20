@@ -8,7 +8,7 @@ import platform
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, BinaryIO
 
 import numpy as np
 
@@ -210,6 +210,8 @@ def write_manifest(
     seed: int | None = None,
     started_at: str | None = None,
     finished_at: str | None = None,
+    run_kind: str = "",
+    error: str = "",
 ) -> Path:
     output = Path(output_path)
     model_path_value = config.get("model_path")
@@ -249,6 +251,10 @@ def write_manifest(
             "available": (output / "replay.npz").exists(),
         },
     }
+    if run_kind:
+        payload["run_kind"] = run_kind
+    if error:
+        payload["error"] = error[-2000:]
     target = output / "manifest.json"
     target.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
     return target
@@ -262,7 +268,8 @@ def verify_manifest(output_path: str | Path) -> list[str]:
     except (OSError, ValueError, TypeError) as exc:
         return [f"Could not read manifest: {exc}"]
     errors: list[str] = []
-    if payload.get("schema_version") != MANIFEST_SCHEMA_VERSION:
+    schema_version = payload.get("schema_version")
+    if type(schema_version) is not int or schema_version != MANIFEST_SCHEMA_VERSION:
         errors.append("Unsupported manifest schema.")
     for relative, expected in dict(payload.get("artifacts", {})).items():
         path = output / relative
@@ -292,6 +299,16 @@ def replay_index_reason(output_path: str | Path) -> str:
     source = Path(output_path) / "replay.npz"
     if not source.is_file():
         return legacy_replay_reason(output_path)
+    return replay_index_reason_from_stream(source, source_label=str(source))
+
+
+def replay_index_reason_from_stream(
+    source: str | Path | BinaryIO,
+    *,
+    source_label: str = "replay.npz",
+) -> str:
+    """Validate a replay index from a caller-owned safe stream."""
+
     try:
         with np.load(source, allow_pickle=False) as data:
             required = {"schema_version", "time", "qpos", "qvel", "ctrl"}
@@ -302,7 +319,7 @@ def replay_index_reason(output_path: str | Path) -> str:
             if version != REPLAY_SCHEMA_VERSION:
                 return f"Unsupported replay schema {version}; expected {REPLAY_SCHEMA_VERSION}."
     except (EOFError, KeyError, OSError, TypeError, ValueError) as exc:
-        return f"Could not read replay {source}: {exc}"
+        return f"Could not read replay {source_label}: {exc}"
     return ""
 
 

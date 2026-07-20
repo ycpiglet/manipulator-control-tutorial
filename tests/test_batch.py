@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -12,7 +13,12 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from mclab import batch  # noqa: E402
 from mclab.application.artifacts import verify_manifest  # noqa: E402
+from mclab.application.batch_runs import (  # noqa: E402
+    all_compare_command,
+    create_all_compare_output,
+)
 from mclab.config import load_config  # noqa: E402
+from mclab.output_cleanup import build_cleanup_plan  # noqa: E402
 
 
 class BatchTests(unittest.TestCase):
@@ -266,7 +272,7 @@ class BatchTests(unittest.TestCase):
             ):
                 output = batch.run_batch(
                     "unit_compare",
-                    output_dir=Path(tmp) / "batch_output",
+                    output_dir=Path(tmp).resolve() / "batch_output",
                     plot=False,
                     seed=11,
                 )
@@ -282,7 +288,34 @@ class BatchTests(unittest.TestCase):
             self.assertTrue((output / "summary.json").exists())
             self.assertTrue((output / "report.html").exists())
             self.assertTrue((output / "worksheet.md").exists())
+            manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["scenario_id"], "batch.unit_compare")
+            self.assertEqual(manifest["status"], "completed")
+            self.assertEqual(manifest["run_kind"], "comparison_batch")
+            self.assertEqual(verify_manifest(output), [])
+            self.assertEqual(
+                set(manifest["artifacts"]),
+                {
+                    path.relative_to(output).as_posix()
+                    for path in output.rglob("*")
+                    if path.is_file() and path.name != "manifest.json"
+                },
+            )
+            cleanup_plan = build_cleanup_plan(
+                output.parent,
+                keep=0,
+                allowed_root=output.parent,
+            )
+            self.assertEqual([entry.name for entry in cleanup_plan.selected], [output.name])
             self.assertIn("demo_scenario/report.html", (output / "index.html").read_text(encoding="utf-8"))
+            before = (output / "summary.json").read_bytes()
+            with (
+                patch.dict(batch.BATCH_SETS, {"unit_compare": (scenario,)}, clear=False),
+                patch.dict(batch.LAB_RUNNERS, {"lab01": fake_runner}, clear=False),
+                self.assertRaisesRegex(RuntimeError, "existing batch output directory"),
+            ):
+                batch.run_batch("unit_compare", output_dir=output, plot=False, seed=11)
+            self.assertEqual((output / "summary.json").read_bytes(), before)
             self.assertTrue((output / "demo_scenario" / "worksheet.md").exists())
             report_html = (output / "report.html").read_text(encoding="utf-8")
             self.assertIn("Learning Focus", report_html)
@@ -370,6 +403,52 @@ class BatchTests(unittest.TestCase):
             self.assertIn("batch_output/report.html", parent_index.read_text(encoding="utf-8"))
             self.assertIn("batch_output/worksheet.md", parent_index.read_text(encoding="utf-8"))
 
+    def test_run_batch_failure_publishes_strict_error_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp).resolve() / "partial-batch"
+            with (
+                patch.dict(batch.BATCH_SETS, {"unit_compare": ()}, clear=False),
+                patch("mclab.batch.write_outputs_index"),
+                patch(
+                    "mclab.batch.write_batch_report",
+                    side_effect=RuntimeError("injected"),
+                ),
+                self.assertRaisesRegex(RuntimeError, "injected"),
+            ):
+                batch.run_batch("unit_compare", output_dir=output, plot=False)
+
+            manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["status"], "error")
+            self.assertEqual(manifest["error"], "injected")
+            self.assertEqual(verify_manifest(output), [])
+            cleanup_plan = build_cleanup_plan(
+                output.parent,
+                keep=0,
+                allowed_root=output.parent,
+            )
+            self.assertEqual([entry.name for entry in cleanup_plan.selected], [output.name])
+
+    def test_run_batch_preserves_original_error_if_error_manifest_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp).resolve() / "partial-batch"
+            with (
+                patch.dict(batch.BATCH_SETS, {"unit_compare": ()}, clear=False),
+                patch("mclab.batch.write_outputs_index"),
+                patch(
+                    "mclab.batch.write_batch_report",
+                    side_effect=RuntimeError("original batch failure"),
+                ),
+                patch(
+                    "mclab.application.artifacts.write_manifest",
+                    side_effect=OSError("manifest failure"),
+                ),
+                self.assertRaisesRegex(RuntimeError, "original batch failure"),
+            ):
+                batch.run_batch("unit_compare", output_dir=output, plot=False)
+
+            self.assertTrue(output.exists())
+            self.assertFalse((output / "manifest.json").exists())
+
     def test_run_all_batches_creates_group_report(self) -> None:
         def fake_run_batch(batch_name: str, **kwargs: object) -> Path:
             output = Path(kwargs["output_dir"])
@@ -391,12 +470,17 @@ class BatchTests(unittest.TestCase):
         expected_batches = list(batch.list_batch_sets())
         expected_scenarios = sum(len(scenarios) for scenarios in batch.BATCH_SETS.values())
         progress: list[tuple[int, int, str]] = []
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"MCLAB_DATA_DIR": tmp}
+        ):
+            all_output = create_all_compare_output()
+            _program, arguments = all_compare_command(all_output)
             with patch("mclab.batch.run_batch", side_effect=fake_run_batch) as runner:
                 output = batch.run_all_batches(
-                    output_dir=Path(tmp) / "all_output",
+                    output_dir=all_output,
                     plot=False,
                     seed=23,
+                    handoff_token=arguments[-1],
                     on_progress=lambda current, total, name: progress.append(
                         (current, total, name)
                     ),
@@ -413,6 +497,7 @@ class BatchTests(unittest.TestCase):
             self.assertEqual(summary["batch_name"], batch.ALL_BATCH_NAME)
             self.assertEqual(summary["scenario_runs"], expected_scenarios)
             self.assertGreaterEqual(summary["duration"], 0.0)
+
             manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["scenario_id"], "batch.all")
             self.assertEqual(manifest["status"], "completed")
@@ -451,6 +536,46 @@ class BatchTests(unittest.TestCase):
             self.assertIn("Viewer handoff: lab01_msd_compare/report.html#viewer-handoff", worksheet)
             self.assertIn("- [ ] Identify one idea that stayed the same from Lab01 to Lab04.", worksheet)
             self.assertIn("lab01_msd_compare/report.html", (output / "index.html").read_text(encoding="utf-8"))
+
+    def test_desktop_batch_handoff_is_one_shot(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp).resolve() / "data")}
+        ):
+            output = create_all_compare_output()
+            _program, arguments = all_compare_command(output)
+            token = arguments[-1]
+            self.assertEqual(
+                batch.create_batch_output_path(
+                    "all_batches",
+                    output,
+                    handoff_token=token,
+                ),
+                output,
+            )
+            with self.assertRaisesRegex(RuntimeError, "invalid or already used"):
+                batch.create_batch_output_path(
+                    "all_batches",
+                    output,
+                    handoff_token=token,
+                )
+
+    def test_desktop_batch_handoff_rejects_directory_links(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp).resolve() / "data")}
+        ):
+            linked_output = create_all_compare_output()
+            _program, linked_arguments = all_compare_command(linked_output)
+            alias = Path(tmp).resolve() / "batch-alias"
+            try:
+                alias.symlink_to(linked_output, target_is_directory=True)
+            except (NotImplementedError, OSError):
+                self.skipTest("directory symlinks are unavailable")
+            with self.assertRaisesRegex(RuntimeError, "invalid or already used"):
+                batch.create_batch_output_path(
+                    "all_batches",
+                    alias,
+                    handoff_token=linked_arguments[-1],
+                )
 
     def test_run_batch_rejects_unknown_batch_name(self) -> None:
         with self.assertRaises(ValueError):
@@ -547,7 +672,7 @@ class BatchTests(unittest.TestCase):
             batch.BatchScenario("high gain", "lab02", "configs/lab02_pid/p_high_gain.yaml"),
         )
         with tempfile.TemporaryDirectory() as tmp:
-            output = Path(tmp) / "batch_output"
+            output = Path(tmp).resolve() / "batch_output"
             for scenario in scenarios:
                 run_dir = output / scenario.label.replace(" ", "_")
                 run_dir.mkdir(parents=True)
@@ -632,7 +757,7 @@ class BatchTests(unittest.TestCase):
             batch.BatchScenario("fast_wall", "lab04", "configs/lab04_panda/wall_fast_approach.yaml", "wall_compare"),
         )
         with tempfile.TemporaryDirectory() as tmp:
-            output = Path(tmp) / "batch_output"
+            output = Path(tmp).resolve() / "batch_output"
             for index, scenario in enumerate(scenarios):
                 run_dir = output / scenario.label
                 run_dir.mkdir(parents=True)

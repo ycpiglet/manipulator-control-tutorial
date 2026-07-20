@@ -171,10 +171,51 @@ signing/notarization, complete third-party notices, and real OS/GPU, screen
 reader, and beginner-user validation. UI and artifact schemas may change
 during v0.1.
 
-> [!WARNING]
-> `mclab clean` currently has a known target-selection issue that can select
-> the wrong directories. Do not use it until P0-01 is fixed. Back up important
-> outputs and delete only individual runs through **Results → Manage**.
+> [!NOTE]
+> `mclab clean` is read-only by default. Under the configured MCLab output root,
+> it selects only strict terminal manifests whose `schema_version` is the JSON
+> integer `1` and whose status is `completed`, `stopped`, or `error`. Legacy,
+> incomplete, and running results can remain visible but are not cleanup
+> candidates. Both the displayed plan ID and `--yes` are required before runs
+> move into recoverable quarantine; nothing is permanently deleted.
+> **Results → Manage** uses the same strict rule after an exact folder-name entry
+> and a stale-target check.
+
+```bash
+python -m mclab clean --keep 20
+python -m mclab clean --keep 20 --apply PLAN_ID_FROM_DRY_RUN --yes
+python -m mclab clean --list-trash
+python -m mclab clean --restore RECEIPT_ID_FROM_LIST
+```
+
+An arbitrary directory cannot be cleaned with `--output-dir`; set
+`MCLAB_DATA_DIR` first to change the parent data location; MCLab uses only its
+`outputs/` child. Replace each placeholder above with the ID printed by the
+preceding command. `--list-trash` shows the full receipt history and current
+state; only IDs marked `restorable` can be passed to `--restore`. `busy` means
+another cleanup or restore is active for the same output root; wait for it to
+finish and list the receipts again. The installed GUI bundle currently exposes
+neither a cleanup/receipt console nor a receipt-restore button. Listing and
+restore are therefore supported only from a source or virtual environment that
+can run the `python -m mclab` commands above. To restore a run quarantined by
+the packaged GUI, first point that source/venv CLI at the **same packaged data
+parent**:
+
+| OS where the packaged GUI ran | Run first in the source/venv terminal |
+|---|---|
+| Windows PowerShell | `$env:MCLAB_DATA_DIR = Join-Path $env:LOCALAPPDATA "MCLab"` |
+| macOS zsh | `export MCLAB_DATA_DIR="$HOME/Library/Application Support/MCLab"` |
+| Linux shell | `export MCLAB_DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/mclab"` |
+
+Then refresh the list with `python -m mclab clean --list-trash` and run
+`python -m mclab clean --restore RECEIPT_ID_FROM_LIST`. If the GUI was launched
+with an explicit `MCLAB_DATA_DIR`, use that same parent instead of the table's
+default. Omitting this step points a source checkout at its own `outputs/`, so
+the packaged GUI receipt will not appear. Cleanup and restore are supported
+and validated only on local filesystems. Do not run them on network filesystems
+such as NFS or SMB; move the results to a local MCLab data location first.
+Quarantine still uses disk space, and SAFE-01 intentionally does not expose
+permanent purge.
 
 See the
 [2026-07-20 readiness audit](.agents/reviews/20260720_enterprise_readiness_audit.md)
