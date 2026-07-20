@@ -194,6 +194,57 @@ def add_viewer_box(
     return _add_viewer_geom(mujoco, viewer_handle, geom_type, position, half_size, rgba)
 
 
+def add_viewer_segment(
+    mujoco: Any,
+    viewer_handle: Any | None,
+    start: Sequence[float],
+    end: Sequence[float],
+    *,
+    width: float,
+    rgba: Sequence[float],
+) -> bool:
+    """Add a capsule segment between two points to the passive viewer scene."""
+
+    geom_type = mujoco.mjtGeom.mjGEOM_CAPSULE
+    if not _add_viewer_geom(mujoco, viewer_handle, geom_type, start, [width, width, width], rgba):
+        return False
+
+    import numpy as np
+
+    geom = viewer_handle.user_scn.geoms[int(viewer_handle.user_scn.ngeom) - 1]
+    mujoco.mjv_connector(
+        geom,
+        geom_type,
+        float(width),
+        np.asarray(start, dtype=float),
+        np.asarray(end, dtype=float),
+    )
+    return True
+
+
+def spring_polyline(
+    start: Sequence[float],
+    end: Sequence[float],
+    *,
+    coils: int = 8,
+    amplitude: float = 0.075,
+) -> tuple[tuple[float, float, float], ...]:
+    """Return a visibly deforming zig-zag between an anchor and a moving mass."""
+
+    import numpy as np
+
+    first = np.asarray(start, dtype=float)
+    last = np.asarray(end, dtype=float)
+    points = [first]
+    count = max(2, int(coils) * 2)
+    for index in range(1, count):
+        point = first + (last - first) * (index / count)
+        point[2] += amplitude if index % 2 else -amplitude
+        points.append(point)
+    points.append(last)
+    return tuple(tuple(float(value) for value in point) for point in points)
+
+
 def _add_viewer_geom(
     mujoco: Any,
     viewer_handle: Any | None,

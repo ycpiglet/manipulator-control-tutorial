@@ -39,7 +39,13 @@ Rectangle {
                 Accessible.ignored: true
             }
             Label {
-                text: "◆ " + backend.localizedText(backend.language, "legend.target")
+                // In lab01 the purple diamond marks the spring equilibrium
+                // (there is no commanded target); everywhere else it is the
+                // control target.
+                text: "◆ " + backend.localizedText(
+                          backend.language,
+                          backend.selectedScenario.lab === "lab01" ? "scene.equilibrium"
+                                                                   : "legend.target")
                 color: "#D8A7FF"
                 font.bold: true
                 font.pixelSize: hud.compact ? 10 : 13

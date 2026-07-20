@@ -9,6 +9,10 @@ from typing import Any, Sequence
 
 import numpy as np
 
+# Shared with the CLI passive-viewer overlays so both spring visuals deform
+# identically; re-exported for the adapter overlay code.
+from mclab.sim.mujoco_utils import spring_polyline  # noqa: F401
+
 _RENDER_CONTEXT = threading.local()
 _RENDERER_FACTORY_LOCK = threading.Lock()
 
@@ -438,25 +442,6 @@ def add_wall_grid(
         )
 
 
-def spring_polyline(
-    start: Sequence[float],
-    end: Sequence[float],
-    *,
-    coils: int = 8,
-    amplitude: float = 0.075,
-) -> tuple[tuple[float, float, float], ...]:
-    """Return a visibly deforming zig-zag between an anchor and a moving mass."""
-
-    first = np.asarray(start, dtype=float)
-    last = np.asarray(end, dtype=float)
-    points = [first]
-    count = max(2, int(coils) * 2)
-    for index in range(1, count):
-        point = first + (last - first) * (index / count)
-        point[2] += amplitude if index % 2 else -amplitude
-        points.append(point)
-    points.append(last)
-    return tuple(tuple(float(value) for value in point) for point in points)
 
 
 def _add_geom(
