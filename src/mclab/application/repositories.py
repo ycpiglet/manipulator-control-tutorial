@@ -149,13 +149,16 @@ class ArtifactRepository:
     ) -> CleanupReceipt:
         target = Path(os.path.abspath(os.path.expanduser(os.fspath(path))))
         root = Path(os.path.abspath(os.path.expanduser(os.fspath(self.outputs_root))))
-        if target.parent != root:
+        if not _same_existing_path(target.parent, root):
             raise ValueError("Run cleanup is limited to a direct child of outputs/.")
         record = next(
             (
                 item
                 for item in self.list_runs()
-                if Path(os.path.abspath(os.fspath(item.path))) == target
+                if _same_existing_path(
+                    Path(os.path.abspath(os.fspath(item.path))),
+                    target,
+                )
             ),
             None,
         )
@@ -166,6 +169,15 @@ class ArtifactRepository:
             confirm_path=confirm_path,
             cleanup_token=cleanup_token,
         )
+
+
+def _same_existing_path(left: Path, right: Path) -> bool:
+    """Compare an existing path across Windows short/long-name aliases."""
+
+    try:
+        return left.samefile(right)
+    except OSError:
+        return os.path.normcase(str(left)) == os.path.normcase(str(right))
 
 
 class ProgressRepository:

@@ -272,7 +272,7 @@ class BatchTests(unittest.TestCase):
             ):
                 output = batch.run_batch(
                     "unit_compare",
-                    output_dir=Path(tmp) / "batch_output",
+                    output_dir=Path(tmp).resolve() / "batch_output",
                     plot=False,
                     seed=11,
                 )
@@ -405,7 +405,7 @@ class BatchTests(unittest.TestCase):
 
     def test_run_batch_failure_publishes_strict_error_manifest(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            output = Path(tmp) / "partial-batch"
+            output = Path(tmp).resolve() / "partial-batch"
             with (
                 patch.dict(batch.BATCH_SETS, {"unit_compare": ()}, clear=False),
                 patch("mclab.batch.write_outputs_index"),
@@ -430,7 +430,7 @@ class BatchTests(unittest.TestCase):
 
     def test_run_batch_preserves_original_error_if_error_manifest_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            output = Path(tmp) / "partial-batch"
+            output = Path(tmp).resolve() / "partial-batch"
             with (
                 patch.dict(batch.BATCH_SETS, {"unit_compare": ()}, clear=False),
                 patch("mclab.batch.write_outputs_index"),
@@ -539,7 +539,7 @@ class BatchTests(unittest.TestCase):
 
     def test_desktop_batch_handoff_is_one_shot(self) -> None:
         with tempfile.TemporaryDirectory() as tmp, patch.dict(
-            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}
+            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp).resolve() / "data")}
         ):
             output = create_all_compare_output()
             _program, arguments = all_compare_command(output)
@@ -561,11 +561,11 @@ class BatchTests(unittest.TestCase):
 
     def test_desktop_batch_handoff_rejects_directory_links(self) -> None:
         with tempfile.TemporaryDirectory() as tmp, patch.dict(
-            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}
+            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp).resolve() / "data")}
         ):
             linked_output = create_all_compare_output()
             _program, linked_arguments = all_compare_command(linked_output)
-            alias = Path(tmp) / "batch-alias"
+            alias = Path(tmp).resolve() / "batch-alias"
             try:
                 alias.symlink_to(linked_output, target_is_directory=True)
             except (NotImplementedError, OSError):
@@ -672,7 +672,7 @@ class BatchTests(unittest.TestCase):
             batch.BatchScenario("high gain", "lab02", "configs/lab02_pid/p_high_gain.yaml"),
         )
         with tempfile.TemporaryDirectory() as tmp:
-            output = Path(tmp) / "batch_output"
+            output = Path(tmp).resolve() / "batch_output"
             for scenario in scenarios:
                 run_dir = output / scenario.label.replace(" ", "_")
                 run_dir.mkdir(parents=True)
@@ -757,7 +757,7 @@ class BatchTests(unittest.TestCase):
             batch.BatchScenario("fast_wall", "lab04", "configs/lab04_panda/wall_fast_approach.yaml", "wall_compare"),
         )
         with tempfile.TemporaryDirectory() as tmp:
-            output = Path(tmp) / "batch_output"
+            output = Path(tmp).resolve() / "batch_output"
             for index, scenario in enumerate(scenarios):
                 run_dir = output / scenario.label
                 run_dir.mkdir(parents=True)

@@ -105,16 +105,18 @@ semantics, dependency locking, release retention policy, or B2 status.
 - Desktop all-batch launch uses a 256-bit one-shot token. Its SHA-256 is stored
   in the running manifest; regular-file and link/reparse checks plus an atomic
   active-directory claim prevent duplicate or aliased writers. The token file
-  is consumed on claim and the active claim is released before terminal
-  publication.
+  is consumed on claim. Normal successful completion releases the active claim
+  before terminal publication; a failed, cancelled, or abruptly terminated
+  desktop child can retain the internal marker, and strict cleanup rejects that
+  output instead of treating the marker as durable release evidence.
 
 ## Local Validation Evidence
 
 | Gate | Result | Measurement |
 |---|---|---|
-| Python 3.12 full regression | PASS | 528 passed, 6 skipped, 1,109 subtests |
-| Python 3.12 coverage | PASS | 80.92% total, 89% `src/mclab/output_cleanup.py`; floor 80% |
-| Python 3.10 cleanup/CLI regression | PASS | 109 passed, 5 platform-only skipped, 20 subtests |
+| Python 3.12 full regression | PASS | 528 passed, 7 skipped, 1,109 subtests |
+| Python 3.12 coverage | PASS | 80.91% total, 89% `src/mclab/output_cleanup.py`; floor 80% |
+| Python 3.10 cleanup/CLI regression | PASS | 109 passed, 6 platform-only skipped, 20 subtests |
 | Relevant Qt audit | PASS | 18/18 XCB cases; final exact-head remote rerun required |
 | Ruff | PASS | 0 findings across required scopes |
 | Workflow Action pin scan | PASS | 14/14 immutable references |
@@ -169,9 +171,9 @@ NFS/SMB are outside SAFE-01; process-interruption recovery is in scope.
   isolated `unsafe` row. This is fail-closed and does not delete data, but a
   future operability change should expose the corrupt ID without hiding valid
   history.
-- Windows volume/file IDs, ancestor rename blocking, and the Xvfb workflow
-  package set still require the remote exact-head platform gates. Local Linux
-  evidence cannot close those platform contracts.
+- Windows volume/file IDs, root/ancestor rename blocking, exact handle-based
+  rename, and the repaired Xvfb package set still require the next remote
+  exact-head platform gates. Local Linux evidence cannot close those contracts.
 - A same-privilege hostile process is not required to honor the cooperative
   operation lock. The implementation pins and rechecks identities and records
   indeterminate post-commit moves conservatively, but it cannot make the final
@@ -179,9 +181,10 @@ NFS/SMB are outside SAFE-01; process-interruption recovery is in scope.
 - The Windows target is the intended desktop NTFS contract, pending the remote
   exact-head Windows gate. ReFS-specific file-ID
   semantics are not claimed by SAFE-01 and require a separate platform contract.
-- Abrupt batch-process termination can leave a running partial directory and
-  internal handoff/active markers. Strict cleanup rejects that directory; a
-  future recovery UX may classify and repair it without weakening eligibility.
+- Failed, cancelled, or abruptly terminated desktop batch processes can leave a
+  partial directory and internal active marker. Strict cleanup rejects that
+  directory even if the parent later records a terminal UI status; a future
+  recovery UX may classify and repair it without weakening eligibility.
 - A failed first desktop adapter construction consumes the one-shot explicit
   output override. A retry safely uses a fresh default output instead of
   reusing the partial directory.
@@ -193,12 +196,16 @@ NFS/SMB are outside SAFE-01; process-interruption recovery is in scope.
 | Strict planner/quarantine implementation | local PASS |
 | Mixed and fault-injection regression suite | local PASS |
 | Independent final code review | scoped local GOs; no known P0/P1 in cleanup mutation, output claim, writer publication, batch handoff, or terminal callback paths |
-| Exact candidate commit and PR | pending |
-| Required exact-head checks | pending, 0/6 recorded |
-| Remote Windows/Ubuntu/macOS validation | pending |
+| Exact candidate commit and PR | Draft PR #46 open; initial head `a56e308f2c82b3d346801905fd3bba686ab7da4b`; repaired head pending commit/push |
+| Required exact-head checks | initial head 3/6 PASS: simulator, paper gates, paper build; repaired exact head pending |
+| Remote Windows/Ubuntu/macOS validation | initial desktop matrix 0/3; macOS temp-alias fixtures, Windows rename buffer/path matching/root pin, and Ubuntu XCB runtime set repaired locally; exact-head rerun required |
 | Ruleset merge and post-merge main verification | pending |
 | Real-root dry-run owner review | pending; only after post-merge verification and SAFE-01 PASS |
 | Real-root quarantine apply | prohibited until owner reviews the same dry-run plan |
+
+Initial PR run evidence is GitHub Actions CI `29776388384` and desktop matrix
+`29776388375`. Preserve those failed-run IDs as diagnosis history; acceptance
+must use the later repaired exact-head run IDs.
 
 ## Rollback and Recovery
 
@@ -215,7 +222,6 @@ NFS/SMB are outside SAFE-01; process-interruption recovery is in scope.
 
 ## Exact Next Action
 
-Assign the exact candidate commit, open the SAFE-01 PR, and require the six
-exact-head checks plus the three-OS desktop
-matrix. Do not run `mclab clean` against the real outputs root during that
-validation.
+Commit and push the platform-gate repair to Draft PR #46, record the new exact
+head, and require all six exact-head checks plus the three-OS desktop matrix.
+Do not run `mclab clean` against the real outputs root during that validation.

@@ -80,7 +80,10 @@ def open_windows_directory(path: Path, *, delete_access: bool) -> int:
         wintypes.HANDLE,
     ]
     create_file.restype = wintypes.HANDLE
-    desired_access = 0x00000080 | (0x00010000 if delete_access else 0)
+    # FILE_LIST_DIRECTORY makes the retained handle participate in ordinary
+    # directory sharing checks; omitting FILE_SHARE_DELETE then prevents a
+    # configured output directory from being renamed out from under the pin.
+    desired_access = 0x00000001 | 0x00000080 | (0x00010000 if delete_access else 0)
     raw_handle = create_file(
         str(path),
         desired_access,
@@ -194,7 +197,10 @@ def rename_windows_directory_noreplace(
             ]
 
         encoded_name = str(destination).encode("utf-16-le")
-        size = FileRenameInfo.FileName.offset + len(encoded_name)
+        # FileNameLength excludes the terminator, while the ABI requires at
+        # least sizeof(FILE_RENAME_INFO) plus the encoded name. The zero-filled
+        # trailing storage also supplies the WCHAR terminator.
+        size = ctypes.sizeof(FileRenameInfo) + len(encoded_name)
         buffer = ctypes.create_string_buffer(size)
         info = FileRenameInfo.from_buffer(buffer)
         info.ReplaceIfExists = False

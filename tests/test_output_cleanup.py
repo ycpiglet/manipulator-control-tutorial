@@ -410,6 +410,89 @@ class CleanupRootGuardTests(unittest.TestCase):
             parent.rename(moved_parent)
             self.assertTrue((moved_parent / "outputs").is_dir())
 
+    @unittest.skipUnless(os.name == "nt", "Windows handle-rename fixture")
+    def test_windows_handle_rename_uses_the_exact_nested_destination(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve() / "outputs"
+            source_name = "source-끝-Z9"
+            source = root / source_name
+            entries = root / ".mclab-trash" / "receipt" / "entries"
+            source.mkdir(parents=True)
+            entries.mkdir(parents=True)
+            (source / "canary.txt").write_text("preserve", encoding="utf-8")
+            destination = entries / source_name
+            collision_source = root / "collision-source"
+            collision_destination = entries / "collision-existing"
+            collision_source.mkdir()
+            collision_destination.mkdir()
+            (collision_source / "source.txt").write_text("source", encoding="utf-8")
+            (collision_destination / "destination.txt").write_text(
+                "destination",
+                encoding="utf-8",
+            )
+
+            from mclab.output_root import pinned_output_root
+
+            with pinned_output_root(root, allowed_root=root) as (
+                _resolved,
+                root_exists,
+                root_pin,
+            ):
+                self.assertTrue(root_exists)
+                self.assertIsNotNone(root_pin)
+                assert root_pin is not None
+                root_pin.pin_directory((".mclab-trash",), description="quarantine")
+                root_pin.pin_directory(
+                    (".mclab-trash", "receipt"),
+                    description="cleanup receipt",
+                )
+                root_pin.pin_directory(
+                    (".mclab-trash", "receipt", "entries"),
+                    description="quarantine entries",
+                )
+                source_identity = root_pin.directory_identity((source_name,))
+                root_pin.rename_noreplace(
+                    (source_name,),
+                    (".mclab-trash", "receipt", "entries", destination.name),
+                    expected_source_identity=source_identity,
+                )
+                self.assertEqual(
+                    root_pin.directory_identity(
+                        (".mclab-trash", "receipt", "entries", destination.name)
+                    ),
+                    source_identity,
+                )
+                collision_identity = root_pin.directory_identity((collision_source.name,))
+                with self.assertRaises(FileExistsError):
+                    root_pin.rename_noreplace(
+                        (collision_source.name,),
+                        (
+                            ".mclab-trash",
+                            "receipt",
+                            "entries",
+                            collision_destination.name,
+                        ),
+                        expected_source_identity=collision_identity,
+                    )
+
+            self.assertFalse(source.exists())
+            self.assertEqual(
+                (destination / "canary.txt").read_text(encoding="utf-8"),
+                "preserve",
+            )
+            self.assertEqual(
+                {path.name for path in entries.iterdir()},
+                {destination.name, collision_destination.name},
+            )
+            self.assertEqual(
+                (collision_source / "source.txt").read_text(encoding="utf-8"),
+                "source",
+            )
+            self.assertEqual(
+                (collision_destination / "destination.txt").read_text(encoding="utf-8"),
+                "destination",
+            )
+
 
 class CleanupCandidateTests(unittest.TestCase):
     def test_mixed_inventory_selects_only_strict_terminal_manifests(self) -> None:
@@ -431,9 +514,9 @@ class CleanupCandidateTests(unittest.TestCase):
                 "_internal",
                 "_QT_probe",
                 "codex_probe",
-                "CODEX_probe",
+                "CODEX_upper_probe",
                 "verify_probe",
-                "VERIFY_probe",
+                "VERIFY_upper_probe",
                 ".mclab-trash",
             ):
                 _make_run(root, name)

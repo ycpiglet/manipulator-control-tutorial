@@ -83,12 +83,18 @@ The desktop all-batch handoff is token-bound and one-shot.
 Independent fault-injection and writer-boundary reviews found no P0/P1 in the
 reviewed source-swap, post-commit, rollback, root-identity, output-claim, or
 terminal-publication paths and issued scoped local GO decisions. Frozen-tree
-Python 3.12 validation passed 528 tests with 6 platform skips and 1,109
-subtests; coverage is 80.92% overall and 89% for `output_cleanup.py`. Python
-3.10 cleanup/CLI validation passed 109 tests with 5 platform-only skips and 20
+Python 3.12 validation passed 528 tests with 7 platform skips and 1,109
+subtests; coverage is 80.91% overall and 89% for `output_cleanup.py`. Python
+3.10 cleanup/CLI validation passed 109 tests with 6 platform-only skips and 20
 subtests. The relevant XCB Qt audit passed 18/18 cases; Ruff, compileall, 14/14
-Action pin scanning, and diff checks also passed. Exact-head cross-OS CI remains pending,
-and the real `outputs/` tree was not modified. The full candidate record is
+Action pin scanning, and diff checks also passed. Draft PR #46 opened from
+initial head `a56e308f2c82b3d346801905fd3bba686ab7da4b`: simulator and both paper
+gates passed, while the three desktop jobs exposed macOS temp-path aliases,
+Windows rename-buffer/path/pin behavior, and missing Ubuntu XCB runtime
+dependencies. Those findings are repaired locally with dedicated platform
+coverage, but the repaired exact head is not accepted until all six checks and
+all three desktop jobs rerun green. Initial run IDs are CI `29776388384` and
+desktop `29776388375`. The real `outputs/` tree was not modified. The full candidate record is
 `.agents/baselines/SAFE-01-cleanup.md`.
 
 ### 2026-07-20 B1 baseline and worktree cleanup

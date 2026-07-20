@@ -557,7 +557,7 @@ class ApplicationFoundationTests(unittest.TestCase):
                     json.dumps({"scenario_id": scenario.id, "status": status}),
                     encoding="utf-8",
                 )
-            records = ArtifactRepository(tmp).list_runs()
+            records = ArtifactRepository(Path(tmp).resolve()).list_runs()
             progress = course_progress_payload(path, Translator("ko"), records)
 
         self.assertEqual(progress["done"], 1)
@@ -577,7 +577,7 @@ class ApplicationFoundationTests(unittest.TestCase):
             ready_for_compare = course_progress_payload(
                 path,
                 Translator("en"),
-                ArtifactRepository(tmp).list_runs(),
+                ArtifactRepository(Path(tmp).resolve()).list_runs(),
             )
             batch_run = Path(tmp).resolve() / "all-compare"
             batch_run.mkdir()
@@ -588,7 +588,7 @@ class ApplicationFoundationTests(unittest.TestCase):
             complete = course_progress_payload(
                 path,
                 Translator("en"),
-                ArtifactRepository(tmp).list_runs(),
+                ArtifactRepository(Path(tmp).resolve()).list_runs(),
             )
 
         self.assertEqual(ready_for_compare["done"], len(path))
@@ -797,7 +797,7 @@ class ApplicationFoundationTests(unittest.TestCase):
         )
 
         with tempfile.TemporaryDirectory() as tmp:
-            late_error_output = Path(tmp) / "batch"
+            late_error_output = Path(tmp).resolve() / "batch"
             late_error_output.mkdir()
             late_error_manifest = write_manifest(
                 late_error_output,
@@ -1485,7 +1485,7 @@ class ApplicationFoundationTests(unittest.TestCase):
             )
             (run / "config.yaml").write_text("mass: 1.0\n", encoding="utf-8")
             (run / "replay.npz").write_bytes(b"not a valid npz recording")
-            repository = ArtifactRepository(tmp)
+            repository = ArtifactRepository(Path(tmp).resolve())
             quick = repository.list_runs()[0]
             checked = repository.list_runs(validate_replays=True)[0]
 
@@ -1526,7 +1526,7 @@ class ApplicationFoundationTests(unittest.TestCase):
             )
             (run / "config.yaml").write_text("sim_time: 2.0\n", encoding="utf-8")
             (run / "report.html").write_text("<html></html>", encoding="utf-8")
-            record = ArtifactRepository(tmp).list_runs(validate_replays=True)[0]
+            record = ArtifactRepository(Path(tmp).resolve()).list_runs(validate_replays=True)[0]
             result = result_payloads(
                 (record,),
                 Translator("ko"),
@@ -1553,10 +1553,10 @@ class ApplicationFoundationTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            record = ArtifactRepository(tmp).list_runs(validate_replays=True)[0]
+            record = ArtifactRepository(Path(tmp).resolve()).list_runs(validate_replays=True)[0]
             result = result_payloads((record,), Translator("en"))[0]
             with self.assertRaisesRegex(ValueError, "Legacy saved runs"):
-                ArtifactRepository(tmp).delete_path(
+                ArtifactRepository(Path(tmp).resolve()).delete_path(
                     run,
                     confirm_path=run.name,
                     cleanup_token=record.cleanup_token,
@@ -1588,7 +1588,7 @@ class ApplicationFoundationTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (run / "report.html").write_text("<html></html>", encoding="utf-8")
-            record = ArtifactRepository(tmp).list_runs(validate_replays=True)[0]
+            record = ArtifactRepository(Path(tmp).resolve()).list_runs(validate_replays=True)[0]
             result = result_payloads(
                 (record,), Translator("ko"), ScenarioCatalog.default()
             )[0]
@@ -1633,7 +1633,7 @@ class ApplicationFoundationTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            repository = ArtifactRepository(tmp)
+            repository = ArtifactRepository(Path(tmp).resolve())
             record = repository.list_runs()[0]
 
             with self.assertRaisesRegex(ValueError, "exact folder name"):
@@ -1892,7 +1892,7 @@ class ApplicationFoundationTests(unittest.TestCase):
                 json.dumps({"scenario_id": "batch.all", "status": "running"}),
                 encoding="utf-8",
             )
-            repository = ArtifactRepository(tmp)
+            repository = ArtifactRepository(Path(tmp).resolve())
             record = repository.list_runs()[0]
             with self.assertRaisesRegex(ValueError, "Running or unknown-status"):
                 repository.delete_path(
@@ -1922,7 +1922,7 @@ class ApplicationFoundationTests(unittest.TestCase):
                     encoding="utf-8",
                 )
             started = time.perf_counter()
-            records = ArtifactRepository(tmp).list_runs(validate_replays=True)
+            records = ArtifactRepository(Path(tmp).resolve()).list_runs(validate_replays=True)
             results = result_payloads(records, Translator("en"), ScenarioCatalog.default())
             elapsed = time.perf_counter() - started
 

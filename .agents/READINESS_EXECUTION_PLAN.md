@@ -62,11 +62,15 @@
   마지막에 발행한다. desktop all-batch handoff는 token-bound one-shot claim이다.
   독립 로컬 fault-injection·writer-boundary 검토는 source-swap, post-commit,
   rollback, root-identity, output-claim, terminal-publication 범위에서 알려진 P0/P1
-  없이 scoped GO를 냈다. frozen-tree Python 3.12는 528 passed, 6 skipped,
-  1,109 subtests와 coverage 80.92%를, Python 3.10 cleanup/CLI는 109 passed,
-  5 platform-only skipped, 20 subtests를 통과했다. 관련 XCB Qt 감사 18/18,
-  Ruff, compileall, Action pin 14/14, diff check도 통과했다. 실제
-  `outputs/`는 건드리지 않았으며 exact-head 원격 3-OS/CI는 아직 대기 중이다.
+  없이 scoped GO를 냈다. frozen-tree Python 3.12는 528 passed, 7 skipped,
+  1,109 subtests와 coverage 80.91%를, Python 3.10 cleanup/CLI는 109 passed,
+  6 platform-only skipped, 20 subtests를 통과했다. 관련 XCB Qt 감사 18/18,
+  Ruff, compileall, Action pin 14/14, diff check도 통과했다. Draft PR #46의
+  초기 head `a56e308f2c82b3d346801905fd3bba686ab7da4b`는 simulator와 두 paper
+  gate가 통과했지만 desktop 3-OS에서 macOS temp alias, Windows rename
+  buffer/path/pin, Ubuntu XCB runtime 결함을 드러냈다. 로컬 보수와 플랫폼
+  회귀 검증은 끝났지만, 새 exact head의 6/6 및 desktop 3/3 전에는 SAFE-01을
+  PASS로 보지 않는다. 실제 `outputs/`는 건드리지 않았다.
 - Desktop의 완료 판정은 manifest의 `status == "completed"`를 중심으로 세며,
   catalog/menu가 약속한 plot, control, prediction, observation 증거와 불일치한다.
 - 감사 시점 로컬 checkout은 원격 main보다 오래되었고 패키징과 폰트 변경이 섞여
