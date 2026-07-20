@@ -21,7 +21,7 @@ class WorkflowActionPinTests(unittest.TestCase):
         self.assertEqual(len(references), 12)
         self.assertEqual(CHECKER.unpinned_references(references), [])
 
-    def test_mutable_refs_fail_while_local_and_docker_actions_are_ignored(self) -> None:
+    def test_mutable_refs_and_docker_tags_fail_while_immutable_refs_pass(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "fixture.yml"
             path.write_text(
@@ -30,14 +30,18 @@ class WorkflowActionPinTests(unittest.TestCase):
   - uses: owner/action@34e114876b0b11c390a56381ad16ebd13914f8d5
   - uses: ./.github/actions/local
   - uses: docker://alpine:3.20
+  - uses: docker://alpine@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
 """,
                 encoding="utf-8",
             )
             references = CHECKER.external_action_references([path])
-            self.assertEqual(len(references), 2)
+            self.assertEqual(len(references), 4)
             self.assertEqual(
                 CHECKER.unpinned_references(references),
-                [(path, 2, "actions/checkout@v4")],
+                [
+                    (path, 2, "actions/checkout@v4"),
+                    (path, 5, "docker://alpine:3.20"),
+                ],
             )
 
 

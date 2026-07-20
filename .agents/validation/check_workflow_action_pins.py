@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW_ROOT = ROOT / ".github" / "workflows"
 USES_RE = re.compile(r"\buses:\s*([^\s#]+)")
 FULL_SHA_RE = re.compile(r"[0-9a-f]{40}")
+DOCKER_DIGEST_RE = re.compile(r"docker://[^@\s]+@sha256:[0-9a-f]{64}")
 
 
 def workflow_files(workflow_root: Path = WORKFLOW_ROOT) -> list[Path]:
@@ -19,7 +20,7 @@ def workflow_files(workflow_root: Path = WORKFLOW_ROOT) -> list[Path]:
 
 
 def external_action_references(paths: list[Path]) -> list[tuple[Path, int, str]]:
-    """Return external action references, excluding local and Docker actions."""
+    """Return external action references, excluding repository-local actions."""
 
     references: list[tuple[Path, int, str]] = []
     for path in paths:
@@ -28,7 +29,7 @@ def external_action_references(paths: list[Path]) -> list[tuple[Path, int, str]]
             if match is None:
                 continue
             reference = match.group(1)
-            if reference.startswith(("./", "docker://")):
+            if reference.startswith("./"):
                 continue
             references.append((path, line_number, reference))
     return references
@@ -37,10 +38,14 @@ def external_action_references(paths: list[Path]) -> list[tuple[Path, int, str]]
 def unpinned_references(
     references: list[tuple[Path, int, str]],
 ) -> list[tuple[Path, int, str]]:
-    """Return references whose revision is not a full lowercase commit SHA."""
+    """Return references without a full commit SHA or Docker image digest."""
 
     unpinned: list[tuple[Path, int, str]] = []
     for path, line_number, reference in references:
+        if reference.startswith("docker://"):
+            if DOCKER_DIGEST_RE.fullmatch(reference) is None:
+                unpinned.append((path, line_number, reference))
+            continue
         revision = reference.rsplit("@", 1)[-1] if "@" in reference else ""
         if FULL_SHA_RE.fullmatch(revision) is None:
             unpinned.append((path, line_number, reference))

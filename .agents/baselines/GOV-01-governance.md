@@ -72,10 +72,11 @@ Additional candidate controls:
 - all four checkout steps set `persist-credentials: false`;
 - Tectonic is pinned to release `0.16.9`;
 - Dependabot checks GitHub Actions weekly without grouping or auto-merge;
-- `.agents/validation/check_workflow_action_pins.py` rejects non-SHA external
-  `uses:` references and is called by CI;
-- tests prove the current 12-reference inventory passes and a mutable tag
-  fixture fails.
+- `.agents/validation/check_workflow_action_pins.py` requires full commit SHAs
+  for repository Actions and `sha256` digests for Docker Actions, and is called
+  by CI;
+- tests prove the current 12-reference inventory passes while mutable Action
+  tags and mutable Docker image tags fail.
 
 The audited Linux Tectonic asset is
 `tectonic-0.16.9-x86_64-unknown-linux-gnu.tar.gz`, size 21,568,986 bytes,
