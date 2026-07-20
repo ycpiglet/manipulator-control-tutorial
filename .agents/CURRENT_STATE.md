@@ -9,6 +9,10 @@ The authoritative current audit is
 starting release, cleanup, completion-progress, packaging, README, or
 repository-structure work.
 
+The authoritative implementation order, validation gates, rollback rules, and
+cross-session handoff are in `.agents/READINESS_EXECUTION_PLAN.md`. Do not start
+from the historical sections below or from the stale dirty checkout.
+
 Current release decision:
 
 - supervised Linux classroom/demo: Conditional GO;
@@ -18,12 +22,17 @@ Current release decision:
 
 Immediate order of work:
 
-1. merge and verify the newcomer documentation pass in draft PR #35;
-2. fix unsafe `mclab clean` target selection;
-3. unify desktop course completion with the declared learner-evidence rules;
-4. establish a clean release-candidate baseline from current `origin/main`;
-5. complete distribution licensing, supply-chain, packaged E2E, signing, and
-   real-platform/human validation.
+1. add and verify the readiness execution plan in draft PR #35;
+2. obtain human review, merge PR #35, and record its exact main SHA;
+3. create a clean branch from that main and fix unsafe `mclab clean` target
+   selection without touching real learner outputs;
+4. in a separate rebased PR, unify course completion with the declared
+   learner-evidence rules;
+5. follow gates G1 through G5 in the execution plan for governance, clean RC,
+   distribution, real-platform/human validation, signing, and publication.
+
+Current exact next action: finish PR #35 checks and human review. Do not run
+`mclab clean` or implement audit P0 changes on this documentation branch.
 
 ### 2026-07-20 Newcomer documentation and repository IA
 
@@ -32,6 +41,11 @@ first commit preserves the enterprise readiness audit; its documentation pass
 rewrites `README.md` and `README.en.md` with one shared information
 architecture, adds `docs/README.md`, and makes the integrated Qt app the
 explicit primary entry point in every Lab guide.
+
+The same PR now carries the durable readiness execution plan and an active
+work-order pointer in `AGENTS.md`, so later sessions can recover the exact
+dependency order, gates, and rollback policy without reconstructing this
+conversation.
 
 Repository-structure decision:
 
