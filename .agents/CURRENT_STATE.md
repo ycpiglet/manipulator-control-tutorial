@@ -22,22 +22,40 @@ Current release decision:
 
 Immediate order of work:
 
-1. merge the GOV-01A policy baseline (B1 is already declared);
-2. enable and verify the main ruleset, vulnerability alerts, Dependabot
-   security updates, and private vulnerability reporting as GOV-01B;
-3. pin every third-party GitHub Action to a reviewed full commit SHA and verify
+1. pin every third-party GitHub Action to a reviewed full commit SHA and verify
    green replacement runs as GOV-01C;
-4. fix unsafe `mclab clean` target selection without touching real learner
+2. fix unsafe `mclab clean` target selection without touching real learner
    outputs;
-5. add the canonical completion contract, then connect every learner surface
+3. add the canonical completion contract, then connect every learner surface
    in a separate rebased PR;
-6. declare B2 and follow gates G2 through G5 for distribution,
+4. declare B2 and follow gates G2 through G5 for distribution,
    real-platform/human validation, signing, and publication.
 
-Current exact next action: complete GOV-01A from a clean worktree based on
-`main@f04cca1`, then apply and verify GOV-01B settings. GOV-01 and B2 remain
-incomplete until Actions are pinned under GOV-01C. Do not run `mclab clean`
-before SAFE-01 passes.
+Current exact next action: validate and merge the GOV-01C candidate based on
+`main@9f4169f`, then enable and verify repository Action SHA enforcement.
+GOV-01 and B2 remain incomplete until that post-merge setting reads true. Do
+not run `mclab clean` before SAFE-01 passes.
+
+### 2026-07-20 GOV-01A/B complete; GOV-01C in validation
+
+PR #39 merged the policy baseline as
+`9f4169f60efb32d6b6d49b9f06d985d8de9c6f70` after 6/6 exact-head checks.
+Before merge, Private Vulnerability Reporting was enabled and re-read as true.
+
+Ruleset `Protect main (GOV-01B)` ID `19209773` is active for `main`. It blocks
+deletion and force-push, requires a PR, conversation resolution, an up-to-date
+branch, and six exact GitHub Actions checks. Admin bypass is PR-only. GitHub
+API rechecks also show vulnerability alerts, Dependabot security updates,
+private reporting, secret scanning, and push protection enabled. The single
+direct-collaborator exception keeps required approvals at zero and is recorded
+as an exception, not independent human approval.
+
+GOV-01C implementation commit `5de6581` pins 12 Action uses to five reviewed
+full SHAs, disables checkout credential persistence, pins Tectonic 0.16.9,
+adds weekly GitHub Actions Dependabot updates, and adds a regression checker.
+Exact-head replacement CI, merge, and post-merge `sha_pinning_required=true`
+remain pending. Detailed evidence is in
+`.agents/baselines/GOV-01-governance.md`.
 
 ### 2026-07-20 B1 baseline and worktree cleanup
 
