@@ -18,12 +18,31 @@ Current release decision:
 
 Immediate order of work:
 
-1. improve the Korean/English README and newcomer information architecture;
+1. merge and verify the newcomer documentation pass in draft PR #35;
 2. fix unsafe `mclab clean` target selection;
 3. unify desktop course completion with the declared learner-evidence rules;
 4. establish a clean release-candidate baseline from current `origin/main`;
 5. complete distribution licensing, supply-chain, packaged E2E, signing, and
    real-platform/human validation.
+
+### 2026-07-20 Newcomer documentation and repository IA
+
+Draft PR #35 was created from a clean `origin/main@44b1937` worktree. Its
+first commit preserves the enterprise readiness audit; its documentation pass
+rewrites `README.md` and `README.en.md` with one shared information
+architecture, adds `docs/README.md`, and makes the integrated Qt app the
+explicit primary entry point in every Lab guide.
+
+Repository-structure decision:
+
+- keep `src/`, `configs/`, `models/`, `tests/`, `third_party/`,
+  `paper/`, `jose/`, and `.agents/` in place for now;
+- treat the current clutter as presentation and transition debt, not a reason
+  for a wholesale architecture move;
+- later consolidate root `run_lab*.cmd` and `run_batch*.cmd` launchers
+  behind compatibility shims in a dedicated PR;
+- do not move config/model or publication paths merely for aesthetics because
+  they are embedded in reproducibility records, tests, CI, and LaTeX tooling.
 
 The sections below are retained as historical manuscript and implementation
 context. If they conflict with the 2026-07-20 audit, the audit takes
