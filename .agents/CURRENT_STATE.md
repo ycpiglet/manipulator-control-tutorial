@@ -22,21 +22,50 @@ Current release decision:
 
 Immediate order of work:
 
-1. add and verify the readiness execution plan in draft PR #35;
-2. obtain human review, merge PR #35, and record its exact main SHA;
-3. create a clean branch from that main and fix unsafe `mclab clean` target
-   selection without touching real learner outputs;
-4. in a separate rebased PR, unify course completion with the declared
-   learner-evidence rules;
-5. follow gates G1 through G5 in the execution plan for governance, clean RC,
-   distribution, real-platform/human validation, signing, and publication.
+1. merge the GOV-01A policy baseline (B1 is already declared);
+2. enable and verify the main ruleset, vulnerability alerts, Dependabot
+   security updates, and private vulnerability reporting as GOV-01B;
+3. pin every third-party GitHub Action to a reviewed full commit SHA and verify
+   green replacement runs as GOV-01C;
+4. fix unsafe `mclab clean` target selection without touching real learner
+   outputs;
+5. add the canonical completion contract, then connect every learner surface
+   in a separate rebased PR;
+6. declare B2 and follow gates G2 through G5 for distribution,
+   real-platform/human validation, signing, and publication.
 
-Current exact next action: finish PR #35 checks and human review. Do not run
-`mclab clean` or implement audit P0 changes on this documentation branch.
+Current exact next action: complete GOV-01A from a clean worktree based on
+`main@f04cca1`, then apply and verify GOV-01B settings. GOV-01 and B2 remain
+incomplete until Actions are pinned under GOV-01C. Do not run `mclab clean`
+before SAFE-01 passes.
+
+### 2026-07-20 B1 baseline and worktree cleanup
+
+PR #35 was rebased after PR #36 advanced main, passed all six checks again,
+and merged as `f04cca16848316e227df18fe129229b515ae01c7`. The merge tree is
+identical to the reviewed PR head. The exact controlled-item fingerprints and
+G0 evidence are recorded in `.agents/baselines/B1-newcomer-baseline.md`.
+
+The stale root checkout contained two package-size changes. They were copied
+byte-for-byte onto current main, verified, and preserved remotely in draft PR
+#37 before the local copies were restored. The root worktree is now clean,
+checked out at `main`, and equal to `origin/main`. PR #37 remains a WIP and is
+not approved for merge. Its six exact-head checks and three packaged
+self-test/doctor runs now pass; the remaining decision needs a structural
+exclusion test and same-workflow package-size baseline deltas.
+
+The separately recovered static-font WIP is preserved in draft PR #38 as two
+commits: an exact recovery baseline and a current-main integration/test
+adjustment. Local regeneration produced all six pinned hashes and the full
+suite passed 444 tests. Same-workflow three-OS evidence records a 24.5–24.6 MB
+one-folder increase and all builds remain below the 400 MiB development gate.
+It remains unapproved pending real Windows Korean glyph inspection, packaged
+font-hash/OFL checks, registration-failure handling, and licensing/install
+scope decisions.
 
 ### 2026-07-20 Newcomer documentation and repository IA
 
-Draft PR #35 was created from a clean `origin/main@44b1937` worktree. Its
+PR #35 was created from a clean `origin/main@44b1937` worktree. Its
 first commit preserves the enterprise readiness audit; its documentation pass
 rewrites `README.md` and `README.en.md` with one shared information
 architecture, adds `docs/README.md`, and makes the integrated Qt app the
