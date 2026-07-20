@@ -1,6 +1,33 @@
 # Current State
 
-Updated: 2026-07-19 KST
+Updated: 2026-07-20 KST
+
+## Active Product and Release Handoff
+
+The authoritative current audit is
+`.agents/reviews/20260720_enterprise_readiness_audit.md`. Read it before
+starting release, cleanup, completion-progress, packaging, README, or
+repository-structure work.
+
+Current release decision:
+
+- supervised Linux classroom/demo: Conditional GO;
+- limited technical preview: Conditional GO;
+- general public beta: NO-GO;
+- signed multi-platform production: NO-GO.
+
+Immediate order of work:
+
+1. improve the Korean/English README and newcomer information architecture;
+2. fix unsafe `mclab clean` target selection;
+3. unify desktop course completion with the declared learner-evidence rules;
+4. establish a clean release-candidate baseline from current `origin/main`;
+5. complete distribution licensing, supply-chain, packaged E2E, signing, and
+   real-platform/human validation.
+
+The sections below are retained as historical manuscript and implementation
+context. If they conflict with the 2026-07-20 audit, the audit takes
+precedence.
 
 ## Current Objective
 
