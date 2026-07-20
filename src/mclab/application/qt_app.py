@@ -12,6 +12,7 @@ from mclab.application.adapters import replay_adapter_from_manifest
 from mclab.application.artifacts import ReplayArchive, legacy_replay_reason
 from mclab.application.catalog import ScenarioCatalog, ScenarioDefinition
 from mclab.application.error_messages import localized_error, self_test_qt_errors
+from mclab.application.fonts import FONT_ROOT, application_font_files
 from mclab.application.i18n import TRANSLATIONS, Translator, normalize_language
 from mclab.application.launcher import create_scenario_adapter
 from mclab.application.platform import PlatformServices
@@ -48,7 +49,6 @@ from mclab.application.saved_runs import resolve_saved_run_launch
 from mclab.application.session import SessionState, SimulationSession
 from mclab.application.single_instance import acquire_instance_lock, start_activation_server
 from mclab.application.qt_smoke import schedule_smoke_action
-from mclab.config import PROJECT_ROOT
 
 
 SHUTDOWN_WAIT_MS = 30_000
@@ -722,16 +722,15 @@ def run_app(
                 )
             )
 
-    font_root = PROJECT_ROOT / "third_party" / "fonts" / "noto"
-    configure_font_environment(font_root)
+    configure_font_environment(FONT_ROOT)
     QGuiApplication.setOrganizationName("MCLab")
     QGuiApplication.setApplicationName("MCLab")
     instance_lock = acquire_instance_lock(language)
     if instance_lock is None:
         return 6
     app = QGuiApplication.instance() or QGuiApplication(sys.argv[:1])
-    QFontDatabase.addApplicationFont(str(font_root / "NotoSansKR[wght].ttf"))
-    QFontDatabase.addApplicationFont(str(font_root / "NotoSansMono[wdth,wght].ttf"))
+    for font_file in application_font_files():
+        QFontDatabase.addApplicationFont(str(font_file))
     app_font = QFont("Noto Sans KR", 11)
     app_font.setWeight(QFont.Weight.DemiBold)
     app.setFont(app_font)
