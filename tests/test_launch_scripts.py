@@ -7,6 +7,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class LaunchScriptTests(unittest.TestCase):
+    def test_production_bundle_excludes_audit_only_qt_modules(self) -> None:
+        spec = (ROOT / "packaging" / "mclab.spec").read_text(encoding="utf-8")
+
+        self.assertIn('"PySide6.QtTest"', spec)
+        self.assertIn('"PySide6.QtWidgets"', spec)
+
     def test_top_level_menu_launcher_exists(self) -> None:
         text = (ROOT / "run_mclab.cmd").read_text(encoding="utf-8")
         self.assertIn("scripts\\bootstrap_and_run.py", text)

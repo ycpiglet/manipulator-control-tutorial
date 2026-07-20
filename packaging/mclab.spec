@@ -46,6 +46,12 @@ a = Analysis(
         "PySide6.QtWebEngineWidgets",
         "PySide6.QtCharts",
         "PySide6.Qt3DCore",
+        # qt_smoke imports QtTest only inside audit actions. Production uses
+        # QGuiApplication and Qt Quick Basic controls, so bundling QtTest and
+        # its QtWidgets dependency wastes roughly 15 MB without adding runtime
+        # functionality. Source-based UI audits still have both modules.
+        "PySide6.QtTest",
+        "PySide6.QtWidgets",
         "matplotlib.backends.backend_qt5agg",
         "matplotlib.backends.backend_tkagg",
     ],
