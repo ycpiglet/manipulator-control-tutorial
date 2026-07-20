@@ -22,27 +22,24 @@ Current release decision:
 
 Immediate order of work:
 
-1. finish independent review and exact-head remote validation of the SAFE-01
-   cleanup candidate without touching real learner outputs;
-2. merge SAFE-01 only after all required checks pass, revalidate merged main,
-   record the merge evidence, and only then declare SAFE-01 PASS;
-3. after PASS, inspect a real-root dry-run with the owner without automatically
-   applying it;
-4. add DOC-01 README/command/link contract gates, then add the canonical
-   completion contract and connect every learner surface in separate PRs;
-5. declare B2 and follow gates G2 through G5 for distribution,
+1. preserve the completed SAFE-01 exact-head and post-merge evidence without
+   touching real learner outputs;
+2. add DOC-01 README/command/link/repository-map contract gates and perform the
+   KR/EN newcomer truth review in a separate clean worktree;
+3. add the canonical completion contract and connect every learner surface in
+   separate PRs;
+4. declare B2 only after GOV-01, SAFE-01, DOC-01, and COMP-01/02 all pass, then
+   follow gates G2 through G5 for distribution,
    real-platform/human validation, signing, and publication.
 
-Current exact next action: complete the SAFE-01 review on the clean candidate
-based on `main@41be887f21bfb476507d94a089f98c0ef72453c8`, assign an exact commit,
-and run the six required exact-head checks including the three-OS desktop
-matrix. GOV-01 is complete;
-SAFE-01 and B2 are not. Do not run `mclab clean` before SAFE-01 passes
-post-merge verification. After PASS, do not apply a plan to the real outputs
-root until the owner has reviewed that exact dry-run and separately authorized
-apply.
+Current exact next action: start DOC-01 from
+`main@0fb77a026206f4b25360ace36d70d265a93a9366`. GOV-01 and SAFE-01 are
+complete; DOC-01, COMP-01/02, and B2 are not. A real-root cleanup dry-run is now
+permitted only as a separate owner-reviewed activity and is deliberately not a
+DOC-01 prerequisite. Do not apply any plan to the real outputs root until the
+owner has reviewed that exact dry-run and separately authorized apply.
 
-### 2026-07-21 GOV-01 complete; SAFE-01 local scoped review GO
+### 2026-07-21 GOV-01 and SAFE-01 complete; DOC-01 next
 
 PR #39 merged the policy baseline as
 `9f4169f60efb32d6b6d49b9f06d985d8de9c6f70` after 6/6 exact-head checks.
@@ -62,14 +59,14 @@ merged as `41be887f21bfb476507d94a089f98c0ef72453c8`. Post-merge CI
 `29749432294`, the three-OS desktop run `29749432322`, and Dependabot
 activation run `29749436873` passed. Repository Action SHA enforcement was
 enabled and read back as `sha_pinning_required=true`; GOV-01 verified 12/12
-workflow Action references at that merge, while the SAFE-01 candidate currently
-verifies 14/14 after adding one pinned setup step. Some pinned Action releases still declare
+workflow Action references at that merge, while merged main now verifies 14/14
+after SAFE-01 added one pinned setup step. Some pinned Action releases still declare
 Node 20 internally and are currently run through GitHub's Node 24
 compatibility path; replacing them with reviewed newer releases remains a
 SUP-01 residual. Detailed evidence is in
 `.agents/baselines/GOV-01-governance.md`.
 
-The SAFE-01 branch now implements strict configured-root and manifest
+The merged SAFE-01 implementation provides strict configured-root and manifest
 selection, UTC retention, default dry-run, exact `--apply PLAN_ID --yes`
 authorization, recoverable quarantine receipts/list/restore, move rollback and
 interruption recovery, exact typed Qt confirmation, lexical root/ancestor
@@ -87,21 +84,24 @@ Python 3.12 validation passed 528 tests with 7 platform skips and 1,109
 subtests; coverage is 80.92% overall and 89% for `output_cleanup.py`. Python
 3.10 cleanup/CLI validation passed 109 tests with 6 platform-only skips and 20
 subtests. The relevant XCB Qt audit passed 18/18 cases; Ruff, compileall, 14/14
-Action pin scanning, and diff checks also passed. Draft PR #46 opened from
+Action pin scanning, and diff checks also passed. PR #46 opened from
 initial head `a56e308f2c82b3d346801905fd3bba686ab7da4b`: simulator and both paper
 gates passed, while the three desktop jobs exposed macOS temp-path aliases,
 Windows rename-buffer/path/pin behavior, and missing Ubuntu XCB runtime
-dependencies. Those findings are repaired locally with dedicated platform
-coverage. Second head `7e9fcf701121069be924b220510ab7a107099c0b`
-passed all three CI jobs and the full Ubuntu desktop job, including 18/18 XCB;
-macOS and Windows each failed exactly one foundation test. The remaining
-macOS Qt temp path now resolves canonically, and result selection now accepts a
-physical parent short/long alias without treating a differently named junction
-child as the listed run. Those final local repairs still require a new exact
-head with all six checks and all three desktop jobs green. Run IDs are initial
-CI `29776388384`, initial desktop `29776388375`, second CI `29778026648`, and
-second desktop `29778026653`. The real `outputs/` tree was not modified. The full candidate record is
-`.agents/baselines/SAFE-01-cleanup.md`.
+dependencies. Second head `7e9fcf701121069be924b220510ab7a107099c0b`
+passed CI 3/3 and the full Ubuntu desktop job, then isolated one remaining
+macOS fixture alias and one Windows junction-selection expectation. Final head
+`cca1655dbc4b1d133959df6ad1b77fc3e9e499e9` repaired those two gaps. An
+independent final review found no P0/P1/P2 in the focused changes. Exact-head
+CI `29778661706` and desktop matrix `29778661771` passed 6/6, including
+Ubuntu 18/18 XCB and all three packaged diagnostics. PR #46 merged through
+ruleset `19209773` as
+`0fb77a026206f4b25360ace36d70d265a93a9366`; post-merge CI `29779125693`
+and desktop matrix `29779125685` passed all six checks again. SAFE-01 is PASS.
+The failed run IDs `29776388375` and `29778026653` remain preserved as
+diagnosis history rather than acceptance evidence. The real `outputs/` tree
+was not modified, no real-root dry-run or apply ran, and the temporary Panda
+link was removed. The full record is `.agents/baselines/SAFE-01-cleanup.md`.
 
 ### 2026-07-20 B1 baseline and worktree cleanup
 

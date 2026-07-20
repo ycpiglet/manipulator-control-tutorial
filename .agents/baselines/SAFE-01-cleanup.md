@@ -1,17 +1,19 @@
 # SAFE-01 — Recoverable Output Cleanup Evidence
 
 - Updated: 2026-07-21 KST
-- Status: **LOCAL AUTOMATION PASS AND INDEPENDENT SCOPED GO; REMOTE EXACT-HEAD GATES PENDING**
+- Status: **PASS — EXACT-HEAD AND POST-MERGE 6/6 VERIFIED**
 - Candidate branch: `agent/safe-output-cleanup`
 - Exact base: `41be887f21bfb476507d94a089f98c0ef72453c8`
-- Exact candidate commit: **not assigned yet**
+- Exact candidate commit: `cca1655dbc4b1d133959df6ad1b77fc3e9e499e9`
+- Pull request: [#46](https://github.com/ycpiglet/manipulator-control-tutorial/pull/46)
+- Merge commit: `0fb77a026206f4b25360ace36d70d265a93a9366`
 - Real learner outputs modified: **no**
 
-This record describes an unmerged candidate. It does not authorize
-`mclab clean`, does not close SAFE-01, and is not B2 evidence. The candidate
-must receive an exact commit, independent review, all six required exact-head
-checks, the remote three-OS desktop matrix, merge through the active ruleset,
-and post-merge verification before SAFE-01 can pass.
+This record closes SAFE-01 after independent review, all six required checks
+on one exact candidate head, merge through the active ruleset, and all six
+checks again on the merge commit. SAFE-01 PASS permits only a separately
+reviewed default dry-run against the real configured output root. It does not
+authorize quarantine apply, permanent purge, B2, or any release promotion.
 
 ## Objective and Scope
 
@@ -117,7 +119,7 @@ semantics, dependency locking, release retention policy, or B2 status.
 | Python 3.12 full regression | PASS | 528 passed, 7 skipped, 1,109 subtests |
 | Python 3.12 coverage | PASS | 80.92% total, 89% `src/mclab/output_cleanup.py`; floor 80% |
 | Python 3.10 cleanup/CLI regression | PASS | 109 passed, 6 platform-only skipped, 20 subtests |
-| Relevant Qt audit | PASS | 18/18 XCB cases; final exact-head remote rerun required |
+| Relevant Qt audit | PASS | 18/18 XCB cases locally, at exact PR head, and after merge |
 | Ruff | PASS | 0 findings across required scopes |
 | Workflow Action pin scan | PASS | 14/14 immutable references |
 | Compileall | PASS | no compile errors |
@@ -132,10 +134,10 @@ completed evidence run, including one-shot explicit-output consumption across
 restart. The relevant runs reported no unnamed, undersized, or clipped
 controls.
 
-The local UI screenshots and JSON were generated under a temporary XCB display;
-they are not durable release evidence. The SAFE-01 PR uses isolated Xvfb/X11
-for the Linux dialog/window audit and must regenerate durable exact-head CI
-evidence. Other desktop self-tests and builds remain offscreen.
+The local UI screenshots and JSON were generated under a temporary XCB display
+and are not durable release evidence. Durable isolated Xvfb/X11 audit evidence
+was regenerated successfully at the exact PR head and again after merge.
+Other desktop self-tests and builds remain offscreen.
 
 ## Threat and Fault Coverage
 
@@ -156,10 +158,10 @@ manifests.
 Metadata reads are size-bounded and use descriptor/handle identity checks plus
 no-link rooted access. Windows reparse attributes and volume/file IDs are
 checked separately. The contract is designed for local filesystems on the
-supported desktop platforms. Local Linux evidence exists; APFS and NTFS remain
-pending until the exact-head macOS and Windows gates pass. Power-loss durability
-beyond the underlying filesystem guarantee and network filesystems such as
-NFS/SMB are outside SAFE-01; process-interruption recovery is in scope.
+supported desktop platforms. GitHub-hosted macOS and Windows runners passed the
+exact-head and post-merge platform gates. Power-loss durability beyond the
+underlying filesystem guarantee and network filesystems such as NFS/SMB are
+outside SAFE-01; process-interruption recovery is in scope.
 
 ## Known Residuals
 
@@ -171,16 +173,16 @@ NFS/SMB are outside SAFE-01; process-interruption recovery is in scope.
   isolated `unsafe` row. This is fail-closed and does not delete data, but a
   future operability change should expose the corrupt ID without hiding valid
   history.
-- Windows volume/file IDs, root/ancestor rename blocking, exact handle-based
-  rename, and the repaired Xvfb package set still require the next remote
-  exact-head platform gates. Local Linux evidence cannot close those contracts.
+- GitHub-hosted APFS/NTFS-compatible runner evidence closes the automated
+  platform gate, but it is not a claim about ReFS, network filesystems, every
+  mount configuration, or arbitrary hostile same-privilege races.
 - A same-privilege hostile process is not required to honor the cooperative
   operation lock. The implementation pins and rechecks identities and records
   indeterminate post-commit moves conservatively, but it cannot make the final
   instruction boundary immune to arbitrary concurrent namespace mutation.
-- The Windows target is the intended desktop NTFS contract, pending the remote
-  exact-head Windows gate. ReFS-specific file-ID
-  semantics are not claimed by SAFE-01 and require a separate platform contract.
+- The Windows target is the intended desktop NTFS contract. ReFS-specific
+  file-ID semantics are not claimed by SAFE-01 and require a separate platform
+  contract.
 - Failed, cancelled, or abruptly terminated desktop batch processes can leave a
   partial directory and internal active marker. Strict cleanup rejects that
   directory even if the parent later records a terminal UI status; a future
@@ -193,25 +195,28 @@ NFS/SMB are outside SAFE-01; process-interruption recovery is in scope.
 
 | Requirement | Status |
 |---|---|
-| Strict planner/quarantine implementation | local PASS |
-| Mixed and fault-injection regression suite | local PASS |
-| Independent final code review | scoped local GOs; no known P0/P1 in cleanup mutation, output claim, writer publication, batch handoff, or terminal callback paths |
-| Exact candidate commit and PR | Draft PR #46 open; initial head `a56e308f2c82b3d346801905fd3bba686ab7da4b`, second head `7e9fcf701121069be924b220510ab7a107099c0b`; final two-test repair pending commit/push |
-| Required exact-head checks | second head 4/6 PASS: simulator, paper gates, paper build, Ubuntu desktop; macOS and Windows desktop failed one foundation test each |
-| Remote Windows/Ubuntu/macOS validation | second matrix 1/3: Ubuntu full job and 18/18 XCB PASS; macOS had one unresolved temp alias and Windows rejected one junction-alias expectation; both locally repaired, final exact-head rerun required |
-| Ruleset merge and post-merge main verification | pending |
-| Real-root dry-run owner review | pending; only after post-merge verification and SAFE-01 PASS |
+| Strict planner/quarantine implementation | PASS |
+| Mixed and fault-injection regression suite | PASS |
+| Independent final code review | scoped GO; no known P0/P1/P2 in the final two repairs and no known P0/P1 in the wider reviewed cleanup/writer paths |
+| Exact candidate commit and PR | PASS: PR #46 exact head `cca1655dbc4b1d133959df6ad1b77fc3e9e499e9` |
+| Required exact-head checks | PASS: 6/6 in CI `29778661706` and desktop `29778661771` |
+| Remote Windows/Ubuntu/macOS validation | PASS: 3/3, including Ubuntu 18/18 XCB and packaged diagnostics |
+| Ruleset merge and post-merge main verification | PASS: merge `0fb77a026206f4b25360ace36d70d265a93a9366`; CI `29779125693`, desktop `29779125685`, 6/6 |
+| Real-root dry-run owner review | not run; permitted only as a separate default dry-run and not required to close SAFE-01 |
 | Real-root quarantine apply | prohibited until owner reviews the same dry-run plan |
 
 Initial PR run evidence is GitHub Actions CI `29776388384` and desktop matrix
 `29776388375`. Second-head evidence is CI `29778026648` and desktop matrix
-`29778026653`. Preserve the failed-run IDs as diagnosis history; acceptance
-must use the final repaired exact-head run IDs.
+`29778026653`. Final accepted candidate evidence is CI `29778661706` and
+desktop matrix `29778661771`. Post-merge evidence is CI `29779125693` and
+desktop matrix `29779125685`. The earlier failed-run IDs are preserved as
+diagnosis history and are not counted toward acceptance.
 
 ## Rollback and Recovery
 
-- Before merge, a failed gate keeps the historical command disabled and the
-  candidate is repaired or abandoned; no learner output migration is needed.
+- A regression in the merged implementation is reverted only through the
+  protected-branch PR path after preserving receipt compatibility; no learner
+  output migration was performed for SAFE-01.
 - After any real quarantine, a code regression is restored first with the
   receipt-aware SAFE exact commit. Only after identity/hash verification is the
   regression reverted through a PR; `.mclab-trash` receipts are never deleted.
@@ -223,7 +228,7 @@ must use the final repaired exact-head run IDs.
 
 ## Exact Next Action
 
-Commit and push the final macOS temp-path and Windows junction-selection repair
-to Draft PR #46, record the new exact head, and require all six exact-head
-checks plus the three-OS desktop matrix.
-Do not run `mclab clean` against the real outputs root during that validation.
+Begin DOC-01 in a separate clean worktree: turn the KR/EN newcomer README,
+public commands, local links/anchors, and repository map into PR-blocking
+contracts before COMP-01/COMP-02. Keep any real-root cleanup dry-run separate,
+local, and owner-reviewed; do not apply it without a second explicit approval.
