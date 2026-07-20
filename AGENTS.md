@@ -13,11 +13,12 @@
 
 실행 순서와 승격 gate는 `READINESS_EXECUTION_PLAN.md`가 정합니다. 오래되거나 dirty한
 checkout에서 release/readiness 작업을 이어가지 말고 최신 `origin/main`에서 clean
-worktree를 만듭니다. PR #35, B1, GOV-01은 완료됐으며 현재 SAFE-01을 수행합니다.
-SAFE-01이 병합된 뒤 post-merge required check를 재검증하고 PASS를
-기록하기 전에는 `mclab clean`을 실행하지 않습니다. PASS 뒤에도 실제 learner
-outputs에는 owner가 같은 dry-run plan을 검토하기 전 `--apply`를 실행하지
-않습니다.
+worktree를 만듭니다. PR #35, B1, GOV-01, SAFE-01은 완료됐으며 현재 DOC-01을
+수행합니다. DOC-01은 KR/EN newcomer README와 공개 명령·링크·repository map의
+자동 계약을 먼저 추가하며 대규모 디렉터리 이동을 포함하지 않습니다. 구조 변경은
+B2 뒤 IA-00 결정과 별도 compatibility PR로 처리합니다. SAFE-01 PASS 뒤에도 실제
+learner outputs의 dry-run은 owner가 참여하는 별도 작업으로만 수행하고, owner가 같은
+plan을 검토한 뒤 다시 명시적으로 승인하기 전에는 `--apply`를 실행하지 않습니다.
 
 ## Project Intent
 
