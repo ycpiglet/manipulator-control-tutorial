@@ -13,7 +13,7 @@
 
 실행 순서와 승격 gate는 `READINESS_EXECUTION_PLAN.md`가 정합니다. 오래되거나 dirty한
 checkout에서 release/readiness 작업을 이어가지 말고 최신 `origin/main`에서 clean
-worktree를 만듭니다. PR #35가 병합되기 전에는 감사 P0 구현을 시작하지 않으며,
+worktree를 만듭니다. PR #35와 B1 기준선은 완료됐으며 현재 Wave 1을 수행합니다.
 SAFE-01이 통과하기 전에는 `mclab clean`을 실행하지 않습니다.
 
 ## Project Intent

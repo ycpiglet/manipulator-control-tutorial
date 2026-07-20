@@ -1,0 +1,3 @@
+# Ownership routing only. Do not require code-owner approval until a second
+# independent reviewer is available.
+* @ycpiglet

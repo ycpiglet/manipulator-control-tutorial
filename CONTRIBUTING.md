@@ -16,13 +16,35 @@ Thanks for your interest in improving the MuJoCo Manipulator Control Lab.
 
 ## Before opening a pull request
 
+Start from a clean worktree based on the current remote main. Keep unrelated
+work in a separate branch/worktree instead of stashing, resetting, or folding
+it into the same PR.
+
 ```bash
-python -m pytest -q                 # full suite must pass
-python -m ruff check .              # lint
-python .agents/validation/validate_robotics_foundations.py  # if you touched paper/ or validation
+git fetch --prune origin
+git status --short --branch
+git worktree add -b agent/my-focused-change ../mclab-my-focused-change origin/main
 ```
 
-CI enforces the same gates plus a coverage floor (>= 80 %).
+Keep one risk and one rollback unit per PR. Do not include generated
+`outputs/`, build products, caches, or unrelated local experiments. Cleanup or
+retention tests must use temporary fixtures, never real learner outputs.
+
+Run the core checks that are practical in a local source checkout:
+
+```bash
+python -m ruff check src tests scripts .agents/validation
+python -m pytest -q --cov=mclab --cov-report=term --cov-fail-under=80
+python .agents/validation/check_citation_coverage.py
+python .agents/validation/validate_robotics_foundations.py
+```
+
+Paper checks are required even when a change is expected not to affect the
+paper because the current required workflow always runs them. CI additionally
+builds `paper/main.tex` with Tectonic and builds and smoke-tests unsigned
+development bundles on Windows, Ubuntu, and macOS. Those platform jobs are not
+implied by the local commands above. Report every check that was not run as
+`not run`; exact-head GitHub CI remains the cross-platform merge evidence.
 
 ## Licensing of contributions
 
@@ -31,4 +53,7 @@ educational content under CC BY 4.0 (see `LICENSE` and `LICENSE-docs`).
 
 ## Questions
 
-Open an issue, or start a discussion on the repository.
+For ordinary questions, setup problems, or lesson confusion, read the
+[support policy](.github/SUPPORT.md) and open an issue. Report suspected
+security or data-loss vulnerabilities privately according to the
+[security policy](.github/SECURITY.md).
