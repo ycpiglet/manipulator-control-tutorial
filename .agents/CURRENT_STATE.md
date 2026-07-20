@@ -32,12 +32,13 @@ Immediate order of work:
    follow gates G2 through G5 for distribution,
    real-platform/human validation, signing, and publication.
 
-Current exact next action: start DOC-01 from
-`main@0fb77a026206f4b25360ace36d70d265a93a9366`. GOV-01 and SAFE-01 are
-complete; DOC-01, COMP-01/02, and B2 are not. A real-root cleanup dry-run is now
-permitted only as a separate owner-reviewed activity and is deliberately not a
-DOC-01 prerequisite. Do not apply any plan to the real outputs root until the
-owner has reviewed that exact dry-run and separately authorized apply.
+Current exact next action: fetch and start DOC-01 from the latest clean
+`origin/main` that contains SAFE-01 merge
+`0fb77a026206f4b25360ace36d70d265a93a9366`. GOV-01 and SAFE-01 are complete;
+DOC-01, COMP-01/02, and B2 are not. A real-root cleanup dry-run is now permitted
+only as a separate owner-reviewed activity and is deliberately not a DOC-01
+prerequisite. Do not apply any plan to the real outputs root until the owner
+has reviewed that exact dry-run and separately authorized apply.
 
 ### 2026-07-21 GOV-01 and SAFE-01 complete; DOC-01 next
 

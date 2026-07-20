@@ -2,7 +2,8 @@
 
 - 상태: **Execution baseline v5 — GOV-01·SAFE-01 통과, DOC-01 착수 준비**
 - 작성일: 2026-07-21 KST
-- 현재 기준 원격: `origin/main@0fb77a026206f4b25360ace36d70d265a93a9366`
+- SAFE-01 구현 기준선: `0fb77a026206f4b25360ace36d70d265a93a9366`
+- 작업 시작 기준: 위 commit을 포함하는 fetch된 최신 `origin/main`
 - 계획 원본 브랜치: `agent/readme-project-handoff` (병합 완료)
 - 기준 PR: [#35](https://github.com/ycpiglet/manipulator-control-tutorial/pull/35) (병합 완료)
 - 선행 감사: [`reviews/20260720_enterprise_readiness_audit.md`](reviews/20260720_enterprise_readiness_audit.md)
@@ -563,9 +564,10 @@ Single next action:
 
 ## 13. 지금 수행할 정확한 다음 작업
 
-1. `main@0fb77a0` 기반 별도 clean worktree에서 DOC-01을 시작한다. 신규 방문자가
-   60초 안에 프로젝트 목적, 지원 범위, 최소 실행 경로, 결과물, 안전 경계를 이해하도록
-   KR/EN README를 재검증하고 공개 명령·링크·anchor·repository map을 자동 gate로 만든다.
+1. SAFE-01 merge `0fb77a0`를 포함하는 최신 `origin/main` 기반 별도 clean
+   worktree에서 DOC-01을 시작한다. 신규 방문자가 60초 안에 프로젝트 목적, 지원 범위,
+   최소 실행 경로, 결과물, 안전 경계를 이해하도록 KR/EN README를 재검증하고 공개
+   명령·링크·anchor·repository map을 자동 gate로 만든다.
 2. DOC-01은 대규모 디렉터리 이동을 포함하지 않는다. 먼저 현재 경로를 사실대로
    문서화하고 no-move inventory와 compatibility 경계를 기록한다. 구조 이동은 B2 뒤
    IA-00 ADR과 별도 shim PR에서 결정한다.

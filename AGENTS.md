@@ -568,7 +568,8 @@ The full project is course-demo ready when:
 
 ## Next Best Task
 
-Follow the active readiness work order: finish SAFE-01, add the DOC-01 README and
-documentation contract gates, then implement and connect COMP-01/02 before declaring
-B2. Resume optional Lab03/Lab04 lesson expansion only after those safety gates. Do not
-add web, ROS2, or Isaac Sim scope before the local MuJoCo labs are stable.
+Follow the active readiness work order: SAFE-01 is complete, so start the DOC-01
+README and documentation contract gates from the latest clean `origin/main`, then
+implement and connect COMP-01/02 before declaring B2. Resume optional Lab03/Lab04
+lesson expansion only after those gates. Do not add web, ROS2, or Isaac Sim scope
+before the local MuJoCo labs are stable.
