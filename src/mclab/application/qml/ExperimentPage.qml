@@ -39,11 +39,17 @@ Item {
         if (savedResultsButton.visible && savedResultsButton.enabled)
             savedResultsButton.forceActiveFocus()
     }
+    function focusCompletedPrimary() {
+        if (startNextButton.visible && startNextButton.enabled)
+            startNextButton.forceActiveFocus()
+        else
+            focusSavedResults()
+    }
     function focusAfterEvidenceSaved() {
         controls.showEvidenceComplete()
         if (backend.sessionState === "completed" && !backend.hasReplay
                 && !page.needsEvidenceRetry)
-            focusSavedResults()
+            focusCompletedPrimary()
         else
             transport.focusPrimary()
     }
@@ -81,7 +87,7 @@ Item {
                     if (page.needsEvidenceRetry)
                         Qt.callLater(transport.focusPrimary)
                     else if (!backend.hasReplay)
-                        Qt.callLater(page.focusSavedResults)
+                        Qt.callLater(page.focusCompletedPrimary)
                 }
             }
         }
@@ -183,11 +189,25 @@ Item {
                 elide: Text.ElideRight
             }
             MButton {
+                id: startNextButton
+                objectName: "startNextButton"
+                visible: backend.sessionState === "completed" && !backend.hasReplay
+                         && !page.needsEvidenceRetry && backend.nextScenarioId !== ""
+                enabled: !backend.hasActiveExperiment
+                minimumButtonWidth: compact ? 82 : 124
+                text: backend.localizedText(backend.language, "path.start_next")
+                accessibleDescription: enabled
+                                       ? backend.localizedText(backend.language, "results.start_help")
+                                       : backend.localizedText(backend.language, "active.saving_title")
+                onClicked: backend.startScenario(backend.nextScenarioId)
+            }
+            MButton {
                 id: savedResultsButton
                 objectName: "savedResultsButton"
                 minimumButtonWidth: compact ? 82 : 124
                 secondary: !(backend.sessionState === "completed"
-                             && !backend.hasReplay && !page.needsEvidenceRetry)
+                             && !backend.hasReplay && !page.needsEvidenceRetry
+                             && backend.nextScenarioId === "")
                 text: backend.sessionState === "completed" && !backend.hasReplay
                       ? backend.localizedText(backend.language, "experiment.saved_results")
                       : "← " + backend.localizedText(backend.language, "nav.home")

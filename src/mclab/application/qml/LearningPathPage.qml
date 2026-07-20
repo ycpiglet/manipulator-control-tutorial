@@ -144,6 +144,7 @@ Item {
                                         + (course.next.lab || "").toUpperCase() + " · "
                                         + (course.next.title || ""))
                         accessibleDescription: startsNewWork && backend.hasActiveExperiment
+                                               && backend.sessionState === "completed"
                                                ? backend.localizedText(backend.language, "active.launch_blocked")
                                                : course.complete ? backend.localizedText(backend.language, "path.complete_detail")
                                                : batch.running ? page.batchStatusText()
@@ -153,7 +154,8 @@ Item {
                                                  : (course.next.purpose || "")
                         enabled: (course.complete || (batch.running && !batch.cancelling)
                                   || (!batch.running && course.next.ready !== false))
-                                 && (!startsNewWork || !backend.hasActiveExperiment)
+                                 && (!startsNewWork || !backend.hasActiveExperiment
+                                     || backend.sessionState !== "completed")
                         onClicked: course.complete ? backend.navigate("results")
                                    : batch.cancelling ? undefined
                                    : batch.running ? backend.cancelBatch()

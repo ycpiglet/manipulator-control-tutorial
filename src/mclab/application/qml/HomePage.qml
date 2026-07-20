@@ -135,8 +135,10 @@ Item {
                               : backend.localizedText(backend.language, "home.next")
                         enabled: (course.complete || (batch.running && !batch.cancelling)
                                   || (!batch.running && course.next.ready !== false))
-                                 && (!startsNewWork || !backend.hasActiveExperiment)
+                                 && (!startsNewWork || !backend.hasActiveExperiment
+                                     || backend.sessionState !== "completed")
                         accessibleDescription: startsNewWork && backend.hasActiveExperiment
+                                               && backend.sessionState === "completed"
                                                ? backend.localizedText(backend.language, "active.launch_blocked")
                                                : enabled
                                                  ? (course.complete ? backend.localizedText(backend.language, "path.complete_detail")

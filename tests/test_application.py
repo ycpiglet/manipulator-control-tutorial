@@ -68,6 +68,8 @@ from mclab.doctor import DoctorCheck, doctor_report_json  # noqa: E402
 from mclab.application.qt_app import SHUTDOWN_WAIT_MS  # noqa: E402
 from mclab.application.qt_batch import create_batch_controller  # noqa: E402
 from mclab.application.qt_lifecycle import (  # noqa: E402
+    consume_pending_next_scenario,
+    defer_start_for_parked_session,
     has_active_experiment,
     pause_before_navigation,
     reject_running_batch,
@@ -1221,6 +1223,23 @@ class ApplicationFoundationTests(unittest.TestCase):
             with self.subTest(path=path.name):
                 self.assertLessEqual(len(path.read_text(encoding="utf-8").splitlines()), 800)
 
+    def test_windows_font_setup_happens_before_gui_creation(self) -> None:
+        # DirectWrite renders the bundled variable Noto fonts with wrong
+        # glyph indices on Windows; the FreeType engine must be the default
+        # and both font environment defaults must land before the
+        # QGuiApplication exists.
+        fonts_source = (ROOT / "src/mclab/application/qt_fonts.py").read_text(encoding="utf-8")
+        self.assertIn('os.environ.setdefault("QT_QPA_FONTDIR", str(font_root))', fonts_source)
+        self.assertIn(
+            'os.environ.setdefault("QT_QPA_PLATFORM", "windows:fontengine=freetype")',
+            fonts_source,
+        )
+        source = (ROOT / "src/mclab/application/qt_app.py").read_text(encoding="utf-8")
+        self.assertLess(
+            source.index("configure_font_environment(font_root)"),
+            source.index("QGuiApplication.instance()"),
+        )
+
     def test_desktop_app_rejects_a_second_process_before_creating_a_gui(self) -> None:
         source = (ROOT / "src/mclab/application/qt_app.py").read_text(encoding="utf-8")
         self.assertLess(
@@ -1922,6 +1941,15 @@ class SessionTests(unittest.TestCase):
         qt_backend = (ROOT / "src/mclab/application/qt_app.py").read_text(encoding="utf-8")
         self.assertEqual(qt_backend.count("reject_running_experiment(self)"), 3)
         self.assertEqual(qt_backend.count("reject_running_batch(self)"), 3)
+        self.assertIn("if defer_start_for_parked_session(self, scenario):", qt_backend)
+        self.assertIn("if consume_pending_next_scenario(self):", qt_backend)
+        experiment_page = (ROOT / "src/mclab/application/qml/ExperimentPage.qml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('objectName: "startNextButton"', experiment_page)
+        self.assertIn(
+            "onClicked: backend.startScenario(backend.nextScenarioId)", experiment_page
+        )
         detail, action = localized_error(
             "ko",
             "An experiment is already running.",
@@ -2000,6 +2028,51 @@ class SessionTests(unittest.TestCase):
         self.assertTrue(has_active_experiment(owner))
         owner.worker.busy = False
         self.assertFalse(has_active_experiment(owner))
+
+    def test_parked_session_defers_and_starts_the_requested_next_scenario(self) -> None:
+        class Worker:
+            busy = True
+
+            def isRunning(self) -> bool:  # noqa: N802
+                return True
+
+        class Owner:
+            def __init__(self, session: SimulationSession) -> None:
+                self.session = session
+                self.worker = Worker()
+                self._shutting_down = False
+                self._pending_next_scenario: str | None = None
+                self.started: list[str] = []
+
+            @staticmethod
+            def _submit_session(command: object) -> None:
+                command()  # type: ignore[operator]
+
+            def _on_worker_finished(self) -> None:
+                consume_pending_next_scenario(self)
+
+            def startScenario(self, scenario: str) -> None:  # noqa: N802
+                self.started.append(scenario)
+
+        session = SimulationSession(FakeAdapter(), duration=1.0)
+        session.start()
+        session.pause()
+        owner = Owner(session)
+
+        # A parked (paused) session defers the launch instead of rejecting it.
+        self.assertTrue(defer_start_for_parked_session(owner, "lab01.interactive-pull"))
+        self.assertEqual(session.state, SessionState.COMPLETED)
+        self.assertEqual(owner.started, [])
+
+        # Once the worker goes idle, the deferred scenario starts exactly once.
+        owner.worker.busy = False
+        self.assertTrue(consume_pending_next_scenario(owner))
+        self.assertEqual(owner.started, ["lab01.interactive-pull"])
+        self.assertIsNone(owner._pending_next_scenario)
+        self.assertFalse(consume_pending_next_scenario(owner))
+
+        # An idle worker means nothing is parked: no deferral takes place.
+        self.assertFalse(defer_start_for_parked_session(owner, "lab02.default"))
 
     def test_renderer_cleanup_finishes_gpu_work_before_close(self) -> None:
         class Context:

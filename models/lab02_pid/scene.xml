@@ -8,8 +8,6 @@
     <geom name="floor" type="plane" size="2.2 1.2 0.05" pos="0 0 -0.2" rgba="0.72 0.76 0.82 1"/>
     <geom name="rail" type="capsule" fromto="-1.5 0 -0.08 1.5 0 -0.08" size="0.018" rgba="0.35 0.4 0.48 1" contype="0" conaffinity="0"/>
     <geom name="controller_anchor" type="box" pos="-1.45 0 0.08" size="0.04 0.18 0.28" rgba="0.35 0.4 0.48 1"/>
-    <geom name="damper_body" type="box" pos="-0.96 0 -0.13" size="0.25 0.035 0.035" rgba="0.31 0.36 0.44 1" contype="0" conaffinity="0"/>
-    <geom name="damper_rod" type="capsule" fromto="-0.72 0 -0.13 -0.45 0 -0.13" size="0.012" rgba="0.82 0.84 0.88 1" contype="0" conaffinity="0"/>
     <geom name="zero_tick" type="box" pos="0 0 -0.105" size="0.012 0.07 0.055" rgba="0.55 0.63 0.72 1" contype="0" conaffinity="0"/>
     <geom name="tick_minus_1" type="box" pos="-1 0 -0.105" size="0.006 0.04 0.03" rgba="0.45 0.5 0.58 1" contype="0" conaffinity="0"/>
     <geom name="tick_plus_1" type="box" pos="1 0 -0.105" size="0.006 0.04 0.03" rgba="0.45 0.5 0.58 1" contype="0" conaffinity="0"/>

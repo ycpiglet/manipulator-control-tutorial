@@ -18,6 +18,14 @@ class ReadinessIssue:
     scenario_id: str = ""
 
 
+def qt_available() -> tuple[bool, str]:
+    try:
+        import PySide6  # noqa: F401
+    except Exception as exc:
+        return False, f"{exc.__class__.__name__}: {exc}"
+    return True, "PySide6 is importable."
+
+
 def scenario_readiness(
     scenario: ScenarioDefinition,
     *,
