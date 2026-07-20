@@ -1236,7 +1236,7 @@ class ApplicationFoundationTests(unittest.TestCase):
         )
         source = (ROOT / "src/mclab/application/qt_app.py").read_text(encoding="utf-8")
         self.assertLess(
-            source.index("configure_font_environment(font_root)"),
+            source.index("configure_font_environment(FONT_ROOT)"),
             source.index("QGuiApplication.instance()"),
         )
 
