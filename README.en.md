@@ -1,41 +1,106 @@
 # MCLab
 
-[한국어 README](README.md)
+[한국어](README.md)
 
-MCLab is a local MuJoCo robot-control learning app. It carries one predict–manipulate–review workflow from a 1D mass–spring–damper plant through PID, 2DOF Jacobian/DLS, and the Franka Panda virtual wall.
+[![CI](https://github.com/ycpiglet/manipulator-control-tutorial/actions/workflows/ci.yml/badge.svg)](https://github.com/ycpiglet/manipulator-control-tutorial/actions/workflows/ci.yml)
+[![Desktop smoke](https://github.com/ycpiglet/manipulator-control-tutorial/actions/workflows/desktop.yml/badge.svg)](https://github.com/ycpiglet/manipulator-control-tutorial/actions/workflows/desktop.yml)
+[![Code: Apache-2.0](https://img.shields.io/badge/code-Apache--2.0-blue.svg)](LICENSE)
+[![Educational content: CC BY 4.0](https://img.shields.io/badge/educational_content-CC_BY_4.0-green.svg)](LICENSE-docs)
+
+**A local learning lab where you change robot-control parameters and explain the resulting MuJoCo dynamics with saved evidence.**
+
+MCLab connects a 1D mass–spring–damper system, PID, 2DOF Jacobian/DLS, and
+7DOF Franka Panda Cartesian control and virtual-wall contact through one
+learning workflow.
+
+> [!IMPORTANT]
+> This is a **v0.1.0 project under active development** and is currently
+> source-first. Desktop bundles produced by CI are unsigned development
+> artifacts. MCLab is an educational simulator, not an industrial digital
+> twin or a safety controller for physical robots.
 
 ![MCLab English home](docs/assets/mclab-home-en.png)
 
-## Start in three steps
+## What this repository does
+
+- **One learning loop:** predict → run → change one variable → observe → save
+  → replay and compare.
+- **Safe failure-driven experiments:** reproduce excessive stiffness, low
+  damping, PID windup, Jacobian singularities, and virtual-wall contact without
+  risking hardware.
+- **Evidence, not screenshots alone:** keep the resolved YAML, CSV/NPZ logs,
+  replay, report, worksheet, and selected plots in one run directory.
+- **Local-first operation:** use the desktop app or headless runs without an
+  account or cloud service.
+
+MCLab is for students learning robot control, educators who need reproducible
+classroom demonstrations, and developers who want to inspect the dynamic
+response of control algorithms.
+
+## What you learn
+
+| Lab | System | Core ideas | Representative evidence |
+|---|---|---|---|
+| Lab01 | 1D mass–spring–damper | stiffness, damping, energy, settling | position, velocity, force, energy |
+| Lab02 | 1D PID control | P/I/D, saturation, anti-windup, delay, noise | tracking error, overshoot, control effort |
+| Lab03 | Planar 2DOF arm | trajectories, FK/IK, Jacobians, singularities, DLS | joint/hand error, torque, condition number |
+| Lab04 | 7DOF Franka Panda | hold, Cartesian reach, impedance, virtual wall | hand error, contact force, penetration |
+
+The recommended app path has 12 steps. Explore also contains more than 70
+guided baseline, comparison, and failure scenarios.
+
+## Quick start
+
+Python 3.10 or newer is required. The first launch creates a dedicated
+`.venv`, installs dependencies, and downloads the verified Panda asset, so it
+needs an internet connection and may take a few minutes.
+
+```bash
+git clone https://github.com/ycpiglet/manipulator-control-tutorial.git
+cd manipulator-control-tutorial
+```
+
+| Platform | Recommended launcher |
+|---|---|
+| Windows | Double-click `START_HERE.cmd` |
+| Ubuntu/Linux | `./start_here.sh` |
+| macOS | `./START_HERE.command` |
+
+After the app opens:
 
 1. Select **Start next experiment**.
-2. Select **Push**, change **Damping**, then select **Play**.
-3. Select **Replay recording**, then explain the priority plot.
+2. Select **Push**, change **Damping**, and select **Play**.
+3. When the run finishes, open **View saved results** and **Replay recording**.
+4. Use `report.html` to explain the position response and priority plot.
 
-| OS | Source launcher |
-|---|---|
-| Windows 11 x64 | Double-click `START_HERE.cmd` |
-| Ubuntu 24.04 x64 | `./start_here.sh` |
-| macOS arm64/Intel | `./START_HERE.command` |
-
-The first launch prepares a virtual environment and the licensed Panda assets.
-
-## Manual installation
-
-Python 3.10+ is required.
+For manual setup:
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate             # Windows: .venv\Scripts\activate
-python -m pip install -e '.[app]'
+```
+
+Windows PowerShell:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+Linux/macOS:
+
+```bash
+source .venv/bin/activate
+```
+
+Then, on every platform:
+
+```bash
+python -m pip install -e ".[app]"
 python -m mclab assets install
 python -m mclab doctor
 python -m mclab app
 ```
 
-MCLab runs one desktop process per user. Launching it again restores and raises the existing window instead of creating a second GPU process.
-
-Headless use does not require Qt:
+You can also create a first headless report and plot without Qt:
 
 ```bash
 python -m pip install -e .
@@ -44,83 +109,100 @@ python -m mclab run lab01 \
   --headless --plot --plots essential
 ```
 
-## App
+See the [installation guide](docs/installation.md) for setup and packaging
+details.
 
-The four top-level destinations are Home, Learning path, Explore, and Results. Explore combines text search with directly labeled Level and Mode filters, a live result count, and a keyboard-reachable reset when no experiment matches. Multi-word searches such as `lab04 wall` match every word in any order. The experiment screen keeps the goal stages, MuJoCo scene, at most five core controls, and Pause/Step/Reset/speed/timeline visible. Physics waits for the learner's prediction and then starts at 0.00 s, so thinking time cannot change the result.
+## Saved evidence
 
-On first launch, Home keeps **Start → Change → Replay** and **Start next experiment** together in the first 640×360 viewport. Skipping moves keyboard focus to the primary action, and **Show tour again** beside the Home title restores the guide. If setup is not ready, its cause and recovery action take priority over the tour.
+Each source run normally creates the following under `outputs/`. An explicit
+output-directory setting takes precedence:
 
-The first Lab01 opens paused at 0.00 s with keyboard focus on **Push**. Its default panel shows only Pull/Push and one highlighted **Damping** control, so the tour can be completed literally. This app-only prepared state does not pause the same YAML when it runs through CLI/headless physics.
+- `config.yaml`: the resolved configuration used for the calculation
+- `log.csv`, `states.npz`, and `summary.json`: signals and summary values
+- `replay.npz`: qpos/qvel/ctrl state recording
+- `manifest.json`: scenario, seed, runtime, model/license, and artifact hashes
+- `report.html` and `worksheet.md`: interpretation and review
+- `plots/*.png` when `--plot` is requested
+- learner events, snapshot, and tuned YAML for hands-on runs
 
-If the run ends before its evidence is complete, **Restart** becomes the only primary action. Enter restarts at 0.00 s and returns focus to prediction; **View saved results** becomes primary only after prediction, one control, and observation are saved.
+**Replay recording** displays the saved state without recomputing physics.
+**Run again with same settings** performs a new calculation with the same
+config and seed. The app does not delete saved runs automatically.
 
-Prediction examples match each experiment and put the observable first—Damping, P gain, tracking error, singularity, hand or joint target, or contact force—so the key quantity remains visible at 200% zoom.
+## Repository map
 
-Lab01/02 directly label the spring, damper, mass block, and equilibrium, alongside a bright floor, scale ticks, current circle, and target diamond. GPU safe mode keeps the same responsive teaching diagram instead of falling back to an empty scene.
+| Path | Purpose |
+|---|---|
+| `src/mclab/` | CLI, integrated desktop app, and shared simulation loop |
+| `src/mclab/controllers/` | readable PID, PD, task-space, and impedance laws |
+| `src/mclab/labs/` | Lab01–04 physics and control assembly |
+| `configs/` | reproducible YAML experiments and comparisons |
+| `models/`, `third_party/` | local MuJoCo scenes and licensed external assets |
+| `tests/` | unit, smoke, report, and desktop regression checks |
+| `docs/` | learner, educator, developer, installation, and support material |
+| `paper/`, `jose/`, `outreach/` | papers and outreach verified by the same experiments |
+| `.agents/` | project state, audits, validation gates, and session handoffs |
+| `outputs/` | generated evidence; Git tracks only `.gitkeep` |
 
-Lab03/04 safe mode also remains instructional: it draws a 1D tracking rail, numbered 2DOF arm and workspace, simplified Panda arm, and virtual-wall grid with the same current/target semantics.
+The core package is already separated by responsibility. Root
+`run_lab*.cmd` and `run_batch*.cmd` files are compatibility launchers for
+existing classroom workflows. New users should use one of the three
+`START_HERE` launchers or the integrated app.
 
-Leaving the experiment automatically pauses physics and recording. A persistent session bar on Home, Learning path, Explore, and Results lets the learner return to the experiment or end and save it explicitly.
-While that bar is visible, starting, replaying, rerunning, and deleting are disabled; reports and folders remain available for safe review.
+## Documentation
 
-Learning path presents one recommended next action and advances only after a successful saved run. When the app path is complete, its primary action changes to **Review results** instead of rerunning the final experiment.
+- Learners: [learner guide](docs/learner_guide.md), [Lab01](docs/lab01_mass_spring_damper.md),
+  [Lab02](docs/lab02_pid_control.md), [Lab03](docs/lab03_trajectory_planning.md),
+  [Lab04](docs/lab04_panda_manipulator.md)
+- Educators: [educator guide](docs/educator_guide.md)
+- Developers: [desktop architecture](docs/developer_guide.md),
+  [contribution guide](CONTRIBUTING.md)
+- Installation and support: [installation](docs/installation.md),
+  [troubleshooting](docs/troubleshooting.md)
+- Research and citation: [tutorial paper](paper/README.md),
+  [JOSE software paper](jose/paper.md)
+- Full index: [documentation map](docs/README.md)
 
-The last of 12 recommended steps runs all five comparison sets in a separate process. The app stays
-usable, and a comparison bar on Explore and Results shows the current topic with 1/5–5/5 progress
-and cancellation. Until it finishes, new experiments, recording playback, and reruns are disabled;
-existing reports, folders, and cleanup of unrelated saved runs remain available. The combined report
-and worksheet then appear in Results.
+## Development status
 
-The semantic visual system is consistent: current is cyan/solid/circle, target is violet/dashed/diamond, force is rose/arrow, and a wall or constraint is amber/patterned.
+Lab01–04, the CLI/app, logging, reports, replay, and automated tests are
+operational. General public beta and production distribution still require
+signing/notarization, complete third-party notices, and real OS/GPU, screen
+reader, and beginner-user validation. UI and artifact schemas may change
+during v0.1.
 
-Prediction examples follow the active physics context: damping, P gain, tracking, singularity, joint or hand targets, and virtual-wall contact force each receive a short Korean/English hypothesis instead of reusing the Lab01 oscillation example.
+> [!WARNING]
+> `mclab clean` currently has a known target-selection issue that can select
+> the wrong directories. Do not use it until P0-01 is fixed. Back up important
+> outputs and delete only individual runs through **Results → Manage**.
 
-Keyboard users can complete the core flow with Tab, Shift+Tab, Enter, Space, and arrow keys. Space pauses an experiment and Right Arrow steps once.
+See the
+[2026-07-20 readiness audit](.agents/reviews/20260720_enterprise_readiness_audit.md)
+for the evidence, decision, and ordered backlog.
 
-## Commands
-
-```text
-mclab app [--lang ko|en] [--scenario ID] [--safe-mode]
-mclab replay <run-dir>
-mclab doctor [--json]
-mclab assets install
-mclab run ...
-mclab batch ...
-mclab coverage
-mclab review
-mclab index --open
-```
-
-`mclab menu` aliases the new app. The existing `run --viewer` route remains available for compatibility; macOS viewer commands select `mjpython` automatically.
-
-## Reproducible evidence
-
-Every new CLI run automatically saves:
-
-- resolved YAML, 100 Hz CSV, and compressed numeric states;
-- a default 60 fps qpos/qvel/ctrl/semantic replay;
-- schema-v1 provenance with scenario, status, seed, runtime, model/license, and artifact hashes;
-- plots, a result-first HTML report, and worksheet;
-- learner events, final snapshot, and tuned YAML when applicable.
-
-Replay recording uses saved states without recomputing physics. Run again with same settings performs a new calculation. Run last tuning uses `learner_tuned_config.yaml` for a new calculation.
-
-Results presents a one-sentence outcome, three important values, and the recommended next action before the primary **View report** action. Advanced reruns, tuned settings, folder access, and permanent deletion stay under **Manage**. MCLab never deletes saved runs automatically; cleanup shows the size and exact folder first.
-
-Legacy outputs stay readable. Recording replay is disabled with a reason when the old run lacks complete MuJoCo state.
-
-## Development
+## Development and contributing
 
 ```bash
-python -m pip install -e '.[app,dev]'
+python -m pip install -e ".[app,dev]"
 python -m pytest -q
-python -m ruff check src tests scripts
+python -m ruff check src tests scripts .agents/validation
 QT_QPA_PLATFORM=offscreen python -m mclab app --self-test
-# after installing dev extras: python scripts/audit_report_ui.py --help
 ```
 
-See [installation](docs/installation.md), [learner guide](docs/learner_guide.md), [educator guide](docs/educator_guide.md), [architecture](docs/developer_guide.md), and [troubleshooting](docs/troubleshooting.md).
+Every new config needs a learning guide and a suggested next experiment. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for the complete rules and pull-request
+checklist.
 
-## License
+## Citation and licenses
 
-Project code is Apache-2.0. The MuJoCo Menagerie Panda model keeps its original license. Asset installation verifies the pinned archive SHA-256 before extracting the Panda folder and license.
+If you use MCLab in teaching or research, please cite it using
+[CITATION.cff](CITATION.cff).
+
+- Code: [Apache License 2.0](LICENSE)
+- Documentation and educational content: [CC BY 4.0](LICENSE-docs)
+- Noto fonts: [SIL Open Font License](third_party/fonts/noto/OFL.txt)
+- Franka Panda model: the original MuJoCo Menagerie license, preserved by the
+  [verified asset installer](src/mclab/application/assets.py)
+
+Other dependencies remain under their respective upstream licenses. A signed
+production bundle and consolidated third-party notice are not yet available.

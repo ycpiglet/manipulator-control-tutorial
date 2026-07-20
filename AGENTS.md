@@ -2,6 +2,20 @@
 
 이 문서는 `README.md`와 `SIMULATOR_DEVELOPMENT_SPEC.md`를 기준으로, 앞으로 이 저장소에서 코딩 에이전트가 어떤 순서와 기준으로 작업해야 하는지 정리한 운영 가이드입니다.
 
+## Active Work Order
+
+출시 준비, 감사 후속, cleanup, 완료 판정, packaging, README 또는 저장소 구조
+작업을 시작하기 전에 다음 문서를 순서대로 읽습니다.
+
+1. `.agents/CURRENT_STATE.md`
+2. `.agents/reviews/20260720_enterprise_readiness_audit.md`
+3. `.agents/READINESS_EXECUTION_PLAN.md`
+
+실행 순서와 승격 gate는 `READINESS_EXECUTION_PLAN.md`가 정합니다. 오래되거나 dirty한
+checkout에서 release/readiness 작업을 이어가지 말고 최신 `origin/main`에서 clean
+worktree를 만듭니다. PR #35가 병합되기 전에는 감사 P0 구현을 시작하지 않으며,
+SAFE-01이 통과하기 전에는 `mclab clean`을 실행하지 않습니다.
+
 ## Project Intent
 
 이 프로젝트는 산업용 로봇의 정밀 디지털 트윈이 아니라, MuJoCo 기반의 교육용 로봇 제어 실험실입니다. 모든 랩은 같은 물리 엔진, 같은 실행 방식, 같은 로깅/플로팅 파이프라인을 공유해야 합니다.

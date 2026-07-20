@@ -2,6 +2,10 @@
 
 This lab controls the same one-dimensional MuJoCo plant with a readable scalar PID controller.
 
+> **Recommended learner entry:** run `python -m mclab app` and use Learning
+> path or Explore. The `.cmd` and `run --viewer` instructions below are
+> advanced/compatibility paths that remain useful for prepared demonstrations.
+
 The main controlled variable is slider position. The controller changes force to make `position` follow `target_position`.
 
 Read the plots in this order:

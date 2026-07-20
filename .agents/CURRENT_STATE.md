@@ -1,6 +1,66 @@
 # Current State
 
-Updated: 2026-07-19 KST
+Updated: 2026-07-20 KST
+
+## Active Product and Release Handoff
+
+The authoritative current audit is
+`.agents/reviews/20260720_enterprise_readiness_audit.md`. Read it before
+starting release, cleanup, completion-progress, packaging, README, or
+repository-structure work.
+
+The authoritative implementation order, validation gates, rollback rules, and
+cross-session handoff are in `.agents/READINESS_EXECUTION_PLAN.md`. Do not start
+from the historical sections below or from the stale dirty checkout.
+
+Current release decision:
+
+- supervised Linux classroom/demo: Conditional GO;
+- limited technical preview: Conditional GO;
+- general public beta: NO-GO;
+- signed multi-platform production: NO-GO.
+
+Immediate order of work:
+
+1. add and verify the readiness execution plan in draft PR #35;
+2. obtain human review, merge PR #35, and record its exact main SHA;
+3. create a clean branch from that main and fix unsafe `mclab clean` target
+   selection without touching real learner outputs;
+4. in a separate rebased PR, unify course completion with the declared
+   learner-evidence rules;
+5. follow gates G1 through G5 in the execution plan for governance, clean RC,
+   distribution, real-platform/human validation, signing, and publication.
+
+Current exact next action: finish PR #35 checks and human review. Do not run
+`mclab clean` or implement audit P0 changes on this documentation branch.
+
+### 2026-07-20 Newcomer documentation and repository IA
+
+Draft PR #35 was created from a clean `origin/main@44b1937` worktree. Its
+first commit preserves the enterprise readiness audit; its documentation pass
+rewrites `README.md` and `README.en.md` with one shared information
+architecture, adds `docs/README.md`, and makes the integrated Qt app the
+explicit primary entry point in every Lab guide.
+
+The same PR now carries the durable readiness execution plan and an active
+work-order pointer in `AGENTS.md`, so later sessions can recover the exact
+dependency order, gates, and rollback policy without reconstructing this
+conversation.
+
+Repository-structure decision:
+
+- keep `src/`, `configs/`, `models/`, `tests/`, `third_party/`,
+  `paper/`, `jose/`, and `.agents/` in place for now;
+- treat the current clutter as presentation and transition debt, not a reason
+  for a wholesale architecture move;
+- later consolidate root `run_lab*.cmd` and `run_batch*.cmd` launchers
+  behind compatibility shims in a dedicated PR;
+- do not move config/model or publication paths merely for aesthetics because
+  they are embedded in reproducibility records, tests, CI, and LaTeX tooling.
+
+The sections below are retained as historical manuscript and implementation
+context. If they conflict with the 2026-07-20 audit, the audit takes
+precedence.
 
 ## Current Objective
 

@@ -117,8 +117,8 @@ Explore filtering stays presentation-only and operates on stable manifest fields
 expose canonical `difficultyId` plus `requiresEvidence`; QML must not infer level or hands-on mode
 from translated card text. Keep Search, Level, and Mode directly labeled, announce the live shown/total
 count, and present an explicit reset when zero scenarios match. The keyboard contract is Search →
-Level → Mode, while Reset returns focus to Search. Audit all 70, hands-on 9, Build + hands-on 2, and
-zero → reset 70 states in both languages and at 640×360. Search semantics are token-AND, not one
+Level → Mode, while Reset returns focus to Search. Audit all 72, hands-on 9, Build + hands-on 2, and
+zero → reset 72 states in both languages and at 640×360. Search semantics are token-AND, not one
 literal substring: trim and split whitespace, require every token in any order, and verify
 `lab04 wall` → 14 at both 100% and 200% scale. Keep the scenario list cached once in QML so result
 counting does not repeatedly serialize all Python payloads.

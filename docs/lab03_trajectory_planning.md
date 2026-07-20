@@ -2,6 +2,10 @@
 
 This lab bridges the 1D plants and the Panda manipulator with a planar two-link MuJoCo arm.
 
+> **Recommended learner entry:** run `python -m mclab app` and use Learning
+> path or Explore. The `.cmd` and `run --viewer` instructions below are
+> advanced/compatibility paths that remain useful for prepared demonstrations.
+
 The main controlled variables are:
 
 - shoulder and elbow joint angles in joint-space mode

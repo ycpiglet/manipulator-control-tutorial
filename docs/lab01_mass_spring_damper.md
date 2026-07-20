@@ -2,6 +2,10 @@
 
 This lab uses a MuJoCo slide joint as a one-dimensional mass-spring-damper plant.
 
+> **Recommended learner entry:** run `python -m mclab app` and use Learning
+> path or Explore. The `.cmd` and `run --viewer` instructions below are
+> advanced/compatibility paths that remain useful for prepared demonstrations.
+
 The main controlled input is the external force applied to the slider. Read the plots in this order:
 
 1. `position.png`: check oscillation, overshoot, and settling.

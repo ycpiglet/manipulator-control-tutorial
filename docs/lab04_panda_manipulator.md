@@ -2,6 +2,10 @@
 
 This lab uses the Franka Emika Panda model from MuJoCo Menagerie.
 
+> **Recommended learner entry:** run `python -m mclab app` and use Learning
+> path or Explore. The `.cmd` and `run --viewer` instructions below are
+> advanced/compatibility paths that remain useful for prepared demonstrations.
+
 The Menagerie Panda model is position-actuated. In this implementation:
 
 - `ctrl` is the desired joint position for the seven arm joints.
