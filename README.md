@@ -163,10 +163,47 @@ python -m mclab run lab01 \
 third-party 고지, 실제 OS/GPU·스크린리더·초보 사용자 검증은 남아 있습니다.
 UI와 artifact schema도 v0.1 기간에는 변경될 수 있습니다.
 
-> [!WARNING]
-> 현재 `mclab clean`에는 잘못된 폴더를 삭제 대상으로 선택할 수 있는 알려진
-> 문제가 있습니다. 수정 전에는 사용하지 말고, 필요한 결과를 백업한 뒤 앱의
-> **결과 → 관리**에서 개별 실행만 삭제하세요.
+> [!NOTE]
+> `mclab clean`은 기본적으로 읽기 전용 계획만 출력합니다. 설정된 MCLab output
+> root에서 `schema_version`이 JSON 정수 `1`이고 상태가 `completed`, `stopped`,
+> `error` 중 하나인 strict 종료 manifest만 대상으로 삼습니다. legacy·불완전·실행 중
+> 결과는 표시될 수 있지만 정리 대상이 아닙니다. 표시된 plan ID와 `--yes`를 함께
+> 제공해야 복구 보관소로 이동하며 영구 삭제하지 않습니다. 앱의 **결과 → 관리**도
+> 정확한 폴더명 입력과 변경 감지 뒤 같은 strict 기준과 보관소를 사용합니다.
+
+```bash
+python -m mclab clean --keep 20
+python -m mclab clean --keep 20 --apply PLAN_ID_FROM_DRY_RUN --yes
+python -m mclab clean --list-trash
+python -m mclab clean --restore RECEIPT_ID_FROM_LIST
+```
+
+`--output-dir`로 임의 폴더를 정리할 수 없습니다. 사용자 데이터 위치를 바꾸려면 먼저
+`MCLAB_DATA_DIR`를 설정하세요. 이 값은 데이터 상위 폴더이며 MCLab은 그 아래
+`outputs/`만 사용합니다. 위 placeholder는 바로 앞 명령이 표시한 실제 ID로 바꾸세요.
+`--list-trash`는 전체 receipt 이력과 현재 상태를 표시합니다. 그중 `restorable`로
+표시된 ID만 `--restore`에 사용할 수 있습니다. `busy`는 다른 cleanup 또는 restore가
+같은 output root에서 진행 중이라는 뜻이므로 그 작업이 끝난 뒤 목록을 새로 확인하세요.
+현재 설치형 GUI 번들은 cleanup/receipt용 콘솔과 receipt 복원 버튼을 제공하지
+않습니다. 따라서 목록 확인과 복원은 위 `python -m mclab` 명령을 사용할 수 있는
+소스 또는 가상환경에서만 지원됩니다. 패키지 GUI에서 격리한 실행을 복원할
+때는 소스/venv CLI가 **같은 패키지 데이터 상위 폴더**를 보도록 먼저 설정합니다.
+
+| 패키지 GUI를 실행한 OS | 소스/venv 터미널에서 먼저 실행 |
+|---|---|
+| Windows PowerShell | `$env:MCLAB_DATA_DIR = Join-Path $env:LOCALAPPDATA "MCLab"` |
+| macOS zsh | `export MCLAB_DATA_DIR="$HOME/Library/Application Support/MCLab"` |
+| Linux shell | `export MCLAB_DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/mclab"` |
+
+그런 다음 `python -m mclab clean --list-trash`로 목록을 새로 확인하고
+`python -m mclab clean --restore RECEIPT_ID_FROM_LIST`를 실행하세요. GUI를
+실행할 때 `MCLAB_DATA_DIR`를 직접 지정했다면 표의 기본값 대신 그와 같은 상위
+폴더를 사용해야 합니다. 이 설정을 생략하면 source checkout의 `outputs/`를 보게
+되어 패키지 GUI receipt가 목록에 나오지 않습니다. cleanup/restore의 지원·검증 범위는 로컬
+파일시스템입니다. NFS/SMB 같은 네트워크 파일시스템에서는 실행하지 말고, 필요한
+결과를 먼저 로컬 MCLab 데이터 위치로 옮기세요.
+복구 보관소는 디스크 공간을 계속 사용하며, SAFE-01은
+안전한 영구 purge를 의도적으로 제공하지 않습니다.
 
 판정과 우선순위는
 [2026-07-20 readiness audit](.agents/reviews/20260720_enterprise_readiness_audit.md)에

@@ -25,10 +25,67 @@ and one recommended next action. The Results QML keeps one shared management dia
 dialog per delegate, creates only 20 cards initially, and reveals the remaining records in blocks of
 20. Do not silently truncate repository records.
 
-Saved-run deletion must go through `ArtifactRepository.delete_path`. The selected path must resolve
-to a direct child of the configured outputs root, and the caller must repeat the exact resolved path
-as confirmation. The UI must keep cleanup behind **Manage**, show the permanent warning, refresh the
-collection immediately, and never perform automatic deletion.
+Saved-run cleanup must go through `ArtifactRepository.delete_path` and the shared
+`mclab.output_cleanup` boundary. Listing rejects symlinks, junctions, reparse points, special entries,
+and malformed saved-run metadata before presenting or sizing a record. The selected lexical path must
+be a physical direct child of the configured outputs root; the caller supplies the exact folder name
+and the identity token returned when the record was listed. A changed token, active/running record,
+preserve marker, root mismatch, or link fails closed.
+
+Bulk CLI cleanup and the Qt single-result action share one strict eligibility rule. The manifest must
+use JSON integer `schema_version: 1` (a boolean is not an integer for this contract), contain a
+non-empty scenario ID, a `completed`, `stopped`, or `error` status, aware start/finish times, resolved
+config mapping, and safe artifact paths. Presentation may still read a legacy `summary.json` so old
+results remain visible, but cleanup never falls back to it. Legacy, incomplete, malformed, and
+`running` results remain in place with a deterministic rejection reason.
+
+The UI keeps cleanup behind **Manage** and requires the learner to type the folder name. Successful
+cleanup uses same-filesystem, non-overwriting renames into `.mclab-trash/<receipt>/entries/`; it never
+calls `rmtree`. `mclab clean` is also dry-run by default, applies only an unchanged plan ID plus
+`--yes`, and supports receipt listing and restore. A failed multi-entry move or restore attempts a
+best-effort rollback; if that rollback also encounters I/O failure, the receipt records the split
+state so a later restore can converge without discarding either copy. Quarantine is recoverable but
+does not reclaim disk space; permanent purge is intentionally outside SAFE-01.
+
+Each operation first opens the configured root through a lexical, no-link component chain and keeps
+that root, the quarantine directory, the receipt, and `entries/` pinned for the transaction. POSIX
+uses root-relative descriptors; Windows holds the lexical ancestor handles and the root file ID. A
+root-scoped non-blocking operation lock serializes planning, quarantine, and restore across processes;
+receipt listing reports otherwise recoverable entries as `busy` while that lock is held. Stable root
+identity is deliberately separate from plan freshness, so permission-only changes do not orphan a
+receipt while child, metadata, or timestamp changes invalidate an old plan. Receipt reads and writes
+share a 2 MiB hard limit, and quarantine and restore preflight the worst-case future receipt before
+the first move. Rollback checks the recorded run identity before and after every reverse move.
+
+Every forward quarantine and restore move also carries the source's captured physical identity to
+the rename boundary. POSIX keeps a descriptor for that source, checks the destination identity after
+the no-replace rename, and attempts a safe reverse move if an unexpected object crossed the boundary.
+Windows checks the expected volume/file ID on the same delete-capable source handle used for its
+no-replace rename. A post-commit error is recorded as a staged, recoverable state when reversal cannot
+be proven safe.
+
+SAFE-01 is designed for local filesystems on the supported desktop platforms. Local Linux evidence
+exists for this candidate; APFS and NTFS behavior remains pending until the exact-head macOS and
+Windows gates pass. Network filesystems such as NFS/SMB, abrupt power-loss durability beyond the
+filesystem's guarantees, and permanent quarantine purge are outside SAFE-01. Do not broaden that
+support claim without platform-specific fault and recovery tests.
+Windows ReFS-specific file-ID semantics are also not claimed. The operation lock coordinates MCLab
+processes; a same-privilege hostile process that ignores it remains outside the cooperative contract,
+although identity checks and conservative indeterminate receipts still protect recoverability where
+the mutation is observable.
+Receipt listing is a read-only snapshot rather than a mutation authorization boundary: restore
+reacquires the root lock and revalidates the receipt. A malformed receipt currently stops the list
+fail-closed instead of being summarized as an isolated unsafe row; keep that operability limitation
+visible until a tested corrupt-receipt representation is added.
+
+Artifact writers must make terminal publication the eligibility boundary. A new run or batch claims a
+unique directory; explicit non-empty paths are rejected, and an empty explicit run path is claimed
+atomically. Writers publish `running`, then data, plots, learner artifacts, and report, and write the
+strict terminal manifest last. Nothing inside that output may be written after terminal publication.
+RunLogger report failure stays `running` and retryable, while a finalized logger rejects later writes.
+Standalone batch failure writes a hashed `error` manifest after synchronous work has stopped and
+re-raises the original error; failure to write `completed` must remain fail-closed, not be rewritten as
+another terminal state.
 
 `course_progress_payload` is the single presentation snapshot for Home and Learning path. It counts
 only records whose manifest status is `completed`, returns an empty `nextId` at the true end state,
@@ -37,12 +94,17 @@ and supplies the localized next scenario and ordered rows together. The syntheti
 Results; it must never fall back to rerunning the final step. Learning path keeps one primary
 next-step button, while completed and upcoming rows are status-only orientation.
 
-The final comparison runs through `QProcess`, never the GUI thread. The CLI emits the private
+The final comparison runs through `QProcess`, never the GUI thread. Desktop launch passes a 256-bit
+one-shot handoff token whose SHA-256 is stored in the running manifest. Claiming requires regular
+metadata files, rejects link/reparse aliases, and atomically creates an active directory; a second
+claim cannot reuse the output. The CLI emits the private
 `MCLAB_BATCH_PROGRESS current/total name` protocol before each of five sets. Cancellation first
 terminates and then kills after a short grace period; duplicate launch is rejected. The child writes
-the completed manifest and artifact hashes so finalization cannot freeze Qt. A persisted `running`
+each standalone child and group completed manifest after its artifact hashes so finalization cannot
+freeze Qt. Persisted strict terminal status is authoritative over late cancel or process-error
+callbacks. A persisted `running`
 manifest with no active process is presented as stopped/retryable after restart. An active output
-folder must be protected both by disabled Results management and the backend deletion guard.
+folder must be protected both by disabled Results management and the backend quarantine guard.
 
 Every learner-facing QML translation call uses `localizedText(backend.language, key)`. The explicit
 language argument is intentional: it gives the binding a Qt notify dependency, so static navigation,
@@ -110,8 +172,9 @@ is not itself an active experiment: the experiment guard must use `busy` ownersh
 completed run would block the final course comparison forever. `BatchSessionBar` keeps progress and
 cancel visible on Explore and Results. `ResultManageDialog.qml` displays the applicable blocking
 reason inside the modal; report/folder/close remain available, and a running batch does not prevent
-deleting unrelated saved evidence. Only the active batch output and evidence owned by an active
-experiment are protected at the repository-facing backend boundary.
+moving unrelated saved evidence to quarantine. While an experiment is active, all saved-run cleanup
+is blocked. During a comparison batch, only the active batch output is protected at the
+repository-facing backend boundary, so unrelated saved evidence can still be quarantined.
 
 Explore filtering stays presentation-only and operates on stable manifest fields. Scenario payloads
 expose canonical `difficultyId` plus `requiresEvidence`; QML must not infer level or hands-on mode

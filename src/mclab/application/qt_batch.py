@@ -7,6 +7,7 @@ from typing import Any
 
 from mclab.application.batch_runs import (
     all_compare_command,
+    batch_manifest_status,
     create_all_compare_output,
     parse_batch_progress,
     update_batch_manifest,
@@ -110,12 +111,25 @@ def create_batch_controller(
             self._read_output()
             if self._settled:
                 return
-            if self.cancel_requested:
+            terminal_status = batch_manifest_status(self.output)
+            if terminal_status:
+                status = terminal_status
+            elif self.cancel_requested:
                 status = "stopped"
             else:
                 status = "completed" if exit_code == 0 else "error"
             detail = self._tail.strip()[-2000:]
-            update_batch_manifest(self.output, status=status, error=detail if status == "error" else "")
+            if status == "completed" and terminal_status != "completed":
+                status = "error"
+                detail = (
+                    detail + "\nBatch process exited without a completed manifest."
+                ).strip()
+            if not terminal_status:
+                update_batch_manifest(
+                    self.output,
+                    status=status,
+                    error=detail if status == "error" else "",
+                )
             self._settled = True
             self.changed.emit()
             if status == "completed":
@@ -129,6 +143,17 @@ def create_batch_controller(
             if self._settled or self.running or self.cancel_requested:
                 return
             detail = self.process.errorString() or "The course comparison process could not start."
+            terminal_status = batch_manifest_status(self.output)
+            if terminal_status:
+                self._settled = True
+                self.changed.emit()
+                if terminal_status == "completed":
+                    self.completed.emit(self.output)
+                elif terminal_status == "stopped":
+                    self.stopped.emit(self.output)
+                else:
+                    self.failed.emit(detail, self.output)
+                return
             update_batch_manifest(self.output, status="error", error=detail)
             self._settled = True
             self.changed.emit()
@@ -191,26 +216,37 @@ def create_batch_backend_mixin(QObject: Any, Property: Any, Signal: Any, Slot: A
         def cancelBatch(self) -> None:  # noqa: N802
             self._batch.cancel()
 
-        @Slot(str, str)
-        def deleteRun(self, run_path: str, confirm_path: str) -> None:  # noqa: N802
+        @Slot(str, str, str, result=bool)
+        def deleteRun(  # noqa: N802
+            self,
+            run_path: str,
+            confirm_path: str,
+            cleanup_token: str,
+        ) -> bool:
             if has_active_experiment(self):
                 self._set_error(
-                    "Saved evidence cannot be deleted while an experiment is active.",
+                    "Saved evidence cannot be moved to quarantine while an experiment is active.",
                     "Return to the active experiment, or end and save it before starting another.",
                 )
-                return
+                return False
             if self._batch.running and Path(run_path).resolve() == Path(self._batch.output).resolve():
                 self._set_error(
-                    "The active course comparison cannot be deleted.",
+                    "The active course comparison cannot be moved to quarantine.",
                     "Cancel the comparison and wait for it to stop before cleanup.",
                 )
-                return
+                return False
             try:
-                ArtifactRepository().delete_path(run_path, confirm_path=confirm_path)
+                ArtifactRepository().delete_path(
+                    run_path,
+                    confirm_path=confirm_path,
+                    cleanup_token=cleanup_token,
+                )
             except Exception as exc:
                 self._set_error(str(exc), self.translator.text("results.delete_recovery"))
+                return False
             else:
                 self.results_changed.emit()
+                return True
 
         def _batch_completed(self, output: str) -> None:
             self._last_output = output

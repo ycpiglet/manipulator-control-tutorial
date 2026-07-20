@@ -128,13 +128,13 @@ def run_app(
             self.worker: SessionWorker | None = None
             self.session: SimulationSession | None = None
             self.adapter: Any | None = None
-            self._last_output = ""
-            self._safe_mode = safe_mode
+            self._last_output, self._safe_mode = "", safe_mode
+            self._output_override = os.environ.get("MCLAB_OUTPUT_DIR", "").strip()
+            self._output_override_used = False
             self._tour_visible = not bool(self.settings.value("tourComplete", False, type=bool))
             self._pending_restart: tuple[str | None, Any, bool] | None = None
             self._pending_next_scenario: str | None = None
-            self._replay_mode = False
-            self._shutting_down = False
+            self._replay_mode = self._shutting_down = False
             self._init_batch(BatchController(self))
             self._init_evidence()
 
@@ -611,7 +611,8 @@ def run_app(
                 raise RuntimeError("An experiment is already running.")
             config = dict(config_override if config_override is not None else scenario.config)
             config["language"] = self._language
-            output_override = os.environ.get("MCLAB_OUTPUT_DIR")
+            output_override = "" if self._output_override_used else self._output_override
+            self._output_override_used = self._output_override_used or bool(output_override)
             self._replay_mode = False
             self._selected = scenario
             self._active_config = config

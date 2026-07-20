@@ -337,6 +337,7 @@ def result_payloads(
             {
                 "path": str(item.path),
                 "name": item.path.name,
+                "cleanupToken": item.cleanup_token,
                 "scenarioId": item.scenario_id,
                 "isBatch": is_batch,
                 "activeBatch": active_batch_record,

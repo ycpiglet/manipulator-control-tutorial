@@ -50,8 +50,10 @@ pythonpath = ["src"]
 
 [tool.coverage.run]
 # Qt binding/factory modules are exercised by the cross-platform desktop
-# workflow. The main simulator coverage gate measures dependency-light code.
+# workflow. Win32 handle primitives are covered by that same three-OS gate.
+# The main simulator coverage gate measures dependency-light code.
 omit = [
+  "src/mclab/output_windows.py",
   "src/mclab/application/qt_app.py",
   "src/mclab/application/qt_batch.py",
   "src/mclab/application/qt_evidence.py",

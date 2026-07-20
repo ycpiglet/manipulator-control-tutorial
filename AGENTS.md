@@ -13,8 +13,11 @@
 
 실행 순서와 승격 gate는 `READINESS_EXECUTION_PLAN.md`가 정합니다. 오래되거나 dirty한
 checkout에서 release/readiness 작업을 이어가지 말고 최신 `origin/main`에서 clean
-worktree를 만듭니다. PR #35와 B1 기준선은 완료됐으며 현재 Wave 1을 수행합니다.
-SAFE-01이 통과하기 전에는 `mclab clean`을 실행하지 않습니다.
+worktree를 만듭니다. PR #35, B1, GOV-01은 완료됐으며 현재 SAFE-01을 수행합니다.
+SAFE-01이 병합된 뒤 post-merge required check를 재검증하고 PASS를
+기록하기 전에는 `mclab clean`을 실행하지 않습니다. PASS 뒤에도 실제 learner
+outputs에는 owner가 같은 dry-run plan을 검토하기 전 `--apply`를 실행하지
+않습니다.
 
 ## Project Intent
 
@@ -564,4 +567,7 @@ The full project is course-demo ready when:
 
 ## Next Best Task
 
-Continue expanding Lab04 impedance/wall lessons or add Lab03 condition-aware task-control comparisons. Do not add web, ROS2, or Isaac Sim scope before the local MuJoCo labs are stable.
+Follow the active readiness work order: finish SAFE-01, add the DOC-01 README and
+documentation contract gates, then implement and connect COMP-01/02 before declaring
+B2. Resume optional Lab03/Lab04 lesson expansion only after those safety gates. Do not
+add web, ROS2, or Isaac Sim scope before the local MuJoCo labs are stable.

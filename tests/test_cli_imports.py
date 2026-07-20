@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
+import json
 import os
 import sys
 import tempfile
@@ -25,6 +26,7 @@ from mclab.cli import (  # noqa: E402
 from mclab.cli import build_parser  # noqa: E402
 from mclab.doctor import DoctorCheck  # noqa: E402
 from mclab.learner_menu import BATCH_ACTIONS, LEARNING_PATH, MENU_ACTIONS  # noqa: E402
+from mclab.output_cleanup import CleanupOperationError, build_cleanup_plan  # noqa: E402
 
 
 class CliImportTests(unittest.TestCase):
@@ -121,7 +123,7 @@ class CliImportTests(unittest.TestCase):
 
     def test_cli_generates_outputs_index(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            output_dir = Path(tmp) / "outputs"
+            output_dir = Path(tmp).resolve() / "outputs"
             index_path = output_dir / "index.html"
 
             args = build_parser().parse_args(["index", "--output-dir", str(output_dir), "--open"])
@@ -142,7 +144,7 @@ class CliImportTests(unittest.TestCase):
 
     def test_cli_prints_experience_coverage_and_next_command(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            output_dir = Path(tmp) / "outputs"
+            output_dir = Path(tmp).resolve() / "outputs"
 
             args = build_parser().parse_args(["coverage", "--output-dir", str(output_dir)])
             self.assertEqual(args.command, "coverage")
@@ -181,7 +183,7 @@ class CliImportTests(unittest.TestCase):
 
     def test_cli_prints_experience_coverage_details(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            output_dir = Path(tmp) / "outputs"
+            output_dir = Path(tmp).resolve() / "outputs"
 
             args = build_parser().parse_args(["coverage", "--output-dir", str(output_dir), "--details"])
             self.assertEqual(args.command, "coverage")
@@ -233,7 +235,7 @@ class CliImportTests(unittest.TestCase):
 
     def test_cli_coverage_complete_points_to_learning_path_when_path_is_pending(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            output_dir = Path(tmp) / "outputs"
+            output_dir = Path(tmp).resolve() / "outputs"
             output_dir.mkdir()
             lab01 = output_dir / "run_lab01_interactive"
             lab01.mkdir()
@@ -302,7 +304,7 @@ class CliImportTests(unittest.TestCase):
 
     def test_cli_prints_learning_path_progress_and_next_command(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            output_dir = Path(tmp) / "outputs"
+            output_dir = Path(tmp).resolve() / "outputs"
 
             args = build_parser().parse_args(["path", "--output-dir", str(output_dir), "--all"])
             self.assertEqual(args.command, "path")
@@ -333,7 +335,7 @@ class CliImportTests(unittest.TestCase):
 
     def test_cli_previews_next_learning_path_step_without_running(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            output_dir = Path(tmp) / "outputs"
+            output_dir = Path(tmp).resolve() / "outputs"
 
             args = build_parser().parse_args(["next", "--output-dir", str(output_dir), "--preview"])
             self.assertEqual(args.command, "next")
@@ -372,7 +374,7 @@ class CliImportTests(unittest.TestCase):
 
     def test_cli_preview_names_first_hands_on_action_for_unrun_viewer_step(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            output_dir = Path(tmp) / "outputs"
+            output_dir = Path(tmp).resolve() / "outputs"
             run_path = output_dir / "run_lab01_auto"
             plots = run_path / "plots"
             plots.mkdir(parents=True)
@@ -404,8 +406,8 @@ class CliImportTests(unittest.TestCase):
 
     def test_cli_runs_next_learning_path_step(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            output_dir = Path(tmp) / "outputs"
-            output = Path(tmp) / "next_run"
+            output_dir = Path(tmp).resolve() / "outputs"
+            output = Path(tmp).resolve() / "next_run"
             output.mkdir()
             report = output / "report.html"
             report.write_text("<html></html>", encoding="utf-8")
@@ -445,7 +447,7 @@ class CliImportTests(unittest.TestCase):
 
     def test_cli_previews_batch_next_step_with_review_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            output_dir = Path(tmp) / "outputs"
+            output_dir = Path(tmp).resolve() / "outputs"
             with (
                 patch("mclab.cli.learning_path_progress_items", return_value=()),
                 patch("mclab.cli.learning_path_summary_text", return_value="Progress: batch next"),
@@ -465,7 +467,7 @@ class CliImportTests(unittest.TestCase):
 
     def test_cli_prints_review_queue_and_next_report(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            outputs = Path(tmp) / "outputs"
+            outputs = Path(tmp).resolve() / "outputs"
             run_path = outputs / "run_lab01_interactive"
             run_path.mkdir(parents=True)
             report = run_path / "report.html"
@@ -527,7 +529,7 @@ class CliImportTests(unittest.TestCase):
 
     def test_cli_review_names_required_preset_before_observation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            outputs = Path(tmp) / "outputs"
+            outputs = Path(tmp).resolve() / "outputs"
             run_path = outputs / "run_lab04_wall"
             run_path.mkdir(parents=True)
             report = run_path / "report.html"
@@ -570,7 +572,7 @@ class CliImportTests(unittest.TestCase):
 
     def test_cli_review_groups_duplicate_repair_commands(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            outputs = Path(tmp) / "outputs"
+            outputs = Path(tmp).resolve() / "outputs"
             wall_new = outputs / "new_lab04_wall"
             wall_old = outputs / "old_lab04_wall"
             arm_run = outputs / "lab03_interactive"
@@ -616,7 +618,7 @@ class CliImportTests(unittest.TestCase):
 
     def test_cli_review_handles_empty_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            outputs = Path(tmp) / "outputs"
+            outputs = Path(tmp).resolve() / "outputs"
             with patch("mclab.cli._open_path") as opener, patch("builtins.print") as printer:
                 self.assertEqual(main(["review", "--output-dir", str(outputs), "--open"]), 0)
 
@@ -939,7 +941,7 @@ class CliImportTests(unittest.TestCase):
 
     def test_cli_batch_handoff_detail_uses_latest_worksheet_viewer_command(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            output = Path(tmp) / "batch"
+            output = Path(tmp).resolve() / "batch"
             output.mkdir()
             (output / "report.html").write_text("<html></html>", encoding="utf-8")
             (output / "worksheet.md").write_text(
@@ -967,7 +969,7 @@ class CliImportTests(unittest.TestCase):
 
     def test_cli_all_batch_handoff_follows_linked_batch_worksheet_command(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            output = Path(tmp) / "all_batches"
+            output = Path(tmp).resolve() / "all_batches"
             child = output / "lab01_msd_compare"
             child.mkdir(parents=True)
             (output / "worksheet.md").write_text(
@@ -1009,9 +1011,9 @@ class CliImportTests(unittest.TestCase):
 
     def test_cli_opens_batch_report_when_requested(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            output = Path(tmp) / "batch"
+            output = Path(tmp).resolve() / "batch"
             output.mkdir()
-            all_reports_index = Path(tmp) / "index.html"
+            all_reports_index = Path(tmp).resolve() / "index.html"
             all_reports_index.write_text("<html></html>", encoding="utf-8")
             report = output / "report.html"
             report.write_text("<html></html>", encoding="utf-8")
@@ -1072,7 +1074,7 @@ class CliImportTests(unittest.TestCase):
 
     def test_cli_runs_all_batches_when_requested(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            output = Path(tmp) / "all_batches"
+            output = Path(tmp).resolve() / "all_batches"
             output.mkdir()
             report = output / "report.html"
             report.write_text("<html></html>", encoding="utf-8")
@@ -1082,10 +1084,23 @@ class CliImportTests(unittest.TestCase):
                 patch("mclab.cli.run_batch") as single_runner,
                 patch("mclab.cli._open_path") as opener,
             ):
-                self.assertEqual(main(["batch", "all", "--no-plot", "--open-report"]), 0)
+                self.assertEqual(
+                    main(
+                        [
+                            "batch",
+                            "all",
+                            "--no-plot",
+                            "--open-report",
+                            "--handoff-token",
+                            "a" * 64,
+                        ]
+                    ),
+                    0,
+                )
 
             runner.assert_called_once()
             self.assertFalse(runner.call_args.kwargs["plot"])
+            self.assertEqual(runner.call_args.kwargs["handoff_token"], "a" * 64)
             single_runner.assert_not_called()
             opener.assert_called_once_with(report)
 
@@ -1199,9 +1214,9 @@ class CliImportTests(unittest.TestCase):
 
     def test_cli_opens_run_report_when_requested(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            output = Path(tmp) / "run"
+            output = Path(tmp).resolve() / "run"
             output.mkdir()
-            all_reports_index = Path(tmp) / "index.html"
+            all_reports_index = Path(tmp).resolve() / "index.html"
             all_reports_index.write_text("<html></html>", encoding="utf-8")
             report = output / "report.html"
             report.write_text("<html></html>", encoding="utf-8")
@@ -1280,28 +1295,277 @@ class CliImportTests(unittest.TestCase):
 
 
 class CleanCommandTests(unittest.TestCase):
-    def test_clean_keeps_most_recent_and_removes_the_rest(self) -> None:
+    def test_clean_defaults_to_dry_run_and_yes_alone_never_moves_files(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp) / "outputs"
-            root.mkdir()
-            names = [f"2026070{i}_120000_lab01_msd" for i in range(1, 8)]
-            for name in names:
-                (root / name).mkdir()
-                (root / name / "summary.json").write_text("{}", encoding="utf-8")
-            (root / "index.html").write_text("<html></html>", encoding="utf-8")
+            data_root = Path(tmp).resolve() / "data"
+            root = data_root / "outputs"
+            root.mkdir(parents=True)
+            run = _write_cleanup_manifest(root, "old-run", minute=0)
+            before = _tree_snapshot(root)
 
             output = StringIO()
-            with redirect_stdout(output):
-                self.assertEqual(main(["clean", "--output-dir", str(root), "--keep", "3", "--yes"]), 0)
+            with patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}), redirect_stdout(output):
+                self.assertEqual(main(["clean", "--keep", "0"]), 0)
+            printed = output.getvalue()
+            self.assertIn("Cleanup dry-run", printed)
+            self.assertIn(f"QUARANTINE {run}", printed)
+            self.assertIn("Plan ID:", printed)
+            self.assertTrue(run.exists())
 
-            remaining = sorted(p.name for p in root.iterdir() if p.is_dir())
-            self.assertEqual(remaining, sorted(names[-3:]))
-            self.assertTrue((root / "index.html").exists())
+            error = StringIO()
+            with (
+                patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}),
+                redirect_stdout(StringIO()),
+                redirect_stderr(error),
+            ):
+                self.assertEqual(main(["clean", "--keep", "0", "--yes"]), 2)
+            self.assertIn("--yes alone", error.getvalue())
+            self.assertTrue(run.exists())
+            self.assertEqual(_tree_snapshot(root), before)
+
+    def test_clean_applies_exact_plan_to_quarantine_and_restores_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            data_root = Path(tmp).resolve() / "data"
+            root = data_root / "outputs"
+            root.mkdir(parents=True)
+            old = _write_cleanup_manifest(root, "old-run", minute=0)
+            new = _write_cleanup_manifest(root, "new-run", minute=1)
+            plan = build_cleanup_plan(root, keep=1, allowed_root=root)
+
+            output = StringIO()
+            with patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}), redirect_stdout(output):
+                self.assertEqual(
+                    main(
+                        [
+                            "clean",
+                            "--keep",
+                            "1",
+                            "--apply",
+                            plan.plan_id,
+                            "--yes",
+                        ]
+                    ),
+                    0,
+                )
+            self.assertFalse(old.exists())
+            self.assertTrue(new.exists())
+            receipt_line = next(
+                line for line in output.getvalue().splitlines() if line.startswith("Receipt: ")
+            )
+            receipt_id = receipt_line.removeprefix("Receipt: ")
+
+            with patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}):
+                self.assertEqual(main(["clean", "--restore", receipt_id]), 0)
+            self.assertTrue(old.exists())
+            self.assertTrue(new.exists())
+
+    def test_clean_rejects_arbitrary_output_root(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            data_root = Path(tmp).resolve() / "data"
+            configured = data_root / "outputs"
+            configured.mkdir(parents=True)
+            other = Path(tmp).resolve() / "other" / "outputs"
+            other.mkdir(parents=True)
+            run = _write_cleanup_manifest(other, "canary", minute=0)
+            before = _tree_snapshot(other)
+            error = StringIO()
+            with (
+                patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}),
+                redirect_stderr(error),
+            ):
+                self.assertEqual(
+                    main(["clean", "--output-dir", str(other), "--keep", "0", "--yes"]),
+                    2,
+                )
+            self.assertIn("configured outputs root", error.getvalue())
+            self.assertTrue(run.exists())
+            self.assertEqual(_tree_snapshot(other), before)
 
     def test_clean_missing_dir_is_noop(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            missing = Path(tmp) / "nope"
+            data_root = Path(tmp).resolve() / "data"
             output = StringIO()
-            with redirect_stdout(output):
-                self.assertEqual(main(["clean", "--output-dir", str(missing), "--yes"]), 0)
+            with patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}), redirect_stdout(output):
+                self.assertEqual(main(["clean"]), 0)
             self.assertIn("does not exist", output.getvalue())
+
+    def test_clean_rejects_wrong_plan_even_when_nothing_is_selected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            data_root = Path(tmp).resolve() / "data"
+            root = data_root / "outputs"
+            root.mkdir(parents=True)
+            error = StringIO()
+            with (
+                patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}),
+                redirect_stderr(error),
+            ):
+                self.assertEqual(
+                    main(["clean", "--apply", "0" * 64, "--yes"]),
+                    2,
+                )
+            self.assertIn("plan ID", error.getvalue())
+            self.assertFalse((root / ".mclab-trash").exists())
+
+    def test_clean_apply_without_yes_is_a_byte_for_byte_noop(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            data_root = Path(tmp).resolve() / "data"
+            root = data_root / "outputs"
+            root.mkdir(parents=True)
+            _write_cleanup_manifest(root, "old-run", minute=0)
+            plan = build_cleanup_plan(root, keep=0, allowed_root=root)
+            before = _tree_snapshot(root)
+            error = StringIO()
+            with (
+                patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}),
+                redirect_stdout(StringIO()),
+                redirect_stderr(error),
+            ):
+                self.assertEqual(
+                    main(["clean", "--keep", "0", "--apply", plan.plan_id]),
+                    2,
+                )
+            self.assertIn("requires --yes", error.getvalue())
+            self.assertEqual(_tree_snapshot(root), before)
+
+    def test_clean_json_plan_list_and_restore_are_machine_parseable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            data_root = Path(tmp).resolve() / "data"
+            root = data_root / "outputs"
+            root.mkdir(parents=True)
+            run = _write_cleanup_manifest(root, "old-run", minute=0)
+
+            output = StringIO()
+            with patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}), redirect_stdout(output):
+                self.assertEqual(main(["clean", "--keep", "0", "--json"]), 0)
+            plan_payload = json.loads(output.getvalue())
+            self.assertEqual(plan_payload["schema_version"], 1)
+            self.assertEqual([item["name"] for item in plan_payload["selected"]], [run.name])
+
+            output = StringIO()
+            with patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}), redirect_stdout(output):
+                self.assertEqual(
+                    main(
+                        [
+                            "clean",
+                            "--keep",
+                            "0",
+                            "--apply",
+                            plan_payload["plan_id"],
+                            "--yes",
+                            "--json",
+                        ]
+                    ),
+                    0,
+                )
+            receipt_payload = json.loads(output.getvalue())
+            self.assertEqual(receipt_payload["status"], "quarantined")
+            self.assertIs(receipt_payload["recoverable"], True)
+
+            output = StringIO()
+            with patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}), redirect_stdout(output):
+                self.assertEqual(main(["clean", "--list-trash", "--json"]), 0)
+            listed = json.loads(output.getvalue())
+            self.assertEqual([item["receipt_id"] for item in listed], [receipt_payload["receipt_id"]])
+            self.assertIs(listed[0]["recoverable"], True)
+
+            output = StringIO()
+            with patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}), redirect_stdout(output):
+                self.assertEqual(main(["clean", "--list-trash"]), 0)
+            self.assertIn("| restorable |", output.getvalue())
+
+            output = StringIO()
+            with patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}), redirect_stdout(output):
+                self.assertEqual(
+                    main(
+                        [
+                            "clean",
+                            "--restore",
+                            receipt_payload["receipt_id"],
+                            "--json",
+                        ]
+                    ),
+                    0,
+                )
+            restored = json.loads(output.getvalue())
+            self.assertEqual(restored["status"], "restored")
+            self.assertIs(restored["recoverable"], False)
+            self.assertTrue(run.is_dir())
+
+            output = StringIO()
+            with patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}), redirect_stdout(output):
+                self.assertEqual(main(["clean", "--list-trash", "--json"]), 0)
+            history = json.loads(output.getvalue())
+            self.assertEqual(history[0]["status"], "restored")
+            self.assertIs(history[0]["recoverable"], False)
+
+            output = StringIO()
+            with patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}), redirect_stdout(output):
+                self.assertEqual(main(["clean", "--list-trash"]), 0)
+            self.assertIn("| history-only |", output.getvalue())
+
+    def test_clean_operation_failure_returns_one_and_preserves_the_tree(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            data_root = Path(tmp).resolve() / "data"
+            root = data_root / "outputs"
+            root.mkdir(parents=True)
+            _write_cleanup_manifest(root, "old-run", minute=0)
+            plan = build_cleanup_plan(root, keep=0, allowed_root=root)
+            before = _tree_snapshot(root)
+            error = StringIO()
+            with (
+                patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}),
+                patch(
+                    "mclab.cli.quarantine_cleanup_plan",
+                    side_effect=CleanupOperationError("injected operation failure"),
+                ),
+                redirect_stdout(StringIO()),
+                redirect_stderr(error),
+            ):
+                self.assertEqual(
+                    main(
+                        [
+                            "clean",
+                            "--keep",
+                            "0",
+                            "--apply",
+                            plan.plan_id,
+                            "--yes",
+                        ]
+                    ),
+                    1,
+                )
+            self.assertIn("operation failed", error.getvalue())
+            self.assertEqual(_tree_snapshot(root), before)
+
+
+def _write_cleanup_manifest(root: Path, name: str, *, minute: int) -> Path:
+    run = root / name
+    run.mkdir()
+    (run / "manifest.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "scenario_id": "lab01.default",
+                "status": "completed",
+                "started_at": f"2026-07-20T12:{minute:02d}:00+00:00",
+                "finished_at": f"2026-07-20T12:{minute:02d}:30+00:00",
+                "config": {"resolved": {"sim_time": 1.0}},
+                "artifacts": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+    return run
+
+
+def _tree_snapshot(root: Path) -> tuple[tuple[str, str, bytes], ...]:
+    rows: list[tuple[str, str, bytes]] = []
+    for path in sorted(root.rglob("*"), key=lambda item: item.as_posix()):
+        relative = path.relative_to(root).as_posix()
+        if path.is_symlink():
+            rows.append((relative, "link", os.readlink(path).encode()))
+        elif path.is_dir():
+            rows.append((relative, "dir", b""))
+        else:
+            rows.append((relative, "file", path.read_bytes()))
+    return tuple(rows)

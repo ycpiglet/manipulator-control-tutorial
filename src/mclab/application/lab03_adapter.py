@@ -207,6 +207,7 @@ class Lab03SliderAdapter(MujocoRenderMixin):
                 legacy._slider_learner_tuned_updates(self.config, self.live_tuning),
             ),
             run_status=status,
+            finalize=False,
         )
         legacy._save_plots(output, self.logger.rows, self.scenario.plot_preset)
         self.logger.finalize_artifacts()
@@ -578,6 +579,7 @@ class Lab03TwoLinkAdapter(MujocoRenderMixin):
                 ),
             ),
             run_status=status,
+            finalize=False,
         )
         legacy._save_two_link_plots(output, self.logger.rows, self.scenario.plot_preset)
         self.logger.finalize_artifacts()

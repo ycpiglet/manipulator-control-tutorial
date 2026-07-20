@@ -335,6 +335,7 @@ class Lab01Adapter:
             learner_snapshot={"slider_values": dict(self.parameters)},
             learner_tuned_config={**self.config, **self.parameters},
             run_status=status,
+            finalize=False,
         )
         from mclab.labs.lab01_msd import _save_plots
 
@@ -532,6 +533,7 @@ class Lab02Adapter(Lab01Adapter):
                 },
             },
             run_status=status,
+            finalize=False,
         )
         from mclab.labs.lab02_pid import _save_plots
 

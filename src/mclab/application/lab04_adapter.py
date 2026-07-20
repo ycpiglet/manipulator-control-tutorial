@@ -430,6 +430,7 @@ class Lab04Adapter(MujocoRenderMixin):
                 ),
             ),
             run_status=status,
+            finalize=False,
         )
         legacy._save_plots(output, self.logger.rows, self.scenario.plot_preset)
         self.logger.finalize_artifacts()
