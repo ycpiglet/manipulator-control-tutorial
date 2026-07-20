@@ -17,8 +17,11 @@ from mclab.application.launcher import create_scenario_adapter
 from mclab.application.platform import PlatformServices
 from mclab.application.qt_batch import create_batch_backend_mixin, create_batch_controller
 from mclab.application.qt_evidence import create_evidence_backend_mixin
+from mclab.application.qt_fonts import configure_font_environment
 from mclab.application.qt_frame import create_frame_provider
 from mclab.application.qt_lifecycle import (
+    consume_pending_next_scenario,
+    defer_start_for_parked_session,
     has_active_experiment,
     pause_before_navigation,
     reject_running_batch,
@@ -46,14 +49,6 @@ from mclab.application.session import SessionState, SimulationSession
 from mclab.application.single_instance import acquire_instance_lock, start_activation_server
 from mclab.application.qt_smoke import schedule_smoke_action
 from mclab.config import PROJECT_ROOT
-
-
-def qt_available() -> tuple[bool, str]:
-    try:
-        import PySide6  # noqa: F401
-    except Exception as exc:
-        return False, f"{exc.__class__.__name__}: {exc}"
-    return True, "PySide6 is importable."
 
 
 SHUTDOWN_WAIT_MS = 30_000
@@ -137,6 +132,7 @@ def run_app(
             self._safe_mode = safe_mode
             self._tour_visible = not bool(self.settings.value("tourComplete", False, type=bool))
             self._pending_restart: tuple[str | None, Any, bool] | None = None
+            self._pending_next_scenario: str | None = None
             self._replay_mode = False
             self._shutting_down = False
             self._init_batch(BatchController(self))
@@ -311,6 +307,8 @@ def run_app(
         @Slot(str)
         def startScenario(self, scenario: str) -> None:  # noqa: N802
             if reject_running_batch(self):
+                return
+            if defer_start_for_parked_session(self, scenario):
                 return
             if reject_running_experiment(self):
                 return
@@ -552,6 +550,7 @@ def run_app(
             self._shutting_down = True
             self._shutdown_batch()
             self._pending_restart = None
+            self._pending_next_scenario = None
             if self.session is not None:
                 self.session.stop()
             if self.worker is not None and self.worker.isRunning():
@@ -661,6 +660,8 @@ def run_app(
                 return
             if not self._shutting_down:
                 self.state_changed.emit()
+            if consume_pending_next_scenario(self):
+                return
             if self._shutting_down or self._pending_restart is None or self._selected is None:
                 return
             name, value, start_paused_step = self._pending_restart
@@ -722,7 +723,7 @@ def run_app(
             )
 
     font_root = PROJECT_ROOT / "third_party" / "fonts" / "noto"
-    os.environ.setdefault("QT_QPA_FONTDIR", str(font_root))
+    configure_font_environment(font_root)
     QGuiApplication.setOrganizationName("MCLab")
     QGuiApplication.setApplicationName("MCLab")
     instance_lock = acquire_instance_lock(language)

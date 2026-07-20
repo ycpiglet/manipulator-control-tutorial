@@ -6,6 +6,9 @@ Item {
     property bool compact: false
     property bool isOneDimensional: backend.selectedScenario.lab === "lab01"
                                       || backend.selectedScenario.lab === "lab02"
+    // Lab02 plants run with stiffness 0 (no spring in the scene), so the
+    // spring drawing and label are Lab01-only.
+    property bool hasSpring: backend.selectedScenario.lab === "lab01"
     property real position: Number(backend.telemetry.position || 0)
     property real force: Number(backend.telemetry.force || 0)
     property real sceneScale: compact ? 1.0
@@ -51,7 +54,9 @@ Item {
             var blockHeight = guide.massHeight
             var blockLeft = blockCenter - blockWidth / 2
             var springEnd = blockLeft - 3
-            var equilibriumX = width * 0.72
+            // Position 0 maps to width * 0.57 (massCenterX baseline); the
+            // equilibrium marker must sit where the mass can actually rest.
+            var equilibriumX = width * 0.57
 
             ctx.fillStyle = "#D7DEE8"
             ctx.fillRect(0, floorY, width, height - floorY)
@@ -68,20 +73,22 @@ Item {
                          midY - blockHeight * 0.72,
                          guide.compact ? 12 : 12 * sceneScale,
                          blockHeight * 1.46)
-            ctx.strokeStyle = "#FBBF24"
-            ctx.lineWidth = guide.compact ? 3 : 4 * sceneScale
-            var springOffsetY = guide.compact ? 7 : 7 * sceneScale
-            var springAmplitude = guide.compact ? 10 : 10 * sceneScale
-            ctx.beginPath(); ctx.moveTo(anchorX + 4 * sceneScale, midY - springOffsetY)
-            var coils = guide.compact ? 9 : Math.round(12 * Math.sqrt(sceneScale))
-            for (var index = 1; index <= coils; ++index) {
-                var springX = anchorX + 4 * sceneScale
-                              + (springEnd - anchorX - 4 * sceneScale) * index / coils
-                var springY = midY - springOffsetY
-                              + (index % 2 ? -springAmplitude : springAmplitude)
-                ctx.lineTo(springX, springY)
+            if (guide.hasSpring) {
+                ctx.strokeStyle = "#FBBF24"
+                ctx.lineWidth = guide.compact ? 3 : 4 * sceneScale
+                var springOffsetY = guide.compact ? 7 : 7 * sceneScale
+                var springAmplitude = guide.compact ? 10 : 10 * sceneScale
+                ctx.beginPath(); ctx.moveTo(anchorX + 4 * sceneScale, midY - springOffsetY)
+                var coils = guide.compact ? 9 : Math.round(12 * Math.sqrt(sceneScale))
+                for (var index = 1; index <= coils; ++index) {
+                    var springX = anchorX + 4 * sceneScale
+                                  + (springEnd - anchorX - 4 * sceneScale) * index / coils
+                    var springY = midY - springOffsetY
+                                  + (index % 2 ? -springAmplitude : springAmplitude)
+                    ctx.lineTo(springX, springY)
+                }
+                ctx.lineTo(springEnd, midY - springOffsetY); ctx.stroke()
             }
-            ctx.lineTo(springEnd, midY - springOffsetY); ctx.stroke()
 
             var damperY = midY + (guide.compact ? 17 : 17 * sceneScale)
             var damperBodyEnd = anchorX + (springEnd - anchorX) * 0.58
@@ -177,6 +184,7 @@ Item {
     }
 
     SceneLabel {
+        visible: guide.hasSpring
         labelText: backend.localizedText(backend.language, "scene.spring")
         accent: "#FBBF24"
         x: guide.compact ? 20 : guide.anchorX + 8 * guide.sceneScale
@@ -204,7 +212,7 @@ Item {
     SceneLabel {
         labelText: backend.localizedText(backend.language, "scene.equilibrium")
         accent: "#D8A7FF"
-        x: Math.min(guide.width - width - 8, guide.width * 0.72 + 8)
+        x: Math.min(guide.width - width - 8, guide.width * 0.57 + 8)
         y: guide.compact ? guide.height - 58
                          : guide.floorLineY + 16 * guide.sceneScale
     }

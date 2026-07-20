@@ -31,6 +31,18 @@ class FixedDatetime:
 
 
 class LoggingTests(unittest.TestCase):
+    def test_default_run_output_root_matches_course_progress_root(self) -> None:
+        # Course progress and readiness read default_outputs_root(); a run
+        # written anywhere else never advances the learning path (the
+        # packaged app and MCLAB_DATA_DIR overrides hit this).
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.dict("os.environ", {"MCLAB_DATA_DIR": tmp}):
+                path = create_output_path("lab01_msd")
+            expected_root = Path(tmp).resolve() / "outputs"
+            self.assertEqual(path.parent, expected_root)
+            self.assertTrue(path.name.endswith("_lab01_msd"))
+            self.assertTrue((path / "plots").is_dir())
+
     def test_plot_priorities_follow_lesson_context(self) -> None:
         dls_priorities = plot_priorities_for_context(
             config_path="configs/lab03_2dof/condition_aware_dls_adaptive_speed_retarget_2dof.yaml",
@@ -114,7 +126,7 @@ class LoggingTests(unittest.TestCase):
     def test_automatic_output_paths_are_unique_within_same_second(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             with (
-                patch("mclab.sim.logging.PROJECT_ROOT", Path(temp_dir)),
+                patch.dict("os.environ", {"MCLAB_DATA_DIR": temp_dir}),
                 patch("mclab.sim.logging.datetime", FixedDatetime),
             ):
                 first = create_output_path("lab01_msd")

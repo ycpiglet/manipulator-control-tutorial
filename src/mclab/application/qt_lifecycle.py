@@ -47,6 +47,45 @@ def stop_active_experiment(owner: Any) -> None:
         owner._submit_session(session.stop)  # noqa: SLF001
 
 
+def defer_start_for_parked_session(owner: Any, scenario: str) -> bool:
+    """Stop a paused/idle session and remember the scenario to start once it ends.
+
+    A completed-but-restarted (or paused replay) session keeps the worker busy
+    forever, which used to dead-end every "start next" entry point. Instead of
+    rejecting the launch, end the parked session (evidence is preserved by
+    stop_active_experiment) and let the idle handler start the requested one.
+    """
+
+    if not has_active_experiment(owner) or owner.session is None:
+        return False
+    if owner.session.state not in {
+        SessionState.READY,
+        SessionState.PAUSED,
+        SessionState.REPLAYING,
+    }:
+        return False
+    owner._pending_next_scenario = scenario  # noqa: SLF001
+    stop_active_experiment(owner)
+    worker = owner.worker
+    if worker is None or not worker.busy:
+        owner._on_worker_finished()  # noqa: SLF001
+    return True
+
+
+def consume_pending_next_scenario(owner: Any) -> bool:
+    """Start the deferred next scenario once the worker has gone idle."""
+
+    pending = getattr(owner, "_pending_next_scenario", None)
+    if pending is None or owner._shutting_down:  # noqa: SLF001
+        return False
+    worker = owner.worker
+    if worker is not None and worker.busy:
+        return False
+    owner._pending_next_scenario = None  # noqa: SLF001
+    owner.startScenario(pending)
+    return True
+
+
 def reject_running_experiment(owner: Any) -> bool:
     """Reject a second launch while the current worker still owns a session."""
 

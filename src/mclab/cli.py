@@ -381,7 +381,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command in {"menu", "app"}:
-        from mclab.application.qt_app import qt_available, run_app
+        from mclab.application.qt_app import run_app
+        from mclab.application.readiness import qt_available
 
         if args.command == "app" and args.self_test:
             available, detail = qt_available()

@@ -17,9 +17,7 @@ from typing import Any
 
 from mclab.application.batch_runs import ALL_COMPARE_ID
 from mclab.config import (
-    PROJECT_ROOT,
     default_outputs_root,
-    is_frozen_bundle,
     load_config,
     resolve_output_path,
 )
@@ -795,8 +793,8 @@ def create_batch_output_path(batch_name: str, output_dir: str | Path | None = No
         return path
 
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    root = default_outputs_root() if is_frozen_bundle() else PROJECT_ROOT / "outputs"
-    base_path = root / f"{stamp}_{batch_name}"
+    # Same root as course progress/readiness (honors MCLAB_DATA_DIR + frozen).
+    base_path = default_outputs_root() / f"{stamp}_{batch_name}"
     return _create_unique_directory(base_path)
 
 

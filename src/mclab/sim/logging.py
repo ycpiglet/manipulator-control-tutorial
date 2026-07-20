@@ -10,12 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from mclab.application.artifacts import ReplayRecorder, write_manifest
-from mclab.config import (
-    PROJECT_ROOT,
-    default_outputs_root,
-    is_frozen_bundle,
-    resolve_output_path,
-)
+from mclab.config import default_outputs_root, resolve_output_path
 from mclab.sim.reporting import write_run_report
 
 
@@ -25,8 +20,10 @@ def create_output_path(lab_name: str, output_dir: str | Path | None = None) -> P
         path.mkdir(parents=True, exist_ok=True)
     else:
         stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        root = default_outputs_root() if is_frozen_bundle() else PROJECT_ROOT / "outputs"
-        path = _create_unique_output_directory(root / f"{stamp}_{lab_name}")
+        # Course progress and readiness read default_outputs_root(); runs must
+        # be written under the same root or completions never advance the path
+        # (MCLAB_DATA_DIR overrides and frozen bundles diverged here before).
+        path = _create_unique_output_directory(default_outputs_root() / f"{stamp}_{lab_name}")
     (path / "plots").mkdir(exist_ok=True)
     return path
 

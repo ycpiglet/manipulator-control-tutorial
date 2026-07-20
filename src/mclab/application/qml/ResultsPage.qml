@@ -58,11 +58,10 @@ Item {
     ColumnLayout {
         anchors.fill: parent
         spacing: 10
-        Label {
-            text: backend.localizedText(backend.language, "nav.results")
-            color: "#172033"
-            font.pixelSize: 30
-            font.bold: true
+        ResultsHeader {
+            Layout.fillWidth: true
+            runCount: page.runs.length
+            batchRunning: page.batch.running
         }
         ActiveSessionBar {}
         BatchSessionBar {}
