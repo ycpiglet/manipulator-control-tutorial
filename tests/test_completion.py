@@ -450,9 +450,10 @@ class CompletionCatalogContractTests(unittest.TestCase):
                 if item not in hands_on
             )
         )
-        self.assertTrue(
-            all(not item.completion.required_presets for item in scenarios),
-            "Catalog presets remain disabled until every COMP-02 consumer exposes them.",
+        wall = next(item for item in scenarios if item.id == "lab04.interactive-virtual-wall")
+        self.assertEqual(
+            wall.completion.required_presets,
+            ("Close wall", "Back away", "Re-enter wall"),
         )
 
 

@@ -92,6 +92,8 @@ class ScenarioCatalog:
                 config = {}
                 config_error = f"{exc.__class__.__name__}: {exc}"
             interactive = _is_interactive(config)
+            # Policy declaration only: COMP-02 must expose and record the same
+            # ordered presets on every learner surface before wiring this rule.
             scenarios.append(
                 ScenarioDefinition(
                     id=ids[index],
@@ -110,6 +112,7 @@ class ScenarioCatalog:
                         requires_observation=interactive,
                         requires_prediction=interactive,
                         requires_note=interactive,
+                        required_presets=_required_preset_labels(config),
                     ),
                     next_scenario_id=ids[index + 1] if index + 1 < len(ids) else None,
                     config_data=config,
@@ -193,6 +196,23 @@ def _is_interactive(config: dict[str, Any]) -> bool:
     return bool(
         interaction.get("panel") or interaction.get("live_tuning") or interaction.get("key_force")
     )
+
+
+def _required_preset_labels(config: dict[str, Any]) -> tuple[str, ...]:
+    interaction = config.get("interaction")
+    if not isinstance(interaction, dict):
+        return ()
+    presets = interaction.get("tuning_presets")
+    if not isinstance(presets, list):
+        return ()
+    labels: list[str] = []
+    for index, preset in enumerate(presets, start=1):
+        if not isinstance(preset, dict) or not bool(preset.get("required", False)):
+            continue
+        label = str(preset.get("label") or preset.get("name") or f"Preset {index}").strip()
+        if label:
+            labels.append(label)
+    return tuple(labels)
 
 
 def _difficulty(lab_name: str, label: str) -> str:
