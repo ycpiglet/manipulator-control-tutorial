@@ -22,21 +22,60 @@ Current release decision:
 
 Immediate order of work:
 
-1. preserve the completed DOC-01 and SAFE-01 exact-head and post-merge evidence
+1. preserve the completed COMP-01, DOC-01, and SAFE-01 exact-head and post-merge evidence
    without touching real learner outputs;
-2. add the read-only canonical completion contract as COMP-01;
-3. connect every learner surface to that contract in a separate COMP-02 PR;
-4. declare B2 only after GOV-01, SAFE-01, DOC-01, and COMP-01/02 all pass, then
+2. connect every learner surface to the canonical completion contract in the
+   separate COMP-02 PR;
+3. declare B2 only after GOV-01, SAFE-01, DOC-01, and COMP-01/02 all pass, then
    follow gates G2 through G5 for distribution,
    real-platform/human validation, signing, and publication.
 
-Current exact next action: start COMP-01 from a fresh clean worktree based on
-the fetched latest `origin/main` that contains DOC-01 merge
-`66eca7f666409336a6b9a6052828b3ae1c8b68d7`. GOV-01, SAFE-01, and DOC-01 are
-complete; COMP-01/02 and B2 are not. A real-root cleanup dry-run is permitted
-only as a separate owner-reviewed activity and is not a COMP-01 prerequisite.
+Current exact next action: start COMP-02 from a fresh clean worktree based on
+the fetched latest `origin/main` that contains COMP-01 merge
+`c742501de82a8e2500d02d501ecb492e3cf9edb4`. GOV-01, SAFE-01, DOC-01, and
+COMP-01 are complete; COMP-02 and B2 are not. A real-root cleanup dry-run is
+permitted only as a separate owner-reviewed activity and is not a COMP-02 prerequisite.
 Do not apply any plan to the real outputs root until the owner has reviewed
 that exact dry-run and separately authorized apply.
+
+### 2026-07-21 COMP-01 complete; COMP-02 next
+
+- Objective: freeze one read-only, versioned truth function for run status,
+  plot, learner-control, correlated prediction/note observation, ordered
+  required-preset, and legacy completion evidence.
+- Completed work and PR: PR #51 exact head
+  `95e1be9069349be2c4140932f5f12b3deb99dabb` passed all six required checks
+  and merged through ruleset `19209773` as
+  `c742501de82a8e2500d02d501ecb492e3cf9edb4`. The merge tree equals the
+  reviewed source-head tree.
+- Changed areas: new dependency-light completion domain module, catalog rule
+  re-export/declarations, immutable v1 and legacy fixtures, and exhaustive
+  truth-contract tests. Desktop, learner menu, CLI, index, report, and worksheet
+  consumers were not rewired; no saved artifact was migrated or rewritten.
+- Local measured result: 17 contract tests and 1,076 subtests PASS; exhaustive
+  1,024-case truth matrix PASS; focused boundary regression 204 passed, 3
+  skipped, 1,840 subtests; full regression 691 passed, 9 skipped, 2,189
+  subtests with 80.86% coverage; Python 3.10 floor 109 passed, 6 skipped, 20
+  subtests; Ruff, README contracts, citation/formula gates, and 14/14 Action
+  pins PASS.
+- Gate status: final-head local contract and no-consumer-wiring reviews
+  APPROVE with no unresolved P0-P3. Earlier GitHub automated reviews found two
+  P1 issues on prior heads; both were fixed and their threads resolved.
+  Exact-head CI `29836070679` and desktop matrix `29836070606` passed 6/6.
+  Post-merge CI `29836511032` and desktop matrix `29836511019` passed the same
+  6/6 on the merge SHA. The durable record is
+  `.agents/baselines/COMP-01-completion-contract.md`.
+- Compatibility/rollback: schema-1 and legacy files are read-only, the catalog
+  import path remains compatible, and consumer behavior was deliberately held
+  for COMP-02. Revert the focused COMP-01 merge through protected main if the
+  unused contract itself is wrong; do not rewrite learner artifacts.
+- Open risk: COMP-02 must perform complete schema-1 validation through a pinned,
+  bounded, no-link reader, verify actual regular evidence files, preserve
+  ordered wall-preset capability on every relevant surface, define batch rules,
+  and prove desktop/menu/CLI/index/report/worksheet mismatch 0.
+- Single next action: start `agent/completion-consumers` from fetched latest
+  clean `origin/main` containing `c742501d` and implement COMP-02 only. B2,
+  structure changes, real-root dry-run, and cleanup apply remain out of scope.
 
 ### 2026-07-21 DOC-01 complete; COMP-01 next
 
