@@ -181,8 +181,11 @@ def course_progress_payload(
     """Build one canonical path snapshot from independently assessed runs."""
 
     items = tuple(scenarios)
-    saved_records = tuple(records)
     scenario_catalog = catalog or _cached_default_catalog()
+    saved_records = tuple(
+        _legacy_record_with_stable_diagnostic_id(record, scenario_catalog)
+        for record in records
+    )
     scenario_index = build_completion_assessment_index(items, saved_records)
     batch_target = scenario_catalog.get_batch(ALL_COMPARE_ID)
     batch_assessment = assess_target_completion(batch_target, saved_records)
@@ -237,6 +240,18 @@ def _completion_assessment_payload(
         "latestRun": str(latest.path) if isinstance(latest, ArtifactRecord) else "",
         "creditedRun": str(credited.path) if isinstance(credited, ArtifactRecord) else "",
     }
+
+
+def _legacy_record_with_stable_diagnostic_id(
+    record: ArtifactRecord,
+    catalog: ScenarioCatalog,
+) -> ArtifactRecord:
+    """Map legacy summary records to their catalog diagnostic ID."""
+
+    if record.completion_evidence.record_kind != CompletionRecordKind.LEGACY_SUMMARY:
+        return record
+    target = target_from_legacy_summary(catalog, record.summary)
+    return replace(record, scenario_id=target.id) if target is not None else record
 
 
 @lru_cache(maxsize=1)
@@ -344,18 +359,11 @@ def result_payloads(
     payloads: list[dict[str, Any]] = []
     active_batch = Path(active_batch_path).resolve() if active_batch_path else None
     for index, item in enumerate(records, start=1):
+        item = _legacy_record_with_stable_diagnostic_id(item, scenario_catalog)
         try:
             target = scenario_catalog.get_target(item.scenario_id)
         except KeyError:
             target = None
-        if (
-            target is None
-            and item.completion_evidence.record_kind
-            == CompletionRecordKind.LEGACY_SUMMARY
-        ):
-            target = target_from_legacy_summary(scenario_catalog, item.summary)
-            if target is not None:
-                item = replace(item, scenario_id=target.id)
         completion = evaluate_completion(
             target.completion if target is not None else None,
             item.completion_evidence,
