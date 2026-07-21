@@ -13,12 +13,13 @@
 
 실행 순서와 승격 gate는 `READINESS_EXECUTION_PLAN.md`가 정합니다. 오래되거나 dirty한
 checkout에서 release/readiness 작업을 이어가지 말고 최신 `origin/main`에서 clean
-worktree를 만듭니다. PR #35, B1, GOV-01, SAFE-01은 완료됐으며 현재 DOC-01을
-수행합니다. DOC-01은 KR/EN newcomer README와 공개 명령·링크·repository map의
-자동 계약을 먼저 추가하며 대규모 디렉터리 이동을 포함하지 않습니다. 구조 변경은
-B2 뒤 IA-00 결정과 별도 compatibility PR로 처리합니다. SAFE-01 PASS 뒤에도 실제
-learner outputs의 dry-run은 owner가 참여하는 별도 작업으로만 수행하고, owner가 같은
-plan을 검토한 뒤 다시 명시적으로 승인하기 전에는 `--apply`를 실행하지 않습니다.
+worktree를 만듭니다. PR #35, B1, GOV-01, SAFE-01, DOC-01은 완료됐으며 현재
+COMP-01을 수행합니다. COMP-01은 아직 소비자 동작을 바꾸지 않는 read-only canonical
+completion evaluator, versioned reason, legacy/golden contract fixture를 먼저 추가합니다.
+모든 learner surface 연결은 뒤따르는 별도 COMP-02 PR에서 수행합니다. 구조 변경은 B2
+뒤 IA-00 결정과 별도 compatibility PR로 처리합니다. SAFE-01 PASS 뒤에도 실제 learner
+outputs의 dry-run은 owner가 참여하는 별도 작업으로만 수행하고, owner가 같은 plan을
+검토한 뒤 다시 명시적으로 승인하기 전에는 `--apply`를 실행하지 않습니다.
 
 ## Project Intent
 
@@ -568,8 +569,9 @@ The full project is course-demo ready when:
 
 ## Next Best Task
 
-Follow the active readiness work order: SAFE-01 is complete, so start the DOC-01
-README and documentation contract gates from the latest clean `origin/main`, then
-implement and connect COMP-01/02 before declaring B2. Resume optional Lab03/Lab04
-lesson expansion only after those gates. Do not add web, ROS2, or Isaac Sim scope
-before the local MuJoCo labs are stable.
+Follow the active readiness work order: SAFE-01 and DOC-01 are complete, so
+start the read-only COMP-01 canonical completion contract from the latest clean
+`origin/main`, then connect its consumers in the separate COMP-02 PR before
+declaring B2. Resume optional Lab03/Lab04 lesson expansion only after those
+gates. Do not add web, ROS2, or Isaac Sim scope before the local MuJoCo labs are
+stable.
