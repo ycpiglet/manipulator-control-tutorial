@@ -22,33 +22,31 @@ Current release decision:
 
 Immediate order of work:
 
-1. finish the recovered DOC-01 candidate through independent review, exact-head
-   six-check CI, merge, and post-merge verification without touching real
-   learner outputs;
-2. preserve the completed SAFE-01 exact-head and post-merge evidence;
-3. add the canonical completion contract and connect every learner surface in
-   separate PRs;
+1. preserve the completed DOC-01 and SAFE-01 exact-head and post-merge evidence
+   without touching real learner outputs;
+2. add the read-only canonical completion contract as COMP-01;
+3. connect every learner surface to that contract in a separate COMP-02 PR;
 4. declare B2 only after GOV-01, SAFE-01, DOC-01, and COMP-01/02 all pass, then
    follow gates G2 through G5 for distribution,
    real-platform/human validation, signing, and publication.
 
-Current exact next action: advance DOC-01 on `agent/readme-contract-gates`,
-based on current `origin/main@6a6632ab97c018779da8a0e404529db43a7706ca`,
-through all six exact-head checks and post-merge main checks before declaring
-it complete. GOV-01 and SAFE-01 are complete; DOC-01, COMP-01/02, and B2 are
-not. A real-root cleanup dry-run is permitted only as a separate owner-reviewed
-activity and is not a DOC-01 prerequisite. Do not apply any plan to the real
-outputs root until the owner has reviewed that exact dry-run and separately
-authorized apply.
+Current exact next action: start COMP-01 from a fresh clean worktree based on
+the fetched latest `origin/main` that contains DOC-01 merge
+`66eca7f666409336a6b9a6052828b3ae1c8b68d7`. GOV-01, SAFE-01, and DOC-01 are
+complete; COMP-01/02 and B2 are not. A real-root cleanup dry-run is permitted
+only as a separate owner-reviewed activity and is not a COMP-01 prerequisite.
+Do not apply any plan to the real outputs root until the owner has reviewed
+that exact dry-run and separately authorized apply.
 
-### 2026-07-21 DOC-01 shutdown recovery candidate
+### 2026-07-21 DOC-01 complete; COMP-01 next
 
 - Objective: make the KR/EN newcomer README, public command/CLI shape, links,
   launchers, quickstart evidence, and repository map deterministic PR gates.
-- Current exact base: the branch was cut from and re-fetched against
-  `origin/main@6a6632ab97c018779da8a0e404529db43a7706ca` with no intervening main
-  advance. The eventual PR head SHA and remote results remain acceptance
-  evidence; no merge is assumed here.
+- Completed work and PR: PR #49 exact head
+  `74a77393761025462c3dcdea0c2bfcdfe62b315b` passed all six required checks
+  and merged through ruleset `19209773` as
+  `66eca7f666409336a6b9a6052828b3ae1c8b68d7`. The merge tree equals the
+  reviewed source-head tree.
 - Completed work: recovered the interrupted uncommitted files from the only
   surviving worktree, closed the prior Markdown/HTML and CLI-parser review
   findings, added the no-move compatibility inventory, and added actual
@@ -67,19 +65,23 @@ authorized apply.
   SHA-256 values are `b0098ea93cdab921bc3b61ed12a7bc746db8feabe8fb279f311e5a9752c298d7`
   and `9513987bce9ae14799e48c96ec52d4744b47e8e8a9a1f6b8fbb97fba05920acb`.
 - Gate status: newcomer-truth, code-boundary, and final regression/performance
-  reviews all APPROVE with no P0-P3 findings. GitHub exact-head and post-merge
-  checks have not run and are never assumed. Local Tectonic is unavailable, so
-  the paper-build job remains remote evidence.
+  reviews all APPROVE with no P0-P3 findings. Exact-head CI `29811793935` and
+  desktop matrix `29811793927` passed 6/6. Post-merge CI `29812128233` and
+  desktop matrix `29812128189` passed the same 6/6 on the merge SHA, including
+  Tectonic and all three recommended-launcher paths. The durable record is
+  `.agents/baselines/DOC-01-readme-contract.md`.
 - Compatibility/rollback: all paths stay in place; `run_mclab.cmd`,
   `run_lab*.cmd`, `run_batch*.cmd`, and `run_all_batches.cmd` remain compatibility
   paths. `run_all.ps1` is explicitly internal. Revert the focused DOC-01 commit
   if the gate causes a false block; do not solve it with a directory move.
-- Open risk: the expanded recommended-launcher workflow must prove itself on
-  real GitHub Windows, Ubuntu, and macOS runners at the exact candidate SHA.
-- Single next action: publish the frozen branch as the DOC-01 PR and wait for
-  all six exact-head checks before any merge decision.
+- Open risk: GitHub-hosted runners prove the automated source setup contract,
+  not real newcomer comprehension or signed packaged-install independence.
+  Those remain later G3/G4 gates.
+- Single next action: start `agent/completion-contract` from the fetched latest
+  clean `origin/main` containing the DOC-01 merge and implement COMP-01 without
+  changing consumer behavior or rewriting legacy manifests.
 
-### 2026-07-21 GOV-01 and SAFE-01 complete; DOC-01 next
+### 2026-07-21 GOV-01 and SAFE-01 completion record
 
 PR #39 merged the policy baseline as
 `9f4169f60efb32d6b6d49b9f06d985d8de9c6f70` after 6/6 exact-head checks.
