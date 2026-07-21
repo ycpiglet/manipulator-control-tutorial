@@ -24,24 +24,27 @@ Immediate order of work:
 
 1. preserve the completed COMP-01, DOC-01, and SAFE-01 exact-head and post-merge evidence
    without touching real learner outputs;
-2. push the frozen COMP-02 local candidate, open its draft PR, and require all six
-   exact-head checks before merge;
+2. finish draft PR #53 on its current head, requiring all six exact-head checks
+   and resolved review conversations before merge;
 3. declare B2 only after GOV-01, SAFE-01, DOC-01, and COMP-01/02 all pass, then
    follow gates G2 through G5 for distribution,
    real-platform/human validation, signing, and publication.
 
-Current exact next action: push COMP-02 implementation candidate
-`872ad7b7ce2949751873c47e7149300c4a521930`, open a draft PR from
-`agent/completion-consumers`, and run the six required exact-head checks. The
-candidate is based on clean fetched `origin/main`
+Current exact next action: push this state-only handoff update to draft PR #53,
+require all six checks again on that new exact head, resolve every review
+conversation, and merge only if the protected gate remains green. The functional
+candidate `7e54f8cffad7b82408c6352a130a1a463013dfc8` passed 6/6 in CI run
+`29861932148` and desktop run `29861932100`. The candidate is based on clean
+fetched `origin/main`
 `edaeb340765b076e761f5cd23ac588dda6729ba3`. GOV-01, SAFE-01, DOC-01, and
-COMP-01 are complete; COMP-02 remote evidence, merge, and B2 are not. A
+COMP-01 are complete; PR #53 merge, post-merge evidence, COMP-02 completion,
+and B2 are not. A
 real-root cleanup dry-run is permitted only as a separate owner-reviewed
 activity and is not a COMP-02 prerequisite.
 Do not apply any plan to the real outputs root until the owner has reviewed
 that exact dry-run and separately authorized apply.
 
-### 2026-07-22 COMP-02 local candidate; remote gate pending
+### 2026-07-22 COMP-02 draft PR #53; merge gate pending
 
 - Objective: connect desktop, menu, CLI, outputs index, report, worksheet,
   coverage, and path progress to the COMP-01 canonical evaluator without
@@ -49,25 +52,31 @@ that exact dry-run and separately authorized apply.
 - Current exact base/head: clean fetched
   `origin/main@edaeb340765b076e761f5cd23ac588dda6729ba3`; frozen implementation
   commit `872ad7b7ce2949751873c47e7149300c4a521930` with tree
-  `7eeffa92fb47d599bf751419c0bf612aba25d3b0`.
+  `7eeffa92fb47d599bf751419c0bf612aba25d3b0`; reviewed functional head
+  `7e54f8cffad7b82408c6352a130a1a463013dfc8` with tree
+  `7daafd48b64c541f89e8907c6a1a4e82e45fb93c`.
 - Completed local work: strict schema-1 pinned, bounded, no-link evidence
   reading; immutable terminal publication and fail-closed recovery; canonical
   batch rules; all learner-surface wiring; ordered Lab04 wall-preset evidence;
   digest-published read-only worksheet policy; and safe cumulative-index CLI
-  discovery. No PR exists yet.
+  discovery. Draft PR #53 is open.
 - Changed areas: application repositories/presentation/QML, batch and CLI,
   completion progress, output inventory/root/publication, logging/plotting/
   reporting, and focused fixtures/regression tests. No model, config, launcher,
   dependency, directory-layout, or real learner-output change is included.
 - Commands and measured results: final Python 3.10 full regression
-  `823 passed, 7 skipped, 2,422 subtests`, coverage `82.45%`; focused
+  `825 passed, 7 skipped, 2,422 subtests`, coverage `82.45%`; focused
   publication/consumer regression `171 passed, 71 subtests`; catalog parity
   `78` targets and `292` cases with mismatch `0`; Ruff, KR/EN static and
   runtime README contracts, `14/14` Action pins, citation coverage, robotics
   foundations, and diff check PASS.
 - Gate status: local independent final COMP-02/G1 review GO with no P0/P1.
-  Exact-head GitHub checks, remote review conversations, merge, and post-merge
-  checks are not run and must not be assumed.
+  Functional head `7e54f8c` passed required 6/6 in CI `29861932148` and
+  desktop matrix `29861932100`. Earlier heads exposed and then fixed one
+  immutable audit-fixture publication error and one compact-card XCB
+  overflow/focus regression. This state-only successor head must pass the same
+  6/6 before merge; review conversations, merge, and post-merge checks remain
+  pending and must not be assumed.
 - Compatibility/rollback: schema-1 remains versioned and read-only; invalid or
   future schema does not fall back to legacy summaries; existing artifacts are
   never migrated. Revert the focused COMP-02 merge if consumer parity or
@@ -77,8 +86,8 @@ that exact dry-run and separately authorized apply.
   redirected bytes, so this cannot grant false completion and is a nonblocking
   writer-hardening follow-up. Single-maintainer owner risk acceptance remains
   required for B2, which is not a public-beta GO.
-- Single next action: push `agent/completion-consumers`, open the draft PR, and
-  require the six exact-head checks before any merge decision.
+- Single next action: push this state update to PR #53 and require six green
+  checks plus resolved conversations on the resulting exact head.
 
 ### 2026-07-21 COMP-01 complete; COMP-02 next
 
