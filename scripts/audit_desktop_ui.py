@@ -4106,26 +4106,6 @@ def _prepare_fixture(name: str, data_root: Path) -> None:
                 dtype=str,
             ),
         )
-        (run / "manifest.json").write_text(
-            json.dumps(
-                {
-                    "schema_version": 1,
-                    "scenario_id": "lab01.interactive-pull",
-                    "status": "completed",
-                    "model": {"path": "models/lab01_msd/scene.xml"},
-                    "config": {
-                        "resolved": {
-                            "model_path": "models/lab01_msd/scene.xml",
-                            "sim_time": 1.0,
-                            "mass": 1.0,
-                            "damping": 0.8,
-                            "stiffness": 30.0,
-                        }
-                    },
-                }
-            ),
-            encoding="utf-8",
-        )
         (run / "config.yaml").write_text(
             "model_path: models/lab01_msd/scene.xml\nsim_time: 1.0\n",
             encoding="utf-8",

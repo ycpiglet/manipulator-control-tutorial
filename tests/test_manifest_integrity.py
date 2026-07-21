@@ -141,6 +141,24 @@ def test_manifest_rejects_unknown_status_without_publication(tmp_path: Path) -> 
     assert not (output / "manifest.json").exists()
 
 
+@pytest.mark.parametrize("fixture_name", ["valid_replay", "dense_replay"])
+def test_desktop_replay_fixture_publishes_terminal_manifest_once(
+    tmp_path: Path,
+    fixture_name: str,
+) -> None:
+    pytest.importorskip("PySide6")
+    from scripts.audit_desktop_ui import _prepare_fixture
+
+    _prepare_fixture(fixture_name, tmp_path)
+
+    output = tmp_path / "outputs" / fixture_name
+    payload = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+    assert payload["status"] == "completed"
+    assert payload["scenario_id"] == "lab01.interactive-pull"
+    assert "replay.npz" in payload["artifacts"]
+    assert verify_manifest(output) == []
+
+
 def test_manifest_rejects_payload_larger_than_reader_limit(tmp_path: Path) -> None:
     output = tmp_path / "run"
     output.mkdir()
