@@ -22,29 +22,27 @@ Current release decision:
 
 Immediate order of work:
 
-1. preserve the completed GOV-01, SAFE-01, DOC-01, COMP-01, and COMP-02
-   evidence, including the original PR #53 plus corrective PR #54 history,
-   without touching real learner outputs;
-2. merge this durable COMP-02 handoff through protected main;
-3. create a new clean worktree from the latest fetched `origin/main` and
-   prepare the BASE-01 evidence manifest and live governance snapshot;
+1. preserve the completed GOV-01, SAFE-01, DOC-01, COMP-01, COMP-02, and
+   durable PR #55 handoff evidence without touching real learner outputs;
+2. record the BASE-01 candidate for frozen subject
+   `ae4d40371b9a3fe4d7078822e1fc541a72defe2d` and tree
+   `b5f4cb03abbf1e66c14c27c720c737ef2fc4f798`;
+3. open the BASE-01 candidate PR, obtain independent read-only review, and
+   pass all six required checks at its exact head;
 4. keep B2 undeclared until the owner explicitly accepts the documented
-   single-maintainer residual risk for the exact baseline subject and PR head,
-   then follow gates G2 through G5 for distribution, real-platform/human
-   validation, signing, and publication.
+   single-maintainer residual risk for that exact subject and PR head, then
+   follow gates G2 through G5.
 
-Current exact next action: merge this durable COMP-02 handoff, whose corrective
-merge `a2266b4f21f9a794998a98e71fa93643cacd1b64` passed post-merge CI run
-`29869552669` and desktop run `29869552662` 6/6. After the handoff reaches
-`main`, create
-`agent/safe-main-baseline` from a newly fetched clean `origin/main`. Do not
-interpret general permission to continue work as the exact-SHA owner risk
-acceptance required for B2. A real-root cleanup dry-run remains a separate
-owner-participating activity and is not a BASE-01 prerequisite.
+Current exact next action: publish the collected BASE-01 evidence as
+`CANDIDATE — OWNER ACCEPTANCE PENDING`. G1 is 11/12: the clean subject,
+technical checks, and live-governance evidence pass; only the review-topology
+row's exact-subject/exact-PR-head owner acceptance remains. General permission
+to continue is not that acceptance. A real-root cleanup dry-run remains a
+separate owner-participating activity and is not a BASE-01 prerequisite.
 Do not apply any plan to the real outputs root until the owner has reviewed
 that exact dry-run and separately authorized apply.
 
-### 2026-07-22 COMP-02 complete; durable handoff and BASE-01 next
+### 2026-07-22 COMP-02 complete; durable handoff merged; BASE-01 candidate pending
 
 - Objective: connect desktop, menu, CLI, outputs index, report, worksheet,
   coverage, and path progress to the COMP-01 canonical evaluator without
@@ -91,6 +89,17 @@ that exact dry-run and separately authorized apply.
   PR #53 thread was re-read and resolved after the corrective merge evidence;
   PR #54 has no reviews, comments, or threads. The durable evidence record is
   `.agents/baselines/COMP-02-completion-consumers.md`.
+- Durable handoff status: PR #55 exact head
+  `1399921a3d96f8a67a8b3d3ea5a44a56c6e94685` merged through protected main as
+  `ae4d40371b9a3fe4d7078822e1fc541a72defe2d`; source and merge trees are both
+  `b5f4cb03abbf1e66c14c27c720c737ef2fc4f798`. Exact-head CI
+  `29871635697` and desktop `29871635771`, then post-merge CI
+  `29873178744` and desktop `29873178702`, each passed 6/6.
+- BASE-01 evidence status: the frozen subject is clean and equal to
+  `origin/main`; G1 is 11/12 with only exact-subject/exact-PR-head owner
+  acceptance pending. Deferred dependency-lock, mutable CI Menagerie fetch,
+  notice inventory, unsigned distribution, and long-lived producer-pin risks
+  remain recorded and do not become public-beta approval.
 - Compatibility/rollback: schema-1 remains versioned and read-only; invalid or
   future schema does not fall back to legacy summaries; existing artifacts are
   never migrated. Use a focused protected-main fix or revert PR #54 if its
@@ -103,8 +112,8 @@ that exact dry-run and separately authorized apply.
   P2 writer-hardening follow-up and the only expected code residual after the
   late thread correction. Exact-SHA single-maintainer owner risk acceptance
   remains required for B2, which is not a public-beta GO.
-- Single next action: merge this durable handoff, then prepare BASE-01 from the
-  latest clean main while keeping B2 pending exact-SHA owner risk acceptance.
+- Single next action: create the BASE-01 candidate records and PR, then run
+  exact-head review/checks before requesting exact-SHA owner acceptance.
 
 ### 2026-07-21 COMP-01 complete; COMP-02 next
 

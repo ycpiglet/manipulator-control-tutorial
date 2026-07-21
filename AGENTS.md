@@ -16,11 +16,12 @@ checkout에서 release/readiness 작업을 이어가지 말고 최신 `origin/ma
 worktree를 만듭니다. PR #35, B1, GOV-01, SAFE-01, DOC-01, COMP-01, COMP-02는
 완료됐습니다. Original COMP-02 PR #53 뒤 late review가 찾은 desktop legacy-ID
 reason parity 누락은 corrective PR #54로 보수됐고 exact-head와 post-merge 6/6 및
-review-thread resolution을 통과했습니다. 이 durable handoff가 병합된 최신 clean
-`origin/main`에서 BASE-01의 exact SHA/tree, config/model inventory, workflow와 live
-governance evidence를 수집합니다. BASE-01은 먼저 candidate로 작성하고, owner가
-exact subject와 PR head에 대해 single-maintainer 잔여 위험을 명시적으로 수용하고
-B2-scope blocker가 0임을 확인하기 전에는 B2를 선언하지 않습니다. 구조 변경은 B2
+review-thread resolution을 통과했습니다. Durable handoff PR #55도 exact-head와
+post-merge 6/6을 통과하고 `ae4d40371b9a3fe4d7078822e1fc541a72defe2d`로
+병합됐습니다. BASE-01은 이 clean main을 subject로 고정해 G1과 live-governance
+evidence 11/12를 수집했습니다. 이제 candidate PR의 독립 review와 exact-head six
+checks를 수행하며, owner가 exact subject와 PR head에 대해 single-maintainer 잔여
+위험을 명시적으로 수용하기 전에는 B2를 선언하지 않습니다. 구조 변경은 B2
 뒤 IA-00 결정과 별도
 compatibility PR로 처리합니다. SAFE-01 PASS 뒤에도 실제 learner outputs의 dry-run은
 owner가 참여하는 별도 작업으로만 수행하고, owner가 같은 plan을 검토한 뒤 다시
@@ -574,12 +575,12 @@ The full project is course-demo ready when:
 
 ## Next Best Task
 
-Follow the active readiness work order: GOV-01, SAFE-01, DOC-01, COMP-01, and
-COMP-02 are complete. Merge the durable COMP-02 handoff, then prepare BASE-01
-from the latest clean `origin/main`, freeze the exact safe-main subject, collect
-the G1 and live-governance evidence, and keep the declaration in candidate state
-until the owner explicitly accepts the documented single-maintainer residual
-risk for the exact subject and PR head. Do not treat B2 as public-beta approval, move
-directories before IA-00, touch real learner outputs, or resume optional lesson
-expansion ahead of the readiness gates. Do not add web, ROS2, or Isaac Sim scope
-before the local MuJoCo labs are stable.
+Follow the active readiness work order: the durable COMP-02 handoff is merged
+and BASE-01 evidence is 11/12 complete for frozen subject
+`ae4d40371b9a3fe4d7078822e1fc541a72defe2d`. Create the candidate records and
+PR, complete independent read-only review and all six exact-head checks, then
+request explicit owner acceptance for that subject and final PR head. Keep B2
+undeclared until that acceptance. Do not treat B2 as public-beta approval,
+move directories before IA-00, touch real learner outputs, or resume optional
+lesson expansion ahead of the readiness gates. Do not add web, ROS2, or Isaac
+Sim scope before the local MuJoCo labs are stable.
