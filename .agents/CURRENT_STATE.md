@@ -34,11 +34,15 @@ Immediate order of work:
    follow gates G2 through G5.
 
 Current exact next action: publish the collected BASE-01 evidence as
-`CANDIDATE — OWNER ACCEPTANCE PENDING`. G1 is 11/12: the clean subject,
-technical checks, and live-governance evidence pass; only the review-topology
-row's exact-subject/exact-PR-head owner acceptance remains. General permission
-to continue is not that acceptance. A real-root cleanup dry-run remains a
-separate owner-participating activity and is not a BASE-01 prerequisite.
+`CANDIDATE — CHECKS, REVIEW, AND OWNER ACCEPTANCE PENDING AT RECORD CREATION`.
+G1 has 11 of 12 metric rows passing: the sole pending metric row is review
+topology, which ultimately requires exact-subject/exact-PR-head owner
+acceptance. That metric count is not a count of remaining BASE-01 workflow
+prerequisites. Candidate exact-head six checks, independent read-only review,
+and exact-SHA owner acceptance must all be confirmed on the same final head.
+General permission to continue is not that acceptance. A real-root cleanup
+dry-run remains a separate owner-participating activity and is not a BASE-01
+prerequisite.
 Do not apply any plan to the real outputs root until the owner has reviewed
 that exact dry-run and separately authorized apply.
 
@@ -96,10 +100,12 @@ that exact dry-run and separately authorized apply.
   `29871635697` and desktop `29871635771`, then post-merge CI
   `29873178744` and desktop `29873178702`, each passed 6/6.
 - BASE-01 evidence status: the frozen subject is clean and equal to
-  `origin/main`; G1 is 11/12 with only exact-subject/exact-PR-head owner
-  acceptance pending. Deferred dependency-lock, mutable CI Menagerie fetch,
-  notice inventory, unsigned distribution, and long-lived producer-pin risks
-  remain recorded and do not become public-beta approval.
+  `origin/main`; 11 of 12 G1 metric rows pass, with review topology the sole
+  pending metric row. Candidate exact-head checks, independent review, and
+  exact-subject/exact-head owner acceptance are distinct workflow prerequisites
+  for the same final head. Deferred dependency-lock, mutable CI Menagerie
+  fetch, notice inventory, unsigned distribution, and long-lived producer-pin
+  risks remain recorded and do not become public-beta approval.
 - Compatibility/rollback: schema-1 remains versioned and read-only; invalid or
   future schema does not fall back to legacy summaries; existing artifacts are
   never migrated. Use a focused protected-main fix or revert PR #54 if its

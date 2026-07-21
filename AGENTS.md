@@ -21,7 +21,10 @@ post-merge 6/6을 통과하고 `ae4d40371b9a3fe4d7078822e1fc541a72defe2d`로
 병합됐습니다. BASE-01은 이 clean main을 subject로 고정해 G1과 live-governance
 evidence 11/12를 수집했습니다. 이제 candidate PR의 독립 review와 exact-head six
 checks를 수행하며, owner가 exact subject와 PR head에 대해 single-maintainer 잔여
-위험을 명시적으로 수용하기 전에는 B2를 선언하지 않습니다. 구조 변경은 B2
+위험을 명시적으로 수용하기 전에는 B2를 선언하지 않습니다. 여기서 11/12의 한
+pending은 G1 metric row 수이며, BASE-01 workflow prerequisite가 owner acceptance
+하나뿐이라는 뜻이 아닙니다. 독립 review, exact-head six checks, exact-SHA owner
+acceptance를 같은 final head에서 모두 확인합니다. 구조 변경은 B2
 뒤 IA-00 결정과 별도
 compatibility PR로 처리합니다. SAFE-01 PASS 뒤에도 실제 learner outputs의 dry-run은
 owner가 참여하는 별도 작업으로만 수행하고, owner가 같은 plan을 검토한 뒤 다시
@@ -576,7 +579,7 @@ The full project is course-demo ready when:
 ## Next Best Task
 
 Follow the active readiness work order: the durable COMP-02 handoff is merged
-and BASE-01 evidence is 11/12 complete for frozen subject
+and 11 of 12 BASE-01 G1 metric rows pass for frozen subject
 `ae4d40371b9a3fe4d7078822e1fc541a72defe2d`. Create the candidate records and
 PR, complete independent read-only review and all six exact-head checks, then
 request explicit owner acceptance for that subject and final PR head. Keep B2

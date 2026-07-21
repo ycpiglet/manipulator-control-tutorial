@@ -20,6 +20,7 @@
     "pending_metric_ids": [
       "review_topology"
     ],
+    "pending_metric_count_scope": "G1 metric rows only; candidate exact-head checks, independent read-only review, and exact-SHA owner acceptance are separately tracked workflow prerequisites and must all bind the same final head",
     "known_b2_scope_code_config_blockers": 0
   },
   "captured_at": {
@@ -541,6 +542,7 @@
   ],
   "candidate_pr_evidence": {
     "status": "pending",
+    "recording_semantics": "record-creation snapshot; current PR head, check rollup, and review evidence are authoritative in GitHub and must be revalidated for every changed head",
     "pull_request_number": null,
     "pull_request_url": null,
     "head_sha": null,
@@ -638,6 +640,8 @@
       "independent_review_pending",
       "exact_sha_owner_acceptance_pending"
     ],
+    "blocking_reason_scope": "three distinct BASE-01 workflow prerequisites; the 11/12 value counts G1 metric rows and does not reduce this list to owner acceptance alone",
+    "all_blocking_reasons_must_bind_same_final_head": true,
     "append_only_final_record_required": true
   }
 }

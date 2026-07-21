@@ -1,6 +1,6 @@
 # B2 — Safe Main Candidate Evidence
 
-- Status: **CANDIDATE — OWNER ACCEPTANCE PENDING**
+- Status: **CANDIDATE — CHECKS, REVIEW, AND OWNER ACCEPTANCE PENDING AT RECORD CREATION**
 - Baseline declaration: **NOT DECLARED**
 - G1 result: **11/12 PASS; review topology pending**
 - B2-scope code/config blockers: **0 known**
@@ -16,12 +16,15 @@
 - Real-root cleanup dry-run/apply: **not run / not run**
 
 This is a conservative BASE-01 candidate record, not a B2 declaration. It
-freezes the clean safe-main subject and measures every G1 row, but it cannot
-close review topology until an unchanged candidate PR head passes all six
-required checks, receives independent read-only review, and the owner accepts
-the documented single-maintainer residual risk for both the frozen subject and
-that exact PR head. General permission to continue, a PR merge, or an earlier
-owner action does not count as that acceptance.
+freezes the clean safe-main subject and measures every G1 row, but B2 cannot be
+declared until an unchanged candidate PR head passes all six required checks,
+receives independent read-only review, and the owner accepts the documented
+single-maintainer residual risk for both the frozen subject and that exact PR
+head. Only that exact-SHA owner acceptance closes the pending review-topology
+metric row; checks and independent review are separate workflow prerequisites.
+The 11/12 result counts G1 metric rows and does not imply that any of those
+three prerequisites is complete. General permission to continue, a PR merge,
+or an earlier owner action does not count as that acceptance.
 
 ## Scope and Promotion Boundary
 
@@ -344,8 +347,9 @@ gate disposition without rewriting the finding text.
 Residuals that must remain visible but do not block the B2-scoped technical
 baseline:
 
-- the single-maintainer exception is still unaccepted for the exact candidate
-  PR head and therefore remains the one active B2 blocker;
+- review topology is the sole pending G1 metric row and remains open because
+  exact-SHA owner acceptance is absent; exact-head checks and independent
+  review are separate same-final-head workflow prerequisites;
 - COMP-02 producer payload writes are not all held under one long-lived pinned
   publication lease; strict readers revalidate and fail closed (P2);
 - SAFE-01 retains documented fail-closed operability/platform residuals;
@@ -392,6 +396,11 @@ Pending fields:
 - candidate exact-head check runs/jobs: pending;
 - independent final candidate review record: pending;
 - B2 declaration and merge record: not declared / pending.
+
+These are three distinct final-head workflow prerequisites: exact-head checks,
+independent review, and exact-SHA owner acceptance. Only the acceptance closes
+the sole pending G1 metric row. Checks and review are separate prerequisites;
+none of the three is implied complete by the 11/12 score.
 
 ## Exact Next Action
 
