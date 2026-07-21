@@ -26,6 +26,7 @@ from mclab.labs.lab04_panda import (  # noqa: E402
     _wall_retreat_distance,
     _wall_target_crossing_metrics,
 )
+from mclab.application.artifacts import write_manifest  # noqa: E402
 
 
 class DummyLiveTuning:
@@ -475,7 +476,18 @@ class Lab04WallTests(unittest.TestCase):
         ]
 
         with tempfile.TemporaryDirectory() as tmp:
-            output = Path(tmp)
+            output = Path(tmp) / "run"
+            output.mkdir()
+            (output / "summary.json").write_text(
+                '{"lab_name":"lab04_panda","config_name":"wall_plot_test","samples":1,"duration":0.0}',
+                encoding="utf-8",
+            )
+            write_manifest(
+                output,
+                scenario_id="lab04.wall-plot-test",
+                status="running",
+                config={},
+            )
             _save_plots(output, rows, "wall")
 
             self.assertTrue((output / "plots" / "wall_target.png").exists())

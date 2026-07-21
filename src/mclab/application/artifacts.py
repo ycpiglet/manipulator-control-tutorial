@@ -4,19 +4,33 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import platform
+import stat
+from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, BinaryIO
+from pathlib import Path, PurePosixPath, PureWindowsPath
+from typing import Any, BinaryIO, Iterator
 
 import numpy as np
 
 from mclab import __version__
 from mclab.config import PROJECT_ROOT, resolve_project_path
+from mclab.output_root import PinnedOutputRoot, pinned_output_root
+from mclab.output_safety import (
+    MAX_METADATA_BYTES,
+    MAX_RUN_TREE_ENTRIES,
+    CleanupOperationError,
+    CleanupSafetyError,
+    _stat_is_link_or_reparse,
+)
 
 MANIFEST_SCHEMA_VERSION = 1
 REPLAY_SCHEMA_VERSION = 1
+_TERMINAL_MANIFEST_STATUSES = frozenset({"completed", "stopped", "error"})
+_MANIFEST_STATUSES = frozenset({"running", *_TERMINAL_MANIFEST_STATUSES})
+LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -214,70 +228,352 @@ def write_manifest(
     error: str = "",
 ) -> Path:
     output = Path(output_path)
-    model_path_value = config.get("model_path")
-    model_path = resolve_project_path(model_path_value) if model_path_value else None
-    license_path = _find_model_license(model_path)
-    artifacts = {
-        item.relative_to(output).as_posix(): _sha256(item)
-        for item in sorted(output.rglob("*"))
-        if item.is_file() and item.name != "manifest.json"
-    }
-    payload = {
-        "schema_version": MANIFEST_SCHEMA_VERSION,
-        "scenario_id": scenario_id,
-        "status": status,
-        "started_at": started_at or _utc_now(),
-        "finished_at": finished_at or _utc_now(),
-        "config": {
-            "path": Path(config_path).as_posix() if config_path else "",
-            "seed": seed,
-            "resolved": config,
-        },
-        "runtime": {
-            "mclab": __version__,
-            "mujoco": _module_version("mujoco"),
-            "python": platform.python_version(),
-            "os": platform.platform(),
-        },
-        "model": {
-            "path": _relative_or_absolute(model_path),
-            "sha256": _sha256(model_path) if model_path and model_path.is_file() else "",
-            "license": _relative_or_absolute(license_path),
-            "license_sha256": _sha256(license_path) if license_path else "",
-        },
-        "artifacts": artifacts,
-        "replay": {
-            "schema_version": REPLAY_SCHEMA_VERSION,
-            "available": (output / "replay.npz").exists(),
-        },
-    }
-    if run_kind:
-        payload["run_kind"] = run_kind
-    if error:
-        payload["error"] = error[-2000:]
-    target = output / "manifest.json"
-    target.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
-    return target
+    try:
+        with pinned_output_root(output, allowed_root=output) as (
+            display_root,
+            root_exists,
+            root_pin,
+        ):
+            if not root_exists or root_pin is None:
+                raise CleanupSafetyError("Manifest output directory is missing")
+            root_pin.validate_directory((), description="manifest output")
+            with root_pin.operation_lock():
+                expected_manifest = _assert_manifest_transition_allowed(
+                    root_pin,
+                    requested_status=status,
+                )
+                artifacts = _inventory_artifacts_rooted(root_pin)
+                model_path_value = config.get("model_path")
+                model_path = resolve_project_path(model_path_value) if model_path_value else None
+                license_path = _find_model_license(model_path)
+                payload = {
+                    "schema_version": MANIFEST_SCHEMA_VERSION,
+                    "scenario_id": scenario_id,
+                    "status": status,
+                    "started_at": started_at or _utc_now(),
+                    "finished_at": finished_at or _utc_now(),
+                    "config": {
+                        "path": Path(config_path).as_posix() if config_path else "",
+                        "seed": seed,
+                        "resolved": config,
+                    },
+                    "runtime": {
+                        "mclab": __version__,
+                        "mujoco": _module_version("mujoco"),
+                        "python": platform.python_version(),
+                        "os": platform.platform(),
+                    },
+                    "model": {
+                        "path": _relative_or_absolute(model_path),
+                        "sha256": (
+                            _sha256(model_path) if model_path and model_path.is_file() else ""
+                        ),
+                        "license": _relative_or_absolute(license_path),
+                        "license_sha256": _sha256(license_path) if license_path else "",
+                    },
+                    "artifacts": artifacts,
+                    "replay": {
+                        "schema_version": REPLAY_SCHEMA_VERSION,
+                        "available": "replay.npz" in artifacts,
+                    },
+                }
+                if run_kind:
+                    payload["run_kind"] = run_kind
+                if error:
+                    payload["error"] = error[-2000:]
+                encoded = json.dumps(payload, indent=2, ensure_ascii=False).encode("utf-8")
+                if len(encoded) > MAX_METADATA_BYTES:
+                    raise CleanupSafetyError(
+                        "Manifest exceeds the schema-1 metadata read limit"
+                    )
+                _assert_manifest_unchanged(root_pin, expected_manifest)
+                try:
+                    root_pin.replace_regular_file(("manifest.json",), encoded)
+                    root_pin.assert_transaction_boundaries()
+                except (CleanupOperationError, CleanupSafetyError, OSError) as exc:
+                    if not _desired_manifest_is_visible(root_pin, encoded):
+                        raise
+                    LOGGER.warning(
+                        "Manifest replacement reached the requested state before a "
+                        "post-commit check failed; preserving the visible publication: %s",
+                        exc,
+                    )
+                return display_root / "manifest.json"
+    except (CleanupOperationError, CleanupSafetyError, OSError) as exc:
+        raise RuntimeError(f"Could not publish manifest safely: {exc}") from exc
 
 
 def verify_manifest(output_path: str | Path) -> list[str]:
     output = Path(output_path)
-    manifest_path = output / "manifest.json"
     try:
-        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError, TypeError) as exc:
+        with pinned_output_root(output, allowed_root=output) as (
+            _display_root,
+            root_exists,
+            root_pin,
+        ):
+            if not root_exists or root_pin is None:
+                raise CleanupSafetyError("Manifest output directory is missing")
+            root_pin.validate_directory((), description="manifest output")
+            with root_pin.operation_lock():
+                manifest_bytes = root_pin.read_regular_file(
+                    ("manifest.json",),
+                    description="manifest",
+                    max_bytes=MAX_METADATA_BYTES,
+                    allow_empty=False,
+                )
+                payload = json.loads(manifest_bytes.decode("utf-8"))
+                errors = _verify_manifest_payload_rooted(root_pin, payload)
+                final_manifest = root_pin.read_regular_file(
+                    ("manifest.json",),
+                    description="manifest",
+                    max_bytes=MAX_METADATA_BYTES,
+                    allow_empty=False,
+                )
+                if final_manifest != manifest_bytes:
+                    errors.append("Manifest changed during verification.")
+                root_pin.assert_read_boundary()
+                return errors
+    except (
+        CleanupOperationError,
+        CleanupSafetyError,
+        OSError,
+        UnicodeError,
+        ValueError,
+        TypeError,
+    ) as exc:
         return [f"Could not read manifest: {exc}"]
+
+
+def _verify_manifest_payload_rooted(
+    root_pin: PinnedOutputRoot,
+    payload: object,
+) -> list[str]:
+    if not isinstance(payload, dict):
+        return ["Invalid manifest payload."]
     errors: list[str] = []
     schema_version = payload.get("schema_version")
     if type(schema_version) is not int or schema_version != MANIFEST_SCHEMA_VERSION:
         errors.append("Unsupported manifest schema.")
-    for relative, expected in dict(payload.get("artifacts", {})).items():
-        path = output / relative
-        if not path.is_file():
+    raw_artifacts = payload.get("artifacts", {})
+    if not isinstance(raw_artifacts, dict):
+        return ["Invalid manifest artifacts."]
+    for relative, expected in raw_artifacts.items():
+        if not _safe_artifact_relative(relative):
+            errors.append(f"Unsafe artifact path: {relative}")
+            continue
+        parts = tuple(PurePosixPath(relative).parts)
+        try:
+            artifact_stat = root_pin.lstat(parts)
+        except (CleanupOperationError, CleanupSafetyError, OSError):
             errors.append(f"Missing artifact: {relative}")
-        elif _sha256(path) != expected:
+            continue
+        if _stat_is_link_or_reparse(artifact_stat) or not stat.S_ISREG(artifact_stat.st_mode):
+            errors.append(f"Missing artifact: {relative}")
+            continue
+        try:
+            actual = _sha256_rooted(
+                root_pin,
+                parts,
+                description=f"artifact {relative}",
+                expected_size=int(artifact_stat.st_size),
+            )
+        except (CleanupOperationError, CleanupSafetyError, OSError):
+            errors.append(f"Missing artifact: {relative}")
+            continue
+        if actual != expected:
             errors.append(f"Artifact hash mismatch: {relative}")
     return errors
+
+
+def _assert_manifest_transition_allowed(
+    root_pin: PinnedOutputRoot,
+    *,
+    requested_status: str,
+) -> bytes | None:
+    if requested_status not in _MANIFEST_STATUSES:
+        raise CleanupSafetyError(f"Unsupported manifest status: {requested_status!r}")
+    if not root_pin.lexists(("manifest.json",)):
+        return None
+    try:
+        existing_bytes = root_pin.read_regular_file(
+            ("manifest.json",),
+            description="existing manifest",
+            max_bytes=MAX_METADATA_BYTES,
+            allow_empty=False,
+        )
+        existing = json.loads(existing_bytes.decode("utf-8"))
+    except (CleanupOperationError, CleanupSafetyError, OSError, UnicodeError, ValueError) as exc:
+        raise CleanupSafetyError("Existing manifest is not safely readable") from exc
+    if not isinstance(existing, dict):
+        raise CleanupSafetyError("Existing manifest payload is invalid")
+    if existing.get("status") in _TERMINAL_MANIFEST_STATUSES:
+        raise CleanupSafetyError(
+            f"A terminal manifest is immutable and cannot be reopened as {requested_status!r}"
+        )
+    if (
+        type(existing.get("schema_version")) is not int
+        or existing.get("schema_version") != MANIFEST_SCHEMA_VERSION
+        or existing.get("status") != "running"
+    ):
+        raise CleanupSafetyError(
+            "Only an existing schema-1 running manifest may be advanced or refreshed"
+        )
+    return existing_bytes
+
+
+def _assert_manifest_unchanged(
+    root_pin: PinnedOutputRoot,
+    expected_manifest: bytes | None,
+) -> None:
+    """Refuse to overwrite a marker changed after the transition check."""
+
+    if expected_manifest is None:
+        if root_pin.lexists(("manifest.json",)):
+            raise CleanupSafetyError("Manifest appeared during publication")
+        return
+    try:
+        current = root_pin.read_regular_file(
+            ("manifest.json",),
+            description="existing manifest",
+            max_bytes=MAX_METADATA_BYTES,
+            allow_empty=False,
+        )
+    except (CleanupOperationError, CleanupSafetyError, OSError) as exc:
+        raise CleanupSafetyError("Manifest changed during publication") from exc
+    if current != expected_manifest:
+        raise CleanupSafetyError("Manifest changed during publication")
+
+
+def _desired_manifest_is_visible(
+    root_pin: PinnedOutputRoot,
+    expected: bytes,
+) -> bool:
+    """Reconcile an exception only when the exact marker is still attached."""
+
+    try:
+        root_pin.assert_current()
+        current = root_pin.read_regular_file(
+            ("manifest.json",),
+            description="committed manifest",
+            max_bytes=MAX_METADATA_BYTES,
+            allow_empty=False,
+        )
+    except (CleanupOperationError, CleanupSafetyError, OSError):
+        return False
+    return current == expected
+
+
+def _inventory_artifacts_rooted(root_pin: PinnedOutputRoot) -> dict[str, str]:
+    regular_files: list[tuple[str, tuple[str, ...], int]] = []
+    directories: list[tuple[str, ...]] = [()]
+    entries_seen = 0
+    while directories:
+        directory = directories.pop()
+        with _pinned_directory_chain(root_pin, directory):
+            remaining_entries = MAX_RUN_TREE_ENTRIES - entries_seen
+            names = root_pin.list_names(directory, max_entries=remaining_entries)
+            for name in sorted(names):
+                entries_seen += 1
+                if entries_seen > MAX_RUN_TREE_ENTRIES:
+                    raise CleanupSafetyError(
+                        f"Manifest output contains more than {MAX_RUN_TREE_ENTRIES} entries"
+                    )
+                child = (*directory, name)
+                relative = PurePosixPath(*child).as_posix()
+                if relative == "manifest.json":
+                    continue
+                child_stat = root_pin.lstat(child)
+                if _stat_is_link_or_reparse(child_stat):
+                    continue
+                if stat.S_ISREG(child_stat.st_mode):
+                    if _safe_artifact_relative(relative):
+                        regular_files.append((relative, child, int(child_stat.st_size)))
+                    continue
+                if stat.S_ISDIR(child_stat.st_mode) and not root_pin.is_mount_point(child):
+                    directories.append(child)
+
+    artifacts: dict[str, str] = {}
+    for relative, parts, expected_size in sorted(regular_files):
+        artifacts[relative] = _sha256_rooted(
+            root_pin,
+            parts,
+            description=f"artifact {relative}",
+            expected_size=expected_size,
+        )
+    return artifacts
+
+
+def _sha256_rooted(
+    root_pin: PinnedOutputRoot,
+    relative: tuple[str, ...],
+    *,
+    description: str,
+    expected_size: int,
+) -> str:
+    if expected_size < 0:
+        raise CleanupSafetyError(f"{description} has an invalid size")
+    digest = hashlib.sha256()
+    bytes_read = 0
+    with _pinned_directory_chain(root_pin, relative[:-1]):
+        file_stat = root_pin.lstat(relative)
+        if (
+            _stat_is_link_or_reparse(file_stat)
+            or not stat.S_ISREG(file_stat.st_mode)
+            or int(file_stat.st_size) != expected_size
+        ):
+            raise CleanupSafetyError(f"{description} changed or has an unsafe type")
+        with root_pin.open_regular_file(
+            relative,
+            description=description,
+            max_bytes=expected_size,
+        ) as stream:
+            while bytes_read <= expected_size:
+                remaining = expected_size + 1 - bytes_read
+                chunk = stream.read(min(1024 * 1024, remaining))
+                if not chunk:
+                    break
+                digest.update(chunk)
+                bytes_read += len(chunk)
+    if bytes_read != expected_size:
+        raise CleanupSafetyError(f"{description} changed size while hashed")
+    return digest.hexdigest()
+
+
+@contextmanager
+def _pinned_directory_chain(
+    root_pin: PinnedOutputRoot,
+    relative: tuple[str, ...],
+) -> Iterator[None]:
+    """Retain every ancestor so no Windows reparse point can enter mid-read."""
+
+    with ExitStack() as stack:
+        for index in range(1, len(relative) + 1):
+            prefix = relative[:index]
+            stack.enter_context(
+                root_pin.scoped_directory_pin(
+                    prefix,
+                    description=f"artifact directory {'/'.join(prefix)}",
+                )
+            )
+        yield
+
+
+def _safe_artifact_relative(value: object) -> bool:
+    if (
+        not isinstance(value, str)
+        or not value
+        or "\\" in value
+        or any(ord(character) < 32 or ord(character) == 127 for character in value)
+    ):
+        return False
+    if PureWindowsPath(value).drive:
+        return False
+    path = PurePosixPath(value)
+    return (
+        not path.is_absolute()
+        and path.as_posix() == value
+        and all(part not in {"", ".", ".."} for part in path.parts)
+    )
 
 
 def legacy_replay_reason(output_path: str | Path) -> str:

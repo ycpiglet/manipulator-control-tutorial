@@ -1,0 +1,332 @@
+{
+  "contract_version": 1,
+  "cases": [
+    {
+      "id": "lab01_batch_complete",
+      "target_id": "batch.lab01_msd_compare",
+      "status": "completed",
+      "plot_count": 1,
+      "artifact_keys": ["report", "worksheet", "prediction-check"],
+      "expected": {
+        "contract_version": 1,
+        "complete": true,
+        "primary_reason": "completion.v1.complete",
+        "reasons": ["completion.v1.complete"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "lab02_batch_complete",
+      "target_id": "batch.lab02_pid_compare",
+      "status": "completed",
+      "plot_count": 1,
+      "artifact_keys": ["report", "worksheet", "prediction-check"],
+      "expected": {
+        "contract_version": 1,
+        "complete": true,
+        "primary_reason": "completion.v1.complete",
+        "reasons": ["completion.v1.complete"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "lab03_batch_complete",
+      "target_id": "batch.lab03_2dof_compare",
+      "status": "completed",
+      "plot_count": 1,
+      "artifact_keys": ["report", "worksheet", "prediction-check"],
+      "expected": {
+        "contract_version": 1,
+        "complete": true,
+        "primary_reason": "completion.v1.complete",
+        "reasons": ["completion.v1.complete"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "lab04_wall_batch_complete",
+      "target_id": "batch.lab04_wall_compare",
+      "status": "completed",
+      "plot_count": 1,
+      "artifact_keys": ["report", "worksheet", "prediction-check"],
+      "expected": {
+        "contract_version": 1,
+        "complete": true,
+        "primary_reason": "completion.v1.complete",
+        "reasons": ["completion.v1.complete"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "lab04_cartesian_batch_complete",
+      "target_id": "batch.lab04_cartesian_compare",
+      "status": "completed",
+      "plot_count": 1,
+      "artifact_keys": ["report", "worksheet", "prediction-check"],
+      "expected": {
+        "contract_version": 1,
+        "complete": true,
+        "primary_reason": "completion.v1.complete",
+        "reasons": ["completion.v1.complete"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "concrete_missing_plot",
+      "target_id": "batch.lab01_msd_compare",
+      "status": "completed",
+      "plot_count": 0,
+      "artifact_keys": ["report", "worksheet", "prediction-check"],
+      "expected": {
+        "contract_version": 1,
+        "complete": false,
+        "primary_reason": "completion.v1.plot_missing",
+        "reasons": ["completion.v1.plot_missing"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "concrete_missing_report",
+      "target_id": "batch.lab01_msd_compare",
+      "status": "completed",
+      "plot_count": 1,
+      "artifact_keys": ["worksheet", "prediction-check"],
+      "expected": {
+        "contract_version": 1,
+        "complete": false,
+        "primary_reason": "completion.v1.required_artifact_missing",
+        "reasons": ["completion.v1.required_artifact_missing"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "concrete_missing_worksheet",
+      "target_id": "batch.lab01_msd_compare",
+      "status": "completed",
+      "plot_count": 1,
+      "artifact_keys": ["report", "prediction-check"],
+      "expected": {
+        "contract_version": 1,
+        "complete": false,
+        "primary_reason": "completion.v1.required_artifact_missing",
+        "reasons": ["completion.v1.required_artifact_missing"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "concrete_missing_prediction_check",
+      "target_id": "batch.lab01_msd_compare",
+      "status": "completed",
+      "plot_count": 1,
+      "artifact_keys": ["report", "worksheet"],
+      "expected": {
+        "contract_version": 1,
+        "complete": false,
+        "primary_reason": "completion.v1.required_artifact_missing",
+        "reasons": ["completion.v1.required_artifact_missing"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "concrete_not_terminal_completed",
+      "target_id": "batch.lab01_msd_compare",
+      "status": "running",
+      "plot_count": 1,
+      "artifact_keys": ["report", "worksheet", "prediction-check"],
+      "expected": {
+        "contract_version": 1,
+        "complete": false,
+        "primary_reason": "completion.v1.run_not_completed",
+        "reasons": ["completion.v1.run_not_completed"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "all_complete_without_parent_plot",
+      "target_id": "batch.all",
+      "status": "completed",
+      "plot_count": 0,
+      "artifact_keys": [
+        "report",
+        "worksheet",
+        "batch.lab01_msd_compare",
+        "batch.lab02_pid_compare",
+        "batch.lab03_2dof_compare",
+        "batch.lab04_wall_compare",
+        "batch.lab04_cartesian_compare"
+      ],
+      "expected": {
+        "contract_version": 1,
+        "complete": true,
+        "primary_reason": "completion.v1.complete",
+        "reasons": ["completion.v1.complete"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "all_missing_report",
+      "target_id": "batch.all",
+      "status": "completed",
+      "plot_count": 0,
+      "artifact_keys": [
+        "worksheet",
+        "batch.lab01_msd_compare",
+        "batch.lab02_pid_compare",
+        "batch.lab03_2dof_compare",
+        "batch.lab04_wall_compare",
+        "batch.lab04_cartesian_compare"
+      ],
+      "expected": {
+        "contract_version": 1,
+        "complete": false,
+        "primary_reason": "completion.v1.required_artifact_missing",
+        "reasons": ["completion.v1.required_artifact_missing"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "all_missing_worksheet",
+      "target_id": "batch.all",
+      "status": "completed",
+      "plot_count": 0,
+      "artifact_keys": [
+        "report",
+        "batch.lab01_msd_compare",
+        "batch.lab02_pid_compare",
+        "batch.lab03_2dof_compare",
+        "batch.lab04_wall_compare",
+        "batch.lab04_cartesian_compare"
+      ],
+      "expected": {
+        "contract_version": 1,
+        "complete": false,
+        "primary_reason": "completion.v1.required_artifact_missing",
+        "reasons": ["completion.v1.required_artifact_missing"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "all_missing_lab01_child",
+      "target_id": "batch.all",
+      "status": "completed",
+      "plot_count": 0,
+      "artifact_keys": [
+        "report",
+        "worksheet",
+        "batch.lab02_pid_compare",
+        "batch.lab03_2dof_compare",
+        "batch.lab04_wall_compare",
+        "batch.lab04_cartesian_compare"
+      ],
+      "expected": {
+        "contract_version": 1,
+        "complete": false,
+        "primary_reason": "completion.v1.required_artifact_missing",
+        "reasons": ["completion.v1.required_artifact_missing"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "all_missing_lab02_child",
+      "target_id": "batch.all",
+      "status": "completed",
+      "plot_count": 0,
+      "artifact_keys": [
+        "report",
+        "worksheet",
+        "batch.lab01_msd_compare",
+        "batch.lab03_2dof_compare",
+        "batch.lab04_wall_compare",
+        "batch.lab04_cartesian_compare"
+      ],
+      "expected": {
+        "contract_version": 1,
+        "complete": false,
+        "primary_reason": "completion.v1.required_artifact_missing",
+        "reasons": ["completion.v1.required_artifact_missing"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "all_missing_lab03_child",
+      "target_id": "batch.all",
+      "status": "completed",
+      "plot_count": 0,
+      "artifact_keys": [
+        "report",
+        "worksheet",
+        "batch.lab01_msd_compare",
+        "batch.lab02_pid_compare",
+        "batch.lab04_wall_compare",
+        "batch.lab04_cartesian_compare"
+      ],
+      "expected": {
+        "contract_version": 1,
+        "complete": false,
+        "primary_reason": "completion.v1.required_artifact_missing",
+        "reasons": ["completion.v1.required_artifact_missing"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "all_missing_lab04_wall_child",
+      "target_id": "batch.all",
+      "status": "completed",
+      "plot_count": 0,
+      "artifact_keys": [
+        "report",
+        "worksheet",
+        "batch.lab01_msd_compare",
+        "batch.lab02_pid_compare",
+        "batch.lab03_2dof_compare",
+        "batch.lab04_cartesian_compare"
+      ],
+      "expected": {
+        "contract_version": 1,
+        "complete": false,
+        "primary_reason": "completion.v1.required_artifact_missing",
+        "reasons": ["completion.v1.required_artifact_missing"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "all_missing_lab04_cartesian_child",
+      "target_id": "batch.all",
+      "status": "completed",
+      "plot_count": 0,
+      "artifact_keys": [
+        "report",
+        "worksheet",
+        "batch.lab01_msd_compare",
+        "batch.lab02_pid_compare",
+        "batch.lab03_2dof_compare",
+        "batch.lab04_wall_compare"
+      ],
+      "expected": {
+        "contract_version": 1,
+        "complete": false,
+        "primary_reason": "completion.v1.required_artifact_missing",
+        "reasons": ["completion.v1.required_artifact_missing"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    }
+  ]
+}

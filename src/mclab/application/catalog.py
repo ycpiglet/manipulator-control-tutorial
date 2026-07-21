@@ -11,6 +11,21 @@ from typing import Any
 from mclab.completion import CompletionRule
 from mclab.config import PROJECT_ROOT, load_config
 
+REPORT_ARTIFACT_KEY = "report"
+WORKSHEET_ARTIFACT_KEY = "worksheet"
+PREDICTION_CHECK_ARTIFACT_KEY = "prediction-check"
+
+CONCRETE_BATCH_NAMES = (
+    "lab01_msd_compare",
+    "lab02_pid_compare",
+    "lab03_2dof_compare",
+    "lab04_wall_compare",
+    "lab04_cartesian_compare",
+)
+CONCRETE_BATCH_TARGET_IDS = tuple(f"batch.{name}" for name in CONCRETE_BATCH_NAMES)
+ALL_BATCH_TARGET_ID = "batch.all"
+BATCH_TARGET_IDS = (*CONCRETE_BATCH_TARGET_IDS, ALL_BATCH_TARGET_ID)
+
 LEARNING_PATH_SCENARIO_IDS = (
     "lab01.default",
     "lab01.interactive-pull",
@@ -24,6 +39,7 @@ LEARNING_PATH_SCENARIO_IDS = (
     "lab04.cartesian-reach",
     "lab04.interactive-virtual-wall",
 )
+LEARNING_PATH_TARGET_IDS = (*LEARNING_PATH_SCENARIO_IDS, ALL_BATCH_TARGET_ID)
 
 
 @dataclass(frozen=True)
@@ -63,6 +79,19 @@ class ScenarioDefinition:
         return load_config(self.config_path)
 
 
+@dataclass(frozen=True)
+class BatchDefinition:
+    """A comparison-batch target with explicit child and completion identities."""
+
+    id: str
+    batch_name: str
+    child_target_ids: tuple[str, ...]
+    completion: CompletionRule
+
+
+CompletionTargetDefinition = ScenarioDefinition | BatchDefinition
+
+
 class ScenarioCatalog:
     """Read-only catalog used by the desktop app, CLI, and validation tests.
 
@@ -71,18 +100,28 @@ class ScenarioCatalog:
     they resolve a definition through this boundary.
     """
 
-    def __init__(self, scenarios: tuple[ScenarioDefinition, ...]) -> None:
+    def __init__(
+        self,
+        scenarios: tuple[ScenarioDefinition, ...],
+        batches: tuple[BatchDefinition, ...] = (),
+    ) -> None:
         self._scenarios = scenarios
+        self._batches = batches
         self._by_id = {scenario.id: scenario for scenario in scenarios}
         if len(self._by_id) != len(scenarios):
             raise ValueError("Scenario IDs must be unique.")
+        self._batches_by_id = {batch.id: batch for batch in batches}
+        if len(self._batches_by_id) != len(batches):
+            raise ValueError("Batch IDs must be unique.")
+        if self._by_id.keys() & self._batches_by_id.keys():
+            raise ValueError("Scenario and batch IDs must not overlap.")
 
     @classmethod
     def default(cls) -> "ScenarioCatalog":
         # Lazy import avoids pulling Tk or Qt into headless module imports.
         from mclab.learner_menu import MENU_ACTIONS
 
-        ids = [_stable_id(action.lab_name, action.config_path) for action in MENU_ACTIONS]
+        ids = [stable_scenario_id(action.lab_name, action.config_path) for action in MENU_ACTIONS]
         scenarios: list[ScenarioDefinition] = []
         for index, action in enumerate(MENU_ACTIONS):
             try:
@@ -119,7 +158,8 @@ class ScenarioCatalog:
                     config_error=config_error,
                 )
             )
-        return cls(tuple(scenarios))
+        scenario_definitions = tuple(scenarios)
+        return cls(scenario_definitions, _default_batch_definitions())
 
     def all(self) -> tuple[ScenarioDefinition, ...]:
         return self._scenarios
@@ -129,6 +169,23 @@ class ScenarioCatalog:
             return self._by_id[scenario_id]
         except KeyError as exc:
             raise KeyError(f"Unknown scenario ID: {scenario_id}") from exc
+
+    def batches(self) -> tuple[BatchDefinition, ...]:
+        return self._batches
+
+    def get_batch(self, batch_id: str) -> BatchDefinition:
+        try:
+            return self._batches_by_id[batch_id]
+        except KeyError as exc:
+            raise KeyError(f"Unknown batch ID: {batch_id}") from exc
+
+    def targets(self) -> tuple[CompletionTargetDefinition, ...]:
+        return (*self._scenarios, *self._batches)
+
+    def get_target(self, target_id: str) -> CompletionTargetDefinition:
+        if target_id in self._by_id:
+            return self._by_id[target_id]
+        return self.get_batch(target_id)
 
     def find_by_config(self, config_path: str | Path) -> ScenarioDefinition | None:
         normalized = Path(config_path).as_posix()
@@ -158,6 +215,9 @@ class ScenarioCatalog:
     def learning_path(self) -> tuple[ScenarioDefinition, ...]:
         return tuple(self.get(scenario_id) for scenario_id in LEARNING_PATH_SCENARIO_IDS)
 
+    def learning_path_targets(self) -> tuple[CompletionTargetDefinition, ...]:
+        return tuple(self.get_target(target_id) for target_id in LEARNING_PATH_TARGET_IDS)
+
     def integrity_errors(self, root: Path = PROJECT_ROOT) -> list[str]:
         errors: list[str] = []
         for scenario in self._scenarios:
@@ -182,13 +242,123 @@ class ScenarioCatalog:
                     f"{scenario.id}: unknown application core controls "
                     + ", ".join(sorted(missing_controls))
                 )
+        target_ids = set(self._by_id) | set(self._batches_by_id)
+        for batch in self._batches:
+            if not batch.child_target_ids:
+                errors.append(f"{batch.id}: has no child targets")
+            unknown_children = set(batch.child_target_ids) - target_ids
+            if unknown_children:
+                errors.append(
+                    f"{batch.id}: unknown child targets " + ", ".join(sorted(unknown_children))
+                )
         return errors
 
 
-def _stable_id(lab_name: str, config_path: str) -> str:
-    stem = Path(config_path).stem.lower()
+def stable_scenario_id(lab_name: str, config_path: str | Path | None) -> str:
+    """Return the one public manifest ID for a lab/config pair."""
+
+    prefix = {
+        "lab01_msd": "lab01",
+        "lab02_pid": "lab02",
+        "lab03_trajectory": "lab03",
+        "lab03_2dof": "lab03",
+        "lab04_panda": "lab04",
+    }.get(lab_name, lab_name)
+    stem = Path(config_path).stem.lower() if config_path is not None else "custom"
     slug = re.sub(r"[^a-z0-9]+", "-", stem).strip("-")
-    return f"{lab_name}.{slug}"
+    return f"{prefix}.{slug}"
+
+
+def target_from_legacy_summary(
+    catalog: ScenarioCatalog,
+    summary: dict[str, Any],
+) -> CompletionTargetDefinition | None:
+    """Resolve only pre-manifest diagnostic identity from legacy summary fields."""
+
+    config_path = str(summary.get("config_path") or "").strip()
+    if config_path:
+        normalized = _normalized_config_path(config_path)
+        for scenario in catalog.all():
+            if _normalized_config_path(scenario.config_path) == normalized:
+                return scenario
+
+    batch_name = str(
+        summary.get("batch_name") or (
+            summary.get("config_name")
+            if summary.get("lab_name") in {"batch", "batch_group"}
+            else ""
+        )
+        or ""
+    ).strip()
+    if batch_name:
+        try:
+            return catalog.get_batch(f"batch.{batch_name}")
+        except KeyError:
+            pass
+
+    config_name = str(summary.get("config_name") or "").strip().casefold()
+    lab_name = str(summary.get("lab_name") or "").strip().casefold()
+    if not config_name or not lab_name:
+        return None
+    return next(
+        (
+            scenario
+            for scenario in catalog.all()
+            if Path(scenario.config_path).stem.casefold() == config_name
+            and (
+                scenario.lab_name.casefold() in lab_name
+                or lab_name in scenario.lab_name.casefold()
+            )
+        ),
+        None,
+    )
+
+
+def _normalized_config_path(value: str) -> str:
+    return value.replace("\\", "/").lstrip("./").casefold()
+
+
+def _default_batch_definitions() -> tuple[BatchDefinition, ...]:
+    # Keep the existing executable batch matrix as the child source until its
+    # compatibility path can consume this registry in a separate change.
+    from mclab.batch import BATCH_SETS
+
+    concrete = tuple(
+        BatchDefinition(
+            id=batch_id,
+            batch_name=batch_name,
+            child_target_ids=tuple(
+                stable_scenario_id(item.lab_name, item.config_path)
+                for item in BATCH_SETS[batch_name]
+            ),
+            completion=CompletionRule(
+                requires_plot=True,
+                required_artifacts=(
+                    REPORT_ARTIFACT_KEY,
+                    WORKSHEET_ARTIFACT_KEY,
+                    PREDICTION_CHECK_ARTIFACT_KEY,
+                ),
+            ),
+        )
+        for batch_name, batch_id in zip(
+            CONCRETE_BATCH_NAMES,
+            CONCRETE_BATCH_TARGET_IDS,
+            strict=True,
+        )
+    )
+    course = BatchDefinition(
+        id=ALL_BATCH_TARGET_ID,
+        batch_name="all",
+        child_target_ids=CONCRETE_BATCH_TARGET_IDS,
+        completion=CompletionRule(
+            required_artifacts=(
+                REPORT_ARTIFACT_KEY,
+                WORKSHEET_ARTIFACT_KEY,
+                *CONCRETE_BATCH_TARGET_IDS,
+            ),
+        ),
+    )
+    return (*concrete, course)
 
 
 def _is_interactive(config: dict[str, Any]) -> bool:

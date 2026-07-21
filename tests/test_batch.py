@@ -12,7 +12,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from mclab import batch  # noqa: E402
-from mclab.application.artifacts import verify_manifest  # noqa: E402
+from mclab.application.artifacts import verify_manifest, write_manifest  # noqa: E402
+from mclab.application.catalog import stable_scenario_id  # noqa: E402
 from mclab.application.batch_runs import (  # noqa: E402
     all_compare_command,
     create_all_compare_output,
@@ -69,7 +70,9 @@ class BatchTests(unittest.TestCase):
         )
         self.assertTrue(any("approach speed" in question for question in lab04_guide.questions))
         self.assertTrue(any("target push depth" in question for question in lab04_guide.questions))
-        self.assertTrue(any("repeated target crossings" in question for question in lab04_guide.questions))
+        self.assertTrue(
+            any("repeated target crossings" in question for question in lab04_guide.questions)
+        )
         self.assertIn("max_hand_x_speed", lab04_guide.metric_keys)
         self.assertIn("max_target_wall_gap_cm", lab04_guide.metric_keys)
         self.assertIn("first_target_wall_cross_time", lab04_guide.metric_keys)
@@ -80,11 +83,21 @@ class BatchTests(unittest.TestCase):
         self.assertIn("target_wall_cross_episodes", lab04_guide.metric_keys)
         self.assertIn("wall_contact_episodes", lab04_guide.metric_keys)
         self.assertIn(
-            ("hand_x_speed_compare.png", "Panda Hand X Speed Comparison", "x speed [m/s]", "xdot_ee_0"),
+            (
+                "hand_x_speed_compare.png",
+                "Panda Hand X Speed Comparison",
+                "x speed [m/s]",
+                "xdot_ee_0",
+            ),
             lab04_guide.comparison_specs,
         )
         self.assertIn(
-            ("target_wall_gap_compare.png", "Target-Wall Gap Comparison", "gap [cm]", "target_wall_gap_cm"),
+            (
+                "target_wall_gap_compare.png",
+                "Target-Wall Gap Comparison",
+                "gap [cm]",
+                "target_wall_gap_cm",
+            ),
             lab04_guide.comparison_specs,
         )
         self.assertIn(
@@ -105,22 +118,32 @@ class BatchTests(unittest.TestCase):
             ),
             lab04_guide.summary_comparison_specs,
         )
-        self.assertIn("max_dls_condition_scale", batch.BATCH_GUIDES["lab03_2dof_compare"].metric_keys)
+        self.assertIn(
+            "max_dls_condition_scale", batch.BATCH_GUIDES["lab03_2dof_compare"].metric_keys
+        )
         self.assertIn("max_dls_task_speed", batch.BATCH_GUIDES["lab03_2dof_compare"].metric_keys)
-        self.assertIn("min_dls_task_speed_limit", batch.BATCH_GUIDES["lab03_2dof_compare"].metric_keys)
-        self.assertIn("max_dls_task_speed_limit", batch.BATCH_GUIDES["lab03_2dof_compare"].metric_keys)
+        self.assertIn(
+            "min_dls_task_speed_limit", batch.BATCH_GUIDES["lab03_2dof_compare"].metric_keys
+        )
+        self.assertIn(
+            "max_dls_task_speed_limit", batch.BATCH_GUIDES["lab03_2dof_compare"].metric_keys
+        )
         lab03_guide = batch.BATCH_GUIDES["lab03_2dof_compare"]
         self.assertTrue(
-            any("lower torque limit increase task error" in question for question in lab03_guide.questions)
+            any(
+                "lower torque limit increase task error" in question
+                for question in lab03_guide.questions
+            )
         )
         self.assertTrue(
             any("faster hand command" in question for question in lab03_guide.questions)
         )
+        self.assertTrue(any("joint-speed limit" in question for question in lab03_guide.questions))
         self.assertTrue(
-            any("joint-speed limit" in question for question in lab03_guide.questions)
-        )
-        self.assertTrue(
-            any("retargeting through an inner waypoint" in question for question in lab03_guide.questions)
+            any(
+                "retargeting through an inner waypoint" in question
+                for question in lab03_guide.questions
+            )
         )
         self.assertTrue(
             any("slowing the task-speed limit" in question for question in lab03_guide.questions)
@@ -132,13 +155,21 @@ class BatchTests(unittest.TestCase):
             any("elbow-up and elbow-down paths" in question for question in lab03_guide.questions)
         )
         self.assertTrue(
-            any("shoulder, elbow, or staggered disturbances" in question for question in lab03_guide.questions)
+            any(
+                "shoulder, elbow, or staggered disturbances" in question
+                for question in lab03_guide.questions
+            )
         )
         self.assertIn("max_abs_tau_disturbance", lab03_guide.metric_keys)
         self.assertIn("max_task_error_during_disturbance", lab03_guide.metric_keys)
         self.assertIn("disturbance_recovery_duration", lab03_guide.metric_keys)
         self.assertIn(
-            ("dls_task_speed_compare.png", "DLS Task Speed Comparison", "task speed", "dls_task_speed"),
+            (
+                "dls_task_speed_compare.png",
+                "DLS Task Speed Comparison",
+                "task speed",
+                "dls_task_speed",
+            ),
             lab03_guide.comparison_specs,
         )
         self.assertIn(
@@ -155,7 +186,12 @@ class BatchTests(unittest.TestCase):
             lab03_guide.comparison_specs,
         )
         self.assertIn(
-            ("shoulder_torque_compare.png", "Shoulder Torque Comparison", "torque [N m]", "tau_cmd_0"),
+            (
+                "shoulder_torque_compare.png",
+                "Shoulder Torque Comparison",
+                "torque [N m]",
+                "tau_cmd_0",
+            ),
             lab03_guide.comparison_specs,
         )
         self.assertIn(
@@ -163,7 +199,12 @@ class BatchTests(unittest.TestCase):
             lab03_guide.comparison_specs,
         )
         self.assertIn(
-            ("elbow_disturbance_compare.png", "Elbow Disturbance Comparison", "torque [N m]", "tau_disturbance_1"),
+            (
+                "elbow_disturbance_compare.png",
+                "Elbow Disturbance Comparison",
+                "torque [N m]",
+                "tau_disturbance_1",
+            ),
             lab03_guide.comparison_specs,
         )
         self.assertIn(
@@ -205,7 +246,9 @@ class BatchTests(unittest.TestCase):
 
     def test_lab03_adaptive_speed_schedule_configs_isolate_speed_schedule(self) -> None:
         fixed = load_config("configs/lab03_2dof/condition_aware_dls_fixed_speed_retarget_2dof.yaml")
-        adaptive = load_config("configs/lab03_2dof/condition_aware_dls_adaptive_speed_retarget_2dof.yaml")
+        adaptive = load_config(
+            "configs/lab03_2dof/condition_aware_dls_adaptive_speed_retarget_2dof.yaml"
+        )
 
         fixed_controller = dict(fixed["tracking_controller"])
         adaptive_controller = dict(adaptive["tracking_controller"])
@@ -214,7 +257,9 @@ class BatchTests(unittest.TestCase):
         self.assertNotIn("max_task_speed_schedule", fixed_controller)
         self.assertEqual(fixed_controller, adaptive_controller)
         self.assertEqual(fixed["target_xy_waypoints"], adaptive["target_xy_waypoints"])
-        self.assertLess(min(point["speed"] for point in schedule), adaptive_controller["max_task_speed"])
+        self.assertLess(
+            min(point["speed"] for point in schedule), adaptive_controller["max_task_speed"]
+        )
         for key in ("mode", "sim_time", "dt", "initial_q", "target_xy", "trajectory"):
             self.assertEqual(fixed[key], adaptive[key])
 
@@ -228,12 +273,16 @@ class BatchTests(unittest.TestCase):
         self.assertEqual(shallow["cartesian_target"], deep["cartesian_target"])
         for key in ("mode", "sim_time", "dt", "home_q", "trajectory", "virtual_wall"):
             self.assertEqual(shallow[key], deep[key])
-        self.assertEqual([point["time"] for point in shallow_waypoints], [point["time"] for point in deep_waypoints])
+        self.assertEqual(
+            [point["time"] for point in shallow_waypoints],
+            [point["time"] for point in deep_waypoints],
+        )
         self.assertLess(shallow_waypoints[2]["position"][0], deep_waypoints[2]["position"][0])
         self.assertLess(shallow_waypoints[-1]["position"][0], deep_waypoints[-1]["position"][0])
 
     def test_run_batch_creates_child_runs_and_index(self) -> None:
         calls: list[dict[str, object]] = []
+        batch_name = "lab01_msd_compare"
         scenario = batch.BatchScenario(
             label="demo scenario",
             lab_name="lab01",
@@ -262,16 +311,23 @@ class BatchTests(unittest.TestCase):
             (output / "worksheet.md").write_text("# Scenario Worksheet\n", encoding="utf-8")
             (output / "plots").mkdir()
             (output / "plots" / "position.png").write_bytes(b"fake-png")
+            write_manifest(
+                output,
+                scenario_id="lab01.default",
+                status="completed",
+                config=config,
+                config_path=config_path,
+            )
             calls.append({"config": config, **kwargs})
             return output
 
         with tempfile.TemporaryDirectory() as tmp:
             with (
-                patch.dict(batch.BATCH_SETS, {"unit_compare": (scenario,)}, clear=False),
+                patch.dict(batch.BATCH_SETS, {batch_name: (scenario,)}, clear=False),
                 patch.dict(batch.LAB_RUNNERS, {"lab01": fake_runner}, clear=False),
             ):
                 output = batch.run_batch(
-                    "unit_compare",
+                    batch_name,
                     output_dir=Path(tmp).resolve() / "batch_output",
                     plot=False,
                     seed=11,
@@ -289,7 +345,7 @@ class BatchTests(unittest.TestCase):
             self.assertTrue((output / "report.html").exists())
             self.assertTrue((output / "worksheet.md").exists())
             manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
-            self.assertEqual(manifest["scenario_id"], "batch.unit_compare")
+            self.assertEqual(manifest["scenario_id"], f"batch.{batch_name}")
             self.assertEqual(manifest["status"], "completed")
             self.assertEqual(manifest["run_kind"], "comparison_batch")
             self.assertEqual(verify_manifest(output), [])
@@ -298,7 +354,7 @@ class BatchTests(unittest.TestCase):
                 {
                     path.relative_to(output).as_posix()
                     for path in output.rglob("*")
-                    if path.is_file() and path.name != "manifest.json"
+                    if path.is_file() and path != output / "manifest.json"
                 },
             )
             cleanup_plan = build_cleanup_plan(
@@ -307,7 +363,9 @@ class BatchTests(unittest.TestCase):
                 allowed_root=output.parent,
             )
             self.assertEqual([entry.name for entry in cleanup_plan.selected], [output.name])
-            self.assertIn("demo_scenario/report.html", (output / "index.html").read_text(encoding="utf-8"))
+            self.assertIn(
+                "demo_scenario/report.html", (output / "index.html").read_text(encoding="utf-8")
+            )
             before = (output / "summary.json").read_bytes()
             with (
                 patch.dict(batch.BATCH_SETS, {"unit_compare": (scenario,)}, clear=False),
@@ -325,9 +383,18 @@ class BatchTests(unittest.TestCase):
             )
             self.assertIn(".table-wrap:focus-visible", report_html)
             self.assertIn("Open the batch worksheet", report_html)
+            self.assertIn("digest-published and read-only", report_html)
+            self.assertIn(
+                "personal or course notes outside the saved-run folder",
+                report_html,
+            )
+            self.assertIn("as a read-only reference", report_html)
             self.assertIn("Next Experiments", report_html)
             self.assertIn("Reproduce Commands", report_html)
-            self.assertIn("python -m mclab batch unit_compare --open-report", report_html)
+            self.assertIn(
+                f"python -m mclab batch {batch_name} --open-report",
+                report_html,
+            )
             self.assertIn(
                 "python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot --plots essential",
                 report_html,
@@ -343,11 +410,17 @@ class BatchTests(unittest.TestCase):
             self.assertIn("Viewer Handoff", report_html)
             self.assertIn('id="viewer-handoff"', report_html)
             self.assertIn("Start with demo scenario", report_html)
-            self.assertIn("only saved scenario; inspect the motion before editing YAML", report_html)
-            self.assertIn("Open the scenario report, priority plot, worksheet, or folder first", report_html)
+            self.assertIn(
+                "only saved scenario; inspect the motion before editing YAML", report_html
+            )
+            self.assertIn(
+                "Open the scenario report, priority plot, worksheet, or folder first", report_html
+            )
             self.assertIn("demo scenario", report_html)
             self.assertIn("Start steps", report_html)
-            self.assertIn("Predict -&gt; Run scenario -&gt; Review priority plot and worksheet.", report_html)
+            self.assertIn(
+                "Predict -&gt; Run scenario -&gt; Review priority plot and worksheet.", report_html
+            )
             self.assertIn("Challenge", report_html)
             self.assertIn("verify it in the saved plot and worksheet", report_html)
             self.assertIn("Predict", report_html)
@@ -376,16 +449,31 @@ class BatchTests(unittest.TestCase):
             self.assertIn("demo_scenario/plots/position.png", report_html)
             worksheet = (output / "worksheet.md").read_text(encoding="utf-8")
             self.assertIn("# MCLab Batch Worksheet", worksheet)
+            self.assertIn("## Saved Artifact Policy", worksheet)
+            self.assertIn("digest-published and read-only", worksheet)
+            self.assertIn(
+                "personal or course notes outside the saved-run folder",
+                worksheet,
+            )
             self.assertIn("## Scenario Review", worksheet)
             self.assertIn("demo scenario", worksheet)
             self.assertIn("Folder: demo_scenario/", worksheet)
             self.assertIn("Worksheet: demo_scenario/worksheet.md", worksheet)
-            self.assertIn("Start steps: Predict -> Run scenario -> Review priority plot and worksheet.", worksheet)
+            self.assertIn(
+                "Start steps: Predict -> Run scenario -> Review priority plot and worksheet.",
+                worksheet,
+            )
             self.assertIn("Challenge: Explain how mass, damping, stiffness", worksheet)
             self.assertIn("Priority plot: demo_scenario/plots/position.png", worksheet)
             self.assertIn("Plot review: Position - Compare actual motion against target", worksheet)
-            self.assertIn("Batch command: python -m mclab batch unit_compare --open-report", worksheet)
-            self.assertIn("Scenario command: python -m mclab run lab01 --config configs/lab01_msd/default.yaml", worksheet)
+            self.assertIn(
+                f"Batch command: python -m mclab batch {batch_name} --open-report",
+                worksheet,
+            )
+            self.assertIn(
+                "Scenario command: python -m mclab run lab01 --config configs/lab01_msd/default.yaml",
+                worksheet,
+            )
             self.assertIn(
                 "Viewer rerun: python -m mclab run lab01 --config configs/lab01_msd/default.yaml "
                 "--viewer --realtime --pause-at-end --plot --plots essential",
@@ -393,17 +481,64 @@ class BatchTests(unittest.TestCase):
             )
             self.assertIn("## Viewer Handoff", worksheet)
             self.assertIn("Start with: demo scenario", worksheet)
-            self.assertIn("Why: only saved scenario; inspect the motion before editing YAML", worksheet)
+            self.assertIn(
+                "Why: only saved scenario; inspect the motion before editing YAML", worksheet
+            )
             self.assertIn("Report: demo_scenario/report.html", worksheet)
             self.assertIn("Priority plot: demo_scenario/plots/position.png", worksheet)
             self.assertIn("Worksheet: demo_scenario/worksheet.md", worksheet)
             self.assertIn("Folder: demo_scenario/", worksheet)
-            self.assertIn("- [ ] Write which scenario best supports your prediction.", worksheet)
+            self.assertIn(
+                "- Review prompt: Record which scenario best supports your prediction.",
+                worksheet,
+            )
+            self.assertNotIn("- [ ]", worksheet)
             parent_index = output.parent / "index.html"
             self.assertIn("batch_output/report.html", parent_index.read_text(encoding="utf-8"))
             self.assertIn("batch_output/worksheet.md", parent_index.read_text(encoding="utf-8"))
 
-    def test_run_batch_failure_publishes_strict_error_manifest(self) -> None:
+    def test_run_batch_failure_publishes_strict_error_manifest_after_report_repair(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp).resolve() / "partial-batch"
+            original_report = batch.write_batch_report
+            report_attempts = 0
+
+            def fail_once(*args: object, **kwargs: object) -> Path:
+                nonlocal report_attempts
+                report_attempts += 1
+                if report_attempts == 1:
+                    raise RuntimeError("injected")
+                return original_report(*args, **kwargs)
+
+            with (
+                patch.dict(batch.BATCH_SETS, {"lab01_msd_compare": ()}, clear=False),
+                patch("mclab.batch.write_outputs_index"),
+                patch(
+                    "mclab.batch.write_batch_report",
+                    side_effect=fail_once,
+                ),
+                self.assertRaisesRegex(RuntimeError, "injected"),
+            ):
+                batch.run_batch("lab01_msd_compare", output_dir=output, plot=False)
+
+            manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["status"], "error")
+            self.assertEqual(manifest["error"], "injected")
+            self.assertEqual(verify_manifest(output), [])
+            self.assertIn(
+                "completion.v1.run_not_completed",
+                (output / "report.html").read_text(encoding="utf-8"),
+            )
+            cleanup_plan = build_cleanup_plan(
+                output.parent,
+                keep=0,
+                allowed_root=output.parent,
+            )
+            self.assertEqual([entry.name for entry in cleanup_plan.selected], [output.name])
+
+    def test_run_batch_report_repair_failure_stays_running(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp).resolve() / "partial-batch"
             with (
@@ -418,17 +553,17 @@ class BatchTests(unittest.TestCase):
                 batch.run_batch("unit_compare", output_dir=output, plot=False)
 
             manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
-            self.assertEqual(manifest["status"], "error")
-            self.assertEqual(manifest["error"], "injected")
+            self.assertEqual(manifest["status"], "running")
+            self.assertNotIn("error", manifest)
             self.assertEqual(verify_manifest(output), [])
             cleanup_plan = build_cleanup_plan(
                 output.parent,
                 keep=0,
                 allowed_root=output.parent,
             )
-            self.assertEqual([entry.name for entry in cleanup_plan.selected], [output.name])
+            self.assertEqual(cleanup_plan.selected, ())
 
-    def test_run_batch_preserves_original_error_if_error_manifest_fails(self) -> None:
+    def test_run_batch_stops_if_initial_running_manifest_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp).resolve() / "partial-batch"
             with (
@@ -442,7 +577,7 @@ class BatchTests(unittest.TestCase):
                     "mclab.application.artifacts.write_manifest",
                     side_effect=OSError("manifest failure"),
                 ),
-                self.assertRaisesRegex(RuntimeError, "original batch failure"),
+                self.assertRaisesRegex(OSError, "manifest failure"),
             ):
                 batch.run_batch("unit_compare", output_dir=output, plot=False)
 
@@ -464,15 +599,25 @@ class BatchTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (output / "report.html").write_text("<html></html>", encoding="utf-8")
-            (output / "worksheet.md").write_text("# Batch Worksheet\n", encoding="utf-8")
+            (output / "worksheet.md").write_text(
+                "# Batch Worksheet\n\n## Prediction Check\n",
+                encoding="utf-8",
+            )
+            (output / "comparison_plots").mkdir()
+            (output / "comparison_plots" / "comparison.png").write_bytes(b"plot")
+            write_manifest(
+                output,
+                scenario_id=f"batch.{batch_name}",
+                status="completed",
+                config={"batch_name": batch_name, "plot": True},
+                run_kind="comparison_batch",
+            )
             return output
 
         expected_batches = list(batch.list_batch_sets())
         expected_scenarios = sum(len(scenarios) for scenarios in batch.BATCH_SETS.values())
         progress: list[tuple[int, int, str]] = []
-        with tempfile.TemporaryDirectory() as tmp, patch.dict(
-            os.environ, {"MCLAB_DATA_DIR": tmp}
-        ):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, {"MCLAB_DATA_DIR": tmp}):
             all_output = create_all_compare_output()
             _program, arguments = all_compare_command(all_output)
             with patch("mclab.batch.run_batch", side_effect=fake_run_batch) as runner:
@@ -527,19 +672,42 @@ class BatchTests(unittest.TestCase):
             self.assertIn("lab01_msd_compare/worksheet.md", report_html)
             self.assertIn('href="lab01_msd_compare/"', report_html)
             self.assertIn("Open the course worksheet", report_html)
+            self.assertIn("digest-published and read-only", report_html)
+            self.assertIn(
+                "personal or course notes outside the saved-run folder",
+                report_html,
+            )
+            self.assertIn("as a read-only reference", report_html)
             worksheet = (output / "worksheet.md").read_text(encoding="utf-8")
             self.assertIn("# MCLab Course Batch Worksheet", worksheet)
+            self.assertIn("## Saved Artifact Policy", worksheet)
+            self.assertIn("digest-published and read-only", worksheet)
+            self.assertIn(
+                "personal or course notes outside the saved-run folder",
+                worksheet,
+            )
             self.assertIn("lab01_msd_compare", worksheet)
-            self.assertIn("Focus: Compare how damping and stiffness change free response", worksheet)
-            self.assertIn("First question: Which case oscillates the most before settling?", worksheet)
+            self.assertIn(
+                "Focus: Compare how damping and stiffness change free response", worksheet
+            )
+            self.assertIn(
+                "First question: Which case oscillates the most before settling?", worksheet
+            )
             self.assertIn("Worksheet: lab01_msd_compare/worksheet.md", worksheet)
             self.assertIn("Viewer handoff: lab01_msd_compare/report.html#viewer-handoff", worksheet)
-            self.assertIn("- [ ] Identify one idea that stayed the same from Lab01 to Lab04.", worksheet)
-            self.assertIn("lab01_msd_compare/report.html", (output / "index.html").read_text(encoding="utf-8"))
+            self.assertIn(
+                "- Review prompt: Record one idea that stayed the same from Lab01 to Lab04.",
+                worksheet,
+            )
+            self.assertNotIn("- [ ]", worksheet)
+            self.assertIn(
+                "lab01_msd_compare/report.html", (output / "index.html").read_text(encoding="utf-8")
+            )
 
     def test_desktop_batch_handoff_is_one_shot(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp, patch.dict(
-            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp).resolve() / "data")}
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            patch.dict(os.environ, {"MCLAB_DATA_DIR": str(Path(tmp).resolve() / "data")}),
         ):
             output = create_all_compare_output()
             _program, arguments = all_compare_command(output)
@@ -560,8 +728,9 @@ class BatchTests(unittest.TestCase):
                 )
 
     def test_desktop_batch_handoff_rejects_directory_links(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp, patch.dict(
-            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp).resolve() / "data")}
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            patch.dict(os.environ, {"MCLAB_DATA_DIR": str(Path(tmp).resolve() / "data")}),
         ):
             linked_output = create_all_compare_output()
             _program, linked_arguments = all_compare_command(linked_output)
@@ -658,13 +827,25 @@ class BatchTests(unittest.TestCase):
 
         items = batch._prediction_check_items(rows, ["steady_state_error"])
         html = batch._prediction_check(rows, ["steady_state_error"])
-        worksheet_lines = batch._batch_worksheet_prediction_check_lines(rows, ["steady_state_error"])
+        worksheet_lines = batch._batch_worksheet_prediction_check_lines(
+            rows, ["steady_state_error"]
+        )
 
         self.assertEqual(len(items), 1)
         self.assertIn("near_zero (", items[0][1])
         self.assertIn("far_negative (", items[0][1])
         self.assertIn("Matched / Partly matched / Surprised", html)
+        self.assertIn("digest-published and read-only", html)
+        self.assertIn("personal or course notes outside the saved-run folder", html)
         self.assertTrue(any("## Prediction Check" in line for line in worksheet_lines))
+        self.assertTrue(
+            any(
+                "personal or course notes outside the saved-run folder" in line
+                for line in worksheet_lines
+            )
+        )
+        self.assertTrue(any("Review prompt:" in line for line in worksheet_lines))
+        self.assertFalse(any("- [ ]" in line for line in worksheet_lines))
 
     def test_comparison_plots_are_written_from_run_logs(self) -> None:
         scenarios = (
@@ -673,9 +854,17 @@ class BatchTests(unittest.TestCase):
         )
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp).resolve() / "batch_output"
+            output.mkdir()
+            write_manifest(
+                output,
+                scenario_id="batch.lab02_pid_compare",
+                status="running",
+                config={"batch_name": "lab02_pid_compare", "plot": True},
+                run_kind="comparison_batch",
+            )
             for scenario in scenarios:
                 run_dir = output / scenario.label.replace(" ", "_")
-                run_dir.mkdir(parents=True)
+                run_dir.mkdir()
                 (run_dir / "log.csv").write_text(
                     (
                         "time,position,position_error,control_force\n"
@@ -695,11 +884,26 @@ class BatchTests(unittest.TestCase):
                     encoding="utf-8",
                 )
                 (run_dir / "report.html").write_text("<html></html>", encoding="utf-8")
+                write_manifest(
+                    run_dir,
+                    scenario_id=stable_scenario_id(scenario.lab_name, scenario.config_path),
+                    status="completed",
+                    config=load_config(scenario.config_path),
+                    config_path=scenario.config_path,
+                )
 
             written = batch.write_comparison_plots(output, "lab02_pid_compare", scenarios)
             batch.write_batch_report(output, "lab02_pid_compare", scenarios)
+            write_manifest(
+                output,
+                scenario_id="batch.lab02_pid_compare",
+                status="completed",
+                config={"batch_name": "lab02_pid_compare", "plot": True},
+                run_kind="comparison_batch",
+            )
 
             self.assertTrue(written)
+            self.assertEqual(verify_manifest(output), [])
             self.assertTrue((output / "comparison_plots" / "position_compare.png").exists())
             self.assertTrue((output / "comparison_plots" / "error_compare.png").exists())
             report_html = (output / "report.html").read_text(encoding="utf-8")
@@ -707,7 +911,13 @@ class BatchTests(unittest.TestCase):
             self.assertIn("Prediction Check", report_html)
             self.assertIn("Outcome prompt", report_html)
             self.assertIn(
-                "Mark your prediction outcome for overshoot percent: Matched / Partly matched / Surprised.",
+                "Record in personal or course notes: prediction outcome for overshoot percent - "
+                "Matched / Partly matched / Surprised.",
+                report_html,
+            )
+            self.assertIn("digest-published and read-only", report_html)
+            self.assertIn(
+                "personal or course notes outside the saved-run folder",
                 report_html,
             )
             self.assertIn("Predict", report_html)
@@ -741,26 +951,46 @@ class BatchTests(unittest.TestCase):
             self.assertIn("# MCLab Batch Worksheet", worksheet)
             self.assertIn("## Prediction Check", worksheet)
             self.assertIn(
-                "- [ ] Mark your prediction outcome for overshoot percent: Matched / Partly matched / Surprised.",
+                "Review prompt: Record in personal or course notes: prediction outcome for "
+                "overshoot percent - Matched / Partly matched / Surprised.",
                 worksheet,
             )
             self.assertIn("Comparison Notes", worksheet)
             self.assertIn("overshoot percent", worksheet)
             self.assertIn("## Comparison Plot Guide", worksheet)
-            self.assertIn("comparison_plots/position_compare.png: Position - Compare actual motion against target", worksheet)
-            self.assertIn("- [ ] Name which scenario changes motion most visibly", worksheet)
+            self.assertIn(
+                "comparison_plots/position_compare.png: Position - Compare actual motion against target",
+                worksheet,
+            )
+            self.assertIn(
+                "Review prompt: Name which scenario changes motion most visibly",
+                worksheet,
+            )
             self.assertIn("comparison_plots/position_compare.png", worksheet)
+            self.assertNotIn("- [ ]", worksheet)
 
     def test_summary_comparison_plots_are_written_from_scenario_summaries(self) -> None:
         scenarios = (
-            batch.BatchScenario("soft_wall", "lab04", "configs/lab04_panda/wall_soft.yaml", "wall_compare"),
-            batch.BatchScenario("fast_wall", "lab04", "configs/lab04_panda/wall_fast_approach.yaml", "wall_compare"),
+            batch.BatchScenario(
+                "soft_wall", "lab04", "configs/lab04_panda/wall_soft.yaml", "wall_compare"
+            ),
+            batch.BatchScenario(
+                "fast_wall", "lab04", "configs/lab04_panda/wall_fast_approach.yaml", "wall_compare"
+            ),
         )
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp).resolve() / "batch_output"
+            output.mkdir()
+            write_manifest(
+                output,
+                scenario_id="batch.lab04_wall_compare",
+                status="running",
+                config={"batch_name": "lab04_wall_compare", "plot": True},
+                run_kind="comparison_batch",
+            )
             for index, scenario in enumerate(scenarios):
                 run_dir = output / scenario.label
-                run_dir.mkdir(parents=True)
+                run_dir.mkdir()
                 (run_dir / "summary.json").write_text(
                     json.dumps(
                         {
@@ -775,14 +1005,29 @@ class BatchTests(unittest.TestCase):
                     encoding="utf-8",
                 )
                 (run_dir / "report.html").write_text("<html></html>", encoding="utf-8")
+                write_manifest(
+                    run_dir,
+                    scenario_id=stable_scenario_id(scenario.lab_name, scenario.config_path),
+                    status="completed",
+                    config=load_config(scenario.config_path),
+                    config_path=scenario.config_path,
+                )
 
             written = batch.write_comparison_plots(output, "lab04_wall_compare", scenarios)
             (output / "comparison_plots" / "wall_penetration_compare.png").write_bytes(b"fake-png")
             batch.write_batch_report(output, "lab04_wall_compare", scenarios)
+            write_manifest(
+                output,
+                scenario_id="batch.lab04_wall_compare",
+                status="completed",
+                config={"batch_name": "lab04_wall_compare", "plot": True},
+                run_kind="comparison_batch",
+            )
 
             timing_plot = output / "comparison_plots" / "wall_key_moment_timing_compare.png"
             self.assertIn(timing_plot, written)
             self.assertTrue(timing_plot.exists())
+            self.assertEqual(verify_manifest(output), [])
             report_html = (output / "report.html").read_text(encoding="utf-8")
             worksheet = (output / "worksheet.md").read_text(encoding="utf-8")
             self.assertIn("wall_key_moment_timing_compare.png", report_html)
@@ -795,10 +1040,15 @@ class BatchTests(unittest.TestCase):
             self.assertIn("peak wall force time", report_html)
             self.assertIn("wall_key_moment_timing_compare.png", worksheet)
             self.assertIn("## Comparison Plot Guide", worksheet)
-            self.assertIn("comparison_plots/wall_key_moment_timing_compare.png: Wall Timing", worksheet)
-            self.assertIn("- [ ] Name which scenario contacts first", worksheet)
-            self.assertIn("comparison_plots/wall_penetration_compare.png: Wall Penetration", worksheet)
-            self.assertIn("- [ ] Name which scenario penetrates deepest", worksheet)
+            self.assertIn(
+                "comparison_plots/wall_key_moment_timing_compare.png: Wall Timing", worksheet
+            )
+            self.assertIn("Review prompt: Name which scenario contacts first", worksheet)
+            self.assertIn(
+                "comparison_plots/wall_penetration_compare.png: Wall Penetration", worksheet
+            )
+            self.assertIn("Review prompt: Name which scenario penetrates deepest", worksheet)
+            self.assertNotIn("- [ ]", worksheet)
 
     def test_scenario_card_reports_missing_plot_links_without_failing(self) -> None:
         html = batch._scenario_card(

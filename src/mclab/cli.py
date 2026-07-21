@@ -5,23 +5,28 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import stat
 import subprocess
 import sys
 import tempfile
 from collections import Counter
 from collections.abc import Callable
 from importlib import import_module
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from .application.batch_runs import BATCH_PROGRESS_PREFIX
+from .application.catalog import ScenarioCatalog, target_from_legacy_summary
+from .application.repositories import ArtifactRecord
 from .batch import ALL_BATCH_NAME, BATCH_SETS, run_all_batches, run_batch
-from .config import default_outputs_root, is_frozen_bundle, load_config
+from .completion import CompletionRecordKind, evaluate_completion
+from .config import default_outputs_root, load_config
 from .doctor import doctor_exit_code, doctor_report_json, format_doctor_report, run_doctor_checks
 from .learner_menu import (
     BATCH_ACTIONS,
     BatchMenuAction,
     MenuAction,
+    _trusted_record_for_path,
     action_activity_mix_text,
     action_challenge_text,
     action_challenge_evidence_text,
@@ -57,6 +62,7 @@ from .learner_menu import (
     batch_readiness,
     batch_viewer_handoff_text,
     command_for_target,
+    completion_snapshot,
     config_value_preview,
     default_command_for_target,
     experience_coverage_next_command,
@@ -84,6 +90,7 @@ from .learner_menu import (
     reflection_question,
     review_queue_action_lines,
     review_queue_summary_text,
+    with_completion_snapshot,
 )
 from .output_cleanup import (
     CleanupOperationError,
@@ -128,7 +135,7 @@ LABS: dict[str, LabRunner] = {
 
 
 def build_parser() -> argparse.ArgumentParser:
-    default_outputs = str(default_outputs_root()) if is_frozen_bundle() else "outputs"
+    default_outputs = str(default_outputs_root())
     parser = argparse.ArgumentParser(
         prog="mclab",
         description="MuJoCo Manipulator Control Lab command-line interface.",
@@ -544,9 +551,10 @@ def main(argv: list[str] | None = None) -> int:
             plot_selection=args.plots,
             seed=args.seed,
         )
-        _print_output_summary("Run", output_path)
-        if args.open_report:
-            _open_path(_preferred_output_entry(output_path))
+        with completion_snapshot(output_path.parent):
+            _print_output_summary("Run", output_path)
+            if args.open_report:
+                _open_path(_preferred_output_entry(output_path))
         return 0
 
     if args.command == "batch":
@@ -565,9 +573,10 @@ def main(argv: list[str] | None = None) -> int:
             )
         else:
             output_path = run_batch(args.batch_name, **batch_kwargs)
-        _print_output_summary("Batch", output_path)
-        if args.open_report:
-            _open_path(_preferred_output_entry(output_path))
+        with completion_snapshot(output_path.parent):
+            _print_output_summary("Batch", output_path)
+            if args.open_report:
+                _open_path(_preferred_output_entry(output_path))
         return 0
 
     parser.error(f"Unknown command: {args.command}")
@@ -612,21 +621,48 @@ def _maybe_relaunch_macos_viewer(args: argparse.Namespace, argv: list[str] | Non
 
 
 def _preferred_output_entry(output_path: Path) -> Path:
-    report = output_path / "report.html"
-    if report.exists():
-        return report
-    index = output_path / "index.html"
-    if index.exists():
-        return index
+    record = _trusted_output_record(output_path)
+    if record is not None and record.report_available:
+        return record.path / "report.html"
     return output_path
 
 
 def _print_output_summary(kind: str, output_path: Path) -> None:
-    print(f"{kind} complete: {output_path}")
+    record = _trusted_output_record(output_path)
+    decision = None
+    if record is not None:
+        catalog = ScenarioCatalog.default()
+        try:
+            target = catalog.get_target(record.scenario_id)
+        except KeyError:
+            target = None
+        if (
+            target is None
+            and record.completion_evidence.record_kind == CompletionRecordKind.LEGACY_SUMMARY
+        ):
+            target = target_from_legacy_summary(catalog, record.summary)
+        decision = evaluate_completion(
+            target.completion if target is not None else None,
+            record.completion_evidence,
+        )
+    complete = decision is not None and decision.complete
+    state = "complete" if complete else "saved"
+    print(f"{kind} {state}: {output_path}")
+    if decision is not None:
+        verdict = "Complete" if decision.complete else "Incomplete"
+        print(
+            f"  Completion: {verdict} - {decision.primary_reason.value} "
+            f"({decision.contract_version})"
+        )
     for line in _output_artifact_lines(output_path):
         print(f"  {line}")
 
 
+def _trusted_output_record(output_path: Path) -> ArtifactRecord | None:
+    return _trusted_record_for_path(output_path.absolute())
+
+
+@with_completion_snapshot
 def _print_experience_coverage(outputs_root: Path, *, details: bool = False) -> None:
     print(experience_coverage_summary_text(outputs_root))
     print(experience_coverage_status_text(outputs_root))
@@ -684,6 +720,7 @@ def _print_learning_path_after_coverage_complete(outputs_root: Path) -> None:
     )
 
 
+@with_completion_snapshot
 def _print_learning_path(outputs_root: Path, *, show_all: bool = False) -> None:
     progress_items = learning_path_progress_items(outputs_root)
     print(learning_path_summary_text(progress_items))
@@ -718,34 +755,39 @@ def _learning_path_status_line(step: object, progress: object) -> str:
 def _run_next_learning_path(
     outputs_root: Path, *, preview: bool = False, seed: int | None = None
 ) -> int:
-    progress_items = learning_path_progress_items(outputs_root)
-    next_step = next_learning_path_step(progress_items)
-    print(learning_path_summary_text(progress_items))
-    print(learning_path_milestone_text(progress_items))
-    if next_step is None:
-        print("Next step: Course path complete")
-        print(
-            "Next command: open outputs/index.html or rerun a comparison batch for deeper review."
-        )
-        return 0
+    with completion_snapshot(outputs_root):
+        progress_items = learning_path_progress_items(outputs_root)
+        next_step = next_learning_path_step(progress_items)
+        print(learning_path_summary_text(progress_items))
+        print(learning_path_milestone_text(progress_items))
+        if next_step is None:
+            print("Next step: Course path complete")
+            print(
+                "Next command: open outputs/index.html or rerun a comparison batch for deeper review."
+            )
+            return 0
 
-    target = learning_path_target(next_step)
-    print(f"Next step: {next_step.title}")
-    print(f"Next command: {default_command_for_target(target)}")
-    _print_next_target_guide(
-        target, outputs_root, include_viewer=_target_default_opens_viewer(target)
-    )
-    if preview:
-        return 0
+        target = learning_path_target(next_step)
+        print(f"Next step: {next_step.title}")
+        print(f"Next command: {default_command_for_target(target)}")
+        _print_next_target_guide(
+            target, outputs_root, include_viewer=_target_default_opens_viewer(target)
+        )
+        if preview:
+            return 0
 
     print(f"Running next step: {target.group} - {target.label}")
     if isinstance(target, BatchMenuAction):
         output_path = _run_next_batch_target(target, seed=seed)
-        _print_output_summary("Batch", output_path)
+        kind = "Batch"
     else:
         output_path = _run_next_menu_target(target, seed=seed)
-        _print_output_summary("Run", output_path)
-    _open_path(_preferred_output_entry(output_path))
+        kind = "Run"
+    # A mutating `next` intentionally uses a fresh post-run snapshot so the
+    # newly published terminal manifest can be validated before summary/open.
+    with completion_snapshot(output_path.parent):
+        _print_output_summary(kind, output_path)
+        _open_path(_preferred_output_entry(output_path))
     return 0
 
 
@@ -832,6 +874,7 @@ def _run_next_batch_target(target: BatchMenuAction, *, seed: int | None = None) 
     return run_batch(target.batch_name, seed=seed)
 
 
+@with_completion_snapshot
 def _print_review_queue(
     outputs_root: Path, *, open_next: bool = False, action_limit: int = 5
 ) -> None:
@@ -846,11 +889,11 @@ def _print_review_queue(
 
     print(f"Next review folder: {next_output}")
     print(f"Next review status: {next_review_status_text(outputs_root)}")
+    record = _trusted_output_record(next_output)
     entry = _preferred_output_entry(next_output)
     print(f"Next review report: {entry}")
-    worksheet = next_output / "worksheet.md"
-    if worksheet.exists():
-        print(f"Next review worksheet: {worksheet}")
+    if record is not None and record.worksheet_available:
+        print(f"Next review worksheet: {record.path / 'worksheet.md'}")
     action = action_for_output(next_output)
     if action is not None:
         print(f"Next review action: {action.group} - {action.label}")
@@ -899,7 +942,7 @@ def _print_review_index_command(outputs_root: Path) -> None:
 
 
 def _review_index_command(outputs_root: Path) -> str:
-    if outputs_root == Path("outputs"):
+    if outputs_root.absolute() == default_outputs_root().absolute():
         return "python -m mclab index --open"
     return f"python -m mclab index --output-dir {outputs_root} --open"
 
@@ -909,6 +952,7 @@ def _print_discovery_review_footer() -> None:
     print("All reports: reopen the cumulative browser index with `python -m mclab index --open`.")
 
 
+@with_completion_snapshot
 def _print_scenarios(
     query: str, *, experience_filter: str = "all", limit: int = 8, details: bool = False
 ) -> None:
@@ -1059,8 +1103,9 @@ def _scenario_latest_artifact_lines(action: MenuAction) -> list[str]:
     latest = action_latest_output(action)
     if latest is None:
         return ["Report: Not saved yet", "Folder: Not saved yet"]
+    record = _trusted_output_record(latest)
     entry = _preferred_output_entry(latest)
-    label = "Report" if (latest / "report.html").exists() else "Entry"
+    label = "Report" if record is not None and record.report_available else "Entry"
     return [f"{label}: Latest {entry}", f"Folder: Latest {latest}"]
 
 
@@ -1106,6 +1151,7 @@ def _scenario_course_lines(action: MenuAction) -> list[str]:
     return action_course_lines(action)
 
 
+@with_completion_snapshot
 def _print_batches(query: str, *, limit: int = 8, details: bool = False) -> None:
     matches = _filter_batch_actions(query)
     shown = matches if limit <= 0 else matches[: max(0, limit)]
@@ -1193,6 +1239,7 @@ def _batch_handoff_detail_text(action: BatchMenuAction) -> str:
     latest = action_latest_output(action)
     if latest is None:
         return batch_viewer_handoff_text(action)
+    record = _trusted_output_record(latest)
     start, command = _worksheet_viewer_handoff(latest)
     if command:
         handoff = f"{start} -> {command}" if start else command
@@ -1201,46 +1248,47 @@ def _batch_handoff_detail_text(action: BatchMenuAction) -> str:
         course_handoff = _course_batch_handoff_detail(latest)
         if course_handoff:
             return course_handoff
-    report = latest / "report.html"
-    if report.exists():
-        return f"Handoff: Latest {report}#viewer-handoff"
+    if record is not None and record.report_available:
+        return f"Handoff: Latest {record.path / 'report.html'}#viewer-handoff"
     return "Handoff: Latest batch output has no report.html; rerun the batch or open the worksheet."
 
 
 def _output_artifact_lines(output_path: Path) -> list[str]:
+    record = _trusted_output_record(output_path)
+    if record is None:
+        return []
+
     lines: list[str] = []
-    for label, filename in (
-        ("Report", "report.html"),
-        ("Worksheet", "worksheet.md"),
-        ("Index", "index.html"),
-    ):
-        artifact = output_path / filename
-        if artifact.exists():
-            lines.append(f"{label}: {artifact}")
-    parent_index = output_path.parent / "index.html"
-    if parent_index.exists() and parent_index != output_path / "index.html":
-        lines.append(f"All reports index: {parent_index}")
-    lines.extend(_plot_artifact_lines(output_path, "plots", "Plots"))
-    lines.extend(_plot_artifact_lines(output_path, "comparison_plots", "Comparison plots"))
-    lines.extend(_worksheet_review_artifact_lines(output_path))
-    lines.extend(_next_experience_artifact_lines(output_path))
+    if record.report_available:
+        lines.append(f"Report: {record.path / 'report.html'}")
+    if record.worksheet_available:
+        lines.append(f"Worksheet: {record.path / 'worksheet.md'}")
+    lines.extend(_plot_artifact_lines(record, "plots", "Plots"))
+    lines.extend(_plot_artifact_lines(record, "comparison_plots", "Comparison plots"))
+    lines.extend(_worksheet_review_artifact_lines(record))
+    lines.extend(_next_experience_artifact_lines(record))
+    index_path = record.path.parent / "index.html"
+    try:
+        if stat.S_ISREG(index_path.lstat().st_mode):
+            lines.append(f"All reports index: {index_path}")
+    except OSError:
+        # The cumulative index is derived navigation rather than run-bound
+        # evidence.  Its absence must not hide otherwise trusted artifacts.
+        pass
     return lines
 
 
-def _worksheet_review_artifact_lines(output_path: Path) -> list[str]:
-    worksheet = output_path / "worksheet.md"
-    if not worksheet.exists():
-        return []
-    try:
-        text = worksheet.read_text(encoding="utf-8")
-    except OSError:
+def _worksheet_review_artifact_lines(record: ArtifactRecord) -> list[str]:
+    if not record.worksheet_available or not record.worksheet_text:
         return []
 
+    text = record.worksheet_text
     priority_plot = ""
     read_first = ""
     what_to_check = ""
     next_proof_step = ""
-    first_checklist_item = ""
+    review_prompt = ""
+    legacy_review_prompt = ""
     has_prediction_check = False
     viewer_handoff_start, viewer_handoff_command = _viewer_handoff_from_worksheet_text(text)
     for line in text.splitlines():
@@ -1258,12 +1306,16 @@ def _worksheet_review_artifact_lines(output_path: Path) -> list[str]:
             what_to_check = stripped.removeprefix("- What to check: ").strip()
         elif stripped.startswith("- Next proof step: ") and not next_proof_step:
             next_proof_step = stripped.removeprefix("- Next proof step: ").strip()
-        elif stripped.startswith("- [ ] ") and not first_checklist_item:
-            first_checklist_item = stripped.removeprefix("- [ ] ").strip()
+        elif stripped.startswith("- Review prompt: ") and not review_prompt:
+            review_prompt = stripped.removeprefix("- Review prompt: ").strip()
+        elif stripped.startswith("- [ ] ") and not legacy_review_prompt:
+            legacy_review_prompt = stripped.removeprefix("- [ ] ").strip()
 
     lines: list[str] = []
     if priority_plot:
-        lines.append(f"Priority plot: {_worksheet_relative_path(output_path, priority_plot)}")
+        trusted_plot = _worksheet_plot_path(record, priority_plot)
+        if trusted_plot is not None:
+            lines.append(f"Priority plot: {trusted_plot}")
     if read_first or what_to_check:
         focus = (
             f"{read_first} - {what_to_check}"
@@ -1275,7 +1327,8 @@ def _worksheet_review_artifact_lines(output_path: Path) -> list[str]:
         lines.append(f"Next proof step: {next_proof_step}")
     if has_prediction_check:
         lines.append(
-            "Prediction check: Mark Matched, Partly matched, or Surprised in worksheet.md."
+            "Prediction check: Worksheet is digest-published and read-only; copy outcomes "
+            "into personal/course notes outside the saved-run folder."
         )
     if viewer_handoff_command:
         handoff = (
@@ -1284,70 +1337,105 @@ def _worksheet_review_artifact_lines(output_path: Path) -> list[str]:
             else viewer_handoff_command
         )
         lines.append(f"Viewer handoff: {handoff}")
-    if first_checklist_item:
-        lines.append(f"Review checklist: {first_checklist_item}")
+    worksheet_review_prompt = review_prompt or legacy_review_prompt
+    if worksheet_review_prompt:
+        lines.append(
+            "Worksheet policy: Saved worksheets are digest-published and read-only; record answers "
+            "in personal/course notes outside the saved-run folder."
+        )
+        lines.append(f"Worksheet review prompt: {worksheet_review_prompt}")
     return lines
 
 
 def _worksheet_viewer_handoff(output_path: Path) -> tuple[str, str]:
-    worksheet = output_path / "worksheet.md"
-    if not worksheet.exists():
+    record = _trusted_output_record(output_path)
+    if record is None or not record.worksheet_available or not record.worksheet_text:
         return "", ""
-    try:
-        text = worksheet.read_text(encoding="utf-8")
-    except OSError:
-        return "", ""
-    return _viewer_handoff_from_worksheet_text(text)
+    return _viewer_handoff_from_worksheet_text(record.worksheet_text)
 
 
 def _course_batch_handoff_detail(output_path: Path) -> str:
-    linked_handoff = _course_linked_viewer_handoff(output_path)
-    if linked_handoff:
-        child_output = _linked_batch_output_path(output_path, linked_handoff)
-        if child_output is not None:
-            start, command = _worksheet_viewer_handoff(child_output)
+    record = _trusted_output_record(output_path)
+    if record is None or not record.worksheet_available:
+        return "Handoff: Latest batch output has no trusted worksheet; rerun the batch."
+    linked_child = _course_linked_batch_target(record)
+    if linked_child is not None:
+        child_name, child_target_id = linked_child
+        child_record = _trusted_course_child_record(record, child_name, child_target_id)
+        if (
+            child_record is not None
+            and child_record.worksheet_available
+            and child_record.worksheet_text
+        ):
+            start, command = _viewer_handoff_from_worksheet_text(child_record.worksheet_text)
             if command:
-                label = child_output.name
-                handoff = f"{label} / {start} -> {command}" if start else f"{label} -> {command}"
+                handoff = (
+                    f"{child_name} / {start} -> {command}"
+                    if start
+                    else f"{child_name} -> {command}"
+                )
                 return f"Handoff: {handoff}"
-        return f"Handoff: Open linked batch handoff: {linked_handoff}"
-
-    for batch_name in BATCH_SETS:
-        child_output = output_path / batch_name
-        start, command = _worksheet_viewer_handoff(child_output)
-        if command:
-            handoff = (
-                f"{batch_name} / {start} -> {command}" if start else f"{batch_name} -> {command}"
-            )
-            return f"Handoff: {handoff}"
     return "Handoff: Open the course worksheet, then follow a linked batch Viewer Handoff."
 
 
-def _course_linked_viewer_handoff(output_path: Path) -> str:
-    worksheet = output_path / "worksheet.md"
-    if not worksheet.exists():
+def _course_linked_batch_target(record: ArtifactRecord) -> tuple[str, str] | None:
+    """Resolve only the generated direct-child report link declared by the catalog."""
+
+    linked_handoff = _course_linked_viewer_handoff(record)
+    report_ref, separator, fragment = linked_handoff.partition("#")
+    if separator != "#" or fragment != "viewer-handoff" or "\\" in report_ref:
+        return None
+
+    linked_path = PurePosixPath(report_ref)
+    if linked_path.is_absolute() or len(linked_path.parts) != 2:
+        return None
+    child_name, report_name = linked_path.parts
+    if report_name != "report.html":
+        return None
+
+    catalog = ScenarioCatalog.default()
+    course_target = catalog.get_batch(f"batch.{ALL_BATCH_NAME}")
+    if record.scenario_id != course_target.id:
+        return None
+    for child_target_id in course_target.child_target_ids:
+        child_target = catalog.get_batch(child_target_id)
+        if child_target.batch_name == child_name:
+            return child_name, child_target.id
+    return None
+
+
+def _trusted_course_child_record(
+    course_record: ArtifactRecord,
+    child_name: str,
+    child_target_id: str,
+) -> ArtifactRecord | None:
+    """Inventory one course child root and return its catalog-matching record.
+
+    The surrounding CLI render owns one parent-root completion snapshot.  A
+    validated course link opens at most one additional snapshot, rooted at the
+    course output, and closes it before returning.  The request therefore uses
+    one parent inventory plus zero or one child-root inventory; worksheet line
+    count cannot increase that bound.
+    """
+
+    child_path = course_record.path / child_name
+    with completion_snapshot(course_record.path):
+        child_record = _trusted_output_record(child_path)
+        if child_record is None or child_record.scenario_id != child_target_id:
+            return None
+        return child_record
+
+
+def _course_linked_viewer_handoff(record: ArtifactRecord) -> str:
+    if not record.worksheet_available or not record.worksheet_text:
         return ""
-    try:
-        text = worksheet.read_text(encoding="utf-8")
-    except OSError:
-        return ""
-    for line in text.splitlines():
+    for line in record.worksheet_text.splitlines():
         stripped = line.strip()
         if stripped.startswith("- Viewer handoff: "):
             value = stripped.removeprefix("- Viewer handoff: ").strip()
             if value and value.lower() != "n/a":
                 return value
     return ""
-
-
-def _linked_batch_output_path(output_path: Path, linked_handoff: str) -> Path | None:
-    report_part = linked_handoff.split("#", 1)[0].strip()
-    if not report_part:
-        return None
-    linked_path = Path(report_part)
-    if not linked_path.is_absolute():
-        linked_path = output_path / linked_path
-    return linked_path.parent if linked_path.name == "report.html" else linked_path
 
 
 def _viewer_handoff_from_worksheet_text(text: str) -> tuple[str, str]:
@@ -1368,22 +1456,18 @@ def _viewer_handoff_from_worksheet_text(text: str) -> tuple[str, str]:
     return handoff_start, handoff_command
 
 
-def _worksheet_relative_path(output_path: Path, value: str) -> Path | str:
-    path = Path(value)
-    if path.is_absolute():
-        return path
-    return output_path / path
+def _worksheet_plot_path(record: ArtifactRecord, value: str) -> Path | None:
+    referenced = Path(value)
+    candidate = referenced if referenced.is_absolute() else record.path / referenced
+    candidate = candidate.absolute()
+    return next((plot for plot in record.plot_paths if plot.absolute() == candidate), None)
 
 
-def _next_experience_artifact_lines(output_path: Path) -> list[str]:
-    worksheet = output_path / "worksheet.md"
-    if not worksheet.exists():
-        return []
-    try:
-        text = worksheet.read_text(encoding="utf-8")
-    except OSError:
+def _next_experience_artifact_lines(record: ArtifactRecord) -> list[str]:
+    if not record.worksheet_available or not record.worksheet_text:
         return []
 
+    text = record.worksheet_text
     next_experience = ""
     next_mode = ""
     next_action = ""
@@ -1415,11 +1499,13 @@ def _next_experience_artifact_lines(output_path: Path) -> list[str]:
     return lines
 
 
-def _plot_artifact_lines(output_path: Path, directory_name: str, label: str) -> list[str]:
-    plot_dir = output_path / directory_name
-    if not plot_dir.exists():
-        return []
-    plots = sorted(plot_dir.glob("*.png"))
+def _plot_artifact_lines(
+    record: ArtifactRecord,
+    directory_name: str,
+    label: str,
+) -> list[str]:
+    plot_dir = record.path / directory_name
+    plots = sorted(plot for plot in record.plot_paths if plot.parent == plot_dir)
     if not plots:
         return []
     first_plot = plots[0]
@@ -1470,9 +1556,7 @@ def _clean_outputs(
             if json_output:
                 print(json.dumps(receipt.to_dict(), indent=2))
             else:
-                print(
-                    f"Restored {len(receipt.names)} run(s) from receipt {receipt.receipt_id}."
-                )
+                print(f"Restored {len(receipt.names)} run(s) from receipt {receipt.receipt_id}.")
             return 0
 
         plan = build_cleanup_plan(output_dir, keep=keep, allowed_root=configured_root)

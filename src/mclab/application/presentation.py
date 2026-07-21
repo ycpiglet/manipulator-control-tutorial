@@ -5,14 +5,26 @@ from __future__ import annotations
 import math
 from collections.abc import Iterable
 from dataclasses import replace
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 from mclab.application.batch_runs import ALL_COMPARE_ID
-from mclab.application.catalog import ScenarioCatalog, ScenarioDefinition
+from mclab.application.catalog import (
+    BatchDefinition,
+    ScenarioCatalog,
+    ScenarioDefinition,
+    target_from_legacy_summary,
+)
+from mclab.application.completion_progress import (
+    TargetCompletionAssessment,
+    assess_target_completion,
+    build_completion_assessment_index,
+)
 from mclab.application.i18n import Translator, localized_scenario_text
 from mclab.application.readiness import scenario_readiness, scenario_readiness_payload
 from mclab.application.repositories import ArtifactRecord
+from mclab.completion import CompletionRecordKind, evaluate_completion
 
 _CONTROL_UNITS = {
     "mass": "kg",
@@ -45,6 +57,7 @@ def scenario_payload(
     translator: Translator,
     *,
     config_override: dict[str, Any] | None = None,
+    control_values_override: dict[str, float] | None = None,
 ) -> dict[str, Any]:
     if scenario is None:
         return {}
@@ -58,11 +71,14 @@ def scenario_payload(
     )
     controls = []
     for control in scenario.controls:
-        value = _nested_value(
-            config,
-            control.config_path,
-            control.default if control.default is not None else control.minimum,
-        )
+        if control_values_override is not None and control.id in control_values_override:
+            value = control_values_override[control.id]
+        else:
+            value = _nested_value(
+                config,
+                control.config_path,
+                control.default if control.default is not None else control.minimum,
+            )
         if isinstance(value, (list, tuple)):
             value = max(abs(float(item)) for item in value)
         controls.append(
@@ -78,6 +94,14 @@ def scenario_payload(
             }
         )
     actions = _scenario_actions(scenario, config, translator)
+    presets = _scenario_presets(config)
+    required_preset_labels = [
+        str(preset["canonicalLabel"]) for preset in presets if preset["required"]
+    ]
+    required_preset_guide = ""
+    if required_preset_labels:
+        prefix = "필수 순서" if translator.language == "ko" else "Required order"
+        required_preset_guide = f"{prefix}: {' → '.join(required_preset_labels)}"
     mode = str(config.get("mode", "")).lower()
     is_two_link = (
         scenario.lab_name == "lab03"
@@ -110,6 +134,8 @@ def scenario_payload(
         "minutes": scenario.estimated_minutes,
         "controls": controls,
         "actions": actions,
+        "presets": presets,
+        "requiredPresetGuide": required_preset_guide,
         "startsPaused": bool(application.get("start_paused", False)),
         "config": scenario.config_path,
         "plotPreset": scenario.plot_preset,
@@ -150,14 +176,22 @@ def course_progress_payload(
     records: Iterable[ArtifactRecord],
     *,
     batch_readiness: dict[str, Any] | None = None,
+    catalog: ScenarioCatalog | None = None,
 ) -> dict[str, Any]:
-    """Build one consistent path snapshot from successful saved runs."""
+    """Build one canonical path snapshot from independently assessed runs."""
 
     items = tuple(scenarios)
-    completed_ids = {
-        record.scenario_id for record in records if record.status.casefold() == "completed"
-    }
+    saved_records = tuple(records)
+    scenario_catalog = catalog or _cached_default_catalog()
+    scenario_index = build_completion_assessment_index(items, saved_records)
+    batch_target = scenario_catalog.get_batch(ALL_COMPARE_ID)
+    batch_assessment = assess_target_completion(batch_target, saved_records)
+    completed_ids = set(scenario_index.completed_target_ids)
+    if batch_assessment.complete:
+        completed_ids.add(ALL_COMPARE_ID)
     path = learning_path_payload(items, translator, completed_ids)
+    for scenario, payload in zip(items, path, strict=True):
+        payload.update(_completion_assessment_payload(scenario_index.get(scenario.id)))
     next_scenario = next((item for item in items if item.id not in completed_ids), None)
     batch = _all_compare_payload(translator, batch_readiness)
     batch.update(
@@ -165,6 +199,7 @@ def course_progress_payload(
         completed=ALL_COMPARE_ID in completed_ids,
         isNext=next_scenario is None and ALL_COMPARE_ID not in completed_ids,
     )
+    batch.update(_completion_assessment_payload(batch_assessment))
     path.append(batch)
     next_item = scenario_payload(next_scenario, translator) if next_scenario else batch
     complete = next_scenario is None and ALL_COMPARE_ID in completed_ids
@@ -180,6 +215,35 @@ def course_progress_payload(
         "next": {} if complete else next_item,
         "path": path,
     }
+
+
+def _completion_assessment_payload(
+    assessment: TargetCompletionAssessment,
+) -> dict[str, Any]:
+    latest = assessment.latest_record
+    credited = assessment.credited_record
+    latest_decision = assessment.latest_decision.to_dict()
+    credited_decision = (
+        assessment.credited_decision.to_dict()
+        if assessment.credited_decision is not None
+        else {}
+    )
+    return {
+        # Keep the compatibility field aligned with ``completed`` while exposing
+        # the newest-attempt diagnostic under an unambiguous name.
+        "completionDecision": credited_decision or latest_decision,
+        "latestCompletionDecision": latest_decision,
+        "creditedCompletionDecision": credited_decision,
+        "latestRun": str(latest.path) if isinstance(latest, ArtifactRecord) else "",
+        "creditedRun": str(credited.path) if isinstance(credited, ArtifactRecord) else "",
+    }
+
+
+@lru_cache(maxsize=1)
+def _cached_default_catalog() -> ScenarioCatalog:
+    """Avoid rebuilding the immutable on-disk catalog for every QML binding."""
+
+    return ScenarioCatalog.default()
 
 
 def _all_compare_payload(
@@ -271,7 +335,7 @@ def result_payloads(
     catalog: ScenarioCatalog | None = None,
     active_batch_path: str | Path | None = None,
 ) -> list[dict[str, Any]]:
-    scenario_catalog = catalog or ScenarioCatalog.default()
+    scenario_catalog = catalog or _cached_default_catalog()
     collection_summary = translator.text(
         "results.collection",
         count=len(records),
@@ -280,7 +344,23 @@ def result_payloads(
     payloads: list[dict[str, Any]] = []
     active_batch = Path(active_batch_path).resolve() if active_batch_path else None
     for index, item in enumerate(records, start=1):
-        is_batch = item.scenario_id == ALL_COMPARE_ID
+        try:
+            target = scenario_catalog.get_target(item.scenario_id)
+        except KeyError:
+            target = None
+        if (
+            target is None
+            and item.completion_evidence.record_kind
+            == CompletionRecordKind.LEGACY_SUMMARY
+        ):
+            target = target_from_legacy_summary(scenario_catalog, item.summary)
+            if target is not None:
+                item = replace(item, scenario_id=target.id)
+        completion = evaluate_completion(
+            target.completion if target is not None else None,
+            item.completion_evidence,
+        )
+        is_batch = isinstance(target, BatchDefinition) or item.scenario_id == ALL_COMPARE_ID
         active_batch_record = (
             is_batch and active_batch is not None and item.path.resolve() == active_batch
         )
@@ -291,12 +371,13 @@ def result_payloads(
             and (active_batch is None or item.path.resolve() != active_batch)
             else item
         )
-        try:
-            scenario = scenario_catalog.get(item.scenario_id)
-        except KeyError:
-            scenario = None
+        scenario = target if isinstance(target, ScenarioDefinition) else None
         if is_batch:
-            title = translator.text("path.batch_title")
+            title = (
+                translator.text("path.batch_title")
+                if item.scenario_id == ALL_COMPARE_ID
+                else str(getattr(target, "batch_name", item.scenario_id)).replace("_", " ").title()
+            )
             lab = translator.text("path.course")
         elif scenario is None:
             title = item.scenario_id
@@ -311,28 +392,32 @@ def result_payloads(
             )
             lab = scenario.lab_name.upper()
         metrics = _result_metric_items(item.summary, translator)
+        lifecycle_status = display_item.status.casefold()
+        completion_incomplete = not completion.complete and lifecycle_status not in {
+            "running",
+            "stopped",
+            "error",
+        }
+        recording_missing = (
+            completion.complete
+            and not is_batch
+            and lifecycle_status == "completed"
+            and not display_item.replay_available
+        )
         status_code = (
             "warning"
-            if not is_batch
-            and display_item.status == "completed"
-            and not display_item.replay_available
+            if completion_incomplete or recording_missing
             else display_item.status
         )
-        status_text = (
-            translator.text("results.status.recording_missing")
-            if status_code == "warning"
-            else translator.mapping().get(
+        if completion_incomplete:
+            status_text = translator.text("results.status.completion_incomplete")
+        elif recording_missing:
+            status_text = translator.text("results.status.recording_missing")
+        else:
+            status_text = translator.mapping().get(
                 f"status.{display_item.status}", display_item.status
             )
-        )
-        availability = translator.text("results.batch_evidence") if is_batch else " · ".join(
-            translator.text(key)
-            for key in (
-                "results.recording_yes" if item.replay_available else "results.recording_no",
-                "results.rerun_yes" if item.rerun_available else "results.rerun_no",
-                "results.tuned_yes" if item.tuned_available else "results.tuned_no",
-            )
-        )
+        availability = _result_availability(item, translator, is_batch=is_batch)
         payloads.append(
             {
                 "path": str(item.path),
@@ -354,17 +439,36 @@ def result_payloads(
                     "results.delete_warning", size=format_size(item.size_bytes)
                 ),
                 "collectionSummary": collection_summary,
-                "outcome": _result_outcome(display_item, translator),
-                "nextAction": _result_next_action(display_item, translator),
+                "outcome": _result_outcome(
+                    display_item,
+                    translator,
+                    completion_complete=completion.complete,
+                    is_batch=is_batch,
+                ),
+                "nextAction": _result_next_action(
+                    display_item,
+                    translator,
+                    completion_complete=completion.complete,
+                    is_batch=is_batch,
+                ),
                 "metrics": metrics,
                 "availability": availability,
                 "replay": item.replay_available,
                 "rerun": item.rerun_available,
                 "tuned": item.tuned_available,
-                "report": (item.path / "report.html").is_file(),
+                "report": item.report_available,
+                "worksheet": item.worksheet_available,
+                "canRerunBatch": item.scenario_id == ALL_COMPARE_ID,
                 "reportPath": str(item.path / "report.html"),
                 "legacy": item.legacy,
                 "replayReason": item.replay_reason,
+                "completed": completion.complete,
+                "completionReason": completion.primary_reason.value,
+                "completionReasonText": translator.text(
+                    "results.completion_reason."
+                    + completion.primary_reason.value.rsplit(".", 1)[-1]
+                ),
+                "completionDecision": completion.to_dict(),
             }
         )
     return payloads
@@ -373,15 +477,31 @@ def result_payloads(
 def _result_outcome(
     item: ArtifactRecord,
     translator: Translator,
+    *,
+    completion_complete: bool,
+    is_batch: bool,
 ) -> str:
-    if item.scenario_id == ALL_COMPARE_ID and item.status == "completed":
+    if (
+        item.scenario_id == ALL_COMPARE_ID
+        and item.status == "completed"
+        and completion_complete
+    ):
         return translator.text(
             "results.outcome.batch_completed",
             sets=item.summary.get("child_batches", "—"),
             runs=item.summary.get("scenario_runs", "—"),
         )
-    if item.status == "completed" and not item.replay_available:
+    if is_batch and item.status == "completed" and completion_complete:
+        return translator.text("results.outcome.batch_target_completed")
+    if not completion_complete and item.status not in {"running", "stopped", "error"}:
         outcome = "incomplete"
+    elif (
+        not is_batch
+        and item.status == "completed"
+        and completion_complete
+        and not item.replay_available
+    ):
+        outcome = "recording_missing"
     else:
         outcome = (
             item.status
@@ -393,17 +513,33 @@ def _result_outcome(
     return translator.text(f"results.outcome.{outcome}", duration=seconds)
 
 
-def _result_next_action(item: ArtifactRecord, translator: Translator) -> str:
-    if item.scenario_id == ALL_COMPARE_ID:
+def _result_next_action(
+    item: ArtifactRecord,
+    translator: Translator,
+    *,
+    completion_complete: bool,
+    is_batch: bool,
+) -> str:
+    if is_batch and item.scenario_id == ALL_COMPARE_ID:
         key = (
             "results.next.wait"
             if item.status == "running"
             else "results.next.compare"
-            if item.status == "completed"
+            if item.status == "completed" and completion_complete
             else "results.next.retry_compare"
+        )
+    elif is_batch:
+        key = (
+            "results.next.wait_batch"
+            if item.status == "running"
+            else "results.next.review_batch"
+            if item.status == "completed" and completion_complete and item.report_available
+            else "results.next.details"
         )
     elif item.replay_available:
         key = "results.next.replay"
+    elif completion_complete and item.rerun_available:
+        key = "results.next.restore_recording"
     elif item.status in {"stopped", "error"} and item.rerun_available:
         key = "results.next.finish"
     elif item.rerun_available:
@@ -411,6 +547,38 @@ def _result_next_action(item: ArtifactRecord, translator: Translator) -> str:
     else:
         key = "results.next.details"
     return translator.text(key)
+
+
+def _result_availability(
+    item: ArtifactRecord,
+    translator: Translator,
+    *,
+    is_batch: bool,
+) -> str:
+    if not is_batch:
+        return " · ".join(
+            translator.text(key)
+            for key in (
+                "results.recording_yes" if item.replay_available else "results.recording_no",
+                "results.rerun_yes" if item.rerun_available else "results.rerun_no",
+                "results.tuned_yes" if item.tuned_available else "results.tuned_no",
+            )
+        )
+    if item.report_available and item.worksheet_available:
+        return translator.text("results.batch_evidence")
+    return " · ".join(
+        (
+            translator.text(
+                "results.report_yes" if item.report_available else "results.report_no"
+            ),
+            translator.text(
+                "results.worksheet_yes"
+                if item.worksheet_available
+                else "results.worksheet_no"
+            ),
+            translator.text("results.batch_recording_not_expected"),
+        )
+    )
 
 
 def _result_metric_items(
@@ -486,6 +654,67 @@ def _scenario_actions(
             {"id": "push", "label": translator.text("control.push")},
         ]
     return []
+
+
+def _scenario_presets(config: dict[str, Any]) -> list[dict[str, Any]]:
+    interaction = config.get("interaction")
+    if not isinstance(interaction, dict):
+        return []
+    raw_presets = interaction.get("tuning_presets")
+    if not isinstance(raw_presets, list):
+        return []
+
+    presets: list[dict[str, Any]] = []
+    required_order = 0
+    required_total = sum(
+        1 for item in raw_presets if isinstance(item, dict) and bool(item.get("required"))
+    )
+    for index, raw_preset in enumerate(raw_presets, start=1):
+        if not isinstance(raw_preset, dict):
+            continue
+        raw_values = raw_preset.get("values")
+        if not isinstance(raw_values, dict):
+            continue
+        values: dict[str, float] = {}
+        for raw_name, raw_value in raw_values.items():
+            if isinstance(raw_value, bool):
+                continue
+            try:
+                number = float(raw_value)
+            except (TypeError, ValueError):
+                continue
+            if math.isfinite(number):
+                values[str(raw_name)] = number
+        if not values:
+            continue
+
+        label = str(raw_preset.get("label") or raw_preset.get("name") or f"Preset {index}").strip()
+        preset_id = str(raw_preset.get("name") or _preset_id(label, index))
+        required = bool(raw_preset.get("required", False))
+        if required:
+            required_order += 1
+        presets.append(
+            {
+                "id": preset_id,
+                "label": label,
+                # Completion evidence always records this YAML label, even if
+                # a future UI localizes the visible label.
+                "canonicalLabel": label,
+                "purpose": str(
+                    raw_preset.get("purpose") or raw_preset.get("description") or ""
+                ).strip(),
+                "required": required,
+                "requiredOrder": required_order if required else 0,
+                "requiredTotal": required_total,
+                "values": values,
+            }
+        )
+    return presets
+
+
+def _preset_id(label: str, index: int) -> str:
+    name = "_".join(label.lower().split())
+    return name or f"preset_{index}"
 
 
 def _now_prompt(

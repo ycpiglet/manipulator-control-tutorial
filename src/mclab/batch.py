@@ -5,13 +5,17 @@ from __future__ import annotations
 import json
 import re
 import csv
+import hashlib
+import hmac
+import logging
 import math
 import time
 from collections.abc import Callable
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime
 from html import escape
 from importlib import import_module
+from io import BytesIO, StringIO
 from pathlib import Path
 from typing import Any
 
@@ -20,10 +24,17 @@ from mclab.application.batch_runs import (
     claim_all_compare_handoff,
     release_all_compare_handoff,
 )
+from mclab.application.repositories import ArtifactRecord, ArtifactRepository
 from mclab.config import (
     default_outputs_root,
     load_config,
     resolve_output_path,
+)
+from mclab.completion import (
+    CompletionDecision,
+    CompletionEvidence,
+    CompletionRecordKind,
+    evaluate_completion,
 )
 from mclab.learning_guides import (
     challenge_prompt_for_guide,
@@ -33,6 +44,11 @@ from mclab.learning_guides import (
     question_for_guide,
     start_steps_for_guide,
 )
+from mclab.output_inventory import (
+    MAX_COMPLETION_ARTIFACT_BYTES,
+    TERMINAL_STATUSES,
+)
+from mclab.output_publication import OutputPublication, mutable_run_publication
 from mclab.sim.reporting import (
     INDEX_METRIC_KEYS,
     INDEX_PLOT_PRIORITY,
@@ -45,6 +61,21 @@ LabRunner = Callable[..., Path]
 
 ALL_BATCH_NAME = "all"
 VIEWER_HANDOFF_ANCHOR = "viewer-handoff"
+LOGGER = logging.getLogger(__name__)
+
+
+def _refresh_parent_index_after_publication(output_path: Path) -> None:
+    """Refresh derived navigation without rolling back a terminal publication."""
+
+    try:
+        write_outputs_index(output_path.parent)
+    except Exception as exc:
+        LOGGER.warning(
+            "Comparison output is complete, but the cumulative outputs index could "
+            "not be refreshed: %s",
+            exc,
+        )
+
 
 def _lazy_lab_runner(module_name: str) -> LabRunner:
     def run(*args: Any, **kwargs: Any) -> Path:
@@ -672,6 +703,15 @@ def run_batch(
     from mclab.application.artifacts import write_manifest
 
     try:
+        write_manifest(
+            batch_output,
+            scenario_id=f"batch.{batch_name}",
+            status="running",
+            config={"batch_name": batch_name, "plot": plot},
+            seed=seed,
+            started_at=started_at,
+            run_kind="comparison_batch",
+        )
         completed: list[dict[str, Any]] = []
         for scenario in scenarios:
             config = load_config(scenario.config_path)
@@ -711,33 +751,94 @@ def run_batch(
         write_outputs_index(batch_output)
         if plot:
             write_comparison_plots(batch_output, batch_name, scenarios)
+        # Publish all completion inputs before the report computes a
+        # prospective terminal verdict.  The strict reader rejects links,
+        # directories, digest mismatches, and unbounded artifacts.
+        write_manifest(
+            batch_output,
+            scenario_id=f"batch.{batch_name}",
+            status="running",
+            config={"batch_name": batch_name, "plot": plot},
+            seed=seed,
+            started_at=started_at,
+            run_kind="comparison_batch",
+        )
         write_batch_report(batch_output, batch_name, scenarios)
-        write_outputs_index(batch_output.parent)
     except Exception as exc:
+        # Work/report failures become terminal errors only after surviving
+        # learner artifacts are repaired to the same verdict.
+        error_report_ready = False
         try:
+            write_batch_report(
+                batch_output,
+                batch_name,
+                scenarios,
+                completion_status="error",
+            )
             write_manifest(
                 batch_output,
                 scenario_id=f"batch.{batch_name}",
-                status="error",
+                status="running",
                 config={"batch_name": batch_name, "plot": plot},
                 seed=seed,
                 started_at=started_at,
                 run_kind="comparison_batch",
-                error=str(exc),
+            )
+            error_report_ready = True
+        except Exception:
+            # The prior running marker deliberately leaves any partial or
+            # stale prospective documents untrusted.
+            pass
+        if error_report_ready:
+            try:
+                write_manifest(
+                    batch_output,
+                    scenario_id=f"batch.{batch_name}",
+                    status="error",
+                    config={"batch_name": batch_name, "plot": plot},
+                    seed=seed,
+                    started_at=started_at,
+                    run_kind="comparison_batch",
+                    error=str(exc),
+                )
+                write_outputs_index(batch_output.parent)
+            except Exception:
+                pass
+        raise
+    try:
+        write_manifest(
+            batch_output,
+            scenario_id=f"batch.{batch_name}",
+            status="completed",
+            config={"batch_name": batch_name, "plot": plot},
+            seed=seed,
+            started_at=started_at,
+            run_kind="comparison_batch",
+        )
+    except Exception:
+        # A failed completed publication is not converted into a different
+        # terminal state.  Restore a coherent running snapshot so retry and
+        # recovery remain fail-closed.
+        try:
+            write_batch_report(
+                batch_output,
+                batch_name,
+                scenarios,
+                completion_status="running",
+            )
+            write_manifest(
+                batch_output,
+                scenario_id=f"batch.{batch_name}",
+                status="running",
+                config={"batch_name": batch_name, "plot": plot},
+                seed=seed,
+                started_at=started_at,
+                run_kind="comparison_batch",
             )
         except Exception:
             pass
         raise
-
-    write_manifest(
-        batch_output,
-        scenario_id=f"batch.{batch_name}",
-        status="completed",
-        config={"batch_name": batch_name, "plot": plot},
-        seed=seed,
-        started_at=started_at,
-        run_kind="comparison_batch",
-    )
+    _refresh_parent_index_after_publication(batch_output)
     return batch_output
 
 
@@ -756,74 +857,157 @@ def run_all_batches(
         output_dir,
         handoff_token=handoff_token,
     )
-    completed: list[dict[str, Any]] = []
-    batch_names = list_batch_sets()
-    for index, batch_name in enumerate(batch_names, start=1):
-        if on_progress is not None:
-            on_progress(index, len(batch_names), batch_name)
-        batch_output = run_batch(
-            batch_name,
-            output_dir=group_output / batch_name,
-            plot=plot,
-            seed=seed,
-        )
-        guide = BATCH_GUIDES.get(batch_name)
-        scenario_count = len(BATCH_SETS[batch_name])
-        completed.append(
-            {
-                "batch_name": batch_name,
-                "title": guide.title if guide else batch_name.replace("_", " ").title(),
-                "output_path": str(batch_output),
-                "report": f"{batch_name}/report.html"
-                if (batch_output / "report.html").exists()
-                else f"{batch_name}/index.html",
-                "scenario_count": scenario_count,
-            }
-        )
-
-    scenario_runs = sum(int(item["scenario_count"]) for item in completed)
-    (group_output / "batch_summary.json").write_text(
-        json.dumps(
-            {
-                "batch_name": ALL_BATCH_NAME,
-                "batches": completed,
-                "scenario_runs": scenario_runs,
-            },
-            indent=2,
-        ),
-        encoding="utf-8",
-    )
-    (group_output / "summary.json").write_text(
-        json.dumps(
-            {
-                "lab_name": "batch_group",
-                "config_name": ALL_BATCH_NAME,
-                "samples": scenario_runs,
-                "batch_name": ALL_BATCH_NAME,
-                "child_batches": len(completed),
-                "scenario_runs": scenario_runs,
-                "duration": time.perf_counter() - started,
-            },
-            indent=2,
-        ),
-        encoding="utf-8",
-    )
-    write_outputs_index(group_output)
-    write_all_batches_report(group_output, completed)
-    write_outputs_index(group_output.parent)
     from mclab.application.artifacts import write_manifest
 
+    completed: list[dict[str, Any]] = []
+    try:
+        write_manifest(
+            group_output,
+            scenario_id=ALL_COMPARE_ID,
+            status="running",
+            config={"batch_name": ALL_BATCH_NAME, "plot": plot},
+            seed=seed,
+            started_at=started_at,
+            run_kind="comparison_batch",
+        )
+        batch_names = list_batch_sets()
+        for index, batch_name in enumerate(batch_names, start=1):
+            if on_progress is not None:
+                on_progress(index, len(batch_names), batch_name)
+            batch_output = run_batch(
+                batch_name,
+                output_dir=group_output / batch_name,
+                plot=plot,
+                seed=seed,
+            )
+            guide = BATCH_GUIDES.get(batch_name)
+            scenario_count = len(BATCH_SETS[batch_name])
+            completed.append(
+                {
+                    "batch_name": batch_name,
+                    "title": (guide.title if guide else batch_name.replace("_", " ").title()),
+                    "output_path": str(batch_output),
+                    "report": f"{batch_name}/report.html",
+                    "scenario_count": scenario_count,
+                }
+            )
+
+        scenario_runs = sum(int(item["scenario_count"]) for item in completed)
+        (group_output / "batch_summary.json").write_text(
+            json.dumps(
+                {
+                    "batch_name": ALL_BATCH_NAME,
+                    "batches": completed,
+                    "scenario_runs": scenario_runs,
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+        (group_output / "summary.json").write_text(
+            json.dumps(
+                {
+                    "lab_name": "batch_group",
+                    "config_name": ALL_BATCH_NAME,
+                    "samples": scenario_runs,
+                    "batch_name": ALL_BATCH_NAME,
+                    "child_batches": len(completed),
+                    "scenario_runs": scenario_runs,
+                    "duration": time.perf_counter() - started,
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+        write_outputs_index(group_output)
+        write_manifest(
+            group_output,
+            scenario_id=ALL_COMPARE_ID,
+            status="running",
+            config={"batch_name": ALL_BATCH_NAME, "plot": plot},
+            seed=seed,
+            started_at=started_at,
+            run_kind="comparison_batch",
+        )
+        write_all_batches_report(group_output, completed)
+    except Exception as exc:
+        error_report_ready = False
+        try:
+            write_all_batches_report(
+                group_output,
+                completed,
+                completion_status="error",
+            )
+            write_manifest(
+                group_output,
+                scenario_id=ALL_COMPARE_ID,
+                status="running",
+                config={"batch_name": ALL_BATCH_NAME, "plot": plot},
+                seed=seed,
+                started_at=started_at,
+                run_kind="comparison_batch",
+            )
+            error_report_ready = True
+        except Exception:
+            # The prior running marker deliberately leaves any partial or
+            # stale prospective documents untrusted.
+            pass
+        if handoff_token is not None:
+            # The claim lives inside the output tree and must be removed before
+            # the terminal error manifest is written.
+            try:
+                release_all_compare_handoff(group_output)
+            except Exception:
+                error_report_ready = False
+        if error_report_ready:
+            try:
+                write_manifest(
+                    group_output,
+                    scenario_id=ALL_COMPARE_ID,
+                    status="error",
+                    config={"batch_name": ALL_BATCH_NAME, "plot": plot},
+                    seed=seed,
+                    started_at=started_at,
+                    run_kind="comparison_batch",
+                    error=str(exc),
+                )
+                write_outputs_index(group_output.parent)
+            except Exception:
+                pass
+        raise
     if handoff_token is not None:
+        # Nothing inside the output tree may change after terminal publication.
         release_all_compare_handoff(group_output)
-    write_manifest(
-        group_output,
-        scenario_id=ALL_COMPARE_ID,
-        status="completed",
-        config={"batch_name": ALL_BATCH_NAME, "plot": plot},
-        seed=seed,
-        started_at=started_at,
-        run_kind="comparison_batch",
-    )
+    try:
+        write_manifest(
+            group_output,
+            scenario_id=ALL_COMPARE_ID,
+            status="completed",
+            config={"batch_name": ALL_BATCH_NAME, "plot": plot},
+            seed=seed,
+            started_at=started_at,
+            run_kind="comparison_batch",
+        )
+    except Exception:
+        try:
+            write_all_batches_report(
+                group_output,
+                completed,
+                completion_status="running",
+            )
+            write_manifest(
+                group_output,
+                scenario_id=ALL_COMPARE_ID,
+                status="running",
+                config={"batch_name": ALL_BATCH_NAME, "plot": plot},
+                seed=seed,
+                started_at=started_at,
+                run_kind="comparison_batch",
+            )
+        except Exception:
+            pass
+        raise
+    _refresh_parent_index_after_publication(group_output)
     return group_output
 
 
@@ -867,41 +1051,220 @@ def write_batch_report(
     batch_output: str | Path,
     batch_name: str,
     scenarios: tuple[BatchScenario, ...],
+    *,
+    completion_status: str = "completed",
 ) -> Path:
     output = Path(batch_output)
-    guide = BATCH_GUIDES.get(
-        batch_name,
-        BatchGuide(
-            title=batch_name.replace("_", " ").title(),
-            focus="Compare the scenario reports and summary metrics.",
-            questions=("Open each run report and compare the response plots.",),
-            followups=(
-                "Copy one scenario config, change a single parameter, and rerun the batch.",
+    with mutable_run_publication(output) as publication:
+        record = _batch_artifact_record(publication.root)
+        _assert_batch_report_write_allowed(record)
+        guide = BATCH_GUIDES.get(
+            batch_name,
+            BatchGuide(
+                title=batch_name.replace("_", " ").title(),
+                focus="Compare the scenario reports and summary metrics.",
+                questions=("Open each run report and compare the response plots.",),
+                followups=(
+                    "Copy one scenario config, change a single parameter, and rerun the batch.",
+                ),
+                metric_keys=INDEX_METRIC_KEYS,
+                preview_plots=("position.png",),
+                comparison_specs=(),
             ),
-            metric_keys=INDEX_METRIC_KEYS,
-            preview_plots=("position.png",),
-            comparison_specs=(),
-        ),
-    )
-    rows = _batch_rows(output, scenarios)
-    (output / "worksheet.md").write_text(
-        _render_batch_worksheet(output, batch_name, guide, rows), encoding="utf-8"
-    )
-    report = output / "report.html"
-    report.write_text(_render_batch_report(output, batch_name, guide, rows), encoding="utf-8")
-    return report
+        )
+        rows = _batch_rows(publication, scenarios)
+        prediction_check_available = bool(
+            _prediction_check_items(rows, _display_metric_keys(guide, rows))
+        )
+        completion_decision = _batch_completion_decision(
+            publication.root,
+            batch_name,
+            completion_status=completion_status,
+            prediction_check_available=prediction_check_available,
+            record=record,
+        )
+        worksheet = _render_batch_worksheet(
+            publication.root,
+            batch_name,
+            guide,
+            rows,
+            completion_decision,
+        )
+        publication.write_text(("worksheet.md",), worksheet)
+        return publication.write_text(
+            ("report.html",),
+            _render_batch_report(
+                publication.root,
+                batch_name,
+                guide,
+                rows,
+                completion_decision,
+            ),
+        )
 
 
 def write_all_batches_report(
-    batch_output: str | Path, completed_batches: list[dict[str, Any]]
+    batch_output: str | Path,
+    completed_batches: list[dict[str, Any]],
+    *,
+    completion_status: str = "completed",
 ) -> Path:
     output = Path(batch_output)
-    (output / "worksheet.md").write_text(
-        _render_all_batches_worksheet(completed_batches), encoding="utf-8"
+    with mutable_run_publication(output) as publication:
+        _assert_batch_report_write_allowed(_batch_artifact_record(publication.root))
+        completion_decision = _all_batch_completion_decision(
+            publication.root,
+            completion_status=completion_status,
+        )
+        worksheet = _render_all_batches_worksheet(
+            completed_batches,
+            completion_decision,
+        )
+        publication.write_text(("worksheet.md",), worksheet)
+        return publication.write_text(
+            ("report.html",),
+            _render_all_batches_report(completed_batches, completion_decision),
+        )
+
+
+def _batch_completion_decision(
+    output: Path,
+    batch_name: str,
+    *,
+    completion_status: str,
+    prediction_check_available: bool,
+    record: ArtifactRecord | None,
+) -> CompletionDecision:
+    """Evaluate a concrete batch from producer facts before terminal publication."""
+
+    from mclab.application.catalog import (
+        PREDICTION_CHECK_ARTIFACT_KEY,
+        REPORT_ARTIFACT_KEY,
+        WORKSHEET_ARTIFACT_KEY,
+        ScenarioCatalog,
     )
-    report = output / "report.html"
-    report.write_text(_render_all_batches_report(completed_batches), encoding="utf-8")
-    return report
+
+    target = ScenarioCatalog.default().get_batch(f"batch.{batch_name}")
+    if record is None:
+        evidence = CompletionEvidence(CompletionRecordKind.MISSING)
+    else:
+        evidence = record.completion_evidence
+        if evidence.record_kind == CompletionRecordKind.MANIFEST_V1:
+            evidence = replace(
+                evidence,
+                status=completion_status,
+                artifact_keys=tuple(
+                    dict.fromkeys(
+                        (
+                            *evidence.artifact_keys,
+                            REPORT_ARTIFACT_KEY,
+                            WORKSHEET_ARTIFACT_KEY,
+                            *(
+                                (PREDICTION_CHECK_ARTIFACT_KEY,)
+                                if prediction_check_available
+                                else ()
+                            ),
+                        )
+                    )
+                ),
+            )
+    return evaluate_completion(target.completion, evidence)
+
+
+def _all_batch_completion_decision(
+    output: Path,
+    *,
+    completion_status: str,
+) -> CompletionDecision:
+    """Evaluate course-batch credit from independently trusted child batches."""
+
+    from mclab.application.catalog import (
+        ALL_BATCH_TARGET_ID,
+        CONCRETE_BATCH_TARGET_IDS,
+        REPORT_ARTIFACT_KEY,
+        WORKSHEET_ARTIFACT_KEY,
+        ScenarioCatalog,
+    )
+    from mclab.application.completion_progress import assess_target_completion
+
+    catalog = ScenarioCatalog.default()
+    records = ArtifactRepository(output).list_runs()
+    child_keys = tuple(
+        target_id
+        for target_id in CONCRETE_BATCH_TARGET_IDS
+        if assess_target_completion(catalog.get_batch(target_id), records).complete
+    )
+    target = catalog.get_batch(ALL_BATCH_TARGET_ID)
+    evidence = CompletionEvidence(
+        CompletionRecordKind.MANIFEST_V1,
+        status=completion_status,
+        artifact_keys=(
+            REPORT_ARTIFACT_KEY,
+            WORKSHEET_ARTIFACT_KEY,
+            *child_keys,
+        ),
+    )
+    return evaluate_completion(target.completion, evidence)
+
+
+def _batch_artifact_record(output: Path) -> ArtifactRecord | None:
+    return next(
+        (
+            item
+            for item in ArtifactRepository(output.parent).list_runs()
+            if item.path.name == output.name
+        ),
+        None,
+    )
+
+
+def _assert_batch_report_write_allowed(record: ArtifactRecord | None) -> None:
+    if (
+        record is not None
+        and record.marker_name == "manifest.json"
+        and record.status in TERMINAL_STATUSES
+    ):
+        raise RuntimeError(
+            "Refusing to rewrite batch report artifacts after terminal manifest publication."
+        )
+
+
+def _completion_worksheet_lines(decision: CompletionDecision) -> list[str]:
+    verdict = "Complete" if decision.complete else "Incomplete"
+    reasons = ", ".join(reason.value for reason in decision.reasons)
+    return [
+        "## Completion",
+        "",
+        f"- Completion verdict: {verdict}",
+        f"- Completion contract version: {decision.contract_version}",
+        f"- Completion reason: {decision.primary_reason.value}",
+        f"- Completion reasons: {reasons}",
+        "",
+    ]
+
+
+def _read_only_worksheet_lines() -> list[str]:
+    return [
+        "## Saved Artifact Policy",
+        "",
+        "- This worksheet is digest-published and read-only. Do not edit files in this saved-run folder.",
+        "- Copy prompts into personal or course notes outside the saved-run folder and record answers there.",
+        "",
+    ]
+
+
+def _completion_html(decision: CompletionDecision) -> str:
+    verdict = "Complete" if decision.complete else "Incomplete"
+    reasons = ", ".join(reason.value for reason in decision.reasons)
+    return (
+        '<section class="completion-verdict">'
+        "<h2>Completion</h2>"
+        f"<p><strong>Completion verdict:</strong> {escape(verdict)}</p>"
+        f"<p><strong>Completion contract version:</strong> {decision.contract_version}</p>"
+        f"<p><strong>Completion reason:</strong> {escape(decision.primary_reason.value)}</p>"
+        f"<p><strong>Completion reasons:</strong> {escape(reasons)}</p>"
+        "</section>"
+    )
 
 
 def _create_unique_directory(base_path: Path) -> Path:
@@ -920,40 +1283,67 @@ def _safe_name(value: str) -> str:
     return normalized.strip("._") or "scenario"
 
 
-def _batch_rows(output: Path, scenarios: tuple[BatchScenario, ...]) -> list[dict[str, Any]]:
+def _batch_rows(
+    publication: OutputPublication,
+    scenarios: tuple[BatchScenario, ...],
+) -> list[dict[str, Any]]:
+    records = {
+        record.path.name: record for record in ArtifactRepository(publication.root).list_runs()
+    }
     rows: list[dict[str, Any]] = []
     for scenario in scenarios:
-        run_dir = output / _safe_name(scenario.label)
-        summary = _read_json(run_dir / "summary.json")
+        run_name = _safe_name(scenario.label)
+        record = records.get(run_name)
+        summary = record.summary if record is not None else {}
+        config: dict[str, Any] = {}
+        if record is not None:
+            config_section = record.manifest.get("config")
+            resolved = config_section.get("resolved") if isinstance(config_section, dict) else None
+            if isinstance(resolved, dict):
+                config = resolved
+        plots = (
+            {
+                plot.name: f"{run_name}/{plot.relative_to(record.path).as_posix()}"
+                for plot in record.plot_paths
+            }
+            if record is not None
+            else {}
+        )
         rows.append(
             {
                 "label": scenario.label,
                 "lab_name": scenario.lab_name,
                 "config_path": scenario.config_path,
                 "plot_selection": scenario.plots,
-                "config": _load_config_for_report(run_dir, scenario.config_path),
-                "run_dir": run_dir.name,
-                "report": f"{run_dir.name}/report.html"
-                if (run_dir / "report.html").exists()
-                else run_dir.name,
-                "folder": f"{run_dir.name}/",
-                "worksheet": f"{run_dir.name}/worksheet.md"
-                if (run_dir / "worksheet.md").exists()
+                "config": config,
+                "run_dir": run_name,
+                "report": f"{run_name}/report.html"
+                if record is not None and record.report_available
+                else run_name,
+                "folder": f"{run_name}/",
+                "worksheet": f"{run_name}/worksheet.md"
+                if record is not None and record.worksheet_available
                 else "",
                 "summary": summary,
-                "plots": _available_plot_paths(run_dir),
+                "plots": plots,
             }
         )
     return rows
 
 
 def _render_batch_worksheet(
-    output: Path, batch_name: str, guide: BatchGuide, rows: list[dict[str, Any]]
+    output: Path,
+    batch_name: str,
+    guide: BatchGuide,
+    rows: list[dict[str, Any]],
+    completion_decision: CompletionDecision,
 ) -> str:
     metric_keys = _display_metric_keys(guide, rows)
     lines: list[str] = [
         "# MCLab Batch Worksheet",
         "",
+        *_completion_worksheet_lines(completion_decision),
+        *_read_only_worksheet_lines(),
         "## Batch",
         "",
         f"- Batch: {batch_name}",
@@ -1053,11 +1443,11 @@ def _batch_worksheet_prediction_check_lines(
     lines = [
         "## Prediction Check",
         "",
-        "- Use this after writing a prediction: mark each item as Matched, Partly matched, or Surprised.",
+        "- Copy these prompts into personal or course notes outside the saved-run folder, then record each outcome as Matched, Partly matched, or Surprised.",
     ]
     for metric, evidence, outcome_prompt in items:
         lines.append(f"- {_label(metric)}: {evidence}")
-        lines.append(f"  - [ ] {outcome_prompt}")
+        lines.append(f"  - Review prompt: {outcome_prompt}")
     lines.append("")
     return lines
 
@@ -1081,16 +1471,16 @@ def _batch_worksheet_viewer_handoff_lines(
         f"- Worksheet: {row.get('worksheet') or 'n/a'}",
         f"- Folder: {row.get('folder') or row.get('run_dir') or 'n/a'}",
         f"- Viewer rerun: {_scenario_viewer_command(row)}",
-        "- [ ] Open this scenario in the side-panel-free viewer before editing another YAML parameter.",
+        "- Review prompt: Open this scenario in the side-panel-free viewer, then record what changed in personal or course notes outside the saved-run folder.",
         "",
     ]
 
 
 def _batch_worksheet_checklist_lines() -> list[str]:
     return [
-        "- [ ] Write which scenario best supports your prediction.",
-        "- [ ] Mark which metric changed most clearly from the baseline.",
-        "- [ ] Open one scenario report and one comparison plot before choosing the next experiment.",
+        "- Review prompt: Record which scenario best supports your prediction.",
+        "- Review prompt: Record which metric changed most clearly from the baseline.",
+        "- Review prompt: Record one scenario report and comparison plot you reviewed before choosing the next experiment.",
         "",
     ]
 
@@ -1102,7 +1492,7 @@ def _batch_worksheet_comparison_plot_lines(output: Path) -> list[str]:
     lines = ["## Comparison Plot Guide", ""]
     for plot, title, detail in guided:
         lines.append(f"- comparison_plots/{plot.name}: {title} - {detail}")
-        lines.append(f"  - [ ] {_plot_checkpoint(plot.name, title)}")
+        lines.append(f"  - Review prompt: {_plot_checkpoint(plot.name, title)}")
     lines.append("")
     return lines
 
@@ -1154,11 +1544,16 @@ def _batch_worksheet_artifact_lines(output: Path, rows: list[dict[str, Any]]) ->
     return lines
 
 
-def _render_all_batches_worksheet(completed_batches: list[dict[str, Any]]) -> str:
+def _render_all_batches_worksheet(
+    completed_batches: list[dict[str, Any]],
+    completion_decision: CompletionDecision,
+) -> str:
     scenario_total = sum(int(row.get("scenario_count", 0)) for row in completed_batches)
     lines = [
         "# MCLab Course Batch Worksheet",
         "",
+        *_completion_worksheet_lines(completion_decision),
+        *_read_only_worksheet_lines(),
         "## Course Comparison Set",
         "",
         f"- Batch groups: {len(completed_batches)}",
@@ -1200,9 +1595,9 @@ def _render_all_batches_worksheet(completed_batches: list[dict[str, Any]]) -> st
             "",
             "## Course Reflection",
             "",
-            "- [ ] Identify one idea that stayed the same from Lab01 to Lab04.",
-            "- [ ] Identify one plot where actuator effort made the tradeoff visible.",
-            "- [ ] Pick one batch worksheet and write the next parameter change you would try.",
+            "- Review prompt: Record one idea that stayed the same from Lab01 to Lab04.",
+            "- Review prompt: Record one plot where actuator effort made the tradeoff visible.",
+            "- Review prompt: In personal or course notes outside the saved-run folder, record the next parameter change you would try after reviewing one batch worksheet.",
             "",
         ]
     )
@@ -1210,7 +1605,11 @@ def _render_all_batches_worksheet(completed_batches: list[dict[str, Any]]) -> st
 
 
 def _render_batch_report(
-    output: Path, batch_name: str, guide: BatchGuide, rows: list[dict[str, Any]]
+    output: Path,
+    batch_name: str,
+    guide: BatchGuide,
+    rows: list[dict[str, Any]],
+    completion_decision: CompletionDecision,
 ) -> str:
     metric_keys = _display_metric_keys(guide, rows)
     question_items = "\n".join(f"<li>{escape(question)}</li>" for question in guide.questions)
@@ -1242,6 +1641,7 @@ def _render_batch_report(
         metric_rows = (
             f'<tr><td colspan="{3 + len(metric_keys)}">No scenario summaries were found.</td></tr>'
         )
+    completion = _completion_html(completion_decision)
 
     return f"""<!doctype html>
 <html lang="en">
@@ -1427,11 +1827,13 @@ def _render_batch_report(
 <body>
   <main>
     <h1>{escape(guide.title)}</h1>
+    {completion}
     <section>
       <h2>Learning Focus</h2>
       <p>{escape(guide.focus)}</p>
       <ul>{question_items}</ul>
-      <p class="muted"><a href="worksheet.md">Open the batch worksheet</a> for scenario notes, metric checks, and next experiments.</p>
+      <p class="muted"><strong>Saved artifact policy:</strong> This report and its worksheet are digest-published and read-only. Copy prompts and record answers in personal or course notes outside the saved-run folder.</p>
+      <p class="muted"><a href="worksheet.md">Open the batch worksheet</a> as a read-only reference for scenario evidence, metric prompts, and next experiments.</p>
       <p class="muted"><a href="index.html">Open the detailed run index</a> for every saved artifact.</p>
     </section>
     {next_experiments}
@@ -1464,12 +1866,16 @@ def _render_batch_report(
 """
 
 
-def _render_all_batches_report(completed_batches: list[dict[str, Any]]) -> str:
+def _render_all_batches_report(
+    completed_batches: list[dict[str, Any]],
+    completion_decision: CompletionDecision,
+) -> str:
     total_scenarios = sum(int(row.get("scenario_count", 0)) for row in completed_batches)
     cards = "\n".join(_all_batch_card(row) for row in completed_batches)
     rows = "\n".join(_all_batch_row(row) for row in completed_batches)
     if not rows:
         rows = '<tr><td colspan="5">No batch runs were found.</td></tr>'
+    completion = _completion_html(completion_decision)
 
     return f"""<!doctype html>
 <html lang="en">
@@ -1560,11 +1966,13 @@ def _render_all_batches_report(completed_batches: list[dict[str, Any]]) -> str:
 <body>
   <main>
     <h1>All Comparison Batches</h1>
+    {completion}
     <section>
       <h2>Learning Flow</h2>
       <p>This run creates the complete comparison report set for Lab01 through Lab04.</p>
       <p class="muted">{len(completed_batches)} batch reports, {total_scenarios} scenario runs. Open each batch report to compare plots, metrics, parameter differences, and follow-up experiments.</p>
-      <p class="muted"><a href="worksheet.md">Open the course worksheet</a> for the full batch review checklist.</p>
+      <p class="muted"><strong>Saved artifact policy:</strong> This report and its worksheet are digest-published and read-only. Copy prompts and record answers in personal or course notes outside the saved-run folder.</p>
+      <p class="muted"><a href="worksheet.md">Open the course worksheet</a> as a read-only reference for the full batch review prompts.</p>
       <p class="muted"><a href="index.html">Open the detailed output index</a> for every saved artifact.</p>
     </section>
     <section>
@@ -2147,8 +2555,9 @@ def _prediction_check(rows: list[dict[str, Any]], metric_keys: list[str]) -> str
     return (
         "<section>"
         "<h2>Prediction Check</h2>"
-        '<p class="muted">After making a prediction, use this table to decide whether the saved evidence '
-        "matched, partly matched, or surprised you.</p>"
+        '<p class="muted">This table is digest-published and read-only. Copy its prompts into personal or '
+        "course notes outside the saved-run folder, then record whether the evidence matched, partly matched, "
+        "or surprised you.</p>"
         '<div class="table-wrap" tabindex="0" aria-label="Scrollable data table">'
         "<table>"
         "<thead><tr><th>Metric</th><th>Saved evidence</th><th>Outcome prompt</th></tr></thead>"
@@ -2180,7 +2589,8 @@ def _prediction_check_items(
             continue
         evidence = _prediction_check_evidence(key, low_label, low_value, high_label, high_value)
         outcome_prompt = (
-            f"Mark your prediction outcome for {_label(key)}: Matched / Partly matched / Surprised."
+            f"Record in personal or course notes: prediction outcome for {_label(key)} - "
+            "Matched / Partly matched / Surprised."
         )
         items.append((key, evidence, outcome_prompt))
         if len(items) >= max_items:
@@ -2610,23 +3020,6 @@ def _display_metric_keys(guide: BatchGuide, rows: list[dict[str, Any]]) -> list[
     return primary_keys + extra_keys
 
 
-def _available_plot_paths(run_dir: Path) -> dict[str, str]:
-    plots_dir = run_dir / "plots"
-    if not plots_dir.exists():
-        return {}
-    return {
-        path.name: f"{run_dir.name}/plots/{path.name}" for path in sorted(plots_dir.glob("*.png"))
-    }
-
-
-def _load_config_for_report(run_dir: Path, config_path: str) -> dict[str, Any]:
-    snapshot = run_dir / "config.yaml"
-    try:
-        return load_config(snapshot if snapshot.exists() else config_path)
-    except (OSError, ValueError):
-        return {}
-
-
 def write_comparison_plots(
     batch_output: str | Path,
     batch_name: str,
@@ -2648,51 +3041,85 @@ def write_comparison_plots(
         raise RuntimeError("matplotlib is required when batch plots are enabled.") from exc
 
     output = Path(batch_output)
-    plot_dir = output / "comparison_plots"
-    plot_dir.mkdir(parents=True, exist_ok=True)
-    datasets = [
-        (scenario.label, _read_csv_rows(output / _safe_name(scenario.label) / "log.csv"))
-        for scenario in scenarios
-    ]
-    written: list[Path] = []
-    for filename, title, ylabel, signal_key in guide.comparison_specs:
-        available = [
-            (label, rows)
-            for label, rows in datasets
-            if rows and any(signal_key in row for row in rows)
-        ]
-        if not available:
-            continue
-        fig, axis = plt.subplots(figsize=(8.5, 4.8), constrained_layout=True)
-        for label, rows in available:
-            time = [_as_float(row.get("time", index)) for index, row in enumerate(rows)]
-            values = [_as_float(row.get(signal_key)) for row in rows]
-            axis.plot(time, values, label=label)
-        axis.set_title(title)
-        axis.set_xlabel("time [s]")
-        axis.set_ylabel(ylabel)
-        axis.grid(True, alpha=0.3)
-        axis.legend(fontsize="small")
-        target = plot_dir / filename
-        fig.savefig(target, dpi=150)
-        plt.close(fig)
-        written.append(target)
-    written.extend(_write_summary_comparison_plots(plt, plot_dir, guide, output, scenarios))
-    return written
+    with mutable_run_publication(output) as publication:
+        publication.ensure_directory(("comparison_plots",))
+        records = {
+            record.path.name: record for record in ArtifactRepository(publication.root).list_runs()
+        }
+        datasets = []
+        for scenario in scenarios:
+            run_name = _safe_name(scenario.label)
+            record = records.get(run_name)
+            data = (
+                _trusted_child_artifact_bytes(
+                    publication,
+                    record,
+                    "log.csv",
+                )
+                if record is not None
+                else b""
+            )
+            datasets.append((scenario.label, _read_csv_data(data)))
+
+        written: list[Path] = []
+        for filename, title, ylabel, signal_key in guide.comparison_specs:
+            available = [
+                (label, rows)
+                for label, rows in datasets
+                if rows and any(signal_key in row for row in rows)
+            ]
+            if not available:
+                continue
+            fig, axis = plt.subplots(figsize=(8.5, 4.8), constrained_layout=True)
+            try:
+                for label, rows in available:
+                    time_values = [
+                        _as_float(row.get("time", index)) for index, row in enumerate(rows)
+                    ]
+                    values = [_as_float(row.get(signal_key)) for row in rows]
+                    axis.plot(time_values, values, label=label)
+                axis.set_title(title)
+                axis.set_xlabel("time [s]")
+                axis.set_ylabel(ylabel)
+                axis.grid(True, alpha=0.3)
+                axis.legend(fontsize="small")
+                target = _write_comparison_figure(
+                    publication,
+                    fig,
+                    filename,
+                )
+            finally:
+                plt.close(fig)
+            written.append(target)
+        written.extend(
+            _write_summary_comparison_plots(
+                plt,
+                publication,
+                guide,
+                scenarios,
+                records,
+            )
+        )
+        return written
 
 
 def _write_summary_comparison_plots(
     plt: Any,
-    plot_dir: Path,
+    publication: OutputPublication,
     guide: BatchGuide,
-    output: Path,
     scenarios: tuple[BatchScenario, ...],
+    records: dict[str, ArtifactRecord],
 ) -> list[Path]:
     if not guide.summary_comparison_specs:
         return []
 
     summaries = [
-        (scenario.label, _read_json(output / _safe_name(scenario.label) / "summary.json"))
+        (
+            scenario.label,
+            records[_safe_name(scenario.label)].summary
+            if _safe_name(scenario.label) in records
+            else {},
+        )
         for scenario in scenarios
     ]
     written: list[Path] = []
@@ -2725,28 +3152,56 @@ def _write_summary_comparison_plots(
         axis.set_xticklabels(labels, rotation=30, ha="right")
         axis.grid(True, alpha=0.3)
         axis.legend(fontsize="small")
-        target = plot_dir / filename
-        fig.savefig(target, dpi=150)
-        plt.close(fig)
+        try:
+            target = _write_comparison_figure(publication, fig, filename)
+        finally:
+            plt.close(fig)
         written.append(target)
     return written
 
 
-def _read_csv_rows(path: Path) -> list[dict[str, str]]:
-    if not path.exists():
+def _write_comparison_figure(
+    publication: OutputPublication,
+    figure: Any,
+    filename: str,
+) -> Path:
+    buffer = BytesIO()
+    figure.savefig(buffer, format="png", dpi=150)
+    return publication.write_bytes(
+        ("comparison_plots", filename),
+        buffer.getvalue(),
+    )
+
+
+def _trusted_child_artifact_bytes(
+    publication: OutputPublication,
+    record: ArtifactRecord,
+    relative: str,
+) -> bytes:
+    if record.artifact_validation_errors:
+        return b""
+    artifacts = record.manifest.get("artifacts")
+    expected = artifacts.get(relative) if isinstance(artifacts, dict) else None
+    if not isinstance(expected, str):
+        return b""
+    data = publication.read_bytes(
+        (record.path.name, relative),
+        description=f"batch child artifact {relative}",
+        max_bytes=MAX_COMPLETION_ARTIFACT_BYTES,
+        allow_empty=True,
+    )
+    if not hmac.compare_digest(hashlib.sha256(data).hexdigest(), expected):
+        return b""
+    return data
+
+
+def _read_csv_data(data: bytes) -> list[dict[str, str]]:
+    if not data:
         return []
-    with path.open(newline="", encoding="utf-8") as stream:
-        return list(csv.DictReader(stream))
-
-
-def _read_json(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return {}
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return {}
-    return payload if isinstance(payload, dict) else {}
+        return list(csv.DictReader(StringIO(data.decode("utf-8"))))
+    except (UnicodeError, csv.Error):
+        return []
 
 
 def _has_value(value: Any) -> bool:

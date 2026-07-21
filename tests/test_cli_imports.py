@@ -14,6 +14,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from mclab.batch import BATCH_SETS  # noqa: E402
+from mclab.application.artifacts import write_manifest  # noqa: E402
+from mclab.application.catalog import CONCRETE_BATCH_NAMES, stable_scenario_id  # noqa: E402
 from mclab.cli import (  # noqa: E402
     LABS,
     _batch_handoff_detail_text,
@@ -24,9 +26,161 @@ from mclab.cli import (  # noqa: E402
     main,
 )
 from mclab.cli import build_parser  # noqa: E402
+from mclab.config import load_config  # noqa: E402
 from mclab.doctor import DoctorCheck  # noqa: E402
 from mclab.learner_menu import BATCH_ACTIONS, LEARNING_PATH, MENU_ACTIONS  # noqa: E402
 from mclab.output_cleanup import CleanupOperationError, build_cleanup_plan  # noqa: E402
+
+
+def _publish_scenario_run(
+    run_path: Path,
+    lab_name: str,
+    config_path: str,
+    *,
+    events: list[dict[str, object]] | None = None,
+    plot: bool = True,
+    finished_at: str | None = None,
+) -> Path:
+    """Publish a digest-matching schema-1 run for completion-facing CLI tests."""
+
+    run_path.mkdir(parents=True, exist_ok=True)
+    (run_path / "summary.json").write_text(
+        json.dumps(
+            {
+                "lab_name": lab_name,
+                "config_path": config_path,
+                "config_name": Path(config_path).stem,
+            }
+        ),
+        encoding="utf-8",
+    )
+    if plot:
+        plots = run_path / "plots"
+        plots.mkdir(exist_ok=True)
+        (plots / "position.png").write_bytes(b"fake-png")
+    (run_path / "report.html").write_text("<html></html>", encoding="utf-8")
+    (run_path / "worksheet.md").write_text("# Worksheet\n", encoding="utf-8")
+    if events is not None:
+        (run_path / "interaction_events.json").write_text(
+            json.dumps(events),
+            encoding="utf-8",
+        )
+    config = load_config(config_path)
+    write_manifest(
+        run_path,
+        scenario_id=stable_scenario_id(lab_name, config_path),
+        status="completed",
+        config=config,
+        config_path=config_path,
+        started_at=finished_at,
+        finished_at=finished_at,
+    )
+    return run_path
+
+
+def _publish_batch_run(
+    run_path: Path,
+    batch_name: str,
+    *,
+    worksheet_text: str = "# Batch worksheet\n\n## Prediction Check\n",
+) -> Path:
+    run_path.mkdir(parents=True, exist_ok=True)
+    (run_path / "summary.json").write_text(
+        json.dumps(
+            {
+                "lab_name": "batch",
+                "batch_name": batch_name,
+                "config_name": batch_name,
+            }
+        ),
+        encoding="utf-8",
+    )
+    plots = run_path / "comparison_plots"
+    plots.mkdir(exist_ok=True)
+    (plots / "comparison.png").write_bytes(b"fake-png")
+    (run_path / "report.html").write_text("<html></html>", encoding="utf-8")
+    (run_path / "worksheet.md").write_text(worksheet_text, encoding="utf-8")
+    write_manifest(
+        run_path,
+        scenario_id=f"batch.{batch_name}",
+        status="completed",
+        config={"batch_name": batch_name, "plot": True},
+        run_kind="comparison_batch",
+    )
+    return run_path
+
+
+def _publish_course_batch_run(run_path: Path) -> Path:
+    """Publish all trusted child batches before terminal course artifacts."""
+
+    run_path.mkdir(parents=True, exist_ok=True)
+    for batch_name in CONCRETE_BATCH_NAMES:
+        worksheet_text = (
+            "\n".join(
+                (
+                    "# Batch worksheet",
+                    "",
+                    "## Prediction Check",
+                    "",
+                    "- Review prompt: Compare the prediction with the evidence, then copy the "
+                    "outcome into personal/course notes outside the saved-run folder.",
+                    "",
+                    "## Viewer Handoff",
+                    "",
+                    "- Start with: underdamped",
+                    "- Viewer rerun: python -m mclab run lab01 --config "
+                    "configs/lab01_msd/underdamped.yaml --viewer --realtime "
+                    "--pause-at-end --plot --plots essential",
+                )
+            )
+            if batch_name == "lab01_msd_compare"
+            else "# Batch worksheet\n\n## Prediction Check\n"
+        )
+        _publish_batch_run(
+            run_path / batch_name,
+            batch_name,
+            worksheet_text=worksheet_text,
+        )
+
+    (run_path / "summary.json").write_text(
+        json.dumps(
+            {
+                "lab_name": "batch_group",
+                "batch_name": "all",
+                "config_name": "all",
+            }
+        ),
+        encoding="utf-8",
+    )
+    write_manifest(
+        run_path,
+        scenario_id="batch.all",
+        status="running",
+        config={"batch_name": "all", "plot": True},
+        run_kind="comparison_batch",
+    )
+    (run_path / "report.html").write_text("<html></html>", encoding="utf-8")
+    (run_path / "worksheet.md").write_text(
+        "\n".join(
+            (
+                "# Course worksheet",
+                "",
+                "## Batch Review",
+                "",
+                "- Lab01 Mass-Spring-Damper Comparison",
+                "  - Viewer handoff: lab01_msd_compare/report.html#viewer-handoff",
+            )
+        ),
+        encoding="utf-8",
+    )
+    write_manifest(
+        run_path,
+        scenario_id="batch.all",
+        status="completed",
+        config={"batch_name": "all", "plot": True},
+        run_kind="comparison_batch",
+    )
+    return run_path
 
 
 class CliImportTests(unittest.TestCase):
@@ -106,7 +260,9 @@ class CliImportTests(unittest.TestCase):
         self.assertEqual(args.command, "doctor")
 
         with (
-            patch("mclab.cli.run_doctor_checks", return_value=[DoctorCheck("Python", "OK", "ready")]),
+            patch(
+                "mclab.cli.run_doctor_checks", return_value=[DoctorCheck("Python", "OK", "ready")]
+            ),
             patch("builtins.print") as printer,
         ):
             self.assertEqual(main(["doctor"]), 0)
@@ -171,7 +327,9 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("Next guide: Lab01 Mass-Spring-Damper - Auto demo", printed)
         self.assertIn("Mission: Run the demo", printed)
         self.assertIn("Try: Start here and compare position, velocity, and applied force.", printed)
-        self.assertIn("Change: mass, damping, stiffness, initial_position, force_input.magnitude", printed)
+        self.assertIn(
+            "Change: mass, damping, stiffness, initial_position, force_input.magnitude", printed
+        )
         self.assertIn("Values: mass=1; damping=2; stiffness=50; initial_position=0.1", printed)
         self.assertIn("Prediction: Before changing mass, damping, stiffness", printed)
         self.assertIn("Question:", printed)
@@ -185,13 +343,17 @@ class CliImportTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             output_dir = Path(tmp).resolve() / "outputs"
 
-            args = build_parser().parse_args(["coverage", "--output-dir", str(output_dir), "--details"])
+            args = build_parser().parse_args(
+                ["coverage", "--output-dir", str(output_dir), "--details"]
+            )
             self.assertEqual(args.command, "coverage")
             self.assertEqual(args.output_dir, str(output_dir))
             self.assertTrue(args.details)
 
             with patch("builtins.print") as printer:
-                self.assertEqual(main(["coverage", "--output-dir", str(output_dir), "--details"]), 0)
+                self.assertEqual(
+                    main(["coverage", "--output-dir", str(output_dir), "--details"]), 0
+                )
 
         printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
         self.assertIn("Coverage details:", printed)
@@ -231,52 +393,53 @@ class CliImportTests(unittest.TestCase):
             printed,
         )
         self.assertIn("Target X - away  A / Left / Target X + into wall  D / Right", printed)
-        self.assertIn("view/evidence helpers such as Pause, Playback speed, and Use live status do not count.", printed)
+        self.assertIn(
+            "view/evidence helpers such as Pause, Playback speed, and Use live status do not count.",
+            printed,
+        )
 
     def test_cli_coverage_complete_points_to_learning_path_when_path_is_pending(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output_dir = Path(tmp).resolve() / "outputs"
             output_dir.mkdir()
-            lab01 = output_dir / "run_lab01_interactive"
-            lab01.mkdir()
-            (lab01 / "summary.json").write_text(
-                (
-                    '{"lab_name": "lab01_msd", '
-                    '"config_path": "configs/lab01_msd/interactive_pull.yaml", '
-                    '"config_name": "interactive_pull"}'
-                ),
-                encoding="utf-8",
+            complete_observation = {
+                "kind": "marker",
+                "name": "observation",
+                "value": {
+                    "prediction": "The response should change.",
+                    "outcome": "Matched",
+                    "note": "The change was visible.",
+                },
+            }
+            _publish_scenario_run(
+                output_dir / "run_lab01_interactive",
+                "lab01_msd",
+                "configs/lab01_msd/interactive_pull.yaml",
+                events=[
+                    {"kind": "button", "name": "push", "label": "Push Right"},
+                    complete_observation,
+                ],
             )
-            (lab01 / "interaction_events.json").write_text(
-                '[{"kind": "button", "name": "push", "label": "Push Right"}]',
-                encoding="utf-8",
+            _publish_scenario_run(
+                output_dir / "run_lab03_dls",
+                "lab03_2dof",
+                "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
+                events=[
+                    {"kind": "slider", "name": "dls_gain", "label": "DLS gain", "value": 4.0},
+                    complete_observation,
+                ],
             )
-            lab03 = output_dir / "run_lab03_dls"
-            lab03.mkdir()
-            (lab03 / "summary.json").write_text(
-                (
-                    '{"lab_name": "lab03", '
-                    '"config_path": "configs/lab03_2dof/condition_aware_dls_2dof.yaml", '
-                    '"config_name": "condition_aware_dls_2dof"}'
-                ),
-                encoding="utf-8",
+            _publish_scenario_run(
+                output_dir / "run_lab04_wall_auto",
+                "lab04_panda",
+                "configs/lab04_panda/wall_soft.yaml",
             )
-            lab04 = output_dir / "run_lab04_wall"
-            lab04.mkdir()
-            (lab04 / "summary.json").write_text(
-                (
-                    '{"lab_name": "lab04", '
-                    '"config_path": "configs/lab04_panda/interactive_virtual_wall.yaml", '
-                    '"config_name": "interactive_virtual_wall"}'
-                ),
-                encoding="utf-8",
+            _publish_scenario_run(
+                output_dir / "run_lab04_wall",
+                "lab04_panda",
+                "configs/lab04_panda/interactive_virtual_wall.yaml",
             )
-            batch = output_dir / "batch_lab02"
-            batch.mkdir()
-            (batch / "summary.json").write_text(
-                '{"lab_name": "batch", "config_name": "lab02_pid_compare", "batch_name": "lab02_pid_compare"}',
-                encoding="utf-8",
-            )
+            _publish_batch_run(output_dir / "batch_lab02", "lab02_pid_compare")
 
             with patch("builtins.print") as printer:
                 self.assertEqual(main(["coverage", "--output-dir", str(output_dir)]), 0)
@@ -325,7 +488,9 @@ class CliImportTests(unittest.TestCase):
         )
         self.assertIn("Next guide: Lab01 Mass-Spring-Damper - Auto demo", printed)
         self.assertIn("Mission: Run the demo", printed)
-        self.assertIn("Change: mass, damping, stiffness, initial_position, force_input.magnitude", printed)
+        self.assertIn(
+            "Change: mass, damping, stiffness, initial_position, force_input.magnitude", printed
+        )
         self.assertIn("Values: mass=1; damping=2; stiffness=50; initial_position=0.1", printed)
         self.assertIn("Prediction: Before changing mass, damping, stiffness", printed)
         self.assertNotIn("Viewer: MuJoCo side panels are hidden", printed)
@@ -361,7 +526,9 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("Next guide: Lab01 Mass-Spring-Damper - Auto demo", printed)
         self.assertIn("Mission: Run the demo", printed)
         self.assertIn("Try: Start here and compare position, velocity, and applied force.", printed)
-        self.assertIn("Change: mass, damping, stiffness, initial_position, force_input.magnitude", printed)
+        self.assertIn(
+            "Change: mass, damping, stiffness, initial_position, force_input.magnitude", printed
+        )
         self.assertIn("Values: mass=1; damping=2; stiffness=50; initial_position=0.1", printed)
         self.assertIn("Prediction: Before changing mass, damping, stiffness", printed)
         self.assertIn("Question:", printed)
@@ -369,22 +536,18 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("Start steps:", printed)
         self.assertNotIn("Viewer: MuJoCo side panels are hidden", printed)
         self.assertIn("Controls: Auto run; edit YAML before running", printed)
-        self.assertIn("Next cue: Run this scenario, then review the saved plot and worksheet.", printed)
+        self.assertIn(
+            "Next cue: Run this scenario, then review the saved plot and worksheet.", printed
+        )
         self.assertNotIn("Running next step:", printed)
 
     def test_cli_preview_names_first_hands_on_action_for_unrun_viewer_step(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output_dir = Path(tmp).resolve() / "outputs"
-            run_path = output_dir / "run_lab01_auto"
-            plots = run_path / "plots"
-            plots.mkdir(parents=True)
-            (run_path / "report.html").write_text("<html></html>", encoding="utf-8")
-            (run_path / "worksheet.md").write_text("# Worksheet\n", encoding="utf-8")
-            (plots / "position.png").write_bytes(b"fake-png")
-            (run_path / "summary.json").write_text(
-                '{"lab_name": "lab01_msd", "config_path": "configs/lab01_msd/default.yaml", '
-                '"config_name": "default"}',
-                encoding="utf-8",
+            _publish_scenario_run(
+                output_dir / "run_lab01_auto",
+                "lab01_msd",
+                "configs/lab01_msd/default.yaml",
             )
 
             with (
@@ -407,13 +570,12 @@ class CliImportTests(unittest.TestCase):
     def test_cli_runs_next_learning_path_step(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output_dir = Path(tmp).resolve() / "outputs"
-            output = Path(tmp).resolve() / "next_run"
-            output.mkdir()
+            output = _publish_scenario_run(
+                Path(tmp).resolve() / "next_run",
+                "lab01_msd",
+                "configs/lab01_msd/default.yaml",
+            )
             report = output / "report.html"
-            report.write_text("<html></html>", encoding="utf-8")
-            (output / "worksheet.md").write_text("# Worksheet\n", encoding="utf-8")
-            (output / "plots").mkdir()
-            (output / "plots" / "position.png").write_bytes(b"fake-png")
             calls: list[dict[str, object]] = []
 
             def fake_runner(_config: dict[str, object], **kwargs: object) -> Path:
@@ -451,7 +613,10 @@ class CliImportTests(unittest.TestCase):
             with (
                 patch("mclab.cli.learning_path_progress_items", return_value=()),
                 patch("mclab.cli.learning_path_summary_text", return_value="Progress: batch next"),
-                patch("mclab.cli.learning_path_milestone_text", return_value="Milestones: compare next"),
+                patch(
+                    "mclab.cli.learning_path_milestone_text",
+                    return_value="Milestones: compare next",
+                ),
                 patch("mclab.cli.next_learning_path_step", return_value=LEARNING_PATH[-1]),
                 patch("builtins.print") as printer,
             ):
@@ -468,19 +633,13 @@ class CliImportTests(unittest.TestCase):
     def test_cli_prints_review_queue_and_next_report(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp).resolve() / "outputs"
-            run_path = outputs / "run_lab01_interactive"
-            run_path.mkdir(parents=True)
-            report = run_path / "report.html"
-            report.write_text("<html></html>", encoding="utf-8")
-            worksheet = run_path / "worksheet.md"
-            worksheet.write_text("# Worksheet\n", encoding="utf-8")
-            (run_path / "summary.json").write_text(
-                (
-                    '{"lab_name": "lab01_msd", "config_path": '
-                    '"configs/lab01_msd/interactive_pull.yaml", "config_name": "interactive_pull"}'
-                ),
-                encoding="utf-8",
+            run_path = _publish_scenario_run(
+                outputs / "run_lab01_interactive",
+                "lab01_msd",
+                "configs/lab01_msd/interactive_pull.yaml",
             )
+            report = run_path / "report.html"
+            worksheet = run_path / "worksheet.md"
 
             args = build_parser().parse_args(["review", "--output-dir", str(outputs), "--open"])
             self.assertEqual(args.command, "review")
@@ -518,29 +677,27 @@ class CliImportTests(unittest.TestCase):
             "--viewer --realtime --pause-at-end --plot --plots essential --open-report",
             printed,
         )
-        self.assertIn("Plot review: Not available until a plot is saved", printed)
+        self.assertIn(
+            "Plot review: Position - Compare actual motion against target or reference.",
+            printed,
+        )
         self.assertIn("Course path next: 1. Feel 1D physics", printed)
         self.assertIn(
             "Course path command: python -m mclab run lab01 --config configs/lab01_msd/default.yaml "
             "--headless --plot --plots essential --open-report",
             printed,
         )
-        self.assertIn(f"Review index command: python -m mclab index --output-dir {outputs} --open", printed)
+        self.assertIn(
+            f"Review index command: python -m mclab index --output-dir {outputs} --open", printed
+        )
 
     def test_cli_review_names_required_preset_before_observation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp).resolve() / "outputs"
-            run_path = outputs / "run_lab04_wall"
-            run_path.mkdir(parents=True)
-            report = run_path / "report.html"
-            report.write_text("<html></html>", encoding="utf-8")
-            (run_path / "summary.json").write_text(
-                (
-                    '{"lab_name": "lab04_panda", "config_path": '
-                    '"configs/lab04_panda/interactive_virtual_wall.yaml", '
-                    '"config_name": "interactive_virtual_wall"}'
-                ),
-                encoding="utf-8",
+            _publish_scenario_run(
+                outputs / "run_lab04_wall",
+                "lab04_panda",
+                "configs/lab04_panda/interactive_virtual_wall.yaml",
             )
 
             with patch("builtins.print") as printer:
@@ -568,33 +725,31 @@ class CliImportTests(unittest.TestCase):
             printed,
         )
         self.assertIn("Course path next: 1. Feel 1D physics", printed)
-        self.assertIn(f"Review index command: python -m mclab index --output-dir {outputs} --open", printed)
+        self.assertIn(
+            f"Review index command: python -m mclab index --output-dir {outputs} --open", printed
+        )
 
     def test_cli_review_groups_duplicate_repair_commands(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp).resolve() / "outputs"
-            wall_new = outputs / "new_lab04_wall"
-            wall_old = outputs / "old_lab04_wall"
-            arm_run = outputs / "lab03_interactive"
-            for path in (wall_new, wall_old, arm_run):
-                path.mkdir(parents=True)
-                (path / "report.html").write_text("<html></html>", encoding="utf-8")
-            wall_summary = (
-                '{"lab_name": "lab04_panda", "config_path": '
-                '"configs/lab04_panda/interactive_virtual_wall.yaml", '
-                '"config_name": "interactive_virtual_wall"}'
+            _publish_scenario_run(
+                outputs / "new_lab04_wall",
+                "lab04_panda",
+                "configs/lab04_panda/interactive_virtual_wall.yaml",
+                finished_at="2026-07-21T03:00:00+00:00",
             )
-            arm_summary = (
-                '{"lab_name": "lab03_2dof", "config_path": '
-                '"configs/lab03_2dof/interactive_2dof.yaml", '
-                '"config_name": "interactive_2dof"}'
+            _publish_scenario_run(
+                outputs / "old_lab04_wall",
+                "lab04_panda",
+                "configs/lab04_panda/interactive_virtual_wall.yaml",
+                finished_at="2026-07-21T02:00:00+00:00",
             )
-            (wall_new / "summary.json").write_text(wall_summary, encoding="utf-8")
-            (wall_old / "summary.json").write_text(wall_summary, encoding="utf-8")
-            (arm_run / "summary.json").write_text(arm_summary, encoding="utf-8")
-            for timestamp, path in ((3000, wall_new), (2000, wall_old), (1000, arm_run)):
-                os.utime(path / "report.html", (timestamp, timestamp))
-                os.utime(path / "summary.json", (timestamp, timestamp))
+            _publish_scenario_run(
+                outputs / "lab03_interactive",
+                "lab03_2dof",
+                "configs/lab03_2dof/interactive_2dof.yaml",
+                finished_at="2026-07-21T01:00:00+00:00",
+            )
 
             with patch("builtins.print") as printer:
                 self.assertEqual(main(["review", "--output-dir", str(outputs), "--limit", "3"]), 0)
@@ -633,30 +788,69 @@ class CliImportTests(unittest.TestCase):
             "--headless --plot --plots essential --open-report",
             printed,
         )
-        self.assertIn(f"Review index command: python -m mclab index --output-dir {outputs} --open", printed)
+        self.assertIn(
+            f"Review index command: python -m mclab index --output-dir {outputs} --open", printed
+        )
 
     def test_cli_searches_guided_scenarios(self) -> None:
-        args = build_parser().parse_args(["scenarios", "virtual", "wall", "--filter", "wall", "--limit", "0"])
+        args = build_parser().parse_args(
+            ["scenarios", "virtual", "wall", "--filter", "wall", "--limit", "0"]
+        )
         self.assertEqual(args.command, "scenarios")
         self.assertEqual(args.query, ["virtual", "wall"])
         self.assertEqual(args.filter, "wall")
         self.assertEqual(args.limit, 0)
 
         with (
-            patch("mclab.cli.action_history_text", return_value="History: Latest saved_virtual_wall"),
-            patch("mclab.cli.action_mission_evidence_text", return_value="Mission evidence: Ready for review"),
-            patch("mclab.cli.action_challenge_evidence_text", return_value="Challenge evidence: Ready to review"),
-            patch("mclab.cli.action_evidence_text", return_value="Evidence: 1 observation, 1 prediction, 1 outcome, 1 note"),
-            patch("mclab.cli.action_latest_evidence_text", return_value="Latest evidence: prediction matched wall force"),
-            patch("mclab.cli.action_observation_flow_text", return_value="Observation flow: prediction -> observation"),
-            patch("mclab.cli.action_observation_next_step_text", return_value="Observation next step: Review outcome"),
-            patch("mclab.cli.action_preset_evidence_text", return_value="Preset evidence: 3 presets tried; required presets ready"),
-            patch("mclab.cli.action_activity_mix_text", return_value="Activity mix: 3/3 control families"),
-            patch("mclab.cli.action_next_cue_text", return_value="Next cue: Replay the tuned config, then run Compare."),
+            patch(
+                "mclab.cli.action_history_text", return_value="History: Latest saved_virtual_wall"
+            ),
+            patch(
+                "mclab.cli.action_mission_evidence_text",
+                return_value="Mission evidence: Ready for review",
+            ),
+            patch(
+                "mclab.cli.action_challenge_evidence_text",
+                return_value="Challenge evidence: Ready to review",
+            ),
+            patch(
+                "mclab.cli.action_evidence_text",
+                return_value="Evidence: 1 observation, 1 prediction, 1 outcome, 1 note",
+            ),
+            patch(
+                "mclab.cli.action_latest_evidence_text",
+                return_value="Latest evidence: prediction matched wall force",
+            ),
+            patch(
+                "mclab.cli.action_observation_flow_text",
+                return_value="Observation flow: prediction -> observation",
+            ),
+            patch(
+                "mclab.cli.action_observation_next_step_text",
+                return_value="Observation next step: Review outcome",
+            ),
+            patch(
+                "mclab.cli.action_preset_evidence_text",
+                return_value="Preset evidence: 3 presets tried; required presets ready",
+            ),
+            patch(
+                "mclab.cli.action_activity_mix_text",
+                return_value="Activity mix: 3/3 control families",
+            ),
+            patch(
+                "mclab.cli.action_next_cue_text",
+                return_value="Next cue: Replay the tuned config, then run Compare.",
+            ),
             patch("mclab.cli.action_plot_text", return_value="Plots: Latest virtual_wall.png"),
-            patch("mclab.cli.action_plot_review_text", return_value="Plot review: Virtual Wall - Compare force and gap"),
+            patch(
+                "mclab.cli.action_plot_review_text",
+                return_value="Plot review: Virtual Wall - Compare force and gap",
+            ),
             patch("mclab.cli.action_worksheet_text", return_value="Worksheet: Latest worksheet.md"),
-            patch("mclab.cli.action_replay_text", return_value="Replay: Latest learner_tuned_config.yaml"),
+            patch(
+                "mclab.cli.action_replay_text",
+                return_value="Replay: Latest learner_tuned_config.yaml",
+            ),
             patch(
                 "mclab.cli._scenario_latest_artifact_lines",
                 return_value=["Report: Latest report.html", "Folder: Latest saved_virtual_wall"],
@@ -668,13 +862,27 @@ class CliImportTests(unittest.TestCase):
             patch("builtins.print") as printer,
         ):
             self.assertEqual(
-                main(["scenarios", "virtual", "wall", "--filter", "wall", "--limit", "0", "--details"]),
+                main(
+                    [
+                        "scenarios",
+                        "virtual",
+                        "wall",
+                        "--filter",
+                        "wall",
+                        "--limit",
+                        "0",
+                        "--details",
+                    ]
+                ),
                 0,
             )
 
         printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
         self.assertIn("Scenarios: showing", printed)
-        self.assertIn("Discovery tips: try `python -m mclab scenarios wall --filter hands-on --details`", printed)
+        self.assertIn(
+            "Discovery tips: try `python -m mclab scenarios wall --filter hands-on --details`",
+            printed,
+        )
         self.assertIn("Lab04 Panda Manipulator - Virtual wall", printed)
         self.assertIn("Challenge:", printed)
         self.assertIn("Course step: 11/12 - Touch virtual wall", printed)
@@ -710,18 +918,28 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("Plot review: Virtual Wall - Compare force and gap", printed)
         self.assertIn("Worksheet: Latest worksheet.md", printed)
         self.assertIn("Replay: Latest learner_tuned_config.yaml", printed)
-        self.assertIn("Replay command: python -m mclab run lab04 --config learner_tuned_config.yaml --viewer", printed)
+        self.assertIn(
+            "Replay command: python -m mclab run lab04 --config learner_tuned_config.yaml --viewer",
+            printed,
+        )
         self.assertIn("Setup: Ready", printed)
         self.assertIn(
             "Command: python -m mclab run lab04 --config configs/lab04_panda/interactive_virtual_wall.yaml "
             "--viewer --realtime --pause-at-end --plot --plots wall --open-report",
             printed,
         )
-        self.assertIn("After running: review saved evidence with `python -m mclab review`.", printed)
-        self.assertIn("All reports: reopen the cumulative browser index with `python -m mclab index --open`.", printed)
+        self.assertIn(
+            "After running: review saved evidence with `python -m mclab review`.", printed
+        )
+        self.assertIn(
+            "All reports: reopen the cumulative browser index with `python -m mclab index --open`.",
+            printed,
+        )
 
     def test_cli_prints_parameter_guide_for_scenarios(self) -> None:
-        args = build_parser().parse_args(["params", "wall", "--filter", "hands-on", "--limit", "1", "--values", "6"])
+        args = build_parser().parse_args(
+            ["params", "wall", "--filter", "hands-on", "--limit", "1", "--values", "6"]
+        )
         self.assertEqual(args.command, "params")
         self.assertEqual(args.query, ["wall"])
         self.assertEqual(args.filter, "hands-on")
@@ -729,7 +947,9 @@ class CliImportTests(unittest.TestCase):
         self.assertEqual(args.values, 6)
 
         with patch("builtins.print") as printer:
-            self.assertEqual(main(["params", "wall", "--filter", "hands-on", "--limit", "1", "--values", "6"]), 0)
+            self.assertEqual(
+                main(["params", "wall", "--filter", "hands-on", "--limit", "1", "--values", "6"]), 0
+            )
 
         printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
         self.assertIn("Parameter guide: showing 1 of 1 match(es)", printed)
@@ -747,8 +967,13 @@ class CliImportTests(unittest.TestCase):
             "--viewer --realtime --pause-at-end --plot --plots wall --open-report",
             printed,
         )
-        self.assertIn("After running: review saved evidence with `python -m mclab review`.", printed)
-        self.assertIn("All reports: reopen the cumulative browser index with `python -m mclab index --open`.", printed)
+        self.assertIn(
+            "After running: review saved evidence with `python -m mclab review`.", printed
+        )
+        self.assertIn(
+            "All reports: reopen the cumulative browser index with `python -m mclab index --open`.",
+            printed,
+        )
 
     def test_cli_parameter_guide_handles_empty_matches(self) -> None:
         with patch("builtins.print") as printer:
@@ -757,8 +982,13 @@ class CliImportTests(unittest.TestCase):
         printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
         self.assertIn("Parameter guide: showing 0 of 0 match(es)", printed)
         self.assertIn("No guided scenarios matched.", printed)
-        self.assertIn("After running: review saved evidence with `python -m mclab review`.", printed)
-        self.assertIn("All reports: reopen the cumulative browser index with `python -m mclab index --open`.", printed)
+        self.assertIn(
+            "After running: review saved evidence with `python -m mclab review`.", printed
+        )
+        self.assertIn(
+            "All reports: reopen the cumulative browser index with `python -m mclab index --open`.",
+            printed,
+        )
 
     def test_cli_scenario_search_handles_empty_matches(self) -> None:
         with patch("builtins.print") as printer:
@@ -767,8 +997,13 @@ class CliImportTests(unittest.TestCase):
         printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
         self.assertIn("Scenarios: showing 0 of 0 match(es)", printed)
         self.assertIn("No guided scenarios matched.", printed)
-        self.assertIn("After running: review saved evidence with `python -m mclab review`.", printed)
-        self.assertIn("All reports: reopen the cumulative browser index with `python -m mclab index --open`.", printed)
+        self.assertIn(
+            "After running: review saved evidence with `python -m mclab review`.", printed
+        )
+        self.assertIn(
+            "All reports: reopen the cumulative browser index with `python -m mclab index --open`.",
+            printed,
+        )
 
     def test_cli_scenario_replay_command_uses_latest_tuned_config(self) -> None:
         action = next(
@@ -888,12 +1123,21 @@ class CliImportTests(unittest.TestCase):
             patch("mclab.cli.action_history_text", return_value="History: Latest saved_batch"),
             patch("mclab.cli.action_worksheet_text", return_value="Worksheet: Latest worksheet.md"),
             patch("mclab.cli.action_plot_text", return_value="Plots: Latest error_compare.png"),
-            patch("mclab.cli.action_plot_review_text", return_value="Plot review: Error - Compare traces"),
+            patch(
+                "mclab.cli.action_plot_review_text",
+                return_value="Plot review: Error - Compare traces",
+            ),
             patch(
                 "mclab.cli.batch_prediction_check_text",
-                return_value="Prediction check: Ready in worksheet; mark Matched, Partly matched, or Surprised.",
+                return_value=(
+                    "Prediction check: Worksheet is digest-published and read-only; copy Matched, "
+                    "Partly matched, or Surprised into personal/course notes outside the saved-run folder."
+                ),
             ),
-            patch("mclab.cli._batch_handoff_detail_text", return_value="Handoff: Latest report.html#viewer-handoff"),
+            patch(
+                "mclab.cli._batch_handoff_detail_text",
+                return_value="Handoff: Latest report.html#viewer-handoff",
+            ),
             patch("builtins.print") as printer,
         ):
             self.assertEqual(main(["batches", "wall", "--limit", "0", "--details"]), 0)
@@ -905,17 +1149,29 @@ class CliImportTests(unittest.TestCase):
         self.assertIn("Mission: Run", printed)
         self.assertIn("Setup: Ready", printed)
         self.assertIn("Course step: Optional comparison", printed)
-        self.assertIn("Done when: the comparison report, plots, worksheet, and Prediction Check are saved.", printed)
+        self.assertIn(
+            "Done when: the comparison report, plots, worksheet, and Prediction Check are saved.",
+            printed,
+        )
         self.assertIn("Playbook: 1. predict the comparison outcome", printed)
         self.assertIn("History: Latest saved_batch", printed)
         self.assertIn("Worksheet: Latest worksheet.md", printed)
         self.assertIn("Plots: Latest error_compare.png", printed)
         self.assertIn("Plot review: Error - Compare traces", printed)
-        self.assertIn("Prediction check: Ready in worksheet; mark Matched, Partly matched, or Surprised.", printed)
+        self.assertIn(
+            "Prediction check: Worksheet is digest-published and read-only; copy Matched, "
+            "Partly matched, or Surprised into personal/course notes outside the saved-run folder.",
+            printed,
+        )
         self.assertIn("Handoff: Latest report.html#viewer-handoff", printed)
         self.assertIn("Command: python -m mclab batch lab04_wall_compare --open-report", printed)
-        self.assertIn("After running: review saved evidence with `python -m mclab review`.", printed)
-        self.assertIn("All reports: reopen the cumulative browser index with `python -m mclab index --open`.", printed)
+        self.assertIn(
+            "After running: review saved evidence with `python -m mclab review`.", printed
+        )
+        self.assertIn(
+            "All reports: reopen the cumulative browser index with `python -m mclab index --open`.",
+            printed,
+        )
 
     def test_cli_batch_details_show_course_context_for_all_compare(self) -> None:
         with patch("builtins.print") as printer:
@@ -936,8 +1192,13 @@ class CliImportTests(unittest.TestCase):
         printed = "\n".join(str(call.args[0]) for call in printer.call_args_list)
         self.assertIn("Batches: showing 0 of 0 match(es)", printed)
         self.assertIn("No comparison batches matched.", printed)
-        self.assertIn("After running: review saved evidence with `python -m mclab review`.", printed)
-        self.assertIn("All reports: reopen the cumulative browser index with `python -m mclab index --open`.", printed)
+        self.assertIn(
+            "After running: review saved evidence with `python -m mclab review`.", printed
+        )
+        self.assertIn(
+            "All reports: reopen the cumulative browser index with `python -m mclab index --open`.",
+            printed,
+        )
 
     def test_cli_batch_handoff_detail_uses_latest_worksheet_viewer_command(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -958,7 +1219,16 @@ class CliImportTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            action = next(action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare")
+            write_manifest(
+                output,
+                scenario_id="batch.lab01_msd_compare",
+                status="completed",
+                config={"batch_name": "lab01_msd_compare", "plot": True},
+                run_kind="comparison_batch",
+            )
+            action = next(
+                action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare"
+            )
 
             with patch("mclab.cli.action_latest_output", return_value=output):
                 handoff = _batch_handoff_detail_text(action)
@@ -969,43 +1239,18 @@ class CliImportTests(unittest.TestCase):
 
     def test_cli_all_batch_handoff_follows_linked_batch_worksheet_command(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            output = Path(tmp).resolve() / "all_batches"
-            child = output / "lab01_msd_compare"
-            child.mkdir(parents=True)
-            (output / "worksheet.md").write_text(
-                "\n".join(
-                    [
-                        "# Course worksheet",
-                        "",
-                        "## Batch Review",
-                        "",
-                        "- Lab01 Mass-Spring-Damper Comparison",
-                        "  - Viewer handoff: lab01_msd_compare/report.html#viewer-handoff",
-                        "",
-                    ]
-                ),
-                encoding="utf-8",
-            )
-            (child / "worksheet.md").write_text(
-                "\n".join(
-                    [
-                        "# Batch worksheet",
-                        "",
-                        "## Viewer Handoff",
-                        "",
-                        "- Start with: underdamped",
-                        "- Viewer rerun: python -m mclab run lab01 --config configs/lab01_msd/underdamped.yaml --viewer --realtime --pause-at-end --plot --plots essential",
-                        "",
-                    ]
-                ),
-                encoding="utf-8",
+            output = _publish_course_batch_run(
+                Path(tmp).resolve() / "all_batches",
             )
             action = next(action for action in BATCH_ACTIONS if action.batch_name == "all")
 
             with patch("mclab.cli.action_latest_output", return_value=output):
                 handoff = _batch_handoff_detail_text(action)
 
-        self.assertIn("Handoff: lab01_msd_compare / underdamped -> python -m mclab run lab01", handoff)
+        self.assertIn(
+            "Handoff: lab01_msd_compare / underdamped -> python -m mclab run lab01",
+            handoff,
+        )
         self.assertIn("--viewer --realtime --pause-at-end --plot --plots essential", handoff)
         self.assertNotIn("Open linked batch handoff", handoff)
 
@@ -1024,7 +1269,7 @@ class CliImportTests(unittest.TestCase):
                         "",
                         "## Prediction Check",
                         "",
-                        "- Use this after writing a prediction: mark each item as Matched, Partly matched, or Surprised.",
+                        "- Review prompt: Compare your prediction with the plotted evidence.",
                         "",
                         "## Viewer Handoff",
                         "",
@@ -1032,7 +1277,7 @@ class CliImportTests(unittest.TestCase):
                         "- Why: largest baseline metric change",
                         "- Priority plot: comparison_plots/error_compare.png",
                         "- Viewer rerun: python -m mclab run lab01 --config configs/lab01_msd/over_damped.yaml --viewer --realtime --pause-at-end --plot --plots essential",
-                        "- [ ] Open this scenario in the side-panel-free viewer before editing another YAML parameter.",
+                        "- Review prompt: Open this scenario in the side-panel-free viewer before editing another YAML parameter.",
                         "",
                     ]
                 ),
@@ -1040,6 +1285,13 @@ class CliImportTests(unittest.TestCase):
             )
             (output / "comparison_plots").mkdir()
             (output / "comparison_plots" / "error_compare.png").write_bytes(b"fake-png")
+            write_manifest(
+                output,
+                scenario_id="batch.lab01_msd_compare",
+                status="completed",
+                config={"batch_name": "lab01_msd_compare", "plot": True},
+                run_kind="comparison_batch",
+            )
 
             with (
                 patch("mclab.cli.run_batch", return_value=output) as runner,
@@ -1055,10 +1307,16 @@ class CliImportTests(unittest.TestCase):
             self.assertIn(f"Report: {report}", printed)
             self.assertIn(f"Worksheet: {output / 'worksheet.md'}", printed)
             self.assertIn(f"All reports index: {all_reports_index}", printed)
-            self.assertIn(f"Comparison plots: {output / 'comparison_plots'} (1 PNG; first: error_compare.png)", printed)
-            self.assertIn(f"Priority plot: {output / 'comparison_plots' / 'error_compare.png'}", printed)
             self.assertIn(
-                "Prediction check: Mark Matched, Partly matched, or Surprised in worksheet.md.",
+                f"Comparison plots: {output / 'comparison_plots'} (1 PNG; first: error_compare.png)",
+                printed,
+            )
+            self.assertIn(
+                f"Priority plot: {output / 'comparison_plots' / 'error_compare.png'}", printed
+            )
+            self.assertIn(
+                "Prediction check: Worksheet is digest-published and read-only; copy outcomes "
+                "into personal/course notes outside the saved-run folder.",
                 printed,
             )
             self.assertIn(
@@ -1068,16 +1326,16 @@ class CliImportTests(unittest.TestCase):
                 printed,
             )
             self.assertIn(
-                "Review checklist: Open this scenario in the side-panel-free viewer before editing another YAML parameter.",
+                "Worksheet review prompt: Compare your prediction with the plotted evidence.",
                 printed,
             )
 
     def test_cli_runs_all_batches_when_requested(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            output = Path(tmp).resolve() / "all_batches"
-            output.mkdir()
+            output = _publish_course_batch_run(
+                Path(tmp).resolve() / "all_batches",
+            )
             report = output / "report.html"
-            report.write_text("<html></html>", encoding="utf-8")
 
             with (
                 patch("mclab.cli.run_all_batches", return_value=output) as runner,
@@ -1230,7 +1488,7 @@ class CliImportTests(unittest.TestCase):
                     "- Read first: Position\n"
                     "- What to check: Compare target and actual motion.\n\n"
                     "## Review Checklist\n\n"
-                    "- [ ] Answer the Prediction prompt before reading the plots.\n\n"
+                    "- Review prompt: Answer the Prediction prompt before reading the plots.\n\n"
                     "## Course Experience Coverage\n\n"
                     "- Next experience: Hands-on controls\n"
                     "- Next mode: hands-on viewer\n"
@@ -1243,6 +1501,14 @@ class CliImportTests(unittest.TestCase):
             )
             (output / "plots").mkdir()
             (output / "plots" / "position.png").write_bytes(b"fake-png")
+            config_path = "configs/lab01_msd/default.yaml"
+            write_manifest(
+                output,
+                scenario_id=stable_scenario_id("lab01_msd", config_path),
+                status="completed",
+                config=load_config(config_path),
+                config_path=config_path,
+            )
 
             def fake_runner(_config: dict[str, object], **_kwargs: object) -> Path:
                 return output
@@ -1275,8 +1541,19 @@ class CliImportTests(unittest.TestCase):
             self.assertIn(f"Plots: {output / 'plots'} (1 PNG; first: position.png)", printed)
             self.assertIn(f"Priority plot: {output / 'plots' / 'position.png'}", printed)
             self.assertIn("Review focus: Position - Compare target and actual motion.", printed)
-            self.assertIn("Next proof step: Review the priority plot and worksheet, then run Next or Compare.", printed)
-            self.assertIn("Review checklist: Answer the Prediction prompt before reading the plots.", printed)
+            self.assertIn(
+                "Next proof step: Review the priority plot and worksheet, then run Next or Compare.",
+                printed,
+            )
+            self.assertIn(
+                "Worksheet policy: Saved worksheets are digest-published and read-only; record answers "
+                "in personal/course notes outside the saved-run folder.",
+                printed,
+            )
+            self.assertIn(
+                "Worksheet review prompt: Answer the Prediction prompt before reading the plots.",
+                printed,
+            )
             self.assertIn("Next experience: Hands-on controls", printed)
             self.assertIn("Next mode: hands-on viewer", printed)
             self.assertIn(
@@ -1304,7 +1581,10 @@ class CleanCommandTests(unittest.TestCase):
             before = _tree_snapshot(root)
 
             output = StringIO()
-            with patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}), redirect_stdout(output):
+            with (
+                patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}),
+                redirect_stdout(output),
+            ):
                 self.assertEqual(main(["clean", "--keep", "0"]), 0)
             printed = output.getvalue()
             self.assertIn("Cleanup dry-run", printed)
@@ -1333,7 +1613,10 @@ class CleanCommandTests(unittest.TestCase):
             plan = build_cleanup_plan(root, keep=1, allowed_root=root)
 
             output = StringIO()
-            with patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}), redirect_stdout(output):
+            with (
+                patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}),
+                redirect_stdout(output),
+            ):
                 self.assertEqual(
                     main(
                         [
@@ -1385,7 +1668,10 @@ class CleanCommandTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             data_root = Path(tmp).resolve() / "data"
             output = StringIO()
-            with patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}), redirect_stdout(output):
+            with (
+                patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}),
+                redirect_stdout(output),
+            ):
                 self.assertEqual(main(["clean"]), 0)
             self.assertIn("does not exist", output.getvalue())
 
@@ -1435,14 +1721,20 @@ class CleanCommandTests(unittest.TestCase):
             run = _write_cleanup_manifest(root, "old-run", minute=0)
 
             output = StringIO()
-            with patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}), redirect_stdout(output):
+            with (
+                patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}),
+                redirect_stdout(output),
+            ):
                 self.assertEqual(main(["clean", "--keep", "0", "--json"]), 0)
             plan_payload = json.loads(output.getvalue())
             self.assertEqual(plan_payload["schema_version"], 1)
             self.assertEqual([item["name"] for item in plan_payload["selected"]], [run.name])
 
             output = StringIO()
-            with patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}), redirect_stdout(output):
+            with (
+                patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}),
+                redirect_stdout(output),
+            ):
                 self.assertEqual(
                     main(
                         [
@@ -1462,19 +1754,30 @@ class CleanCommandTests(unittest.TestCase):
             self.assertIs(receipt_payload["recoverable"], True)
 
             output = StringIO()
-            with patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}), redirect_stdout(output):
+            with (
+                patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}),
+                redirect_stdout(output),
+            ):
                 self.assertEqual(main(["clean", "--list-trash", "--json"]), 0)
             listed = json.loads(output.getvalue())
-            self.assertEqual([item["receipt_id"] for item in listed], [receipt_payload["receipt_id"]])
+            self.assertEqual(
+                [item["receipt_id"] for item in listed], [receipt_payload["receipt_id"]]
+            )
             self.assertIs(listed[0]["recoverable"], True)
 
             output = StringIO()
-            with patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}), redirect_stdout(output):
+            with (
+                patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}),
+                redirect_stdout(output),
+            ):
                 self.assertEqual(main(["clean", "--list-trash"]), 0)
             self.assertIn("| restorable |", output.getvalue())
 
             output = StringIO()
-            with patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}), redirect_stdout(output):
+            with (
+                patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}),
+                redirect_stdout(output),
+            ):
                 self.assertEqual(
                     main(
                         [
@@ -1492,14 +1795,20 @@ class CleanCommandTests(unittest.TestCase):
             self.assertTrue(run.is_dir())
 
             output = StringIO()
-            with patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}), redirect_stdout(output):
+            with (
+                patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}),
+                redirect_stdout(output),
+            ):
                 self.assertEqual(main(["clean", "--list-trash", "--json"]), 0)
             history = json.loads(output.getvalue())
             self.assertEqual(history[0]["status"], "restored")
             self.assertIs(history[0]["recoverable"], False)
 
             output = StringIO()
-            with patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}), redirect_stdout(output):
+            with (
+                patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}),
+                redirect_stdout(output),
+            ):
                 self.assertEqual(main(["clean", "--list-trash"]), 0)
             self.assertIn("| history-only |", output.getvalue())
 

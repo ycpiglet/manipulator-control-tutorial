@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import os
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -33,7 +35,8 @@ class DoctorTests(unittest.TestCase):
             root = Path(tmp)
             _write_minimal_project(root, model_exists=True)
 
-            checks = run_doctor_checks(root, required_modules=())
+            with patch.dict(os.environ, {"MCLAB_DATA_DIR": tmp}):
+                checks = run_doctor_checks(root, required_modules=())
 
         self.assertTrue(all(check.status == "OK" for check in checks), checks)
         self.assertEqual(doctor_exit_code(checks), 0)
@@ -54,7 +57,8 @@ class DoctorTests(unittest.TestCase):
             root = Path(tmp)
             _write_minimal_project(root, model_exists=False)
 
-            checks = run_doctor_checks(root, required_modules=())
+            with patch.dict(os.environ, {"MCLAB_DATA_DIR": tmp}):
+                checks = run_doctor_checks(root, required_modules=())
 
         self.assertEqual(doctor_exit_code(checks), 1)
         report = format_doctor_report(checks)
@@ -69,7 +73,8 @@ class DoctorTests(unittest.TestCase):
             _write_minimal_project(root, model_exists=True)
             (root / "src" / "mclab" / "learner_menu.py").write_text("# marker\n", encoding="utf-8")
 
-            checks = run_doctor_checks(root, required_modules=())
+            with patch.dict(os.environ, {"MCLAB_DATA_DIR": tmp}):
+                checks = run_doctor_checks(root, required_modules=())
 
         self.assertEqual(doctor_exit_code(checks), 1)
         report = format_doctor_report(checks)
@@ -84,6 +89,48 @@ class DoctorTests(unittest.TestCase):
         ]
         self.assertEqual(doctor_exit_code(checks), 0)
         self.assertEqual(doctor_exit_code([*checks, DoctorCheck("Fail item", "FAIL", "broken")]), 1)
+
+    def test_source_doctor_uses_the_configured_default_outputs_root(self) -> None:
+        with (
+            tempfile.TemporaryDirectory() as project_tmp,
+            tempfile.TemporaryDirectory() as data_tmp,
+        ):
+            project_root = Path(project_tmp)
+            data_root = Path(data_tmp).resolve()
+            _write_minimal_project(project_root, model_exists=True)
+
+            with patch.dict(os.environ, {"MCLAB_DATA_DIR": str(data_root)}):
+                checks = run_doctor_checks(project_root, required_modules=())
+
+            output_check = next(check for check in checks if check.name == "Outputs folder")
+            self.assertEqual(output_check.status, "OK")
+            self.assertTrue((data_root / "outputs").is_dir())
+            self.assertFalse((project_root / "outputs").exists())
+
+    def test_frozen_doctor_uses_the_packaged_default_outputs_root(self) -> None:
+        from mclab import config
+
+        with tempfile.TemporaryDirectory() as tmp:
+            data_home = Path(tmp).resolve()
+            expected = data_home / "mclab" / "outputs"
+            checked_paths: list[Path] = []
+
+            def capture_outputs_path(outputs: Path) -> DoctorCheck:
+                checked_paths.append(outputs)
+                return DoctorCheck("Outputs folder", "OK", "captured")
+
+            with (
+                patch.object(config.sys, "frozen", True, create=True),
+                patch.object(config.sys, "platform", "linux"),
+                patch.dict(
+                    config.os.environ,
+                    {"MCLAB_DATA_DIR": "", "XDG_DATA_HOME": str(data_home)},
+                ),
+                patch("mclab.doctor._outputs_writable_check", side_effect=capture_outputs_path),
+            ):
+                run_doctor_checks(ROOT, required_modules=())
+
+        self.assertEqual(checked_paths, [expected])
 
 
 def _write_minimal_project(root: Path, *, model_exists: bool) -> None:

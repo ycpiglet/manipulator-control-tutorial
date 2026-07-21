@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, BinaryIO, Callable, Iterator
 
 MAX_METADATA_BYTES = 2 * 1024 * 1024
+MAX_OUTPUT_ROOT_ENTRIES = 10_000
 MAX_RUN_TREE_ENTRIES = 100_000
 
 
@@ -22,6 +23,10 @@ class CleanupSafetyError(ValueError):
 
 class CleanupOperationError(RuntimeError):
     """Report an I/O failure without claiming that cleanup succeeded."""
+
+
+class CleanupBusyError(CleanupOperationError):
+    """A fail-fast saved-output lease is already held by another operation."""
 
 
 class CleanupMoveCommittedError(OSError):

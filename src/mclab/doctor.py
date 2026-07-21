@@ -35,9 +35,7 @@ def run_doctor_checks(
         _config_and_model_check(project_root),
         _learner_menu_readiness_check(project_root),
         _desktop_app_check(project_root),
-        _outputs_writable_check(
-            default_outputs_root() if is_frozen_bundle() else project_root / "outputs"
-        ),
+        _outputs_writable_check(default_outputs_root()),
     ]
     return checks
 

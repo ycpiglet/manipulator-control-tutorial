@@ -5,12 +5,30 @@ from __future__ import annotations
 import json
 import re
 import shlex
+import time
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from html import escape
 from pathlib import Path
 from typing import Any
 
+from mclab.application.catalog import (
+    ScenarioCatalog,
+    stable_scenario_id,
+    target_from_legacy_summary,
+)
+from mclab.application.completion_progress import (
+    TargetCompletionAssessment,
+    build_completion_assessment_index,
+)
+from mclab.application.repositories import ArtifactRecord, ArtifactRepository
+from mclab.completion import (
+    CompletionDecision,
+    CompletionEvidence,
+    CompletionReason,
+    CompletionRecordKind,
+    evaluate_completion,
+)
 from mclab.config import load_config
 from mclab.course_progress import course_milestone_label_for_step_index, course_milestone_summary
 from mclab.experience_coverage import (
@@ -40,7 +58,17 @@ from mclab.learning_guides import (
     start_steps_for_guide,
     viewer_legend_for_guide,
 )
-from mclab.output_filters import is_internal_output_dir
+from mclab.output_inventory import (
+    TERMINAL_STATUSES,
+    assert_output_tree_mutable,
+)
+from mclab.output_publication import (
+    OutputPublication,
+    OutputPublicationBusyError,
+    mutable_collection_publication,
+    mutable_run_publication,
+)
+from mclab.output_safety import MAX_METADATA_BYTES
 
 INDEX_METRIC_KEYS = (
     "max_abs_position",
@@ -913,32 +941,220 @@ NEXT_RUN_SUGGESTIONS: dict[str, tuple[NextRunSuggestion, ...]] = {
 }
 
 
-def write_run_report(output_path: str | Path) -> Path:
+def write_run_report(
+    output_path: str | Path,
+    *,
+    update_index: bool = True,
+    completion_status: str | None = None,
+) -> Path:
     output = Path(output_path)
-    output.mkdir(parents=True, exist_ok=True)
-    summary = _read_json(output / "summary.json")
-    notes = _read_text(output / "notes.md")
-    config = _read_config(output / "config.yaml")
-    plots = sorted((output / "plots").glob("*.png"))
-    interaction_events = _read_json_list(output / "interaction_events.json")
-    learner_snapshot = _read_json(output / "learner_snapshot.json")
+    with mutable_run_publication(output) as publication:
+        record = _report_artifact_record(publication.root)
+        _assert_report_write_allowed(record)
+        if record is None:
+            raise RuntimeError("The running output has no trusted artifact snapshot.")
+        publication.root_pin.assert_current()
+        summary = record.summary
+        notes = _publication_text(publication, ("notes.md",))
+        config: dict[str, Any] = {}
+        plots = sorted(record.plot_paths)
+        interaction_events = _display_interaction_events(record.interaction_events)
+        learner_snapshot = _publication_json(
+            publication,
+            ("learner_snapshot.json",),
+        )
+        completion_evidence, completion_decision = _run_report_completion(
+            publication.root,
+            summary,
+            completion_status=completion_status,
+            record=record,
+        )
+        summary = _trusted_behavior_summary(
+            summary,
+            _report_completion_target(record, summary),
+        )
+        config_section = record.manifest.get("config")
+        resolved = config_section.get("resolved") if isinstance(config_section, dict) else None
+        if isinstance(resolved, dict):
+            config = deepcopy(resolved)
 
-    worksheet = _render_worksheet(output, summary, notes, plots, interaction_events, config)
-    (output / "worksheet.md").write_text(worksheet, encoding="utf-8")
-    html = _render_report(output, summary, notes, plots, interaction_events, config, learner_snapshot)
-    report_path = output / "report.html"
-    report_path.write_text(html, encoding="utf-8")
-    write_outputs_index(output.parent)
+        worksheet = _render_worksheet(
+            publication.root,
+            summary,
+            notes,
+            plots,
+            interaction_events,
+            config,
+            completion_decision,
+            completion_evidence,
+        )
+        publication.write_text(("worksheet.md",), worksheet)
+        html = _render_report(
+            publication.root,
+            summary,
+            notes,
+            plots,
+            interaction_events,
+            config,
+            learner_snapshot,
+            completion_decision,
+            completion_evidence,
+        )
+        report_path = publication.write_text(("report.html",), html)
+    if update_index:
+        write_outputs_index(output.parent)
     return report_path
 
 
 def write_outputs_index(outputs_root: str | Path) -> Path:
     root = Path(outputs_root)
     root.mkdir(parents=True, exist_ok=True)
-    runs = _discover_runs(root)
-    index_path = root / "index.html"
-    index_path.write_text(_render_outputs_index(root, runs), encoding="utf-8")
-    return index_path
+    for attempt in range(20):
+        try:
+            with mutable_collection_publication(root) as publication:
+                runs = _discover_runs(publication.root)
+                publication.root_pin.assert_current()
+                return publication.write_text(
+                    ("index.html",),
+                    _render_outputs_index(publication.root, runs),
+                )
+        except OutputPublicationBusyError:
+            if attempt == 19:
+                raise
+            time.sleep(min(0.025 * (2**attempt), 0.25))
+    raise AssertionError("unreachable output-index publication retry state")
+
+
+def _run_report_completion(
+    output: Path,
+    summary: dict[str, Any],
+    *,
+    completion_status: str | None,
+    record: ArtifactRecord | None,
+) -> tuple[CompletionEvidence, CompletionDecision]:
+    """Evaluate report completion from producer facts or a strict saved snapshot."""
+
+    catalog = ScenarioCatalog.default()
+    if record is not None:
+        target = _catalog_target_or_none(catalog, record.scenario_id)
+        if (
+            target is None
+            and record.completion_evidence.record_kind
+            == CompletionRecordKind.LEGACY_SUMMARY
+        ):
+            target = target_from_legacy_summary(catalog, record.summary)
+        evidence = record.completion_evidence
+        if (
+            completion_status is not None
+            and evidence.record_kind == CompletionRecordKind.MANIFEST_V1
+        ):
+            # A running manifest has already digest-published the producer
+            # evidence.  Only the prospective terminal status is overridden;
+            # raw globs/events never gain completion credit.
+            evidence = replace(evidence, status=completion_status)
+        decision = evaluate_completion(
+            target.completion if target is not None else None,
+            evidence,
+        )
+        return evidence, decision
+
+    scenario_id = stable_scenario_id(
+        str(summary.get("lab_name") or ""),
+        str(summary.get("config_path") or "") or None,
+    )
+    target = _catalog_target_or_none(catalog, scenario_id)
+    evidence = CompletionEvidence(CompletionRecordKind.MISSING)
+    return evidence, evaluate_completion(
+        target.completion if target is not None else None,
+        evidence,
+    )
+
+
+def _report_artifact_record(output: Path) -> ArtifactRecord | None:
+    return next(
+        (
+            item
+            for item in ArtifactRepository(output.parent).list_runs()
+            if item.path.name == output.name
+        ),
+        None,
+    )
+
+
+def assert_run_artifacts_mutable(output_path: str | Path) -> ArtifactRecord | None:
+    """Refuse any run-local artifact rewrite after terminal publication."""
+
+    assert_output_tree_mutable(output_path)
+    record = _report_artifact_record(Path(output_path))
+    _assert_report_write_allowed(record)
+    return record
+
+
+def _assert_report_write_allowed(record: ArtifactRecord | None) -> None:
+    if (
+        record is not None
+        and record.marker_name == "manifest.json"
+        and record.status in TERMINAL_STATUSES
+    ):
+        raise RuntimeError(
+            "Refusing to rewrite report artifacts after terminal manifest publication."
+        )
+
+
+def _catalog_target_or_none(catalog: ScenarioCatalog, target_id: str) -> Any | None:
+    try:
+        return catalog.get_target(target_id)
+    except KeyError:
+        return None
+
+
+def _report_completion_target(
+    record: ArtifactRecord | None,
+    summary: dict[str, Any],
+) -> Any | None:
+    catalog = ScenarioCatalog.default()
+    if record is not None:
+        target = _catalog_target_or_none(catalog, record.scenario_id)
+        if (
+            target is None
+            and record.completion_evidence.record_kind
+            == CompletionRecordKind.LEGACY_SUMMARY
+        ):
+            return target_from_legacy_summary(catalog, record.summary)
+        return target
+    scenario_id = stable_scenario_id(
+        str(summary.get("lab_name") or ""),
+        str(summary.get("config_path") or "") or None,
+    )
+    return _catalog_target_or_none(catalog, scenario_id)
+
+
+def _worksheet_completion_lines(decision: CompletionDecision) -> list[str]:
+    verdict = "Complete" if decision.complete else "Incomplete"
+    reasons = ", ".join(reason.value for reason in decision.reasons)
+    return [
+        "## Completion",
+        "",
+        f"- Completion verdict: {verdict}",
+        f"- Completion contract version: {decision.contract_version}",
+        f"- Completion reason: {decision.primary_reason.value}",
+        f"- Completion reasons: {reasons}",
+        "",
+    ]
+
+
+def _completion_section(decision: CompletionDecision) -> str:
+    verdict = "Complete" if decision.complete else "Incomplete"
+    reasons = ", ".join(reason.value for reason in decision.reasons)
+    return (
+        '<section class="completion-verdict">'
+        "<h2>Completion</h2>"
+        f"<p><strong>Completion verdict:</strong> {escape(verdict)}</p>"
+        f"<p><strong>Completion contract version:</strong> {decision.contract_version}</p>"
+        f"<p><strong>Completion reason:</strong> {escape(decision.primary_reason.value)}</p>"
+        f"<p><strong>Completion reasons:</strong> {escape(reasons)}</p>"
+        "</section>"
+    )
 
 
 def _render_worksheet(
@@ -948,10 +1164,17 @@ def _render_worksheet(
     plots: list[Path],
     interaction_events: list[dict[str, Any]],
     config: dict[str, Any],
+    completion_decision: CompletionDecision,
+    completion_evidence: CompletionEvidence,
 ) -> str:
     guide = guide_for_run_summary(summary)
     lines: list[str] = [
         "# MCLab Learner Worksheet",
+        "",
+        "## Read-only Evidence",
+        "",
+        "- This worksheet is digest-published in manifest.json. Do not edit it or any file inside the saved-run folder.",
+        "- Copy the prompts below into personal or course notes stored outside the saved-run folder, then record your answers there.",
         "",
         "## Run",
         "",
@@ -963,11 +1186,33 @@ def _render_worksheet(
         "- Report: report.html",
         "",
     ]
+    lines.extend(_worksheet_completion_lines(completion_decision))
     lines.extend(_worksheet_learning_guide_lines(guide, summary, config))
     lines.extend(_worksheet_course_position_lines(summary))
-    lines.extend(_worksheet_course_experience_coverage_lines(output))
-    lines.extend(_worksheet_mission_evidence_lines(summary, interaction_events, plots, config))
-    lines.extend(_worksheet_challenge_evidence_lines(summary, interaction_events, plots, config))
+    lines.extend(
+        _worksheet_course_experience_coverage_lines(
+            output,
+            completion_evidence=completion_evidence,
+        )
+    )
+    lines.extend(
+        _worksheet_mission_evidence_lines(
+            summary,
+            interaction_events,
+            plots,
+            config,
+            completion_decision,
+        )
+    )
+    lines.extend(
+        _worksheet_challenge_evidence_lines(
+            summary,
+            interaction_events,
+            plots,
+            config,
+            completion_decision,
+        )
+    )
     lines.extend(_worksheet_pairs_section("Key Parameters", _config_highlight_pairs(config)))
     lines.extend(_worksheet_key_moments_lines(summary))
     lines.extend(_worksheet_pairs_section("Summary Values", list(summary.items())))
@@ -1036,8 +1281,17 @@ def _worksheet_course_position_lines(summary: dict[str, Any]) -> list[str]:
     return lines
 
 
-def _worksheet_course_experience_coverage_lines(output: Path) -> list[str]:
-    runs = _discover_runs(output.parent)
+def _worksheet_course_experience_coverage_lines(
+    output: Path,
+    *,
+    completion_evidence: CompletionEvidence | None = None,
+) -> list[str]:
+    overrides = (
+        {output.name: completion_evidence}
+        if completion_evidence is not None
+        else None
+    )
+    runs = _discover_runs(output.parent, evidence_overrides=overrides)
     records = _experience_coverage_records_for_index(runs)
     repair_items = _experience_coverage_repair_items(runs)
     next_item = next_experience_coverage_item(records)
@@ -1083,9 +1337,22 @@ def _worksheet_mission_evidence_lines(
     events: list[dict[str, Any]],
     plots: list[Path],
     config: dict[str, Any],
+    completion_decision: CompletionDecision,
 ) -> list[str]:
     lines = ["## Mission Evidence", ""]
-    lines.extend(_worksheet_mapping_lines(dict(_mission_evidence_items(summary, events, plots, config))))
+    lines.extend(
+        _worksheet_mapping_lines(
+            dict(
+                _mission_evidence_items(
+                    summary,
+                    events,
+                    plots,
+                    config,
+                    completion_decision=completion_decision,
+                )
+            )
+        )
+    )
     lines.append("")
     return lines
 
@@ -1095,9 +1362,22 @@ def _worksheet_challenge_evidence_lines(
     events: list[dict[str, Any]],
     plots: list[Path],
     config: dict[str, Any],
+    completion_decision: CompletionDecision,
 ) -> list[str]:
     lines = ["## Challenge Evidence", ""]
-    lines.extend(_worksheet_mapping_lines(dict(_challenge_evidence_items(summary, events, plots, config))))
+    lines.extend(
+        _worksheet_mapping_lines(
+            dict(
+                _challenge_evidence_items(
+                    summary,
+                    events,
+                    plots,
+                    config,
+                    completion_decision=completion_decision,
+                )
+            )
+        )
+    )
     lines.append("")
     return lines
 
@@ -1213,7 +1493,8 @@ def _worksheet_evidence_review_cue_lines(
     lines = [
         "### Evidence Review Cue",
         "",
-        "- Use this as a quick worksheet checklist before moving to the next experiment.",
+        "- Use this read-only review guide before moving to the next experiment.",
+        "- Record any follow-up answer in personal or course notes stored outside the saved-run folder.",
     ]
     for label, value in _evidence_review_cue_items(events, markers, learner_control_phrase=learner_control_phrase):
         lines.append(f"- {label}: {_markdown_inline(value)}")
@@ -1244,10 +1525,10 @@ def _worksheet_review_checklist(events: list[dict[str, Any]], config: dict[str, 
     if not has_observation_workflow:
         lines.extend(
             [
-                "- [ ] Answer the Prediction prompt before reading the plots.",
-                "- [ ] Use Plot Review and Challenge Evidence to decide whether the result matched your expectation.",
-                "- [ ] Write Matched, Partly matched, or Surprised in your notes or the batch Prediction Check.",
-                "- [ ] Run one Suggested Next Experiment or the Comparison Batch for a controlled comparison.",
+                "- Review prompt: Answer the Prediction prompt in personal or course notes outside the saved-run folder before reading the plots.",
+                "- Review prompt: Use Plot Review and Challenge Evidence to decide whether the result matched your expectation.",
+                "- Review prompt: Record Matched, Partly matched, or Surprised in personal or course notes outside the saved-run folder.",
+                "- Review prompt: Run one Suggested Next Experiment or the Comparison Batch for a controlled comparison.",
                 "",
             ]
         )
@@ -1255,28 +1536,30 @@ def _worksheet_review_checklist(events: list[dict[str, Any]], config: dict[str, 
     if markers <= 0:
         if next_required:
             lines.append(
-                f"- [ ] Try required preset {_markdown_inline(next_required)}, watch live status, then mark one observation."
+                f"- Review prompt: Rerun the interactive scenario, try required preset {_markdown_inline(next_required)}, "
+                "watch live status, then use Mark observation."
             )
         lines.extend(
             [
-                "- [ ] Save one observation marker with a prediction and note.",
-                "- [ ] Capture one live status or note before moving to the next scenario.",
+                "- Review prompt: Rerun the interactive scenario and save one observation marker with a prediction and note.",
+                "- Review prompt: Capture one live status or note during that rerun before moving to the next scenario.",
             ]
         )
     elif next_required:
         lines.extend(
             [
-                f"- [ ] Try required preset {_markdown_inline(next_required)}, watch live status, then mark one observation.",
-                "- [ ] Compare the required preset response with the plots in report.html.",
+                f"- Review prompt: Rerun the interactive scenario, try required preset {_markdown_inline(next_required)}, "
+                "watch live status, then use Mark observation.",
+                "- Review prompt: Compare the required preset response with the plots in report.html.",
             ]
         )
     else:
         lines.extend(
             [
-                "- [ ] Compare the latest prediction with the plots in report.html.",
-                "- [ ] Mark one outcome for every prediction: Matched, Partly matched, or Surprised.",
-                "- [ ] Keep at least one note that explains what changed and what evidence proved it.",
-                "- [ ] Decide which suggested next run should be compared against this one.",
+                "- Review prompt: Compare the latest saved prediction with the plots in report.html.",
+                "- Review prompt: Review every saved prediction outcome; for follow-up, rerun and use Mark observation or record Matched, Partly matched, or Surprised in external notes.",
+                "- Review prompt: Review the saved learner note; record any follow-up explanation in personal or course notes outside the saved-run folder.",
+                "- Review prompt: Decide which suggested next run should be compared against this one.",
             ]
         )
     lines.append("")
@@ -1334,10 +1617,10 @@ def _worksheet_control_coverage_lines(events: list[dict[str, Any]], config: dict
     if has_buttons:
         checks.append((_activity_button_next_step(config), counts.get("button", 0)))
     checks.append(("Save one Mark observation with prediction and note.", complete_observation_markers))
-    lines = ["", "Control coverage checklist:"]
+    lines = ["", "Control coverage status (read-only):"]
     for label, count in checks:
-        mark = "x" if count > 0 else " "
-        lines.append(f"- [{mark}] {label} ({count} recorded)")
+        status = "Recorded" if count > 0 else "Pending evidence"
+        lines.append(f"- {status}: {label} ({count} recorded)")
     return lines
 
 
@@ -1543,6 +1826,8 @@ def _render_report(
     interaction_events: list[dict[str, Any]],
     config: dict[str, Any],
     learner_snapshot: dict[str, Any],
+    completion_decision: CompletionDecision,
+    completion_evidence: CompletionEvidence,
 ) -> str:
     title = _report_title(output, summary)
     report_language = str(config.get("language", "en"))
@@ -1550,9 +1835,13 @@ def _render_report(
         report_language = "en"
     title = _localized_report_title(summary, fallback=title, language=report_language)
     overview = _result_overview_section(output, summary, plots, language=report_language)
+    completion = _completion_section(completion_decision)
     learning_guide = _learning_guide_section(guide_for_run_summary(summary), summary, config)
     course_position = _course_position_section(summary)
-    course_coverage = _course_experience_coverage_section(output)
+    course_coverage = _course_experience_coverage_section(
+        output,
+        completion_evidence=completion_evidence,
+    )
     worksheet = _worksheet_section(output)
     next_actions = _next_actions_section(
         output,
@@ -1571,8 +1860,20 @@ def _render_report(
     configured_presets = _configured_presets_section(config)
     result_check = _result_check_section(summary)
     key_moments = _key_moments_section(summary)
-    mission_evidence = _mission_evidence_section(summary, interaction_events, plots, config)
-    challenge_evidence = _challenge_evidence_section(summary, interaction_events, plots, config)
+    mission_evidence = _mission_evidence_section(
+        summary,
+        interaction_events,
+        plots,
+        config,
+        completion_decision,
+    )
+    challenge_evidence = _challenge_evidence_section(
+        summary,
+        interaction_events,
+        plots,
+        config,
+        completion_decision,
+    )
     hands_on_evidence = _hands_on_evidence_section(summary, interaction_events, config)
     learner_action_summary = _learner_action_summary_section(interaction_events, config)
     learner_snapshot_section = _learner_snapshot_section(learner_snapshot)
@@ -1988,6 +2289,7 @@ def _render_report(
   <main>
     <h1>{escape(document_title)}</h1>
     {overview}
+    {completion}
     {next_actions}
     <details class="advanced">
       <summary>{advanced_label}</summary>
@@ -2116,7 +2418,8 @@ def _worksheet_section(output: Path) -> str:
         return ""
     return _action_card(
         "Learner Worksheet",
-        "Open the printable Markdown worksheet to review prediction, outcome, notes, and next-run decisions.",
+        "Open the digest-published, read-only Markdown worksheet to review saved evidence. "
+        "Record follow-up answers in personal or course notes outside this saved-run folder.",
         '<p class="empty"><a href="worksheet.md">Open worksheet.md</a></p>',
     )
 
@@ -2147,8 +2450,17 @@ def _course_position_section(summary: dict[str, Any]) -> str:
     )
 
 
-def _course_experience_coverage_section(output: Path) -> str:
-    runs = _discover_runs(output.parent)
+def _course_experience_coverage_section(
+    output: Path,
+    *,
+    completion_evidence: CompletionEvidence | None = None,
+) -> str:
+    overrides = (
+        {output.name: completion_evidence}
+        if completion_evidence is not None
+        else None
+    )
+    runs = _discover_runs(output.parent, evidence_overrides=overrides)
     records = _experience_coverage_records_for_index(runs)
     summary = experience_coverage_summary_text(records)
     next_item = next_experience_coverage_item(records)
@@ -3510,6 +3822,8 @@ def _mission_evidence_items(
     events: list[dict[str, Any]],
     plots: list[Any],
     config: dict[str, Any] | None = None,
+    *,
+    completion_decision: CompletionDecision | None = None,
 ) -> list[tuple[str, Any]]:
     markers, predictions, notes, outcomes = _observation_evidence_counts_from_events(events)
     pending_outcomes = max(0, predictions - outcomes)
@@ -3580,6 +3894,28 @@ def _mission_evidence_items(
     if required_labels:
         items.insert(7, ("Required presets", " -> ".join(required_labels)))
         items.insert(8, ("Required presets tried", f"{len(required_tried)}/{len(required_labels)}"))
+    if completion_decision is not None and not completion_decision.complete:
+        contract_status = _completion_status_text(completion_decision, summary)
+        items = [
+            (key, contract_status if key == "Status" else value)
+            for key, value in items
+        ]
+        next_index = next(
+            (index for index, (key, _value) in enumerate(items) if key == "Next proof step"),
+            len(items),
+        )
+        items.insert(
+            next_index,
+            ("Completion reason", completion_decision.primary_reason.value),
+        )
+        contract_next = (
+            f"Resolve {completion_decision.primary_reason.value} before treating this "
+            "run as mission evidence."
+        )
+        items = [
+            (key, contract_next if key == "Next proof step" else value)
+            for key, value in items
+        ]
     return items
 
 
@@ -3588,10 +3924,20 @@ def _challenge_evidence_items(
     events: list[dict[str, Any]],
     plots: list[Any],
     config: dict[str, Any] | None = None,
+    *,
+    completion_decision: CompletionDecision | None = None,
 ) -> list[tuple[str, Any]]:
     guide = guide_for_run_summary(summary)
     challenge = challenge_prompt_for_guide(guide).removeprefix("Challenge:").strip()
-    mission_items = dict(_mission_evidence_items(summary, events, plots, config))
+    mission_items = dict(
+        _mission_evidence_items(
+            summary,
+            events,
+            plots,
+            config,
+            completion_decision=completion_decision,
+        )
+    )
     mission_status = str(mission_items.get("Status") or "")
     mission_next_step = str(mission_items.get("Next proof step") or "")
     requires_hands_on = _summary_requires_hands_on_evidence(summary)
@@ -3647,6 +3993,7 @@ def _mission_evidence_section(
     events: list[dict[str, Any]],
     plots: list[Path],
     config: dict[str, Any],
+    completion_decision: CompletionDecision,
 ) -> str:
     return (
         "<section>"
@@ -3655,7 +4002,7 @@ def _mission_evidence_section(
         '<article class="action-card action-wide">'
         "<strong>Mission proof status</strong>"
         '<p class="empty">Use this before moving on: it tells whether the mission has enough saved evidence.</p>'
-        f"{_action_value_list(_mission_evidence_items(summary, events, plots, config))}"
+        f"{_action_value_list(_mission_evidence_items(summary, events, plots, config, completion_decision=completion_decision))}"
         "</article>"
         "</div>"
         "</section>"
@@ -3667,6 +4014,7 @@ def _challenge_evidence_section(
     events: list[dict[str, Any]],
     plots: list[Path],
     config: dict[str, Any],
+    completion_decision: CompletionDecision,
 ) -> str:
     return (
         "<section>"
@@ -3675,7 +4023,7 @@ def _challenge_evidence_section(
         '<article class="action-card action-wide">'
         "<strong>Challenge proof status</strong>"
         '<p class="empty">Use this after the run: it turns the visible-effect challenge into evidence to check.</p>'
-        f"{_action_value_list(_challenge_evidence_items(summary, events, plots, config))}"
+        f"{_action_value_list(_challenge_evidence_items(summary, events, plots, config, completion_decision=completion_decision))}"
         "</article>"
         "</div>"
         "</section>"
@@ -4727,7 +5075,8 @@ def _evidence_review_cue(
 ) -> str:
     return _action_card(
         "Evidence Review Cue",
-        "Use this as a quick worksheet checklist before moving to the next experiment.",
+        "Use this read-only review guide before moving to the next experiment; record follow-up answers "
+        "in personal or course notes outside the saved-run folder.",
         _action_value_list(_evidence_review_cue_items(events, markers, learner_control_phrase=learner_control_phrase)),
     )
 
@@ -4984,34 +5333,51 @@ def _plot_guidance(filename: str) -> tuple[str, str] | None:
     return None
 
 
-def _discover_runs(root: Path) -> list[dict[str, Any]]:
-    runs: list[dict[str, Any]] = []
-    for child in root.iterdir():
-        try:
-            if not child.is_dir():
-                continue
-            if is_internal_output_dir(child):
-                continue
-            summary = _read_json(child / "summary.json")
-            report_path = child / "report.html"
-            index_path = child / "index.html"
-            if not summary and not report_path.exists() and not index_path.exists():
-                continue
-        except OSError:
-            # Sibling directories owned by other users (e.g. systemd private
-            # /tmp trees on Linux) are unreadable and cannot be run outputs.
-            continue
-        guide = guide_for_run_summary(summary)
-        modified = max(
-            (
-                path.stat().st_mtime
-                for path in (report_path, index_path, child / "summary.json")
-                if path.exists()
-            ),
-            default=child.stat().st_mtime,
+def _discover_runs(
+    root: Path,
+    *,
+    evidence_overrides: dict[str, CompletionEvidence] | None = None,
+) -> list[dict[str, Any]]:
+    records = ArtifactRepository(root).list_runs()
+    if evidence_overrides:
+        records = tuple(
+            replace(
+                record,
+                status=(
+                    evidence_overrides[record.path.name].status
+                    or record.status
+                ),
+                completion_evidence=evidence_overrides[record.path.name],
+            )
+            if record.path.name in evidence_overrides
+            else record
+            for record in records
         )
-        interaction_events = _read_json_list(child / "interaction_events.json")
-        config = _index_run_config(child, summary)
+    catalog = ScenarioCatalog.default()
+    assessment_index = build_completion_assessment_index(catalog.targets(), records)
+    runs: list[dict[str, Any]] = []
+    for record in records:
+        child = record.path
+        saved_summary = record.summary
+        target = _catalog_target_or_none(catalog, record.scenario_id)
+        direct_target = target is not None
+        if (
+            target is None
+            and record.completion_evidence.record_kind
+            == CompletionRecordKind.LEGACY_SUMMARY
+        ):
+            target = target_from_legacy_summary(catalog, saved_summary)
+        summary = _trusted_behavior_summary(saved_summary, target)
+        decision = evaluate_completion(
+            target.completion if target is not None else None,
+            record.completion_evidence,
+        )
+        assessment = (
+            assessment_index.get(record.scenario_id) if direct_target else None
+        )
+        guide = guide_for_run_summary(summary)
+        interaction_events = _display_interaction_events(record.interaction_events)
+        config = _index_run_config(record, target)
         observation_markers, learner_predictions, learner_notes, learner_outcomes = (
             _observation_evidence_counts_from_events(interaction_events)
         )
@@ -5019,22 +5385,25 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
         latest_evidence = _latest_observation_evidence_from_events(interaction_events)
         observation_flow = _observation_flow_text_from_events(interaction_events)
         observation_next_step = _index_observation_next_step(summary, interaction_events, config)
-        plots = _discover_run_plots(child, summary)
-        worksheet = _discover_worksheet(child)
+        plots = _discover_trusted_run_plots(record, summary)
+        worksheet = _trusted_worksheet_link(record)
         runs.append(
             {
                 "name": child.name,
-                "lab_name": summary.get("lab_name", ""),
-                "config_name": summary.get("config_name", ""),
-                "config_path": summary.get("config_path", ""),
+                "scenario_id": record.scenario_id,
+                "lab_name": saved_summary.get("lab_name", ""),
+                "config_name": saved_summary.get("config_name", ""),
+                "config_path": saved_summary.get("config_path", ""),
                 "samples": summary.get("samples", ""),
                 "duration": summary.get("duration", ""),
-                "report": _run_link(child, report_path, index_path),
+                "report": (
+                    f"{child.name}/report.html" if record.report_available else child.name
+                ),
                 "folder": _discover_output_folder(child),
                 "worksheet": worksheet,
                 "plots": plots,
-                "replay": _discover_replay_config(child),
-                "modified": modified,
+                "replay": _trusted_replay_config(record),
+                "modified": record.sort_timestamp,
                 "summary": summary,
                 "lesson_title": guide.title if guide is not None else "",
                 "next_step": guide.next_step if guide is not None else "",
@@ -5053,6 +5422,7 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
                     plots,
                     config,
                     worksheet=worksheet,
+                    completion_decision=decision,
                 ),
                 "challenge_evidence": _challenge_evidence_index_text(
                     summary,
@@ -5060,28 +5430,61 @@ def _discover_runs(root: Path) -> list[dict[str, Any]]:
                     plots,
                     config,
                     worksheet=worksheet,
+                    completion_decision=decision,
                 ),
                 "config": config,
                 "interaction_events": interaction_events,
+                "record": record,
+                "completion_decision": decision,
+                "completion_complete": decision.complete,
+                "completion_assessment": assessment,
+                "completion_target": target,
             }
         )
-    return sorted(runs, key=lambda run: float(run["modified"]), reverse=True)
+    return runs
 
 
-def _index_run_config(child: Path, summary: dict[str, Any]) -> dict[str, Any]:
-    config_path = str(summary.get("config_path") or "").strip()
+def _index_run_config(
+    record: ArtifactRecord,
+    target: Any | None,
+) -> dict[str, Any]:
+    config_path = str(getattr(target, "config_path", "") or "").strip()
     source_config: dict[str, Any] = {}
     if config_path:
         try:
             source_config = load_config(config_path)
         except (OSError, ValueError):
             source_config = {}
-    config = _read_config(child / "config.yaml")
+    config_section = record.manifest.get("config")
+    resolved = config_section.get("resolved") if isinstance(config_section, dict) else None
+    config = deepcopy(resolved) if isinstance(resolved, dict) else {}
     if config:
         return _merge_source_learning_metadata(config, source_config)
     if source_config:
         return source_config
     return {}
+
+
+def _trusted_behavior_summary(
+    summary: dict[str, Any],
+    target: Any | None,
+) -> dict[str, Any]:
+    """Keep metrics while sourcing executable metadata only from the catalog."""
+
+    safe = deepcopy(summary)
+    config_path = str(getattr(target, "config_path", "") or "").strip()
+    batch_name = str(getattr(target, "batch_name", "") or "").strip()
+    lab_name = str(getattr(target, "lab_name", "") or "").strip()
+    safe["config_path"] = config_path
+    if config_path:
+        safe["config_name"] = Path(config_path).stem
+    elif batch_name:
+        safe["config_name"] = batch_name
+    else:
+        safe["config_name"] = ""
+    safe["lab_name"] = lab_name or ("batch" if batch_name else "")
+    safe["batch_name"] = batch_name
+    return safe
 
 
 def _merge_source_learning_metadata(config: dict[str, Any], source_config: dict[str, Any]) -> dict[str, Any]:
@@ -5619,27 +6022,29 @@ def _experience_coverage_item_config(item: ExperienceCoverageItem) -> dict[str, 
 def _experience_coverage_records_for_index(runs: list[dict[str, Any]]) -> list[ExperienceCoverageRecord]:
     records: list[ExperienceCoverageRecord] = []
     for run in runs:
+        if not bool(run.get("completion_complete", False)):
+            continue
         tags = _experience_tags_for_index_run(run)
-        events = run.get("interaction_events")
-        if not isinstance(events, list):
-            events = []
+        record = run.get("record")
+        has_control = bool(
+            isinstance(record, ArtifactRecord)
+            and record.completion_evidence.interaction.learner_control_count > 0
+        )
         records.append(
             ExperienceCoverageRecord(
                 frozenset(tags),
-                has_control=_learner_control_event_count(events) > 0,
+                has_control=has_control,
             )
         )
     return records
 
 
 def _experience_tags_for_index_run(run: dict[str, Any]) -> set[str]:
-    summary = run.get("summary")
-    if not isinstance(summary, dict):
-        summary = {}
-    config_path = _normalize_path(str(run.get("config_path") or summary.get("config_path") or ""))
-    config_name = str(run.get("config_name") or summary.get("config_name") or "").lower()
-    lab_name = str(run.get("lab_name") or summary.get("lab_name") or "").lower()
-    batch_name = str(summary.get("batch_name") or config_name).lower()
+    target = run.get("completion_target")
+    config_path = _normalize_path(str(getattr(target, "config_path", "")))
+    config_name = Path(config_path).stem.lower()
+    lab_name = str(getattr(target, "lab_name", "")).lower()
+    batch_name = str(getattr(target, "batch_name", "") or config_name).lower()
     text = " ".join((config_path, config_name, lab_name, batch_name))
     tags: set[str] = set()
 
@@ -5691,20 +6096,26 @@ def _learning_path_item(step: IndexPathStep, runs: list[dict[str, Any]]) -> dict
         events = []
     learner_controls = _learner_control_event_count(events)
     required_total, required_tried, next_required = _learning_path_required_preset_progress(step, run)
-    required_ready = required_total == 0 or required_tried >= required_total
-    if step.batch_name:
-        has_worksheet = run is not None and isinstance(run.get("worksheet"), dict)
-        has_plot = step.batch_name == "all" or (run is not None and bool(run.get("plots")))
-        completed = run is not None and has_worksheet and has_plot
-    else:
-        completed = run is not None and (
-            not evidence_required
-            or (markers > 0 and predictions > 0 and notes > 0 and learner_controls > 0 and required_ready)
+    assessment = run.get("completion_assessment") if run is not None else None
+    completed = bool(
+        isinstance(assessment, TargetCompletionAssessment) and assessment.complete
+    )
+    credited_run = None
+    if isinstance(assessment, TargetCompletionAssessment):
+        credited_record = assessment.credited_record
+        credited_run = next(
+            (
+                candidate
+                for candidate in runs
+                if candidate.get("record") is credited_record
+            ),
+            None,
         )
     return {
         "step": step,
         "run": run,
         "completed": completed,
+        "credited_run": credited_run,
         "evidence_required": evidence_required,
         "observation_markers": markers,
         "learner_predictions": predictions,
@@ -5803,11 +6214,30 @@ def _learning_path_card(item: dict[str, Any]) -> str:
             if item["evidence_required"] and int(item["learner_predictions"]) > int(item["learner_outcomes"])
             else ""
         )
-        status = (
-            f'<span class="status">Done{escape(_learning_path_evidence_suffix(item))}</span>'
-            f'<p class="muted">Latest: <a href="{escape(str(run["report"]))}">{escape(str(run["name"]))}</a></p>'
-            f"{outcome_review}"
-        )
+        credited_run = item.get("credited_run")
+        latest_decision = run.get("completion_decision")
+        if (
+            isinstance(credited_run, dict)
+            and credited_run is not run
+            and isinstance(latest_decision, CompletionDecision)
+            and not latest_decision.complete
+        ):
+            latest_status = _completion_status_text(latest_decision, run.get("summary"))
+            status = (
+                f'<span class="status">Done{escape(_learning_path_evidence_suffix(item))}</span>'
+                '<p class="muted"><strong>Historical credit:</strong> '
+                f'<a href="{escape(str(credited_run["report"]))}">{escape(str(credited_run["name"]))}</a>; '
+                '<strong>latest attempt:</strong> '
+                f'<a href="{escape(str(run["report"]))}">{escape(str(run["name"]))}</a> — '
+                f'{escape(latest_status)} ({escape(latest_decision.primary_reason.value)}).</p>'
+                f"{outcome_review}"
+            )
+        else:
+            status = (
+                f'<span class="status">Done{escape(_learning_path_evidence_suffix(item))}</span>'
+                f'<p class="muted">Latest: <a href="{escape(str(run["report"]))}">{escape(str(run["name"]))}</a></p>'
+                f"{outcome_review}"
+            )
     elif int(item["observation_markers"]) > 0 and int(item["learner_predictions"]) == 0:
         status = (
             f'<span class="status">Needs prediction{escape(_learning_path_evidence_suffix(item))}</span>'
@@ -6337,7 +6767,8 @@ def _learning_path_learning_cue(step: IndexPathStep) -> str:
     if step.batch_name:
         return (
             '<p class="muted"><strong>Compare:</strong> Generate the course batch report set. '
-            "<strong>Prediction check:</strong> Mark Matched, Partly matched, or Surprised in the worksheet. "
+            "<strong>Prediction check:</strong> Review the digest-published, read-only worksheet, then copy "
+            "Matched, Partly matched, or Surprised into personal or course notes outside the saved-run folder. "
             "<strong>Watch:</strong> How the same control ideas scale from 1D plants to Panda wall behavior.</p>"
         )
     if not step.config_path:
@@ -6417,18 +6848,17 @@ def _learning_path_command(step: IndexPathStep) -> str:
 
 
 def _latest_learning_path_run(step: IndexPathStep, runs: list[dict[str, Any]]) -> dict[str, Any] | None:
+    target_id = _learning_path_target_id(step)
     for run in runs:
-        summary = run.get("summary", {})
-        if step.batch_name:
-            batch_name = str(summary.get("batch_name") or summary.get("config_name") or "")
-            if batch_name == step.batch_name:
-                return run
-            continue
-        if _normalize_path(str(summary.get("config_path") or run.get("config_path") or "")) == _normalize_path(
-            step.config_path
-        ):
+        if run.get("scenario_id") == target_id:
             return run
     return None
+
+
+def _learning_path_target_id(step: IndexPathStep) -> str:
+    if step.batch_name:
+        return f"batch.{step.batch_name}"
+    return stable_scenario_id(_cli_lab_name(step.config_path), step.config_path)
 
 
 def _progress_cards(runs: list[dict[str, Any]]) -> str:
@@ -6590,7 +7020,7 @@ def _mission_review_bucket(status: str) -> str:
         return "note"
     if normalized == "needs learner control":
         return "control"
-    if normalized in {"needs plot", "needs worksheet"}:
+    if normalized in {"needs plot", "needs worksheet", "needs required artifact"}:
         return "artifact"
     return "other"
 
@@ -7051,17 +7481,63 @@ def _mission_evidence_index_text(
     config: dict[str, Any] | None = None,
     *,
     worksheet: dict[str, str] | None = None,
+    completion_decision: CompletionDecision,
 ) -> str:
-    if _summary_is_all_batch(summary):
-        if isinstance(worksheet, dict):
-            return "Course artifacts ready; Open the course worksheet, then follow each linked batch Prediction Check."
-        return "Needs worksheet; Rerun all batches to regenerate course review artifacts."
+    status = _completion_status_text(completion_decision, summary)
     items = dict(_mission_evidence_items(summary, events, plots, config))
-    status = str(items.get("Status") or "").strip()
     next_step = str(items.get("Next proof step") or "").strip()
+    if _summary_is_all_batch(summary):
+        next_step = (
+            "Open the course worksheet, then follow each linked batch Prediction Check."
+            if completion_decision.complete
+            else "Rerun all batches to regenerate canonical course review artifacts."
+        )
+    reason = completion_decision.primary_reason.value
     if status and next_step:
-        return f"{status}; {_short_evidence_text(next_step, max_length=96)}"
-    return status or next_step
+        return (
+            f"{status}; {_short_evidence_text(next_step, max_length=96)}; "
+            f"contract {reason}"
+        )
+    return f"{status or next_step}; contract {reason}"
+
+
+def _completion_status_text(
+    decision: CompletionDecision,
+    summary: dict[str, Any] | None = None,
+) -> str:
+    if decision.complete:
+        if decision.outcome_review_pending:
+            return "Outcome review pending"
+        if summary is not None and _summary_is_all_batch(summary):
+            return "Course artifacts ready"
+        if summary is not None and _summary_is_comparison_batch(summary):
+            return "Artifacts ready"
+        return "Ready for review"
+    statuses = {
+        CompletionReason.RUN_NOT_COMPLETED: "Run not completed",
+        CompletionReason.PLOT_MISSING: "Needs plot",
+        CompletionReason.REQUIRED_ARTIFACT_MISSING: "Needs required artifact",
+        CompletionReason.INTERACTION_EVIDENCE_INVALID: "Invalid interaction evidence",
+        CompletionReason.OBSERVATION_MISSING: "Needs observation",
+        CompletionReason.PREDICTION_MISSING: "Needs prediction",
+        CompletionReason.NOTE_MISSING: "Ready, add note next",
+        CompletionReason.REQUIRED_PRESET_MISSING: "Needs required preset",
+        CompletionReason.LEARNER_CONTROL_MISSING: "Needs learner control",
+        CompletionReason.LEGACY_MANIFEST_MISSING: "Legacy manifest missing",
+        CompletionReason.MANIFEST_MISSING: "Manifest missing",
+        CompletionReason.MANIFEST_INVALID: "Manifest invalid",
+        CompletionReason.MANIFEST_SCHEMA_UNSUPPORTED: "Manifest schema unsupported",
+        CompletionReason.SCENARIO_MISMATCH: "Scenario mismatch",
+        CompletionReason.RULE_UNAVAILABLE: "Completion rule unavailable",
+        CompletionReason.RULE_INVALID: "Completion rule invalid",
+    }
+    status = statuses.get(decision.primary_reason, "Completion incomplete")
+    if (
+        decision.primary_reason == CompletionReason.REQUIRED_PRESET_MISSING
+        and decision.next_required_preset
+    ):
+        status = f"{status} {decision.next_required_preset}"
+    return status
 
 
 def _challenge_evidence_index_text(
@@ -7071,12 +7547,27 @@ def _challenge_evidence_index_text(
     config: dict[str, Any] | None = None,
     *,
     worksheet: dict[str, str] | None = None,
+    completion_decision: CompletionDecision,
 ) -> str:
+    if not completion_decision.complete:
+        status = _completion_status_text(completion_decision, summary)
+        return (
+            f"{status}; contract {completion_decision.primary_reason.value}; "
+            "resolve the completion contract before challenge review."
+        )
     if _summary_is_all_batch(summary):
         if isinstance(worksheet, dict):
             return "Ready to review; source course worksheet; compare linked batch Prediction Checks."
         return "Needs worksheet evidence; Rerun all batches to regenerate course review artifacts."
-    items = dict(_challenge_evidence_items(summary, events, plots, config))
+    items = dict(
+        _challenge_evidence_items(
+            summary,
+            events,
+            plots,
+            config,
+            completion_decision=completion_decision,
+        )
+    )
     status = str(items.get("Challenge status") or "").strip()
     source = str(items.get("Proof source") or "").strip()
     next_step = str(items.get("Next challenge step") or "").strip()
@@ -7174,14 +7665,6 @@ def _run_plot_review_cell(run: dict[str, Any]) -> str:
     return "Plot review: Open the saved plot and compare it with the worksheet."
 
 
-def _run_link(child: Path, report_path: Path, index_path: Path) -> str:
-    if report_path.exists():
-        return f"{child.name}/report.html"
-    if index_path.exists():
-        return f"{child.name}/index.html"
-    return child.name
-
-
 def _discover_output_folder(child: Path) -> dict[str, str]:
     return {
         "href": f"{child.name}/",
@@ -7189,34 +7672,28 @@ def _discover_output_folder(child: Path) -> dict[str, str]:
     }
 
 
-def _discover_replay_config(child: Path) -> dict[str, str] | None:
-    tuned_config = child / "learner_tuned_config.yaml"
-    if not tuned_config.exists():
+def _trusted_replay_config(record: ArtifactRecord) -> dict[str, str] | None:
+    if not record.tuned_available:
         return None
     return {
-        "href": f"{child.name}/{tuned_config.name}",
+        "href": f"{record.path.name}/learner_tuned_config.yaml",
         "label": "Tuned config",
     }
 
 
-def _discover_worksheet(child: Path) -> dict[str, str] | None:
-    worksheet = child / "worksheet.md"
-    if not worksheet.exists():
+def _trusted_worksheet_link(record: ArtifactRecord) -> dict[str, str] | None:
+    if not record.worksheet_available:
         return None
     return {
-        "href": f"{child.name}/{worksheet.name}",
+        "href": f"{record.path.name}/worksheet.md",
         "label": "Worksheet",
     }
 
 
-def _discover_run_plots(child: Path, summary: dict[str, Any] | None = None) -> list[dict[str, str]]:
-    candidates: list[tuple[Path, str]] = []
-    for directory_name in ("plots", "comparison_plots"):
-        plot_dir = child / directory_name
-        if not plot_dir.exists():
-            continue
-        candidates.extend((plot, directory_name) for plot in plot_dir.glob("*.png"))
-
+def _discover_trusted_run_plots(
+    record: ArtifactRecord,
+    summary: dict[str, Any] | None = None,
+) -> list[dict[str, str]]:
     summary = summary or {}
     priorities = plot_priorities_for_context(
         config_path=str(summary.get("config_path") or ""),
@@ -7224,13 +7701,16 @@ def _discover_run_plots(child: Path, summary: dict[str, Any] | None = None) -> l
         lab_name=str(summary.get("lab_name") or ""),
         batch_name=str(summary.get("batch_name") or ""),
     )
-    plots = sorted(candidates, key=lambda item: _index_plot_sort_key(item[0], priorities))
+    plots = sorted(
+        record.plot_paths,
+        key=lambda plot: _index_plot_sort_key(plot, priorities),
+    )
     return [
         {
-            "href": f"{child.name}/{directory_name}/{plot.name}",
+            "href": f"{record.path.name}/{plot.relative_to(record.path).as_posix()}",
             "label": _index_plot_label(plot),
         }
-        for plot, directory_name in plots[:INDEX_MAX_PLOT_LINKS]
+        for plot in plots[:INDEX_MAX_PLOT_LINKS]
     ]
 
 
@@ -7253,34 +7733,44 @@ def _index_plot_name(plot: Path) -> str:
     return plot.stem.lower().replace("-", "_").removesuffix("_compare")
 
 
-def _read_json(path: Path) -> dict[str, Any]:
-    if not path.exists():
+def _publication_json(
+    publication: OutputPublication,
+    relative: tuple[str, ...],
+) -> dict[str, Any]:
+    if not publication.regular_file_exists(relative):
         return {}
+    data = publication.read_bytes(
+        relative,
+        description="report JSON input",
+        max_bytes=MAX_METADATA_BYTES,
+        allow_empty=False,
+    )
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
+        payload = json.loads(data.decode("utf-8"))
+    except (UnicodeError, ValueError, TypeError):
         return {}
     return payload if isinstance(payload, dict) else {}
 
 
-def _read_json_list(path: Path) -> list[dict[str, Any]]:
-    if not path.exists():
-        return []
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return []
+def _publication_text(
+    publication: OutputPublication,
+    relative: tuple[str, ...],
+) -> str:
+    if not publication.regular_file_exists(relative):
+        return ""
+    data = publication.read_bytes(
+        relative,
+        description="report text input",
+        max_bytes=MAX_METADATA_BYTES,
+        allow_empty=True,
+    )
+    return data.decode("utf-8", errors="replace")
+
+
+def _display_interaction_events(payload: object) -> list[dict[str, Any]]:
     if not isinstance(payload, list):
         return []
     return [item for item in payload if isinstance(item, dict)]
-
-
-def _observation_evidence_counts(output_path: Path) -> tuple[int, int, int, int]:
-    return _observation_evidence_counts_from_events(_read_json_list(output_path / "interaction_events.json"))
-
-
-def _observation_outcome_counts(output_path: Path) -> dict[str, int]:
-    return _observation_outcome_counts_from_events(_read_json_list(output_path / "interaction_events.json"))
 
 
 def _observation_outcome_counts_from_events(events: list[dict[str, Any]]) -> dict[str, int]:
@@ -7295,10 +7785,6 @@ def _observation_outcome_counts_from_events(events: list[dict[str, Any]]) -> dic
         if outcome:
             counts[outcome] = counts.get(outcome, 0) + 1
     return counts
-
-
-def _latest_observation_evidence(output_path: Path) -> str:
-    return _latest_observation_evidence_from_events(_read_json_list(output_path / "interaction_events.json"))
 
 
 def _latest_observation_evidence_from_events(events: list[dict[str, Any]]) -> str:
@@ -7361,21 +7847,6 @@ def _short_evidence_text(value: str, *, max_length: int = 88) -> str:
     if len(text) <= max_length:
         return text
     return text[: max_length - 3].rstrip() + "..."
-
-
-def _read_config(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return {}
-    try:
-        return load_config(path)
-    except Exception:
-        return {}
-
-
-def _read_text(path: Path) -> str:
-    if not path.exists():
-        return ""
-    return path.read_text(encoding="utf-8")
 
 
 def _format_value(value: Any) -> str:

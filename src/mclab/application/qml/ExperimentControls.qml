@@ -52,6 +52,11 @@ Rectangle {
             action.forceActiveFocus()
             return
         }
+        var preset = presetRepeater.itemAt(0)
+        if (preset) {
+            preset.forceActiveFocus()
+            return
+        }
         var control = controlRepeater.itemAt(0)
         if (control)
             control.focusControl()
@@ -176,6 +181,63 @@ Rectangle {
                          && (!scenario.requiresEvidence || backend.hasPrediction)
                          && (scenario.actions || []).length > 0
                 Layout.fillWidth: true; height: 1; color: "#DCE2EC"
+            }
+            ColumnLayout {
+                visible: !panel.needsEvidenceRetry && !backend.hasReplay
+                         && (!scenario.requiresEvidence || backend.hasPrediction)
+                         && (scenario.presets || []).length > 0
+                Layout.fillWidth: true
+                spacing: compact ? 4 : 6
+                Label {
+                    text: backend.language === "ko" ? "빠른 프리셋" : "Quick presets"
+                    color: "#172033"
+                    font.pixelSize: compact ? 13 : 14
+                    font.bold: true
+                    Layout.fillWidth: true
+                }
+                Label {
+                    visible: (scenario.requiredPresetGuide || "").length > 0
+                    text: scenario.requiredPresetGuide || ""
+                    color: "#7C2D12"
+                    font.pixelSize: compact ? 12 : 13
+                    font.bold: true
+                    wrapMode: Text.WordWrap
+                    Layout.fillWidth: true
+                    Accessible.name: text
+                }
+                GridLayout {
+                    Layout.fillWidth: true
+                    columns: compact ? 1 : 2
+                    columnSpacing: 8
+                    rowSpacing: 6
+                    Repeater {
+                        id: presetRepeater
+                        model: scenario.presets || []
+                        MButton {
+                            id: presetButton
+                            objectName: "quickPreset_" + modelData.id
+                            minimumButtonWidth: compact ? 84 : 112
+                            text: modelData.label
+                            wrapText: true
+                            secondary: true
+                            enabled: panel.liveEditable
+                            accessibleName: (backend.language === "ko"
+                                             ? "빠른 프리셋: " : "Quick preset: ")
+                                            + modelData.label
+                            accessibleDescription: modelData.purpose
+                                                   + (modelData.required
+                                                      && scenario.requiredPresetGuide
+                                                      ? ". " + scenario.requiredPresetGuide
+                                                      : "")
+                            Layout.fillWidth: true
+                            onClicked: backend.applyPreset(modelData.id)
+                            onActiveFocusChanged: {
+                                if (activeFocus)
+                                    panel.revealControl(presetButton)
+                            }
+                        }
+                    }
+                }
             }
             GridLayout {
                 id: controlGrid
