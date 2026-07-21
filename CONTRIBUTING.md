@@ -35,6 +35,7 @@ Run the core checks that are practical in a local source checkout:
 ```bash
 python -m ruff check src tests scripts .agents/validation
 python -m pytest -q --cov=mclab --cov-report=term --cov-fail-under=80
+python .agents/validation/check_readme_contract.py
 python .agents/validation/check_citation_coverage.py
 python .agents/validation/validate_robotics_foundations.py
 ```

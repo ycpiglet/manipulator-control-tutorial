@@ -44,6 +44,37 @@ class BootstrapVerifyTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "summary.json"):
                 verify_output_artifacts(output, expect_plots=True)
 
+    def test_verify_output_artifacts_requires_readme_core_evidence(self) -> None:
+        for filename in ("states.npz", "replay.npz", "manifest.json", "worksheet.md"):
+            with self.subTest(filename=filename), tempfile.TemporaryDirectory() as tmp:
+                output = Path(tmp) / "run"
+                _write_output(output, with_plot=True)
+                (output / filename).unlink()
+
+                with self.assertRaisesRegex(RuntimeError, filename.replace(".", r"\.")):
+                    verify_output_artifacts(output, expect_plots=True)
+
+    def test_verify_output_artifacts_rejects_directory_in_place_of_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "run"
+            _write_output(output, with_plot=True)
+            (output / "states.npz").unlink()
+            (output / "states.npz").mkdir()
+
+            with self.assertRaisesRegex(RuntimeError, r"states\.npz"):
+                verify_output_artifacts(output, expect_plots=True)
+
+    def test_verify_output_artifacts_rejects_png_named_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "run"
+            _write_output(output, with_plot=True)
+            plot = output / "plots" / "position.png"
+            plot.unlink()
+            plot.mkdir()
+
+            with self.assertRaisesRegex(RuntimeError, r"plots/\*\.png"):
+                verify_output_artifacts(output, expect_plots=True)
+
 
 def _write_output(output: Path, *, with_plot: bool) -> None:
     output.mkdir(parents=True)
@@ -51,7 +82,10 @@ def _write_output(output: Path, *, with_plot: bool) -> None:
     (output / "summary.json").write_text('{"lab_name": "lab01_msd"}', encoding="utf-8")
     (output / "notes.md").write_text("# Notes\n", encoding="utf-8")
     (output / "log.csv").write_text("time,position\n0.0,0.0\n", encoding="utf-8")
-    (output / "states.json").write_text("[]", encoding="utf-8")
+    (output / "states.npz").write_bytes(b"fake-states")
+    (output / "replay.npz").write_bytes(b"fake-replay")
+    (output / "manifest.json").write_text('{"status": "completed"}', encoding="utf-8")
+    (output / "worksheet.md").write_text("# Worksheet\n", encoding="utf-8")
     report_sections = [
         "Reproduce This Run",
         "Suggested Next Runs",

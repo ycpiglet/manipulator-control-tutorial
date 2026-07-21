@@ -71,6 +71,14 @@ cd manipulator-control-tutorial
 3. 실행이 끝나면 **저장 결과 보기**와 **기록 재생**으로 응답을 확인합니다.
 4. 생성된 `report.html`에서 위치 응답과 가장 중요한 그래프를 설명합니다.
 
+**첫 소스 실행의 자동 검증 기준:** Windows, Linux, macOS의 권장 실행기가 설치와
+앱 self-test를 완료하고, `doctor`와 Lab01이 오류 없이 끝나며, 저장 결과에
+`report.html`과 하나 이상의 `plots/*.png`가 생성됩니다. 앱의 **저장 결과 보기**와
+**기록 재생**은 위에서 학습자가 직접 확인하는 hands-on 단계입니다.
+
+<details>
+<summary>터미널에서 직접 설치하거나 headless 결과 만들기</summary>
+
 직접 환경을 구성하려면:
 
 ```bash
@@ -102,12 +110,12 @@ Qt 앱 없이 첫 headless report와 plot을 만들 수도 있습니다.
 
 ```bash
 python -m pip install -e .
-python -m mclab run lab01 \
-  --config configs/lab01_msd/default.yaml \
-  --headless --plot --plots essential
+python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot --plots essential
 ```
 
 설치·패키징 세부사항은 [설치 문서](docs/installation.md)를 참고하세요.
+
+</details>
 
 ## 저장되는 결과
 
@@ -144,17 +152,24 @@ python -m mclab run lab01 \
 코어 패키지 구조는 이미 역할별로 분리되어 있습니다. 루트의
 `run_lab*.cmd`와 `run_batch*.cmd`는 기존 수업·호환용 실행기이며,
 신규 사용자는 세 개의 `START_HERE` 실행기나 통합 앱을 사용하면 됩니다.
+현재 경로를 유지하는 이유와 향후 이동 시 지킬 호환 규칙은
+[저장소 구조와 호환성 경계](docs/repository_structure.md)에 기록되어 있습니다.
 
 ## 문서 안내
 
-- 학습자: [학습자 가이드](docs/learner_guide.md), [Lab01](docs/lab01_mass_spring_damper.md),
-  [Lab02](docs/lab02_pid_control.md), [Lab03](docs/lab03_trajectory_planning.md),
-  [Lab04](docs/lab04_panda_manipulator.md)
-- 교육자: [교육자 가이드](docs/educator_guide.md)
-- 개발자: [개발자 구조](docs/developer_guide.md), [기여 방법](CONTRIBUTING.md)
-- 설치·운영: [설치와 배포](docs/installation.md), [문제 해결](docs/troubleshooting.md)
-- 연구·인용: [튜토리얼 논문](paper/README.md), [JOSE 소프트웨어 논문](jose/paper.md)
-- 전체 색인: [Documentation map](docs/README.md)
+- 학습자: [학습자 가이드 (영문)](docs/learner_guide.md),
+  [Lab01 (영문)](docs/lab01_mass_spring_damper.md),
+  [Lab02 (영문)](docs/lab02_pid_control.md), [Lab03 (영문)](docs/lab03_trajectory_planning.md),
+  [Lab04 (영문)](docs/lab04_panda_manipulator.md)
+- 교육자: [교육자 가이드 (영문)](docs/educator_guide.md)
+- 개발자: [개발자 구조 (영문)](docs/developer_guide.md),
+  [저장소 구조와 호환성 (영문 중심)](docs/repository_structure.md),
+  [기여 방법 (영문)](CONTRIBUTING.md)
+- 설치·운영: [설치와 배포 (영문)](docs/installation.md),
+  [문제 해결 (영문)](docs/troubleshooting.md)
+- 연구·인용: [튜토리얼 논문 (한국어)](paper/README.md),
+  [JOSE 소프트웨어 논문 (영문)](jose/paper.md)
+- 전체 색인: [Documentation map (영문 중심)](docs/README.md)
 
 ## 개발 상태
 
@@ -170,6 +185,14 @@ UI와 artifact schema도 v0.1 기간에는 변경될 수 있습니다.
 > 결과는 표시될 수 있지만 정리 대상이 아닙니다. 표시된 plan ID와 `--yes`를 함께
 > 제공해야 복구 보관소로 이동하며 영구 삭제하지 않습니다. 앱의 **결과 → 관리**도
 > 정확한 폴더명 입력과 변경 감지 뒤 같은 strict 기준과 보관소를 사용합니다.
+
+<details>
+<summary>출력 정리·복원 명령과 플랫폼별 데이터 위치</summary>
+
+> [!WARNING]
+> 아래 `--apply` 예시를 바로 복사해 실행하지 마세요. 먼저 기본 dry-run이 표시한
+> 모든 후보를 검토하고, 별도로 승인한 **동일한 plan ID**에만 `--apply ... --yes`를
+> 사용하세요.
 
 ```bash
 python -m mclab clean --keep 20
@@ -205,9 +228,12 @@ python -m mclab clean --restore RECEIPT_ID_FROM_LIST
 복구 보관소는 디스크 공간을 계속 사용하며, SAFE-01은
 안전한 영구 purge를 의도적으로 제공하지 않습니다.
 
-판정과 우선순위는
-[2026-07-20 readiness audit](.agents/reviews/20260720_enterprise_readiness_audit.md)에
-기록되어 있습니다.
+</details>
+
+원래 감사 finding과 당시 판정은
+[2026-07-20 readiness audit](.agents/reviews/20260720_enterprise_readiness_audit.md),
+현재 작업 상태는 [CURRENT_STATE](.agents/CURRENT_STATE.md), 권위 있는 실행 순서는
+[READINESS_EXECUTION_PLAN](.agents/READINESS_EXECUTION_PLAN.md)에 기록되어 있습니다.
 
 ## 개발과 기여
 
@@ -215,7 +241,7 @@ python -m mclab clean --restore RECEIPT_ID_FROM_LIST
 python -m pip install -e ".[app,dev]"
 python -m pytest -q
 python -m ruff check src tests scripts .agents/validation
-QT_QPA_PLATFORM=offscreen python -m mclab app --self-test
+python -m mclab app --self-test
 ```
 
 새 config에는 학습 가이드와 다음 실험 연결이 필요합니다. 자세한 규칙과 PR

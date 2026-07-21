@@ -64,18 +64,56 @@ jobs:
           path: third_party/mujoco_menagerie/franka_emika_panda
           key: panda-71f066ad-${{ runner.os }}
 
-      - name: Install verified Panda assets
-        if: steps.panda-cache.outputs.cache-hit != 'true'
-        run: python -m mclab assets install
+      - name: Windows recommended launcher setup smoke
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: call START_HERE.cmd --setup-only
+
+      - name: Linux recommended launcher setup smoke
+        if: runner.os == 'Linux'
+        shell: bash
+        run: ./start_here.sh --setup-only
+
+      - name: macOS recommended launcher setup smoke
+        if: runner.os == 'macOS'
+        shell: bash
+        run: ./START_HERE.command --setup-only
+
+      - name: Select recommended-launcher Python
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            echo "MCLAB_NEWCOMER_PYTHON=$PWD/.venv/Scripts/python.exe" >> "$GITHUB_ENV"
+          else
+            echo "MCLAB_NEWCOMER_PYTHON=$PWD/.venv/bin/python" >> "$GITHUB_ENV"
+          fi
+
+      - name: Newcomer source setup diagnostics
+        shell: bash
+        run: '"$MCLAB_NEWCOMER_PYTHON" -m mclab doctor --json'
+
+      - name: Newcomer README and runtime CLI contract
+        shell: bash
+        run: '"$MCLAB_NEWCOMER_PYTHON" .agents/validation/check_readme_contract.py --runtime-cli'
 
       - name: Desktop catalog and Qt offscreen smoke
-        run: python -m mclab app --self-test --lang en
+        shell: bash
+        run: '"$MCLAB_NEWCOMER_PYTHON" -m mclab app --self-test --lang en'
 
       - name: Lab01 headless replay artifact smoke
+        shell: bash
         run: >-
-          python -m mclab run lab01
+          "$MCLAB_NEWCOMER_PYTHON" -m mclab run lab01
           --config configs/lab01_msd/default.yaml
-          --headless --output-dir outputs/ci_lab01
+          --headless --plot --plots essential
+          --output-dir outputs/ci_lab01
+
+      - name: Verify newcomer report and plot contract
+        shell: bash
+        run: >-
+          "$MCLAB_NEWCOMER_PYTHON" -c "from pathlib import Path;
+          from scripts.bootstrap_and_run import verify_output_artifacts;
+          verify_output_artifacts(Path('outputs/ci_lab01'), expect_plots=True)"
 
       - name: Report responsive and axe audit
         if: runner.os == 'Linux'

@@ -22,23 +22,62 @@ Current release decision:
 
 Immediate order of work:
 
-1. preserve the completed SAFE-01 exact-head and post-merge evidence without
-   touching real learner outputs;
-2. add DOC-01 README/command/link/repository-map contract gates and perform the
-   KR/EN newcomer truth review in a separate clean worktree;
+1. finish the recovered DOC-01 candidate through independent review, exact-head
+   six-check CI, merge, and post-merge verification without touching real
+   learner outputs;
+2. preserve the completed SAFE-01 exact-head and post-merge evidence;
 3. add the canonical completion contract and connect every learner surface in
    separate PRs;
 4. declare B2 only after GOV-01, SAFE-01, DOC-01, and COMP-01/02 all pass, then
    follow gates G2 through G5 for distribution,
    real-platform/human validation, signing, and publication.
 
-Current exact next action: fetch and start DOC-01 from the latest clean
-`origin/main` that contains SAFE-01 merge
-`0fb77a026206f4b25360ace36d70d265a93a9366`. GOV-01 and SAFE-01 are complete;
-DOC-01, COMP-01/02, and B2 are not. A real-root cleanup dry-run is now permitted
-only as a separate owner-reviewed activity and is deliberately not a DOC-01
-prerequisite. Do not apply any plan to the real outputs root until the owner
-has reviewed that exact dry-run and separately authorized apply.
+Current exact next action: advance DOC-01 on `agent/readme-contract-gates`,
+based on current `origin/main@6a6632ab97c018779da8a0e404529db43a7706ca`,
+through all six exact-head checks and post-merge main checks before declaring
+it complete. GOV-01 and SAFE-01 are complete; DOC-01, COMP-01/02, and B2 are
+not. A real-root cleanup dry-run is permitted only as a separate owner-reviewed
+activity and is not a DOC-01 prerequisite. Do not apply any plan to the real
+outputs root until the owner has reviewed that exact dry-run and separately
+authorized apply.
+
+### 2026-07-21 DOC-01 shutdown recovery candidate
+
+- Objective: make the KR/EN newcomer README, public command/CLI shape, links,
+  launchers, quickstart evidence, and repository map deterministic PR gates.
+- Current exact base: the branch was cut from and re-fetched against
+  `origin/main@6a6632ab97c018779da8a0e404529db43a7706ca` with no intervening main
+  advance. The eventual PR head SHA and remote results remain acceptance
+  evidence; no merge is assumed here.
+- Completed work: recovered the interrupted uncommitted files from the only
+  surviving worktree, closed the prior Markdown/HTML and CLI-parser review
+  findings, added the no-move compatibility inventory, and added actual
+  Windows/Linux/macOS recommended-launcher setup checks. The audit snapshot was
+  not rewritten.
+- Changed areas: root KR/EN README and launcher, documentation map/structure
+  guide, README contract checker/tests, artifact verifier/tests, CI/desktop
+  workflows, contribution command, and validation metrics. No directory move,
+  config/model change, learner output cleanup, or cleanup `--apply` is in scope.
+- Local measured result on the frozen final candidate: README checker 25/25
+  static metrics and 82 links PASS; installed runtime CLI 9/9 invocations PASS;
+  676 passed, 7 skipped, 1,113 subtests; coverage 81.02%; Python 3.10/3.12
+  static checker, Ruff, citation coverage, robotics foundations, 14/14 Action
+  pins, workflow YAML, Linux recommended-launcher setup, and all four
+  default-lab artifact checks PASS. The frozen checker and regression-test
+  SHA-256 values are `b0098ea93cdab921bc3b61ed12a7bc746db8feabe8fb279f311e5a9752c298d7`
+  and `9513987bce9ae14799e48c96ec52d4744b47e8e8a9a1f6b8fbb97fba05920acb`.
+- Gate status: newcomer-truth, code-boundary, and final regression/performance
+  reviews all APPROVE with no P0-P3 findings. GitHub exact-head and post-merge
+  checks have not run and are never assumed. Local Tectonic is unavailable, so
+  the paper-build job remains remote evidence.
+- Compatibility/rollback: all paths stay in place; `run_mclab.cmd`,
+  `run_lab*.cmd`, `run_batch*.cmd`, and `run_all_batches.cmd` remain compatibility
+  paths. `run_all.ps1` is explicitly internal. Revert the focused DOC-01 commit
+  if the gate causes a false block; do not solve it with a directory move.
+- Open risk: the expanded recommended-launcher workflow must prove itself on
+  real GitHub Windows, Ubuntu, and macOS runners at the exact candidate SHA.
+- Single next action: publish the frozen branch as the DOC-01 PR and wait for
+  all six exact-head checks before any merge decision.
 
 ### 2026-07-21 GOV-01 and SAFE-01 complete; DOC-01 next
 
