@@ -8,6 +8,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import Any
 
+from mclab.completion import CompletionRule
 from mclab.config import PROJECT_ROOT, load_config
 
 LEARNING_PATH_SCENARIO_IDS = (
@@ -34,14 +35,6 @@ class ControlDefinition:
     step: float
     config_path: str
     default: float | None = None
-
-
-@dataclass(frozen=True)
-class CompletionRule:
-    requires_run: bool = True
-    requires_plot: bool = False
-    requires_learner_control: bool = False
-    requires_observation: bool = False
 
 
 @dataclass(frozen=True)
@@ -115,6 +108,9 @@ class ScenarioCatalog:
                         requires_plot=True,
                         requires_learner_control=interactive,
                         requires_observation=interactive,
+                        requires_prediction=interactive,
+                        requires_note=interactive,
+                        required_presets=_required_preset_labels(config),
                     ),
                     next_scenario_id=ids[index + 1] if index + 1 < len(ids) else None,
                     config_data=config,
@@ -198,6 +194,23 @@ def _is_interactive(config: dict[str, Any]) -> bool:
     return bool(
         interaction.get("panel") or interaction.get("live_tuning") or interaction.get("key_force")
     )
+
+
+def _required_preset_labels(config: dict[str, Any]) -> tuple[str, ...]:
+    interaction = config.get("interaction")
+    if not isinstance(interaction, dict):
+        return ()
+    presets = interaction.get("tuning_presets")
+    if not isinstance(presets, list):
+        return ()
+    labels: list[str] = []
+    for index, preset in enumerate(presets, start=1):
+        if not isinstance(preset, dict) or not bool(preset.get("required", False)):
+            continue
+        label = str(preset.get("label") or preset.get("name") or f"Preset {index}").strip()
+        if label:
+            labels.append(label)
+    return tuple(labels)
 
 
 def _difficulty(lab_name: str, label: str) -> str:

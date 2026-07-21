@@ -1,0 +1,328 @@
+{
+  "contract_version": 1,
+  "cases": [
+    {
+      "id": "automatic_complete_without_events",
+      "rule": {"requires_run": true, "requires_plot": true},
+      "manifest": {"schema_version": 1, "scenario_id": "lab01.default", "status": "completed"},
+      "plot_count": 1,
+      "expected": {
+        "contract_version": 1,
+        "complete": true,
+        "primary_reason": "completion.v1.complete",
+        "reasons": ["completion.v1.complete"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "automatic_status_stopped",
+      "rule": {"requires_run": true, "requires_plot": true},
+      "manifest": {"schema_version": 1, "scenario_id": "lab01.default", "status": "stopped"},
+      "plot_count": 1,
+      "expected": {
+        "contract_version": 1,
+        "complete": false,
+        "primary_reason": "completion.v1.run_not_completed",
+        "reasons": ["completion.v1.run_not_completed"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "automatic_completed_without_plot",
+      "rule": {"requires_run": true, "requires_plot": true},
+      "manifest": {"schema_version": 1, "scenario_id": "lab01.default", "status": "completed"},
+      "plot_count": 0,
+      "expected": {
+        "contract_version": 1,
+        "complete": false,
+        "primary_reason": "completion.v1.plot_missing",
+        "reasons": ["completion.v1.plot_missing"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "manifest_missing",
+      "rule": {"requires_run": true},
+      "manifest": null,
+      "expected": {
+        "contract_version": 1,
+        "complete": false,
+        "primary_reason": "completion.v1.manifest_missing",
+        "reasons": ["completion.v1.manifest_missing"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "legacy_summary_is_not_verified_completion",
+      "rule": {"requires_run": true},
+      "manifest": null,
+      "legacy_summary": {"lab_name": "lab01_msd", "config_name": "default"},
+      "expected": {
+        "contract_version": 1,
+        "complete": false,
+        "primary_reason": "completion.v1.legacy_manifest_missing",
+        "reasons": ["completion.v1.legacy_manifest_missing"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "future_manifest_schema_fails_closed",
+      "rule": {"requires_run": true},
+      "manifest": {"schema_version": 2, "scenario_id": "lab01.default", "status": "completed"},
+      "expected": {
+        "contract_version": 1,
+        "complete": false,
+        "primary_reason": "completion.v1.manifest_schema_unsupported",
+        "reasons": ["completion.v1.manifest_schema_unsupported"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "scenario_mismatch_fails_closed",
+      "rule": {"requires_run": true},
+      "manifest": {"schema_version": 1, "scenario_id": "lab02.default", "status": "completed"},
+      "expected": {
+        "contract_version": 1,
+        "complete": false,
+        "primary_reason": "completion.v1.scenario_mismatch",
+        "reasons": ["completion.v1.scenario_mismatch"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "hands_on_complete_outcome_review_pending",
+      "rule": {
+        "requires_run": true,
+        "requires_plot": true,
+        "requires_learner_control": true,
+        "requires_observation": true,
+        "requires_prediction": true,
+        "requires_note": true
+      },
+      "manifest": {"schema_version": 1, "scenario_id": "lab01.default", "status": "completed"},
+      "plot_count": 1,
+      "events": [
+        {"kind": "slider", "name": "damping", "value": 4.0},
+        {"kind": "marker", "name": "observation", "value": {"prediction": "Faster settling", "note": "The oscillation decayed."}}
+      ],
+      "expected": {
+        "contract_version": 1,
+        "complete": true,
+        "primary_reason": "completion.v1.complete",
+        "reasons": ["completion.v1.complete"],
+        "outcome_review_pending": true,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "hands_on_complete_with_outcome",
+      "rule": {
+        "requires_run": true,
+        "requires_plot": true,
+        "requires_learner_control": true,
+        "requires_observation": true,
+        "requires_prediction": true,
+        "requires_note": true
+      },
+      "manifest": {"schema_version": 1, "scenario_id": "lab01.default", "status": "completed"},
+      "plot_count": 1,
+      "events": [
+        {"kind": "button", "name": "pull_mass"},
+        {"kind": "marker", "name": "observation", "value": {"prediction": "Overshoot", "note": "Overshoot was visible.", "outcome": "Matched"}}
+      ],
+      "expected": {
+        "contract_version": 1,
+        "complete": true,
+        "primary_reason": "completion.v1.complete",
+        "reasons": ["completion.v1.complete"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "completed_manifest_without_required_evidence",
+      "rule": {
+        "requires_run": true,
+        "requires_plot": true,
+        "requires_learner_control": true,
+        "requires_observation": true,
+        "requires_prediction": true,
+        "requires_note": true
+      },
+      "manifest": {"schema_version": 1, "scenario_id": "lab01.default", "status": "completed"},
+      "plot_count": 0,
+      "events": [],
+      "expected": {
+        "contract_version": 1,
+        "complete": false,
+        "primary_reason": "completion.v1.plot_missing",
+        "reasons": [
+          "completion.v1.plot_missing",
+          "completion.v1.observation_missing",
+          "completion.v1.prediction_missing",
+          "completion.v1.note_missing",
+          "completion.v1.learner_control_missing"
+        ],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "helper_controls_do_not_count",
+      "rule": {
+        "requires_run": true,
+        "requires_plot": true,
+        "requires_learner_control": true,
+        "requires_observation": true,
+        "requires_prediction": true,
+        "requires_note": true
+      },
+      "manifest": {"schema_version": 1, "scenario_id": "lab01.default", "status": "completed"},
+      "plot_count": 1,
+      "events": [
+        {"kind": "button", "name": "use_live_status_note"},
+        {"kind": "slider", "name": "playback_speed"},
+        {"kind": "marker", "name": "observation", "value": {"prediction": "Settle", "note": "Settled."}}
+      ],
+      "expected": {
+        "contract_version": 1,
+        "complete": false,
+        "primary_reason": "completion.v1.learner_control_missing",
+        "reasons": ["completion.v1.learner_control_missing"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "prediction_and_note_split_across_markers",
+      "rule": {
+        "requires_run": true,
+        "requires_plot": true,
+        "requires_observation": true,
+        "requires_prediction": true,
+        "requires_note": true
+      },
+      "manifest": {"schema_version": 1, "scenario_id": "lab01.default", "status": "completed"},
+      "plot_count": 1,
+      "events": [
+        {"kind": "marker", "name": "observation", "value": {"prediction": "Settle"}},
+        {"kind": "marker", "name": "observation", "value": {"note": "Settled."}}
+      ],
+      "expected": {
+        "contract_version": 1,
+        "complete": false,
+        "primary_reason": "completion.v1.note_missing",
+        "reasons": ["completion.v1.note_missing"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "corrupt_required_interaction_payload",
+      "rule": {"requires_run": true, "requires_observation": true},
+      "manifest": {"schema_version": 1, "scenario_id": "lab01.default", "status": "completed"},
+      "events": {"kind": "marker"},
+      "expected": {
+        "contract_version": 1,
+        "complete": false,
+        "primary_reason": "completion.v1.interaction_evidence_invalid",
+        "reasons": ["completion.v1.interaction_evidence_invalid"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "corrupt_optional_interaction_does_not_block_automatic_rule",
+      "rule": {"requires_run": true, "requires_plot": true},
+      "manifest": {"schema_version": 1, "scenario_id": "lab01.default", "status": "completed"},
+      "plot_count": 1,
+      "events": {"kind": "marker"},
+      "expected": {
+        "contract_version": 1,
+        "complete": true,
+        "primary_reason": "completion.v1.complete",
+        "reasons": ["completion.v1.complete"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "required_preset_order_is_incomplete",
+      "rule": {
+        "requires_run": true,
+        "requires_learner_control": true,
+        "required_presets": ["Close wall", "Back away", "Re-enter wall"]
+      },
+      "manifest": {"schema_version": 1, "scenario_id": "lab01.default", "status": "completed"},
+      "events": [
+        {"kind": "preset", "name": "back_away", "label": "Back away"},
+        {"kind": "preset", "name": "close_wall", "label": "Close wall"},
+        {"kind": "preset", "name": "re_enter_wall", "label": "Re-enter wall"}
+      ],
+      "expected": {
+        "contract_version": 1,
+        "complete": false,
+        "primary_reason": "completion.v1.required_preset_missing",
+        "reasons": ["completion.v1.required_preset_missing"],
+        "outcome_review_pending": false,
+        "next_required_preset": "Back away"
+      }
+    },
+    {
+      "id": "required_preset_order_is_complete",
+      "rule": {
+        "requires_run": true,
+        "requires_learner_control": true,
+        "required_presets": ["Close wall", "Back away", "Re-enter wall"]
+      },
+      "manifest": {"schema_version": 1, "scenario_id": "lab01.default", "status": "completed"},
+      "events": [
+        {"kind": "preset", "name": "close_wall", "label": "close WALL"},
+        {"kind": "preset", "name": "back_away", "label": "Back away"},
+        {"kind": "preset", "name": "re_enter_wall", "label": "Re-enter wall"}
+      ],
+      "expected": {
+        "contract_version": 1,
+        "complete": true,
+        "primary_reason": "completion.v1.complete",
+        "reasons": ["completion.v1.complete"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "run_requirement_can_be_disabled",
+      "rule": {"requires_run": false, "requires_plot": true},
+      "manifest": {"schema_version": 1, "scenario_id": "lab01.default", "status": "stopped"},
+      "plot_count": 1,
+      "expected": {
+        "contract_version": 1,
+        "complete": true,
+        "primary_reason": "completion.v1.complete",
+        "reasons": ["completion.v1.complete"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    },
+    {
+      "id": "rule_unavailable_fails_closed",
+      "rule": null,
+      "manifest": {"schema_version": 1, "scenario_id": "lab01.default", "status": "completed"},
+      "expected": {
+        "contract_version": 1,
+        "complete": false,
+        "primary_reason": "completion.v1.rule_unavailable",
+        "reasons": ["completion.v1.rule_unavailable"],
+        "outcome_review_pending": false,
+        "next_required_preset": ""
+      }
+    }
+  ]
+}
