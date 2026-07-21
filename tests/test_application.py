@@ -1006,6 +1006,7 @@ class ApplicationFoundationTests(unittest.TestCase):
         self.assertIn('objectName: "completionReasonLabel"', results)
         self.assertIn("modelData.completionReasonText", results)
         self.assertIn("modelData.completionReason", results)
+        self.assertIn("Layout.preferredHeight: page.compact ? 216 : 224", results)
         self.assertIn("visible: modelData.canRerunBatch", results)
         self.assertIn("backend.rerunSavedRun(modelData.path, false)", results)
         explore = (qml_root / "ExplorePage.qml").read_text(encoding="utf-8")

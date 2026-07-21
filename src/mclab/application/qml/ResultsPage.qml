@@ -140,7 +140,7 @@ Item {
                         property var primaryControl: primaryAction
                         Layout.fillWidth: true
                         Layout.maximumWidth: 1120
-                        Layout.preferredHeight: 224
+                        Layout.preferredHeight: page.compact ? 216 : 224
                         Layout.alignment: Qt.AlignHCenter
                         radius: 12
                         color: "#FFFFFF"
