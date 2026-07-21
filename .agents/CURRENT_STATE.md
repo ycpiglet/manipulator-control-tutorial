@@ -22,72 +22,89 @@ Current release decision:
 
 Immediate order of work:
 
-1. preserve the completed COMP-01, DOC-01, and SAFE-01 exact-head and post-merge evidence
+1. preserve the completed GOV-01, SAFE-01, DOC-01, COMP-01, and COMP-02
+   evidence, including the original PR #53 plus corrective PR #54 history,
    without touching real learner outputs;
-2. finish draft PR #53 on its current head, requiring all six exact-head checks
-   and resolved review conversations before merge;
-3. declare B2 only after GOV-01, SAFE-01, DOC-01, and COMP-01/02 all pass, then
-   follow gates G2 through G5 for distribution,
-   real-platform/human validation, signing, and publication.
+2. merge this durable COMP-02 handoff through protected main;
+3. create a new clean worktree from the latest fetched `origin/main` and
+   prepare the BASE-01 evidence manifest and live governance snapshot;
+4. keep B2 undeclared until the owner explicitly accepts the documented
+   single-maintainer residual risk for the exact baseline subject and PR head,
+   then follow gates G2 through G5 for distribution, real-platform/human
+   validation, signing, and publication.
 
-Current exact next action: push this state-only handoff update to draft PR #53,
-require all six checks again on that new exact head, resolve every review
-conversation, and merge only if the protected gate remains green. The functional
-candidate `7e54f8cffad7b82408c6352a130a1a463013dfc8` passed 6/6 in CI run
-`29861932148` and desktop run `29861932100`. The candidate is based on clean
-fetched `origin/main`
-`edaeb340765b076e761f5cd23ac588dda6729ba3`. GOV-01, SAFE-01, DOC-01, and
-COMP-01 are complete; PR #53 merge, post-merge evidence, COMP-02 completion,
-and B2 are not. A
-real-root cleanup dry-run is permitted only as a separate owner-reviewed
-activity and is not a COMP-02 prerequisite.
+Current exact next action: merge this durable COMP-02 handoff, whose corrective
+merge `a2266b4f21f9a794998a98e71fa93643cacd1b64` passed post-merge CI run
+`29869552669` and desktop run `29869552662` 6/6. After the handoff reaches
+`main`, create
+`agent/safe-main-baseline` from a newly fetched clean `origin/main`. Do not
+interpret general permission to continue work as the exact-SHA owner risk
+acceptance required for B2. A real-root cleanup dry-run remains a separate
+owner-participating activity and is not a BASE-01 prerequisite.
 Do not apply any plan to the real outputs root until the owner has reviewed
 that exact dry-run and separately authorized apply.
 
-### 2026-07-22 COMP-02 draft PR #53; merge gate pending
+### 2026-07-22 COMP-02 complete; durable handoff and BASE-01 next
 
 - Objective: connect desktop, menu, CLI, outputs index, report, worksheet,
   coverage, and path progress to the COMP-01 canonical evaluator without
   rewriting learner artifacts.
-- Current exact base/head: clean fetched
-  `origin/main@edaeb340765b076e761f5cd23ac588dda6729ba3`; frozen implementation
-  commit `872ad7b7ce2949751873c47e7149300c4a521930` with tree
-  `7eeffa92fb47d599bf751419c0bf612aba25d3b0`; reviewed functional head
-  `7e54f8cffad7b82408c6352a130a1a463013dfc8` with tree
-  `7daafd48b64c541f89e8907c6a1a4e82e45fb93c`.
-- Completed local work: strict schema-1 pinned, bounded, no-link evidence
+- Completed work and PRs: clean original base
+  `edaeb340765b076e761f5cd23ac588dda6729ba3`; frozen implementation
+  `872ad7b7ce2949751873c47e7149300c4a521930`; reviewed functional head
+  `7e54f8cffad7b82408c6352a130a1a463013dfc8`; exact source head
+  `b0468ad361e5313b3634245f23b640318d84680d`. PR #53 merged through the
+  protected ruleset as `e7e3bdbd6552daed9b6c330656e2755f07f19593`.
+  The original source and merge trees are both
+  `a47ac3762103dfb3a989d2fe24b4a2c009282ec7`. A late PR #53 review thread
+  `PRRT_kwDOTF1rrM6Stevd` / `discussion_r3625355867` then found that desktop
+  course progress did not normalize raw legacy scenario IDs before assessment,
+  producing `manifest_missing` instead of the canonical
+  `legacy_manifest_missing` diagnostic. Corrective PR #54 used base
+  `e7e3bdbd6552daed9b6c330656e2755f07f19593`, exact head
+  `ca7a1c9195ff1d07b2b6df9ac5adb60861428bfa`, and merged as
+  `a2266b4f21f9a794998a98e71fa93643cacd1b64`; its source and merge trees are
+  both `a0aafbd1b067719f43168523df56dd560dd52da3`.
+- Delivered contract: strict schema-1 pinned, bounded, no-link evidence
   reading; immutable terminal publication and fail-closed recovery; canonical
   batch rules; all learner-surface wiring; ordered Lab04 wall-preset evidence;
   digest-published read-only worksheet policy; and safe cumulative-index CLI
-  discovery. Draft PR #53 is open.
+  discovery.
 - Changed areas: application repositories/presentation/QML, batch and CLI,
   completion progress, output inventory/root/publication, logging/plotting/
   reporting, and focused fixtures/regression tests. No model, config, launcher,
   dependency, directory-layout, or real learner-output change is included.
-- Commands and measured results: final Python 3.10 full regression
-  `825 passed, 7 skipped, 2,422 subtests`, coverage `82.45%`; focused
+- Local measured result after the corrective patch: final Python 3.10 full
+  regression `827 passed, 7 skipped, 2,422 subtests`, coverage `82.45%`;
+  focused corrective parity `7 passed, 6 subtests`; original focused
   publication/consumer regression `171 passed, 71 subtests`; catalog parity
-  `78` targets and `292` cases with mismatch `0`; Ruff, KR/EN static and
+  `78` targets, `292` cases, `12` strict axes, mismatch `0`; Ruff, KR/EN static and
   runtime README contracts, `14/14` Action pins, citation coverage, robotics
   foundations, and diff check PASS.
-- Gate status: local independent final COMP-02/G1 review GO with no P0/P1.
-  Functional head `7e54f8c` passed required 6/6 in CI `29861932148` and
-  desktop matrix `29861932100`. Earlier heads exposed and then fixed one
-  immutable audit-fixture publication error and one compact-card XCB
-  overflow/focus regression. This state-only successor head must pass the same
-  6/6 before merge; review conversations, merge, and post-merge checks remain
-  pending and must not be assumed.
+- Gate status: original PR #53 exact-head and post-merge checks passed 6/6,
+  but the late review finding prevented those runs from closing COMP-02 alone.
+  Corrective PR #54 exact-head CI `29867670314` and desktop matrix
+  `29867670323`, then corrective post-merge CI `29869552669` and desktop matrix
+  `29869552662`, each passed the required 6/6. Both corrective simulator jobs
+  recorded `822 passed, 12 skipped, 2,420 subtests` and `82.20%` coverage; both
+  Python 3.10 floors recorded `109 passed, 6 skipped, 20 subtests`. The late
+  PR #53 thread was re-read and resolved after the corrective merge evidence;
+  PR #54 has no reviews, comments, or threads. The durable evidence record is
+  `.agents/baselines/COMP-02-completion-consumers.md`.
 - Compatibility/rollback: schema-1 remains versioned and read-only; invalid or
   future schema does not fall back to legacy summaries; existing artifacts are
-  never migrated. Revert the focused COMP-02 merge if consumer parity or
-  publication semantics regress; do not repair by rewriting saved runs.
+  never migrated. Use a focused protected-main fix or revert PR #54 if its
+  correction regresses, while recognizing that original merge `e7e3bdb` has
+  the known legacy parity gap and is not a COMP-02 PASS state. Do not repair by
+  rewriting saved runs.
 - Open risk: producer payload writes before terminal publication are not held
   under one long-lived pinned lease. The strict reader rejects any changed or
   redirected bytes, so this cannot grant false completion and is a nonblocking
-  writer-hardening follow-up. Single-maintainer owner risk acceptance remains
-  required for B2, which is not a public-beta GO.
-- Single next action: push this state update to PR #53 and require six green
-  checks plus resolved conversations on the resulting exact head.
+  P2 writer-hardening follow-up and the only expected code residual after the
+  late thread correction. Exact-SHA single-maintainer owner risk acceptance
+  remains required for B2, which is not a public-beta GO.
+- Single next action: merge this durable handoff, then prepare BASE-01 from the
+  latest clean main while keeping B2 pending exact-SHA owner risk acceptance.
 
 ### 2026-07-21 COMP-01 complete; COMP-02 next
 
