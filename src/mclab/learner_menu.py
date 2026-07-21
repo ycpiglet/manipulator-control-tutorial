@@ -2,20 +2,42 @@
 
 from __future__ import annotations
 
-import json
 import subprocess
 import shutil
 import sys
 import webbrowser
-from collections.abc import Callable, Sequence
-from dataclasses import dataclass
-from functools import lru_cache
+from collections.abc import Callable, Iterator, Sequence
+from contextlib import contextmanager
+from contextvars import ContextVar
+from dataclasses import dataclass, replace
+from functools import lru_cache, wraps
+from inspect import signature
 from pathlib import Path
 from threading import Thread
-from typing import Any
+from typing import Any, TypeVar, cast
 
+from mclab.application.catalog import (
+    ALL_BATCH_TARGET_ID,
+    BatchDefinition,
+    CompletionTargetDefinition,
+    ScenarioCatalog,
+    stable_scenario_id,
+    target_from_legacy_summary,
+)
+from mclab.application.completion_progress import (
+    TargetCompletionAssessment,
+    assess_target_completion,
+    build_completion_assessment_index,
+)
+from mclab.application.repositories import ArtifactRecord, ArtifactRepository
 from mclab.batch import ALL_BATCH_NAME, BATCH_SETS
-from mclab.config import PROJECT_ROOT, load_config
+from mclab.completion import (
+    CompletionDecision,
+    CompletionReason,
+    CompletionRecordKind,
+    InteractionEvidence,
+)
+from mclab.config import PROJECT_ROOT, default_outputs_root, load_config
 from mclab.course_progress import course_milestone_summary
 from mclab.experience_coverage import (
     EXPERIENCE_COVERAGE_ITEMS,
@@ -40,7 +62,6 @@ from mclab.learning_guides import (
     start_steps_for_guide,
     viewer_legend_for_guide,
 )
-from mclab.output_filters import is_internal_output_dir
 from mclab.sim.reporting import (
     INDEX_PLOT_PRIORITY,
     _activity_mix_items,
@@ -49,7 +70,6 @@ from mclab.sim.reporting import (
     _latest_observation_evidence_from_events,
     _observation_flow_text_from_events,
     _observation_next_step_text_from_events,
-    _read_config,
     plot_priorities_for_context,
     plot_guidance,
     write_outputs_index,
@@ -57,13 +77,31 @@ from mclab.sim.reporting import (
 
 RUN_COMPLETE_PREFIX = "Run complete:"
 BATCH_COMPLETE_PREFIX = "Batch complete:"
-COMPLETE_PREFIXES = (RUN_COMPLETE_PREFIX, BATCH_COMPLETE_PREFIX)
+RUN_SAVED_PREFIX = "Run saved:"
+BATCH_SAVED_PREFIX = "Batch saved:"
+COMPLETE_PREFIXES = (
+    RUN_COMPLETE_PREFIX,
+    BATCH_COMPLETE_PREFIX,
+    RUN_SAVED_PREFIX,
+    BATCH_SAVED_PREFIX,
+)
 DOC_PATHS = {
     "lab01": "docs/lab01_mass_spring_damper.md",
     "lab02": "docs/lab02_pid_control.md",
     "lab03": "docs/lab03_trajectory_planning.md",
     "lab04": "docs/lab04_panda_manipulator.md",
 }
+
+_CallableT = TypeVar("_CallableT", bound=Callable[..., Any])
+_CompletionSnapshot = tuple[
+    Path,
+    ScenarioCatalog,
+    tuple[ArtifactRecord, ...],
+]
+_ACTIVE_COMPLETION_SNAPSHOT: ContextVar[_CompletionSnapshot | None] = ContextVar(
+    "mclab_completion_snapshot",
+    default=None,
+)
 
 
 @dataclass(frozen=True)
@@ -101,6 +139,11 @@ class LearningPathStep:
 class LearningPathProgress:
     completed: bool
     latest_output: Path | None = None
+    credited_output: Path | None = None
+    latest_complete: bool = False
+    latest_reasons: tuple[CompletionReason, ...] = ()
+    latest_status: str = ""
+    outcome_review_pending: bool = False
     evidence_required: bool = False
     observation_markers: int = 0
     learner_predictions: int = 0
@@ -1285,34 +1328,307 @@ def action_course_lines(action: MenuAction | BatchMenuAction) -> list[str]:
     ]
 
 
+def completion_target_id(action: MenuAction | BatchMenuAction) -> str:
+    """Map a learner-menu action to its stable canonical completion target."""
+
+    if isinstance(action, BatchMenuAction):
+        return (
+            ALL_BATCH_TARGET_ID
+            if action.batch_name == ALL_BATCH_NAME
+            else f"batch.{action.batch_name}"
+        )
+    return stable_scenario_id(action.lab_name, action.config_path)
+
+
+def _completion_target_for_action(
+    action: MenuAction | BatchMenuAction,
+    catalog: ScenarioCatalog,
+) -> CompletionTargetDefinition:
+    return catalog.get_target(completion_target_id(action))
+
+
+def _completion_context(
+    outputs_root: Path | None,
+) -> tuple[ScenarioCatalog, tuple[ArtifactRecord, ...]]:
+    root = _completion_outputs_root(outputs_root)
+    active = _ACTIVE_COMPLETION_SNAPSHOT.get()
+    if active is not None and active[0] == root:
+        return active[1], active[2]
+    return _build_completion_context(root)
+
+
+def _build_completion_context(
+    root: Path,
+) -> tuple[ScenarioCatalog, tuple[ArtifactRecord, ...]]:
+    catalog = _completion_catalog()
+    records = ArtifactRepository(root).list_runs()
+    normalized_records = tuple(
+        _legacy_record_with_stable_diagnostic_id(record, catalog) for record in records
+    )
+    return catalog, normalized_records
+
+
+def _completion_outputs_root(outputs_root: Path | None) -> Path:
+    root = outputs_root if outputs_root is not None else default_outputs_root()
+    return Path(root).absolute()
+
+
+@contextmanager
+def completion_snapshot(outputs_root: Path | None = None) -> Iterator[None]:
+    """Reuse one immutable trusted inventory for one learner-facing render."""
+
+    root = _completion_outputs_root(outputs_root)
+    active = _ACTIVE_COMPLETION_SNAPSHOT.get()
+    if active is not None and active[0] == root:
+        yield
+        return
+    catalog, records = _build_completion_context(root)
+    token = _ACTIVE_COMPLETION_SNAPSHOT.set((root, catalog, records))
+    try:
+        yield
+    finally:
+        _ACTIVE_COMPLETION_SNAPSHOT.reset(token)
+
+
+def with_completion_snapshot(function: _CallableT) -> _CallableT:
+    """Wrap a card/render call in one trusted completion inventory snapshot."""
+
+    function_signature = signature(function)
+
+    @wraps(function)
+    def wrapped(*args: Any, **kwargs: Any) -> Any:
+        bound = function_signature.bind_partial(*args, **kwargs)
+        outputs_root = bound.arguments.get("outputs_root")
+        if outputs_root is None:
+            output_path = bound.arguments.get("output_path")
+            if isinstance(output_path, Path):
+                outputs_root = output_path.parent
+        with completion_snapshot(outputs_root):
+            return function(*args, **kwargs)
+
+    return cast(_CallableT, wrapped)
+
+
+@lru_cache(maxsize=1)
+def _completion_catalog() -> ScenarioCatalog:
+    return ScenarioCatalog.default()
+
+
+def _latest_action_record(
+    action: MenuAction | BatchMenuAction,
+    outputs_root: Path | None,
+) -> ArtifactRecord | None:
+    catalog, records = _completion_context(outputs_root)
+    target_id = _completion_target_for_action(action, catalog).id
+    return next((record for record in records if record.scenario_id == target_id), None)
+
+
+def _trusted_record_for_path(path: Path | None) -> ArtifactRecord | None:
+    if path is None:
+        return None
+    _catalog, records = _completion_context(path.parent)
+    target = path.absolute()
+    return next((record for record in records if record.path == target), None)
+
+
+def _trusted_interaction_events(record: ArtifactRecord | None) -> list[dict[str, Any]]:
+    if record is None or not isinstance(record.interaction_events, list):
+        return []
+    return [item for item in record.interaction_events if isinstance(item, dict)]
+
+
+def _trusted_interaction_events_for_path(path: Path) -> list[dict[str, Any]]:
+    return _trusted_interaction_events(_trusted_record_for_path(path))
+
+
+def _legacy_record_with_stable_diagnostic_id(
+    record: ArtifactRecord,
+    catalog: ScenarioCatalog,
+) -> ArtifactRecord:
+    if record.completion_evidence.record_kind != CompletionRecordKind.LEGACY_SUMMARY:
+        return record
+    target = target_from_legacy_summary(catalog, record.summary)
+    if target is None:
+        return record
+    return replace(record, scenario_id=target.id)
+
+
+def _action_completion_assessment(
+    action: MenuAction | BatchMenuAction,
+    catalog: ScenarioCatalog,
+    records: Sequence[ArtifactRecord],
+) -> TargetCompletionAssessment:
+    return assess_target_completion(
+        _completion_target_for_action(action, catalog),
+        records,
+    )
+
+
+def _artifact_record(value: object | None) -> ArtifactRecord | None:
+    return value if isinstance(value, ArtifactRecord) else None
+
+
+def _record_evidence_counts(record: ArtifactRecord | None) -> tuple[int, int, int, int, int]:
+    if record is None:
+        return 0, 0, 0, 0, 0
+    interaction = record.completion_evidence.interaction
+    if not isinstance(interaction, InteractionEvidence) or not interaction.valid:
+        return 0, 0, 0, 0, 0
+    observations = interaction.observations
+    return (
+        len(observations),
+        sum(item.has_prediction for item in observations),
+        sum(item.has_note for item in observations),
+        sum(item.has_outcome for item in observations),
+        interaction.learner_control_count,
+    )
+
+
+def _record_required_preset_progress(
+    target: CompletionTargetDefinition,
+    record: ArtifactRecord | None,
+) -> tuple[int, int, str]:
+    required = target.completion.required_presets
+    if not required or record is None:
+        return len(required), 0, required[0] if required else ""
+    interaction = record.completion_evidence.interaction
+    attempted = (
+        interaction.preset_labels
+        if isinstance(interaction, InteractionEvidence) and interaction.valid
+        else ()
+    )
+    tried, next_required = _ordered_required_preset_progress(required, attempted)
+    return len(required), len(tried), next_required
+
+
+def _missing_required_artifact(
+    target: CompletionTargetDefinition,
+    record: ArtifactRecord | None,
+) -> str:
+    available = (
+        set(record.completion_evidence.artifact_keys)
+        if record is not None
+        and isinstance(record.completion_evidence.artifact_keys, tuple)
+        else set()
+    )
+    return next(
+        (key for key in target.completion.required_artifacts if key not in available),
+        "",
+    )
+
+
+def _canonical_completion_status(
+    target: CompletionTargetDefinition,
+    decision: CompletionDecision,
+    record: ArtifactRecord | None,
+) -> str:
+    if decision.complete:
+        if decision.outcome_review_pending:
+            return "Outcome review pending"
+        return (
+            "Ready for review"
+            if target.completion.requires_observation
+            else "Artifacts ready"
+        )
+
+    blocking_statuses = {
+        CompletionReason.RULE_UNAVAILABLE: "Completion rule unavailable",
+        CompletionReason.RULE_INVALID: "Completion rule invalid",
+        CompletionReason.MANIFEST_MISSING: "Manifest missing",
+        CompletionReason.LEGACY_MANIFEST_MISSING: "Legacy manifest incomplete",
+        CompletionReason.MANIFEST_INVALID: "Invalid manifest",
+        CompletionReason.MANIFEST_SCHEMA_UNSUPPORTED: "Unsupported manifest schema",
+        CompletionReason.SCENARIO_MISMATCH: "Scenario mismatch",
+        CompletionReason.RUN_NOT_COMPLETED: "Run not completed",
+        CompletionReason.INTERACTION_EVIDENCE_INVALID: "Invalid interaction evidence",
+    }
+    if decision.primary_reason in blocking_statuses:
+        return blocking_statuses[decision.primary_reason]
+
+    primary = decision.primary_reason
+    if primary == CompletionReason.PLOT_MISSING:
+        return "Needs plot"
+    if primary == CompletionReason.REQUIRED_ARTIFACT_MISSING:
+        missing = _missing_required_artifact(target, record)
+        if missing == "report":
+            return "Needs report"
+        if missing == "worksheet":
+            return "Needs worksheet"
+        if missing == "prediction-check":
+            return "Needs Prediction Check"
+        if missing.startswith("batch."):
+            return f"Needs validated child batch {missing}"
+        return "Needs review artifact"
+    reasons = set(decision.reasons)
+    if CompletionReason.REQUIRED_PRESET_MISSING in reasons:
+        return (
+            f"Needs required preset {decision.next_required_preset}"
+            if decision.next_required_preset
+            else "Needs required preset"
+        )
+    if CompletionReason.OBSERVATION_MISSING in reasons:
+        return "Needs observation"
+    if CompletionReason.PREDICTION_MISSING in reasons:
+        return "Needs prediction"
+    if CompletionReason.NOTE_MISSING in reasons:
+        return "Ready; add note next"
+    if CompletionReason.LEARNER_CONTROL_MISSING in reasons:
+        return "Needs learner control"
+
+    return "Completion evidence incomplete"
+
+
+def _action_for_target_id(target_id: str) -> MenuAction | BatchMenuAction | None:
+    for action in (*MENU_ACTIONS, *BATCH_ACTIONS):
+        if completion_target_id(action) == target_id:
+            return action
+    return None
+
+
 def learning_path_progress(
     step: LearningPathStep,
     outputs_root: Path | None = None,
 ) -> LearningPathProgress:
-    latest = learning_path_latest_output(step, outputs_root)
-    evidence_required = learning_path_requires_evidence(step)
-    events = _read_json_list(latest / "interaction_events.json") if latest is not None else []
-    markers, predictions, notes, outcomes = (
-        _observation_evidence_counts(latest) if latest is not None else (0, 0, 0, 0)
-    )
-    learner_controls = _learner_control_event_count(events)
+    catalog, records = _completion_context(outputs_root)
+    return _learning_path_progress_from_records(step, catalog, records)
+
+
+def _learning_path_progress_from_records(
+    step: LearningPathStep,
+    catalog: ScenarioCatalog,
+    records: Sequence[ArtifactRecord],
+) -> LearningPathProgress:
     action = learning_path_target(step)
-    required_total, required_tried, next_required = (
-        _required_preset_progress_for_action(action, latest) if latest is not None else (0, 0, "")
+    target = _completion_target_for_action(action, catalog)
+    assessment = assess_target_completion(target, records)
+    latest_record = _artifact_record(assessment.latest_record)
+    credited_record = _artifact_record(assessment.credited_record)
+    markers, predictions, notes, outcomes, learner_controls = _record_evidence_counts(
+        latest_record
     )
-    required_ready = required_total == 0 or required_tried >= required_total
-    if isinstance(action, BatchMenuAction):
-        has_worksheet = action_latest_worksheet(action, outputs_root) is not None
-        has_plot = action.batch_name == ALL_BATCH_NAME or action_latest_plot(action, outputs_root) is not None
-        completed = latest is not None and has_worksheet and has_plot
-    else:
-        completed = latest is not None and (
-            not evidence_required
-            or (markers > 0 and predictions > 0 and notes > 0 and learner_controls > 0 and required_ready)
-        )
+    required_total, required_tried, next_required = _record_required_preset_progress(
+        target,
+        latest_record,
+    )
+    evidence_required = bool(
+        target.completion.requires_learner_control
+        or target.completion.requires_observation
+        or target.completion.requires_prediction
+        or target.completion.requires_note
+        or target.completion.required_presets
+    )
     return LearningPathProgress(
-        completed=completed,
-        latest_output=latest,
+        completed=assessment.complete,
+        latest_output=latest_record.path if latest_record is not None else None,
+        credited_output=credited_record.path if credited_record is not None else None,
+        latest_complete=assessment.latest_decision.complete,
+        latest_reasons=assessment.latest_decision.reasons,
+        latest_status=_canonical_completion_status(
+            target,
+            assessment.latest_decision,
+            latest_record,
+        ),
+        outcome_review_pending=assessment.latest_decision.outcome_review_pending,
         evidence_required=evidence_required,
         observation_markers=markers,
         learner_predictions=predictions,
@@ -1332,50 +1648,48 @@ def learning_path_progress_text(
     current = progress if progress is not None else learning_path_progress(step)
     if current.latest_output is None:
         status = "Status: Not run yet"
-    elif current.completed:
+    elif current.completed and _progress_latest_is_complete(current):
         status = f"Status: Done - latest {current.latest_output.name}{_learning_path_evidence_suffix(current)}"
-        if current.evidence_required and current.learner_predictions > current.learner_outcomes:
+        if current.outcome_review_pending:
             status += ". Add one Prediction outcome while reviewing."
-    elif current.observation_markers > 0 and current.learner_predictions == 0:
+    elif current.completed:
+        credited = current.credited_output.name if current.credited_output is not None else "earlier run"
         status = (
-            f"Status: Needs prediction - latest {current.latest_output.name}"
-            f"{_learning_path_evidence_suffix(current)}. "
-            "Add one Prediction in Mark observation before moving on."
-        )
-    elif current.required_presets > 0 and current.required_presets_tried < current.required_presets:
-        next_text = (
-            f"Try required preset {current.next_required_preset} before moving on."
-            if current.next_required_preset
-            else "Try the remaining required preset before moving on."
-        )
-        status = (
-            f"Status: Needs required preset - latest {current.latest_output.name}"
-            f"{_learning_path_evidence_suffix(current)}. {next_text}"
-        )
-    elif current.observation_markers > 0 and current.learner_notes == 0:
-        status = (
-            f"Status: Needs note - latest {current.latest_output.name}"
-            f"{_learning_path_evidence_suffix(current)}. "
-            "Add a short note or Use live status before moving on."
-        )
-    elif current.evidence_required and current.observation_markers > 0 and current.learner_controls <= 0:
-        action = learning_path_target(step)
-        control_action = ""
-        if isinstance(action, MenuAction):
-            try:
-                control_action = learner_control_action_text_for_config(load_config(action.config_path))
-            except (OSError, ValueError):
-                control_action = ""
-        status = (
-            f"Status: Needs learner control - latest {current.latest_output.name}"
-            f"{_learning_path_evidence_suffix(current)}. "
-            f"{control_action or 'Use one button, slider, or preset before moving on.'}"
+            f"Status: Done - credited {credited}; latest {current.latest_output.name}: "
+            f"{current.latest_status or 'Completion evidence incomplete'}"
+            f"{_learning_path_evidence_suffix(current)}."
         )
     else:
         status = (
-            f"Status: Needs observation - latest {current.latest_output.name}. "
-            "Add one Mark observation entry before moving on."
+            f"Status: {current.latest_status or 'Completion evidence incomplete'} - "
+            f"latest {current.latest_output.name}{_learning_path_evidence_suffix(current)}."
         )
+        if current.latest_status == "Needs prediction":
+            status += " Add one Prediction in Mark observation before moving on."
+        elif current.latest_status.startswith("Needs required preset"):
+            next_text = (
+                f"Try required preset {current.next_required_preset} before moving on."
+                if current.next_required_preset
+                else "Try the remaining required preset before moving on."
+            )
+            status += f" {next_text}"
+        elif current.latest_status == "Ready; add note next":
+            status += " Add a short note or Use live status before moving on."
+        elif current.latest_status == "Needs learner control":
+            action = learning_path_target(step)
+            control_action = ""
+            if isinstance(action, MenuAction):
+                try:
+                    control_action = learner_control_action_text_for_config(
+                        load_config(action.config_path)
+                    )
+                except (OSError, ValueError):
+                    control_action = ""
+            status += (
+                f" {control_action or 'Use one button, slider, or preset before moving on.'}"
+            )
+        elif current.latest_status == "Needs observation":
+            status += " Add one Mark observation entry before moving on."
     suffix_parts = [
         text
         for text in (
@@ -1386,6 +1700,10 @@ def learning_path_progress_text(
     ]
     suffix = "\n" + "\n".join(suffix_parts) if suffix_parts else ""
     return f"{learning_path_text(step)}\n{status}{suffix}"
+
+
+def _progress_latest_is_complete(progress: LearningPathProgress) -> bool:
+    return progress.latest_complete or (progress.completed and not progress.latest_reasons)
 
 
 def _learning_path_evidence_suffix(progress: LearningPathProgress) -> str:
@@ -1450,7 +1768,11 @@ def _learning_path_progress_artifacts_text(output_path: Path | None) -> str:
 def learning_path_progress_items(
     outputs_root: Path | None = None,
 ) -> tuple[LearningPathProgressItem, ...]:
-    return tuple((step, learning_path_progress(step, outputs_root)) for step in LEARNING_PATH)
+    catalog, records = _completion_context(outputs_root)
+    return tuple(
+        (step, _learning_path_progress_from_records(step, catalog, records))
+        for step in LEARNING_PATH
+    )
 
 
 def next_learning_path_step(
@@ -1522,7 +1844,7 @@ def experience_coverage_next_evidence(outputs_root: Path | None = None) -> str:
 
 
 def experience_coverage_detail_lines(outputs_root: Path | None = None) -> list[str]:
-    root = outputs_root if outputs_root is not None else PROJECT_ROOT / "outputs"
+    root = outputs_root if outputs_root is not None else default_outputs_root()
     repairs = _experience_coverage_repair_lines(root)
     lines = ["Coverage details:"]
     for status in experience_coverage_statuses(_experience_coverage_records(root)):
@@ -1627,25 +1949,28 @@ def _experience_coverage_target_for_key(key: str) -> MenuAction | BatchMenuActio
 
 
 def _experience_coverage_records(outputs_root: Path | None = None) -> list[ExperienceCoverageRecord]:
-    root = outputs_root if outputs_root is not None else PROJECT_ROOT / "outputs"
-    if not root.exists():
-        return []
-    records: list[ExperienceCoverageRecord] = []
-    for output_path, summary, _modified in _iter_output_summaries(root):
-        tags, has_control = _experience_tags_for_output(output_path, summary)
-        records.append(ExperienceCoverageRecord(frozenset(tags), has_control=has_control))
-    return records
-
-
-def _experience_tags_for_output(output_path: Path, summary: dict[str, Any]) -> tuple[set[str], bool]:
-    action = _action_for_summary(summary)
-    tags: set[str] = set()
-    if isinstance(action, MenuAction):
-        tags.update(action_tags(action))
-    elif isinstance(action, BatchMenuAction):
-        tags.update(_batch_experience_tags(action))
-    has_control = _learner_control_event_count(_read_json_list(output_path / "interaction_events.json")) > 0
-    return tags, has_control
+    catalog, saved_records = _completion_context(outputs_root)
+    assessments = build_completion_assessment_index(catalog.targets(), saved_records)
+    coverage_records: list[ExperienceCoverageRecord] = []
+    for target in catalog.targets():
+        assessment = assessments.get(target.id)
+        if not assessment.complete:
+            continue
+        action = _action_for_target_id(target.id)
+        credited_record = _artifact_record(assessment.credited_record)
+        if action is None or credited_record is None:
+            continue
+        tags = _experience_coverage_action_tags(action)
+        interaction = credited_record.completion_evidence.interaction
+        has_control = (
+            isinstance(interaction, InteractionEvidence)
+            and interaction.valid
+            and interaction.learner_control_count > 0
+        )
+        coverage_records.append(
+            ExperienceCoverageRecord(frozenset(tags), has_control=has_control)
+        )
+    return coverage_records
 
 
 def _batch_experience_tags(action: BatchMenuAction) -> set[str]:
@@ -1677,23 +2002,38 @@ def learning_path_summary_text(
         1
         for _step, progress in items
         if progress.latest_output is not None
-        and progress.evidence_required
-        and progress.learner_predictions > progress.learner_outcomes
+        and (
+            progress.outcome_review_pending
+            or (
+                not progress.latest_reasons
+                and progress.evidence_required
+                and progress.learner_predictions > progress.learner_outcomes
+            )
+        )
+    )
+    latest_repairs = sum(
+        1
+        for _step, progress in items
+        if progress.completed
+        and progress.latest_output is not None
+        and not _progress_latest_is_complete(progress)
     )
     next_step = next_learning_path_step(items)
     if next_step is None:
         outcome_text = f" Outcome review pending: {outcome_pending} hands-on step(s)." if outcome_pending else ""
+        repair_text = f" Latest-attempt repair: {latest_repairs} step(s)." if latest_repairs else ""
         review_text = (
             " Next review: add missing Prediction outcome(s), then open All reports."
             if outcome_pending
             else " Course path complete - open All reports to review."
         )
-        return f"Progress: {completed}/{total} complete.{outcome_text}{review_text}"
+        return f"Progress: {completed}/{total} complete.{outcome_text}{repair_text}{review_text}"
     evidence_text = f" Evidence pending: {evidence_pending} hands-on step(s)." if evidence_pending else ""
     outcome_text = f" Outcome review pending: {outcome_pending} hands-on step(s)." if outcome_pending else ""
+    repair_text = f" Latest-attempt repair: {latest_repairs} credited step(s)." if latest_repairs else ""
     description = next_step.description.rstrip(".")
     return (
-        f"Progress: {completed}/{total} complete.{evidence_text}{outcome_text} "
+        f"Progress: {completed}/{total} complete.{evidence_text}{outcome_text}{repair_text} "
         f"Next: {next_step.title} - {description}. {_learning_path_next_action_text(next_step)}"
     )
 
@@ -1842,6 +2182,7 @@ def latest_output_button_labels(output_path: Path | None) -> dict[str, str]:
     }
 
 
+@with_completion_snapshot
 def latest_output_status_text(output_path: Path | None) -> str:
     if output_path is None:
         return "Ready."
@@ -1860,13 +2201,9 @@ def latest_output_status_text(output_path: Path | None) -> str:
 
 
 def latest_saved_output(outputs_root: Path | None = None) -> Path | None:
-    root = outputs_root if outputs_root is not None else PROJECT_ROOT / "outputs"
-    if not root.exists():
-        return None
-    summaries = _iter_output_summaries(root)
-    if not summaries:
-        return None
-    return max(summaries, key=lambda item: item[2])[0]
+    root = outputs_root if outputs_root is not None else default_outputs_root()
+    record = next(iter(ArtifactRepository(root).list_runs()), None)
+    return record.path if record is not None else None
 
 
 def initialize_latest_output_state(
@@ -1925,33 +2262,39 @@ def action_latest_output(
     action: MenuAction | BatchMenuAction,
     outputs_root: Path | None = None,
 ) -> Path | None:
-    root = outputs_root if outputs_root is not None else PROJECT_ROOT / "outputs"
-    return _latest_matching_output(action, root)
+    record = _latest_action_record(action, outputs_root)
+    return record.path if record is not None else None
 
 
 def action_latest_plot(
     action: MenuAction | BatchMenuAction,
     outputs_root: Path | None = None,
 ) -> Path | None:
-    return latest_output_plot(
-        action_latest_output(action, outputs_root),
-        plot_priorities=_action_plot_priorities(action),
-    )
+    record = _latest_action_record(action, outputs_root)
+    if record is None or not record.plot_paths:
+        return None
+    priorities = _action_plot_priorities(action)
+    return sorted(
+        record.plot_paths,
+        key=lambda plot: _plot_sort_key(plot, priorities),
+    )[0]
 
 
 def action_latest_worksheet(
     action: MenuAction | BatchMenuAction,
     outputs_root: Path | None = None,
 ) -> Path | None:
-    return latest_output_worksheet(action_latest_output(action, outputs_root))
+    record = _latest_action_record(action, outputs_root)
+    if record is None or not record.worksheet_available:
+        return None
+    return record.path / "worksheet.md"
 
 
 def action_latest_tuned_config(action: MenuAction, outputs_root: Path | None = None) -> Path | None:
-    latest = action_latest_output(action, outputs_root)
-    if latest is None:
+    record = _latest_action_record(action, outputs_root)
+    if record is None or not record.tuned_available:
         return None
-    tuned = latest / "learner_tuned_config.yaml"
-    return tuned if tuned.exists() else None
+    return record.path / "learner_tuned_config.yaml"
 
 
 def learning_path_latest_plot(
@@ -1998,7 +2341,9 @@ def action_latest_evidence_text(
     latest = action_latest_output(action, outputs_root)
     if latest is None:
         return "Latest evidence: None yet"
-    evidence = _latest_observation_evidence_from_events(_read_json_list(latest / "interaction_events.json"))
+    evidence = _latest_observation_evidence_from_events(
+        _trusted_interaction_events_for_path(latest)
+    )
     if not evidence:
         return "Latest evidence: None yet"
     if evidence == "marker saved without details":
@@ -2015,7 +2360,7 @@ def action_observation_flow_text(
     latest = action_latest_output(action, outputs_root)
     if latest is None:
         return ""
-    return _observation_flow_text_from_events(_read_json_list(latest / "interaction_events.json"))
+    return _observation_flow_text_from_events(_trusted_interaction_events_for_path(latest))
 
 
 def action_observation_next_step_text(
@@ -2033,7 +2378,7 @@ def action_observation_next_step_text(
                 learner_control_phrase=_action_learner_control_phrase(action, None),
             )
         return ""
-    events = _read_json_list(latest / "interaction_events.json")
+    events = _trusted_interaction_events_for_path(latest)
     if evidence_required and isinstance(action, MenuAction):
         required_total, required_tried, next_required = _required_preset_progress_for_action(action, latest)
         if required_total and required_tried < required_total:
@@ -2061,77 +2406,118 @@ def action_mission_evidence_text(
     action: MenuAction | BatchMenuAction,
     outputs_root: Path | None = None,
 ) -> str:
-    latest = action_latest_output(action, outputs_root)
-    if latest is None:
+    catalog, records = _completion_context(outputs_root)
+    target = _completion_target_for_action(action, catalog)
+    assessment = assess_target_completion(target, records)
+    latest_record = _artifact_record(assessment.latest_record)
+    if latest_record is None:
         return "Mission evidence: Not run yet"
 
-    events = _read_json_list(latest / "interaction_events.json")
-    learner_controls = _learner_control_event_count(events)
-    markers, predictions, notes, outcomes = _observation_evidence_counts(latest)
+    markers, predictions, notes, outcomes, learner_controls = _record_evidence_counts(
+        latest_record
+    )
+    status = _canonical_completion_status(
+        target,
+        assessment.latest_decision,
+        latest_record,
+    )
+    required_total, required_tried, _next_required = _record_required_preset_progress(
+        target,
+        latest_record,
+    )
+    preset_text = _required_preset_progress_text(required_total, required_tried)
 
-    if isinstance(action, MenuAction) and "hands-on" in action_tags(action):
-        required_total, required_tried, next_required = _required_preset_progress_for_action(action, latest)
-        if markers <= 0:
-            status = "Needs observation"
-        elif predictions <= 0:
-            status = "Needs prediction"
-        elif required_total and required_tried < required_total:
-            status = f"Needs required preset {next_required}" if next_required else "Needs required preset"
-        elif notes <= 0:
-            status = "Ready; add note next"
-        elif learner_controls <= 0:
-            status = "Needs learner control"
-        elif predictions > outcomes:
-            status = "Outcome review pending"
-        else:
-            status = "Ready for review"
-        preset_text = _required_preset_progress_text(required_total, required_tried)
+    if assessment.complete and not assessment.latest_decision.complete:
+        credited_record = _artifact_record(assessment.credited_record)
+        credited_name = (
+            credited_record.path.name if credited_record is not None else "an earlier run"
+        )
+        count_text = (
+            f"; {_mission_evidence_counts(markers, predictions, outcomes, notes, learner_controls)}"
+            if target.completion.requires_observation
+            else ""
+        )
+        return (
+            f"Mission evidence: Course credit ready from {credited_name}; "
+            f"latest attempt {status}{count_text}{preset_text}"
+        )
+
+    if target.completion.requires_observation:
         return (
             f"Mission evidence: {status}; "
             f"{_mission_evidence_counts(markers, predictions, outcomes, notes, learner_controls)}{preset_text}"
         )
 
-    if predictions > outcomes:
-        return f"Mission evidence: Outcome review pending; {_mission_evidence_counts(markers, predictions, outcomes, notes)}"
+    if not assessment.latest_decision.complete:
+        if status == "Needs plot":
+            return "Mission evidence: Needs plot; rerun with plots enabled"
+        if status == "Needs worksheet" and target.id == ALL_BATCH_TARGET_ID:
+            return (
+                "Mission evidence: Needs worksheet; rerun all batches to regenerate "
+                "course review artifacts"
+            )
+        if status == "Needs worksheet":
+            return "Mission evidence: Needs worksheet; rerun or regenerate review artifacts"
+        return f"Mission evidence: {status}"
 
-    if isinstance(action, BatchMenuAction) and action.batch_name == ALL_BATCH_NAME:
-        worksheet = action_latest_worksheet(action, outputs_root)
-        if worksheet is None:
-            return "Mission evidence: Needs worksheet; rerun all batches to regenerate course review artifacts"
-        return f"Mission evidence: Course artifacts ready; worksheet {worksheet.name}"
+    if isinstance(target, BatchDefinition) and target.id == ALL_BATCH_TARGET_ID:
+        return "Mission evidence: Course artifacts ready; worksheet worksheet.md"
 
-    plot = action_latest_plot(action, outputs_root)
-    worksheet = action_latest_worksheet(action, outputs_root)
-    if plot is None:
+    plot = latest_record.plot_paths[0] if latest_record.plot_paths else None
+    worksheet = Path("worksheet.md") if latest_record.worksheet_available else None
+    if plot is None and target.completion.requires_plot:
         return "Mission evidence: Needs plot; rerun with plots enabled"
-    if worksheet is None:
-        return "Mission evidence: Needs worksheet; rerun or regenerate review artifacts"
-    return f"Mission evidence: Artifacts ready; plot {plot.name}; worksheet {worksheet.name}"
+    artifact_parts = []
+    if plot is not None:
+        artifact_parts.append(f"plot {plot.name}")
+    if worksheet is not None:
+        artifact_parts.append(f"worksheet {worksheet.name}")
+    suffix = f"; {'; '.join(artifact_parts)}" if artifact_parts else ""
+    return f"Mission evidence: Artifacts ready{suffix}"
 
 
 def action_challenge_evidence_text(
     action: MenuAction | BatchMenuAction,
     outputs_root: Path | None = None,
 ) -> str:
-    latest = action_latest_output(action, outputs_root)
-    if latest is None:
+    catalog, records = _completion_context(outputs_root)
+    target = _completion_target_for_action(action, catalog)
+    assessment = assess_target_completion(target, records)
+    latest_record = _artifact_record(assessment.latest_record)
+    if latest_record is None:
         return "Challenge evidence: Not run yet"
+    status = _canonical_completion_status(
+        target,
+        assessment.latest_decision,
+        latest_record,
+    )
+    if not assessment.latest_decision.complete:
+        reason = assessment.latest_decision.primary_reason.value
+        if assessment.complete:
+            credited_record = _artifact_record(assessment.credited_record)
+            credited_name = (
+                credited_record.path.name
+                if credited_record is not None
+                else "an earlier run"
+            )
+            return (
+                f"Challenge evidence: Course credit ready from {credited_name}; "
+                f"latest attempt {status}; contract {reason}"
+            )
+        return f"Challenge evidence: {status}; contract {reason}"
 
-    summary = _read_json(latest / "summary.json")
-    if not summary:
-        summary = _summary_for_action(action)
+    summary = latest_record.summary or _summary_for_action(action)
 
     if isinstance(action, BatchMenuAction) and action.batch_name == ALL_BATCH_NAME:
-        worksheet = action_latest_worksheet(action, outputs_root)
-        if worksheet is None:
+        if not latest_record.worksheet_available:
             return "Challenge evidence: Needs worksheet evidence; rerun all batches to regenerate course review artifacts"
         return "Challenge evidence: Ready to review; source course worksheet; compare linked batch Prediction Checks"
 
-    events = _read_json_list(latest / "interaction_events.json")
-    config = _config_for_action(action, latest)
-    plots = _challenge_plot_inputs(action, outputs_root)
+    events = _trusted_interaction_events(latest_record)
+    config = _config_for_action(action, latest_record.path)
+    plots = list(latest_record.plot_paths)
     items = dict(_challenge_evidence_items(summary, events, plots, config))
-    status = str(items.get("Challenge status") or "").strip()
+    challenge_status = str(items.get("Challenge status") or "").strip()
     source = str(items.get("Proof source") or "").strip()
     next_step = str(items.get("Next challenge step") or "").strip()
     details = []
@@ -2140,7 +2526,7 @@ def action_challenge_evidence_text(
     if next_step:
         details.append(_short_menu_text(next_step, max_length=96))
     suffix = f"; {'; '.join(details)}" if details else ""
-    return f"Challenge evidence: {status or 'Needs evidence'}{suffix}"
+    return f"Challenge evidence: {challenge_status or 'Needs evidence'}{suffix}"
 
 
 def _summary_for_action(action: MenuAction | BatchMenuAction) -> dict[str, Any]:
@@ -2158,9 +2544,13 @@ def _summary_for_action(action: MenuAction | BatchMenuAction) -> dict[str, Any]:
 
 
 def _config_for_action(action: MenuAction | BatchMenuAction, latest: Path) -> dict[str, Any]:
-    config = _read_config(latest / "config.yaml")
-    if config:
-        return config
+    record = _trusted_record_for_path(latest)
+    if record is not None:
+        manifest_config = record.manifest.get("config")
+        if isinstance(manifest_config, dict):
+            resolved = manifest_config.get("resolved")
+            if isinstance(resolved, dict):
+                return resolved
     if isinstance(action, MenuAction):
         return _loaded_action_config(action.config_path)
     return {}
@@ -2206,7 +2596,7 @@ def _required_preset_progress_text(required_total: int, required_tried: int) -> 
 
 
 def review_queue_summary_text(outputs_root: Path | None = None) -> str:
-    root = outputs_root if outputs_root is not None else PROJECT_ROOT / "outputs"
+    root = outputs_root if outputs_root is not None else default_outputs_root()
     items = _review_queue_items(root)
     if not items:
         return "Review queue: No saved runs yet. Run a scenario first."
@@ -2238,13 +2628,13 @@ def review_queue_summary_text(outputs_root: Path | None = None) -> str:
 
 
 def next_review_output(outputs_root: Path | None = None) -> Path | None:
-    root = outputs_root if outputs_root is not None else PROJECT_ROOT / "outputs"
+    root = outputs_root if outputs_root is not None else default_outputs_root()
     next_item = _next_review_queue_item(_review_queue_items(root))
     return next_item[0] if next_item is not None else None
 
 
 def next_review_status_text(outputs_root: Path | None = None) -> str:
-    root = outputs_root if outputs_root is not None else PROJECT_ROOT / "outputs"
+    root = outputs_root if outputs_root is not None else default_outputs_root()
     next_item = _next_review_queue_item(_review_queue_items(root))
     return next_item[1] if next_item is not None else "All saved mission evidence is ready."
 
@@ -2252,7 +2642,7 @@ def next_review_status_text(outputs_root: Path | None = None) -> str:
 def review_queue_action_lines(outputs_root: Path | None = None, *, limit: int = 5) -> list[str]:
     if limit <= 0:
         return []
-    root = outputs_root if outputs_root is not None else PROJECT_ROOT / "outputs"
+    root = outputs_root if outputs_root is not None else default_outputs_root()
     items = _prioritized_review_queue_items(
         _review_queue_items(root),
         buckets=("outcome", "preset", "observation", "prediction", "note", "control"),
@@ -2295,72 +2685,27 @@ def review_queue_action_lines(outputs_root: Path | None = None, *, limit: int = 
 
 
 def _review_queue_items(outputs_root: Path) -> list[tuple[Path, str, str, float]]:
-    if not outputs_root.exists():
-        return []
-    items = []
-    for output_path, summary, modified in _iter_output_summaries(outputs_root):
-        status = _review_queue_status(output_path, summary)
-        items.append((output_path, status, _review_queue_bucket(status), modified))
-    return sorted(items, key=lambda item: item[3], reverse=True)
+    catalog, records = _completion_context(outputs_root)
+    total = len(records)
+    return [
+        (
+            record.path,
+            status,
+            _review_queue_bucket(status),
+            float(total - index),
+        )
+        for index, record in enumerate(records)
+        for status in (_review_queue_status(record, catalog),)
+    ]
 
 
-def _review_queue_status(output_path: Path, summary: dict[str, Any]) -> str:
-    markers, predictions, notes, outcomes = _observation_evidence_counts(output_path)
-
-    if _summary_requires_hands_on_evidence(summary):
-        required_total, required_tried, next_required = _required_preset_progress_for_summary(summary, output_path)
-        if markers <= 0:
-            if required_total and required_tried < required_total:
-                return f"Needs required preset {next_required}" if next_required else "Needs required preset"
-            return "Needs observation"
-        if predictions <= 0:
-            return "Needs prediction"
-        if required_total and required_tried < required_total:
-            return f"Needs required preset {next_required}" if next_required else "Needs required preset"
-        if notes <= 0:
-            return "Ready; add note next"
-        if _learner_control_event_count(_read_json_list(output_path / "interaction_events.json")) <= 0:
-            return "Needs learner control"
-        if predictions > outcomes:
-            return "Outcome review pending"
-        return "Ready for review"
-
-    if predictions > outcomes:
-        return "Outcome review pending"
-
-    if _summary_is_all_batch(summary):
-        return "Artifacts ready" if (output_path / "worksheet.md").exists() else "Needs worksheet"
-
-    if latest_output_plot(output_path) is None:
-        return "Needs plot"
-    if latest_output_worksheet(output_path) is None:
-        return "Needs worksheet"
-    return "Artifacts ready"
-
-
-def _summary_is_all_batch(summary: dict[str, Any]) -> bool:
-    batch_name = str(summary.get("batch_name") or summary.get("config_name") or "").strip()
-    return batch_name == ALL_BATCH_NAME
-
-
-def _summary_requires_hands_on_evidence(summary: dict[str, Any]) -> bool:
-    config_text = " ".join(str(summary.get(name) or "") for name in ("config_path", "config_name")).lower()
-    return "interactive" in config_text
-
-
-def _required_preset_progress_for_summary(summary: dict[str, Any], output_path: Path) -> tuple[int, int, str]:
-    config_path = str(summary.get("config_path") or "").strip()
-    if not config_path:
-        return 0, 0, ""
-    required_labels = list(configured_required_preset_labels(config_path))
-    if not required_labels:
-        return 0, 0, ""
-    labels = list(configured_preset_labels(config_path))
-    tried_required, next_required = _ordered_required_preset_progress(
-        required_labels,
-        _preset_event_labels(output_path, labels),
-    )
-    return len(required_labels), len(tried_required), next_required
+def _review_queue_status(record: ArtifactRecord, catalog: ScenarioCatalog) -> str:
+    try:
+        target = catalog.get_target(record.scenario_id)
+    except KeyError:
+        return "Completion rule unavailable"
+    assessment = assess_target_completion(target, (record,))
+    return _canonical_completion_status(target, assessment.latest_decision, record)
 
 
 def _review_queue_bucket(status: str) -> str:
@@ -2379,7 +2724,11 @@ def _review_queue_bucket(status: str) -> str:
         return "note"
     if normalized == "needs learner control":
         return "control"
-    if normalized in {"needs plot", "needs worksheet"}:
+    if (
+        normalized in {"needs plot", "needs report", "needs worksheet", "needs prediction check"}
+        or normalized.startswith("needs validated child batch")
+        or normalized == "needs review artifact"
+    ):
         return "artifact"
     return "other"
 
@@ -2448,7 +2797,12 @@ def action_activity_mix_text(action: MenuAction, outputs_root: Path | None = Non
     latest = action_latest_output(action, outputs_root)
     if latest is None:
         return "Activity mix: Not run yet"
-    items = dict(_activity_mix_items(_read_json_list(latest / "interaction_events.json"), _loaded_action_config(action.config_path)))
+    items = dict(
+        _activity_mix_items(
+            _trusted_interaction_events_for_path(latest),
+            _loaded_action_config(action.config_path),
+        )
+    )
     if not items:
         return "Activity mix: No learner controls yet"
     path = str(items.get("Activity path") or "").strip()
@@ -2496,7 +2850,7 @@ def action_next_cue_text(action: MenuAction, outputs_root: Path | None = None) -
         return "Next cue: Run this scenario, then review the saved plot and worksheet."
 
     markers, predictions, notes, outcomes = _observation_evidence_counts(latest)
-    events = _read_json_list(latest / "interaction_events.json")
+    events = _trusted_interaction_events_for_path(latest)
     learner_controls = _learner_control_event_count(events)
     if predictions > outcomes:
         return "Next cue: Review latest evidence and choose the missing prediction outcome."
@@ -2592,19 +2946,21 @@ def batch_prediction_check_text(
     action: BatchMenuAction,
     outputs_root: Path | None = None,
 ) -> str:
-    latest = action_latest_output(action, outputs_root)
-    if latest is None:
+    record = _latest_action_record(action, outputs_root)
+    if record is None:
         return "Prediction check: Write a prediction before running the batch."
-    worksheet = action_latest_worksheet(action, outputs_root)
-    if worksheet is None:
+    if not record.worksheet_available:
         return "Prediction check: Not saved yet; rerun or regenerate the worksheet."
-    try:
-        text = worksheet.read_text(encoding="utf-8")
-    except OSError:
-        return "Prediction check: Worksheet unreadable; open the batch report instead."
-    if "## Prediction Check" in text:
-        return "Prediction check: Ready in worksheet; mark Matched, Partly matched, or Surprised."
-    return "Prediction check: Worksheet saved; use the comparison notes to judge your prediction."
+    if "prediction-check" in record.completion_evidence.artifact_keys:
+        return (
+            "Prediction check: Worksheet is digest-published and read-only; copy Matched, "
+            "Partly matched, or Surprised into personal/course notes outside the saved-run folder."
+        )
+    return (
+        "Prediction check: Worksheet is digest-published and read-only; use the comparison "
+        "notes to judge your prediction, then copy the outcome into personal/course notes "
+        "outside the saved-run folder."
+    )
 
 
 def batch_viewer_handoff_text(action: BatchMenuAction) -> str:
@@ -2622,6 +2978,7 @@ def action_replay_text(action: MenuAction, outputs_root: Path | None = None) -> 
     return f"Replay: Latest {tuned_config.name}"
 
 
+@with_completion_snapshot
 def refresh_batch_menu_state(
     items: tuple[
         BatchMenuStateItem | BatchMenuStateItemWithWorksheet | BatchMenuStateItemWithFolder | BatchMenuStateItemWithHandoff,
@@ -2691,41 +3048,6 @@ def _batch_action_by_name(batch_name: str) -> BatchMenuAction:
     raise ValueError(f"Batch action was not found: {batch_name}")
 
 
-def _latest_matching_output(action: MenuAction | BatchMenuAction, outputs_root: Path) -> Path | None:
-    if not outputs_root.exists():
-        return None
-    matches: list[tuple[float, Path]] = []
-    for output_path, summary, modified in _iter_output_summaries(outputs_root):
-        if _summary_matches_action(summary, action):
-            matches.append((modified, output_path))
-    if not matches:
-        return None
-    return max(matches, key=lambda item: item[0])[1]
-
-
-def _iter_output_summaries(outputs_root: Path) -> list[tuple[Path, dict[str, Any], float]]:
-    summaries: list[tuple[Path, dict[str, Any], float]] = []
-    for child in outputs_root.iterdir():
-        if not child.is_dir():
-            continue
-        if is_internal_output_dir(child):
-            continue
-        summary_path = child / "summary.json"
-        summary = _read_json(summary_path)
-        if not summary:
-            continue
-        modified = max(
-            (
-                path.stat().st_mtime
-                for path in (child / "report.html", child / "index.html", summary_path)
-                if path.exists()
-            ),
-            default=child.stat().st_mtime,
-        )
-        summaries.append((child, summary, modified))
-    return summaries
-
-
 def _summary_matches_action(summary: dict[str, Any], action: MenuAction | BatchMenuAction) -> bool:
     if isinstance(action, BatchMenuAction):
         batch_name = str(summary.get("batch_name") or summary.get("config_name") or "")
@@ -2741,7 +3063,15 @@ def _summary_matches_action(summary: dict[str, Any], action: MenuAction | BatchM
 
 
 def action_for_output(output_path: Path) -> MenuAction | BatchMenuAction | None:
-    return _action_for_summary(_read_json(output_path / "summary.json"))
+    record = _trusted_record_for_path(output_path)
+    if record is None:
+        return None
+    action = _action_for_target_id(record.scenario_id)
+    if action is not None:
+        return action
+    if record.completion_evidence.record_kind == CompletionRecordKind.LEGACY_SUMMARY:
+        return _action_for_summary(record.summary)
+    return None
 
 
 def _action_for_summary(summary: dict[str, Any]) -> MenuAction | BatchMenuAction | None:
@@ -2758,34 +3088,12 @@ def _normalize_config_path(value: str) -> str:
     return value.replace("\\", "/").lstrip("./").lower()
 
 
-def _read_json(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return {}
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return {}
-    return payload if isinstance(payload, dict) else {}
-
-
-def _read_json_list(path: Path) -> list[dict[str, Any]]:
-    if not path.exists():
-        return []
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return []
-    if not isinstance(payload, list):
-        return []
-    return [item for item in payload if isinstance(item, dict)]
-
-
 def _observation_evidence_counts(output_path: Path) -> tuple[int, int, int, int]:
     markers = 0
     predictions = 0
     notes = 0
     outcomes = 0
-    for event in _read_json_list(output_path / "interaction_events.json"):
+    for event in _trusted_interaction_events_for_path(output_path):
         if not _is_observation_marker_event(event):
             continue
         markers += 1
@@ -2802,7 +3110,7 @@ def _observation_evidence_counts(output_path: Path) -> tuple[int, int, int, int]
 
 
 def _latest_observation_marker(output_path: Path) -> dict[str, Any] | None:
-    for event in reversed(_read_json_list(output_path / "interaction_events.json")):
+    for event in reversed(_trusted_interaction_events_for_path(output_path)):
         if _is_observation_marker_event(event):
             return event
     return None
@@ -2819,7 +3127,7 @@ def _distinct_preset_labels(output_path: Path, configured_labels: list[str]) -> 
 def _preset_event_labels(output_path: Path, configured_labels: list[str]) -> list[str]:
     configured_lookup = {label.lower(): label for label in configured_labels}
     labels: list[str] = []
-    for event in _read_json_list(output_path / "interaction_events.json"):
+    for event in _trusted_interaction_events_for_path(output_path):
         if str(event.get("kind", "")).lower() != "preset":
             continue
         label = str(event.get("label") or event.get("name") or "").strip()
@@ -2977,13 +3285,13 @@ def launch_action_doc(action: MenuAction) -> subprocess.Popen[Any] | None:
 
 
 def launch_outputs_folder() -> subprocess.Popen[Any] | None:
-    outputs = PROJECT_ROOT / "outputs"
-    outputs.mkdir(exist_ok=True)
+    outputs = default_outputs_root()
+    outputs.mkdir(parents=True, exist_ok=True)
     return open_path(outputs)
 
 
 def launch_outputs_index() -> subprocess.Popen[Any] | None:
-    outputs = PROJECT_ROOT / "outputs"
+    outputs = default_outputs_root()
     index = outputs / "index.html"
     write_outputs_index(outputs)
     return open_path(index)
@@ -3133,62 +3441,57 @@ def launch_action_latest_folder(
 
 
 def _preferred_output_entry(path: Path) -> Path:
-    report = path / "report.html"
-    if report.exists():
-        return report
-    index = path / "index.html"
-    if index.exists():
-        return index
+    record = _trusted_record_for_path(path)
+    if record is not None and record.report_available:
+        return record.path / "report.html"
     return path
 
 
 def latest_output_plot(path: Path | None, plot_priorities: tuple[str, ...] | None = None) -> Path | None:
-    if path is None:
+    record = _trusted_record_for_path(path)
+    if record is None or not record.plot_paths:
         return None
-    candidates: list[Path] = []
-    for directory_name in ("plots", "comparison_plots"):
-        plot_dir = path / directory_name
-        if plot_dir.exists():
-            candidates.extend(plot_dir.glob("*.png"))
-    if not candidates:
-        return None
-    priorities = plot_priorities if plot_priorities is not None else _output_plot_priorities(path)
-    return sorted(candidates, key=lambda plot: _plot_sort_key(plot, priorities))[0]
+    priorities = (
+        plot_priorities
+        if plot_priorities is not None
+        else _output_plot_priorities(record)
+    )
+    return sorted(
+        record.plot_paths,
+        key=lambda plot: _plot_sort_key(plot, priorities),
+    )[0]
 
 
 def latest_output_worksheet(path: Path | None) -> Path | None:
-    if path is None:
+    record = _trusted_record_for_path(path)
+    if record is None or not record.worksheet_available:
         return None
-    worksheet = path / "worksheet.md"
-    return worksheet if worksheet.exists() else None
+    return record.path / "worksheet.md"
 
 
 def latest_output_tuned_config(path: Path | None) -> Path | None:
-    if path is None:
+    record = _trusted_record_for_path(path)
+    if record is None or not record.tuned_available:
         return None
-    tuned_config = path / "learner_tuned_config.yaml"
-    return tuned_config if tuned_config.exists() else None
+    return record.path / "learner_tuned_config.yaml"
 
 
 def latest_output_viewer_handoff_uri(path: Path | None) -> str:
-    if path is None:
+    record = _trusted_record_for_path(path)
+    if record is None or not record.report_available:
         return ""
-    action = latest_output_action(path)
+    action = _action_for_summary(record.summary)
     if not isinstance(action, BatchMenuAction):
         return ""
-    report = path / "report.html"
-    if not report.exists():
-        return ""
-    return f"{report.resolve().as_uri()}#{VIEWER_HANDOFF_FRAGMENT}"
+    report = record.path / "report.html"
+    return f"{report.as_uri()}#{VIEWER_HANDOFF_FRAGMENT}"
 
 
 def latest_output_action(path: Path | None) -> MenuAction | BatchMenuAction | None:
-    if path is None:
+    record = _trusted_record_for_path(path)
+    if record is None:
         return None
-    summary = _read_json(path / "summary.json")
-    if not summary:
-        return None
-    return _action_for_summary(summary)
+    return _action_for_summary(record.summary)
 
 
 def latest_output_menu_action(path: Path | None) -> MenuAction | None:
@@ -3262,8 +3565,8 @@ def _action_plot_priorities(action: MenuAction | BatchMenuAction) -> tuple[str, 
     )
 
 
-def _output_plot_priorities(path: Path) -> tuple[str, ...]:
-    summary = _read_json(path / "summary.json")
+def _output_plot_priorities(record: ArtifactRecord) -> tuple[str, ...]:
+    summary = record.summary
     return plot_priorities_for_context(
         config_path=str(summary.get("config_path") or ""),
         config_name=str(summary.get("config_name") or ""),
@@ -3588,7 +3891,8 @@ def action_challenge_text(action: MenuAction | BatchMenuAction) -> str:
     if isinstance(action, BatchMenuAction):
         return (
             "Challenge: Choose the scenario you expect to show the strongest effect before running, "
-            "then mark the Prediction Check outcome in the worksheet."
+            "then review the digest-published, read-only Prediction Check and copy the outcome "
+            "into personal/course notes outside the saved-run folder."
         )
     guide = guide_for_config(config_path=action.config_path, lab_name=action.lab_name)
     challenge = challenge_prompt_for_guide(guide)
@@ -3867,6 +4171,7 @@ def _waypoint_position_preview(waypoint: dict[str, Any]) -> str:
     return _format_config_value(raw_position)
 
 
+@with_completion_snapshot
 def lesson_text(action: MenuAction, outputs_root: Path | None = None) -> str:
     course_text = "\n".join(action_course_lines(action))
     preset_labels = configured_preset_labels(action.config_path)
@@ -4293,6 +4598,7 @@ def main() -> int:
         labels = learning_path_artifact_button_labels(step)
         button.configure(text=labels[key])
 
+    @with_completion_snapshot
     def refresh_learning_path_progress() -> None:
         progress_items: list[LearningPathProgressItem] = []
         progress_by_step: dict[LearningPathStep, LearningPathProgress] = {}
@@ -4756,6 +5062,7 @@ def main() -> int:
     )
     ttk.Label(bottom, textvariable=status).pack(side="left", padx=12)
 
+    @with_completion_snapshot
     def render_actions(*_args: Any) -> None:
         for child in scroll_frame.winfo_children():
             child.destroy()
@@ -5300,6 +5607,7 @@ def _set_status_after_run(
         update_ui()
 
 
+@with_completion_snapshot
 def lesson_text_for_batch(action: BatchMenuAction, outputs_root: Path | None = None) -> str:
     scenario_count = _batch_scenario_count(action)
     course_text = "\n".join(action_course_lines(action))

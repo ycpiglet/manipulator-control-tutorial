@@ -5,28 +5,33 @@ from __future__ import annotations
 import json
 import os
 import stat
-from dataclasses import dataclass
-from pathlib import Path
+from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from mclab.application.artifacts import replay_index_reason_from_stream
+from mclab.completion import CompletionEvidence, CompletionRecordKind
 from mclab.config import default_outputs_root
 from mclab.output_filters import is_internal_output_dir
 from mclab.output_cleanup import (
     CleanupReceipt,
     quarantine_run,
-    read_saved_run_snapshot_rooted,
+)
+from mclab.output_inventory import (
+    CompletionRunSnapshot,
+    TERMINAL_STATUSES,
+    read_completion_run_snapshot_rooted,
 )
 from mclab.output_root import PinnedOutputRoot, pinned_output_root
 from mclab.output_safety import (
+    MAX_OUTPUT_ROOT_ENTRIES,
     MAX_RUN_TREE_ENTRIES,
     CleanupSafetyError,
 )
 
 
 MAX_REPLAY_BYTES = 512 * 1024 * 1024
-
-
 @dataclass(frozen=True)
 class ArtifactRecord:
     path: Path
@@ -40,6 +45,19 @@ class ArtifactRecord:
     replay_reason: str
     summary: dict[str, Any]
     cleanup_token: str
+    manifest: dict[str, Any] = field(default_factory=dict)
+    marker_name: str = ""
+    completion_evidence: CompletionEvidence = field(
+        default_factory=lambda: CompletionEvidence(CompletionRecordKind.MISSING)
+    )
+    interaction_events: object = None
+    plot_paths: tuple[Path, ...] = ()
+    worksheet_available: bool = False
+    report_available: bool = False
+    artifact_validation_errors: tuple[str, ...] = ()
+    finished_at: str = ""
+    sort_timestamp: float = 0.0
+    worksheet_text: str = ""
 
 
 class ArtifactRepository:
@@ -56,48 +74,48 @@ class ArtifactRepository:
             ) as (root, root_exists, root_pin):
                 if not root_exists or root_pin is None:
                     return ()
-                records: list[tuple[float, ArtifactRecord]] = []
-                for name in root_pin.list_names():
+                records: list[tuple[float, str, ArtifactRecord]] = []
+                for name in root_pin.list_names(max_entries=MAX_OUTPUT_ROOT_ENTRIES):
                     path = root / name
                     if is_internal_output_dir(path):
                         continue
                     try:
-                        snapshot = read_saved_run_snapshot_rooted(
-                            root_pin,
-                            name,
-                            allow_legacy=True,
-                        )
-                        size_bytes = root_pin.tree_size(
+                        with root_pin.scoped_directory_pin(
                             (name,),
-                            max_entries=MAX_RUN_TREE_ENTRIES,
-                        )
-                        manifest = snapshot.manifest
-                        summary = snapshot.summary
-                        if not manifest and not summary:
-                            continue
-                        replay_reason = _safe_replay_reason_rooted(
-                            root_pin,
-                            name,
-                            validate=validate_replays,
-                        )
-                        rerun_available = _safe_regular_file_exists_rooted(
-                            root_pin,
-                            (name, "config.yaml"),
-                        ) or _has_resolved_config(manifest)
-                        tuned_available = _safe_regular_file_exists_rooted(
-                            root_pin,
-                            (name, "learner_tuned_config.yaml"),
-                        )
-                        modified = float(root_pin.lstat((name,)).st_mtime)
-                    except (CleanupSafetyError, OSError):
-                        continue
-                    records.append(
-                        (
-                            modified,
-                            ArtifactRecord(
+                            description="saved run",
+                        ):
+                            snapshot = read_completion_run_snapshot_rooted(
+                                root_pin,
+                                name,
+                                allow_legacy=True,
+                            )
+                            size_bytes = root_pin.tree_size(
+                                (name,),
+                                max_entries=MAX_RUN_TREE_ENTRIES,
+                            )
+                            manifest = snapshot.manifest
+                            summary = snapshot.summary
+                            if not manifest and not summary:
+                                continue
+                            replay_reason = _safe_replay_reason_rooted(
+                                root_pin,
+                                name,
+                                validate=validate_replays,
+                            )
+                            rerun_available = _safe_regular_file_exists_rooted(
+                                root_pin,
+                                (name, "config.yaml"),
+                            ) or _has_resolved_config(manifest)
+                            tuned_available = _safe_regular_file_exists_rooted(
+                                root_pin,
+                                (name, "learner_tuned_config.yaml"),
+                            )
+                            modified = float(root_pin.lstat((name,)).st_mtime)
+                            sort_timestamp = _completion_sort_timestamp(snapshot, modified)
+                            record = ArtifactRecord(
                                 path=path,
                                 scenario_id=snapshot.scenario_id,
-                                status=snapshot.status if manifest else "completed",
+                                status=snapshot.status,
                                 size_bytes=size_bytes,
                                 replay_available=not replay_reason,
                                 rerun_available=rerun_available,
@@ -106,12 +124,29 @@ class ArtifactRepository:
                                 replay_reason=replay_reason,
                                 summary=summary,
                                 cleanup_token=snapshot.token,
-                            ),
-                        )
-                    )
+                                manifest=manifest,
+                                marker_name=snapshot.marker_name,
+                                completion_evidence=snapshot.completion_evidence,
+                                interaction_events=snapshot.interaction_events,
+                                plot_paths=tuple(
+                                    path.joinpath(*PurePosixPath(relative).parts)
+                                    for relative in snapshot.plot_paths
+                                ),
+                                worksheet_available=snapshot.worksheet_available,
+                                report_available=snapshot.report_available,
+                                artifact_validation_errors=(
+                                    snapshot.artifact_validation_errors
+                                ),
+                                finished_at=snapshot.finished_at,
+                                sort_timestamp=sort_timestamp,
+                                worksheet_text=snapshot.worksheet_text,
+                            )
+                    except (CleanupSafetyError, OSError):
+                        continue
+                    records.append((sort_timestamp, name, record))
                 root_pin.assert_read_boundary()
-                records.sort(key=lambda item: item[0], reverse=True)
-                return tuple(record for _modified, record in records)
+                records.sort(key=lambda item: (-item[0], item[1]))
+                return tuple(record for _timestamp, _name, record in records)
         except (CleanupSafetyError, OSError):
             return ()
 
@@ -184,6 +219,15 @@ def _same_direct_child_path(left: Path, right: Path) -> bool:
     """Match one listed child name without accepting a junction alias."""
 
     return left.name == right.name and _same_existing_path(left.parent, right.parent)
+
+
+def _completion_sort_timestamp(snapshot: CompletionRunSnapshot, fallback: float) -> float:
+    if snapshot.status not in TERMINAL_STATUSES or not snapshot.finished_at:
+        return fallback
+    try:
+        return datetime.fromisoformat(snapshot.finished_at).timestamp()
+    except (OSError, OverflowError, ValueError):
+        return fallback
 
 
 class ProgressRepository:

@@ -140,7 +140,7 @@ Item {
                         property var primaryControl: primaryAction
                         Layout.fillWidth: true
                         Layout.maximumWidth: 1120
-                        Layout.preferredHeight: 204
+                        Layout.preferredHeight: page.compact ? 216 : 224
                         Layout.alignment: Qt.AlignHCenter
                         radius: 12
                         color: "#FFFFFF"
@@ -184,6 +184,12 @@ Item {
                                 color: "#334155"
                                 font.pixelSize: 13
                                 elide: Text.ElideRight
+                            }
+                            Label {
+                                objectName: "completionReasonLabel"; Layout.fillWidth: true
+                                text: backend.localizedText(backend.language, "results.completion_reason_label") + ": " + modelData.completionReasonText + " · " + modelData.completionReason
+                                color: modelData.completed ? "#166534" : "#92400E"; font.pixelSize: 12
+                                font.bold: true; elide: Text.ElideRight; Accessible.name: text
                             }
                             GridLayout {
                                 visible: modelData.metrics.length > 0
@@ -299,15 +305,14 @@ Item {
                                 }
                                 MButton {
                                     id: supportingAction
-                                    property bool startsNewWork: !modelData.isBatch || !page.batch.running
+                                    property bool startsNewWork: !modelData.canRerunBatch || !page.batch.running
                                     property bool launchBlocked: startsNewWork
                                                                  && (backend.hasActiveExperiment
                                                                      || page.batch.running)
                                     Layout.fillWidth: true
-                                    visible: modelData.isBatch
-                                             || (primaryAction.launchesSession && Boolean(modelData.report))
+                                    visible: modelData.canRerunBatch || (primaryAction.launchesSession && Boolean(modelData.report))
                                     secondary: true
-                                    text: modelData.isBatch
+                                    text: modelData.canRerunBatch
                                           ? (page.batch.cancelling
                                              ? backend.localizedText(backend.language, "path.cancelling_button")
                                              : page.batch.running
@@ -315,25 +320,25 @@ Item {
                                              : backend.localizedText(backend.language, "results.run_compare"))
                                           : backend.localizedText(backend.language, "results.report")
                                     accessibleName: text + ": " + modelData.lab + " · " + modelData.title + " · " + modelData.runLabel
-                                    accessibleDescription: modelData.isBatch && launchBlocked
+                                    accessibleDescription: modelData.canRerunBatch && launchBlocked
                                                            ? backend.localizedText(
                                                                  backend.language,
                                                                  page.batch.running
                                                                  ? "batch.replay_blocked"
-                                                                 : modelData.isBatch
+                                                                 : modelData.canRerunBatch
                                                                    ? "active.launch_blocked"
                                                                    : "active.replay_launch_blocked")
-                                                           : modelData.isBatch
+                                                           : modelData.canRerunBatch
                                                              ? modelData.nextAction
                                                              : modelData.outcome
-                                    enabled: modelData.isBatch
+                                    enabled: modelData.canRerunBatch
                                              ? (page.batch.running
                                                 ? !page.batch.cancelling
                                                 : !launchBlocked)
                                              : Boolean(modelData.report)
                                     ToolTip.visible: (hovered || activeFocus) && !enabled
                                     ToolTip.text: accessibleDescription
-                                    onClicked: modelData.isBatch
+                                    onClicked: modelData.canRerunBatch
                                                ? (page.batch.cancelling
                                                   ? undefined
                                                   : page.batch.running

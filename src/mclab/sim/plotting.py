@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from io import BytesIO
 from math import isfinite
 from pathlib import Path
 from typing import Any
 
+from mclab.output_publication import mutable_run_publication
+from mclab.output_safety import MAX_METADATA_BYTES
 from mclab.sim.reporting import write_run_report
 
 
@@ -71,41 +74,59 @@ def save_time_series_plots(
         raise RuntimeError("matplotlib is required when --plot is used.") from exc
 
     output = Path(output_path)
-    language = _plot_language(output)
-    plot_dir = output / "plots"
-    plot_dir.mkdir(parents=True, exist_ok=True)
-    marker_map = {
-        _plot_name(plot_name): markers for plot_name, markers in (event_markers or {}).items()
-    }
-
-    time = [_as_float(row.get("time", index)) for index, row in enumerate(rows)]
-    for filename, title, ylabel, keys in specs:
-        available = [key for key in keys if any(key in row for row in rows)]
-        if not available:
-            continue
-        fig, axis = plt.subplots(figsize=(8, 4.5), constrained_layout=True)
-        for key in available:
-            values = [_as_float(row.get(key)) for row in rows]
-            axis.plot(
-                time,
-                values,
-                label=_signal_label(key, language),
-                markevery=max(1, len(time) // 18),
-                **_signal_style(key),
+    with mutable_run_publication(output) as publication:
+        config_data = (
+            publication.read_bytes(
+                ("config.yaml",),
+                description="plot config",
+                max_bytes=MAX_METADATA_BYTES,
+                allow_empty=True,
             )
-        first_key = available[0]
-        first_values = [_as_float(row.get(first_key)) for row in rows]
-        _annotate_peak(axis, time, first_values, language)
-        axis.set_title(title)
-        axis.set_xlabel("시간 [초]" if language == "ko" else "Time [s]")
-        axis.set_ylabel(ylabel)
-        axis.grid(True, alpha=0.3)
-        _apply_event_markers(axis, marker_map.get(_plot_name(filename), ()))
-        axis.legend()
-        fig.savefig(plot_dir / filename, dpi=150)
-        plt.close(fig)
+            if publication.regular_file_exists(("config.yaml",))
+            else b""
+        )
+        language = _plot_language(config_data)
+        publication.ensure_directory(("plots",))
+        marker_map = {
+            _plot_name(plot_name): markers
+            for plot_name, markers in (event_markers or {}).items()
+        }
 
-    write_run_report(output)
+        time = [_as_float(row.get("time", index)) for index, row in enumerate(rows)]
+        for filename, title, ylabel, keys in specs:
+            available = [key for key in keys if any(key in row for row in rows)]
+            if not available:
+                continue
+            fig, axis = plt.subplots(figsize=(8, 4.5), constrained_layout=True)
+            try:
+                for key in available:
+                    values = [_as_float(row.get(key)) for row in rows]
+                    axis.plot(
+                        time,
+                        values,
+                        label=_signal_label(key, language),
+                        markevery=max(1, len(time) // 18),
+                        **_signal_style(key),
+                    )
+                first_key = available[0]
+                first_values = [_as_float(row.get(first_key)) for row in rows]
+                _annotate_peak(axis, time, first_values, language)
+                axis.set_title(title)
+                axis.set_xlabel("시간 [초]" if language == "ko" else "Time [s]")
+                axis.set_ylabel(ylabel)
+                axis.grid(True, alpha=0.3)
+                _apply_event_markers(axis, marker_map.get(_plot_name(filename), ()))
+                axis.legend()
+                buffer = BytesIO()
+                fig.savefig(buffer, format="png", dpi=150)
+                publication.write_bytes(("plots", filename), buffer.getvalue())
+            finally:
+                plt.close(fig)
+
+    # The terminal manifest is published by RunLogger only after every
+    # run-local artifact exists.  Updating the parent index here would expose a
+    # stale running verdict, so finalization performs that refresh instead.
+    write_run_report(output, update_index=False)
 
 
 def configure_matplotlib_font(matplotlib: Any) -> None:
@@ -202,15 +223,11 @@ def _as_float(value: Any) -> float:
         return float("nan")
 
 
-def _plot_language(output: Path) -> str:
-    config_path = output / "config.yaml"
-    try:
-        for line in config_path.read_text(encoding="utf-8").splitlines():
-            if line.strip().startswith("language:"):
-                value = line.split(":", 1)[1].strip().lower()
-                return "ko" if value == "ko" else "en"
-    except OSError:
-        pass
+def _plot_language(config_data: bytes) -> str:
+    for line in config_data.decode("utf-8", errors="replace").splitlines():
+        if line.strip().startswith("language:"):
+            value = line.split(":", 1)[1].strip().lower()
+            return "ko" if value == "ko" else "en"
     return "en"
 
 

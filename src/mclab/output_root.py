@@ -8,10 +8,11 @@ import tempfile
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
-from typing import BinaryIO, Iterator
+from typing import BinaryIO, Generator, Iterator
 
 from mclab.config import PROJECT_ROOT, default_outputs_root
 from mclab.output_safety import (
+    CleanupBusyError,
     CleanupOperationError,
     CleanupSafetyError,
     FilesystemIdentity,
@@ -146,7 +147,7 @@ class PinnedOutputRoot:
         try:
             fcntl.flock(self._descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
-            raise CleanupOperationError(
+            raise CleanupBusyError(
                 "Another saved-output cleanup or restore operation is active"
             ) from exc
         except OSError as exc:
@@ -178,9 +179,15 @@ class PinnedOutputRoot:
         self.validate_directory(parts, description=description)
         if os.name == "nt":
             handle = _open_windows_directory(self.display_path(parts), delete_access=False)
+            try:
+                windows_id = _windows_file_id(handle)
+                opened = self.lstat(parts)
+            except Exception:
+                _close_windows_handles((handle,))
+                raise
             self._directory_handles[parts] = handle
-            self._directory_windows_ids[parts] = _windows_file_id(handle)
-            self._directory_stats[parts] = self.lstat(parts)
+            self._directory_windows_ids[parts] = windows_id
+            self._directory_stats[parts] = opened
             return
         with self._open_directory_fd(parts) as descriptor:
             retained = os.dup(descriptor)
@@ -188,36 +195,95 @@ class PinnedOutputRoot:
         self._directory_descriptors[parts] = retained
         self._directory_stats[parts] = opened
 
+    @contextmanager
+    def scoped_directory_pin(
+        self,
+        relative: tuple[str, ...],
+        *,
+        description: str,
+    ) -> Iterator[None]:
+        """Keep one subdirectory pinned only for the bounded read operation."""
+
+        parts = _validated_parts(relative)
+        already_pinned = parts in self._directory_stats
+        if not already_pinned:
+            self.pin_directory(parts, description=description)
+        self.assert_pinned_directory_current(parts)
+        completed = False
+        try:
+            yield
+            completed = True
+        finally:
+            try:
+                if completed:
+                    self.assert_pinned_directory_current(parts)
+            finally:
+                if not already_pinned:
+                    self._release_pinned_directory(parts)
+
+    def pinned_directory_stat(self, relative: tuple[str, ...]) -> os.stat_result:
+        """Return the handle-derived stat for a currently pinned directory."""
+
+        parts = _validated_parts(relative)
+        try:
+            return self._directory_stats[parts]
+        except KeyError as exc:
+            raise CleanupOperationError(
+                f"Output directory is not pinned: {'/'.join(parts)}"
+            ) from exc
+
+    def assert_pinned_directory_current(self, relative: tuple[str, ...]) -> None:
+        """Verify one held directory still has its canonical rooted name."""
+
+        parts = _validated_parts(relative)
+        try:
+            initial = self._directory_stats[parts]
+        except KeyError as exc:
+            raise CleanupOperationError(
+                f"Output directory is not pinned: {'/'.join(parts)}"
+            ) from exc
+        try:
+            current = self.lstat(parts)
+        except OSError as exc:
+            raise CleanupSafetyError(
+                f"Pinned output directory changed at {'/'.join(parts)}: {exc}"
+            ) from exc
+        if (
+            _stat_is_link_or_reparse(current)
+            or not stat.S_ISDIR(current.st_mode)
+            or not _same_file_identity(initial, current)
+        ):
+            raise CleanupSafetyError(
+                f"Pinned output directory changed at {'/'.join(parts)}"
+            )
+        if os.name == "nt":
+            handle = _open_windows_directory(
+                self.display_path(parts),
+                delete_access=False,
+            )
+            try:
+                if _windows_file_id(handle) != self._directory_windows_ids[parts]:
+                    raise CleanupSafetyError(
+                        f"Pinned Windows output directory changed at {'/'.join(parts)}"
+                    )
+            finally:
+                _close_windows_handles((handle,))
+
     def assert_pinned_directories_current(self) -> None:
         """Verify that every pinned subdirectory still has its canonical rooted name."""
 
-        for relative, initial in self._directory_stats.items():
-            try:
-                current = self.lstat(relative)
-            except OSError as exc:
-                raise CleanupSafetyError(
-                    f"Pinned output directory changed at {'/'.join(relative)}: {exc}"
-                ) from exc
-            if (
-                _stat_is_link_or_reparse(current)
-                or not stat.S_ISDIR(current.st_mode)
-                or not _same_file_identity(initial, current)
-            ):
-                raise CleanupSafetyError(
-                    f"Pinned output directory changed at {'/'.join(relative)}"
-                )
-            if os.name == "nt":
-                handle = _open_windows_directory(
-                    self.display_path(relative),
-                    delete_access=False,
-                )
-                try:
-                    if _windows_file_id(handle) != self._directory_windows_ids[relative]:
-                        raise CleanupSafetyError(
-                            f"Pinned Windows output directory changed at {'/'.join(relative)}"
-                        )
-                finally:
-                    _close_windows_handles((handle,))
+        for relative in tuple(self._directory_stats):
+            self.assert_pinned_directory_current(relative)
+
+    def _release_pinned_directory(self, relative: tuple[str, ...]) -> None:
+        descriptor = self._directory_descriptors.pop(relative, -1)
+        if descriptor >= 0:
+            os.close(descriptor)
+        handle = self._directory_handles.pop(relative, None)
+        if handle is not None:
+            _close_windows_handles((handle,))
+        self._directory_stats.pop(relative, None)
+        self._directory_windows_ids.pop(relative, None)
 
     def assert_transaction_boundaries(self) -> None:
         self.assert_current()
@@ -260,24 +326,56 @@ class PinnedOutputRoot:
         with self._open_directory_fd(parts) as descriptor:
             return _posix_directory_identity(os.fstat(descriptor))
 
-    def list_names(self, relative: tuple[str, ...] = ()) -> tuple[str, ...]:
-        """List one physical directory through the pinned boundary."""
+    def list_names(
+        self,
+        relative: tuple[str, ...] = (),
+        *,
+        max_entries: int | None = None,
+    ) -> tuple[str, ...]:
+        """List one physical directory through the pinned boundary.
+
+        ``max_entries`` is opt-in for compatibility with cleanup callers that
+        already apply their own bounded inventory.  Read-only consumers must
+        supply it so a hostile directory cannot be materialized before its
+        entry limit is checked.
+        """
+
+        if max_entries is not None and (type(max_entries) is not int or max_entries < 0):
+            raise CleanupSafetyError("Directory entry limit must be a non-negative integer")
+        names: list[str] = []
+        entries = self._iter_names(relative)
+        try:
+            for name in entries:
+                if max_entries is not None and len(names) >= max_entries:
+                    raise CleanupSafetyError(
+                        f"Directory contains more than {max_entries} entries"
+                    )
+                names.append(name)
+        finally:
+            entries.close()
+        return tuple(names)
+
+    def _iter_names(self, relative: tuple[str, ...] = ()) -> Generator[str, None, None]:
+        """Yield names without first materializing an untrusted directory."""
 
         parts = _validated_parts(relative)
         if os.name == "nt":
             with self._pinned_windows_directory(parts):
                 try:
-                    names = tuple(entry.name for entry in os.scandir(self.display_path(parts)))
+                    with os.scandir(self.display_path(parts)) as entries:
+                        for entry in entries:
+                            yield entry.name
                 except OSError as exc:
                     raise CleanupSafetyError(f"Could not inventory outputs safely: {exc}") from exc
         else:
             with self._open_directory_fd(parts) as descriptor:
                 try:
-                    names = tuple(entry.name for entry in os.scandir(descriptor))
+                    with os.scandir(descriptor) as entries:
+                        for entry in entries:
+                            yield entry.name
                 except OSError as exc:
                     raise CleanupSafetyError(f"Could not inventory outputs safely: {exc}") from exc
         self.assert_read_boundary()
-        return names
 
     def lstat(self, relative: tuple[str, ...]) -> os.stat_result:
         parts = _validated_parts(relative)
@@ -423,28 +521,35 @@ class PinnedOutputRoot:
             directory = stack.pop()
             initial = self.lstat(directory)
             before[directory] = initial
-            for name in self.list_names(directory):
-                count += 1
-                if count > max_entries:
-                    raise CleanupSafetyError(
-                        f"Saved run contains more than {max_entries} entries"
-                    )
-                child = (*directory, name)
-                child_stat = self.lstat(child)
-                if _stat_is_link_or_reparse(child_stat):
-                    raise CleanupSafetyError(
-                        f"Saved-run contents include a link or reparse point: {name}"
-                    )
-                if stat.S_ISREG(child_stat.st_mode):
-                    total += int(child_stat.st_size)
-                elif stat.S_ISDIR(child_stat.st_mode):
-                    if self.is_mount_point(child):
-                        raise CleanupSafetyError("Saved-run contents include a mount point")
-                    stack.append(child)
-                else:
-                    raise CleanupSafetyError(
-                        f"Saved-run contents include a special filesystem entry: {name}"
-                    )
+            entries = self._iter_names(directory)
+            try:
+                for name in entries:
+                    count += 1
+                    if count > max_entries:
+                        raise CleanupSafetyError(
+                            f"Saved run contains more than {max_entries} entries"
+                        )
+                    child = (*directory, name)
+                    child_stat = self.lstat(child)
+                    if _stat_is_link_or_reparse(child_stat):
+                        raise CleanupSafetyError(
+                            f"Saved-run contents include a link or reparse point: {name}"
+                        )
+                    if stat.S_ISREG(child_stat.st_mode):
+                        total += int(child_stat.st_size)
+                    elif stat.S_ISDIR(child_stat.st_mode):
+                        if self.is_mount_point(child):
+                            raise CleanupSafetyError(
+                                "Saved-run contents include a mount point"
+                            )
+                        stack.append(child)
+                    else:
+                        raise CleanupSafetyError(
+                            "Saved-run contents include a special filesystem entry: "
+                            f"{name}"
+                        )
+            finally:
+                entries.close()
         for directory, initial in before.items():
             final = self.lstat(directory)
             if _stat_is_link_or_reparse(final) or not _same_open_file_state(initial, final):

@@ -12,6 +12,12 @@ from unittest.mock import Mock, patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from mclab.application.artifacts import write_manifest  # noqa: E402
+from mclab.application.catalog import (  # noqa: E402
+    CONCRETE_BATCH_NAMES,
+    CONCRETE_BATCH_TARGET_IDS,
+    stable_scenario_id,
+)
 from mclab.config import load_config  # noqa: E402
 from mclab.learner_menu import (  # noqa: E402
     ActionReadiness,
@@ -166,6 +172,162 @@ class FakeTextVariable:
         self.value = value
 
 
+def _finalize_scenario_run(
+    run_path: Path,
+    lab_name: str,
+    config_path: str,
+    *,
+    finished_at: str | None = None,
+) -> Path:
+    """Write the schema-1 manifest only after a fixture's artifacts are final."""
+
+    config = load_config(config_path)
+    write_manifest(
+        run_path,
+        scenario_id=stable_scenario_id(lab_name, config_path),
+        status="completed",
+        config=config,
+        config_path=config_path,
+        started_at=finished_at,
+        finished_at=finished_at,
+    )
+    return run_path
+
+
+def _finalize_batch_run(run_path: Path, batch_name: str) -> Path:
+    """Write a concrete batch manifest after its custom fixture artifacts."""
+
+    write_manifest(
+        run_path,
+        scenario_id=f"batch.{batch_name}",
+        status="completed",
+        config={"batch_name": batch_name, "plot": True},
+        run_kind="comparison_batch",
+    )
+    return run_path
+
+
+def _publish_scenario_run(
+    run_path: Path,
+    lab_name: str,
+    config_path: str,
+    *,
+    events: list[dict[str, object]] | None = None,
+    plot: bool = True,
+    report: bool = True,
+    worksheet: bool = True,
+    finished_at: str | None = None,
+    tuned_config: str | None = None,
+) -> Path:
+    """Publish one schema-1 test run after all trusted evidence is written."""
+
+    run_path.mkdir(parents=True, exist_ok=True)
+    (run_path / "summary.json").write_text(
+        json.dumps(
+            {
+                "lab_name": lab_name,
+                "config_path": config_path,
+                "config_name": Path(config_path).stem,
+            }
+        ),
+        encoding="utf-8",
+    )
+    if plot:
+        plots = run_path / "plots"
+        plots.mkdir(exist_ok=True)
+        (plots / "position.png").write_bytes(b"fake-png")
+    if report:
+        (run_path / "report.html").write_text("<html></html>", encoding="utf-8")
+    if worksheet:
+        (run_path / "worksheet.md").write_text("# Worksheet\n", encoding="utf-8")
+    if events is not None:
+        (run_path / "interaction_events.json").write_text(
+            json.dumps(events),
+            encoding="utf-8",
+        )
+    if tuned_config is not None:
+        (run_path / "learner_tuned_config.yaml").write_text(
+            tuned_config,
+            encoding="utf-8",
+        )
+    return _finalize_scenario_run(
+        run_path,
+        lab_name,
+        config_path,
+        finished_at=finished_at,
+    )
+
+
+def _publish_batch_run(
+    run_path: Path,
+    batch_name: str,
+    *,
+    index: bool = False,
+) -> Path:
+    """Publish a concrete comparison batch with its required artifacts."""
+
+    run_path.mkdir(parents=True, exist_ok=True)
+    (run_path / "summary.json").write_text(
+        json.dumps(
+            {
+                "lab_name": "batch",
+                "batch_name": batch_name,
+                "config_name": batch_name,
+            }
+        ),
+        encoding="utf-8",
+    )
+    plots = run_path / "comparison_plots"
+    plots.mkdir(exist_ok=True)
+    (plots / "comparison.png").write_bytes(b"fake-png")
+    (run_path / "report.html").write_text("<html></html>", encoding="utf-8")
+    (run_path / "worksheet.md").write_text(
+        "# Batch worksheet\n\n## Prediction Check\n",
+        encoding="utf-8",
+    )
+    if index:
+        (run_path / "index.html").write_text("<html></html>", encoding="utf-8")
+    return _finalize_batch_run(run_path, batch_name)
+
+
+def _publish_course_run(run_path: Path, *, worksheet: bool = True) -> Path:
+    """Publish the all-batches target and five validated child batches."""
+
+    run_path.mkdir(parents=True, exist_ok=True)
+    for batch_name, target_id in zip(
+        CONCRETE_BATCH_NAMES,
+        CONCRETE_BATCH_TARGET_IDS,
+        strict=True,
+    ):
+        child = _publish_batch_run(run_path / batch_name, batch_name)
+        manifest = json.loads((child / "manifest.json").read_text(encoding="utf-8"))
+        if manifest["scenario_id"] != target_id:
+            raise AssertionError(f"Unexpected test batch identity: {manifest['scenario_id']}")
+    (run_path / "summary.json").write_text(
+        json.dumps({"lab_name": "batch_group", "batch_name": "all", "config_name": "all"}),
+        encoding="utf-8",
+    )
+    (run_path / "report.html").write_text("<html></html>", encoding="utf-8")
+    if worksheet:
+        (run_path / "worksheet.md").write_text("# Course worksheet\n", encoding="utf-8")
+    write_manifest(
+        run_path,
+        scenario_id="batch.all",
+        status="completed",
+        config={"batch_name": "all", "plot": True},
+        run_kind="course_batch",
+    )
+    return run_path
+
+
+def _output_snapshot(root: Path, name: str) -> Path:
+    """Create an isolated saved-output history state for an evolving test."""
+
+    output = root / name
+    output.mkdir()
+    return output
+
+
 class LearnerMenuTests(unittest.TestCase):
     def test_menu_covers_core_learner_experiences(self) -> None:
         labels = {(action.group, action.label) for action in MENU_ACTIONS}
@@ -262,7 +424,9 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Lab03 2DOF compare", labels)
         self.assertIn("Lab04 wall compare", labels)
         self.assertIn("Lab04 Cartesian compare", labels)
-        lab03_compare = next(action for action in BATCH_ACTIONS if action.label == "Lab03 2DOF compare")
+        lab03_compare = next(
+            action for action in BATCH_ACTIONS if action.label == "Lab03 2DOF compare"
+        )
         self.assertIn("retarget", lab03_compare.description)
         self.assertIn("speed-limit", lab03_compare.description)
         self.assertIn("speed limits", lab03_compare.try_this)
@@ -311,37 +475,56 @@ class LearnerMenuTests(unittest.TestCase):
 
     def test_experience_coverage_names_missing_experience_types(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            outputs = Path(tmp)
-            text = experience_coverage_summary_text(outputs)
-            first_status = experience_coverage_status_text(outputs)
-            first_target = experience_coverage_next_target(outputs)
-            first_button = experience_coverage_next_button_label(outputs)
+            root = Path(tmp)
+            empty_outputs = _output_snapshot(root, "empty")
+            text = experience_coverage_summary_text(empty_outputs)
+            first_status = experience_coverage_status_text(empty_outputs)
+            first_target = experience_coverage_next_target(empty_outputs)
+            first_button = experience_coverage_next_button_label(empty_outputs)
 
-            interactive = outputs / "run_lab01_interactive"
-            interactive.mkdir()
-            (interactive / "summary.json").write_text(
-                json.dumps(
+            _publish_scenario_run(
+                (_output_snapshot(root, "no_control") / "run_lab01_auto"),
+                "lab01_msd",
+                "configs/lab01_msd/default.yaml",
+            )
+            no_control_outputs = root / "no_control"
+            _publish_scenario_run(
+                no_control_outputs / "run_lab01_interactive",
+                "lab01_msd",
+                "configs/lab01_msd/interactive_pull.yaml",
+            )
+            no_control_text = experience_coverage_summary_text(no_control_outputs)
+            no_control_status = experience_coverage_status_text(no_control_outputs)
+            no_control_target = experience_coverage_next_target(no_control_outputs)
+            no_control_button = experience_coverage_next_button_label(no_control_outputs)
+
+            with_control_outputs = _output_snapshot(root, "with_control")
+            _publish_scenario_run(
+                with_control_outputs / "run_lab01_auto",
+                "lab01_msd",
+                "configs/lab01_msd/default.yaml",
+            )
+            _publish_scenario_run(
+                with_control_outputs / "run_lab01_interactive",
+                "lab01_msd",
+                "configs/lab01_msd/interactive_pull.yaml",
+                events=[
+                    {"kind": "slider", "name": "damping", "label": "Damping", "value": 4.0},
                     {
-                        "lab_name": "lab01_msd",
-                        "config_path": "configs/lab01_msd/interactive_pull.yaml",
-                        "config_name": "interactive_pull",
-                    }
-                ),
-                encoding="utf-8",
+                        "kind": "marker",
+                        "name": "observation",
+                        "value": {
+                            "prediction": "More damping should settle faster.",
+                            "outcome": "Matched",
+                            "note": "The motion settled faster.",
+                        },
+                    },
+                ],
             )
-            no_control_text = experience_coverage_summary_text(outputs)
-            no_control_status = experience_coverage_status_text(outputs)
-            no_control_target = experience_coverage_next_target(outputs)
-            no_control_button = experience_coverage_next_button_label(outputs)
-
-            (interactive / "interaction_events.json").write_text(
-                json.dumps([{"kind": "slider", "name": "damping", "label": "Damping", "value": 4.0}]),
-                encoding="utf-8",
-            )
-            with_control_text = experience_coverage_summary_text(outputs)
-            with_control_status = experience_coverage_status_text(outputs)
-            with_control_target = experience_coverage_next_target(outputs)
-            with_control_button = experience_coverage_next_button_label(outputs)
+            with_control_text = experience_coverage_summary_text(with_control_outputs)
+            with_control_status = experience_coverage_status_text(with_control_outputs)
+            with_control_target = experience_coverage_next_target(with_control_outputs)
+            with_control_button = experience_coverage_next_button_label(with_control_outputs)
 
         self.assertIn("Experience coverage: 0/7 types tried", text)
         self.assertIn("Next: Run Lab01 Mass-Spring-Damper - Auto demo.", text)
@@ -354,7 +537,10 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Experience coverage: 1/7 types tried", no_control_text)
         self.assertIn("Done: Intro basics.", no_control_text)
         self.assertIn("Missing: Hands-on controls", no_control_text)
-        self.assertIn("Next: Run an interactive viewer and use one button, slider, or preset.", no_control_text)
+        self.assertIn(
+            "Next: Run an interactive viewer and use one button, slider, or preset.",
+            no_control_text,
+        )
         self.assertIn("Intro basics: Done", no_control_status)
         self.assertIn("Hands-on controls: Next", no_control_status)
         self.assertIsNotNone(no_control_target)
@@ -373,52 +559,45 @@ class LearnerMenuTests(unittest.TestCase):
     def test_experience_coverage_reaches_all_core_experiences(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)
-            lab01 = outputs / "run_lab01_interactive"
-            lab01.mkdir()
-            (lab01 / "summary.json").write_text(
-                json.dumps(
-                    {
-                        "lab_name": "lab01_msd",
-                        "config_path": "configs/lab01_msd/interactive_pull.yaml",
-                        "config_name": "interactive_pull",
-                    }
-                ),
-                encoding="utf-8",
+            complete_observation = {
+                "kind": "marker",
+                "name": "observation",
+                "value": {
+                    "prediction": "The response should change.",
+                    "outcome": "Matched",
+                    "note": "The change was visible.",
+                },
+            }
+            _publish_scenario_run(
+                outputs / "run_lab01_interactive",
+                "lab01_msd",
+                "configs/lab01_msd/interactive_pull.yaml",
+                events=[
+                    {"kind": "button", "name": "push", "label": "Push Right"},
+                    complete_observation,
+                ],
             )
-            (lab01 / "interaction_events.json").write_text(
-                json.dumps([{"kind": "button", "name": "push", "label": "Push Right"}]),
-                encoding="utf-8",
+            _publish_scenario_run(
+                outputs / "run_lab03_dls",
+                "lab03_2dof",
+                "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
+                events=[
+                    {"kind": "slider", "name": "dls_gain", "label": "DLS gain", "value": 4.0},
+                    complete_observation,
+                ],
             )
-            lab03 = outputs / "run_lab03_dls"
-            lab03.mkdir()
-            (lab03 / "summary.json").write_text(
-                json.dumps(
-                    {
-                        "lab_name": "lab03",
-                        "config_path": "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
-                        "config_name": "condition_aware_dls_2dof",
-                    }
-                ),
-                encoding="utf-8",
+            _publish_scenario_run(
+                outputs / "run_lab04_wall",
+                "lab04_panda",
+                "configs/lab04_panda/interactive_virtual_wall.yaml",
+                events=[
+                    {"kind": "preset", "name": "close_wall", "label": "Close wall"},
+                    {"kind": "preset", "name": "back_away", "label": "Back away"},
+                    {"kind": "preset", "name": "reenter_wall", "label": "Re-enter wall"},
+                    complete_observation,
+                ],
             )
-            lab04 = outputs / "run_lab04_wall"
-            lab04.mkdir()
-            (lab04 / "summary.json").write_text(
-                json.dumps(
-                    {
-                        "lab_name": "lab04",
-                        "config_path": "configs/lab04_panda/interactive_virtual_wall.yaml",
-                        "config_name": "interactive_virtual_wall",
-                    }
-                ),
-                encoding="utf-8",
-            )
-            batch = outputs / "batch_lab02"
-            batch.mkdir()
-            (batch / "summary.json").write_text(
-                json.dumps({"lab_name": "batch", "config_name": "lab02_pid_compare", "batch_name": "lab02_pid_compare"}),
-                encoding="utf-8",
-            )
+            _publish_batch_run(outputs / "batch_lab02", "lab02_pid_compare")
 
             text = experience_coverage_summary_text(outputs)
             status = experience_coverage_status_text(outputs)
@@ -437,19 +616,11 @@ class LearnerMenuTests(unittest.TestCase):
     def test_experience_coverage_details_show_matching_review_repair(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)
-            wall = outputs / "run_lab04_wall"
-            wall.mkdir()
-            (wall / "summary.json").write_text(
-                json.dumps(
-                    {
-                        "lab_name": "lab04_panda",
-                        "config_path": "configs/lab04_panda/interactive_virtual_wall.yaml",
-                        "config_name": "interactive_virtual_wall",
-                    }
-                ),
-                encoding="utf-8",
+            _publish_scenario_run(
+                outputs / "run_lab04_wall",
+                "lab04_panda",
+                "configs/lab04_panda/interactive_virtual_wall.yaml",
             )
-            (wall / "report.html").write_text("<html></html>", encoding="utf-8")
 
             lines = experience_coverage_detail_lines(outputs)
 
@@ -464,28 +635,21 @@ class LearnerMenuTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)
 
-            def write_summary(name: str, lab_name: str, config_path: str) -> None:
-                run = outputs / name
-                run.mkdir()
-                (run / "summary.json").write_text(
-                    json.dumps(
-                        {
-                            "lab_name": lab_name,
-                            "config_path": config_path,
-                            "config_name": Path(config_path).stem,
-                        }
-                    ),
-                    encoding="utf-8",
-                )
-                (run / "report.html").write_text("<html></html>", encoding="utf-8")
-
-            write_summary("run_lab04_wall", "lab04_panda", "configs/lab04_panda/interactive_virtual_wall.yaml")
-            write_summary(
-                "run_lab04_cartesian",
+            _publish_scenario_run(
+                outputs / "run_lab04_wall",
+                "lab04_panda",
+                "configs/lab04_panda/interactive_virtual_wall.yaml",
+            )
+            _publish_scenario_run(
+                outputs / "run_lab04_cartesian",
                 "lab04_panda",
                 "configs/lab04_panda/interactive_cartesian_reach.yaml",
             )
-            write_summary("run_lab03_interactive", "lab03_2dof", "configs/lab03_2dof/interactive_2dof.yaml")
+            _publish_scenario_run(
+                outputs / "run_lab03_interactive",
+                "lab03_2dof",
+                "configs/lab03_2dof/interactive_2dof.yaml",
+            )
 
             lines = experience_coverage_detail_lines(outputs)
 
@@ -555,35 +719,17 @@ class LearnerMenuTests(unittest.TestCase):
         last_step = LEARNING_PATH[-1]
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)
-            run_dir = outputs / "run_lab01"
-            run_dir.mkdir()
-            (run_dir / "summary.json").write_text(
-                json.dumps(
-                    {
-                        "lab_name": "lab01_msd",
-                        "config_path": "configs/lab01_msd/default.yaml",
-                        "config_name": "default",
-                    }
-                ),
-                encoding="utf-8",
+            run_dir = _publish_scenario_run(
+                outputs / "run_lab01",
+                "lab01_msd",
+                "configs/lab01_msd/default.yaml",
             )
-            (run_dir / "report.html").write_text("<html></html>", encoding="utf-8")
-            (run_dir / "plots").mkdir()
-            (run_dir / "plots" / "position.png").write_bytes(b"fake-png")
             worksheet = run_dir / "worksheet.md"
-            worksheet.write_text("# Worksheet\n", encoding="utf-8")
             tuned_config = run_dir / "learner_tuned_config.yaml"
             tuned_config.write_text("interaction:\n  panel: false\n", encoding="utf-8")
 
-            batch_dir = outputs / "all_batches"
-            batch_dir.mkdir()
-            (batch_dir / "summary.json").write_text(
-                json.dumps({"lab_name": "batch_group", "batch_name": "all", "config_name": "all"}),
-                encoding="utf-8",
-            )
-            (batch_dir / "report.html").write_text("<html></html>", encoding="utf-8")
+            batch_dir = _publish_course_run(outputs / "all_batches")
             batch_worksheet = batch_dir / "worksheet.md"
-            batch_worksheet.write_text("# Course worksheet\n", encoding="utf-8")
 
             first_progress = learning_path_progress(first_step, outputs)
             last_progress = learning_path_progress(last_step, outputs)
@@ -605,7 +751,10 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(first_worksheet, worksheet)
         self.assertEqual(first_tuned, tuned_config)
         self.assertIn("Status: Done - latest run_lab01", first_progress_text)
-        self.assertIn("Latest artifacts: worksheet worksheet.md; replay learner_tuned_config.yaml", first_progress_text)
+        self.assertIn(
+            "Latest artifacts: worksheet worksheet.md; replay learner_tuned_config.yaml",
+            first_progress_text,
+        )
         self.assertIn("Latest plot: position.png", first_progress_text)
         self.assertIn("Plot review: Position - Compare actual motion", first_progress_text)
         self.assertEqual(first_labels["plot"], "Plot: position")
@@ -618,12 +767,20 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(last_worksheet, batch_worksheet)
         self.assertIsNone(last_tuned)
         self.assertFalse(second_progress.completed)
-        self.assertIn("Status: Not run yet", learning_path_progress_text(LEARNING_PATH[1], second_progress))
+        self.assertIn(
+            "Status: Not run yet", learning_path_progress_text(LEARNING_PATH[1], second_progress)
+        )
         self.assertEqual(next_learning_path_step(progress_items), LEARNING_PATH[1])
         self.assertIn("Progress: 2/12 complete", learning_path_summary_text(progress_items))
         self.assertIn("Next: 2. Disturb and tune", learning_path_summary_text(progress_items))
-        self.assertIn("Next action: run Lab01 Mass-Spring-Damper - Interactive", learning_path_summary_text(progress_items))
-        self.assertIn("Done when: use at least one button, slider, or preset", learning_path_summary_text(progress_items))
+        self.assertIn(
+            "Next action: run Lab01 Mass-Spring-Damper - Interactive",
+            learning_path_summary_text(progress_items),
+        )
+        self.assertIn(
+            "Done when: use at least one button, slider, or preset",
+            learning_path_summary_text(progress_items),
+        )
         self.assertIn("Predict:", learning_path_summary_text(progress_items))
         self.assertIn("Watch:", learning_path_summary_text(progress_items))
         self.assertEqual(
@@ -636,128 +793,115 @@ class LearnerMenuTests(unittest.TestCase):
         first_step = LEARNING_PATH[0]
         second_step = LEARNING_PATH[1]
         with tempfile.TemporaryDirectory() as tmp:
-            outputs = Path(tmp)
-            run_dir = outputs / "run_lab01"
-            run_dir.mkdir()
-            (run_dir / "summary.json").write_text(
-                json.dumps(
-                    {
-                        "lab_name": "lab01_msd",
-                        "config_path": "configs/lab01_msd/default.yaml",
-                        "config_name": "default",
-                    }
-                ),
-                encoding="utf-8",
-            )
-            (run_dir / "report.html").write_text("<html></html>", encoding="utf-8")
+            root = Path(tmp)
 
-            interactive_dir = outputs / "run_lab01_interactive"
-            interactive_dir.mkdir()
-            (interactive_dir / "summary.json").write_text(
-                json.dumps(
-                    {
-                        "lab_name": "lab01_msd",
-                        "config_path": "configs/lab01_msd/interactive_pull.yaml",
-                        "config_name": "interactive_pull",
-                    }
-                ),
-                encoding="utf-8",
-            )
-            (interactive_dir / "report.html").write_text("<html></html>", encoding="utf-8")
+            def state(
+                name: str,
+                events: list[dict[str, object]] | None = None,
+            ) -> Path:
+                outputs = _output_snapshot(root, name)
+                _publish_scenario_run(
+                    outputs / "run_lab01",
+                    "lab01_msd",
+                    "configs/lab01_msd/default.yaml",
+                )
+                _publish_scenario_run(
+                    outputs / "run_lab01_interactive",
+                    "lab01_msd",
+                    "configs/lab01_msd/interactive_pull.yaml",
+                    events=events,
+                )
+                return outputs
+
+            outputs = state("needs_evidence")
 
             needs_evidence = learning_path_progress(second_step, outputs)
             needs_summary = learning_path_summary_text(learning_path_progress_items(outputs))
 
-            (interactive_dir / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {
-                            "kind": "marker",
-                            "name": "observation",
-                            "value": {"question": "Question: demo?", "note": "Saw the mass settle."},
-                        }
-                    ]
-                ),
-                encoding="utf-8",
+            outputs = state(
+                "needs_prediction",
+                events=[
+                    {
+                        "kind": "marker",
+                        "name": "observation",
+                        "value": {"question": "Question: demo?", "note": "Saw the mass settle."},
+                    }
+                ],
             )
             needs_prediction = learning_path_progress(second_step, outputs)
-            needs_prediction_summary = learning_path_summary_text(learning_path_progress_items(outputs))
+            needs_prediction_summary = learning_path_summary_text(
+                learning_path_progress_items(outputs)
+            )
 
-            (interactive_dir / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {"kind": "slider", "name": "damping", "label": "Damping", "value": 4.0},
-                        {
-                            "kind": "marker",
-                            "name": "observation",
-                            "value": {
-                                "question": "Question: demo?",
-                                "prediction": "More damping should settle faster.",
-                                "note": "Saw the mass settle.",
-                            },
-                        }
-                    ]
-                ),
-                encoding="utf-8",
+            outputs = state(
+                "needs_outcome",
+                events=[
+                    {"kind": "slider", "name": "damping", "label": "Damping", "value": 4.0},
+                    {
+                        "kind": "marker",
+                        "name": "observation",
+                        "value": {
+                            "question": "Question: demo?",
+                            "prediction": "More damping should settle faster.",
+                            "note": "Saw the mass settle.",
+                        },
+                    },
+                ],
             )
             needs_outcome = learning_path_progress(second_step, outputs)
-            needs_outcome_summary = learning_path_summary_text(learning_path_progress_items(outputs))
+            needs_outcome_summary = learning_path_summary_text(
+                learning_path_progress_items(outputs)
+            )
 
-            (interactive_dir / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {
-                            "kind": "marker",
-                            "name": "observation",
-                            "value": {
-                                "question": "Question: demo?",
-                                "prediction": "More damping should settle faster.",
-                                "outcome": "Matched",
-                            },
-                        }
-                    ]
-                ),
-                encoding="utf-8",
+            outputs = state(
+                "needs_note",
+                events=[
+                    {
+                        "kind": "marker",
+                        "name": "observation",
+                        "value": {
+                            "question": "Question: demo?",
+                            "prediction": "More damping should settle faster.",
+                            "outcome": "Matched",
+                        },
+                    }
+                ],
             )
             needs_note = learning_path_progress(second_step, outputs)
             needs_note_summary = learning_path_summary_text(learning_path_progress_items(outputs))
 
-            (interactive_dir / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {
-                            "kind": "marker",
-                            "name": "observation",
-                            "value": {
-                                "question": "Question: demo?",
-                                "prediction": "More damping should settle faster.",
-                                "outcome": "Matched",
-                                "note": "Saw the mass settle.",
-                            },
-                        }
-                    ]
-                ),
-                encoding="utf-8",
+            outputs = state(
+                "needs_control",
+                events=[
+                    {
+                        "kind": "marker",
+                        "name": "observation",
+                        "value": {
+                            "question": "Question: demo?",
+                            "prediction": "More damping should settle faster.",
+                            "outcome": "Matched",
+                            "note": "Saw the mass settle.",
+                        },
+                    }
+                ],
             )
             needs_control = learning_path_progress(second_step, outputs)
 
-            (interactive_dir / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {"kind": "slider", "name": "damping", "label": "Damping", "value": 4.0},
-                        {
-                            "kind": "marker",
-                            "name": "observation",
-                            "value": {
-                                "question": "Question: demo?",
-                                "prediction": "More damping should settle faster.",
-                                "outcome": "Matched",
-                                "note": "Saw the mass settle.",
-                            },
-                        }
-                    ]
-                ),
-                encoding="utf-8",
+            outputs = state(
+                "complete",
+                events=[
+                    {"kind": "slider", "name": "damping", "label": "Damping", "value": 4.0},
+                    {
+                        "kind": "marker",
+                        "name": "observation",
+                        "value": {
+                            "question": "Question: demo?",
+                            "prediction": "More damping should settle faster.",
+                            "outcome": "Matched",
+                            "note": "Saw the mass settle.",
+                        },
+                    },
+                ],
             )
             complete_progress = learning_path_progress(second_step, outputs)
             complete_summary = learning_path_summary_text(learning_path_progress_items(outputs))
@@ -766,8 +910,14 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertTrue(learning_path_requires_evidence(second_step))
         self.assertFalse(needs_evidence.completed)
         self.assertEqual(needs_evidence.observation_markers, 0)
-        self.assertIn("Status: Needs observation - latest run_lab01_interactive", learning_path_progress_text(second_step, needs_evidence))
-        self.assertIn("Add one Mark observation entry", learning_path_progress_text(second_step, needs_evidence))
+        self.assertIn(
+            "Status: Needs observation - latest run_lab01_interactive",
+            learning_path_progress_text(second_step, needs_evidence),
+        )
+        self.assertIn(
+            "Add one Mark observation entry",
+            learning_path_progress_text(second_step, needs_evidence),
+        )
         self.assertIn("Progress: 1/12 complete", needs_summary)
         self.assertIn("Evidence pending: 1 hands-on step(s).", needs_summary)
         self.assertIn("Next: 2. Disturb and tune", needs_summary)
@@ -780,7 +930,10 @@ class LearnerMenuTests(unittest.TestCase):
             "Status: Needs prediction - latest run_lab01_interactive (1 observation, 1 note, 0 controls)",
             learning_path_progress_text(second_step, needs_prediction),
         )
-        self.assertIn("Add one Prediction in Mark observation", learning_path_progress_text(second_step, needs_prediction))
+        self.assertIn(
+            "Add one Prediction in Mark observation",
+            learning_path_progress_text(second_step, needs_prediction),
+        )
         self.assertIn("Progress: 1/12 complete", needs_prediction_summary)
         self.assertIn("Evidence pending: 1 hands-on step(s).", needs_prediction_summary)
 
@@ -788,14 +941,18 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(needs_outcome.learner_predictions, 1)
         self.assertEqual(needs_outcome.learner_outcomes, 0)
         self.assertIn("Outcome review pending: 1 hands-on step(s).", needs_outcome_summary)
-        self.assertIn("Add one Prediction outcome while reviewing.", learning_path_progress_text(second_step, needs_outcome))
+        self.assertIn(
+            "Add one Prediction outcome while reviewing.",
+            learning_path_progress_text(second_step, needs_outcome),
+        )
 
         self.assertFalse(needs_note.completed)
         self.assertEqual(needs_note.learner_notes, 0)
         self.assertIn("Progress: 1/12 complete", needs_note_summary)
         self.assertIn("Evidence pending: 1 hands-on step(s).", needs_note_summary)
         self.assertIn(
-            "Status: Needs note - latest run_lab01_interactive (1 observation, 1 prediction, 1 outcome, 0 controls)",
+            "Status: Ready; add note next - latest run_lab01_interactive "
+            "(1 observation, 1 prediction, 1 outcome, 0 controls)",
             learning_path_progress_text(second_step, needs_note),
         )
         self.assertIn(
@@ -850,7 +1007,7 @@ class LearnerMenuTests(unittest.TestCase):
         action = learning_path_target(wall_step)
         assert isinstance(action, MenuAction)
 
-        def write_events(run_path: Path, preset_labels: list[str]) -> None:
+        def write_events(outputs: Path, preset_labels: list[str]) -> None:
             events = [
                 {"kind": "preset", "name": label.lower().replace(" ", "_"), "label": label}
                 for label in preset_labels
@@ -867,43 +1024,44 @@ class LearnerMenuTests(unittest.TestCase):
                     },
                 }
             )
-            (run_path / "interaction_events.json").write_text(json.dumps(events), encoding="utf-8")
-
-        with tempfile.TemporaryDirectory() as tmp:
-            outputs = Path(tmp)
-            run_path = outputs / "run_lab04_wall_interactive"
-            run_path.mkdir()
-            (run_path / "summary.json").write_text(
-                json.dumps(
-                    {
-                        "lab_name": action.lab_name,
-                        "config_path": action.config_path,
-                        "config_name": Path(action.config_path).stem,
-                    }
-                ),
-                encoding="utf-8",
+            _publish_scenario_run(
+                outputs / "run_lab04_wall_interactive",
+                action.lab_name,
+                action.config_path,
+                events=events,
             )
 
-            write_events(run_path, ["Soft wall", "Stiff wall"])
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            outputs = _output_snapshot(root, "missing_close")
+            write_events(outputs, ["Soft wall", "Stiff wall"])
             missing_close = learning_path_progress(wall_step, outputs)
 
-            write_events(run_path, ["Close wall"])
+            outputs = _output_snapshot(root, "missing_back")
+            write_events(outputs, ["Close wall"])
             missing_back = learning_path_progress(wall_step, outputs)
             missing_back_text = learning_path_progress_text(wall_step, missing_back)
             missing_back_mission = action_mission_evidence_text(action, outputs)
 
-            write_events(run_path, ["Close wall", "Back away"])
+            outputs = _output_snapshot(root, "missing_reenter")
+            write_events(outputs, ["Close wall", "Back away"])
             missing_reenter = learning_path_progress(wall_step, outputs)
             missing_reenter_text = learning_path_progress_text(wall_step, missing_reenter)
 
-            write_events(run_path, ["Re-enter wall", "Close wall", "Back away"])
+            outputs = _output_snapshot(root, "out_of_order")
+            write_events(outputs, ["Re-enter wall", "Close wall", "Back away"])
             out_of_order = learning_path_progress(wall_step, outputs)
 
-            write_events(run_path, ["Close wall", "Back away", "Re-enter wall"])
+            outputs = _output_snapshot(root, "complete")
+            write_events(outputs, ["Close wall", "Back away", "Re-enter wall"])
             complete = learning_path_progress(wall_step, outputs)
 
         self.assertEqual(wall_step.title, "11. Touch virtual wall")
-        self.assertIn("required presets: Close wall -> Back away -> Re-enter wall", learning_path_completion_text(wall_step))
+        self.assertIn(
+            "required presets: Close wall -> Back away -> Re-enter wall",
+            learning_path_completion_text(wall_step),
+        )
         self.assertFalse(missing_close.completed)
         self.assertEqual(missing_close.required_presets, 3)
         self.assertEqual(missing_close.required_presets_tried, 0)
@@ -950,6 +1108,11 @@ class LearnerMenuTests(unittest.TestCase):
             report.write_text("<html></html>", encoding="utf-8")
             worksheet = run_dir / "worksheet.md"
             worksheet.write_text("# Worksheet\n", encoding="utf-8")
+            _finalize_scenario_run(
+                run_dir,
+                "lab01_msd",
+                "configs/lab01_msd/default.yaml",
+            )
 
             with patch("mclab.learner_menu.open_path") as opener:
                 launch_learning_path_latest_output(first_step, outputs)
@@ -964,7 +1127,9 @@ class LearnerMenuTests(unittest.TestCase):
 
             opener.assert_called_once_with(run_dir)
             self.assertIsNone(missing_folder)
-            self.assertEqual(learning_path_artifact_button_labels(first_step, outputs)["folder"], "Folder")
+            self.assertEqual(
+                learning_path_artifact_button_labels(first_step, outputs)["folder"], "Folder"
+            )
 
             with patch("mclab.learner_menu.open_path") as opener:
                 launch_learning_path_latest_worksheet(first_step, outputs)
@@ -982,12 +1147,16 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIsNone(next_learning_path_step(progress_items))
         self.assertIn("Progress: 12/12 complete", learning_path_summary_text(progress_items))
         self.assertIn("Course path complete", learning_path_summary_text(progress_items))
-        self.assertIn("All milestones ready for review.", learning_path_milestone_text(progress_items))
+        self.assertIn(
+            "All milestones ready for review.", learning_path_milestone_text(progress_items)
+        )
 
         batch_next_items = tuple(
             (
                 step,
-                LearningPathProgress(completed=index < len(LEARNING_PATH), latest_output=Path(f"run_{index}")),
+                LearningPathProgress(
+                    completed=index < len(LEARNING_PATH), latest_output=Path(f"run_{index}")
+                ),
             )
             for index, step in enumerate(LEARNING_PATH, start=1)
         )
@@ -1072,7 +1241,10 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Mission: Change", action_mission_text(lab03_dls))
         self.assertIn("mark one observation", action_playbook_text(lab03_dls))
         self.assertIn("Run viewer", action_start_steps_text(lab03_dls))
-        self.assertIn("try presets Early damping -> Balanced schedule -> Late damping", action_start_steps_text(lab03_dls))
+        self.assertIn(
+            "try presets Early damping -> Balanced schedule -> Late damping",
+            action_start_steps_text(lab03_dls),
+        )
         self.assertIn("prediction-backed observation", action_challenge_text(lab03_dls))
         lab04_joint = by_label[("Lab04 Panda Manipulator", "Joint target")]
         self.assertIn(
@@ -1088,7 +1260,9 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertNotIn("Mark observation", action_start_steps_text(deep_push_wall))
         self.assertIn("review the saved plot and worksheet", action_playbook_text(deep_push_wall))
         self.assertNotIn("mark one observation", action_playbook_text(deep_push_wall))
-        self.assertIn("verify it in the saved plot and worksheet", action_challenge_text(deep_push_wall))
+        self.assertIn(
+            "verify it in the saved plot and worksheet", action_challenge_text(deep_push_wall)
+        )
         self.assertNotIn("prediction-backed observation", action_challenge_text(deep_push_wall))
 
         batch_by_label = {(action.group, action.label): action for action in BATCH_ACTIONS}
@@ -1100,6 +1274,14 @@ class LearnerMenuTests(unittest.TestCase):
             "Start steps: Predict the strongest course-level effect -> Run all comparison batches -> Open the course worksheet.",
         )
         self.assertIn("Run 5 scenarios", action_start_steps_text(lab01_compare))
+        self.assertIn(
+            "review the digest-published, read-only Prediction Check",
+            action_challenge_text(lab01_compare),
+        )
+        self.assertIn(
+            "personal/course notes outside the saved-run folder",
+            action_challenge_text(lab01_compare),
+        )
         self.assertIn("compare wall penetration", action_mission_text(lab04_wall_compare))
         self.assertNotIn("compare Compare", action_mission_text(lab04_wall_compare))
         self.assertIn("open the top report", action_mission_text(all_compare))
@@ -1109,7 +1291,9 @@ class LearnerMenuTests(unittest.TestCase):
         by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
         auto_demo = by_label[("Lab01 Mass-Spring-Damper", "Auto demo")]
         lab01_interactive = by_label[("Lab01 Mass-Spring-Damper", "Interactive")]
-        lab03_condition_dls = by_label[("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS")]
+        lab03_condition_dls = by_label[
+            ("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS")
+        ]
         lab04_cartesian = by_label[("Lab04 Panda Manipulator", "Cartesian interactive")]
         lab04_wall = by_label[("Lab04 Panda Manipulator", "Virtual wall")]
 
@@ -1134,7 +1318,9 @@ class LearnerMenuTests(unittest.TestCase):
 
         dls_controls = action_controls_text(lab03_condition_dls)
         self.assertIn("Shoulder/Elbow pulse buttons and A/D keys", dls_controls)
-        self.assertIn("quick presets (Early damping, Balanced schedule, Late damping)", dls_controls)
+        self.assertIn(
+            "quick presets (Early damping, Balanced schedule, Late damping)", dls_controls
+        )
         self.assertIn("live sliders with Changed values", dls_controls)
 
         cartesian_controls = action_controls_text(lab04_cartesian)
@@ -1143,7 +1329,10 @@ class LearnerMenuTests(unittest.TestCase):
 
         wall_controls = action_controls_text(lab04_wall)
         self.assertIn("Target X + into wall", wall_controls)
-        self.assertIn("quick presets (Soft wall, Stiff wall, Close wall, Back away, Re-enter wall)", wall_controls)
+        self.assertIn(
+            "quick presets (Soft wall, Stiff wall, Close wall, Back away, Re-enter wall)",
+            wall_controls,
+        )
         self.assertIn("Counts as control:", lesson_text(lab04_wall))
         self.assertIn(
             "try required presets Close wall -> Back away -> Re-enter wall",
@@ -1153,15 +1342,22 @@ class LearnerMenuTests(unittest.TestCase):
     def test_menu_cards_show_viewer_marker_legend(self) -> None:
         by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
         lab01_interactive = by_label[("Lab01 Mass-Spring-Damper", "Interactive")]
-        lab03_condition_dls = by_label[("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS")]
+        lab03_condition_dls = by_label[
+            ("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS")
+        ]
         lab03_retarget = by_label[("Lab03 2DOF Arm and Trajectories", "2DOF inward-retarget DLS")]
         lab04_wall = by_label[("Lab04 Panda Manipulator", "Virtual wall")]
         lab04_joint = by_label[("Lab04 Panda Manipulator", "Joint target")]
 
         self.assertIn("MuJoCo side panels are hidden", action_viewer_text(lab01_interactive))
         self.assertIn("Green marker = Target position.", action_viewer_text(lab01_interactive))
-        self.assertIn("Orange sphere = Singularity warning", action_viewer_text(lab03_condition_dls))
-        self.assertIn("Small green spheres = Planned target waypoint path.", action_viewer_text(lab03_retarget))
+        self.assertIn(
+            "Orange sphere = Singularity warning", action_viewer_text(lab03_condition_dls)
+        )
+        self.assertIn(
+            "Small green spheres = Planned target waypoint path.",
+            action_viewer_text(lab03_retarget),
+        )
         self.assertIn("Red plane = Virtual wall location.", action_viewer_text(lab04_wall))
         self.assertIn("standard MuJoCo scene", action_viewer_text(lab04_joint))
         lesson = lesson_text(lab01_interactive)
@@ -1209,7 +1405,9 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("models/demo/scene.xml", ready.detail)
 
     def test_batch_readiness_checks_all_scenario_assets(self) -> None:
-        lab01_batch = next(action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare")
+        lab01_batch = next(
+            action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare"
+        )
         config_names = (
             "default.yaml",
             "underdamped.yaml",
@@ -1257,7 +1455,9 @@ class LearnerMenuTests(unittest.TestCase):
         with (
             patch(
                 "mclab.learner_menu.action_readiness",
-                return_value=ActionReadiness("fail", "Missing model", "demo.xml", "Run Check setup."),
+                return_value=ActionReadiness(
+                    "fail", "Missing model", "demo.xml", "Run Check setup."
+                ),
             ),
             patch("mclab.learner_menu.launch_action") as launcher,
         ):
@@ -1272,7 +1472,9 @@ class LearnerMenuTests(unittest.TestCase):
         with (
             patch(
                 "mclab.learner_menu.batch_readiness",
-                return_value=ActionReadiness("fail", "Batch not ready", "missing model", "Run Check setup."),
+                return_value=ActionReadiness(
+                    "fail", "Batch not ready", "missing model", "Run Check setup."
+                ),
             ),
             patch("mclab.learner_menu.launch_batch_action") as launcher,
         ):
@@ -1286,7 +1488,9 @@ class LearnerMenuTests(unittest.TestCase):
         by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
         lab02_interactive = by_label[("Lab02 PID Control", "Interactive")]
         lab03_dls = by_label[("Lab03 2DOF Arm and Trajectories", "2DOF DLS singularity")]
-        lab03_condition_dls = by_label[("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS")]
+        lab03_condition_dls = by_label[
+            ("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS")
+        ]
         lab04_cartesian = by_label[("Lab04 Panda Manipulator", "Cartesian interactive")]
         lab04_wall = by_label[("Lab04 Panda Manipulator", "Virtual wall")]
 
@@ -1302,22 +1506,42 @@ class LearnerMenuTests(unittest.TestCase):
             configured_preset_comparison(lab02_interactive.config_path),
             "Gentle P -> Damped PD -> Aggressive PID; watch live status, then mark one observation.",
         )
-        self.assertIn("Presets: Gentle P, Damped PD, Aggressive PID", lesson_text(lab02_interactive))
-        self.assertIn("Preset purpose: Gentle P: Slow but calm disturbance recovery.", lesson_text(lab02_interactive))
+        self.assertIn(
+            "Presets: Gentle P, Damped PD, Aggressive PID", lesson_text(lab02_interactive)
+        )
+        self.assertIn(
+            "Preset purpose: Gentle P: Slow but calm disturbance recovery.",
+            lesson_text(lab02_interactive),
+        )
         self.assertIn(
             "Preset compare: Gentle P -> Damped PD -> Aggressive PID; watch live status, then mark one observation.",
             lesson_text(lab02_interactive),
         )
-        self.assertIn("Presets: Low DLS damping, Balanced DLS, High DLS damping", lesson_text(lab03_dls))
-        self.assertIn("Presets: Early damping, Balanced schedule, Late damping", lesson_text(lab03_condition_dls))
-        self.assertIn("Presets: Soft reach, Default reach, Far target", lesson_text(lab04_cartesian))
-        self.assertEqual(configured_required_preset_labels(lab04_wall.config_path), ("Close wall", "Back away", "Re-enter wall"))
+        self.assertIn(
+            "Presets: Low DLS damping, Balanced DLS, High DLS damping", lesson_text(lab03_dls)
+        )
+        self.assertIn(
+            "Presets: Early damping, Balanced schedule, Late damping",
+            lesson_text(lab03_condition_dls),
+        )
+        self.assertIn(
+            "Presets: Soft reach, Default reach, Far target", lesson_text(lab04_cartesian)
+        )
+        self.assertEqual(
+            configured_required_preset_labels(lab04_wall.config_path),
+            ("Close wall", "Back away", "Re-enter wall"),
+        )
         self.assertIn(
             "required evidence: Close wall -> Back away -> Re-enter wall",
             configured_preset_comparison(lab04_wall.config_path),
         )
-        self.assertIn("Presets: Soft wall, Stiff wall, Close wall, Back away, Re-enter wall", lesson_text(lab04_wall))
-        self.assertIn("required evidence: Close wall -> Back away -> Re-enter wall", lesson_text(lab04_wall))
+        self.assertIn(
+            "Presets: Soft wall, Stiff wall, Close wall, Back away, Re-enter wall",
+            lesson_text(lab04_wall),
+        )
+        self.assertIn(
+            "required evidence: Close wall -> Back away -> Re-enter wall", lesson_text(lab04_wall)
+        )
 
     def test_menu_cards_show_readable_experience_badges(self) -> None:
         by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
@@ -1358,7 +1582,9 @@ class LearnerMenuTests(unittest.TestCase):
             ],
         )
         self.assertIn("Course step: 11/12 - Touch virtual wall", lesson_text(lab04_wall))
-        self.assertIn("Done when: use at least one button, slider, or preset", lesson_text(lab04_wall))
+        self.assertIn(
+            "Done when: use at least one button, slider, or preset", lesson_text(lab04_wall)
+        )
         self.assertEqual(
             action_course_lines(lab04_stability),
             [
@@ -1368,14 +1594,18 @@ class LearnerMenuTests(unittest.TestCase):
             ],
         )
         self.assertIn("Course step: Optional exploration", lesson_text(lab04_stability))
-        self.assertIn("Done when: the run report, priority plot, and worksheet", lesson_text(lab04_stability))
+        self.assertIn(
+            "Done when: the run report, priority plot, and worksheet", lesson_text(lab04_stability)
+        )
 
         course_matches = filter_menu_actions("course step virtual wall")
         self.assertIn(lab04_wall, course_matches)
 
     def test_batch_cards_show_course_context(self) -> None:
         all_batch = next(action for action in BATCH_ACTIONS if action.batch_name == "all")
-        wall_batch = next(action for action in BATCH_ACTIONS if action.batch_name == "lab04_wall_compare")
+        wall_batch = next(
+            action for action in BATCH_ACTIONS if action.batch_name == "lab04_wall_compare"
+        )
 
         self.assertEqual(
             action_course_lines(all_batch),
@@ -1396,7 +1626,9 @@ class LearnerMenuTests(unittest.TestCase):
             ],
         )
         self.assertIn("Course step: Optional comparison", lesson_text_for_batch(wall_batch))
-        self.assertIn("Done when: the comparison report, plots, worksheet", lesson_text_for_batch(wall_batch))
+        self.assertIn(
+            "Done when: the comparison report, plots, worksheet", lesson_text_for_batch(wall_batch)
+        )
 
     def test_menu_action_followups_point_to_real_next_experiences(self) -> None:
         for action in MENU_ACTIONS:
@@ -1418,26 +1650,42 @@ class LearnerMenuTests(unittest.TestCase):
                 self.assertIn(compare_batch, BATCH_ACTIONS)
                 self.assertIn(compare_batch.label, action_compare_text(action))
 
-        self.assertEqual(action_compare_batch(by_label[("Lab01 Mass-Spring-Damper", "Interactive")]).batch_name, "lab01_msd_compare")
-        self.assertEqual(action_compare_batch(by_label[("Lab02 PID Control", "Windup")]).batch_name, "lab02_pid_compare")
         self.assertEqual(
-            action_compare_batch(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF DLS singularity")]).batch_name,
+            action_compare_batch(by_label[("Lab01 Mass-Spring-Damper", "Interactive")]).batch_name,
+            "lab01_msd_compare",
+        )
+        self.assertEqual(
+            action_compare_batch(by_label[("Lab02 PID Control", "Windup")]).batch_name,
+            "lab02_pid_compare",
+        )
+        self.assertEqual(
+            action_compare_batch(
+                by_label[("Lab03 2DOF Arm and Trajectories", "2DOF DLS singularity")]
+            ).batch_name,
             "lab03_2dof_compare",
         )
         self.assertEqual(
-            action_compare_batch(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF low-torque DLS")]).batch_name,
+            action_compare_batch(
+                by_label[("Lab03 2DOF Arm and Trajectories", "2DOF low-torque DLS")]
+            ).batch_name,
             "lab03_2dof_compare",
         )
         self.assertEqual(
-            action_compare_batch(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF fast-command DLS")]).batch_name,
+            action_compare_batch(
+                by_label[("Lab03 2DOF Arm and Trajectories", "2DOF fast-command DLS")]
+            ).batch_name,
             "lab03_2dof_compare",
         )
         self.assertEqual(
-            action_compare_batch(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF low-joint-speed DLS")]).batch_name,
+            action_compare_batch(
+                by_label[("Lab03 2DOF Arm and Trajectories", "2DOF low-joint-speed DLS")]
+            ).batch_name,
             "lab03_2dof_compare",
         )
         self.assertEqual(
-            action_compare_batch(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF upper-path DLS")]).batch_name,
+            action_compare_batch(
+                by_label[("Lab03 2DOF Arm and Trajectories", "2DOF upper-path DLS")]
+            ).batch_name,
             "lab03_2dof_compare",
         )
         self.assertEqual(
@@ -1453,12 +1701,19 @@ class LearnerMenuTests(unittest.TestCase):
             "lab03_2dof_compare",
         )
         self.assertEqual(
-            action_compare_batch(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF direct-retarget DLS")]).batch_name,
+            action_compare_batch(
+                by_label[("Lab03 2DOF Arm and Trajectories", "2DOF direct-retarget DLS")]
+            ).batch_name,
             "lab03_2dof_compare",
         )
-        self.assertEqual(action_compare_batch(by_label[("Lab04 Panda Manipulator", "Virtual wall")]).batch_name, "lab04_wall_compare")
         self.assertEqual(
-            action_compare_batch(by_label[("Lab04 Panda Manipulator", "Cartesian reach")]).batch_name,
+            action_compare_batch(by_label[("Lab04 Panda Manipulator", "Virtual wall")]).batch_name,
+            "lab04_wall_compare",
+        )
+        self.assertEqual(
+            action_compare_batch(
+                by_label[("Lab04 Panda Manipulator", "Cartesian reach")]
+            ).batch_name,
             "lab04_cartesian_compare",
         )
 
@@ -1473,7 +1728,9 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("controller.ki=", windup)
         self.assertIn("controller.anti_windup=", windup)
 
-        task_space = config_value_preview(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF task-space")])
+        task_space = config_value_preview(
+            by_label[("Lab03 2DOF Arm and Trajectories", "2DOF task-space")]
+        )
         self.assertIn("target_xy=", task_space)
         self.assertIn("tracking_controller.task_kp=", task_space)
 
@@ -1481,16 +1738,24 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("virtual_wall.stiffness=", wall)
         self.assertIn("virtual_wall.damping=", wall)
 
-        interactive = config_value_preview(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF interactive")])
+        interactive = config_value_preview(
+            by_label[("Lab03 2DOF Arm and Trajectories", "2DOF interactive")]
+        )
         self.assertIn("target_xy=", interactive)
         self.assertIn("interaction.joint_disturbance_torque=", interactive)
 
-        low_torque = config_value_preview(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF low-torque DLS")])
+        low_torque = config_value_preview(
+            by_label[("Lab03 2DOF Arm and Trajectories", "2DOF low-torque DLS")]
+        )
         self.assertIn("tracking_controller.torque_limit=", low_torque)
-        edge_target = config_value_preview(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF edge-target DLS")])
+        edge_target = config_value_preview(
+            by_label[("Lab03 2DOF Arm and Trajectories", "2DOF edge-target DLS")]
+        )
         self.assertIn("target_xy=", edge_target)
         self.assertIn("tracking_controller.condition_damping_threshold=", edge_target)
-        upper_path = config_value_preview(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF upper-path DLS")])
+        upper_path = config_value_preview(
+            by_label[("Lab03 2DOF Arm and Trajectories", "2DOF upper-path DLS")]
+        )
         self.assertIn("initial_q=", upper_path)
         self.assertIn("target_xy=", upper_path)
         self.assertIn("tracking_controller.condition_damping_threshold=", upper_path)
@@ -1504,7 +1769,9 @@ class LearnerMenuTests(unittest.TestCase):
         )
         self.assertIn("disturbance_torque.duration=", staggered_disturbance)
         self.assertIn("disturbance_torque.ramp_time=", staggered_disturbance)
-        fast_command = config_value_preview(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF fast-command DLS")])
+        fast_command = config_value_preview(
+            by_label[("Lab03 2DOF Arm and Trajectories", "2DOF fast-command DLS")]
+        )
         self.assertIn("trajectory.duration=", fast_command)
         self.assertIn("tracking_controller.max_task_speed=", fast_command)
         low_joint_speed = config_value_preview(
@@ -1521,7 +1788,9 @@ class LearnerMenuTests(unittest.TestCase):
         )
         self.assertIn("target_xy_waypoints", adaptive_speed_retarget)
         self.assertIn("tracking_controller.max_task_speed_schedule", adaptive_speed_retarget)
-        deep_push_wall = config_value_preview(by_label[("Lab04 Panda Manipulator", "Deep push wall")])
+        deep_push_wall = config_value_preview(
+            by_label[("Lab04 Panda Manipulator", "Deep push wall")]
+        )
         self.assertIn("cartesian_target.waypoints", deep_push_wall)
         self.assertIn("virtual_wall.wall_x=", deep_push_wall)
 
@@ -1534,9 +1803,15 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Soft wall", wall_labels)
         self.assertIn("Stiff wall", wall_labels)
         self.assertIn("Virtual wall", wall_labels)
-        self.assertEqual(filter_menu_actions("wall", experience_filter="wall")[0].label, "Virtual wall")
-        self.assertEqual(filter_menu_actions("virtual wall", experience_filter="wall")[0].label, "Virtual wall")
-        self.assertEqual(filter_menu_actions("soft wall", experience_filter="wall")[0].label, "Soft wall")
+        self.assertEqual(
+            filter_menu_actions("wall", experience_filter="wall")[0].label, "Virtual wall"
+        )
+        self.assertEqual(
+            filter_menu_actions("virtual wall", experience_filter="wall")[0].label, "Virtual wall"
+        )
+        self.assertEqual(
+            filter_menu_actions("soft wall", experience_filter="wall")[0].label, "Soft wall"
+        )
         contact_labels = {action.label for action in filter_menu_actions("contact release")}
         self.assertIn("Contact cycle wall", contact_labels)
         target_depth_labels = {action.label for action in filter_menu_actions("target depth wall")}
@@ -1547,25 +1822,41 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("High retreat wall", retreat_labels)
         intro_labels = {(action.group, action.label) for action in filter_menu_actions("intro")}
         self.assertIn(("Lab01 Mass-Spring-Damper", "Auto demo"), intro_labels)
-        deep_dive_labels = {(action.group, action.label) for action in filter_menu_actions("deep dive")}
-        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS"), deep_dive_labels)
+        deep_dive_labels = {
+            (action.group, action.label) for action in filter_menu_actions("deep dive")
+        }
+        self.assertIn(
+            ("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS"), deep_dive_labels
+        )
 
         interactive_labels = {action.label for action in filter_menu_actions("interactive")}
         self.assertIn("Interactive", interactive_labels)
         self.assertIn("2DOF interactive", interactive_labels)
         self.assertIn("Cartesian interactive", interactive_labels)
 
-        preset_labels = {(action.group, action.label) for action in filter_menu_actions("far target")}
+        preset_labels = {
+            (action.group, action.label) for action in filter_menu_actions("far target")
+        }
         self.assertIn(("Lab04 Panda Manipulator", "Cartesian interactive"), preset_labels)
-        preset_purpose_labels = {(action.group, action.label) for action in filter_menu_actions("safer joints")}
-        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF DLS singularity"), preset_purpose_labels)
-        preset_compare_labels = {(action.group, action.label) for action in filter_menu_actions("mark one observation")}
+        preset_purpose_labels = {
+            (action.group, action.label) for action in filter_menu_actions("safer joints")
+        }
+        self.assertIn(
+            ("Lab03 2DOF Arm and Trajectories", "2DOF DLS singularity"), preset_purpose_labels
+        )
+        preset_compare_labels = {
+            (action.group, action.label) for action in filter_menu_actions("mark one observation")
+        }
         self.assertIn(("Lab02 PID Control", "Interactive"), preset_compare_labels)
 
-        value_labels = {(action.group, action.label) for action in filter_menu_actions("anti_windup=true")}
+        value_labels = {
+            (action.group, action.label) for action in filter_menu_actions("anti_windup=true")
+        }
         self.assertIn(("Lab02 PID Control", "Anti-windup"), value_labels)
 
-        followup_labels = {(action.group, action.label) for action in filter_menu_actions("next anti-windup")}
+        followup_labels = {
+            (action.group, action.label) for action in filter_menu_actions("next anti-windup")
+        }
         self.assertIn(("Lab02 PID Control", "Windup"), followup_labels)
 
         compare_batch_labels = {
@@ -1573,29 +1864,52 @@ class LearnerMenuTests(unittest.TestCase):
         }
         self.assertIn(("Lab04 Panda Manipulator", "Virtual wall"), compare_batch_labels)
 
-        question_labels = {(action.group, action.label) for action in filter_menu_actions("question overshoot")}
+        question_labels = {
+            (action.group, action.label) for action in filter_menu_actions("question overshoot")
+        }
         self.assertIn(("Lab02 PID Control", "High P gain"), question_labels)
 
-        prediction_labels = {(action.group, action.label) for action in filter_menu_actions("prediction live target")}
+        prediction_labels = {
+            (action.group, action.label) for action in filter_menu_actions("prediction live target")
+        }
         self.assertIn(("Lab02 PID Control", "Interactive"), prediction_labels)
 
-        torque_labels = {(action.group, action.label) for action in filter_menu_actions("torque limit")}
+        torque_labels = {
+            (action.group, action.label) for action in filter_menu_actions("torque limit")
+        }
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF low-torque DLS"), torque_labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF high-torque DLS"), torque_labels)
-        target_labels = {(action.group, action.label) for action in filter_menu_actions("target dls")}
+        target_labels = {
+            (action.group, action.label) for action in filter_menu_actions("target dls")
+        }
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF edge-target DLS"), target_labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF inner-target DLS"), target_labels)
-        command_labels = {(action.group, action.label) for action in filter_menu_actions("fast command speed")}
+        command_labels = {
+            (action.group, action.label) for action in filter_menu_actions("fast command speed")
+        }
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF fast-command DLS"), command_labels)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF slow-command DLS"), command_labels)
-        joint_speed_labels = {(action.group, action.label) for action in filter_menu_actions("joint speed limit")}
-        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF low-joint-speed DLS"), joint_speed_labels)
-        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF high-joint-speed DLS"), joint_speed_labels)
-        retarget_labels = {(action.group, action.label) for action in filter_menu_actions("retarget dls")}
-        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF direct-retarget DLS"), retarget_labels)
-        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF inward-retarget DLS"), retarget_labels)
+        joint_speed_labels = {
+            (action.group, action.label) for action in filter_menu_actions("joint speed limit")
+        }
+        self.assertIn(
+            ("Lab03 2DOF Arm and Trajectories", "2DOF low-joint-speed DLS"), joint_speed_labels
+        )
+        self.assertIn(
+            ("Lab03 2DOF Arm and Trajectories", "2DOF high-joint-speed DLS"), joint_speed_labels
+        )
+        retarget_labels = {
+            (action.group, action.label) for action in filter_menu_actions("retarget dls")
+        }
+        self.assertIn(
+            ("Lab03 2DOF Arm and Trajectories", "2DOF direct-retarget DLS"), retarget_labels
+        )
+        self.assertIn(
+            ("Lab03 2DOF Arm and Trajectories", "2DOF inward-retarget DLS"), retarget_labels
+        )
         speed_retarget_labels = {
-            (action.group, action.label) for action in filter_menu_actions("adaptive speed retarget")
+            (action.group, action.label)
+            for action in filter_menu_actions("adaptive speed retarget")
         }
         self.assertIn(
             ("Lab03 2DOF Arm and Trajectories", "2DOF adaptive-speed retarget DLS"),
@@ -1605,38 +1919,78 @@ class LearnerMenuTests(unittest.TestCase):
             ("Lab03 2DOF Arm and Trajectories", "2DOF fixed-speed retarget DLS"),
             speed_retarget_labels,
         )
-        playbook_labels = {(action.group, action.label) for action in filter_menu_actions("playbook mark observation")}
+        playbook_labels = {
+            (action.group, action.label)
+            for action in filter_menu_actions("playbook mark observation")
+        }
         self.assertIn(("Lab01 Mass-Spring-Damper", "Interactive"), playbook_labels)
         self.assertIn(("Lab04 Panda Manipulator", "Virtual wall"), playbook_labels)
-        start_steps_labels = {(action.group, action.label) for action in filter_menu_actions("start steps run viewer")}
+        start_steps_labels = {
+            (action.group, action.label) for action in filter_menu_actions("start steps run viewer")
+        }
         self.assertIn(("Lab04 Panda Manipulator", "Virtual wall"), start_steps_labels)
-        challenge_labels = {(action.group, action.label) for action in filter_menu_actions("challenge visible effect")}
+        challenge_labels = {
+            (action.group, action.label)
+            for action in filter_menu_actions("challenge visible effect")
+        }
         self.assertIn(("Lab01 Mass-Spring-Damper", "Auto demo"), challenge_labels)
         self.assertIn(("Lab04 Panda Manipulator", "Virtual wall"), challenge_labels)
-        edge_target_labels = {(action.group, action.label) for action in filter_menu_actions("edge target dls")}
-        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF edge-target DLS"), edge_target_labels)
-        path_branch_labels = {(action.group, action.label) for action in filter_menu_actions("elbow branch")}
-        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF upper-path DLS"), path_branch_labels)
-        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF lower-path DLS"), path_branch_labels)
-        disturbance_labels = {(action.group, action.label) for action in filter_menu_actions("disturbance pulse")}
-        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF shoulder-disturbance DLS"), disturbance_labels)
-        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF elbow-disturbance DLS"), disturbance_labels)
-        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF staggered-disturbance DLS"), disturbance_labels)
+        edge_target_labels = {
+            (action.group, action.label) for action in filter_menu_actions("edge target dls")
+        }
+        self.assertIn(
+            ("Lab03 2DOF Arm and Trajectories", "2DOF edge-target DLS"), edge_target_labels
+        )
+        path_branch_labels = {
+            (action.group, action.label) for action in filter_menu_actions("elbow branch")
+        }
+        self.assertIn(
+            ("Lab03 2DOF Arm and Trajectories", "2DOF upper-path DLS"), path_branch_labels
+        )
+        self.assertIn(
+            ("Lab03 2DOF Arm and Trajectories", "2DOF lower-path DLS"), path_branch_labels
+        )
+        disturbance_labels = {
+            (action.group, action.label) for action in filter_menu_actions("disturbance pulse")
+        }
+        self.assertIn(
+            ("Lab03 2DOF Arm and Trajectories", "2DOF shoulder-disturbance DLS"), disturbance_labels
+        )
+        self.assertIn(
+            ("Lab03 2DOF Arm and Trajectories", "2DOF elbow-disturbance DLS"), disturbance_labels
+        )
+        self.assertIn(
+            ("Lab03 2DOF Arm and Trajectories", "2DOF staggered-disturbance DLS"),
+            disturbance_labels,
+        )
 
-        controls_labels = {(action.group, action.label) for action in filter_menu_actions("pull push")}
+        controls_labels = {
+            (action.group, action.label) for action in filter_menu_actions("pull push")
+        }
         self.assertIn(("Lab01 Mass-Spring-Damper", "Interactive"), controls_labels)
 
-        pause_labels = {(action.group, action.label) for action in filter_menu_actions("pause step")}
+        pause_labels = {
+            (action.group, action.label) for action in filter_menu_actions("pause step")
+        }
         self.assertIn(("Lab04 Panda Manipulator", "Virtual wall"), pause_labels)
 
-        credit_labels = {(action.group, action.label) for action in filter_menu_actions("counts as control quick presets")}
+        credit_labels = {
+            (action.group, action.label)
+            for action in filter_menu_actions("counts as control quick presets")
+        }
         self.assertIn(("Lab04 Panda Manipulator", "Virtual wall"), credit_labels)
 
-        red_plane_labels = {(action.group, action.label) for action in filter_menu_actions("red plane")}
+        red_plane_labels = {
+            (action.group, action.label) for action in filter_menu_actions("red plane")
+        }
         self.assertIn(("Lab04 Panda Manipulator", "Virtual wall"), red_plane_labels)
 
-        orange_sphere_labels = {(action.group, action.label) for action in filter_menu_actions("orange sphere")}
-        self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS"), orange_sphere_labels)
+        orange_sphere_labels = {
+            (action.group, action.label) for action in filter_menu_actions("orange sphere")
+        }
+        self.assertIn(
+            ("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS"), orange_sphere_labels
+        )
 
     def test_experience_filters_group_scenarios_by_learning_mode(self) -> None:
         filter_keys = {filter_option.key for filter_option in EXPERIENCE_FILTERS}
@@ -1646,13 +2000,20 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("hands-on", filter_keys)
         self.assertIn("compare", filter_keys)
         self.assertIn("wall", filter_keys)
-        self.assertEqual(experience_filter_description("deep dive"), "Advanced singularity, wall, and manipulator behavior.")
-        self.assertEqual(experience_filter_description("missing"), EXPERIENCE_FILTERS[0].description)
+        self.assertEqual(
+            experience_filter_description("deep dive"),
+            "Advanced singularity, wall, and manipulator behavior.",
+        )
+        self.assertEqual(
+            experience_filter_description("missing"), EXPERIENCE_FILTERS[0].description
+        )
 
         by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
         lab01_auto = by_label[("Lab01 Mass-Spring-Damper", "Auto demo")]
         lab03_task_space = by_label[("Lab03 2DOF Arm and Trajectories", "2DOF task-space")]
-        lab03_condition_dls = by_label[("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS")]
+        lab03_condition_dls = by_label[
+            ("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS")
+        ]
         lab04_wall = by_label[("Lab04 Panda Manipulator", "Virtual wall")]
         self.assertIn("intro", action_tags(lab01_auto))
         self.assertIn("build", action_tags(lab03_task_space))
@@ -1661,31 +2022,48 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("deep-dive", action_tags(lab04_wall))
         self.assertIn("wall", action_tags(lab04_wall))
         self.assertIn("panda", action_tags(lab04_wall))
-        self.assertIn("singularity", action_tags(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF DLS singularity")]))
+        self.assertIn(
+            "singularity",
+            action_tags(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF DLS singularity")]),
+        )
 
-        intro = {(action.group, action.label) for action in filter_menu_actions("", experience_filter="intro")}
+        intro = {
+            (action.group, action.label)
+            for action in filter_menu_actions("", experience_filter="intro")
+        }
         self.assertIn(("Lab01 Mass-Spring-Damper", "Auto demo"), intro)
         self.assertIn(("Lab02 PID Control", "Interactive"), intro)
         self.assertNotIn(("Lab03 2DOF Arm and Trajectories", "2DOF task-space"), intro)
 
-        build = {(action.group, action.label) for action in filter_menu_actions("", experience_filter="build")}
+        build = {
+            (action.group, action.label)
+            for action in filter_menu_actions("", experience_filter="build")
+        }
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF task-space"), build)
         self.assertIn(("Lab04 Panda Manipulator", "Cartesian interactive"), build)
         self.assertNotIn(("Lab04 Panda Manipulator", "Virtual wall"), build)
 
-        deep_dive = {(action.group, action.label) for action in filter_menu_actions("", experience_filter="deep dive")}
+        deep_dive = {
+            (action.group, action.label)
+            for action in filter_menu_actions("", experience_filter="deep dive")
+        }
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS"), deep_dive)
         self.assertIn(("Lab04 Panda Manipulator", "Virtual wall"), deep_dive)
         self.assertNotIn(("Lab01 Mass-Spring-Damper", "Auto demo"), deep_dive)
 
-        hands_on = {(action.group, action.label) for action in filter_menu_actions("", experience_filter="hands-on")}
+        hands_on = {
+            (action.group, action.label)
+            for action in filter_menu_actions("", experience_filter="hands-on")
+        }
         self.assertIn(("Lab01 Mass-Spring-Damper", "Interactive"), hands_on)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF DLS singularity"), hands_on)
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS"), hands_on)
         self.assertIn(("Lab04 Panda Manipulator", "Joint target"), hands_on)
         self.assertNotIn(("Lab04 Panda Manipulator", "Cartesian reach"), hands_on)
 
-        two_dof_labels = {action.label for action in filter_menu_actions("", experience_filter="2dof")}
+        two_dof_labels = {
+            action.label for action in filter_menu_actions("", experience_filter="2dof")
+        }
         self.assertIn("2DOF joint-space", two_dof_labels)
         self.assertIn("2DOF task-space", two_dof_labels)
         self.assertNotIn("Step profile", two_dof_labels)
@@ -1711,7 +2089,9 @@ class LearnerMenuTests(unittest.TestCase):
             },
         )
 
-        singularity_labels = {action.label for action in filter_menu_actions("", experience_filter="singularity")}
+        singularity_labels = {
+            action.label for action in filter_menu_actions("", experience_filter="singularity")
+        }
         self.assertEqual(
             singularity_labels,
             {
@@ -1740,10 +2120,14 @@ class LearnerMenuTests(unittest.TestCase):
             },
         )
 
-        compare_labels = {action.label for action in filter_menu_actions("windup", experience_filter="compare")}
+        compare_labels = {
+            action.label for action in filter_menu_actions("windup", experience_filter="compare")
+        }
         self.assertEqual(compare_labels, {"Windup", "Anti-windup"})
 
-        hands_on_search = {(action.group, action.label) for action in filter_menu_actions("hands on")}
+        hands_on_search = {
+            (action.group, action.label) for action in filter_menu_actions("hands on")
+        }
         self.assertIn(("Lab03 2DOF Arm and Trajectories", "2DOF interactive"), hands_on_search)
         hands_on_ranked = filter_menu_actions("hands-on")
         self.assertEqual(
@@ -1758,10 +2142,18 @@ class LearnerMenuTests(unittest.TestCase):
     def test_parameter_hints_point_to_key_learning_knobs(self) -> None:
         by_label = {(action.group, action.label): action for action in MENU_ACTIONS}
 
-        self.assertIn("damping", parameter_hint(by_label[("Lab01 Mass-Spring-Damper", "Underdamped")]))
-        self.assertIn("controller.anti_windup", parameter_hint(by_label[("Lab02 PID Control", "Windup")]))
-        self.assertIn("measurement_noise_std", parameter_hint(by_label[("Lab02 PID Control", "Sensor noise")]))
-        self.assertIn("control_delay", parameter_hint(by_label[("Lab02 PID Control", "Control delay")]))
+        self.assertIn(
+            "damping", parameter_hint(by_label[("Lab01 Mass-Spring-Damper", "Underdamped")])
+        )
+        self.assertIn(
+            "controller.anti_windup", parameter_hint(by_label[("Lab02 PID Control", "Windup")])
+        )
+        self.assertIn(
+            "measurement_noise_std", parameter_hint(by_label[("Lab02 PID Control", "Sensor noise")])
+        )
+        self.assertIn(
+            "control_delay", parameter_hint(by_label[("Lab02 PID Control", "Control delay")])
+        )
         self.assertIn(
             "target_xy",
             parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF task-space")]),
@@ -1776,7 +2168,9 @@ class LearnerMenuTests(unittest.TestCase):
         )
         self.assertIn(
             "condition_damping_threshold",
-            parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS")]),
+            parameter_hint(
+                by_label[("Lab03 2DOF Arm and Trajectories", "2DOF condition-aware DLS")]
+            ),
         )
         self.assertIn(
             "Shoulder/Elbow pulse",
@@ -1796,11 +2190,15 @@ class LearnerMenuTests(unittest.TestCase):
         )
         self.assertIn(
             "disturbance_torque.torque",
-            parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF shoulder-disturbance DLS")]),
+            parameter_hint(
+                by_label[("Lab03 2DOF Arm and Trajectories", "2DOF shoulder-disturbance DLS")]
+            ),
         )
         self.assertIn(
             "disturbance_torque.pulses",
-            parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF staggered-disturbance DLS")]),
+            parameter_hint(
+                by_label[("Lab03 2DOF Arm and Trajectories", "2DOF staggered-disturbance DLS")]
+            ),
         )
         self.assertIn(
             "tracking_controller.max_task_speed",
@@ -1808,15 +2206,21 @@ class LearnerMenuTests(unittest.TestCase):
         )
         self.assertIn(
             "tracking_controller.max_joint_speed",
-            parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF low-joint-speed DLS")]),
+            parameter_hint(
+                by_label[("Lab03 2DOF Arm and Trajectories", "2DOF low-joint-speed DLS")]
+            ),
         )
         self.assertIn(
             "target_xy_waypoints",
-            parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF inward-retarget DLS")]),
+            parameter_hint(
+                by_label[("Lab03 2DOF Arm and Trajectories", "2DOF inward-retarget DLS")]
+            ),
         )
         self.assertIn(
             "tracking_controller.max_task_speed_schedule",
-            parameter_hint(by_label[("Lab03 2DOF Arm and Trajectories", "2DOF adaptive-speed retarget DLS")]),
+            parameter_hint(
+                by_label[("Lab03 2DOF Arm and Trajectories", "2DOF adaptive-speed retarget DLS")]
+            ),
         )
         self.assertIn(
             "cartesian_target.gain",
@@ -1826,13 +2230,33 @@ class LearnerMenuTests(unittest.TestCase):
             "interaction.target_step",
             parameter_hint(by_label[("Lab04 Panda Manipulator", "Cartesian interactive")]),
         )
-        self.assertIn("sim_time", parameter_hint(by_label[("Lab04 Panda Manipulator", "30s stability hold")]))
-        self.assertIn("virtual_wall.stiffness", parameter_hint(by_label[("Lab04 Panda Manipulator", "Virtual wall")]))
-        self.assertIn("virtual_wall.damping", parameter_hint(by_label[("Lab04 Panda Manipulator", "Low damping wall")]))
-        self.assertIn("virtual_wall.wall_x", parameter_hint(by_label[("Lab04 Panda Manipulator", "Near wall")]))
-        self.assertIn("trajectory.duration", parameter_hint(by_label[("Lab04 Panda Manipulator", "Fast approach wall")]))
-        self.assertIn("cartesian_target.waypoints", parameter_hint(by_label[("Lab04 Panda Manipulator", "Deep push wall")]))
-        self.assertIn("cartesian_target.waypoints", parameter_hint(by_label[("Lab04 Panda Manipulator", "Contact cycle wall")]))
+        self.assertIn(
+            "sim_time", parameter_hint(by_label[("Lab04 Panda Manipulator", "30s stability hold")])
+        )
+        self.assertIn(
+            "virtual_wall.stiffness",
+            parameter_hint(by_label[("Lab04 Panda Manipulator", "Virtual wall")]),
+        )
+        self.assertIn(
+            "virtual_wall.damping",
+            parameter_hint(by_label[("Lab04 Panda Manipulator", "Low damping wall")]),
+        )
+        self.assertIn(
+            "virtual_wall.wall_x",
+            parameter_hint(by_label[("Lab04 Panda Manipulator", "Near wall")]),
+        )
+        self.assertIn(
+            "trajectory.duration",
+            parameter_hint(by_label[("Lab04 Panda Manipulator", "Fast approach wall")]),
+        )
+        self.assertIn(
+            "cartesian_target.waypoints",
+            parameter_hint(by_label[("Lab04 Panda Manipulator", "Deep push wall")]),
+        )
+        self.assertIn(
+            "cartesian_target.waypoints",
+            parameter_hint(by_label[("Lab04 Panda Manipulator", "Contact cycle wall")]),
+        )
         self.assertIn(
             "virtual_wall.force_retreat_gain",
             parameter_hint(by_label[("Lab04 Panda Manipulator", "High retreat wall")]),
@@ -1882,23 +2306,44 @@ class LearnerMenuTests(unittest.TestCase):
             tuned_config.write_text("interaction:\n  panel: false\n", encoding="utf-8")
             worksheet = run_path / "worksheet.md"
             worksheet.write_text("# Worksheet\n", encoding="utf-8")
+            _finalize_scenario_run(
+                run_path,
+                "lab01_msd",
+                "configs/lab01_msd/default.yaml",
+            )
 
             self.assertEqual(action_latest_output(MENU_ACTIONS[0], outputs), run_path)
             self.assertEqual(action_latest_plot(MENU_ACTIONS[0], outputs), priority_plot)
             self.assertEqual(action_latest_worksheet(MENU_ACTIONS[0], outputs), worksheet)
             self.assertEqual(action_latest_tuned_config(MENU_ACTIONS[0], outputs), tuned_config)
-            self.assertIn("History: Latest run_lab01", action_history_text(MENU_ACTIONS[0], outputs))
-            self.assertEqual(action_latest_evidence_text(MENU_ACTIONS[0], outputs), "Latest evidence: None yet")
-            self.assertEqual(action_plot_text(MENU_ACTIONS[0], outputs), "Plots: Latest position.png")
-            self.assertIn("Plot review: Position - Compare actual motion", action_plot_review_text(MENU_ACTIONS[0], outputs))
-            self.assertEqual(action_worksheet_text(MENU_ACTIONS[0], outputs), "Worksheet: Latest worksheet.md")
-            self.assertIn("Plot review: Position - Compare actual motion", lesson_text(MENU_ACTIONS[0], outputs))
+            self.assertIn(
+                "History: Latest run_lab01", action_history_text(MENU_ACTIONS[0], outputs)
+            )
+            self.assertEqual(
+                action_latest_evidence_text(MENU_ACTIONS[0], outputs), "Latest evidence: None yet"
+            )
+            self.assertEqual(
+                action_plot_text(MENU_ACTIONS[0], outputs), "Plots: Latest position.png"
+            )
+            self.assertIn(
+                "Plot review: Position - Compare actual motion",
+                action_plot_review_text(MENU_ACTIONS[0], outputs),
+            )
+            self.assertEqual(
+                action_worksheet_text(MENU_ACTIONS[0], outputs), "Worksheet: Latest worksheet.md"
+            )
+            self.assertIn(
+                "Plot review: Position - Compare actual motion",
+                lesson_text(MENU_ACTIONS[0], outputs),
+            )
             self.assertIn("Worksheet: Latest worksheet.md", lesson_text(MENU_ACTIONS[0], outputs))
             self.assertEqual(
                 action_replay_text(MENU_ACTIONS[0], outputs),
                 "Replay: Latest learner_tuned_config.yaml",
             )
-            self.assertIn("Replay: Latest learner_tuned_config.yaml", lesson_text(MENU_ACTIONS[0], outputs))
+            self.assertIn(
+                "Replay: Latest learner_tuned_config.yaml", lesson_text(MENU_ACTIONS[0], outputs)
+            )
             self.assertEqual(action_history_text(MENU_ACTIONS[1], outputs), "History: Not run yet")
             self.assertEqual(action_plot_text(MENU_ACTIONS[1], outputs), "Plots: Not saved yet")
             self.assertEqual(
@@ -1906,9 +2351,13 @@ class LearnerMenuTests(unittest.TestCase):
                 "Plot review: Not available until a plot is saved",
             )
             self.assertIsNone(action_latest_worksheet(MENU_ACTIONS[1], outputs))
-            self.assertEqual(action_worksheet_text(MENU_ACTIONS[1], outputs), "Worksheet: Not saved yet")
+            self.assertEqual(
+                action_worksheet_text(MENU_ACTIONS[1], outputs), "Worksheet: Not saved yet"
+            )
             self.assertIsNone(action_latest_tuned_config(MENU_ACTIONS[1], outputs))
-            self.assertEqual(action_replay_text(MENU_ACTIONS[1], outputs), "Replay: No tuned config yet")
+            self.assertEqual(
+                action_replay_text(MENU_ACTIONS[1], outputs), "Replay: No tuned config yet"
+            )
 
             with patch("mclab.learner_menu.open_path") as opener:
                 launch_action_latest_output(MENU_ACTIONS[0], outputs)
@@ -1939,7 +2388,9 @@ class LearnerMenuTests(unittest.TestCase):
             self.assertIsNone(missing_worksheet)
 
     def test_dls_action_latest_plot_prefers_dls_plot_over_error(self) -> None:
-        action = next(item for item in MENU_ACTIONS if item.label == "2DOF adaptive-speed retarget DLS")
+        action = next(
+            item for item in MENU_ACTIONS if item.label == "2DOF adaptive-speed retarget DLS"
+        )
         step = next(item for item in LEARNING_PATH if item.label == action.label)
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)
@@ -1960,11 +2411,14 @@ class LearnerMenuTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            _finalize_scenario_run(run_path, "lab03_2dof", action.config_path)
 
             self.assertEqual(action_latest_plot(action, outputs), dls_plot)
             self.assertEqual(latest_output_plot(run_path), dls_plot)
             self.assertEqual(action_plot_text(action, outputs), "Plots: Latest dls.png")
-            self.assertEqual(learning_path_artifact_button_labels(step, outputs)["plot"], "Plot: dls")
+            self.assertEqual(
+                learning_path_artifact_button_labels(step, outputs)["plot"], "Plot: dls"
+            )
             progress_text = learning_path_progress_text(step, learning_path_progress(step, outputs))
             self.assertIn("Latest artifacts: worksheet not saved yet", progress_text)
             self.assertIn("Latest plot: dls.png", progress_text)
@@ -1972,64 +2426,60 @@ class LearnerMenuTests(unittest.TestCase):
 
     def test_action_evidence_summarizes_latest_observation_markers(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            outputs = Path(tmp)
-            run_path = outputs / "run_lab01"
-            run_path.mkdir()
-            (run_path / "summary.json").write_text(
-                json.dumps(
+            root = Path(tmp)
+            outputs = _output_snapshot(root, "with_outcome")
+            _publish_scenario_run(
+                outputs / "run_lab01",
+                MENU_ACTIONS[0].lab_name,
+                MENU_ACTIONS[0].config_path,
+                events=[
                     {
-                        "lab_name": MENU_ACTIONS[0].lab_name,
-                        "config_path": MENU_ACTIONS[0].config_path,
-                        "config_name": Path(MENU_ACTIONS[0].config_path).stem,
-                    }
-                ),
-                encoding="utf-8",
-            )
-            (run_path / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {
-                            "kind": "marker",
-                            "name": "observation",
-                            "value": {
-                                "question": "Question: demo?",
-                                "prediction": "The response should overshoot.",
-                                "outcome": "Matched",
-                                "note": "Saw overshoot.",
-                            },
+                        "kind": "marker",
+                        "name": "observation",
+                        "value": {
+                            "question": "Question: demo?",
+                            "prediction": "The response should overshoot.",
+                            "outcome": "Matched",
+                            "note": "Saw overshoot.",
                         },
-                        {
-                            "kind": "marker",
-                            "name": "observation",
-                            "value": {"question": "Question: demo?"},
-                        },
-                    ]
-                ),
-                encoding="utf-8",
+                    },
+                    {
+                        "kind": "marker",
+                        "name": "observation",
+                        "value": {"question": "Question: demo?"},
+                    },
+                ],
             )
 
             self.assertEqual(
                 action_evidence_text(MENU_ACTIONS[0], outputs),
                 "Evidence: 2 observations, 1 prediction, 1 outcome, 1 note",
             )
-            self.assertIn("Evidence: 2 observations, 1 prediction, 1 outcome, 1 note", lesson_text(MENU_ACTIONS[0], outputs))
-            self.assertEqual(action_evidence_text(MENU_ACTIONS[1], outputs), "Evidence: No observation markers yet")
+            self.assertIn(
+                "Evidence: 2 observations, 1 prediction, 1 outcome, 1 note",
+                lesson_text(MENU_ACTIONS[0], outputs),
+            )
+            self.assertEqual(
+                action_evidence_text(MENU_ACTIONS[1], outputs),
+                "Evidence: No observation markers yet",
+            )
 
-            (run_path / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {
-                            "kind": "marker",
-                            "name": "observation",
-                            "value": {
-                                "question": "Question: demo?",
-                                "prediction": "The response should overshoot.",
-                                "note": "Saw overshoot.",
-                            },
-                        }
-                    ]
-                ),
-                encoding="utf-8",
+            outputs = _output_snapshot(root, "missing_outcome")
+            _publish_scenario_run(
+                outputs / "run_lab01",
+                MENU_ACTIONS[0].lab_name,
+                MENU_ACTIONS[0].config_path,
+                events=[
+                    {
+                        "kind": "marker",
+                        "name": "observation",
+                        "value": {
+                            "question": "Question: demo?",
+                            "prediction": "The response should overshoot.",
+                            "note": "Saw overshoot.",
+                        },
+                    }
+                ],
             )
 
             self.assertEqual(
@@ -2070,6 +2520,11 @@ class LearnerMenuTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            _finalize_scenario_run(
+                run_path,
+                MENU_ACTIONS[0].lab_name,
+                MENU_ACTIONS[0].config_path,
+            )
 
             text = action_latest_evidence_text(MENU_ACTIONS[0], outputs)
             flow = action_observation_flow_text(MENU_ACTIONS[0], outputs)
@@ -2079,7 +2534,9 @@ class LearnerMenuTests(unittest.TestCase):
             self.assertIn("Latest evidence:", text)
             self.assertIn("Prediction: The response should overshoot.", text)
             self.assertIn("Outcome: Matched", text)
-            self.assertIn("Note: Plot: Saw overshoot in the position plot.; Changed values: damping=0.8", text)
+            self.assertIn(
+                "Note: Plot: Saw overshoot in the position plot.; Changed values: damping=0.8", text
+            )
             self.assertIn(
                 "Note evidence: Plot: Saw overshoot in the position plot. | Changed values: damping=0.8",
                 text,
@@ -2099,20 +2556,21 @@ class LearnerMenuTests(unittest.TestCase):
             )
             self.assertIn(next_step, lesson)
 
-            (run_path / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {
-                            "kind": "marker",
-                            "name": "observation",
-                            "value": {
-                                "prediction": "The response should overshoot.",
-                                "note": "Saw overshoot in the position plot.",
-                            },
-                        }
-                    ]
-                ),
-                encoding="utf-8",
+            outputs = _output_snapshot(Path(tmp), "missing_outcome")
+            _publish_scenario_run(
+                outputs / "run_lab01",
+                MENU_ACTIONS[0].lab_name,
+                MENU_ACTIONS[0].config_path,
+                events=[
+                    {
+                        "kind": "marker",
+                        "name": "observation",
+                        "value": {
+                            "prediction": "The response should overshoot.",
+                            "note": "Saw overshoot in the position plot.",
+                        },
+                    }
+                ],
             )
 
             missing_outcome_text = action_latest_evidence_text(MENU_ACTIONS[0], outputs)
@@ -2126,7 +2584,9 @@ class LearnerMenuTests(unittest.TestCase):
 
     def test_action_observation_next_step_prompts_unrun_hands_on_observation(self) -> None:
         lab01_interactive = next(
-            action for action in MENU_ACTIONS if action.config_path == "configs/lab01_msd/interactive_pull.yaml"
+            action
+            for action in MENU_ACTIONS
+            if action.config_path == "configs/lab01_msd/interactive_pull.yaml"
         )
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)
@@ -2166,6 +2626,11 @@ class LearnerMenuTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            _finalize_scenario_run(
+                run_path,
+                lab01_interactive.lab_name,
+                lab01_interactive.config_path,
+            )
 
             self.assertEqual(
                 action_observation_next_step_text(lab01_interactive, outputs),
@@ -2173,20 +2638,21 @@ class LearnerMenuTests(unittest.TestCase):
                 "before marking the next observation (1 marker missing prediction; no learner control yet).",
             )
 
-            (run_path / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {
-                            "kind": "marker",
-                            "name": "observation",
-                            "value": {
-                                "prediction": "Higher damping should settle faster.",
-                                "outcome": "Matched",
-                            },
-                        }
-                    ]
-                ),
-                encoding="utf-8",
+            outputs = _output_snapshot(Path(tmp), "missing_note")
+            _publish_scenario_run(
+                outputs / "run_lab01_interactive",
+                lab01_interactive.lab_name,
+                lab01_interactive.config_path,
+                events=[
+                    {
+                        "kind": "marker",
+                        "name": "observation",
+                        "value": {
+                            "prediction": "Higher damping should settle faster.",
+                            "outcome": "Matched",
+                        },
+                    }
+                ],
             )
 
             self.assertEqual(
@@ -2196,21 +2662,22 @@ class LearnerMenuTests(unittest.TestCase):
                 "(1 marker missing note evidence; no learner control yet).",
             )
 
-            (run_path / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {
-                            "kind": "marker",
-                            "name": "observation",
-                            "value": {
-                                "prediction": "Higher damping should settle faster.",
-                                "outcome": "Matched",
-                                "note": "The plotted response settled faster.",
-                            },
-                        }
-                    ]
-                ),
-                encoding="utf-8",
+            outputs = _output_snapshot(Path(tmp), "needs_control")
+            _publish_scenario_run(
+                outputs / "run_lab01_interactive",
+                lab01_interactive.lab_name,
+                lab01_interactive.config_path,
+                events=[
+                    {
+                        "kind": "marker",
+                        "name": "observation",
+                        "value": {
+                            "prediction": "Higher damping should settle faster.",
+                            "outcome": "Matched",
+                            "note": "The plotted response settled faster.",
+                        },
+                    }
+                ],
             )
 
             self.assertEqual(
@@ -2229,7 +2696,9 @@ class LearnerMenuTests(unittest.TestCase):
             outputs = Path(tmp)
 
             self.assertEqual(action_activity_mix_text(MENU_ACTIONS[0], outputs), "")
-            self.assertEqual(action_activity_mix_text(lab02_interactive, outputs), "Activity mix: Not run yet")
+            self.assertEqual(
+                action_activity_mix_text(lab02_interactive, outputs), "Activity mix: Not run yet"
+            )
 
             run_path = outputs / "run_lab02_interactive"
             run_path.mkdir()
@@ -2251,11 +2720,19 @@ class LearnerMenuTests(unittest.TestCase):
                         {
                             "kind": "marker",
                             "name": "observation",
-                            "value": {"prediction": "More gain should overshoot.", "note": "Overshoot increased."},
+                            "value": {
+                                "prediction": "More gain should overshoot.",
+                                "note": "Overshoot increased.",
+                            },
                         },
                     ]
                 ),
                 encoding="utf-8",
+            )
+            _finalize_scenario_run(
+                run_path,
+                lab02_interactive.lab_name,
+                lab02_interactive.config_path,
             )
 
             text = action_activity_mix_text(lab02_interactive, outputs)
@@ -2277,128 +2754,131 @@ class LearnerMenuTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)
 
-            self.assertEqual(action_mission_evidence_text(MENU_ACTIONS[0], outputs), "Mission evidence: Not run yet")
+            self.assertEqual(
+                action_mission_evidence_text(MENU_ACTIONS[0], outputs),
+                "Mission evidence: Not run yet",
+            )
 
-            auto_path = outputs / "run_lab01"
-            auto_path.mkdir()
-            (auto_path / "summary.json").write_text(
-                json.dumps(
-                    {
-                        "lab_name": MENU_ACTIONS[0].lab_name,
-                        "config_path": MENU_ACTIONS[0].config_path,
-                        "config_name": Path(MENU_ACTIONS[0].config_path).stem,
-                    }
-                ),
-                encoding="utf-8",
+            _publish_scenario_run(
+                outputs / "run_lab01",
+                MENU_ACTIONS[0].lab_name,
+                MENU_ACTIONS[0].config_path,
+                plot=False,
             )
             self.assertEqual(
                 action_mission_evidence_text(MENU_ACTIONS[0], outputs),
                 "Mission evidence: Needs plot; rerun with plots enabled",
             )
-            (auto_path / "plots").mkdir()
-            (auto_path / "plots" / "position.png").write_bytes(b"fake-png")
-            (auto_path / "worksheet.md").write_text("# Worksheet\n", encoding="utf-8")
+            auto_ready_outputs = _output_snapshot(Path(tmp), "auto_ready")
+            _publish_scenario_run(
+                auto_ready_outputs / "run_lab01",
+                MENU_ACTIONS[0].lab_name,
+                MENU_ACTIONS[0].config_path,
+            )
             self.assertEqual(
-                action_mission_evidence_text(MENU_ACTIONS[0], outputs),
+                action_mission_evidence_text(MENU_ACTIONS[0], auto_ready_outputs),
                 "Mission evidence: Artifacts ready; plot position.png; worksheet worksheet.md",
             )
 
             all_batch = next(action for action in BATCH_ACTIONS if action.batch_name == "all")
-            all_batch_path = outputs / "run_all_batches"
-            all_batch_path.mkdir()
-            (all_batch_path / "summary.json").write_text(
-                json.dumps({"lab_name": "batch_group", "batch_name": "all", "config_name": "all"}),
-                encoding="utf-8",
+            course_missing_outputs = _output_snapshot(Path(tmp), "course_missing")
+            _publish_course_run(
+                course_missing_outputs / "run_all_batches",
+                worksheet=False,
             )
             self.assertEqual(
-                action_mission_evidence_text(all_batch, outputs),
+                action_mission_evidence_text(all_batch, course_missing_outputs),
                 "Mission evidence: Needs worksheet; rerun all batches to regenerate course review artifacts",
             )
-            (all_batch_path / "worksheet.md").write_text("# Course worksheet\n", encoding="utf-8")
+            course_ready_outputs = _output_snapshot(Path(tmp), "course_ready")
+            _publish_course_run(course_ready_outputs / "run_all_batches")
             self.assertEqual(
-                action_mission_evidence_text(all_batch, outputs),
+                action_mission_evidence_text(all_batch, course_ready_outputs),
                 "Mission evidence: Course artifacts ready; worksheet worksheet.md",
             )
 
-            interactive_path = outputs / "run_lab02_interactive"
-            interactive_path.mkdir()
-            (interactive_path / "summary.json").write_text(
-                json.dumps(
-                    {
-                        "lab_name": lab02_interactive.lab_name,
-                        "config_path": lab02_interactive.config_path,
-                        "config_name": Path(lab02_interactive.config_path).stem,
-                    }
-                ),
-                encoding="utf-8",
+            interactive_missing_outputs = _output_snapshot(Path(tmp), "interactive_missing")
+            _publish_scenario_run(
+                interactive_missing_outputs / "run_lab02_interactive",
+                lab02_interactive.lab_name,
+                lab02_interactive.config_path,
             )
             self.assertEqual(
-                action_mission_evidence_text(lab02_interactive, outputs),
+                action_mission_evidence_text(lab02_interactive, interactive_missing_outputs),
                 "Mission evidence: Needs observation; 0 observations, 0 predictions, 0 outcomes, 0 notes, 0 controls",
             )
 
-            (interactive_path / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {"kind": "slider", "name": "kp", "label": "Kp", "value": 12.0},
-                        {
-                            "kind": "marker",
-                            "name": "observation",
-                            "value": {"prediction": "Higher Kp will overshoot.", "note": "Overshoot was visible."},
-                        }
-                    ]
-                ),
-                encoding="utf-8",
+            outcome_pending_outputs = _output_snapshot(Path(tmp), "outcome_pending")
+            _publish_scenario_run(
+                outcome_pending_outputs / "run_lab02_interactive",
+                lab02_interactive.lab_name,
+                lab02_interactive.config_path,
+                events=[
+                    {"kind": "slider", "name": "kp", "label": "Kp", "value": 12.0},
+                    {
+                        "kind": "marker",
+                        "name": "observation",
+                        "value": {
+                            "prediction": "Higher Kp will overshoot.",
+                            "note": "Overshoot was visible.",
+                        },
+                    },
+                ],
             )
             self.assertEqual(
-                action_mission_evidence_text(lab02_interactive, outputs),
+                action_mission_evidence_text(lab02_interactive, outcome_pending_outputs),
                 "Mission evidence: Outcome review pending; 1 observation, 1 prediction, 0 outcomes, 1 note, 1 control",
             )
 
-            (interactive_path / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {"kind": "button", "name": "use_live_status_note", "label": "Use live status"},
-                        {
-                            "kind": "marker",
-                            "name": "observation",
-                            "value": {
-                                "prediction": "Higher Kp will overshoot.",
-                                "outcome": "Matched",
-                                "note": "Overshoot was visible.",
-                            },
-                        }
-                    ]
-                ),
-                encoding="utf-8",
+            needs_control_outputs = _output_snapshot(Path(tmp), "needs_control")
+            _publish_scenario_run(
+                needs_control_outputs / "run_lab02_interactive",
+                lab02_interactive.lab_name,
+                lab02_interactive.config_path,
+                events=[
+                    {"kind": "button", "name": "use_live_status_note", "label": "Use live status"},
+                    {
+                        "kind": "marker",
+                        "name": "observation",
+                        "value": {
+                            "prediction": "Higher Kp will overshoot.",
+                            "outcome": "Matched",
+                            "note": "Overshoot was visible.",
+                        },
+                    },
+                ],
             )
             self.assertEqual(
-                action_mission_evidence_text(lab02_interactive, outputs),
+                action_mission_evidence_text(lab02_interactive, needs_control_outputs),
                 "Mission evidence: Needs learner control; 1 observation, 1 prediction, 1 outcome, 1 note, 0 controls",
             )
 
-            (interactive_path / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {"kind": "slider", "name": "kp", "label": "Kp", "value": 12.0},
-                        {
-                            "kind": "marker",
-                            "name": "observation",
-                            "value": {
-                                "prediction": "Higher Kp will overshoot.",
-                                "outcome": "Matched",
-                                "note": "Overshoot was visible.",
-                            },
-                        }
-                    ]
-                ),
-                encoding="utf-8",
+            ready_outputs = _output_snapshot(Path(tmp), "ready")
+            _publish_scenario_run(
+                ready_outputs / "run_lab02_interactive",
+                lab02_interactive.lab_name,
+                lab02_interactive.config_path,
+                events=[
+                    {"kind": "slider", "name": "kp", "label": "Kp", "value": 12.0},
+                    {
+                        "kind": "marker",
+                        "name": "observation",
+                        "value": {
+                            "prediction": "Higher Kp will overshoot.",
+                            "outcome": "Matched",
+                            "note": "Overshoot was visible.",
+                        },
+                    },
+                ],
             )
             self.assertEqual(
-                action_mission_evidence_text(lab02_interactive, outputs),
+                action_mission_evidence_text(lab02_interactive, ready_outputs),
                 "Mission evidence: Ready for review; 1 observation, 1 prediction, 1 outcome, 1 note, 1 control",
             )
-            self.assertIn("Mission evidence: Ready for review", lesson_text(lab02_interactive, outputs))
+            self.assertIn(
+                "Mission evidence: Ready for review",
+                lesson_text(lab02_interactive, ready_outputs),
+            )
 
     def test_action_challenge_evidence_summarizes_latest_proof_status(self) -> None:
         lab02_interactive = next(
@@ -2409,92 +2889,90 @@ class LearnerMenuTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)
 
-            self.assertEqual(action_challenge_evidence_text(MENU_ACTIONS[0], outputs), "Challenge evidence: Not run yet")
+            self.assertEqual(
+                action_challenge_evidence_text(MENU_ACTIONS[0], outputs),
+                "Challenge evidence: Not run yet",
+            )
 
-            auto_path = outputs / "run_lab01"
-            auto_path.mkdir()
-            (auto_path / "summary.json").write_text(
-                json.dumps(
-                    {
-                        "lab_name": MENU_ACTIONS[0].lab_name,
-                        "config_path": MENU_ACTIONS[0].config_path,
-                        "config_name": Path(MENU_ACTIONS[0].config_path).stem,
-                    }
-                ),
-                encoding="utf-8",
+            _publish_scenario_run(
+                outputs / "run_lab01",
+                MENU_ACTIONS[0].lab_name,
+                MENU_ACTIONS[0].config_path,
+                plot=False,
+                report=False,
+                worksheet=False,
             )
             self.assertEqual(
                 action_challenge_evidence_text(MENU_ACTIONS[0], outputs),
-                "Challenge evidence: Needs plot evidence; source Priority plot and worksheet; "
-                "Rerun with --plot so the mission can be checked visually.",
+                "Challenge evidence: Needs plot; contract completion.v1.plot_missing",
             )
-            (auto_path / "plots").mkdir()
-            (auto_path / "plots" / "position.png").write_bytes(b"fake-png")
-            (auto_path / "worksheet.md").write_text("# Worksheet\n", encoding="utf-8")
+            auto_ready_outputs = _output_snapshot(Path(tmp), "auto_ready")
+            _publish_scenario_run(
+                auto_ready_outputs / "run_lab01",
+                MENU_ACTIONS[0].lab_name,
+                MENU_ACTIONS[0].config_path,
+            )
             self.assertEqual(
-                action_challenge_evidence_text(MENU_ACTIONS[0], outputs),
+                action_challenge_evidence_text(MENU_ACTIONS[0], auto_ready_outputs),
                 "Challenge evidence: Ready to review; source Priority plot and worksheet; "
                 "Compare the challenge statement with the priority plot and worksheet.",
             )
 
             all_batch = next(action for action in BATCH_ACTIONS if action.batch_name == "all")
-            all_batch_path = outputs / "run_all_batches"
-            all_batch_path.mkdir()
-            (all_batch_path / "summary.json").write_text(
-                json.dumps({"lab_name": "batch_group", "batch_name": "all", "config_name": "all"}),
-                encoding="utf-8",
+            course_missing_outputs = _output_snapshot(Path(tmp), "course_missing")
+            _publish_course_run(
+                course_missing_outputs / "run_all_batches",
+                worksheet=False,
             )
             self.assertEqual(
-                action_challenge_evidence_text(all_batch, outputs),
-                "Challenge evidence: Needs worksheet evidence; rerun all batches to regenerate course review artifacts",
+                action_challenge_evidence_text(all_batch, course_missing_outputs),
+                "Challenge evidence: Needs worksheet; contract completion.v1.required_artifact_missing",
             )
-            (all_batch_path / "worksheet.md").write_text("# Course worksheet\n", encoding="utf-8")
+            course_ready_outputs = _output_snapshot(Path(tmp), "course_ready")
+            _publish_course_run(course_ready_outputs / "run_all_batches")
             self.assertEqual(
-                action_challenge_evidence_text(all_batch, outputs),
+                action_challenge_evidence_text(all_batch, course_ready_outputs),
                 "Challenge evidence: Ready to review; source course worksheet; compare linked batch Prediction Checks",
             )
 
-            interactive_path = outputs / "run_lab02_interactive"
-            interactive_path.mkdir()
-            (interactive_path / "summary.json").write_text(
-                json.dumps(
-                    {
-                        "lab_name": lab02_interactive.lab_name,
-                        "config_path": lab02_interactive.config_path,
-                        "config_name": Path(lab02_interactive.config_path).stem,
-                    }
-                ),
-                encoding="utf-8",
+            interactive_missing_outputs = _output_snapshot(Path(tmp), "interactive_missing")
+            _publish_scenario_run(
+                interactive_missing_outputs / "run_lab02_interactive",
+                lab02_interactive.lab_name,
+                lab02_interactive.config_path,
             )
             self.assertIn(
-                "Challenge evidence: Needs observation evidence; source Learner control, Mark observation, "
-                "live status, and priority plot",
-                action_challenge_evidence_text(lab02_interactive, outputs),
+                "Challenge evidence: Needs observation; contract completion.v1.observation_missing",
+                action_challenge_evidence_text(lab02_interactive, interactive_missing_outputs),
             )
 
-            (interactive_path / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {"kind": "slider", "name": "kp", "label": "Kp", "value": 12.0},
-                        {
-                            "kind": "marker",
-                            "name": "observation",
-                            "value": {
-                                "prediction": "Higher Kp will overshoot.",
-                                "outcome": "Matched",
-                                "note": "Overshoot was visible.",
-                            },
+            interactive_ready_outputs = _output_snapshot(Path(tmp), "interactive_ready")
+            _publish_scenario_run(
+                interactive_ready_outputs / "run_lab02_interactive",
+                lab02_interactive.lab_name,
+                lab02_interactive.config_path,
+                events=[
+                    {"kind": "slider", "name": "kp", "label": "Kp", "value": 12.0},
+                    {
+                        "kind": "marker",
+                        "name": "observation",
+                        "value": {
+                            "prediction": "Higher Kp will overshoot.",
+                            "outcome": "Matched",
+                            "note": "Overshoot was visible.",
                         },
-                    ]
-                ),
-                encoding="utf-8",
+                    },
+                ],
             )
             self.assertEqual(
-                action_challenge_evidence_text(lab02_interactive, outputs),
+                action_challenge_evidence_text(lab02_interactive, interactive_ready_outputs),
                 "Challenge evidence: Ready to review; source Learner control, Mark observation, live status, "
                 "and priority plot; Compare the prediction-backed observation with the priority plot and worksheet.",
             )
-            self.assertIn("Challenge evidence: Ready to review", lesson_text(lab02_interactive, outputs))
+            self.assertIn(
+                "Challenge evidence: Ready to review",
+                lesson_text(lab02_interactive, interactive_ready_outputs),
+            )
 
     def test_review_queue_summary_counts_saved_mission_evidence_states(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2504,117 +2982,103 @@ class LearnerMenuTests(unittest.TestCase):
                 "Review queue: No saved runs yet. Run a scenario first.",
             )
 
-            def write_summary(path: Path, lab_name: str, config_path: str) -> None:
-                path.mkdir()
-                (path / "summary.json").write_text(
-                    json.dumps(
-                        {
-                            "lab_name": lab_name,
-                            "config_path": config_path,
-                            "config_name": Path(config_path).stem,
-                        }
-                    ),
-                    encoding="utf-8",
-                )
-                (path / "report.html").write_text("<html></html>", encoding="utf-8")
-
-            ready = outputs / "run_lab01_ready"
-            write_summary(ready, "lab01_msd", "configs/lab01_msd/default.yaml")
-            (ready / "plots").mkdir()
-            (ready / "plots" / "position.png").write_bytes(b"fake-png")
-            (ready / "worksheet.md").write_text("# Worksheet\n", encoding="utf-8")
-
-            write_summary(outputs / "run_lab01_needs_plot", "lab01_msd", "configs/lab01_msd/default.yaml")
-            write_summary(
+            _publish_scenario_run(
+                outputs / "run_lab01_ready",
+                "lab01_msd",
+                "configs/lab01_msd/default.yaml",
+            )
+            _publish_scenario_run(
+                outputs / "run_lab01_needs_plot",
+                "lab01_msd",
+                "configs/lab01_msd/default.yaml",
+                plot=False,
+            )
+            _publish_scenario_run(
                 outputs / "_codex_smoke_needs_observation",
                 "lab01_msd",
                 "configs/lab01_msd/interactive_pull.yaml",
             )
-            write_summary(
+            _publish_scenario_run(
                 outputs / "codex_smoke_needs_observation",
                 "lab01_msd",
                 "configs/lab01_msd/interactive_pull.yaml",
             )
-            write_summary(
+            _publish_scenario_run(
                 outputs / "verify_smoke_needs_observation",
                 "lab03_2dof",
                 "configs/lab03_2dof/interactive_2dof.yaml",
             )
-            write_summary(
+            _publish_scenario_run(
                 outputs / "run_lab01_needs_observation",
                 "lab01_msd",
                 "configs/lab01_msd/interactive_pull.yaml",
             )
 
             needs_prediction = outputs / "run_lab02_needs_prediction"
-            write_summary(
+            _publish_scenario_run(
                 needs_prediction,
                 "lab02_pid",
                 "configs/lab02_pid/interactive_disturbance.yaml",
-            )
-            (needs_prediction / "interaction_events.json").write_text(
-                json.dumps([{"kind": "marker", "name": "observation", "value": {"note": "Changed response."}}]),
-                encoding="utf-8",
+                events=[
+                    {
+                        "kind": "marker",
+                        "name": "observation",
+                        "value": {"note": "Changed response."},
+                    }
+                ],
             )
 
             outcome_pending = outputs / "run_lab03_outcome_pending"
-            write_summary(outcome_pending, "lab03_2dof", "configs/lab03_2dof/interactive_2dof.yaml")
-            (outcome_pending / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {"kind": "slider", "name": "target_x", "label": "Target X", "value": 0.4},
-                        {
-                            "kind": "marker",
-                            "name": "observation",
-                            "value": {
-                                "prediction": "Farther target should need more torque.",
-                                "note": "Torque rose.",
-                            },
-                        }
-                    ]
-                ),
-                encoding="utf-8",
+            _publish_scenario_run(
+                outcome_pending,
+                "lab03_2dof",
+                "configs/lab03_2dof/interactive_2dof.yaml",
+                events=[
+                    {"kind": "slider", "name": "target_x", "label": "Target X", "value": 0.4},
+                    {
+                        "kind": "marker",
+                        "name": "observation",
+                        "value": {
+                            "prediction": "Farther target should need more torque.",
+                            "note": "Torque rose.",
+                        },
+                    },
+                ],
             )
 
             preset_pending = outputs / "run_lab04_preset_pending"
-            write_summary(
+            _publish_scenario_run(
                 preset_pending,
                 "lab04_panda",
                 "configs/lab04_panda/interactive_virtual_wall.yaml",
-            )
-            (preset_pending / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {"kind": "preset", "name": "close_wall", "label": "Close wall"},
-                        {
-                            "kind": "marker",
-                            "name": "observation",
-                            "value": {
-                                "prediction": "Stiffer wall should retreat more.",
-                                "outcome": "Matched",
-                            },
-                        }
-                    ]
-                ),
-                encoding="utf-8",
+                events=[
+                    {"kind": "preset", "name": "close_wall", "label": "Close wall"},
+                    {
+                        "kind": "marker",
+                        "name": "observation",
+                        "value": {
+                            "prediction": "Stiffer wall should retreat more.",
+                            "outcome": "Matched",
+                        },
+                    },
+                ],
             )
 
             note_pending = outputs / "run_lab02_note_pending"
-            write_summary(note_pending, "lab02_pid", "configs/lab02_pid/interactive_disturbance.yaml")
-            (note_pending / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {
-                            "kind": "marker",
-                            "name": "observation",
-                            "value": {
-                                "prediction": "Higher Kp should overshoot.",
-                                "outcome": "Matched",
-                            },
-                        }
-                    ]
-                ),
-                encoding="utf-8",
+            _publish_scenario_run(
+                note_pending,
+                "lab02_pid",
+                "configs/lab02_pid/interactive_disturbance.yaml",
+                events=[
+                    {
+                        "kind": "marker",
+                        "name": "observation",
+                        "value": {
+                            "prediction": "Higher Kp should overshoot.",
+                            "outcome": "Matched",
+                        },
+                    }
+                ],
             )
 
             self.assertEqual(
@@ -2630,23 +3094,22 @@ class LearnerMenuTests(unittest.TestCase):
             preset_only_root = outputs / "preset_only_root"
             preset_only_root.mkdir()
             preset_only = preset_only_root / "run_lab04_preset_only"
-            write_summary(preset_only, "lab04_panda", "configs/lab04_panda/interactive_virtual_wall.yaml")
-            (preset_only / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {"kind": "preset", "name": "close_wall", "label": "Close wall"},
-                        {
-                            "kind": "marker",
-                            "name": "observation",
-                            "value": {
-                                "prediction": "Back away should release contact.",
-                                "outcome": "Matched",
-                                "note": "Contact stayed until backing away.",
-                            },
+            _publish_scenario_run(
+                preset_only,
+                "lab04_panda",
+                "configs/lab04_panda/interactive_virtual_wall.yaml",
+                events=[
+                    {"kind": "preset", "name": "close_wall", "label": "Close wall"},
+                    {
+                        "kind": "marker",
+                        "name": "observation",
+                        "value": {
+                            "prediction": "Back away should release contact.",
+                            "outcome": "Matched",
+                            "note": "Contact stayed until backing away.",
                         },
-                    ]
-                ),
-                encoding="utf-8",
+                    },
+                ],
             )
             self.assertIn(
                 "Next review: run_lab04_preset_only - Needs required preset Back away.",
@@ -2657,7 +3120,11 @@ class LearnerMenuTests(unittest.TestCase):
             preset_no_marker_root = outputs / "preset_no_marker_root"
             preset_no_marker_root.mkdir()
             preset_no_marker = preset_no_marker_root / "run_lab04_no_marker"
-            write_summary(preset_no_marker, "lab04_panda", "configs/lab04_panda/interactive_virtual_wall.yaml")
+            _publish_scenario_run(
+                preset_no_marker,
+                "lab04_panda",
+                "configs/lab04_panda/interactive_virtual_wall.yaml",
+            )
             self.assertIn(
                 "Needs observation: 0; prediction: 0; outcome: 0; required preset: 1;",
                 review_queue_summary_text(preset_no_marker_root),
@@ -2667,7 +3134,11 @@ class LearnerMenuTests(unittest.TestCase):
                 review_queue_summary_text(preset_no_marker_root),
             )
             self.assertEqual(next_review_output(preset_no_marker_root), preset_no_marker)
-            wall_action = next(action for action in MENU_ACTIONS if action.config_path == "configs/lab04_panda/interactive_virtual_wall.yaml")
+            wall_action = next(
+                action
+                for action in MENU_ACTIONS
+                if action.config_path == "configs/lab04_panda/interactive_virtual_wall.yaml"
+            )
             self.assertEqual(
                 action_observation_next_step_text(wall_action, preset_no_marker_root),
                 "Observation next step: try required preset Close wall, "
@@ -2677,47 +3148,23 @@ class LearnerMenuTests(unittest.TestCase):
     def test_launch_next_review_output_opens_the_pending_run_report(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)
-            ready = outputs / "run_ready"
-            ready.mkdir()
-            (ready / "summary.json").write_text(
-                json.dumps(
-                    {
-                        "lab_name": "lab01_msd",
-                        "config_path": "configs/lab01_msd/default.yaml",
-                        "config_name": "default",
-                    }
-                ),
-                encoding="utf-8",
+            _publish_scenario_run(
+                outputs / "run_ready",
+                "lab01_msd",
+                "configs/lab01_msd/default.yaml",
             )
-            (ready / "plots").mkdir()
-            (ready / "plots" / "position.png").write_bytes(b"fake-png")
-            (ready / "worksheet.md").write_text("# Worksheet\n", encoding="utf-8")
-
-            pending = outputs / "run_pending"
-            pending.mkdir()
-            (pending / "summary.json").write_text(
-                json.dumps(
+            pending = _publish_scenario_run(
+                outputs / "run_pending",
+                "lab02_pid",
+                "configs/lab02_pid/interactive_disturbance.yaml",
+                events=[
+                    {"kind": "slider", "name": "kp", "label": "Kp", "value": 12.0},
                     {
-                        "lab_name": "lab02_pid",
-                        "config_path": "configs/lab02_pid/interactive_disturbance.yaml",
-                        "config_name": "interactive_disturbance",
-                    }
-                ),
-                encoding="utf-8",
-            )
-            (pending / "report.html").write_text("<html>pending</html>", encoding="utf-8")
-            (pending / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {"kind": "slider", "name": "kp", "label": "Kp", "value": 12.0},
-                        {
-                            "kind": "marker",
-                            "name": "observation",
-                            "value": {"prediction": "More gain should overshoot.", "note": "It did."},
-                        }
-                    ]
-                ),
-                encoding="utf-8",
+                        "kind": "marker",
+                        "name": "observation",
+                        "value": {"prediction": "More gain should overshoot.", "note": "It did."},
+                    },
+                ],
             )
 
             with patch("mclab.learner_menu.open_path") as opener:
@@ -2725,24 +3172,25 @@ class LearnerMenuTests(unittest.TestCase):
 
             opener.assert_called_once_with(pending / "report.html")
 
-            (pending / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {"kind": "slider", "name": "kp", "label": "Kp", "value": 12.0},
-                        {
-                            "kind": "marker",
-                            "name": "observation",
-                            "value": {
-                                "prediction": "More gain should overshoot.",
-                                "outcome": "Matched",
-                                "note": "It did.",
-                            },
-                        }
-                    ]
-                ),
-                encoding="utf-8",
+            completed_outputs = _output_snapshot(Path(tmp), "completed")
+            _publish_scenario_run(
+                completed_outputs / "run_pending",
+                "lab02_pid",
+                "configs/lab02_pid/interactive_disturbance.yaml",
+                events=[
+                    {"kind": "slider", "name": "kp", "label": "Kp", "value": 12.0},
+                    {
+                        "kind": "marker",
+                        "name": "observation",
+                        "value": {
+                            "prediction": "More gain should overshoot.",
+                            "outcome": "Matched",
+                            "note": "It did.",
+                        },
+                    },
+                ],
             )
-            self.assertIsNone(next_review_output(outputs))
+            self.assertIsNone(next_review_output(completed_outputs))
 
     def test_action_preset_evidence_summarizes_latest_preset_progress(self) -> None:
         lab02_interactive = next(
@@ -2777,6 +3225,11 @@ class LearnerMenuTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            _finalize_scenario_run(
+                run_path,
+                lab02_interactive.lab_name,
+                lab02_interactive.config_path,
+            )
 
             self.assertEqual(
                 action_preset_evidence_text(lab02_interactive, outputs),
@@ -2787,14 +3240,15 @@ class LearnerMenuTests(unittest.TestCase):
                 lesson_text(lab02_interactive, outputs),
             )
 
-            (run_path / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {"kind": "preset", "name": "gentle_p", "label": "Gentle P"},
-                        {"kind": "preset", "name": "damped_pd", "label": "Damped PD"},
-                    ]
-                ),
-                encoding="utf-8",
+            outputs = _output_snapshot(Path(tmp), "two_presets")
+            _publish_scenario_run(
+                outputs / "run_lab02_interactive",
+                lab02_interactive.lab_name,
+                lab02_interactive.config_path,
+                events=[
+                    {"kind": "preset", "name": "gentle_p", "label": "Gentle P"},
+                    {"kind": "preset", "name": "damped_pd", "label": "Damped PD"},
+                ],
             )
             self.assertEqual(
                 action_preset_evidence_text(lab02_interactive, outputs),
@@ -2830,6 +3284,11 @@ class LearnerMenuTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            _finalize_scenario_run(
+                run_path,
+                lab04_wall.lab_name,
+                lab04_wall.config_path,
+            )
 
             self.assertEqual(
                 action_preset_evidence_text(lab04_wall, outputs),
@@ -2843,44 +3302,47 @@ class LearnerMenuTests(unittest.TestCase):
                 "Next cue: Try required preset Close wall, then mark a prediction-backed observation.",
             )
 
-            (run_path / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {"kind": "preset", "name": "close_wall", "label": "Close wall"},
-                        {"kind": "preset", "name": "back_away", "label": "Back away"},
-                    ]
-                ),
-                encoding="utf-8",
+            outputs = _output_snapshot(Path(tmp), "missing_reenter")
+            _publish_scenario_run(
+                outputs / "run_lab04_wall",
+                lab04_wall.lab_name,
+                lab04_wall.config_path,
+                events=[
+                    {"kind": "preset", "name": "close_wall", "label": "Close wall"},
+                    {"kind": "preset", "name": "back_away", "label": "Back away"},
+                ],
             )
             self.assertEqual(
                 action_preset_evidence_text(lab04_wall, outputs),
                 "Preset evidence: 2/5 presets tried; required next Re-enter wall; remaining Re-enter wall",
             )
 
-            (run_path / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {"kind": "preset", "name": "re-enter_wall", "label": "Re-enter wall"},
-                        {"kind": "preset", "name": "close_wall", "label": "Close wall"},
-                        {"kind": "preset", "name": "back_away", "label": "Back away"},
-                    ]
-                ),
-                encoding="utf-8",
+            outputs = _output_snapshot(Path(tmp), "out_of_order")
+            _publish_scenario_run(
+                outputs / "run_lab04_wall",
+                lab04_wall.lab_name,
+                lab04_wall.config_path,
+                events=[
+                    {"kind": "preset", "name": "re-enter_wall", "label": "Re-enter wall"},
+                    {"kind": "preset", "name": "close_wall", "label": "Close wall"},
+                    {"kind": "preset", "name": "back_away", "label": "Back away"},
+                ],
             )
             self.assertEqual(
                 action_preset_evidence_text(lab04_wall, outputs),
                 "Preset evidence: 3/5 presets tried; required next Re-enter wall; remaining Re-enter wall",
             )
 
-            (run_path / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {"kind": "preset", "name": "close_wall", "label": "Close wall"},
-                        {"kind": "preset", "name": "back_away", "label": "Back away"},
-                        {"kind": "preset", "name": "re-enter_wall", "label": "Re-enter wall"},
-                    ]
-                ),
-                encoding="utf-8",
+            outputs = _output_snapshot(Path(tmp), "complete")
+            _publish_scenario_run(
+                outputs / "run_lab04_wall",
+                lab04_wall.lab_name,
+                lab04_wall.config_path,
+                events=[
+                    {"kind": "preset", "name": "close_wall", "label": "Close wall"},
+                    {"kind": "preset", "name": "back_away", "label": "Back away"},
+                    {"kind": "preset", "name": "re-enter_wall", "label": "Re-enter wall"},
+                ],
             )
             self.assertEqual(
                 action_preset_evidence_text(lab04_wall, outputs),
@@ -2920,6 +3382,11 @@ class LearnerMenuTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (joint_run_path / "interaction_events.json").write_text("[]", encoding="utf-8")
+            _finalize_scenario_run(
+                joint_run_path,
+                lab04_joint_interactive.lab_name,
+                lab04_joint_interactive.config_path,
+            )
             self.assertEqual(
                 action_next_cue_text(lab04_joint_interactive, outputs),
                 "Next cue: Use Joint Target -  A / Left / Joint Target +  D / Right, "
@@ -2942,6 +3409,11 @@ class LearnerMenuTests(unittest.TestCase):
                 json.dumps([{"kind": "preset", "name": "gentle_p", "label": "Gentle P"}]),
                 encoding="utf-8",
             )
+            _finalize_scenario_run(
+                run_path,
+                lab02_interactive.lab_name,
+                lab02_interactive.config_path,
+            )
 
             self.assertEqual(
                 action_next_cue_text(lab02_interactive, outputs),
@@ -2949,60 +3421,69 @@ class LearnerMenuTests(unittest.TestCase):
             )
             self.assertIn("Next cue: Try preset Damped PD", lesson_text(lab02_interactive, outputs))
 
-            (run_path / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {"kind": "preset", "name": "gentle_p", "label": "Gentle P"},
-                        {"kind": "preset", "name": "damped_pd", "label": "Damped PD"},
-                    ]
-                ),
-                encoding="utf-8",
+            outputs = _output_snapshot(Path(tmp), "two_presets")
+            _publish_scenario_run(
+                outputs / "run_lab02_interactive",
+                lab02_interactive.lab_name,
+                lab02_interactive.config_path,
+                events=[
+                    {"kind": "preset", "name": "gentle_p", "label": "Gentle P"},
+                    {"kind": "preset", "name": "damped_pd", "label": "Damped PD"},
+                ],
+                plot=False,
+                report=False,
+                worksheet=False,
             )
             self.assertEqual(
                 action_next_cue_text(lab02_interactive, outputs),
                 "Next cue: Mark observation with a prediction for the control you just changed.",
             )
 
-            (run_path / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {"kind": "preset", "name": "gentle_p", "label": "Gentle P"},
-                        {"kind": "preset", "name": "damped_pd", "label": "Damped PD"},
-                        {
-                            "kind": "marker",
-                            "name": "observation",
-                            "value": {"prediction": "High gain will overshoot.", "note": "Overshoot happened."},
+            outputs = _output_snapshot(Path(tmp), "missing_outcome")
+            _publish_scenario_run(
+                outputs / "run_lab02_interactive",
+                lab02_interactive.lab_name,
+                lab02_interactive.config_path,
+                events=[
+                    {"kind": "preset", "name": "gentle_p", "label": "Gentle P"},
+                    {"kind": "preset", "name": "damped_pd", "label": "Damped PD"},
+                    {
+                        "kind": "marker",
+                        "name": "observation",
+                        "value": {
+                            "prediction": "High gain will overshoot.",
+                            "note": "Overshoot happened.",
                         },
-                    ]
-                ),
-                encoding="utf-8",
+                    },
+                ],
+                plot=False,
+                report=False,
+                worksheet=False,
             )
             self.assertEqual(
                 action_next_cue_text(lab02_interactive, outputs),
                 "Next cue: Review latest evidence and choose the missing prediction outcome.",
             )
 
-            plot_dir = run_path / "plots"
-            plot_dir.mkdir()
-            (plot_dir / "position.png").write_bytes(b"fake-png")
-            (run_path / "worksheet.md").write_text("# Worksheet\n", encoding="utf-8")
-            (run_path / "learner_tuned_config.yaml").write_text("interaction:\n  panel: false\n", encoding="utf-8")
-            (run_path / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {"kind": "preset", "name": "gentle_p", "label": "Gentle P"},
-                        {"kind": "preset", "name": "damped_pd", "label": "Damped PD"},
-                        {
-                            "kind": "marker",
-                            "name": "observation",
-                            "value": {
-                                "prediction": "High gain will overshoot.",
-                                "outcome": "Matched",
-                            },
+            outputs = _output_snapshot(Path(tmp), "missing_note")
+            _publish_scenario_run(
+                outputs / "run_lab02_interactive",
+                lab02_interactive.lab_name,
+                lab02_interactive.config_path,
+                events=[
+                    {"kind": "preset", "name": "gentle_p", "label": "Gentle P"},
+                    {"kind": "preset", "name": "damped_pd", "label": "Damped PD"},
+                    {
+                        "kind": "marker",
+                        "name": "observation",
+                        "value": {
+                            "prediction": "High gain will overshoot.",
+                            "outcome": "Matched",
                         },
-                    ]
-                ),
-                encoding="utf-8",
+                    },
+                ],
+                report=False,
+                tuned_config="interaction:\n  panel: false\n",
             )
 
             self.assertEqual(
@@ -3010,23 +3491,26 @@ class LearnerMenuTests(unittest.TestCase):
                 "Next cue: Add a short note or Use live status before moving on.",
             )
 
-            (run_path / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {"kind": "preset", "name": "gentle_p", "label": "Gentle P"},
-                        {"kind": "preset", "name": "damped_pd", "label": "Damped PD"},
-                        {
-                            "kind": "marker",
-                            "name": "observation",
-                            "value": {
-                                "prediction": "High gain will overshoot.",
-                                "outcome": "Matched",
-                                "note": "Overshoot happened.",
-                            },
+            outputs = _output_snapshot(Path(tmp), "complete")
+            _publish_scenario_run(
+                outputs / "run_lab02_interactive",
+                lab02_interactive.lab_name,
+                lab02_interactive.config_path,
+                events=[
+                    {"kind": "preset", "name": "gentle_p", "label": "Gentle P"},
+                    {"kind": "preset", "name": "damped_pd", "label": "Damped PD"},
+                    {
+                        "kind": "marker",
+                        "name": "observation",
+                        "value": {
+                            "prediction": "High gain will overshoot.",
+                            "outcome": "Matched",
+                            "note": "Overshoot happened.",
                         },
-                    ]
-                ),
-                encoding="utf-8",
+                    },
+                ],
+                report=False,
+                tuned_config="interaction:\n  panel: false\n",
             )
 
             self.assertEqual(
@@ -3035,8 +3519,12 @@ class LearnerMenuTests(unittest.TestCase):
             )
 
     def test_batch_history_tracks_latest_matching_report(self) -> None:
-        lab01_batch = next(action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare")
-        lab02_batch = next(action for action in BATCH_ACTIONS if action.batch_name == "lab02_pid_compare")
+        lab01_batch = next(
+            action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare"
+        )
+        lab02_batch = next(
+            action for action in BATCH_ACTIONS if action.batch_name == "lab02_pid_compare"
+        )
 
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)
@@ -3063,21 +3551,39 @@ class LearnerMenuTests(unittest.TestCase):
             (batch_path / "comparison_plots").mkdir()
             batch_plot = batch_path / "comparison_plots" / "error_compare.png"
             batch_plot.write_bytes(b"fake-png")
+            _finalize_batch_run(batch_path, lab01_batch.batch_name)
 
             self.assertEqual(action_latest_output(lab01_batch, outputs), batch_path)
             self.assertEqual(action_latest_plot(lab01_batch, outputs), batch_plot)
             self.assertEqual(action_latest_worksheet(lab01_batch, outputs), worksheet)
-            self.assertTrue(action_latest_viewer_handoff_uri(lab01_batch, outputs).endswith("batch_lab01/report.html#viewer-handoff"))
+            self.assertTrue(
+                action_latest_viewer_handoff_uri(lab01_batch, outputs).endswith(
+                    "batch_lab01/report.html#viewer-handoff"
+                )
+            )
             self.assertIn("History: Latest batch_lab01", action_history_text(lab01_batch, outputs))
-            self.assertEqual(action_plot_text(lab01_batch, outputs), "Plots: Latest error_compare.png")
-            self.assertIn("Plot review: Error - Check how quickly error shrinks", action_plot_review_text(lab01_batch, outputs))
-            self.assertEqual(action_worksheet_text(lab01_batch, outputs), "Worksheet: Latest worksheet.md")
+            self.assertEqual(
+                action_plot_text(lab01_batch, outputs), "Plots: Latest error_compare.png"
+            )
+            self.assertIn(
+                "Plot review: Error - Check how quickly error shrinks",
+                action_plot_review_text(lab01_batch, outputs),
+            )
+            self.assertEqual(
+                action_worksheet_text(lab01_batch, outputs), "Worksheet: Latest worksheet.md"
+            )
             self.assertIn("Plan: Batch compare", lesson_text_for_batch(lab01_batch, outputs))
             self.assertIn(batch_plan_text(lab01_batch), lesson_text_for_batch(lab01_batch, outputs))
-            self.assertIn("Plot review: Error - Check how quickly error shrinks", lesson_text_for_batch(lab01_batch, outputs))
-            self.assertIn("Worksheet: Latest worksheet.md", lesson_text_for_batch(lab01_batch, outputs))
             self.assertIn(
-                "Prediction check: Ready in worksheet; mark Matched, Partly matched, or Surprised.",
+                "Plot review: Error - Check how quickly error shrinks",
+                lesson_text_for_batch(lab01_batch, outputs),
+            )
+            self.assertIn(
+                "Worksheet: Latest worksheet.md", lesson_text_for_batch(lab01_batch, outputs)
+            )
+            self.assertIn(
+                "Prediction check: Worksheet is digest-published and read-only; copy Matched, "
+                "Partly matched, or Surprised into personal/course notes outside the saved-run folder.",
                 lesson_text_for_batch(lab01_batch, outputs),
             )
             self.assertIn(
@@ -3119,11 +3625,15 @@ class LearnerMenuTests(unittest.TestCase):
                 launch_action_latest_viewer_handoff(lab01_batch, outputs)
                 missing_handoff = launch_action_latest_viewer_handoff(lab02_batch, outputs)
 
-            self.assertTrue(opener.call_args.args[0].endswith("batch_lab01/report.html#viewer-handoff"))
+            self.assertTrue(
+                opener.call_args.args[0].endswith("batch_lab01/report.html#viewer-handoff")
+            )
             self.assertIsNone(missing_handoff)
 
     def test_lab04_wall_batch_prioritizes_timing_comparison_plot(self) -> None:
-        lab04_wall_batch = next(action for action in BATCH_ACTIONS if action.batch_name == "lab04_wall_compare")
+        lab04_wall_batch = next(
+            action for action in BATCH_ACTIONS if action.batch_name == "lab04_wall_compare"
+        )
 
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)
@@ -3147,17 +3657,26 @@ class LearnerMenuTests(unittest.TestCase):
             timing_plot.write_bytes(b"fake-png")
             (plot_dir / "wall_force_compare.png").write_bytes(b"fake-png")
             (plot_dir / "wall_penetration_compare.png").write_bytes(b"fake-png")
+            _finalize_batch_run(batch_path, lab04_wall_batch.batch_name)
 
             self.assertEqual(action_latest_plot(lab04_wall_batch, outputs), timing_plot)
             self.assertEqual(
                 action_plot_text(lab04_wall_batch, outputs),
                 "Plots: Latest wall_key_moment_timing_compare.png",
             )
-            self.assertIn("Plot review: Wall Timing - Compare when contact", action_plot_review_text(lab04_wall_batch, outputs))
-            self.assertIn("Plot review: Wall Timing - Compare when contact", lesson_text_for_batch(lab04_wall_batch, outputs))
+            self.assertIn(
+                "Plot review: Wall Timing - Compare when contact",
+                action_plot_review_text(lab04_wall_batch, outputs),
+            )
+            self.assertIn(
+                "Plot review: Wall Timing - Compare when contact",
+                lesson_text_for_batch(lab04_wall_batch, outputs),
+            )
 
     def test_refresh_batch_menu_state_updates_text_and_buttons(self) -> None:
-        lab01_batch = next(action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare")
+        lab01_batch = next(
+            action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare"
+        )
         text_variable = FakeTextVariable()
         report_button = FakeButton()
         plot_button = FakeButton()
@@ -3168,7 +3687,17 @@ class LearnerMenuTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)
             refresh_batch_menu_state(
-                ((lab01_batch, text_variable, report_button, plot_button, worksheet_button, folder_button, handoff_button),),
+                (
+                    (
+                        lab01_batch,
+                        text_variable,
+                        report_button,
+                        plot_button,
+                        worksheet_button,
+                        folder_button,
+                        handoff_button,
+                    ),
+                ),
                 outputs,
             )
 
@@ -3176,7 +3705,10 @@ class LearnerMenuTests(unittest.TestCase):
             self.assertIn("Plots: Not saved yet", text_variable.value)
             self.assertIn("Plot review: Not available until a plot is saved", text_variable.value)
             self.assertIn("Worksheet: Not saved yet", text_variable.value)
-            self.assertIn("Prediction check: Write a prediction before running the batch.", text_variable.value)
+            self.assertIn(
+                "Prediction check: Write a prediction before running the batch.",
+                text_variable.value,
+            )
             self.assertEqual(report_button.state_calls[-1], ["disabled"])
             self.assertEqual(plot_button.state_calls[-1], ["disabled"])
             self.assertEqual(worksheet_button.state_calls[-1], ["disabled"])
@@ -3199,9 +3731,20 @@ class LearnerMenuTests(unittest.TestCase):
             (batch_path / "worksheet.md").write_text("# Worksheet\n", encoding="utf-8")
             (batch_path / "comparison_plots").mkdir()
             (batch_path / "comparison_plots" / "position_compare.png").write_bytes(b"fake-png")
+            _finalize_batch_run(batch_path, lab01_batch.batch_name)
 
             refresh_batch_menu_state(
-                ((lab01_batch, text_variable, report_button, plot_button, worksheet_button, folder_button, handoff_button),),
+                (
+                    (
+                        lab01_batch,
+                        text_variable,
+                        report_button,
+                        plot_button,
+                        worksheet_button,
+                        folder_button,
+                        handoff_button,
+                    ),
+                ),
                 outputs,
             )
 
@@ -3209,7 +3752,12 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("Plots: Latest position_compare.png", text_variable.value)
         self.assertIn("Plot review: Position - Compare actual motion", text_variable.value)
         self.assertIn("Worksheet: Latest worksheet.md", text_variable.value)
-        self.assertIn("Prediction check: Worksheet saved; use the comparison notes", text_variable.value)
+        self.assertIn(
+            "Prediction check: Worksheet is digest-published and read-only; use the comparison "
+            "notes to judge your prediction, then copy the outcome into personal/course notes "
+            "outside the saved-run folder.",
+            text_variable.value,
+        )
         self.assertEqual(report_button.state_calls[-1], ["!disabled"])
         self.assertEqual(plot_button.state_calls[-1], ["!disabled"])
         self.assertEqual(worksheet_button.state_calls[-1], ["!disabled"])
@@ -3219,9 +3767,14 @@ class LearnerMenuTests(unittest.TestCase):
     def test_launch_latest_output_opens_report_when_available(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             run_path = Path(tmp) / "run"
-            run_path.mkdir()
+            _publish_scenario_run(
+                run_path,
+                "lab01_msd",
+                "configs/lab01_msd/default.yaml",
+                plot=False,
+                worksheet=False,
+            )
             report = run_path / "report.html"
-            report.write_text("<html></html>", encoding="utf-8")
 
             with patch("mclab.learner_menu.open_path") as opener:
                 launch_latest_output({"path": run_path})
@@ -3236,6 +3789,14 @@ class LearnerMenuTests(unittest.TestCase):
             (plot_dir / "energy.png").write_bytes(b"fake-png")
             priority_plot = plot_dir / "position.png"
             priority_plot.write_bytes(b"fake-png")
+            _publish_scenario_run(
+                run_path,
+                "lab01_msd",
+                "configs/lab01_msd/default.yaml",
+                plot=False,
+                report=False,
+                worksheet=False,
+            )
 
             with patch("mclab.learner_menu.open_path") as opener:
                 launch_latest_plot({"path": run_path})
@@ -3245,9 +3806,14 @@ class LearnerMenuTests(unittest.TestCase):
     def test_launch_latest_worksheet_opens_worksheet_when_available(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             run_path = Path(tmp) / "run"
-            run_path.mkdir()
+            _publish_scenario_run(
+                run_path,
+                "lab01_msd",
+                "configs/lab01_msd/default.yaml",
+                plot=False,
+                report=False,
+            )
             worksheet = run_path / "worksheet.md"
-            worksheet.write_text("# Worksheet\n", encoding="utf-8")
 
             with patch("mclab.learner_menu.open_path") as opener:
                 launch_latest_worksheet({"path": run_path})
@@ -3371,20 +3937,21 @@ class LearnerMenuTests(unittest.TestCase):
         launcher.assert_not_called()
         self.assertIn("comparison batch steps", status.value)
 
-    def test_launch_latest_output_opens_index_for_batch_when_available(self) -> None:
+    def test_launch_latest_output_prefers_trusted_report_for_batch(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             batch_path = Path(tmp) / "batch"
-            batch_path.mkdir()
-            index = batch_path / "index.html"
-            index.write_text("<html></html>", encoding="utf-8")
+            _publish_batch_run(batch_path, "lab01_msd_compare", index=True)
+            report = batch_path / "report.html"
 
             with patch("mclab.learner_menu.open_path") as opener:
                 launch_latest_output({"path": batch_path})
 
-            opener.assert_called_once_with(index)
+            opener.assert_called_once_with(report)
 
     def test_latest_output_viewer_handoff_opens_batch_report_anchor(self) -> None:
-        batch_action = next(action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare")
+        batch_action = next(
+            action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare"
+        )
         with tempfile.TemporaryDirectory() as tmp:
             batch_path = Path(tmp) / "batch_lab01"
             batch_path.mkdir()
@@ -3399,24 +3966,36 @@ class LearnerMenuTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (batch_path / "report.html").write_text("<html></html>", encoding="utf-8")
+            _finalize_batch_run(batch_path, batch_action.batch_name)
 
             self.assertTrue(
-                latest_output_viewer_handoff_uri(batch_path).endswith("batch_lab01/report.html#viewer-handoff")
+                latest_output_viewer_handoff_uri(batch_path).endswith(
+                    "batch_lab01/report.html#viewer-handoff"
+                )
             )
             with patch("mclab.learner_menu.open_uri") as opener:
                 launch_latest_viewer_handoff({"path": batch_path})
 
-            self.assertTrue(opener.call_args.args[0].endswith("batch_lab01/report.html#viewer-handoff"))
+            self.assertTrue(
+                opener.call_args.args[0].endswith("batch_lab01/report.html#viewer-handoff")
+            )
 
     def test_latest_output_viewer_handoff_ignores_non_batch_runs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             run_path = Path(tmp) / "run_lab01"
             run_path.mkdir()
             (run_path / "summary.json").write_text(
-                json.dumps({"lab_name": "lab01_msd", "config_path": "configs/lab01_msd/default.yaml"}),
+                json.dumps(
+                    {"lab_name": "lab01_msd", "config_path": "configs/lab01_msd/default.yaml"}
+                ),
                 encoding="utf-8",
             )
             (run_path / "report.html").write_text("<html></html>", encoding="utf-8")
+            _finalize_scenario_run(
+                run_path,
+                "lab01_msd",
+                "configs/lab01_msd/default.yaml",
+            )
 
             with patch("mclab.learner_menu.open_uri") as opener:
                 result = launch_latest_viewer_handoff({"path": run_path})
@@ -3433,7 +4012,7 @@ class LearnerMenuTests(unittest.TestCase):
             index.write_text("<html></html>", encoding="utf-8")
 
             with (
-                patch("mclab.learner_menu.PROJECT_ROOT", Path(tmp)),
+                patch("mclab.learner_menu.default_outputs_root", return_value=outputs),
                 patch("mclab.learner_menu.open_path") as opener,
             ):
                 launch_outputs_index()
@@ -3442,10 +4021,11 @@ class LearnerMenuTests(unittest.TestCase):
 
     def test_launch_outputs_index_creates_index_when_missing(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            index = Path(tmp) / "outputs" / "index.html"
+            outputs = Path(tmp) / "outputs"
+            index = outputs / "index.html"
 
             with (
-                patch("mclab.learner_menu.PROJECT_ROOT", Path(tmp)),
+                patch("mclab.learner_menu.default_outputs_root", return_value=outputs),
                 patch("mclab.learner_menu.open_path") as opener,
             ):
                 launch_outputs_index()
@@ -3465,19 +4045,30 @@ class LearnerMenuTests(unittest.TestCase):
             internal_newer.mkdir(parents=True)
             verify_newer.mkdir(parents=True)
             (older / "summary.json").write_text(
-                json.dumps({"lab_name": "lab01_msd", "config_path": "configs/lab01_msd/default.yaml"}),
+                json.dumps(
+                    {"lab_name": "lab01_msd", "config_path": "configs/lab01_msd/default.yaml"}
+                ),
                 encoding="utf-8",
             )
             (newer / "summary.json").write_text(
-                json.dumps({"lab_name": "lab04_panda", "config_path": "configs/lab04_panda/joint_pd.yaml"}),
+                json.dumps(
+                    {"lab_name": "lab04_panda", "config_path": "configs/lab04_panda/joint_pd.yaml"}
+                ),
                 encoding="utf-8",
             )
             (internal_newer / "summary.json").write_text(
-                json.dumps({"lab_name": "lab02_pid", "config_path": "configs/lab02_pid/default.yaml"}),
+                json.dumps(
+                    {"lab_name": "lab02_pid", "config_path": "configs/lab02_pid/default.yaml"}
+                ),
                 encoding="utf-8",
             )
             (verify_newer / "summary.json").write_text(
-                json.dumps({"lab_name": "lab03_2dof", "config_path": "configs/lab03_2dof/interactive_2dof.yaml"}),
+                json.dumps(
+                    {
+                        "lab_name": "lab03_2dof",
+                        "config_path": "configs/lab03_2dof/interactive_2dof.yaml",
+                    }
+                ),
                 encoding="utf-8",
             )
             (older / "report.html").write_text("<html></html>", encoding="utf-8")
@@ -3503,13 +4094,20 @@ class LearnerMenuTests(unittest.TestCase):
             plot_dir = output_path / "plots"
             plot_dir.mkdir(parents=True)
             (output_path / "summary.json").write_text(
-                json.dumps({"lab_name": "lab01_msd", "config_path": "configs/lab01_msd/default.yaml"}),
+                json.dumps(
+                    {"lab_name": "lab01_msd", "config_path": "configs/lab01_msd/default.yaml"}
+                ),
                 encoding="utf-8",
             )
             (output_path / "report.html").write_text("<html></html>", encoding="utf-8")
             (plot_dir / "energy.png").write_bytes(b"fake-png")
             (plot_dir / "position.png").write_bytes(b"fake-png")
             (output_path / "worksheet.md").write_text("# Worksheet\n", encoding="utf-8")
+            _finalize_scenario_run(
+                output_path,
+                "lab01_msd",
+                "configs/lab01_msd/default.yaml",
+            )
             latest_output: dict[str, Path | None] = {"path": None}
             report_button = FakeButton()
             plot_button = FakeButton()
@@ -3545,7 +4143,9 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(replay_button.state_calls[-1], ["disabled"])
 
     def test_initialize_latest_output_state_enables_handoff_for_saved_batch(self) -> None:
-        batch_action = next(action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare")
+        batch_action = next(
+            action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare"
+        )
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp) / "outputs"
             output_path = outputs / "batch_lab01"
@@ -3561,6 +4161,7 @@ class LearnerMenuTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (output_path / "report.html").write_text("<html></html>", encoding="utf-8")
+            _finalize_batch_run(output_path, batch_action.batch_name)
             latest_output: dict[str, Path | None] = {"path": None}
             handoff_button = FakeButton()
 
@@ -3575,7 +4176,9 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(handoff_button.config["text"], "Open handoff")
         self.assertEqual(handoff_button.state_calls[-1], ["!disabled"])
 
-    def test_initialize_latest_output_state_enables_latest_replay_when_tuned_config_exists(self) -> None:
+    def test_initialize_latest_output_state_enables_latest_replay_when_tuned_config_exists(
+        self,
+    ) -> None:
         action = MENU_ACTIONS[0]
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp) / "outputs"
@@ -3619,11 +4222,15 @@ class LearnerMenuTests(unittest.TestCase):
             old_output.mkdir(parents=True)
             new_output.mkdir()
             (old_output / "summary.json").write_text(
-                json.dumps({"lab_name": "lab01_msd", "config_path": "configs/lab01_msd/default.yaml"}),
+                json.dumps(
+                    {"lab_name": "lab01_msd", "config_path": "configs/lab01_msd/default.yaml"}
+                ),
                 encoding="utf-8",
             )
             (new_output / "summary.json").write_text(
-                json.dumps({"lab_name": "lab01_msd", "config_path": "configs/lab01_msd/default.yaml"}),
+                json.dumps(
+                    {"lab_name": "lab01_msd", "config_path": "configs/lab01_msd/default.yaml"}
+                ),
                 encoding="utf-8",
             )
             (old_output / "report.html").write_text("<html></html>", encoding="utf-8")
@@ -3632,6 +4239,18 @@ class LearnerMenuTests(unittest.TestCase):
             plot_dir.mkdir()
             (plot_dir / "position.png").write_bytes(b"fake-png")
             (new_output / "worksheet.md").write_text("# Worksheet\n", encoding="utf-8")
+            _finalize_scenario_run(
+                old_output,
+                "lab01_msd",
+                "configs/lab01_msd/default.yaml",
+                finished_at="2026-01-01T00:00:00+00:00",
+            )
+            _finalize_scenario_run(
+                new_output,
+                "lab01_msd",
+                "configs/lab01_msd/default.yaml",
+                finished_at="2026-01-01T00:00:20+00:00",
+            )
             now = time.time()
             for path in (old_output / "summary.json", old_output / "report.html"):
                 os.utime(path, (now - 20.0, now - 20.0))
@@ -3660,7 +4279,9 @@ class LearnerMenuTests(unittest.TestCase):
 
         self.assertEqual(selected, new_output)
         self.assertEqual(latest_output["path"], new_output)
-        self.assertIn("Latest saved output: Lab01 Mass-Spring-Damper - Auto demo (new_run)", status.value)
+        self.assertIn(
+            "Latest saved output: Lab01 Mass-Spring-Damper - Auto demo (new_run)", status.value
+        )
         self.assertIn("Plot: position.png", status.value)
         self.assertIn("Worksheet: worksheet.md", status.value)
         self.assertEqual(report_button.state_calls[-1], ["!disabled"])
@@ -3706,12 +4327,19 @@ class LearnerMenuTests(unittest.TestCase):
             plot_dir = output_path / "plots"
             plot_dir.mkdir(parents=True)
             (output_path / "summary.json").write_text(
-                json.dumps({"lab_name": "lab01_msd", "config_path": "configs/lab01_msd/default.yaml"}),
+                json.dumps(
+                    {"lab_name": "lab01_msd", "config_path": "configs/lab01_msd/default.yaml"}
+                ),
                 encoding="utf-8",
             )
             (plot_dir / "energy.png").write_bytes(b"fake-png")
             (plot_dir / "position.png").write_bytes(b"fake-png")
             (output_path / "worksheet.md").write_text("# Worksheet\n", encoding="utf-8")
+            _finalize_scenario_run(
+                output_path,
+                "lab01_msd",
+                "configs/lab01_msd/default.yaml",
+            )
 
             text = latest_output_status_text(output_path)
 
@@ -3722,7 +4350,9 @@ class LearnerMenuTests(unittest.TestCase):
         )
 
     def test_latest_output_title_uses_batch_card_when_summary_matches_batch(self) -> None:
-        batch_action = next(action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare")
+        batch_action = next(
+            action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare"
+        )
         with tempfile.TemporaryDirectory() as tmp:
             output_path = Path(tmp) / "batch_lab01"
             output_path.mkdir()
@@ -3744,7 +4374,9 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(matched, batch_action)
 
     def test_latest_output_status_text_marks_batch_handoff_ready(self) -> None:
-        batch_action = next(action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare")
+        batch_action = next(
+            action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare"
+        )
         with tempfile.TemporaryDirectory() as tmp:
             output_path = Path(tmp) / "batch_lab01"
             output_path.mkdir()
@@ -3759,6 +4391,7 @@ class LearnerMenuTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (output_path / "report.html").write_text("<html></html>", encoding="utf-8")
+            _finalize_batch_run(output_path, batch_action.batch_name)
 
             text = latest_output_status_text(output_path)
 
@@ -3822,7 +4455,9 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(parsed.name, "20260627_151000_lab02_pid_compare")
 
     def test_parse_run_output_path_ignores_noncompletion_lines(self) -> None:
-        self.assertIsNone(parse_run_output_path("Simulation complete. Close the MuJoCo viewer window to exit."))
+        self.assertIsNone(
+            parse_run_output_path("Simulation complete. Close the MuJoCo viewer window to exit.")
+        )
         self.assertIsNone(parse_run_output_path("Run complete: "))
 
     def test_completed_run_status_enables_latest_output_button(self) -> None:
@@ -3861,6 +4496,22 @@ class LearnerMenuTests(unittest.TestCase):
             priority_plot.write_bytes(b"fake-png")
             worksheet = output_path / "worksheet.md"
             worksheet.write_text("# Worksheet\n", encoding="utf-8")
+            (output_path / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": MENU_ACTIONS[0].lab_name,
+                        "config_path": MENU_ACTIONS[0].config_path,
+                        "config_name": Path(MENU_ACTIONS[0].config_path).stem,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (output_path / "report.html").write_text("<html></html>", encoding="utf-8")
+            _finalize_scenario_run(
+                output_path,
+                MENU_ACTIONS[0].lab_name,
+                MENU_ACTIONS[0].config_path,
+            )
 
             _set_status_after_run(
                 MENU_ACTIONS[0],

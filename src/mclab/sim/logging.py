@@ -4,14 +4,18 @@ from __future__ import annotations
 
 import csv
 import json
+import logging
 from collections.abc import Mapping
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from mclab.application.artifacts import ReplayRecorder, write_manifest
+from mclab.application.catalog import stable_scenario_id
 from mclab.config import default_outputs_root, resolve_output_path
-from mclab.sim.reporting import write_run_report
+from mclab.sim.reporting import write_outputs_index, write_run_report
+
+LOGGER = logging.getLogger(__name__)
 
 
 def create_output_path(lab_name: str, output_dir: str | Path | None = None) -> Path:
@@ -73,6 +77,8 @@ class RunLogger:
         self.started_at = datetime.now(timezone.utc).isoformat()
         self.run_status = "completed"
         self._finalized = False
+        self._running_marker_established = False
+        self._running_report_repair_required = False
 
     def record(self, **row: Any) -> None:
         flattened = _flatten_mapping(row)
@@ -127,7 +133,13 @@ class RunLogger:
     ) -> Path:
         self._require_unfinalized()
         self.run_status = run_status
-        self._write_manifest(status="running")
+        if not self._running_marker_established:
+            # Establish the empty/initial running boundary once.  On a retry,
+            # the prior marker must continue to make changed producer bytes or
+            # stale prospective verdicts fail closed until finalization repairs
+            # the documents and refreshes the manifest in that order.
+            self._write_manifest(status="running")
+            self._running_marker_established = True
         self._save_config_snapshot()
         self._save_csv()
         self._save_states()
@@ -140,18 +152,76 @@ class RunLogger:
         if finalize:
             self.finalize_artifacts()
         else:
+            if self._running_report_repair_required:
+                write_run_report(
+                    self.output_path,
+                    update_index=False,
+                    completion_status="running",
+                )
             self._write_manifest(status="running")
+            self._running_report_repair_required = False
         return self.output_path
 
     def finalize_artifacts(self) -> Path:
         """Write reports while cleanup is blocked, then publish terminal state last."""
 
         self._require_unfinalized()
-        self._write_manifest(status="running")
-        write_run_report(self.output_path)
-        manifest = self._write_manifest(status=self.run_status)
+        try:
+            # A prior terminal-publication attempt may have left prospective
+            # Complete documents whose bytes no longer match the last running
+            # manifest.  Repair those documents before refreshing that
+            # manifest so a retry can never digest-publish a stale verdict.
+            write_run_report(
+                self.output_path,
+                update_index=False,
+                completion_status="running",
+            )
+            self._write_manifest(status="running")
+            self._running_report_repair_required = False
+            write_run_report(
+                self.output_path,
+                update_index=False,
+                completion_status=self.run_status,
+            )
+            manifest = self._write_manifest(status=self.run_status)
+        except Exception:
+            self._repair_failed_finalization()
+            raise
         self._finalized = True
+        # Keep the terminal manifest last inside the run directory.  The
+        # cumulative parent index is outside that immutable artifact boundary
+        # and must observe the published terminal state.
+        try:
+            write_outputs_index(self.output_path.parent)
+        except Exception as exc:
+            LOGGER.warning(
+                "Saved run is complete, but the cumulative outputs index could not "
+                "be refreshed: %s",
+                exc,
+            )
         return manifest
+
+    def _repair_failed_finalization(self) -> None:
+        """Best-effort repair of a prospective verdict while keeping retry open."""
+
+        self._running_report_repair_required = True
+        try:
+            write_run_report(
+                self.output_path,
+                update_index=False,
+                completion_status="running",
+            )
+        except Exception as exc:
+            LOGGER.warning("Could not repair learner report after finalization failure: %s", exc)
+            return
+        try:
+            # Seal only successfully repaired running documents.  Until this
+            # refresh, the prior marker keeps any prospective terminal files
+            # untrusted by digest.
+            self._write_manifest(status="running")
+            self._running_report_repair_required = False
+        except Exception as exc:
+            LOGGER.warning("Could not seal repaired running artifacts: %s", exc)
 
     def _require_unfinalized(self) -> None:
         if self._finalized:
@@ -293,12 +363,4 @@ def _dump_basic_yaml(data: Mapping[str, Any], indent: int = 0) -> str:
 
 
 def _scenario_id(lab_name: str, config_path: Path | None) -> str:
-    prefix = {
-        "lab01_msd": "lab01",
-        "lab02_pid": "lab02",
-        "lab03_trajectory": "lab03",
-        "lab03_2dof": "lab03",
-        "lab04_panda": "lab04",
-    }.get(lab_name, lab_name)
-    suffix = config_path.stem if config_path else "custom"
-    return f"{prefix}.{suffix.replace('_', '-')}"
+    return stable_scenario_id(lab_name, config_path)

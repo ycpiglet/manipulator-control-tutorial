@@ -11,6 +11,9 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from mclab.application.artifacts import write_manifest  # noqa: E402
+from mclab.application.catalog import CONCRETE_BATCH_NAMES, stable_scenario_id  # noqa: E402
+from mclab.config import load_config  # noqa: E402
 from mclab.sim.logging import RunLogger, create_output_path  # noqa: E402
 from mclab.learning_guides import guide_for_config  # noqa: E402
 from mclab.output_cleanup import (  # noqa: E402
@@ -35,6 +38,133 @@ class FixedDatetime:
     @classmethod
     def now(cls) -> datetime:
         return datetime(2026, 6, 27, 20, 50, 0)
+
+
+_FIXTURE_STARTED_AT = "2026-06-27T15:00:00+00:00"
+_FIXTURE_FINISHED_AT = "2026-06-27T15:01:00+00:00"
+
+
+def _publish_scenario_fixture(
+    output: Path,
+    *,
+    lab_name: str | None = None,
+    config_path: str | None = None,
+) -> Path:
+    """Publish a strict schema-1 manifest after fixture evidence is written."""
+
+    summary = json.loads((output / "summary.json").read_text(encoding="utf-8"))
+    resolved_lab_name = lab_name or str(summary["lab_name"])
+    resolved_config_path = config_path or str(summary["config_path"])
+    return write_manifest(
+        output,
+        scenario_id=stable_scenario_id(resolved_lab_name, resolved_config_path),
+        status="completed",
+        config={},
+        config_path=resolved_config_path,
+        started_at=_FIXTURE_STARTED_AT,
+        finished_at=_FIXTURE_FINISHED_AT,
+    )
+
+
+def _write_scenario_fixture_report(output: Path) -> Path:
+    """Digest-publish producer evidence before writing a prospective report."""
+
+    summary = json.loads((output / "summary.json").read_text(encoding="utf-8"))
+    lab_name = str(summary["lab_name"])
+    config_path = str(summary.get("config_path") or "")
+    if not config_path:
+        config_name = str(summary.get("config_name") or "")
+        candidate = ROOT / "configs" / lab_name / f"{config_name}.yaml"
+        if config_name and candidate.is_file():
+            config_path = candidate.relative_to(ROOT).as_posix()
+    config_file = output / "config.yaml"
+    config = load_config(config_file) if config_file.is_file() else {}
+    write_manifest(
+        output,
+        scenario_id=stable_scenario_id(lab_name, config_path or None),
+        status="running",
+        config=config,
+        config_path=config_path or None,
+        started_at=_FIXTURE_STARTED_AT,
+    )
+    return write_run_report(
+        output,
+        update_index=False,
+        completion_status="completed",
+    )
+
+
+def _publish_batch_fixture(output: Path, batch_name: str) -> Path:
+    """Publish a strict comparison/course-batch fixture manifest."""
+
+    return write_manifest(
+        output,
+        scenario_id=f"batch.{batch_name}",
+        status="completed",
+        config={"batch_name": batch_name},
+        started_at=_FIXTURE_STARTED_AT,
+        finished_at=_FIXTURE_FINISHED_AT,
+        run_kind="course_batch" if batch_name == "all" else "comparison_batch",
+    )
+
+
+def _write_test_plot(output: Path, name: str = "position.png") -> Path:
+    plots = output / "plots"
+    plots.mkdir(exist_ok=True)
+    target = plots / name
+    target.write_bytes(b"fake-png")
+    return target
+
+
+def _write_complete_interaction_without_required_presets(output: Path) -> Path:
+    """Write valid hands-on evidence while intentionally omitting wall presets."""
+
+    target = output / "interaction_events.json"
+    target.write_text(
+        json.dumps(
+            [
+                {"kind": "button", "name": "target_x_in", "label": "Target X +"},
+                {
+                    "kind": "marker",
+                    "name": "observation",
+                    "value": {
+                        "prediction": "Moving into the wall should increase contact force.",
+                        "outcome": "Matched",
+                        "note": "Contact force increased after the target moved.",
+                    },
+                },
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return target
+
+
+def _publish_course_batch_children(output: Path) -> None:
+    """Publish the five strict child batches required by ``batch.all``."""
+
+    for batch_name in CONCRETE_BATCH_NAMES:
+        child = output / batch_name
+        child.mkdir()
+        (child / "summary.json").write_text(
+            json.dumps(
+                {
+                    "lab_name": "batch",
+                    "config_name": batch_name,
+                    "batch_name": batch_name,
+                }
+            ),
+            encoding="utf-8",
+        )
+        comparison_plots = child / "comparison_plots"
+        comparison_plots.mkdir()
+        (comparison_plots / "comparison.png").write_bytes(b"fake-png")
+        (child / "report.html").write_text("<html></html>", encoding="utf-8")
+        (child / "worksheet.md").write_text(
+            "# Batch worksheet\n\n## Prediction Check\n",
+            encoding="utf-8",
+        )
+        _publish_batch_fixture(child, batch_name)
 
 
 class LoggingTests(unittest.TestCase):
@@ -105,11 +235,20 @@ class LoggingTests(unittest.TestCase):
             _activity_mix_items(
                 [
                     {"kind": "button", "name": "use_live_status_note", "label": "Use live status"},
-                    {"kind": "button", "name": "use_changed_values_note", "label": "Use changed values"},
+                    {
+                        "kind": "button",
+                        "name": "use_changed_values_note",
+                        "label": "Use changed values",
+                    },
                     {"kind": "button", "name": "clear_observation_note", "label": "Clear note"},
                     {"kind": "button", "name": "pause_simulation", "label": "Pause simulation"},
                     {"kind": "button", "name": "step_simulation", "label": "Step once"},
-                    {"kind": "slider", "name": "playback_speed", "label": "Playback speed", "value": 0.5},
+                    {
+                        "kind": "slider",
+                        "name": "playback_speed",
+                        "label": "Playback speed",
+                        "value": 0.5,
+                    },
                     {"kind": "marker", "name": "observation", "label": "Mark observation"},
                 ]
             )
@@ -125,7 +264,10 @@ class LoggingTests(unittest.TestCase):
         missing: list[str] = []
         for config_path in sorted((ROOT / "configs").glob("**/*.yaml")):
             relative = config_path.relative_to(ROOT).as_posix()
-            if guide_for_config(config_path=relative) and _normalize_path(relative) not in NEXT_RUN_SUGGESTIONS:
+            if (
+                guide_for_config(config_path=relative)
+                and _normalize_path(relative) not in NEXT_RUN_SUGGESTIONS
+            ):
                 missing.append(relative)
 
         self.assertEqual(missing, [])
@@ -164,6 +306,7 @@ class LoggingTests(unittest.TestCase):
                 config_path="configs/lab01_msd/default.yaml",
                 output_dir=Path(temp_dir) / "run",
             )
+            _write_test_plot(logger.output_path)
             logger.record(time=0.0, position=0.1)
             output = logger.save_with_artifacts(
                 summary={"max_position": 0.1, "settling_time": None, "interaction_events": 3},
@@ -249,7 +392,9 @@ class LoggingTests(unittest.TestCase):
                 html,
             )
             self.assertIn("headless plot run", html)
-            self.assertIn("A saved run report, priority plot, and worksheet for the baseline 1D plant.", html)
+            self.assertIn(
+                "A saved run report, priority plot, and worksheet for the baseline 1D plant.", html
+            )
             self.assertIn(
                 "python -m mclab run lab01 --config configs/lab01_msd/interactive_pull.yaml "
                 "--viewer --realtime --pause-at-end --plot --plots essential --open-report",
@@ -261,7 +406,9 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Playbook", html)
             self.assertIn("predict how quickly the mass returns", html)
             self.assertIn("Start steps", html)
-            self.assertIn("Predict -&gt; Run scenario -&gt; Review priority plot and worksheet.", html)
+            self.assertIn(
+                "Predict -&gt; Run scenario -&gt; Review priority plot and worksheet.", html
+            )
             self.assertIn("Challenge", html)
             self.assertIn("verify it in the saved plot and worksheet", html)
             self.assertIn("Mission Evidence", html)
@@ -269,7 +416,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Next proof step", html)
             self.assertIn("Challenge Evidence", html)
             self.assertIn("Challenge proof status", html)
-            self.assertIn("Needs plot evidence", html)
+            self.assertIn("Artifacts ready", html)
             self.assertIn("Priority plot and worksheet", html)
             self.assertIn("Try", html)
             self.assertIn("Change", html)
@@ -332,7 +479,9 @@ class LoggingTests(unittest.TestCase):
             )
             self.assertIn("Interaction variety", html)
             self.assertIn("2/2 control families", html)
-            self.assertIn("Ready: compare this interaction mix against plots and the worksheet.", html)
+            self.assertIn(
+                "Ready: compare this interaction mix against plots and the worksheet.", html
+            )
             self.assertIn("Latest slider values", html)
             self.assertIn("Preset choices", html)
             self.assertIn("Stiff spring", html)
@@ -350,6 +499,8 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Watch tuned replay", html)
             self.assertIn("Learner Worksheet", html)
             self.assertIn("Open worksheet.md", html)
+            self.assertIn("digest-published, read-only Markdown worksheet", html)
+            self.assertIn("personal or course notes outside this saved-run folder", html)
             self.assertIn("Observation Timeline", html)
             self.assertIn("1 observation shown in time order.", html)
             self.assertIn("<td>Observation 1</td>", html)
@@ -359,7 +510,9 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Observation Markers", html)
             self.assertIn("1 marked observation saved.", html)
             self.assertIn("Review prompt", html)
-            self.assertIn("1 learning question, 1 prediction, 1 outcome, and 1 learner note were saved.", html)
+            self.assertIn(
+                "1 learning question, 1 prediction, 1 outcome, and 1 learner note were saved.", html
+            )
             self.assertIn("Prediction Review", html)
             self.assertIn("Predictions saved", html)
             self.assertIn("Observation notes", html)
@@ -372,7 +525,9 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Prediction-only markers", html)
             self.assertIn("Observation-only markers", html)
             self.assertIn("Outcome judgments", html)
-            self.assertIn("Decide whether each prediction matched, partially matched, or surprised you.", html)
+            self.assertIn(
+                "Decide whether each prediction matched, partially matched, or surprised you.", html
+            )
             self.assertIn("Latest prediction:", html)
             self.assertIn("Latest note:", html)
             self.assertIn("Latest note evidence", html)
@@ -382,7 +537,9 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Evidence prompt", html)
             self.assertIn("position, force, and total energy", html)
             self.assertIn("Challenge proof", html)
-            self.assertIn("review-ready; compare the saved observation with plots after the run.", html)
+            self.assertIn(
+                "review-ready; compare the saved observation with plots after the run.", html
+            )
             self.assertIn("Higher stiffness made the force spike easier to see.", html)
             self.assertIn("Learner note evidence", html)
             self.assertIn("<li>Energy: 0.125</li>", html)
@@ -441,17 +598,23 @@ class LoggingTests(unittest.TestCase):
             worksheet_text = worksheet.read_text(encoding="utf-8")
             self.assertIn("# MCLab Learner Worksheet", worksheet_text)
             self.assertIn("## Learning Guide", worksheet_text)
-            self.assertIn("- Done when: report.html, priority plot, and worksheet.md are saved.", worksheet_text)
+            self.assertIn(
+                "- Done when: report.html, priority plot, and worksheet.md are saved.",
+                worksheet_text,
+            )
             self.assertIn("- Mission:", worksheet_text)
             self.assertIn("- Playbook:", worksheet_text)
             self.assertIn("review the saved plot and worksheet", worksheet_text)
-            self.assertIn("- Start steps: Predict -> Run scenario -> Review priority plot and worksheet.", worksheet_text)
+            self.assertIn(
+                "- Start steps: Predict -> Run scenario -> Review priority plot and worksheet.",
+                worksheet_text,
+            )
             self.assertIn("- Challenge:", worksheet_text)
             self.assertIn("verify it in the saved plot and worksheet", worksheet_text)
             self.assertIn("## Mission Evidence", worksheet_text)
             self.assertIn("- Next proof step:", worksheet_text)
             self.assertIn("## Challenge Evidence", worksheet_text)
-            self.assertIn("- Challenge status: Needs plot evidence", worksheet_text)
+            self.assertIn("- Challenge status: Ready to review", worksheet_text)
             self.assertIn("- Proof source: Priority plot and worksheet", worksheet_text)
             self.assertIn("## Key Parameters", worksheet_text)
             self.assertIn("## Observation Timeline", worksheet_text)
@@ -483,7 +646,10 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Live status", worksheet_text)
             self.assertIn("energy: 0.125", worksheet_text)
             self.assertIn("## Review Checklist", worksheet_text)
-            self.assertIn("- [ ] Compare the latest prediction with the plots in report.html.", worksheet_text)
+            self.assertIn(
+                "- Review prompt: Compare the latest saved prediction with the plots in report.html.",
+                worksheet_text,
+            )
             self.assertIn("## Hands-on Activity Mix", worksheet_text)
             self.assertIn(
                 "- Activity path: slider: Stiffness [N/m] -> preset: Stiff spring -> observation: Mark observation",
@@ -494,25 +660,43 @@ class LoggingTests(unittest.TestCase):
                 "- Next activity step: Ready: compare this interaction mix against plots and the worksheet.",
                 worksheet_text,
             )
-            self.assertIn("Control coverage checklist:", worksheet_text)
-            self.assertIn("- [x] Try one Quick preset to compare a named parameter regime. (1 recorded)", worksheet_text)
+            self.assertIn("Control coverage status (read-only):", worksheet_text)
             self.assertIn(
-                "- [x] Move one live slider to test a smaller parameter change. (1 recorded)",
+                "- Recorded: Try one Quick preset to compare a named parameter regime. (1 recorded)",
                 worksheet_text,
             )
-            self.assertIn("- [x] Save one Mark observation with prediction and note. (1 recorded)", worksheet_text)
+            self.assertIn(
+                "- Recorded: Move one live slider to test a smaller parameter change. (1 recorded)",
+                worksheet_text,
+            )
+            self.assertIn(
+                "- Recorded: Save one Mark observation with prediction and note. (1 recorded)",
+                worksheet_text,
+            )
+            self.assertIn("## Read-only Evidence", worksheet_text)
+            self.assertIn("Do not edit it or any file inside the saved-run folder.", worksheet_text)
+            self.assertIn("personal or course notes stored outside the saved-run folder", worksheet_text)
+            self.assertNotIn("- [ ]", worksheet_text)
+            self.assertNotIn("- [x]", worksheet_text)
             self.assertNotIn("Outcome review pending", worksheet_text)
             self.assertIn("## Suggested Next Experiments", worksheet_text)
             self.assertIn("### Lab01 Underdamped", worksheet_text)
             self.assertIn("Reason: See what changes when damping is too low.", worksheet_text)
-            self.assertIn("- Start steps: Predict -> Run scenario -> Compare priority plot and worksheet.", worksheet_text)
-            self.assertIn("- Challenge: Explain how damping, stiffness, initial_position", worksheet_text)
+            self.assertIn(
+                "- Start steps: Predict -> Run scenario -> Compare priority plot and worksheet.",
+                worksheet_text,
+            )
+            self.assertIn(
+                "- Challenge: Explain how damping, stiffness, initial_position", worksheet_text
+            )
             self.assertIn(
                 "Command: python -m mclab run lab01 --config configs/lab01_msd/underdamped.yaml",
                 worksheet_text,
             )
             self.assertIn("## Comparison Batch", worksheet_text)
-            self.assertIn("Command: python -m mclab batch lab01_msd_compare --open-report", worksheet_text)
+            self.assertIn(
+                "Command: python -m mclab batch lab01_msd_compare --open-report", worksheet_text
+            )
             self.assertIn("- report.html", worksheet_text)
             events = json.loads((output / "interaction_events.json").read_text(encoding="utf-8"))
             self.assertEqual(events[0]["name"], "stiffness")
@@ -564,9 +748,15 @@ class LoggingTests(unittest.TestCase):
 
             observed_during_report: list[str] = []
 
-            def write_report_while_cleanup_races(output_path: str | Path) -> Path:
+            def write_report_while_cleanup_races(
+                output_path: str | Path,
+                **kwargs: object,
+            ) -> Path:
                 output = Path(output_path)
-                observed_during_report.append(output.name)
+                self.assertIs(kwargs.get("update_index"), False)
+                completion_status = str(kwargs.get("completion_status"))
+                self.assertIn(completion_status, {"running", "completed"})
+                observed_during_report.append(f"{output.name}:{completion_status}")
                 manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
                 self.assertEqual(manifest["status"], "running")
 
@@ -599,14 +789,24 @@ class LoggingTests(unittest.TestCase):
                 for logger in loggers:
                     logger.finalize_artifacts()
 
-            self.assertEqual(observed_during_report, ["bulk-run", "single-run"])
+            self.assertEqual(
+                observed_during_report,
+                [
+                    "bulk-run:running",
+                    "bulk-run:completed",
+                    "single-run:running",
+                    "single-run:completed",
+                ],
+            )
             for output in outputs:
                 manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
                 self.assertEqual(manifest["status"], "completed")
                 self.assertIn("report.html", manifest["artifacts"])
 
             bulk_plan = build_cleanup_plan(root, keep=1, allowed_root=root)
-            self.assertEqual({entry.name for entry in bulk_plan.eligible}, {"bulk-run", "single-run"})
+            self.assertEqual(
+                {entry.name for entry in bulk_plan.eligible}, {"bulk-run", "single-run"}
+            )
             self.assertEqual(len(bulk_plan.selected), 1)
             self.assertEqual(len(bulk_plan.retained), 1)
             selected = bulk_plan.selected[0].path
@@ -703,7 +903,11 @@ class LoggingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
 
-            def write_summary(path: Path, lab_name: str, config_path: str) -> None:
+            def write_summary(
+                path: Path,
+                lab_name: str,
+                config_path: str,
+            ) -> None:
                 path.mkdir()
                 (path / "summary.json").write_text(
                     json.dumps(
@@ -716,19 +920,24 @@ class LoggingTests(unittest.TestCase):
                     encoding="utf-8",
                 )
                 (path / "report.html").write_text("<html></html>", encoding="utf-8")
+                _write_test_plot(path)
 
             current = root / "run_lab04_cartesian"
-            write_summary(current, "lab04_panda", "configs/lab04_panda/interactive_cartesian_reach.yaml")
+            write_summary(
+                current, "lab04_panda", "configs/lab04_panda/interactive_cartesian_reach.yaml"
+            )
             wall = root / "run_lab04_wall"
             write_summary(wall, "lab04_panda", "configs/lab04_panda/interactive_virtual_wall.yaml")
+            _write_complete_interaction_without_required_presets(wall)
+            _publish_scenario_fixture(wall)
 
-            html = write_run_report(current).read_text(encoding="utf-8")
+            html = _write_scenario_fixture_report(current).read_text(encoding="utf-8")
             worksheet = (current / "worksheet.md").read_text(encoding="utf-8")
 
         self.assertIn("Course Experience Coverage", html)
         self.assertIn("<strong>Virtual wall</strong>", html)
         self.assertIn(
-            '<strong>Review repair:</strong> Needs required preset Close wall in '
+            "<strong>Review repair:</strong> Needs required preset Close wall in "
             '<a href="../run_lab04_wall/report.html">run_lab04_wall</a>',
             html,
         )
@@ -787,12 +996,14 @@ class LoggingTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            html = write_run_report(output).read_text(encoding="utf-8")
+            html = _write_scenario_fixture_report(output).read_text(encoding="utf-8")
             worksheet_text = (output / "worksheet.md").read_text(encoding="utf-8")
 
             self.assertIn("Observation Timeline", html)
             self.assertIn("2 observations shown in time order.", html)
-            self.assertLess(html.index("<td>Observation 1</td>"), html.index("<td>Observation 2</td>"))
+            self.assertLess(
+                html.index("<td>Observation 1</td>"), html.index("<td>Observation 2</td>")
+            )
             self.assertIn("Live: position=0.1 | Changed values: damping=2", html)
             self.assertIn("Position [m]=0.200, Energy [J]=0.030", html)
             self.assertIn("## Observation Timeline", worksheet_text)
@@ -840,14 +1051,18 @@ class LoggingTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            _write_test_plot(output)
 
-            write_run_report(output)
+            _write_scenario_fixture_report(output)
 
             worksheet_text = (output / "worksheet.md").read_text(encoding="utf-8")
             self.assertIn("- Observation markers: 2", worksheet_text)
             self.assertIn("- Predictions: 1", worksheet_text)
             self.assertIn("- Learner notes: 1", worksheet_text)
-            self.assertIn("- [ ] Save one Mark observation with prediction and note. (0 recorded)", worksheet_text)
+            self.assertIn(
+                "- Pending evidence: Save one Mark observation with prediction and note. (0 recorded)",
+                worksheet_text,
+            )
 
     def test_activity_mix_uses_configured_control_families(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -864,17 +1079,18 @@ class LoggingTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (output / "config.yaml").write_text(
-                (
-                    "interaction:\n"
-                    "  panel: true\n"
-                    "  target_nudge: true\n"
-                ),
+                ("interaction:\n  panel: true\n  target_nudge: true\n"),
                 encoding="utf-8",
             )
             (output / "interaction_events.json").write_text(
                 json.dumps(
                     [
-                        {"kind": "button", "name": "joint_target_offset", "label": "Target +", "value": 0.05},
+                        {
+                            "kind": "button",
+                            "name": "joint_target_offset",
+                            "label": "Target +",
+                            "value": 0.05,
+                        },
                         {
                             "kind": "marker",
                             "name": "observation",
@@ -888,7 +1104,7 @@ class LoggingTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            html = write_run_report(output).read_text(encoding="utf-8")
+            html = _write_scenario_fixture_report(output).read_text(encoding="utf-8")
             worksheet_text = (output / "worksheet.md").read_text(encoding="utf-8")
 
             self.assertIn("1/1 control families", html)
@@ -901,13 +1117,16 @@ class LoggingTests(unittest.TestCase):
             self.assertNotIn("Move one live slider to test a smaller parameter change.", html)
             self.assertNotIn("Try a Quick preset to compare a named parameter regime.", html)
             self.assertIn("- Interaction variety: 1/1 control families", worksheet_text)
-            self.assertNotIn("- [ ] Move one live slider", worksheet_text)
+            self.assertNotIn("Move one live slider", worksheet_text)
             self.assertIn(
-                "- [x] Use target nudge buttons to move the commanded target. (1 recorded)",
+                "- Recorded: Use target nudge buttons to move the commanded target. (1 recorded)",
                 worksheet_text,
             )
-            self.assertIn("- [x] Save one Mark observation with prediction and note. (1 recorded)", worksheet_text)
-            self.assertNotIn("- [ ] Try one Quick preset", worksheet_text)
+            self.assertIn(
+                "- Recorded: Save one Mark observation with prediction and note. (1 recorded)",
+                worksheet_text,
+            )
+            self.assertNotIn("Try one Quick preset", worksheet_text)
 
     def test_worksheet_review_checklist_flags_missing_prediction_outcomes(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -940,20 +1159,26 @@ class LoggingTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            _write_test_plot(output)
 
-            write_run_report(output)
+            _write_scenario_fixture_report(output)
 
             worksheet_text = (output / "worksheet.md").read_text(encoding="utf-8")
             self.assertIn("## Mission Evidence", worksheet_text)
             self.assertIn("- Status: Outcome review pending", worksheet_text)
-            self.assertIn("- Next proof step: Choose Matched, Partly matched, or Surprised", worksheet_text)
+            self.assertIn(
+                "- Next proof step: Choose Matched, Partly matched, or Surprised", worksheet_text
+            )
             self.assertIn("- Predictions: 1", worksheet_text)
             self.assertIn("- Prediction outcomes: 0", worksheet_text)
             self.assertIn(
                 "- Outcome review pending: 1 prediction(s) still need Matched, Partly matched, or Surprised.",
                 worksheet_text,
             )
-            self.assertIn("- [ ] Mark one outcome for every prediction", worksheet_text)
+            self.assertIn(
+                "- Review prompt: Review every saved prediction outcome; for follow-up, rerun and use Mark observation",
+                worksheet_text,
+            )
 
     def test_run_report_points_to_relevant_comparison_batch(self) -> None:
         cases = [
@@ -989,7 +1214,7 @@ class LoggingTests(unittest.TestCase):
                 (output / "summary.json").write_text(json.dumps(summary), encoding="utf-8")
                 (output / "notes.md").write_text("# Demo\n", encoding="utf-8")
 
-                html = write_run_report(output).read_text(encoding="utf-8")
+                html = _write_scenario_fixture_report(output).read_text(encoding="utf-8")
 
                 self.assertIn("Comparison Batch", html)
                 self.assertIn(command, html)
@@ -1009,8 +1234,9 @@ class LoggingTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (output / "notes.md").write_text("# Interactive\n", encoding="utf-8")
+            _write_test_plot(output)
 
-            html = write_run_report(output).read_text(encoding="utf-8")
+            html = _write_scenario_fixture_report(output).read_text(encoding="utf-8")
             self.assertIn("Hands-on Evidence", html)
             self.assertIn("use at least one button, slider, or preset", html)
             self.assertIn("Needs observation", html)
@@ -1035,7 +1261,7 @@ class LoggingTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            html = write_run_report(output).read_text(encoding="utf-8")
+            html = _write_scenario_fixture_report(output).read_text(encoding="utf-8")
             self.assertIn("Needs prediction", html)
             self.assertIn("fill the Prediction field", html)
             self.assertIn("Observation markers", html)
@@ -1065,7 +1291,7 @@ class LoggingTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            html = write_run_report(output).read_text(encoding="utf-8")
+            html = _write_scenario_fixture_report(output).read_text(encoding="utf-8")
             self.assertIn("Needs learner control", html)
             self.assertIn(
                 "Use experiment buttons (Pull/Push buttons and A/D keys), live sliders, or Quick presets, "
@@ -1073,8 +1299,11 @@ class LoggingTests(unittest.TestCase):
                 html,
             )
             self.assertIn(
-                "Use experiment buttons (Pull/Push buttons and A/D keys), live sliders, or Quick presets, "
-                "then mark the observation.",
+                "<span>Completion reason</span><strong>completion.v1.learner_control_missing</strong>",
+                html,
+            )
+            self.assertIn(
+                "Resolve completion.v1.learner_control_missing before treating this run as mission evidence.",
                 html,
             )
             self.assertIn(
@@ -1086,7 +1315,12 @@ class LoggingTests(unittest.TestCase):
             (output / "interaction_events.json").write_text(
                 json.dumps(
                     [
-                        {"kind": "button", "name": "push_right", "label": "Push Right", "value": 12.0},
+                        {
+                            "kind": "button",
+                            "name": "push_right",
+                            "label": "Push Right",
+                            "value": 12.0,
+                        },
                         {
                             "kind": "marker",
                             "name": "observation",
@@ -1095,13 +1329,13 @@ class LoggingTests(unittest.TestCase):
                                 "prediction": "More damping should settle faster.",
                                 "note": "The mass settled after the pulse.",
                             },
-                        }
+                        },
                     ]
                 ),
                 encoding="utf-8",
             )
 
-            html = write_run_report(output).read_text(encoding="utf-8")
+            html = _write_scenario_fixture_report(output).read_text(encoding="utf-8")
             self.assertIn("Done for learning path", html)
             self.assertIn("Judge prediction outcome", html)
             self.assertIn("mark whether the prediction matched", html)
@@ -1109,7 +1343,12 @@ class LoggingTests(unittest.TestCase):
             (output / "interaction_events.json").write_text(
                 json.dumps(
                     [
-                        {"kind": "button", "name": "push_right", "label": "Push Right", "value": 12.0},
+                        {
+                            "kind": "button",
+                            "name": "push_right",
+                            "label": "Push Right",
+                            "value": 12.0,
+                        },
                         {
                             "kind": "marker",
                             "name": "observation",
@@ -1119,15 +1358,17 @@ class LoggingTests(unittest.TestCase):
                                 "outcome": "Partly matched",
                                 "note": "The mass settled after the pulse.",
                             },
-                        }
+                        },
                     ]
                 ),
                 encoding="utf-8",
             )
 
-            html = write_run_report(output).read_text(encoding="utf-8")
+            html = _write_scenario_fixture_report(output).read_text(encoding="utf-8")
             self.assertIn("Done for learning path", html)
-            self.assertIn("one learner control plus a Mark observation with prediction and note", html)
+            self.assertIn(
+                "one learner control plus a Mark observation with prediction and note", html
+            )
             self.assertIn("Prediction outcome", html)
             self.assertIn("Partly matched", html)
 
@@ -1139,7 +1380,7 @@ class LoggingTests(unittest.TestCase):
             (output / "notes.md").write_text("# Demo\n", encoding="utf-8")
             (output / "plots" / "position.png").write_bytes(b"fake-png")
 
-            report = write_run_report(output)
+            report = _write_scenario_fixture_report(output)
 
             html = report.read_text(encoding="utf-8")
             self.assertIn("plots/position.png", html)
@@ -1163,7 +1404,9 @@ class LoggingTests(unittest.TestCase):
             (output / "summary.json").write_text(
                 json.dumps(
                     {
-                        "lab_name": "demo",
+                        "lab_name": "lab04_panda",
+                        "config_path": "configs/lab04_panda/cartesian_reach.yaml",
+                        "config_name": "cartesian_reach",
                         "samples": 501,
                         "duration": 5.0,
                         "max_cartesian_error_cm": 3.2,
@@ -1176,11 +1419,12 @@ class LoggingTests(unittest.TestCase):
             (output / "config.yaml").write_text("language: ko\n", encoding="utf-8")
             (output / "plots" / "position.png").write_bytes(b"fake-png")
 
-            html = write_run_report(output).read_text(encoding="utf-8")
+            html = _write_scenario_fixture_report(output).read_text(encoding="utf-8")
             first_screen = html.split('<details class="advanced">', maxsplit=1)[0]
 
             self.assertIn('<html lang="ko">', html)
-            self.assertIn("demo 실행 보고서", first_screen)
+            self.assertIn("Lab04 Panda 매니퓰레이터", first_screen)
+            self.assertIn("실행 보고서", first_screen)
             self.assertIn("한눈에 보는 결과", first_screen)
             self.assertIn("위치 플롯부터 설명해 보세요", first_screen)
             self.assertIn("최대 데카르트 오차 [cm]", first_screen)
@@ -1239,8 +1483,9 @@ class LoggingTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            _write_test_plot(output)
 
-            report = write_run_report(output)
+            report = _write_scenario_fixture_report(output)
 
             html = report.read_text(encoding="utf-8")
             self.assertIn("Configured Presets", html)
@@ -1265,7 +1510,9 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("<strong>Damped PD -&gt; Aggressive PID</strong>", html)
             self.assertIn("Preset order: Damped PD -> Aggressive PID", worksheet_text)
             self.assertIn("Distinct presets tried: 1/2", worksheet_text)
-            self.assertIn("Next: Try Damped PD, watch live status, then mark one observation.", worksheet_text)
+            self.assertIn(
+                "Next: Try Damped PD, watch live status, then mark one observation.", worksheet_text
+            )
             self.assertIn("<span>kp</span>", html)
             self.assertIn("<strong>60</strong>", html)
             self.assertNotIn("interaction.tuning_presets", html)
@@ -1333,23 +1580,32 @@ class LoggingTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            _write_test_plot(output)
 
-            report = write_run_report(output)
+            report = _write_scenario_fixture_report(output)
 
             html = report.read_text(encoding="utf-8")
             self.assertIn(
                 "Predict -&gt; Run viewer -&gt; try required presets Close wall -&gt; Back away -&gt; Re-enter wall -&gt; Mark observation.",
                 html,
             )
-            self.assertIn("Required evidence: Close wall -&gt; Back away -&gt; Re-enter wall.", html)
+            self.assertIn(
+                "Required evidence: Close wall -&gt; Back away -&gt; Re-enter wall.", html
+            )
             self.assertIn("Required evidence preset.", html)
             self.assertIn("Required presets", html)
             self.assertIn("Required presets tried", html)
             self.assertIn("<strong>1/3</strong>", html)
             self.assertIn("Try required preset Back away", html)
             self.assertIn("Needs required preset", html)
-            self.assertIn("<span>Status</span><strong>Needs required preset Back away</strong>", html)
-            self.assertIn("<span>Next proof step</span><strong>Try required preset Back away", html)
+            self.assertIn(
+                "<span>Status</span><strong>Needs required preset Back away</strong>", html
+            )
+            self.assertIn(
+                "<span>Next proof step</span><strong>Resolve completion.v1.required_preset_missing "
+                "before treating this run as mission evidence.</strong>",
+                html,
+            )
             self.assertIn("<span>Required evidence</span>", html)
             self.assertIn("<strong>yes</strong>", html)
             worksheet_text = (output / "worksheet.md").read_text(encoding="utf-8")
@@ -1360,8 +1616,14 @@ class LoggingTests(unittest.TestCase):
             )
             self.assertIn("- Status: Needs required preset Back away", worksheet_text)
             self.assertIn("- Required presets tried: 1/3", worksheet_text)
-            self.assertIn("- [ ] Try required preset Back away, watch live status, then mark one observation.", worksheet_text)
-            self.assertIn("Required presets: Close wall -> Back away -> Re-enter wall", worksheet_text)
+            self.assertIn(
+                "- Review prompt: Rerun the interactive scenario, try required preset Back away, "
+                "watch live status, then use Mark observation.",
+                worksheet_text,
+            )
+            self.assertIn(
+                "Required presets: Close wall -> Back away -> Re-enter wall", worksheet_text
+            )
             self.assertIn("Required presets tried: 1/3", worksheet_text)
             self.assertIn(
                 "Next: Try required preset Back away, watch live status, then mark one observation.",
@@ -1401,15 +1663,19 @@ class LoggingTests(unittest.TestCase):
             )
             (output / "interaction_events.json").write_text("[]", encoding="utf-8")
 
-            write_run_report(output)
+            _write_scenario_fixture_report(output)
 
             worksheet_text = (output / "worksheet.md").read_text(encoding="utf-8")
             self.assertIn("- Required presets tried: 0/3", worksheet_text)
             self.assertIn(
-                "- [ ] Try required preset Close wall, watch live status, then mark one observation.",
+                "- Review prompt: Rerun the interactive scenario, try required preset Close wall, "
+                "watch live status, then use Mark observation.",
                 worksheet_text,
             )
-            self.assertIn("- [ ] Save one observation marker with a prediction and note.", worksheet_text)
+            self.assertIn(
+                "- Review prompt: Rerun the interactive scenario and save one observation marker with a prediction and note.",
+                worksheet_text,
+            )
 
     def test_auto_run_worksheet_uses_plot_review_instead_of_marker_tasks(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1441,7 +1707,7 @@ class LoggingTests(unittest.TestCase):
             )
             (output / "interaction_events.json").write_text("[]", encoding="utf-8")
 
-            write_run_report(output)
+            _write_scenario_fixture_report(output)
 
             worksheet_text = (output / "worksheet.md").read_text(encoding="utf-8")
             self.assertIn("- No observation markers saved yet.", worksheet_text)
@@ -1449,18 +1715,29 @@ class LoggingTests(unittest.TestCase):
                 "- Next: use the Plot Review and Challenge Evidence sections for this auto-run scenario.",
                 worksheet_text,
             )
-            self.assertIn("- Hands-on marker evidence comes from interactive scenarios", worksheet_text)
-            self.assertIn("- [ ] Answer the Prediction prompt before reading the plots.", worksheet_text)
             self.assertIn(
-                "- [ ] Use Plot Review and Challenge Evidence to decide whether the result matched your expectation.",
+                "- Hands-on marker evidence comes from interactive scenarios", worksheet_text
+            )
+            self.assertIn(
+                "- Review prompt: Answer the Prediction prompt in personal or course notes outside the saved-run folder before reading the plots.",
                 worksheet_text,
             )
             self.assertIn(
-                "- [ ] Run one Suggested Next Experiment or the Comparison Batch for a controlled comparison.",
+                "- Review prompt: Use Plot Review and Challenge Evidence to decide whether the result matched your expectation.",
                 worksheet_text,
             )
-            self.assertNotIn("- [ ] Save one observation marker with a prediction and note.", worksheet_text)
-            self.assertNotIn("- [ ] Capture one live status or note before moving to the next scenario.", worksheet_text)
+            self.assertIn(
+                "- Review prompt: Run one Suggested Next Experiment or the Comparison Batch for a controlled comparison.",
+                worksheet_text,
+            )
+            self.assertNotIn(
+                "Rerun the interactive scenario and save one observation marker with a prediction and note.",
+                worksheet_text,
+            )
+            self.assertNotIn(
+                "Capture one live status or note during that rerun before moving to the next scenario.",
+                worksheet_text,
+            )
             self.assertNotIn("press Mark observation", worksheet_text)
 
     def test_run_report_requires_preset_order(self) -> None:
@@ -1512,11 +1789,14 @@ class LoggingTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            _write_test_plot(output)
 
-            html = write_run_report(output).read_text(encoding="utf-8")
+            html = _write_scenario_fixture_report(output).read_text(encoding="utf-8")
             worksheet_text = (output / "worksheet.md").read_text(encoding="utf-8")
 
-            self.assertIn("<span>Status</span><strong>Needs required preset Re-enter wall</strong>", html)
+            self.assertIn(
+                "<span>Status</span><strong>Needs required preset Re-enter wall</strong>", html
+            )
             self.assertIn("<span>Required presets tried</span><strong>2/3</strong>", html)
             self.assertIn("Try required preset Re-enter wall", html)
             self.assertIn("- Status: Needs required preset Re-enter wall", worksheet_text)
@@ -1542,7 +1822,7 @@ class LoggingTests(unittest.TestCase):
             )
             (output / "notes.md").write_text("# Demo\n", encoding="utf-8")
 
-            report = write_run_report(output)
+            report = _write_scenario_fixture_report(output)
 
             html = report.read_text(encoding="utf-8")
             self.assertIn("Suggested Next Runs", html)
@@ -1554,9 +1834,13 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("Question:", html)
             self.assertIn("Which gain change trades speed for overshoot or smoother force?", html)
             self.assertIn("Start steps:", html)
-            self.assertIn("Predict -&gt; Run scenario -&gt; Compare priority plot and worksheet.", html)
+            self.assertIn(
+                "Predict -&gt; Run scenario -&gt; Compare priority plot and worksheet.", html
+            )
             self.assertIn("Challenge:", html)
-            self.assertIn("Explain how controller.kp, controller.kd should change Reduced overshoot", html)
+            self.assertIn(
+                "Explain how controller.kp, controller.kd should change Reduced overshoot", html
+            )
             self.assertIn("Key changes:", html)
             self.assertIn("controller.kd", html)
             self.assertIn("0 -&gt; 18", html)
@@ -1587,7 +1871,7 @@ class LoggingTests(unittest.TestCase):
             )
             (output / "notes.md").write_text("# Demo\n", encoding="utf-8")
 
-            report = write_run_report(output)
+            report = _write_scenario_fixture_report(output)
 
             html = report.read_text(encoding="utf-8")
             self.assertIn("Try next: Lab04 Panda S-Curve Joint Path", html)
@@ -1651,7 +1935,7 @@ class LoggingTests(unittest.TestCase):
             )
             (output / "notes.md").write_text("# Demo\n", encoding="utf-8")
 
-            report = write_run_report(output)
+            report = _write_scenario_fixture_report(output)
 
             html = report.read_text(encoding="utf-8")
             self.assertIn("Jacobian condition", html)
@@ -1690,14 +1974,25 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("check-observed", html)
             worksheet_text = (output / "worksheet.md").read_text(encoding="utf-8")
             self.assertIn("## Key Moments", worksheet_text)
-            self.assertIn("Target crosses wall: time 1.2 s; Target past-wall duration [s]: 1.8.", worksheet_text)
-            self.assertIn("First wall contact: time 1.4 s; Contact duration [s]: 2.2.", worksheet_text)
-            self.assertIn("Deepest target-wall command: time 1.6 s; Target past wall [cm]: 4.", worksheet_text)
-            self.assertIn("Peak wall penetration: time 2.1 s; Penetration [cm]: 1.2.", worksheet_text)
+            self.assertIn(
+                "Target crosses wall: time 1.2 s; Target past-wall duration [s]: 1.8.",
+                worksheet_text,
+            )
+            self.assertIn(
+                "First wall contact: time 1.4 s; Contact duration [s]: 2.2.", worksheet_text
+            )
+            self.assertIn(
+                "Deepest target-wall command: time 1.6 s; Target past wall [cm]: 4.", worksheet_text
+            )
+            self.assertIn(
+                "Peak wall penetration: time 2.1 s; Penetration [cm]: 1.2.", worksheet_text
+            )
             self.assertIn("Peak wall force: time 2.2 s; Wall force: 22.", worksheet_text)
             self.assertIn("Peak damping force: time 1.8 s; Damping force: 4.", worksheet_text)
             self.assertIn("Wall contact release: time 2.8 s; Final phase: Clear.", worksheet_text)
-            self.assertIn("Target backs away: time 3 s; Final target-wall [cm]: -0.5.", worksheet_text)
+            self.assertIn(
+                "Target backs away: time 3 s; Final target-wall [cm]: -0.5.", worksheet_text
+            )
             self.assertIn("Peak hand speed: time 1.7 s; Hand speed [m/s]: 0.34.", worksheet_text)
             self.assertIn("Peak Cartesian error: time 0.6 s; Error [cm]: 1.6.", worksheet_text)
 
@@ -1707,7 +2002,9 @@ class LoggingTests(unittest.TestCase):
             (output / "plots").mkdir(parents=True)
             (output / "plots" / "position.png").write_bytes(b"fake-png")
             (output / "plots" / "energy.png").write_bytes(b"fake-png")
-            (output / "learner_tuned_config.yaml").write_text("interaction:\n  panel: false\n", encoding="utf-8")
+            (output / "learner_tuned_config.yaml").write_text(
+                "interaction:\n  panel: false\n", encoding="utf-8"
+            )
             (output / "summary.json").write_text(
                 (
                     '{"lab_name": "lab01_msd", "config_path": "configs/lab01_msd/default.yaml", '
@@ -1717,7 +2014,9 @@ class LoggingTests(unittest.TestCase):
             )
             (output / "notes.md").write_text("# Demo\n", encoding="utf-8")
 
-            write_run_report(output)
+            _write_scenario_fixture_report(output)
+            _publish_scenario_fixture(output)
+            write_outputs_index(output.parent)
 
             index = Path(temp_dir) / "index.html"
             self.assertTrue(index.exists())
@@ -1734,7 +2033,9 @@ class LoggingTests(unittest.TestCase):
             self.assertIn('<span class="status">Done</span>', html)
             self.assertIn("<strong>Hands-on controls</strong>", html)
             self.assertIn('<span class="status">Next</span>', html)
-            self.assertIn("Next: Run an interactive viewer and use one button, slider, or preset.", html)
+            self.assertIn(
+                "Next: Run an interactive viewer and use one button, slider, or preset.", html
+            )
             self.assertIn("Run next: Hands-on controls", html)
             self.assertIn(
                 "python -m mclab run lab01 --config configs/lab01_msd/interactive_pull.yaml "
@@ -1820,7 +2121,7 @@ class LoggingTests(unittest.TestCase):
             self.assertIn(">Report</a>", html)
             self.assertIn(">Plot: Position</a>", html)
             self.assertIn(
-                ">Plot: Position</a><a class=\"plot-chip\" "
+                '>Plot: Position</a><a class="plot-chip" '
                 'href="20260627_150117_lab01_msd/">Folder</a><a class="plot-chip" '
                 'href="20260627_150117_lab01_msd/learner_tuned_config.yaml">Replay tuned</a></div>'
                 '<p class="muted">Plot review: Position - Compare actual motion against target',
@@ -1856,6 +2157,7 @@ class LoggingTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            _publish_scenario_fixture(output)
 
             html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
 
@@ -1875,7 +2177,7 @@ class LoggingTests(unittest.TestCase):
                 html.index(f'href="{output.name}/plots/error.png">Error</a>'),
             )
 
-    def test_outputs_index_links_to_batch_index_when_no_run_report_exists(self) -> None:
+    def test_outputs_index_keeps_legacy_batch_incomplete_without_run_report(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "20260627_151000_lab02_pid_compare"
             output.mkdir()
@@ -1884,7 +2186,7 @@ class LoggingTests(unittest.TestCase):
             (output / "summary.json").write_text(
                 (
                     '{"lab_name": "batch", "config_name": "lab02_pid_compare", '
-                    '"samples": 9, "duration": ""}'
+                    '"batch_name": "lab02_pid_compare", "samples": 9, "duration": ""}'
                 ),
                 encoding="utf-8",
             )
@@ -1893,15 +2195,20 @@ class LoggingTests(unittest.TestCase):
             index = write_outputs_index(temp_dir)
 
             html = index.read_text(encoding="utf-8")
-            self.assertIn("20260627_151000_lab02_pid_compare/index.html", html)
+            self.assertNotIn("20260627_151000_lab02_pid_compare/index.html", html)
+            self.assertIn('href="20260627_151000_lab02_pid_compare/">Folder</a>', html)
             self.assertIn("lab02_pid_compare", html)
             self.assertIn("Saved evidence overview", html)
             self.assertIn("Batches", html)
             self.assertIn("1 saved run", html)
+            self.assertIn("Legacy manifest missing", html)
+            self.assertIn("completion.v1.legacy_manifest_missing", html)
             self.assertIn("python -m mclab batch lab02_pid_compare --open-report", html)
             self.assertIn("Next cue: Rerun the comparison batch to regenerate the worksheet.", html)
-            self.assertIn("20260627_151000_lab02_pid_compare/comparison_plots/error_compare.png", html)
-            self.assertIn("Plot review: Error - Check how quickly error shrinks", html)
+            self.assertNotIn(
+                "20260627_151000_lab02_pid_compare/comparison_plots/error_compare.png", html
+            )
+            self.assertIn("Plot review: Not available until a plot is saved.", html)
             self.assertNotIn("Viewer Handoff</a>", html)
 
     def test_outputs_index_marks_all_batch_learning_path_step(self) -> None:
@@ -1922,6 +2229,8 @@ class LoggingTests(unittest.TestCase):
             )
             (output / "report.html").write_text("<html>all batches</html>", encoding="utf-8")
             (output / "worksheet.md").write_text("# Course worksheet\n", encoding="utf-8")
+            _publish_course_batch_children(output)
+            _publish_batch_fixture(output, "all")
 
             index = write_outputs_index(temp_dir)
 
@@ -1939,10 +2248,13 @@ class LoggingTests(unittest.TestCase):
             )
             self.assertIn("<strong>Compare:</strong> Generate the course batch report set.", html)
             self.assertIn(
-                "<strong>Prediction check:</strong> Mark Matched, Partly matched, or Surprised in the worksheet.",
+                "<strong>Prediction check:</strong> Review the digest-published, read-only worksheet, then copy "
+                "Matched, Partly matched, or Surprised into personal or course notes outside the saved-run folder.",
                 html,
             )
-            self.assertIn("Mission evidence: Course artifacts ready; Open the course worksheet", html)
+            self.assertIn(
+                "Mission evidence: Course artifacts ready; Open the course worksheet", html
+            )
             self.assertIn("Challenge evidence: Ready to review; source course worksheet", html)
             self.assertNotIn("Mission evidence: Needs plot", html)
             self.assertIn("Mission Review Queue", html)
@@ -1975,8 +2287,13 @@ class LoggingTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            (output / "report.html").write_text('<html><section id="viewer-handoff"></section></html>', encoding="utf-8")
-            (output / "worksheet.md").write_text("# Batch worksheet\n\n## Prediction Check\n", encoding="utf-8")
+            (output / "report.html").write_text(
+                '<html><section id="viewer-handoff"></section></html>', encoding="utf-8"
+            )
+            (output / "worksheet.md").write_text(
+                "# Batch worksheet\n\n## Prediction Check\n", encoding="utf-8"
+            )
+            _publish_batch_fixture(output, "lab01_msd_compare")
 
             index = write_outputs_index(temp_dir)
 
@@ -1995,36 +2312,56 @@ class LoggingTests(unittest.TestCase):
 
     def test_outputs_index_requires_hands_on_prediction_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-            baseline = Path(temp_dir) / "20260627_150000_lab01_msd"
-            baseline.mkdir()
-            (baseline / "summary.json").write_text(
-                json.dumps(
-                    {
-                        "lab_name": "lab01_msd",
-                        "config_path": "configs/lab01_msd/default.yaml",
-                        "config_name": "default",
-                    }
-                ),
-                encoding="utf-8",
-            )
-            (baseline / "report.html").write_text("<html>baseline</html>", encoding="utf-8")
+            stage = 0
 
-            interactive = Path(temp_dir) / "20260627_150100_lab01_interactive"
-            interactive.mkdir()
-            (interactive / "summary.json").write_text(
-                json.dumps(
-                    {
-                        "lab_name": "lab01_msd",
-                        "config_path": "configs/lab01_msd/interactive_pull.yaml",
-                        "config_name": "interactive_pull",
-                    }
-                ),
-                encoding="utf-8",
-            )
-            (interactive / "report.html").write_text("<html>interactive</html>", encoding="utf-8")
+            def render(events: list[dict[str, object]] | None = None) -> str:
+                nonlocal stage
+                stage += 1
+                root = Path(temp_dir) / f"stage_{stage}"
+                root.mkdir()
+                baseline = root / "20260627_150000_lab01_msd"
+                baseline.mkdir()
+                (baseline / "summary.json").write_text(
+                    json.dumps(
+                        {
+                            "lab_name": "lab01_msd",
+                            "config_path": "configs/lab01_msd/default.yaml",
+                            "config_name": "default",
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+                (baseline / "report.html").write_text(
+                    "<html>baseline</html>", encoding="utf-8"
+                )
+                _write_test_plot(baseline)
+                _publish_scenario_fixture(baseline)
 
-            index = write_outputs_index(temp_dir)
-            html = index.read_text(encoding="utf-8")
+                interactive = root / "20260627_150100_lab01_interactive"
+                interactive.mkdir()
+                (interactive / "summary.json").write_text(
+                    json.dumps(
+                        {
+                            "lab_name": "lab01_msd",
+                            "config_path": "configs/lab01_msd/interactive_pull.yaml",
+                            "config_name": "interactive_pull",
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+                (interactive / "report.html").write_text(
+                    "<html>interactive</html>", encoding="utf-8"
+                )
+                _write_test_plot(interactive)
+                if events is not None:
+                    (interactive / "interaction_events.json").write_text(
+                        json.dumps(events),
+                        encoding="utf-8",
+                    )
+                _publish_scenario_fixture(interactive)
+                return write_outputs_index(root).read_text(encoding="utf-8")
+
+            html = render()
 
             self.assertIn("1/12 steps complete. Evidence pending: 1 hands-on step(s).", html)
             self.assertIn("Next: 2. Disturb and tune", html)
@@ -2048,23 +2385,28 @@ class LoggingTests(unittest.TestCase):
             )
             self.assertIn("No markers", html)
             self.assertIn("No learner controls", html)
-            self.assertIn("Next cue: Try preset Lightly damped, then mark a prediction-backed observation.", html)
+            self.assertIn(
+                "Next cue: Try preset Lightly damped, then mark a prediction-backed observation.",
+                html,
+            )
             self.assertIn(
                 "Observation next step: use experiment buttons (Pull/Push buttons and A/D keys), "
                 "live sliders, or Quick presets, "
                 "then mark one observation with a prediction and note.",
                 html,
             )
-            self.assertIn("Needs observation; Run the demo, write a prediction, then press Mark observation.", html)
             self.assertIn(
-                "Challenge evidence: Needs observation evidence; source Learner control, Mark observation, "
-                "live status, and priority plot",
+                "Needs observation; Run the demo, write a prediction, then press Mark observation.",
+                html,
+            )
+            self.assertIn(
+                "Challenge evidence: Needs observation; contract completion.v1.observation_missing; "
+                "resolve the completion contract before challenge review.",
                 html,
             )
 
-            (interactive / "interaction_events.json").write_text(
-                json.dumps(
-                    [
+            html = render(
+                [
                         {
                             "kind": "marker",
                             "name": "observation",
@@ -2073,29 +2415,30 @@ class LoggingTests(unittest.TestCase):
                                 "note": "The mass settled faster after damping changed.",
                             },
                         }
-                    ]
-                ),
-                encoding="utf-8",
+                ]
             )
-
-            html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
             self.assertIn("1/12 steps complete. Evidence pending: 1 hands-on step(s).", html)
             self.assertIn("Next: 2. Disturb and tune", html)
             self.assertIn("Needs prediction (1 observation, 1 note, 0 controls)", html)
             self.assertIn("Add one Prediction in Mark observation before moving on.", html)
             self.assertIn("1 observation, 0 predictions, 1 note", html)
             self.assertIn("Next cue: Add a prediction before marking the next observation.", html)
-            self.assertIn("Needs prediction; Repeat or continue the demo and save a Mark observation with a prediction.", html)
+            self.assertIn(
+                "Needs prediction; Repeat or continue the demo and save a Mark observation with a prediction.",
+                html,
+            )
             self.assertIn(
                 "Latest evidence: Note: The mass settled faster after damping changed.",
                 html,
             )
-            self.assertIn("Activity mix: 0/3 control families; buttons 0, sliders 0, presets 0, markers 1", html)
+            self.assertIn(
+                "Activity mix: 0/3 control families; buttons 0, sliders 0, presets 0, markers 1",
+                html,
+            )
             self.assertIn("Latest: Note: The mass settled faster after damping changed.", html)
 
-            (interactive / "interaction_events.json").write_text(
-                json.dumps(
-                    [
+            html = render(
+                [
                         {
                             "kind": "marker",
                             "name": "observation",
@@ -2106,13 +2449,12 @@ class LoggingTests(unittest.TestCase):
                                 "note": "The mass settled faster after damping changed.",
                             },
                         }
-                    ]
-                ),
-                encoding="utf-8",
+                ]
             )
-
-            html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
-            self.assertIn("Needs learner control (1 observation, 1 prediction, 1 outcome, 1 note, 0 controls)", html)
+            self.assertIn(
+                "Needs learner control (1 observation, 1 prediction, 1 outcome, 1 note, 0 controls)",
+                html,
+            )
             self.assertIn(
                 "Next cue: Use experiment buttons (Pull/Push buttons and A/D keys), "
                 "live sliders, or Quick presets, then mark another observation with a prediction and note.",
@@ -2130,10 +2472,14 @@ class LoggingTests(unittest.TestCase):
                 html,
             )
 
-            (interactive / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {"kind": "button", "name": "manual_force", "label": "Push Right", "value": 12.0},
+            html = render(
+                [
+                        {
+                            "kind": "button",
+                            "name": "manual_force",
+                            "label": "Push Right",
+                            "value": 12.0,
+                        },
                         {"kind": "preset", "name": "heavy_damping", "label": "Heavy damping"},
                         {"kind": "slider", "name": "damping", "label": "Damping", "value": 5.0},
                         {
@@ -2144,16 +2490,14 @@ class LoggingTests(unittest.TestCase):
                                 "prediction": "More damping should settle faster.",
                                 "note": "The mass settled faster after damping changed.",
                             },
-                        }
-                    ]
-                ),
-                encoding="utf-8",
+                        },
+                ]
             )
-
-            html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
             self.assertIn("2/12 steps complete. Outcome review pending: 1 hands-on step(s).", html)
             self.assertIn("Next: 3. Close the loop", html)
-            self.assertIn("Next cue: Review latest evidence and choose the missing prediction outcome.", html)
+            self.assertIn(
+                "Next cue: Review latest evidence and choose the missing prediction outcome.", html
+            )
             self.assertIn("Done (1 observation, 1 prediction, 1 note, 3 controls)", html)
             self.assertIn("Add one Prediction outcome while reviewing.", html)
             self.assertIn(
@@ -2173,9 +2517,8 @@ class LoggingTests(unittest.TestCase):
                 html,
             )
 
-            (interactive / "interaction_events.json").write_text(
-                json.dumps(
-                    [
+            html = render(
+                [
                         {
                             "kind": "marker",
                             "name": "observation",
@@ -2185,22 +2528,22 @@ class LoggingTests(unittest.TestCase):
                                 "outcome": "Matched",
                             },
                         }
-                    ]
-                ),
-                encoding="utf-8",
+                ]
             )
-
-            html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
             self.assertIn("1/12 steps complete. Evidence pending: 1 hands-on step(s).", html)
             self.assertIn("Next: 2. Disturb and tune", html)
             self.assertIn("Needs note (1 observation, 1 prediction, 1 outcome, 0 controls)", html)
             self.assertIn("Next cue: Add a short note or Use live status before moving on.", html)
             self.assertIn("Add a short note or Use live status before moving on.", html)
 
-            (interactive / "interaction_events.json").write_text(
-                json.dumps(
-                    [
-                        {"kind": "button", "name": "manual_force", "label": "Push Right", "value": 12.0},
+            html = render(
+                [
+                        {
+                            "kind": "button",
+                            "name": "manual_force",
+                            "label": "Push Right",
+                            "value": 12.0,
+                        },
                         {"kind": "preset", "name": "heavy_damping", "label": "Heavy damping"},
                         {"kind": "slider", "name": "damping", "label": "Damping", "value": 5.0},
                         {
@@ -2212,15 +2555,14 @@ class LoggingTests(unittest.TestCase):
                                 "outcome": "Matched",
                                 "note": "The mass settled faster after damping changed.",
                             },
-                        }
-                    ]
-                ),
-                encoding="utf-8",
+                        },
+                ]
             )
-
-            html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
             self.assertIn("2/12 steps complete. Next: 3. Close the loop", html)
-            self.assertIn("Next cue: Try preset Lightly damped, then mark a prediction-backed observation.", html)
+            self.assertIn(
+                "Next cue: Try preset Lightly damped, then mark a prediction-backed observation.",
+                html,
+            )
             self.assertIn("Done (1 observation, 1 prediction, 1 outcome, 1 note, 3 controls)", html)
             self.assertIn("1 observation, 1 prediction, 1 outcome, 1 note", html)
             self.assertIn(
@@ -2270,6 +2612,7 @@ class LoggingTests(unittest.TestCase):
             (baseline / "worksheet.md").write_text("# Worksheet\n", encoding="utf-8")
             (baseline / "plots").mkdir()
             (baseline / "plots" / "position.png").write_bytes(b"fake-png")
+            _publish_scenario_fixture(baseline)
 
             html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
 
@@ -2310,6 +2653,7 @@ class LoggingTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (wall / "report.html").write_text("<html>wall</html>", encoding="utf-8")
+            _write_test_plot(wall)
             (wall / "interaction_events.json").write_text(
                 json.dumps(
                     [
@@ -2327,6 +2671,7 @@ class LoggingTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            _publish_scenario_fixture(wall)
 
             html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
 
@@ -2342,15 +2687,19 @@ class LoggingTests(unittest.TestCase):
                 html,
             )
             self.assertIn("Try required preset Back away before moving on.", html)
-            self.assertIn("Next cue: Try required preset Back away, then mark a prediction-backed observation.", html)
+            self.assertIn(
+                "Next cue: Try required preset Back away, then mark a prediction-backed observation.",
+                html,
+            )
             self.assertIn(
                 "Mission evidence: Needs required preset Back away; "
                 "Try required preset Back away, watch live status, then mark one observation.",
                 html,
             )
             self.assertIn(
-                "Challenge evidence: Needs required preset evidence; "
-                "source Learner control, Mark observation, live status, and priority plot",
+                "Challenge evidence: Needs required preset Back away; "
+                "contract completion.v1.required_preset_missing; "
+                "resolve the completion contract before challenge review.",
                 html,
             )
             self.assertIn("required preset: 1", html)
@@ -2375,6 +2724,7 @@ class LoggingTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (run / "report.html").write_text("<html>pid</html>", encoding="utf-8")
+            _write_test_plot(run)
             (run / "interaction_events.json").write_text(
                 json.dumps(
                     [
@@ -2409,6 +2759,7 @@ class LoggingTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            _publish_scenario_fixture(run)
 
             html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
 
@@ -2455,6 +2806,7 @@ class LoggingTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (ready / "report.html").write_text("<html>ready</html>", encoding="utf-8")
+            _publish_scenario_fixture(ready)
 
             artifact = Path(temp_dir) / "20260627_150100_lab01_needs_plot"
             artifact.mkdir()
@@ -2469,6 +2821,7 @@ class LoggingTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (artifact / "report.html").write_text("<html>artifact</html>", encoding="utf-8")
+            _publish_scenario_fixture(artifact)
 
             internal_smoke = Path(temp_dir) / "_codex_smoke_internal"
             internal_smoke.mkdir()
@@ -2524,7 +2877,11 @@ class LoggingTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            (needs_observation / "report.html").write_text("<html>observation</html>", encoding="utf-8")
+            (needs_observation / "report.html").write_text(
+                "<html>observation</html>", encoding="utf-8"
+            )
+            _write_test_plot(needs_observation)
+            _publish_scenario_fixture(needs_observation)
 
             needs_prediction = Path(temp_dir) / "20260627_150300_lab02_interactive_note"
             needs_prediction.mkdir()
@@ -2550,7 +2907,11 @@ class LoggingTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            (needs_prediction / "report.html").write_text("<html>prediction</html>", encoding="utf-8")
+            (needs_prediction / "report.html").write_text(
+                "<html>prediction</html>", encoding="utf-8"
+            )
+            _write_test_plot(needs_prediction)
+            _publish_scenario_fixture(needs_prediction)
 
             outcome_pending = Path(temp_dir) / "20260627_150400_lab03_interactive_outcome"
             outcome_pending.mkdir()
@@ -2575,12 +2936,14 @@ class LoggingTests(unittest.TestCase):
                                 "prediction": "A farther target should need more torque.",
                                 "note": "Torque rose after the preset.",
                             },
-                        }
+                        },
                     ]
                 ),
                 encoding="utf-8",
             )
             (outcome_pending / "report.html").write_text("<html>outcome</html>", encoding="utf-8")
+            _write_test_plot(outcome_pending)
+            _publish_scenario_fixture(outcome_pending)
 
             note_pending = Path(temp_dir) / "20260627_150500_lab04_interactive_note"
             note_pending.mkdir()
@@ -2610,6 +2973,9 @@ class LoggingTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (note_pending / "report.html").write_text("<html>note</html>", encoding="utf-8")
+            _write_test_plot(note_pending)
+            _write_complete_interaction_without_required_presets(note_pending)
+            _publish_scenario_fixture(note_pending)
 
             html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
 
@@ -2631,29 +2997,45 @@ class LoggingTests(unittest.TestCase):
 
     def test_outputs_index_requires_evidence_for_live_tuning_learning_path_configs(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-            dls_run = Path(temp_dir) / "20260627_150200_lab03_dls"
-            dls_run.mkdir()
-            (dls_run / "summary.json").write_text(
-                json.dumps(
-                    {
-                        "lab_name": "lab03_2dof",
-                        "config_path": "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
-                        "config_name": "condition_aware_dls_2dof",
-                    }
-                ),
-                encoding="utf-8",
-            )
-            (dls_run / "report.html").write_text("<html>dls</html>", encoding="utf-8")
+            stage = 0
 
-            html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
+            def render(events: list[dict[str, object]] | None = None) -> str:
+                nonlocal stage
+                stage += 1
+                root = Path(temp_dir) / f"stage_{stage}"
+                root.mkdir()
+                dls_run = root / "20260627_150200_lab03_dls"
+                dls_run.mkdir()
+                (dls_run / "summary.json").write_text(
+                    json.dumps(
+                        {
+                            "lab_name": "lab03_2dof",
+                            "config_path": "configs/lab03_2dof/condition_aware_dls_2dof.yaml",
+                            "config_name": "condition_aware_dls_2dof",
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+                (dls_run / "report.html").write_text(
+                    "<html>dls</html>", encoding="utf-8"
+                )
+                _write_test_plot(dls_run, "dls.png")
+                if events is not None:
+                    (dls_run / "interaction_events.json").write_text(
+                        json.dumps(events),
+                        encoding="utf-8",
+                    )
+                _publish_scenario_fixture(dls_run)
+                return write_outputs_index(root).read_text(encoding="utf-8")
+
+            html = render()
 
             self.assertIn("7. Handle singularity", html)
             self.assertIn("Needs observation", html)
             self.assertIn("20260627_150200_lab03_dls/report.html", html)
 
-            (dls_run / "interaction_events.json").write_text(
-                json.dumps(
-                    [
+            html = render(
+                [
                         {"kind": "preset", "name": "balanced_dls", "label": "Balanced DLS"},
                         {
                             "kind": "marker",
@@ -2663,13 +3045,9 @@ class LoggingTests(unittest.TestCase):
                                 "prediction": "More damping should reduce joint speed.",
                                 "note": "DLS damping rose as condition number increased.",
                             },
-                        }
-                    ]
-                ),
-                encoding="utf-8",
+                        },
+                ]
             )
-
-            html = write_outputs_index(temp_dir).read_text(encoding="utf-8")
 
             self.assertIn("Done (1 observation, 1 prediction, 1 note, 1 control)", html)
             self.assertIn("1 observation, 1 prediction, 1 note", html)
@@ -2689,7 +3067,9 @@ class LoggingTests(unittest.TestCase):
             )
             self.assertIn("Experience Coverage", html)
             self.assertIn("Run next: Intro basics", html)
-            self.assertIn("<strong>Next action:</strong> Run Lab01 Mass-Spring-Damper - Auto demo.", html)
+            self.assertIn(
+                "<strong>Next action:</strong> Run Lab01 Mass-Spring-Damper - Auto demo.", html
+            )
             self.assertIn("<strong>Mode:</strong> hands-on viewer", html)
             self.assertIn(
                 "<strong>Evidence:</strong> At least one learner-control event plus one prediction-backed observation marker.",
@@ -2732,13 +3112,22 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("python -m mclab next --preview", html)
             self.assertIn("<strong>Plan:</strong> Intro; headless plot run; 5s simulated", html)
             self.assertIn("<strong>Plan:</strong> Intro; hands-on viewer; 120s simulated", html)
-            self.assertIn("<strong>Plan:</strong> Compare; course batch; all comparison batches", html)
-            self.assertIn("<strong>Mission:</strong> Compare position, velocity, force, and energy plots", html)
+            self.assertIn(
+                "<strong>Plan:</strong> Compare; course batch; all comparison batches", html
+            )
+            self.assertIn(
+                "<strong>Mission:</strong> Compare position, velocity, force, and energy plots",
+                html,
+            )
             self.assertIn("<strong>Challenge:</strong> Explain how mass, damping, stiffness", html)
             self.assertIn("<strong>Viewer:</strong> MuJoCo side panels are hidden", html)
             self.assertIn("Green sphere = Cartesian hand target", html)
-            self.assertIn("<strong>Change:</strong> mass, damping, stiffness, initial_position", html)
-            self.assertIn("Values:</strong> mass=1; damping=2; stiffness=50; initial_position=0.1", html)
+            self.assertIn(
+                "<strong>Change:</strong> mass, damping, stiffness, initial_position", html
+            )
+            self.assertIn(
+                "Values:</strong> mass=1; damping=2; stiffness=50; initial_position=0.1", html
+            )
             self.assertIn("tracking_controller.max_task_speed_schedule=4 points", html)
             self.assertIn("virtual_wall.stiffness=260", html)
             self.assertIn(
@@ -2773,9 +3162,24 @@ class LoggingTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (lab01 / "interaction_events.json").write_text(
-                '[{"kind": "button", "name": "push", "label": "Push Right"}]',
+                json.dumps(
+                    [
+                        {"kind": "button", "name": "push", "label": "Push Right"},
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "prediction": "The push should increase displacement.",
+                                "outcome": "Matched",
+                                "note": "The mass moved after the push.",
+                            },
+                        },
+                    ]
+                ),
                 encoding="utf-8",
             )
+            _write_test_plot(lab01)
+            _publish_scenario_fixture(lab01)
             lab03 = root / "run_lab03_dls"
             lab03.mkdir()
             (lab03 / "summary.json").write_text(
@@ -2786,6 +3190,25 @@ class LoggingTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            (lab03 / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {"kind": "preset", "name": "balanced", "label": "Balanced schedule"},
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "prediction": "Damping should limit joint speed.",
+                                "outcome": "Matched",
+                                "note": "Joint speed stayed bounded near the singularity.",
+                            },
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            _write_test_plot(lab03, "dls.png")
+            _publish_scenario_fixture(lab03)
             lab04 = root / "run_lab04_wall"
             lab04.mkdir()
             (lab04 / "summary.json").write_text(
@@ -2796,12 +3219,42 @@ class LoggingTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            (lab04 / "interaction_events.json").write_text(
+                json.dumps(
+                    [
+                        {"kind": "preset", "name": "close", "label": "Close wall"},
+                        {"kind": "preset", "name": "away", "label": "Back away"},
+                        {"kind": "preset", "name": "reenter", "label": "Re-enter wall"},
+                        {
+                            "kind": "marker",
+                            "name": "observation",
+                            "value": {
+                                "prediction": "Backing away should release contact.",
+                                "outcome": "Matched",
+                                "note": "Contact released before re-entry.",
+                            },
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            _write_test_plot(lab04, "wall.png")
+            _publish_scenario_fixture(lab04)
             batch = root / "batch_lab02"
             batch.mkdir()
             (batch / "summary.json").write_text(
                 '{"lab_name": "batch", "config_name": "lab02_pid_compare", "batch_name": "lab02_pid_compare"}',
                 encoding="utf-8",
             )
+            comparison_plots = batch / "comparison_plots"
+            comparison_plots.mkdir()
+            (comparison_plots / "error_compare.png").write_bytes(b"fake-png")
+            (batch / "report.html").write_text("<html></html>", encoding="utf-8")
+            (batch / "worksheet.md").write_text(
+                "# Batch worksheet\n\n## Prediction Check\n",
+                encoding="utf-8",
+            )
+            _publish_batch_fixture(batch, "lab02_pid_compare")
 
             html = write_outputs_index(root).read_text(encoding="utf-8")
 
@@ -2825,6 +3278,9 @@ class LoggingTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            _write_test_plot(run, "wall.png")
+            _write_complete_interaction_without_required_presets(run)
+            _publish_scenario_fixture(run)
 
             html = write_outputs_index(root).read_text(encoding="utf-8")
 
@@ -2853,7 +3309,13 @@ class LoggingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
 
-            def write_run(name: str, lab_name: str, config_path: str) -> None:
+            def write_run(
+                name: str,
+                lab_name: str,
+                config_path: str,
+                *,
+                complete_wall_interaction: bool = False,
+            ) -> None:
                 run = root / name
                 run.mkdir()
                 (run / "report.html").write_text("<html></html>", encoding="utf-8")
@@ -2867,20 +3329,31 @@ class LoggingTests(unittest.TestCase):
                     ),
                     encoding="utf-8",
                 )
+                _write_test_plot(run)
+                if complete_wall_interaction:
+                    _write_complete_interaction_without_required_presets(run)
+                _publish_scenario_fixture(run)
 
-            write_run("run_lab04_wall", "lab04_panda", "configs/lab04_panda/interactive_virtual_wall.yaml")
+            write_run(
+                "run_lab04_wall",
+                "lab04_panda",
+                "configs/lab04_panda/interactive_virtual_wall.yaml",
+                complete_wall_interaction=True,
+            )
             write_run(
                 "run_lab04_cartesian",
                 "lab04_panda",
                 "configs/lab04_panda/interactive_cartesian_reach.yaml",
             )
-            write_run("run_lab03_interactive", "lab03_2dof", "configs/lab03_2dof/interactive_2dof.yaml")
+            write_run(
+                "run_lab03_interactive", "lab03_2dof", "configs/lab03_2dof/interactive_2dof.yaml"
+            )
 
             html = write_outputs_index(root).read_text(encoding="utf-8")
 
         self.assertIn("<strong>2DOF/Jacobian</strong>", html)
         self.assertIn(
-            '<strong>Review repair:</strong> Needs observation in '
+            "<strong>Review repair:</strong> Needs observation in "
             '<a href="run_lab03_interactive/report.html">run_lab03_interactive</a>',
             html,
         )
@@ -2891,13 +3364,13 @@ class LoggingTests(unittest.TestCase):
         )
         self.assertIn("<strong>Panda manipulator</strong>", html)
         self.assertIn(
-            '<strong>Review repair:</strong> Needs observation in '
+            "<strong>Review repair:</strong> Needs observation in "
             '<a href="run_lab04_cartesian/report.html">run_lab04_cartesian</a>',
             html,
         )
         self.assertIn("<strong>Virtual wall</strong>", html)
         self.assertIn(
-            '<strong>Review repair:</strong> Needs required preset Close wall in '
+            "<strong>Review repair:</strong> Needs required preset Close wall in "
             '<a href="run_lab04_wall/report.html">run_lab04_wall</a>',
             html,
         )

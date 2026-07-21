@@ -37,7 +37,13 @@ from mclab.application.batch_runs import (  # noqa: E402
     parse_batch_progress,
     update_batch_manifest,
 )
-from mclab.application.catalog import ScenarioCatalog  # noqa: E402
+from mclab.application.catalog import (  # noqa: E402
+    CONCRETE_BATCH_TARGET_IDS,
+    PREDICTION_CHECK_ARTIFACT_KEY,
+    REPORT_ARTIFACT_KEY,
+    WORKSHEET_ARTIFACT_KEY,
+    ScenarioCatalog,
+)
 from mclab.application.error_messages import localized_error  # noqa: E402
 from mclab.application.i18n import (  # noqa: E402
     SCENARIO_TITLES_KO,
@@ -48,6 +54,7 @@ from mclab.application.i18n import (  # noqa: E402
 from mclab.application.launcher import create_scenario_adapter  # noqa: E402
 from mclab.application.platform import PlatformServices  # noqa: E402
 from mclab.application.presentation import (  # noqa: E402
+    _cached_default_catalog,
     course_progress_payload,
     learning_path_payload,
     result_payloads,
@@ -60,6 +67,7 @@ from mclab.application.readiness import (  # noqa: E402
     scenario_readiness_payload,
 )
 from mclab.application.repositories import ArtifactRepository  # noqa: E402
+from mclab.completion import CompletionEvidence, CompletionRecordKind  # noqa: E402
 from mclab.application.rendering import close_mujoco_renderer, spring_polyline  # noqa: E402
 from mclab.application.run_manager import RunManager  # noqa: E402
 from mclab.application.saved_runs import resolve_saved_run_launch  # noqa: E402
@@ -99,6 +107,69 @@ def _contrast_ratio(foreground: str, background: str) -> float:
 
     first, second = sorted((luminance(foreground), luminance(background)), reverse=True)
     return (first + 0.05) / (second + 0.05)
+
+
+def _write_canonical_scenario_run(
+    root: Path,
+    name: str,
+    scenario: object,
+    *,
+    status: str = "completed",
+) -> Path:
+    run = root / name
+    run.mkdir()
+    scenario_id = str(getattr(scenario, "id"))
+    lab_name = str(getattr(scenario, "lab_name"))
+    config_path = str(getattr(scenario, "config_path"))
+    completion = getattr(scenario, "completion")
+    (run / "summary.json").write_text(
+        json.dumps(
+            {
+                "lab_name": lab_name,
+                "config_name": Path(config_path).stem,
+                "config_path": config_path,
+                "duration": 1.0,
+            }
+        ),
+        encoding="utf-8",
+    )
+    (run / "plots").mkdir()
+    (run / "plots" / "position.png").write_bytes(b"trusted plot")
+    events: list[dict[str, object]] = [
+        {
+            "kind": "preset",
+            "name": f"required-{index}",
+            "label": label,
+        }
+        for index, label in enumerate(completion.required_presets, start=1)
+    ]
+    if completion.requires_learner_control and not events:
+        events.append({"kind": "button", "name": "learner-control"})
+    if completion.requires_observation:
+        events.append(
+            {
+                "kind": "marker",
+                "name": "observation",
+                "value": {
+                    "prediction": "expected response",
+                    "note": "observed response",
+                    "outcome": "matched",
+                },
+            }
+        )
+    if events:
+        (run / "interaction_events.json").write_text(
+            json.dumps(events),
+            encoding="utf-8",
+        )
+    write_manifest(
+        run,
+        scenario_id=scenario_id,
+        status=status,
+        config={"sim_time": 1.0},
+        config_path=config_path,
+    )
+    return run
 
 
 class FakeAdapter:
@@ -551,11 +622,11 @@ class ApplicationFoundationTests(unittest.TestCase):
             for index, (scenario, status) in enumerate(
                 zip(path[:3], ("completed", "stopped", "error"), strict=True)
             ):
-                run = Path(tmp).resolve() / f"run-{index}"
-                run.mkdir()
-                (run / "manifest.json").write_text(
-                    json.dumps({"scenario_id": scenario.id, "status": status}),
-                    encoding="utf-8",
+                _write_canonical_scenario_run(
+                    Path(tmp).resolve(),
+                    f"run-{index}",
+                    scenario,
+                    status=status,
                 )
             records = ArtifactRepository(Path(tmp).resolve()).list_runs()
             progress = course_progress_payload(path, Translator("ko"), records)
@@ -566,29 +637,60 @@ class ApplicationFoundationTests(unittest.TestCase):
         self.assertTrue(progress["path"][0]["completed"])
         self.assertTrue(progress["path"][1]["isNext"])
 
+        completed_record = next(
+            record for record in records if record.scenario_id == path[0].id
+        )
+        latest_incomplete = replace(
+            completed_record,
+            path=completed_record.path.with_name("newer-incomplete"),
+            status="stopped",
+            completion_evidence=CompletionEvidence(
+                CompletionRecordKind.MANIFEST_V1,
+                status="stopped",
+            ),
+        )
+        historical = course_progress_payload(
+            path,
+            Translator("en"),
+            (latest_incomplete, completed_record),
+            catalog=catalog,
+        )["path"][0]
+        self.assertTrue(historical["completed"])
+        self.assertTrue(historical["completionDecision"]["complete"])
+        self.assertFalse(historical["latestCompletionDecision"]["complete"])
+        self.assertTrue(historical["creditedCompletionDecision"]["complete"])
+
         with tempfile.TemporaryDirectory() as tmp:
             for index, scenario in enumerate(path):
-                run = Path(tmp).resolve() / f"run-{index}"
-                run.mkdir()
-                (run / "manifest.json").write_text(
-                    json.dumps({"scenario_id": scenario.id, "status": "completed"}),
-                    encoding="utf-8",
+                _write_canonical_scenario_run(
+                    Path(tmp).resolve(),
+                    f"run-{index}",
+                    scenario,
                 )
+            records = ArtifactRepository(Path(tmp).resolve()).list_runs()
             ready_for_compare = course_progress_payload(
                 path,
                 Translator("en"),
-                ArtifactRepository(Path(tmp).resolve()).list_runs(),
+                records,
             )
-            batch_run = Path(tmp).resolve() / "all-compare"
-            batch_run.mkdir()
-            (batch_run / "manifest.json").write_text(
-                json.dumps({"scenario_id": ALL_COMPARE_ID, "status": "completed"}),
-                encoding="utf-8",
+            batch_record = replace(
+                records[0],
+                scenario_id=ALL_COMPARE_ID,
+                status="completed",
+                completion_evidence=CompletionEvidence(
+                    CompletionRecordKind.MANIFEST_V1,
+                    status="completed",
+                    artifact_keys=(
+                        REPORT_ARTIFACT_KEY,
+                        WORKSHEET_ARTIFACT_KEY,
+                        *CONCRETE_BATCH_TARGET_IDS,
+                    ),
+                ),
             )
             complete = course_progress_payload(
                 path,
                 Translator("en"),
-                ArtifactRepository(Path(tmp).resolve()).list_runs(),
+                (*records, batch_record),
             )
 
         self.assertEqual(ready_for_compare["done"], len(path))
@@ -602,6 +704,21 @@ class ApplicationFoundationTests(unittest.TestCase):
         self.assertEqual(complete["nextId"], "")
         self.assertEqual(complete["next"], {})
         self.assertFalse(any(item["isNext"] for item in complete["path"]))
+
+    def test_course_progress_caches_the_immutable_default_catalog(self) -> None:
+        _cached_default_catalog.cache_clear()
+        default_catalog = ScenarioCatalog.default
+        try:
+            with patch.object(
+                ScenarioCatalog,
+                "default",
+                wraps=default_catalog,
+            ) as build_catalog:
+                course_progress_payload((), Translator("en"), ())
+                course_progress_payload((), Translator("ko"), ())
+            self.assertEqual(build_catalog.call_count, 1)
+        finally:
+            _cached_default_catalog.cache_clear()
 
     def test_course_batch_launch_metadata_and_progress_parser_are_reproducible(self) -> None:
         with tempfile.TemporaryDirectory() as tmp, patch.dict(
@@ -886,6 +1003,11 @@ class ApplicationFoundationTests(unittest.TestCase):
         self.assertIn('objectName: index === 0 ? "firstResultPrimaryAction"', results)
         self.assertIn("function focusFirstPrimary()", results)
         self.assertIn("primaryAction.launchesSession", results)
+        self.assertIn('objectName: "completionReasonLabel"', results)
+        self.assertIn("modelData.completionReasonText", results)
+        self.assertIn("modelData.completionReason", results)
+        self.assertIn("Layout.preferredHeight: page.compact ? 216 : 224", results)
+        self.assertIn("visible: modelData.canRerunBatch", results)
         self.assertIn("backend.rerunSavedRun(modelData.path, false)", results)
         explore = (qml_root / "ExplorePage.qml").read_text(encoding="utf-8")
         scenario_card = (qml_root / "ScenarioCard.qml").read_text(encoding="utf-8")
@@ -1479,12 +1601,17 @@ class ApplicationFoundationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             run = Path(tmp).resolve() / "broken-replay"
             run.mkdir()
-            (run / "manifest.json").write_text(
-                json.dumps({"scenario_id": "lab01.default", "status": "completed"}),
-                encoding="utf-8",
-            )
             (run / "config.yaml").write_text("mass: 1.0\n", encoding="utf-8")
             (run / "replay.npz").write_bytes(b"not a valid npz recording")
+            (run / "plots").mkdir()
+            (run / "plots" / "position.png").write_bytes(b"trusted plot")
+            write_manifest(
+                run,
+                scenario_id="lab01.default",
+                status="completed",
+                config={"mass": 1.0},
+                config_path="configs/lab01_msd/default.yaml",
+            )
             repository = ArtifactRepository(Path(tmp).resolve())
             quick = repository.list_runs()[0]
             checked = repository.list_runs(validate_replays=True)[0]
@@ -1498,21 +1625,15 @@ class ApplicationFoundationTests(unittest.TestCase):
         self.assertEqual(result["title"], "자동 데모")
         self.assertEqual((result["status"], result["statusCode"]), ("기록 없음", "warning"))
         self.assertIn("완료", result["outcome"])
+        self.assertTrue(result["completed"])
+        self.assertNotIn("증거 보완", result["outcome"])
+        self.assertIn("완료 인정은 유지", result["nextAction"])
+        self.assertEqual(result["completionReasonText"], "필수 증거가 모두 유효함")
 
     def test_results_surface_localized_metrics_report_next_action_and_total_size(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             run = Path(tmp).resolve() / "friendly-result"
             run.mkdir()
-            (run / "manifest.json").write_text(
-                json.dumps(
-                    {
-                        "scenario_id": "lab02.default",
-                        "status": "completed",
-                        "config": {"resolved": {"sim_time": 2.0}},
-                    }
-                ),
-                encoding="utf-8",
-            )
             (run / "summary.json").write_text(
                 json.dumps(
                     {
@@ -1526,6 +1647,15 @@ class ApplicationFoundationTests(unittest.TestCase):
             )
             (run / "config.yaml").write_text("sim_time: 2.0\n", encoding="utf-8")
             (run / "report.html").write_text("<html></html>", encoding="utf-8")
+            (run / "plots").mkdir()
+            (run / "plots" / "position.png").write_bytes(b"trusted plot")
+            write_manifest(
+                run,
+                scenario_id="lab02.default",
+                status="completed",
+                config={"sim_time": 2.0},
+                config_path="configs/lab02_pid/default.yaml",
+            )
             record = ArtifactRepository(Path(tmp).resolve()).list_runs(validate_replays=True)[0]
             result = result_payloads(
                 (record,),
@@ -1544,7 +1674,7 @@ class ApplicationFoundationTests(unittest.TestCase):
             ["최종 오차", "정착 시간", "오버슈트"],
         )
 
-    def test_summary_only_legacy_run_keeps_completed_presentation_status(self) -> None:
+    def test_summary_only_legacy_run_is_never_synthesized_as_completed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             run = Path(tmp).resolve() / "legacy-result"
             run.mkdir()
@@ -1564,18 +1694,43 @@ class ApplicationFoundationTests(unittest.TestCase):
             self.assertTrue(run.is_dir())
 
         self.assertTrue(record.legacy)
-        self.assertEqual(record.status, "completed")
-        self.assertNotEqual(result["status"], "legacy")
+        self.assertEqual(record.status, "legacy")
+        self.assertFalse(result["completed"])
+        self.assertEqual(
+            result["completionReason"],
+            "completion.v1.legacy_manifest_missing",
+        )
+        self.assertEqual(result["status"], "Completion evidence incomplete")
         self.assertEqual(result["statusCode"], "warning")
 
     def test_course_comparison_result_has_batch_semantics_without_fake_replay_warning(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             run = Path(tmp).resolve() / "all-compare"
             run.mkdir()
-            (run / "manifest.json").write_text(
-                json.dumps({"scenario_id": ALL_COMPARE_ID, "status": "completed"}),
-                encoding="utf-8",
-            )
+            for target_id in CONCRETE_BATCH_TARGET_IDS:
+                batch_name = target_id.removeprefix("batch.")
+                child = run / batch_name
+                child.mkdir()
+                (child / "summary.json").write_text(
+                    json.dumps({"batch_name": batch_name, "duration": 1.0}),
+                    encoding="utf-8",
+                )
+                (child / "report.html").write_text("<html></html>", encoding="utf-8")
+                (child / "worksheet.md").write_text(
+                    "# Batch worksheet\n\n## Prediction Check\n",
+                    encoding="utf-8",
+                )
+                (child / "comparison_plots").mkdir()
+                (child / "comparison_plots" / "comparison.png").write_bytes(
+                    b"trusted comparison"
+                )
+                write_manifest(
+                    child,
+                    scenario_id=target_id,
+                    status="completed",
+                    config={"batch_name": batch_name},
+                    run_kind="comparison_batch",
+                )
             (run / "summary.json").write_text(
                 json.dumps(
                     {
@@ -1588,7 +1743,18 @@ class ApplicationFoundationTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (run / "report.html").write_text("<html></html>", encoding="utf-8")
-            record = ArtifactRepository(Path(tmp).resolve()).list_runs(validate_replays=True)[0]
+            (run / "worksheet.md").write_text("# Course worksheet\n", encoding="utf-8")
+            write_manifest(
+                run,
+                scenario_id=ALL_COMPARE_ID,
+                status="completed",
+                config={"batch_name": "all", "plot": True},
+                run_kind="comparison_batch",
+            )
+            saved = ArtifactRepository(Path(tmp).resolve()).list_runs(
+                validate_replays=True
+            )[0]
+            record = saved
             result = result_payloads(
                 (record,), Translator("ko"), ScenarioCatalog.default()
             )[0]
@@ -1614,6 +1780,64 @@ class ApplicationFoundationTests(unittest.TestCase):
         self.assertIn("retry", stale["nextAction"])
         self.assertEqual((active["status"], active["statusCode"]), ("Running", "running"))
         self.assertIn("keep MCLab open", active["nextAction"])
+
+    def test_concrete_batch_result_uses_trusted_availability_without_all_compare_action(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run = Path(tmp).resolve() / "concrete-batch"
+            run.mkdir()
+            target_id = CONCRETE_BATCH_TARGET_IDS[0]
+            (run / "summary.json").write_text(
+                json.dumps({"batch_name": target_id.removeprefix("batch."), "duration": 4.0}),
+                encoding="utf-8",
+            )
+            (run / "report.html").write_text("<html></html>", encoding="utf-8")
+            (run / "worksheet.md").write_text(
+                "# Worksheet\n\n## Prediction Check\n",
+                encoding="utf-8",
+            )
+            (run / "plots").mkdir()
+            (run / "plots" / "comparison.png").write_bytes(b"trusted comparison")
+            write_manifest(
+                run,
+                scenario_id=target_id,
+                status="completed",
+                config={"batch_name": target_id.removeprefix("batch.")},
+                run_kind="comparison_batch",
+            )
+            record = ArtifactRepository(Path(tmp).resolve()).list_runs()[0]
+            complete = result_payloads((record,), Translator("en"))[0]
+            missing_report = result_payloads(
+                (
+                    replace(
+                        record,
+                        report_available=False,
+                        completion_evidence=CompletionEvidence(
+                            CompletionRecordKind.MANIFEST_V1,
+                            status="completed",
+                            plot_count=1,
+                            artifact_keys=(
+                                WORKSHEET_ARTIFACT_KEY,
+                                PREDICTION_CHECK_ARTIFACT_KEY,
+                            ),
+                        ),
+                    ),
+                ),
+                Translator("en"),
+            )[0]
+
+        self.assertTrue(complete["isBatch"])
+        self.assertTrue(complete["completed"])
+        self.assertFalse(complete["canRerunBatch"])
+        self.assertIn("comparison report and worksheet", complete["outcome"])
+        self.assertIn("open the report", complete["nextAction"])
+        self.assertIn("Reports and worksheets", complete["availability"])
+        self.assertFalse(missing_report["completed"])
+        self.assertEqual(
+            missing_report["completionReason"],
+            "completion.v1.required_artifact_missing",
+        )
+        self.assertIn("No trusted report", missing_report["availability"])
+        self.assertNotIn("Reports and worksheets", missing_report["availability"])
 
     def test_saved_run_cleanup_requires_exact_confirmation_and_uses_quarantine(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1831,13 +2055,19 @@ class ApplicationFoundationTests(unittest.TestCase):
             def swap_before_inventory(
                 root_pin: PinnedOutputRoot,
                 relative: tuple[str, ...] = (),
+                *,
+                max_entries: int | None = None,
             ) -> tuple[str, ...]:
                 nonlocal swapped
                 if not swapped and not relative:
                     root.rename(detached)
                     root.symlink_to(outside, target_is_directory=True)
                     swapped = True
-                return original_list(root_pin, relative)
+                return original_list(
+                    root_pin,
+                    relative,
+                    max_entries=max_entries,
+                )
 
             try:
                 with patch.object(

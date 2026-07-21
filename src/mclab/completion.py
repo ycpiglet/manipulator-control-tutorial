@@ -40,6 +40,7 @@ class CompletionReason(str, Enum):
     SCENARIO_MISMATCH = "completion.v1.scenario_mismatch"
     RUN_NOT_COMPLETED = "completion.v1.run_not_completed"
     PLOT_MISSING = "completion.v1.plot_missing"
+    REQUIRED_ARTIFACT_MISSING = "completion.v1.required_artifact_missing"
     INTERACTION_EVIDENCE_INVALID = "completion.v1.interaction_evidence_invalid"
     OBSERVATION_MISSING = "completion.v1.observation_missing"
     PREDICTION_MISSING = "completion.v1.prediction_missing"
@@ -59,6 +60,7 @@ class CompletionRule:
     requires_prediction: bool = False
     requires_note: bool = False
     required_presets: tuple[str, ...] = ()
+    required_artifacts: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -88,6 +90,7 @@ class CompletionEvidence:
     status: str | None = None
     plot_count: int = 0
     interaction: InteractionEvidence = InteractionEvidence()
+    artifact_keys: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -188,6 +191,7 @@ def completion_evidence_from_payloads(
     plot_count: int = 0,
     interaction_events: object = None,
     legacy_summary: object = None,
+    artifact_keys: tuple[str, ...] = (),
 ) -> CompletionEvidence:
     """Normalize already-read payloads without mutating or rewriting them."""
 
@@ -198,12 +202,18 @@ def completion_evidence_from_payloads(
             if isinstance(legacy_summary, Mapping)
             else CompletionRecordKind.MISSING
         )
-        return CompletionEvidence(kind, plot_count=plot_count, interaction=interaction)
+        return CompletionEvidence(
+            kind,
+            plot_count=plot_count,
+            interaction=interaction,
+            artifact_keys=artifact_keys,
+        )
     if not isinstance(manifest, Mapping):
         return CompletionEvidence(
             CompletionRecordKind.INVALID,
             plot_count=plot_count,
             interaction=interaction,
+            artifact_keys=artifact_keys,
         )
     schema_version = manifest.get("schema_version")
     if type(schema_version) is not int or schema_version != 1:
@@ -211,6 +221,7 @@ def completion_evidence_from_payloads(
             CompletionRecordKind.UNSUPPORTED,
             plot_count=plot_count,
             interaction=interaction,
+            artifact_keys=artifact_keys,
         )
     scenario_id = manifest.get("scenario_id")
     status = manifest.get("status")
@@ -219,24 +230,28 @@ def completion_evidence_from_payloads(
             CompletionRecordKind.INVALID,
             plot_count=plot_count,
             interaction=interaction,
+            artifact_keys=artifact_keys,
         )
     if scenario_id != expected_scenario_id:
         return CompletionEvidence(
             CompletionRecordKind.SCENARIO_MISMATCH,
             plot_count=plot_count,
             interaction=interaction,
+            artifact_keys=artifact_keys,
         )
     if not isinstance(status, str) or not status:
         return CompletionEvidence(
             CompletionRecordKind.INVALID,
             plot_count=plot_count,
             interaction=interaction,
+            artifact_keys=artifact_keys,
         )
     return CompletionEvidence(
         CompletionRecordKind.MANIFEST_V1,
         status=status,
         plot_count=plot_count,
         interaction=interaction,
+        artifact_keys=artifact_keys,
     )
 
 
@@ -263,6 +278,13 @@ def evaluate_completion(
     if rule.requires_plot:
         if not _valid_count(evidence.plot_count) or evidence.plot_count <= 0:
             reasons.append(CompletionReason.PLOT_MISSING)
+    available_artifacts = (
+        frozenset(evidence.artifact_keys)
+        if _valid_artifact_keys(evidence.artifact_keys)
+        else frozenset()
+    )
+    if any(key not in available_artifacts for key in rule.required_artifacts):
+        reasons.append(CompletionReason.REQUIRED_ARTIFACT_MISSING)
 
     requires_interaction = bool(
         rule.requires_learner_control
@@ -360,6 +382,7 @@ def _valid_rule(rule: CompletionRule) -> bool:
         and all(isinstance(label, str) and bool(label.strip()) for label in rule.required_presets)
         and len({_normalized_text(label) for label in rule.required_presets})
         == len(rule.required_presets)
+        and _valid_artifact_keys(rule.required_artifacts)
     )
 
 
@@ -384,6 +407,14 @@ def _valid_interaction(interaction: object) -> bool:
 
 def _valid_count(value: object) -> bool:
     return type(value) is int and value >= 0
+
+
+def _valid_artifact_keys(value: object) -> bool:
+    return (
+        isinstance(value, tuple)
+        and all(isinstance(key, str) and key == key.strip() and bool(key) for key in value)
+        and len(set(value)) == len(value)
+    )
 
 
 def _is_learner_control_event(kind: str, name: str) -> bool:

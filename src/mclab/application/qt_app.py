@@ -33,7 +33,6 @@ from mclab.application.qt_worker import create_session_worker
 from mclab.application.presentation import (
     course_progress_payload,
     result_payloads,
-    scenario_payload,
     telemetry_items,
 )
 from mclab.application.readiness import (
@@ -153,6 +152,7 @@ def run_app(
             return course_progress_payload(
                 self.catalog.learning_path(), self.translator, ArtifactRepository().list_runs(),
                 batch_readiness=readiness_payload(self._setup_issues, self.translator),
+                catalog=self.catalog,
             )
 
         @Property("QVariantMap", notify=language_changed)
@@ -301,7 +301,7 @@ def run_app(
             except KeyError as exc:
                 self._set_error(str(exc), "Open Explore and choose an available scenario.")
                 return
-            self._active_config = {}
+            self._set_preset_config({})
             self.selected_changed.emit()
 
         @Slot(str)
@@ -371,7 +371,7 @@ def run_app(
                 self._replay_mode = True
                 replace_session(self, session, adapter)
                 self._reset_evidence()
-                self._active_config = dict(resolved) if isinstance(resolved, dict) else {}
+                self._set_preset_config(dict(resolved) if isinstance(resolved, dict) else {})
                 self._selected = selected
                 self.selected_changed.emit()
                 self.state_changed.emit()
@@ -615,7 +615,7 @@ def run_app(
             self._output_override_used = self._output_override_used or bool(output_override)
             self._replay_mode = False
             self._selected = scenario
-            self._active_config = config
+            self._set_preset_config(config, base=True)
             self._reset_evidence()
             adapter = create_scenario_adapter(
                 scenario,
@@ -701,7 +701,7 @@ def run_app(
 
         def _scenario_map(self, scenario: ScenarioDefinition | None) -> dict[str, Any]:
             config = self._active_config if self._selected is scenario else None
-            return scenario_payload(scenario, self.translator, config_override=config)
+            return self._preset_scenario_payload(scenario, self.translator, config)
 
         def _submit_session(self, command: Any) -> None:
             if self.worker is not None and self.worker.isRunning():

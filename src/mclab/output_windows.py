@@ -7,7 +7,12 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
-from mclab.output_safety import CleanupOperationError, CleanupSafetyError, _lexists
+from mclab.output_safety import (
+    CleanupBusyError,
+    CleanupOperationError,
+    CleanupSafetyError,
+    _lexists,
+)
 
 
 @contextmanager
@@ -33,7 +38,7 @@ def exclusive_windows_operation_mutex(name: str) -> Iterator[None]:
     handle = int(handle_value)
     if error_code == 183:
         close_windows_handles((handle,))
-        raise CleanupOperationError(
+        raise CleanupBusyError(
             "Another saved-output cleanup or restore operation is active"
         )
     release_mutex = ctypes.windll.kernel32.ReleaseMutex
