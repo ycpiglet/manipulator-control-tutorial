@@ -13,11 +13,15 @@
 
 실행 순서와 승격 gate는 `READINESS_EXECUTION_PLAN.md`가 정합니다. 오래되거나 dirty한
 checkout에서 release/readiness 작업을 이어가지 말고 최신 `origin/main`에서 clean
-worktree를 만듭니다. PR #35, B1, GOV-01, SAFE-01, DOC-01, COMP-01은 완료됐으며
-현재 COMP-02를 수행합니다. COMP-02는 canonical evaluator 앞에 strict pinned evidence
-reader를 두고 desktop/menu/CLI/index/report/worksheet와 course progress를 같은 판정에
-연결해 surface mismatch 0을 증명합니다. ordered wall preset은 모든 관련 surface에서
-실제로 노출·기록한 뒤 완료 조건으로 사용합니다. 구조 변경은 B2 뒤 IA-00 결정과 별도
+worktree를 만듭니다. PR #35, B1, GOV-01, SAFE-01, DOC-01, COMP-01, COMP-02는
+완료됐습니다. Original COMP-02 PR #53 뒤 late review가 찾은 desktop legacy-ID
+reason parity 누락은 corrective PR #54로 보수됐고 exact-head와 post-merge 6/6 및
+review-thread resolution을 통과했습니다. 이 durable handoff가 병합된 최신 clean
+`origin/main`에서 BASE-01의 exact SHA/tree, config/model inventory, workflow와 live
+governance evidence를 수집합니다. BASE-01은 먼저 candidate로 작성하고, owner가
+exact subject와 PR head에 대해 single-maintainer 잔여 위험을 명시적으로 수용하고
+B2-scope blocker가 0임을 확인하기 전에는 B2를 선언하지 않습니다. 구조 변경은 B2
+뒤 IA-00 결정과 별도
 compatibility PR로 처리합니다. SAFE-01 PASS 뒤에도 실제 learner outputs의 dry-run은
 owner가 참여하는 별도 작업으로만 수행하고, owner가 같은 plan을 검토한 뒤 다시
 명시적으로 승인하기 전에는 `--apply`를 실행하지 않습니다.
@@ -570,9 +574,12 @@ The full project is course-demo ready when:
 
 ## Next Best Task
 
-Follow the active readiness work order: SAFE-01, DOC-01, and COMP-01 are
-complete, so start COMP-02 consumer parity from the latest clean `origin/main`.
-Connect every learner surface through the canonical completion evaluator and
-prove mismatch 0 before declaring B2. Resume optional Lab03/Lab04 lesson
-expansion only after those gates. Do not add web, ROS2, or Isaac Sim scope
+Follow the active readiness work order: GOV-01, SAFE-01, DOC-01, COMP-01, and
+COMP-02 are complete. Merge the durable COMP-02 handoff, then prepare BASE-01
+from the latest clean `origin/main`, freeze the exact safe-main subject, collect
+the G1 and live-governance evidence, and keep the declaration in candidate state
+until the owner explicitly accepts the documented single-maintainer residual
+risk for the exact subject and PR head. Do not treat B2 as public-beta approval, move
+directories before IA-00, touch real learner outputs, or resume optional lesson
+expansion ahead of the readiness gates. Do not add web, ROS2, or Isaac Sim scope
 before the local MuJoCo labs are stable.
