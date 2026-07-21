@@ -742,6 +742,12 @@ class CompletionSurfaceParityTests(unittest.TestCase):
                     canonical = evaluate_completion(target.completion, record.completion_evidence)
                     expected = (complete, reason.value)
                     desktop = result_payloads((record,), Translator("en"), catalog)[0]
+                    desktop_path = course_progress_payload(
+                        (target,),
+                        Translator("en"),
+                        records,
+                        catalog=catalog,
+                    )["path"][0]["latestCompletionDecision"]
                     menu_catalog, menu_records = _completion_context(outputs_root)
                     menu = _action_completion_assessment(
                         action,
@@ -752,6 +758,10 @@ class CompletionSurfaceParityTests(unittest.TestCase):
                     observed = {
                         "canonical": _decision_verdict(canonical),
                         "desktop": (desktop["completed"], desktop["completionReason"]),
+                        "desktop-path": (
+                            desktop_path["complete"],
+                            desktop_path["primary_reason"],
+                        ),
                         "menu": _decision_verdict(menu),
                         "reporting": _decision_verdict(reporting_run["completion_decision"]),
                     }
@@ -817,6 +827,99 @@ class CompletionSurfaceParityTests(unittest.TestCase):
                     self.assertIn(cli_status, stdout.getvalue())
 
         self.assertEqual(len(mismatches), 0, "\n".join(mismatches))
+
+    def test_legacy_summary_id_is_normalized_for_desktop_course_progress(self) -> None:
+        catalog = ScenarioCatalog.default()
+        target = catalog.get("lab01.default")
+        action = next(item for item in MENU_ACTIONS if completion_target_id(item) == target.id)
+
+        with tempfile.TemporaryDirectory() as temporary:
+            outputs_root = Path(temporary)
+            older_run = _write_scenario_run(
+                outputs_root,
+                "older-complete",
+            )
+            newer_run = _write_scenario_run(
+                outputs_root,
+                "newer-legacy",
+                legacy=True,
+            )
+            raw_records = ArtifactRepository(outputs_root).list_runs()
+            raw_by_name = {record.path.name: record for record in raw_records}
+            newer_legacy = raw_by_name["newer-legacy"]
+            older_complete = raw_by_name["older-complete"]
+            self.assertEqual(newer_legacy.scenario_id, "default")
+
+            desktop = course_progress_payload(
+                (target,),
+                Translator("en"),
+                (newer_legacy, older_complete),
+                catalog=catalog,
+            )["path"][0]
+            menu_catalog, menu_records = _completion_context(outputs_root)
+            menu_by_name = {record.path.name: record for record in menu_records}
+            menu = _action_completion_assessment(
+                action,
+                menu_catalog,
+                (
+                    menu_by_name["newer-legacy"],
+                    menu_by_name["older-complete"],
+                ),
+            )
+
+        expected = (False, CompletionReason.LEGACY_MANIFEST_MISSING.value)
+        self.assertTrue(desktop["completed"])
+        self.assertEqual(
+            (
+                desktop["latestCompletionDecision"]["complete"],
+                desktop["latestCompletionDecision"]["primary_reason"],
+            ),
+            expected,
+        )
+        self.assertTrue(desktop["completionDecision"]["complete"])
+        self.assertTrue(menu.complete)
+        self.assertEqual(_decision_verdict(menu.latest_decision), expected)
+        credited_decision = menu.credited_decision
+        self.assertIsNotNone(credited_decision)
+        assert credited_decision is not None
+        self.assertTrue(credited_decision.complete)
+        self.assertEqual(Path(desktop["latestRun"]), newer_run)
+        self.assertEqual(Path(desktop["creditedRun"]), older_run)
+
+    def test_legacy_all_batch_id_is_normalized_for_desktop_course_progress(self) -> None:
+        catalog = ScenarioCatalog.default()
+
+        with tempfile.TemporaryDirectory() as temporary:
+            outputs_root = Path(temporary)
+            run = outputs_root / "legacy-all"
+            run.mkdir()
+            (run / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "lab_name": "batch",
+                        "config_name": "all",
+                        "duration": 1.0,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            records = ArtifactRepository(outputs_root).list_runs()
+            self.assertEqual(len(records), 1)
+            self.assertEqual(records[0].scenario_id, "all")
+
+            desktop_batch = course_progress_payload(
+                (),
+                Translator("en"),
+                records,
+                catalog=catalog,
+            )["path"][0]
+
+        self.assertFalse(desktop_batch["completed"])
+        self.assertEqual(
+            desktop_batch["latestCompletionDecision"]["primary_reason"],
+            CompletionReason.LEGACY_MANIFEST_MISSING.value,
+        )
+        self.assertEqual(Path(desktop_batch["latestRun"]), run)
 
     def test_unknown_schema_one_id_never_uses_summary_to_award_completion(self) -> None:
         catalog = ScenarioCatalog.default()
