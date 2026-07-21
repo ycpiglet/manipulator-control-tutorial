@@ -73,6 +73,15 @@ After the app opens:
 3. When the run finishes, open **View saved results** and **Replay recording**.
 4. Use `report.html` to explain the position response and priority plot.
 
+**Automated first source-run criterion:** on Windows, Linux, and macOS, the
+recommended launcher completes setup and the app self-test, `doctor` and Lab01
+exit successfully, and the saved result contains `report.html` plus at least
+one `plots/*.png`. **View saved results** and **Replay recording** remain the
+hands-on learner checks above.
+
+<details>
+<summary>Install manually or create a headless result from a terminal</summary>
+
 For manual setup:
 
 ```bash
@@ -104,13 +113,13 @@ You can also create a first headless report and plot without Qt:
 
 ```bash
 python -m pip install -e .
-python -m mclab run lab01 \
-  --config configs/lab01_msd/default.yaml \
-  --headless --plot --plots essential
+python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot --plots essential
 ```
 
 See the [installation guide](docs/installation.md) for setup and packaging
 details.
+
+</details>
 
 ## Saved evidence
 
@@ -148,6 +157,8 @@ The core package is already separated by responsibility. Root
 `run_lab*.cmd` and `run_batch*.cmd` files are compatibility launchers for
 existing classroom workflows. New users should use one of the three
 `START_HERE` launchers or the integrated app.
+See [repository structure and compatibility](docs/repository_structure.md) for
+the no-move rationale and the rules that apply to any future consolidation.
 
 ## Documentation
 
@@ -156,10 +167,11 @@ existing classroom workflows. New users should use one of the three
   [Lab04](docs/lab04_panda_manipulator.md)
 - Educators: [educator guide](docs/educator_guide.md)
 - Developers: [desktop architecture](docs/developer_guide.md),
+  [repository structure and compatibility](docs/repository_structure.md),
   [contribution guide](CONTRIBUTING.md)
 - Installation and support: [installation](docs/installation.md),
   [troubleshooting](docs/troubleshooting.md)
-- Research and citation: [tutorial paper](paper/README.md),
+- Research and citation: [tutorial paper (Korean)](paper/README.md),
   [JOSE software paper](jose/paper.md)
 - Full index: [documentation map](docs/README.md)
 
@@ -180,6 +192,14 @@ during v0.1.
 > move into recoverable quarantine; nothing is permanently deleted.
 > **Results → Manage** uses the same strict rule after an exact folder-name entry
 > and a stale-target check.
+
+<details>
+<summary>Output cleanup and restore commands, including platform data locations</summary>
+
+> [!WARNING]
+> Do not copy and run the `--apply` example immediately. First inspect every
+> candidate printed by the default dry-run, and use `--apply ... --yes` only
+> for that **same, separately approved plan ID**.
 
 ```bash
 python -m mclab clean --keep 20
@@ -217,9 +237,13 @@ such as NFS or SMB; move the results to a local MCLab data location first.
 Quarantine still uses disk space, and SAFE-01 intentionally does not expose
 permanent purge.
 
-See the
-[2026-07-20 readiness audit](.agents/reviews/20260720_enterprise_readiness_audit.md)
-for the evidence, decision, and ordered backlog.
+</details>
+
+See the [2026-07-20 readiness audit](.agents/reviews/20260720_enterprise_readiness_audit.md)
+for the original findings and decision at that time, [CURRENT_STATE](.agents/CURRENT_STATE.md)
+for the live handoff, and
+[READINESS_EXECUTION_PLAN](.agents/READINESS_EXECUTION_PLAN.md) for the
+authoritative work order.
 
 ## Development and contributing
 
@@ -227,7 +251,7 @@ for the evidence, decision, and ordered backlog.
 python -m pip install -e ".[app,dev]"
 python -m pytest -q
 python -m ruff check src tests scripts .agents/validation
-QT_QPA_PLATFORM=offscreen python -m mclab app --self-test
+python -m mclab app --self-test
 ```
 
 Every new config needs a learning guide and a suggested next experiment. See

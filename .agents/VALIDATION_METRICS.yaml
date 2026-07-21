@@ -37,6 +37,17 @@ code_quality:
     threshold: 0
     command: "python scripts/bootstrap_and_run.py --verify"
 
+documentation:
+  newcomer_readme_contract:
+    metric: "KR/EN semantic sections, public commands, CLI shape, local links/anchors, launchers, and repository maps"
+    threshold: "all checker metrics pass; validation errors 0"
+    command: "python .agents/validation/check_readme_contract.py"
+    evidence: "CI simulator job output and tests/test_readme_contract.py"
+  newcomer_quickstart_artifacts:
+    metric: "recommended source launcher setup, doctor, and Lab01 artifacts on each desktop workflow OS"
+    threshold: "launcher setup/app self-test and doctor exit 0; every README core artifact present; plots/*.png count >= 1"
+    evidence: ".github/workflows/desktop.yml on Windows, Ubuntu, and macOS"
+
 simulation_runs:
   required_artifacts:
     metric: "required output files"

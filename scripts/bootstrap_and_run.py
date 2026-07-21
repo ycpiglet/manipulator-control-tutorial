@@ -41,7 +41,17 @@ VERIFY_VARIANTS = [
     ("lab04", "configs/lab04_panda/impedance_wall.yaml"),
 ]
 
-REQUIRED_ARTIFACTS = ("config.yaml", "summary.json", "notes.md", "log.csv", "report.html")
+REQUIRED_ARTIFACTS = (
+    "config.yaml",
+    "summary.json",
+    "notes.md",
+    "log.csv",
+    "states.npz",
+    "replay.npz",
+    "manifest.json",
+    "report.html",
+    "worksheet.md",
+)
 REQUIRED_REPORT_SECTIONS = (
     "Reproduce This Run",
     "Suggested Next Runs",
@@ -138,10 +148,10 @@ def run(command: list[str]) -> None:
 
 
 def verify_output_artifacts(output_dir: Path, *, expect_plots: bool) -> None:
-    missing = [name for name in REQUIRED_ARTIFACTS if not (output_dir / name).exists()]
-    if not ((output_dir / "states.npz").exists() or (output_dir / "states.json").exists()):
-        missing.append("states.npz or states.json")
-    if expect_plots and not any((output_dir / "plots").glob("*.png")):
+    missing = [name for name in REQUIRED_ARTIFACTS if not (output_dir / name).is_file()]
+    if expect_plots and not any(
+        path.is_file() for path in (output_dir / "plots").glob("*.png")
+    ):
         missing.append("plots/*.png")
     if missing:
         raise RuntimeError(f"Missing output artifact(s) in {output_dir}: {', '.join(missing)}")
