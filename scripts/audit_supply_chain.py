@@ -753,21 +753,24 @@ def validate_target_inventory(actual: Mapping[str, str], expected: Mapping[str, 
     filtered_actual = {
         name: version for name, version in actual.items() if name not in LICENSE_EXCLUDED_PACKAGES
     }
-    if filtered_actual != dict(expected):
-        missing = sorted(set(expected) - set(filtered_actual))
-        extra = sorted(set(filtered_actual) - set(expected))
-        mismatched = sorted(
-            name
-            for name in set(expected) & set(filtered_actual)
-            if expected[name] != filtered_actual[name]
-        )
+    missing = sorted(set(expected) - set(filtered_actual))
+    mismatched = sorted(
+        name
+        for name in set(expected) & set(filtered_actual)
+        if expected[name] != filtered_actual[name]
+    )
+    if missing or mismatched:
         raise SupplyChainAuditError(
             "target Python package-profile drift: "
-            f"missing={missing}, extra={extra}, version_mismatch={mismatched}"
+            f"missing={missing}, version_mismatch={mismatched}"
         )
 
 
-def license_command(python: Path, target_python: Path) -> list[str]:
+def license_command(
+    python: Path,
+    target_python: Path,
+    expected: Mapping[str, str],
+) -> list[str]:
     return [
         str(python),
         "-m",
@@ -785,6 +788,8 @@ def license_command(python: Path, target_python: Path) -> list[str]:
         "--no-license-path",
         "--ignore-packages",
         *sorted(LICENSE_EXCLUDED_PACKAGES),
+        "--packages",
+        *sorted(expected),
     ]
 
 
@@ -1012,7 +1017,7 @@ def run_license_audit(
         )
         validate_target_inventory(actual_inventory, expected)
         scanned = _execute(
-            license_command(tools.python, target),
+            license_command(tools.python, target, expected),
             cwd=tools.work,
             timeout=PROCESS_TIMEOUT_SECONDS,
             environment=sanitized_environment(),

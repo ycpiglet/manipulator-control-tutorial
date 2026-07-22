@@ -301,10 +301,12 @@ def _validate_archive_keyring(path: Path = APT_ARCHIVE_KEYRING) -> None:
         raise PolicyError(f"cannot inspect Ubuntu archive keyring {path}: {exc}") from exc
     if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISREG(metadata.st_mode):
         raise PolicyError(f"Ubuntu archive keyring must be a regular non-symlink file: {path}")
-    if metadata.st_size <= 0 or metadata.st_mode & 0o022:
-        raise PolicyError(
-            f"Ubuntu archive keyring must be nonempty and not group/world writable: {path}"
-        )
+    if metadata.st_size <= 0:
+        raise PolicyError(f"Ubuntu archive keyring must be nonempty: {path}")
+    if metadata.st_uid != 0 or metadata.st_gid != 0:
+        raise PolicyError(f"Ubuntu archive keyring must be owned by root:root: {path}")
+    if stat.S_IMODE(metadata.st_mode) not in {0o644, 0o664}:
+        raise PolicyError(f"Ubuntu archive keyring must have mode 0644 or 0664: {path}")
     if not os.access(path, os.R_OK):
         raise PolicyError(f"Ubuntu archive keyring is not readable: {path}")
 

@@ -472,18 +472,27 @@ def test_target_probe_rejects_duplicate_distribution_and_malformed_json() -> Non
         AUDIT.normalize_target_probe("not-json")
 
 
-def test_target_inventory_requires_exact_installed_name_and_version_coverage() -> None:
+def test_target_inventory_requires_expected_name_and_version_coverage() -> None:
     expected = {"demo": "1.0", "mujoco-manipulator-control-lab": "0.1.0"}
     actual = expected | {"pip": "26.1.2", "setuptools": "83.0.0", "wheel": "0.47.0"}
     AUDIT.validate_target_inventory(actual, expected)
+    AUDIT.validate_target_inventory(actual | {"certifi": "2026.1.4"}, expected)
+    with pytest.raises(AUDIT.SupplyChainAuditError, match="missing"):
+        AUDIT.validate_target_inventory(
+            {name: version for name, version in actual.items() if name != "demo"},
+            expected,
+        )
     with pytest.raises(AUDIT.SupplyChainAuditError, match="version_mismatch"):
         AUDIT.validate_target_inventory(actual | {"demo": "2.0"}, expected)
-    with pytest.raises(AUDIT.SupplyChainAuditError, match="extra"):
-        AUDIT.validate_target_inventory(actual | {"unlocked": "1.0"}, expected)
 
 
 def test_license_command_uses_explicit_target_mixed_json_texts_and_no_paths() -> None:
-    command = AUDIT.license_command(Path("tool-python"), Path("target-python"))
+    expected = {"zeta-package": "2.0", "alpha-package": "1.0"}
+    command = AUDIT.license_command(
+        Path("tool-python"),
+        Path("target-python"),
+        expected,
+    )
     for token in (
         "--python",
         "target-python",
@@ -497,10 +506,14 @@ def test_license_command_uses_explicit_target_mixed_json_texts_and_no_paths() ->
         "--with-notice-file",
         "--no-license-path",
         "--ignore-packages",
+        "--packages",
     ):
         assert token in command
     for excluded in AUDIT.LICENSE_EXCLUDED_PACKAGES:
         assert excluded in command
+    packages_index = command.index("--packages")
+    assert command[packages_index + 1 :] == sorted(expected)
+    assert "certifi" not in command[packages_index + 1 :]
     assert "--output-file" not in command
 
 

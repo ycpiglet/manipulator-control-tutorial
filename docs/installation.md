@@ -51,9 +51,11 @@ package-list and archive state, so hosted-runner Microsoft, Docker, mirror, or
 cached indexes cannot enter candidate selection. Conflicting or disabling
 per-repository snapshot settings, snapshot-ID mismatch, mixed/live repository
 URLs, insecure or unauthenticated fallback, timeouts, and version or
-architecture drift fail closed. This controls the direct package set and
-repository point in time; it is not a frozen base image or a complete native
-transitive-library inventory.
+architecture drift fail closed. The Ubuntu archive keyring must be a nonempty,
+regular, non-symlink root:root file with the hosted-runner-supported mode
+`0644` or `0664`; every other ownership or mode is rejected. This controls the
+direct package set and repository point in time; it is not a frozen base image
+or a complete native transitive-library inventory.
 
 `assets install` downloads the pinned MuJoCo Menagerie commit, verifies the
 archive SHA-256, extracts only the tracked `franka_emika_panda` runtime files,
@@ -152,6 +154,11 @@ package set was fully recorded, while `compliance_status` remains
 `pending-lic-01`. LIC-01 must resolve those gaps before its UNKNOWN=0 release
 gate can pass. These records are not legal advice, a complete notice bundle,
 or approval to distribute Qt/PySide or any other component.
+Hosted-interpreter bootstrap packages outside the reviewed package profile are
+not distribution inputs: the target probe requires every lock-derived package
+at its exact version, and `pip-licenses --packages` limits the evidence to that
+same deterministic set. Ambient packages therefore neither enter the evidence
+nor relax missing-package, version, or scanner-output coverage checks.
 
 `scripts/generate_sbom_inputs.py` combines the reviewed Python locks, Ubuntu
 direct-package manifest, pinned Panda runtime inventory, bundled fonts, and

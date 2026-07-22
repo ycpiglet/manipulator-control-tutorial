@@ -8,6 +8,7 @@ import tempfile
 import unittest
 from copy import deepcopy
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Sequence
 from unittest.mock import patch
 
@@ -77,6 +78,22 @@ def _installed_output(
         installed_version = version_overrides.get(name, version)
         lines.append(f"{name}:amd64\t{installed_version}\t{architecture}")
     return "\n".join(lines) + "\n"
+
+
+def _archive_keyring_metadata(
+    *,
+    permissions: int = 0o644,
+    size: int = 1,
+    uid: int = 0,
+    gid: int = 0,
+    file_type: int = stat.S_IFREG,
+) -> SimpleNamespace:
+    return SimpleNamespace(
+        st_mode=file_type | permissions,
+        st_size=size,
+        st_uid=uid,
+        st_gid=gid,
+    )
 
 
 class FakeRunner:
@@ -248,6 +265,38 @@ class HostAndSourcePolicyTests(unittest.TestCase):
             link.symlink_to(target)
             with self.assertRaisesRegex(ubuntu_packages.PolicyError, "non-symlink"):
                 ubuntu_packages._validate_archive_keyring(link)
+
+    def test_archive_keyring_accepts_exact_reviewed_root_modes(self) -> None:
+        path = Path("/synthetic/ubuntu-archive-keyring.gpg")
+        for permissions in (0o644, 0o664):
+            with self.subTest(permissions=oct(permissions)):
+                metadata = _archive_keyring_metadata(permissions=permissions)
+                with (
+                    patch.object(Path, "lstat", return_value=metadata),
+                    patch.object(ubuntu_packages.os, "access", return_value=True),
+                ):
+                    ubuntu_packages._validate_archive_keyring(path)
+
+    def test_archive_keyring_rejects_unreviewed_metadata(self) -> None:
+        path = Path("/synthetic/ubuntu-archive-keyring.gpg")
+        cases = (
+            ("non-root owner", _archive_keyring_metadata(uid=1000), "root:root"),
+            ("non-root group", _archive_keyring_metadata(gid=1000), "root:root"),
+            ("mode 0666", _archive_keyring_metadata(permissions=0o666), "0644 or 0664"),
+            ("empty", _archive_keyring_metadata(size=0), "nonempty"),
+            (
+                "nonregular",
+                _archive_keyring_metadata(file_type=stat.S_IFDIR),
+                "regular non-symlink",
+            ),
+        )
+        for label, metadata, message in cases:
+            with self.subTest(case=label):
+                with (
+                    patch.object(Path, "lstat", return_value=metadata),
+                    self.assertRaisesRegex(ubuntu_packages.PolicyError, message),
+                ):
+                    ubuntu_packages._validate_archive_keyring(path)
 
     def test_wrong_os_is_rejected_before_any_command(self) -> None:
         runner = FakeRunner()
