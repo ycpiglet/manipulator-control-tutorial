@@ -35,12 +35,43 @@ Suites: noble noble-updates noble-security
 Components: main universe
 """
 }
-VALID_UPDATE_OUTPUT = """\
+SNAPSHOT_ENDPOINT_UPDATE_OUTPUT = """\
 Get:1 https://snapshot.ubuntu.com/ubuntu/20260723T000000Z noble InRelease [256 kB]
 Hit:2 https://snapshot.ubuntu.com/ubuntu/20260723T000000Z noble-updates InRelease
 Get:3 https://snapshot.ubuntu.com/ubuntu/20260723T000000Z noble-security InRelease [126 kB]
 Reading package lists... Done
 """
+VALID_UPDATE_OUTPUT = """\
+Get:1 https://archive.ubuntu.com/ubuntu noble InRelease [256 kB]
+Hit:2 https://archive.ubuntu.com/ubuntu noble-updates InRelease
+Hit:3 https://archive.ubuntu.com/ubuntu noble-backports InRelease
+Get:4 https://security.ubuntu.com/ubuntu noble-security InRelease [126 kB]
+Reading package lists... Done
+"""
+VALID_PREFLIGHT_OUTPUT = (
+    "'https://snapshot.ubuntu.com/ubuntu/20260723T000000Z/dists/noble/InRelease' "
+    "snapshot.ubuntu.com_ubuntu_20260723T000000Z_dists_noble_InRelease 0 \n"
+    "'https://archive.ubuntu.com/ubuntu/dists/noble/InRelease' "
+    "archive.ubuntu.com_ubuntu_dists_noble_InRelease 0 \n"
+    "'https://snapshot.ubuntu.com/ubuntu/20260723T000000Z/dists/noble-updates/InRelease' "
+    "snapshot.ubuntu.com_ubuntu_20260723T000000Z_dists_noble-updates_InRelease 0 \n"
+    "'https://archive.ubuntu.com/ubuntu/dists/noble-updates/InRelease' "
+    "archive.ubuntu.com_ubuntu_dists_noble-updates_InRelease 0 \n"
+    "'https://snapshot.ubuntu.com/ubuntu/20260723T000000Z/dists/noble-backports/InRelease' "
+    "snapshot.ubuntu.com_ubuntu_20260723T000000Z_dists_noble-backports_InRelease 0 \n"
+    "'https://archive.ubuntu.com/ubuntu/dists/noble-backports/InRelease' "
+    "archive.ubuntu.com_ubuntu_dists_noble-backports_InRelease 0 \n"
+    "'https://snapshot.ubuntu.com/ubuntu/20260723T000000Z/dists/noble-security/InRelease' "
+    "snapshot.ubuntu.com_ubuntu_20260723T000000Z_dists_noble-security_InRelease 0 \n"
+    "'https://security.ubuntu.com/ubuntu/dists/noble-security/InRelease' "
+    "security.ubuntu.com_ubuntu_dists_noble-security_InRelease 0 \n"
+    "'https://snapshot.ubuntu.com/ubuntu/20260723T000000Z/dists/noble/main/"
+    "binary-amd64/Packages.xz' "
+    "snapshot.ubuntu.com_ubuntu_20260723T000000Z_dists_noble_main_binary-amd64_Packages "
+    "0 \n"
+    "'https://archive.ubuntu.com/ubuntu/dists/noble/main/binary-amd64/Packages.xz' "
+    "archive.ubuntu.com_ubuntu_dists_noble_main_binary-amd64_Packages 0 \n"
+)
 TEST_ARCHIVE_KEYRING = b"deterministic test-only Ubuntu archive keyring bytes\n"
 TEST_ARCHIVE_KEYRING_SHA256 = hashlib.sha256(TEST_ARCHIVE_KEYRING).hexdigest()
 TEST_ARCHIVE_KEYRING_SPEC = ubuntu_packages.ArchiveKeyringSpec(
@@ -124,12 +155,18 @@ class FakeRunner:
         self,
         *,
         architecture: str = "amd64",
+        preflight_output: str = VALID_PREFLIGHT_OUTPUT,
+        preflight_stderr: str = "",
+        preflight_returncode: int = 0,
         update_output: str = VALID_UPDATE_OUTPUT,
         candidate_output: str | None = None,
         installed_output: str | None = None,
         timeout_on: str | None = None,
     ) -> None:
         self.architecture = architecture
+        self.preflight_output = preflight_output
+        self.preflight_stderr = preflight_stderr
+        self.preflight_returncode = preflight_returncode
         self.update_output = update_output
         self.candidate_output = candidate_output or _candidate_output()
         self.installed_output = installed_output or _installed_output()
@@ -141,26 +178,35 @@ class FakeRunner:
     ) -> subprocess.CompletedProcess[str]:
         command_list = list(command)
         self.calls.append((command_list, timeout_seconds))
-        if command_list == ["dpkg", "--print-architecture"]:
+        executable = Path(command_list[0]).name if command_list else ""
+        if command_list == [ubuntu_packages.DPKG, "--print-architecture"]:
             key = "architecture"
             stdout = f"{self.architecture}\n"
-        elif command_list[0] == "apt-get" and command_list[-1] == "update":
+        elif executable == "apt-get" and "--print-uris" in command_list:
+            key = "preflight"
+            stdout = self.preflight_output
+        elif executable == "apt-get" and command_list[-1] == "update":
             key = "update"
             stdout = self.update_output
-        elif command_list and command_list[0] == "apt-cache":
+        elif executable == "apt-cache":
             key = "candidate"
             stdout = self.candidate_output
-        elif command_list[0] == "apt-get" and "install" in command_list:
+        elif executable == "apt-get" and "install" in command_list:
             key = "install"
             stdout = "Reading package lists... Done\n0 upgraded, 22 newly installed.\n"
-        elif command_list and command_list[0] == "dpkg-query":
+        elif executable == "dpkg-query":
             key = "installed"
             stdout = self.installed_output
         else:
             raise AssertionError(f"unexpected command: {command_list}")
         if self.timeout_on == key:
             raise subprocess.TimeoutExpired(command_list, timeout_seconds)
-        return subprocess.CompletedProcess(command_list, 0, stdout=stdout, stderr="")
+        return subprocess.CompletedProcess(
+            command_list,
+            self.preflight_returncode if key == "preflight" else 0,
+            stdout=stdout,
+            stderr=self.preflight_stderr if key == "preflight" else "",
+        )
 
 
 class ManifestPolicyTests(unittest.TestCase):
@@ -295,12 +341,21 @@ class HostAndSourcePolicyTests(unittest.TestCase):
                 root,
                 verified_archive_keyring=_test_verified_archive_keyring(),
             )
-            self.assertEqual(options[::2], ["-o"] * 8)
+            self.assertEqual(options[::2], ["-o"] * 26)
             values = options[1::2]
             settings = dict(value.split("=", 1) for value in values)
             source = Path(settings["Dir::Etc::sourcelist"])
             source_parts = Path(settings["Dir::Etc::sourceparts"])
+            apt_config = Path(settings["Dir::Etc::main"])
+            apt_config_parts = Path(settings["Dir::Etc::parts"])
+            preferences = Path(settings["Dir::Etc::preferences"])
+            preferences_parts = Path(settings["Dir::Etc::preferencesparts"])
+            trusted = Path(settings["Dir::Etc::trusted"])
+            trusted_parts = Path(settings["Dir::Etc::trustedparts"])
+            auth = Path(settings["Dir::Etc::netrc"])
+            auth_parts = Path(settings["Dir::Etc::netrcparts"])
             lists = Path(settings["Dir::State::lists"])
+            cache = Path(settings["Dir::Cache"])
             archives = Path(settings["Dir::Cache::archives"])
 
             trusted_keyring = root / "ubuntu-archive-keyring.gpg"
@@ -315,14 +370,37 @@ class HostAndSourcePolicyTests(unittest.TestCase):
                 TEST_ARCHIVE_KEYRING_SPEC.path.as_posix(), controlled_sources
             )
             self.assertEqual(list(source_parts.iterdir()), [])
+            self.assertEqual(list(apt_config_parts.iterdir()), [])
+            self.assertEqual(list(preferences_parts.iterdir()), [])
+            self.assertEqual(list(trusted_parts.iterdir()), [])
+            self.assertEqual(list(auth_parts.iterdir()), [])
+            self.assertEqual(preferences.read_bytes(), b"")
+            self.assertEqual(trusted.read_bytes(), TEST_ARCHIVE_KEYRING)
+            self.assertEqual(auth.read_bytes(), b"")
+            self.assertEqual(stat.S_IMODE(auth.stat().st_mode), 0o600)
             self.assertTrue(lists.is_relative_to(root))
+            self.assertTrue(cache.is_relative_to(root))
             self.assertTrue(archives.is_relative_to(root))
             self.assertEqual(settings["APT::Snapshot"], ubuntu_packages.SNAPSHOT)
             self.assertEqual(settings["Acquire::AllowInsecureRepositories"], "false")
+            self.assertEqual(settings["Acquire::AllowWeakRepositories"], "false")
             self.assertEqual(
                 settings["Acquire::AllowDowngradeToInsecureRepositories"], "false"
             )
             self.assertEqual(settings["APT::Get::AllowUnauthenticated"], "false")
+            self.assertEqual(settings["Acquire::Check-Date"], "true")
+            self.assertEqual(settings["Acquire::Check-Valid-Until"], "true")
+            self.assertEqual(settings["Acquire::http::Proxy"], "false")
+            self.assertEqual(settings["Acquire::https::Proxy"], "false")
+            self.assertEqual(settings["Acquire::http::AllowRedirect"], "false")
+            self.assertEqual(settings["Acquire::https::AllowRedirect"], "false")
+            self.assertEqual(settings["Acquire::https::Verify-Peer"], "true")
+            self.assertEqual(settings["Acquire::https::Verify-Host"], "true")
+            controlled_config = ubuntu_packages._render_controlled_apt_config(root)
+            self.assertEqual(apt_config.read_text(encoding="utf-8"), controlled_config)
+            self.assertIn("#clear DPkg::Pre-Install-Pkgs;", controlled_config)
+            self.assertIn("#clear APT::Update::Post-Invoke;", controlled_config)
+            self.assertNotIn("/etc/apt", controlled_config)
             self.assertNotIn("microsoft", source.read_text(encoding="utf-8").lower())
             self.assertNotIn("docker", source.read_text(encoding="utf-8").lower())
             self.assertEqual(
@@ -331,6 +409,54 @@ class HostAndSourcePolicyTests(unittest.TestCase):
                 ),
                 2,
             )
+
+    def test_real_runner_uses_only_controlled_environment_and_early_apt_config(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            options = ubuntu_packages._prepare_isolated_apt_environment(
+                root,
+                verified_archive_keyring=_test_verified_archive_keyring(),
+            )
+            command = [ubuntu_packages.APT_GET, *options, "update"]
+            completed = subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+            hostile_environment = {
+                "APT_CONFIG": "/tmp/hostile.conf",
+                "LD_PRELOAD": "/tmp/hostile.so",
+                "PATH": "/tmp/hostile-bin",
+                "http_proxy": "http://proxy.example",
+                "https_proxy": "http://proxy.example",
+            }
+            with (
+                patch.dict(os.environ, hostile_environment, clear=True),
+                patch.object(
+                    ubuntu_packages.subprocess,
+                    "run",
+                    return_value=completed,
+                ) as run,
+            ):
+                self.assertIs(
+                    ubuntu_packages._run_command(command, 17),
+                    completed,
+                )
+            environment = run.call_args.kwargs["env"]
+            self.assertEqual(
+                environment,
+                {
+                    "APT_CONFIG": (root / "apt.conf").as_posix(),
+                    "APT_LISTCHANGES_FRONTEND": "none",
+                    "DEBIAN_FRONTEND": "noninteractive",
+                    "LC_ALL": "C",
+                    "PATH": "/usr/sbin:/usr/bin:/sbin:/bin",
+                },
+            )
+            self.assertEqual(run.call_args.kwargs["timeout"], 17)
+
+            with self.assertRaisesRegex(OSError, "exactly one Dir::Etc::main"):
+                ubuntu_packages._run_command([ubuntu_packages.APT_GET, "update"], 17)
+
+    def test_controlled_apt_config_rejects_relative_root(self) -> None:
+        with self.assertRaisesRegex(ubuntu_packages.PolicyError, "path is unsafe"):
+            ubuntu_packages._render_controlled_apt_config(Path("relative"))
 
     def test_archive_keyring_symlink_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -652,29 +778,184 @@ class HostAndSourcePolicyTests(unittest.TestCase):
         )
 
 
+class SnapshotPreflightPolicyTests(unittest.TestCase):
+    def test_exact_snapshot_and_logical_shadow_routes_are_accepted(self) -> None:
+        ubuntu_packages.validate_snapshot_preflight_output(VALID_PREFLIGHT_OUTPUT)
+        reversed_output = "\n".join(reversed(VALID_PREFLIGHT_OUTPUT.splitlines())) + "\n"
+        ubuntu_packages.validate_snapshot_preflight_output(reversed_output)
+
+    def test_explicit_default_https_port_is_accepted(self) -> None:
+        output = VALID_PREFLIGHT_OUTPUT.replace(
+            "https://snapshot.ubuntu.com/ubuntu/20260723T000000Z/dists/noble/InRelease",
+            "https://snapshot.ubuntu.com:443/ubuntu/20260723T000000Z/dists/noble/InRelease",
+            1,
+        )
+        ubuntu_packages.validate_snapshot_preflight_output(output)
+
+    def test_every_physical_and_logical_inrelease_route_is_required(self) -> None:
+        physical_line = VALID_PREFLIGHT_OUTPUT.splitlines()[0]
+        logical_line = VALID_PREFLIGHT_OUTPUT.splitlines()[1]
+        for label, removed, message in (
+            ("physical", physical_line, "physical InRelease"),
+            ("logical", logical_line, "logical InRelease"),
+        ):
+            with self.subTest(label=label), self.assertRaisesRegex(
+                ubuntu_packages.PolicyError,
+                message,
+            ):
+                ubuntu_packages.validate_snapshot_preflight_output(
+                    VALID_PREFLIGHT_OUTPUT.replace(f"{removed}\n", "", 1)
+                )
+
+    def test_every_optional_target_requires_physical_logical_parity(self) -> None:
+        physical_packages = next(
+            line
+            for line in VALID_PREFLIGHT_OUTPUT.splitlines()
+            if "snapshot.ubuntu.com" in line and "Packages.xz" in line
+        )
+        logical_packages = next(
+            line
+            for line in VALID_PREFLIGHT_OUTPUT.splitlines()
+            if "archive.ubuntu.com" in line and "Packages.xz" in line
+        )
+        for label, removed in (
+            ("physical", physical_packages),
+            ("logical", logical_packages),
+        ):
+            with self.subTest(label=label), self.assertRaisesRegex(
+                ubuntu_packages.PolicyError,
+                "target parity failed",
+            ):
+                ubuntu_packages.validate_snapshot_preflight_output(
+                    VALID_PREFLIGHT_OUTPUT.replace(f"{removed}\n", "", 1)
+                )
+
+    def test_unapproved_or_ambiguous_preflight_routes_are_rejected(self) -> None:
+        approved = (
+            "https://snapshot.ubuntu.com/ubuntu/20260723T000000Z/"
+            "dists/noble/InRelease"
+        )
+        rejected = (
+            approved.replace("https://", "http://"),
+            approved.replace("snapshot.ubuntu.com", "snapshot.ubuntu.com.evil.example"),
+            approved.replace("snapshot.ubuntu.com", "user@snapshot.ubuntu.com"),
+            approved.replace("snapshot.ubuntu.com", "snapshot.ubuntu.com:444"),
+            approved.replace("snapshot.ubuntu.com", "snapshot.ubuntu.com:invalid"),
+            f"{approved}?mirror=live",
+            f"{approved}#fragment",
+            approved.replace("20260723T000000Z", "20260722T000000Z"),
+            approved.replace("20260723T000000Z", "20260723T000000Zsuffix"),
+            approved.replace("20260723T000000Z", "prefix20260723T000000Z"),
+            approved.replace("/dists/noble/", "/dists/noble/../"),
+            approved.replace("/dists/noble/", "/dists/noble/%2e%2e/"),
+            approved.replace("/dists/noble/", "/dists//noble/"),
+            approved.replace("/dists/noble/", "/dists/oracular/"),
+            approved.replace("/ubuntu/20260723T000000Z", "/ubuntu2/20260723T000000Z"),
+        )
+        original_line = VALID_PREFLIGHT_OUTPUT.splitlines()[0]
+        for url in rejected:
+            replacement = f"'{url}' rejected_destination 0 "
+            output = VALID_PREFLIGHT_OUTPUT.replace(original_line, replacement, 1)
+            with self.subTest(url=url), self.assertRaisesRegex(
+                ubuntu_packages.PolicyError,
+                "unapproved",
+            ):
+                ubuntu_packages.validate_snapshot_preflight_output(output)
+
+    def test_logical_suite_must_use_its_exact_controlled_host(self) -> None:
+        output = VALID_PREFLIGHT_OUTPUT.replace(
+            "https://security.ubuntu.com/ubuntu/dists/noble-security/InRelease",
+            "https://archive.ubuntu.com/ubuntu/dists/noble-security/InRelease",
+            1,
+        )
+        with self.assertRaisesRegex(ubuntu_packages.PolicyError, "unapproved"):
+            ubuntu_packages.validate_snapshot_preflight_output(output)
+
+    def test_malformed_duplicate_and_oversized_preflight_output_is_rejected(self) -> None:
+        first_line = VALID_PREFLIGHT_OUTPUT.splitlines()[0]
+        malformed = (
+            first_line.removeprefix("'"),
+            f"{first_line} extra",
+            first_line.replace(
+                "snapshot.ubuntu.com_ubuntu_20260723T000000Z_dists_noble_InRelease",
+                "unsafe/destination",
+            ),
+            f"{VALID_PREFLIGHT_OUTPUT}\n",
+        )
+        for output in malformed:
+            with self.subTest(output=output[:80]), self.assertRaisesRegex(
+                ubuntu_packages.PolicyError,
+                "malformed",
+            ):
+                ubuntu_packages.validate_snapshot_preflight_output(output)
+
+        with self.assertRaisesRegex(ubuntu_packages.PolicyError, "duplicate"):
+            ubuntu_packages.validate_snapshot_preflight_output(
+                f"{VALID_PREFLIGHT_OUTPUT}{first_line}\n"
+            )
+        lines = VALID_PREFLIGHT_OUTPUT.splitlines()
+        duplicate_destination = f"{lines[1].split()[0]} {lines[0].split()[1]} 0 "
+        with self.assertRaisesRegex(ubuntu_packages.PolicyError, "destination"):
+            ubuntu_packages.validate_snapshot_preflight_output(
+                VALID_PREFLIGHT_OUTPUT.replace(lines[1], duplicate_destination, 1)
+            )
+        explicit_port_line = first_line.replace(
+            "snapshot.ubuntu.com/",
+            "snapshot.ubuntu.com:443/",
+        ).replace(
+            "snapshot.ubuntu.com_ubuntu_20260723T000000Z_dists_noble_InRelease",
+            "snapshot.ubuntu.com:443_ubuntu_20260723T000000Z_dists_noble_InRelease",
+        )
+        with self.assertRaisesRegex(ubuntu_packages.PolicyError, "normalized"):
+            ubuntu_packages.validate_snapshot_preflight_output(
+                f"{VALID_PREFLIGHT_OUTPUT}{explicit_port_line}\n"
+            )
+        with (
+            patch.object(ubuntu_packages, "_MAX_PREFLIGHT_OUTPUT_BYTES", 10),
+            self.assertRaisesRegex(ubuntu_packages.PolicyError, "safety limit"),
+        ):
+            ubuntu_packages.validate_snapshot_preflight_output(VALID_PREFLIGHT_OUTPUT)
+        with (
+            patch.object(ubuntu_packages, "_MAX_PREFLIGHT_RECORDS", 1),
+            self.assertRaisesRegex(ubuntu_packages.PolicyError, "too many"),
+        ):
+            ubuntu_packages.validate_snapshot_preflight_output(VALID_PREFLIGHT_OUTPUT)
+
+
 class SnapshotOutputPolicyTests(unittest.TestCase):
     def test_snapshot_only_update_output_is_accepted(self) -> None:
+        ubuntu_packages.validate_snapshot_update_output(SNAPSHOT_ENDPOINT_UPDATE_OUTPUT)
+
+    def test_snapshot_selected_logical_ubuntu_output_is_accepted(self) -> None:
         ubuntu_packages.validate_snapshot_update_output(VALID_UPDATE_OUTPUT)
 
-    def test_live_repository_fallback_is_rejected(self) -> None:
+    def test_mixed_approved_representations_and_default_port_are_accepted(self) -> None:
+        output = (
+            "Get:1 https://archive.ubuntu.com:443/ubuntu/ noble InRelease [256 kB]\n"
+            "Hit:2 https://snapshot.ubuntu.com/ubuntu/20260723T000000Z/ "
+            "noble-security InRelease\n"
+        )
+        ubuntu_packages.validate_snapshot_update_output(output)
+
+    def test_insecure_logical_repository_is_rejected(self) -> None:
         live_output = VALID_UPDATE_OUTPUT.replace(
-            "https://snapshot.ubuntu.com/ubuntu/20260723T000000Z",
+            "https://archive.ubuntu.com/ubuntu",
             "http://archive.ubuntu.com/ubuntu",
             1,
         )
-        with self.assertRaisesRegex(ubuntu_packages.PolicyError, "non-snapshot"):
+        with self.assertRaisesRegex(ubuntu_packages.PolicyError, "unapproved"):
             ubuntu_packages.validate_snapshot_update_output(live_output)
 
-    def test_mixed_snapshot_and_live_repository_output_is_rejected(self) -> None:
+    def test_mixed_approved_and_insecure_repository_output_is_rejected(self) -> None:
         mixed_output = (
             VALID_UPDATE_OUTPUT
             + "Hit:4 http://security.ubuntu.com/ubuntu noble-security InRelease\n"
         )
-        with self.assertRaisesRegex(ubuntu_packages.PolicyError, "non-snapshot"):
+        with self.assertRaisesRegex(ubuntu_packages.PolicyError, "unapproved"):
             ubuntu_packages.validate_snapshot_update_output(mixed_output)
 
-    def test_no_repository_activity_is_rejected_as_possible_live_fallback(self) -> None:
-        with self.assertRaisesRegex(ubuntu_packages.PolicyError, "no verified snapshot"):
+    def test_no_repository_activity_is_rejected(self) -> None:
+        with self.assertRaisesRegex(ubuntu_packages.PolicyError, "no verified controlled"):
             ubuntu_packages.validate_snapshot_update_output("Reading package lists... Done\n")
 
     def test_snapshot_url_outside_repository_activity_is_not_accepted(self) -> None:
@@ -682,15 +963,120 @@ class SnapshotOutputPolicyTests(unittest.TestCase):
             "Checking https://snapshot.ubuntu.com/ubuntu/20260723T000000Z\n"
             "Reading package lists... Done\n"
         )
-        with self.assertRaisesRegex(ubuntu_packages.PolicyError, "no verified snapshot"):
+        with self.assertRaisesRegex(ubuntu_packages.PolicyError, "no verified controlled"):
             ubuntu_packages.validate_snapshot_update_output(output)
 
-    def test_malformed_snapshot_url_is_rejected_as_non_snapshot(self) -> None:
+    def test_malformed_snapshot_url_is_rejected_as_unapproved(self) -> None:
         output = (
             "Get:1 https://snapshot.ubuntu.com:invalid/ubuntu/20260723T000000Z noble InRelease\n"
         )
-        with self.assertRaisesRegex(ubuntu_packages.PolicyError, "non-snapshot"):
+        with self.assertRaisesRegex(ubuntu_packages.PolicyError, "unapproved"):
             ubuntu_packages.validate_snapshot_update_output(output)
+
+    def test_wrong_snapshot_and_unapproved_https_repository_are_rejected(self) -> None:
+        wrong_snapshot = SNAPSHOT_ENDPOINT_UPDATE_OUTPUT.replace(
+            "20260723T000000Z",
+            "20260722T000000Z",
+        )
+        unapproved = (
+            VALID_UPDATE_OUTPUT
+            + "Hit:5 https://packages.microsoft.com/ubuntu/24.04 noble InRelease\n"
+        )
+        for label, output in (("wrong snapshot", wrong_snapshot), ("unapproved", unapproved)):
+            with self.subTest(label=label), self.assertRaisesRegex(
+                ubuntu_packages.PolicyError,
+                "unapproved",
+            ):
+                ubuntu_packages.validate_snapshot_update_output(output)
+
+    def test_repository_identity_rejects_nonexact_url_variants(self) -> None:
+        rejected = (
+            "http://archive.ubuntu.com/ubuntu",
+            "https://archive.ubuntu.com.evil.example/ubuntu",
+            "https://user@archive.ubuntu.com/ubuntu",
+            "https://archive.ubuntu.com:444/ubuntu",
+            "https://archive.ubuntu.com:/ubuntu",
+            "https://archive.ubuntu.com/ubuntu?snapshot=latest",
+            "https://archive.ubuntu.com/ubuntu#snapshot",
+            "https://security.ubuntu.com/not-ubuntu",
+            "https://archive.ubuntu.com/ubuntu2",
+            "https://archive.ubuntu.com/ubuntu/evil",
+            "https://archive.ubuntu.com/ubuntu/../evil",
+            "https://archive.ubuntu.com/ubuntu/%2e%2e/evil",
+            "https://archive.ubuntu.com/ubuntu.",
+            (
+                "https://snapshot.ubuntu.com/ubuntu/"
+                f"{ubuntu_packages.SNAPSHOT}/../other"
+            ),
+        )
+        for url in rejected:
+            with self.subTest(url=url):
+                self.assertFalse(
+                    ubuntu_packages._repository_output_url_is_allowed(
+                        url,
+                        ubuntu_packages.SNAPSHOT,
+                    )
+                )
+
+        accepted = (
+            "https://archive.ubuntu.com:443/ubuntu",
+            "https://archive.ubuntu.com/ubuntu/",
+            "https://security.ubuntu.com/ubuntu/",
+            f"https://snapshot.ubuntu.com/ubuntu/{ubuntu_packages.SNAPSHOT}/",
+        )
+        for url in accepted:
+            with self.subTest(url=url):
+                self.assertTrue(
+                    ubuntu_packages._repository_output_url_is_allowed(
+                        url,
+                        ubuntu_packages.SNAPSHOT,
+                    )
+                )
+
+    def test_one_activity_line_with_approved_and_foreign_urls_is_rejected(self) -> None:
+        output = (
+            "Get:1 https://archive.ubuntu.com/ubuntu "
+            "https://evil.example/ubuntu noble InRelease\n"
+        )
+        with self.assertRaisesRegex(ubuntu_packages.PolicyError, "secondary URI"):
+            ubuntu_packages.validate_snapshot_update_output(output)
+
+    def test_repository_activity_without_an_approved_primary_url_is_rejected(self) -> None:
+        with self.assertRaisesRegex(ubuntu_packages.PolicyError, "unapproved primary"):
+            ubuntu_packages.validate_snapshot_update_output("Get:1 noble InRelease\n")
+
+    def test_embedded_allowed_url_cannot_hide_an_invalid_primary_token(self) -> None:
+        rejected = (
+            "Get:1 xhttps://archive.ubuntu.com/ubuntu noble InRelease\n",
+            (
+                "Get:1 ftp://evil.example/https://archive.ubuntu.com/ubuntu "
+                "noble InRelease\n"
+            ),
+            "Get:1 file:///https://archive.ubuntu.com/ubuntu noble InRelease\n",
+            (
+                "Get:1 ftp://evil.example/ubuntu "
+                "https://archive.ubuntu.com/ubuntu noble InRelease\n"
+            ),
+            "Get:1 garbage https://archive.ubuntu.com/ubuntu noble InRelease\n",
+        )
+        for output in rejected:
+            with self.subTest(output=output), self.assertRaisesRegex(
+                ubuntu_packages.PolicyError,
+                "unapproved primary",
+            ):
+                ubuntu_packages.validate_snapshot_update_output(output)
+
+    def test_malformed_repository_activity_prefix_is_rejected(self) -> None:
+        for output in (
+            "Get:\n",
+            "Get:1x https://archive.ubuntu.com/ubuntu noble InRelease\n",
+            "Hit https://archive.ubuntu.com/ubuntu noble InRelease\n",
+        ):
+            with self.subTest(output=output), self.assertRaisesRegex(
+                ubuntu_packages.PolicyError,
+                "malformed",
+            ):
+                ubuntu_packages.validate_snapshot_update_output(output)
 
     def test_update_warnings_are_rejected_even_with_zero_exit_status(self) -> None:
         for warning in (
@@ -708,7 +1094,7 @@ class SnapshotOutputPolicyTests(unittest.TestCase):
             with self.subTest(prefix=prefix):
                 output = (
                     VALID_UPDATE_OUTPUT
-                    + f"{prefix} https://snapshot.ubuntu.com/ubuntu/20260723T000000Z "
+                    + f"{prefix} https://security.ubuntu.com/ubuntu "
                     "noble-backports InRelease\n"
                 )
                 with self.assertRaisesRegex(ubuntu_packages.PolicyError, "failed repository"):
@@ -741,17 +1127,23 @@ class CommandAndVerificationTests(unittest.TestCase):
             self.assertEqual(stat.S_IMODE(second_output.stat().st_mode), 0o644)
 
         commands = [command for command, _timeout in runner.calls]
-        self.assertEqual(len(commands), 5)
-        self.assertEqual(commands[0], ["dpkg", "--print-architecture"])
-        self.assertEqual(commands[1][0], "apt-get")
-        self.assertEqual(commands[1][-3:], ["-S", "20260723T000000Z", "update"])
-        expected_names = [name for name, _version in ubuntu_packages.EXPECTED_PACKAGES]
-        self.assertEqual(commands[2][0], "apt-cache")
-        policy_index = commands[2].index("policy")
-        self.assertEqual(commands[2][policy_index + 1 :], expected_names)
-        install_snapshot_index = commands[3].index("-S")
+        self.assertEqual(len(commands), 6)
+        self.assertEqual(commands[0], [ubuntu_packages.DPKG, "--print-architecture"])
+        self.assertEqual(commands[1][0], ubuntu_packages.APT_GET)
+        preflight_index = commands[1].index("--print-uris")
         self.assertEqual(
-            commands[3][install_snapshot_index:],
+            commands[1][preflight_index:],
+            ["--print-uris", "-S", "20260723T000000Z", "update"],
+        )
+        self.assertEqual(commands[2][0], ubuntu_packages.APT_GET)
+        self.assertEqual(commands[2][-3:], ["-S", "20260723T000000Z", "update"])
+        expected_names = [name for name, _version in ubuntu_packages.EXPECTED_PACKAGES]
+        self.assertEqual(commands[3][0], ubuntu_packages.APT_CACHE)
+        policy_index = commands[3].index("policy")
+        self.assertEqual(commands[3][policy_index + 1 :], expected_names)
+        install_snapshot_index = commands[4].index("-S")
+        self.assertEqual(
+            commands[4][install_snapshot_index:],
             [
                 "-S",
                 "20260723T000000Z",
@@ -762,24 +1154,31 @@ class CommandAndVerificationTests(unittest.TestCase):
                 *[f"{name}={version}" for name, version in ubuntu_packages.EXPECTED_PACKAGES],
             ],
         )
-        shared_options = commands[1][1:-3]
-        self.assertEqual(commands[2][1:policy_index], shared_options)
-        self.assertEqual(commands[3][1:install_snapshot_index], shared_options)
-        self.assertEqual(shared_options[::2], ["-o"] * 8)
+        shared_options = commands[2][1:-3]
+        self.assertEqual(commands[1][1:preflight_index], shared_options)
+        self.assertEqual(commands[3][1:policy_index], shared_options)
+        self.assertEqual(commands[4][1:install_snapshot_index], shared_options)
+        self.assertEqual(shared_options[::2], ["-o"] * 26)
         option_values = shared_options[1::2]
         self.assertIn("APT::Snapshot=20260723T000000Z", option_values)
         self.assertIn("Acquire::AllowInsecureRepositories=false", option_values)
+        self.assertIn("Acquire::AllowWeakRepositories=false", option_values)
         self.assertIn("Acquire::AllowDowngradeToInsecureRepositories=false", option_values)
         self.assertIn("APT::Get::AllowUnauthenticated=false", option_values)
+        self.assertIn("Acquire::Check-Date=true", option_values)
+        self.assertIn("Acquire::Check-Valid-Until=true", option_values)
+        self.assertIn("Acquire::https::Verify-Peer=true", option_values)
+        self.assertIn("Acquire::https::Verify-Host=true", option_values)
         self.assertTrue(any(value.startswith("Dir::Etc::sourcelist=") for value in option_values))
         self.assertTrue(any(value.startswith("Dir::Etc::sourceparts=") for value in option_values))
         self.assertTrue(any(value.startswith("Dir::State::lists=") for value in option_values))
+        self.assertTrue(any(value.startswith("Dir::Cache=") for value in option_values))
         self.assertTrue(any(value.startswith("Dir::Cache::archives=") for value in option_values))
         self.assertFalse(any("microsoft" in value.lower() for value in option_values))
         self.assertEqual(
-            commands[4],
+            commands[5],
             [
-                "dpkg-query",
+                ubuntu_packages.DPKG_QUERY,
                 "-W",
                 "-f=${binary:Package}\t${Version}\t${Architecture}\n",
                 *expected_names,
@@ -824,7 +1223,14 @@ class CommandAndVerificationTests(unittest.TestCase):
             )
 
     def test_timeouts_at_every_command_stage_fail_closed_without_evidence(self) -> None:
-        for stage in ("architecture", "update", "candidate", "install", "installed"):
+        for stage in (
+            "architecture",
+            "preflight",
+            "update",
+            "candidate",
+            "install",
+            "installed",
+        ):
             with self.subTest(stage=stage), tempfile.TemporaryDirectory() as tmp:
                 output = Path(tmp) / "evidence.json"
                 with self.assertRaisesRegex(ubuntu_packages.PolicyError, "timed out"):
@@ -898,8 +1304,151 @@ class CommandAndVerificationTests(unittest.TestCase):
                     source_files=VALID_SOURCES,
                     runner=runner,
                 )
-            self.assertEqual(len(runner.calls), 2)
+            self.assertEqual(len(runner.calls), 3)
             self.assertFalse(output.exists())
+
+    def test_unapproved_real_update_url_blocks_candidate_install_and_evidence(self) -> None:
+        runner = FakeRunner(
+            update_output=VALID_UPDATE_OUTPUT.replace(
+                "https://archive.ubuntu.com/ubuntu",
+                "https://mirror.example/ubuntu",
+                1,
+            )
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "evidence.json"
+            with self.assertRaisesRegex(ubuntu_packages.PolicyError, "unapproved"):
+                _install_and_verify(
+                    output,
+                    os_release_text=VALID_OS_RELEASE,
+                    source_files=VALID_SOURCES,
+                    runner=runner,
+                )
+            self.assertEqual(len(runner.calls), 3)
+            self.assertFalse(any("install" in command for command, _ in runner.calls))
+            self.assertFalse(output.exists())
+
+    def test_unapproved_preflight_route_blocks_update_install_and_evidence(self) -> None:
+        bad_output = VALID_PREFLIGHT_OUTPUT.replace(
+            "https://snapshot.ubuntu.com/ubuntu/20260723T000000Z/dists/noble/InRelease",
+            "https://mirror.example/ubuntu/20260723T000000Z/dists/noble/InRelease",
+            1,
+        )
+        runner = FakeRunner(preflight_output=bad_output)
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "evidence.json"
+            with self.assertRaisesRegex(ubuntu_packages.PolicyError, "unapproved"):
+                _install_and_verify(
+                    output,
+                    os_release_text=VALID_OS_RELEASE,
+                    source_files=VALID_SOURCES,
+                    runner=runner,
+                )
+            self.assertEqual(len(runner.calls), 2)
+            self.assertFalse(any("install" in command for command, _ in runner.calls))
+            self.assertFalse(output.exists())
+
+    def test_preflight_nonzero_or_stderr_blocks_update_and_evidence(self) -> None:
+        runners = (
+            FakeRunner(preflight_returncode=100),
+            FakeRunner(preflight_stderr="unexpected apt notice\n"),
+        )
+        for runner in runners:
+            with self.subTest(runner=runner), tempfile.TemporaryDirectory() as tmp:
+                output = Path(tmp) / "evidence.json"
+                with self.assertRaises(ubuntu_packages.PolicyError):
+                    _install_and_verify(
+                        output,
+                        os_release_text=VALID_OS_RELEASE,
+                        source_files=VALID_SOURCES,
+                        runner=runner,
+                    )
+                self.assertEqual(len(runner.calls), 2)
+                self.assertFalse(output.exists())
+
+    def test_preflight_state_or_control_mutation_blocks_update_and_evidence(self) -> None:
+        for mutation in (
+            "state",
+            "source",
+            "keyring",
+            "cache_mode",
+            "sourceparts_symlink",
+        ):
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as tmp:
+                fake = FakeRunner()
+
+                def mutating_runner(
+                    command: Sequence[str], timeout_seconds: int
+                ) -> subprocess.CompletedProcess[str]:
+                    result = fake(command, timeout_seconds)
+                    command_list = list(command)
+                    if "--print-uris" not in command_list:
+                        return result
+                    option_values = command_list[2::2]
+                    if mutation == "state":
+                        lists_value = next(
+                            value
+                            for value in option_values
+                            if value.startswith("Dir::State::lists=")
+                        )
+                        (Path(lists_value.split("=", 1)[1]) / "unexpected").write_text(
+                            "mutation\n",
+                            encoding="utf-8",
+                        )
+                    elif mutation == "source":
+                        source_value = next(
+                            value
+                            for value in option_values
+                            if value.startswith("Dir::Etc::sourcelist=")
+                        )
+                        Path(source_value.split("=", 1)[1]).write_text(
+                            "Types: deb\n",
+                            encoding="utf-8",
+                        )
+                    elif mutation == "keyring":
+                        source_value = next(
+                            value
+                            for value in option_values
+                            if value.startswith("Dir::Etc::sourcelist=")
+                        )
+                        keyring = (
+                            Path(source_value.split("=", 1)[1]).parent
+                            / "ubuntu-archive-keyring.gpg"
+                        )
+                        keyring.chmod(0o777)
+                    elif mutation == "cache_mode":
+                        cache_value = next(
+                            value
+                            for value in option_values
+                            if value.startswith("Dir::Cache=")
+                        )
+                        Path(cache_value.split("=", 1)[1]).chmod(0o777)
+                    else:
+                        parts_value = next(
+                            value
+                            for value in option_values
+                            if value.startswith("Dir::Etc::sourceparts=")
+                        )
+                        sourceparts = Path(parts_value.split("=", 1)[1])
+                        replacement = sourceparts.parent / "replacement-empty"
+                        replacement.mkdir()
+                        sourceparts.rmdir()
+                        sourceparts.symlink_to(replacement, target_is_directory=True)
+                    return result
+
+                output = Path(tmp) / "evidence.json"
+                with self.assertRaisesRegex(
+                    ubuntu_packages.PolicyError,
+                    "changed controlled metadata|wrong type|mutated isolated state|source drifted|keyring metadata drifted",
+                ):
+                    _install_and_verify(
+                        output,
+                        os_release_text=VALID_OS_RELEASE,
+                        source_files=VALID_SOURCES,
+                        runner=mutating_runner,
+                    )
+                self.assertEqual(len(fake.calls), 2)
+                self.assertFalse(output.exists())
 
     def test_cli_requires_explicit_install_flag_and_output_path(self) -> None:
         parser = ubuntu_packages._build_parser()

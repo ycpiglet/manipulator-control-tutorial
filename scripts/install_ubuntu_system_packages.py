@@ -35,6 +35,10 @@ APT_ARCHIVE_KEYRING_VERSION = "2023.11.28.1"
 APT_ARCHIVE_KEYRING_SIZE = 3607
 APT_ARCHIVE_KEYRING_SHA256 = "80a36b0a6de2f69f49d2df75ef473ccde121e9e190b9ea01d20a4f63778d5c31"
 VALIDATION_ROOT = ROOT / "build" / "validation"
+DPKG = "/usr/bin/dpkg"
+DPKG_QUERY = "/usr/bin/dpkg-query"
+APT_GET = "/usr/bin/apt-get"
+APT_CACHE = "/usr/bin/apt-cache"
 
 SCHEMA_VERSION = 1
 SNAPSHOT = "20260723T000000Z"
@@ -107,10 +111,25 @@ _VERSION_RE = re.compile(r"^[!-~]+$")
 _SNAPSHOT_OVERRIDE_FIELD_RE = re.compile(r"^\s*snapshot\s*:", re.IGNORECASE)
 _SNAPSHOT_OVERRIDE_OPTION_RE = re.compile(r"(?:^|\s)snapshot\s*=", re.IGNORECASE)
 _SOURCE_LINE_RE = re.compile(r"^\s*deb(?:-src)?(?:\s|$)", re.IGNORECASE)
-_REPOSITORY_LINE_RE = re.compile(r"^\s*(Hit|Get|Ign|Err):\d*\s*", re.IGNORECASE)
+_REPOSITORY_ACTIVITY_RE = re.compile(
+    r"^\s*(?P<kind>Hit|Get|Ign|Err):(?P<index>\d+)\s+"
+    r"(?P<uri>\S+)(?P<remainder>(?:\s+.*)?)$",
+    re.IGNORECASE,
+)
+_REPOSITORY_ACTIVITY_PREFIX_RE = re.compile(
+    r"^\s*(?:Hit|Get|Ign|Err)(?=:|\s|$)",
+    re.IGNORECASE,
+)
 _URL_RE = re.compile(r"https?://[^\s'\"<>]+", re.IGNORECASE)
 _DIAGNOSTIC_RE = re.compile(r"^\s*(?:W:|Warning:|E:|Error:)", re.IGNORECASE)
+_PRINT_URI_LINE_RE = re.compile(
+    r"^'(?P<uri>[^'\\\x00-\x20]+)' "
+    r"(?P<destination>[A-Za-z0-9][A-Za-z0-9+._:@-]*) 0[ \t]*$"
+)
+_APT_URI_SEGMENT_RE = re.compile(r"^[A-Za-z0-9+._:@~-]+$")
 _MAX_CONTROL_FILE_BYTES = 1_048_576
+_MAX_PREFLIGHT_OUTPUT_BYTES = 1_048_576
+_MAX_PREFLIGHT_RECORDS = 4096
 
 ARCH_TIMEOUT_SECONDS = 15
 QUERY_TIMEOUT_SECONDS = 60
@@ -367,6 +386,64 @@ def _render_controlled_apt_sources(archive_keyring: Path) -> str:
     )
 
 
+def _render_controlled_apt_config(root: Path) -> str:
+    """Render the early-loaded APT configuration for the isolated root."""
+
+    paths = {
+        "Dir::Etc::sourcelist": root / "mclab-ubuntu.sources",
+        "Dir::Etc::sourceparts": root / "sourceparts",
+        "Dir::Etc::main": root / "apt.conf",
+        "Dir::Etc::parts": root / "apt.conf.d",
+        "Dir::Etc::preferences": root / "preferences",
+        "Dir::Etc::preferencesparts": root / "preferences.d",
+        "Dir::Etc::trusted": root / "ubuntu-archive-keyring.gpg",
+        "Dir::Etc::trustedparts": root / "trusted.gpg.d",
+        "Dir::Etc::netrc": root / "auth.conf",
+        "Dir::Etc::netrcparts": root / "auth.conf.d",
+        "Dir::State::lists": root / "lists",
+        "Dir::Cache": root / "cache",
+        "Dir::Cache::archives": root / "archives",
+    }
+    rendered: dict[str, str] = {}
+    for key, path in paths.items():
+        value = path.as_posix()
+        if not path.is_absolute() or re.fullmatch(r"/[A-Za-z0-9._/-]+", value) is None:
+            raise PolicyError(f"isolated APT configuration path is unsafe: {key}")
+        rendered[key] = value
+
+    path_lines = "\n".join(f'{key} "{value}";' for key, value in rendered.items())
+    return f"""\
+{path_lines}
+APT::Snapshot "{SNAPSHOT}";
+APT::Get::AllowUnauthenticated "false";
+APT::Install-Recommends "false";
+APT::Install-Suggests "false";
+Acquire::AllowInsecureRepositories "false";
+Acquire::AllowWeakRepositories "false";
+Acquire::AllowDowngradeToInsecureRepositories "false";
+Acquire::Check-Date "true";
+Acquire::Check-Valid-Until "true";
+Acquire::Retries "0";
+Acquire::Languages "none";
+Acquire::http::Proxy "false";
+Acquire::https::Proxy "false";
+Acquire::http::AllowRedirect "false";
+Acquire::https::AllowRedirect "false";
+Acquire::https::Verify-Peer "true";
+Acquire::https::Verify-Host "true";
+Acquire::Snapshots::URI::Origin::Ubuntu "https://snapshot.ubuntu.com/ubuntu/@SNAPSHOTID@/";
+Acquire::Snapshots::URI::Host::archive.ubuntu.com "https://snapshot.ubuntu.com/@PATH@/@SNAPSHOTID@/";
+Acquire::Snapshots::URI::Host::security.ubuntu.com "https://snapshot.ubuntu.com/@PATH@/@SNAPSHOTID@/";
+#clear APT::Update::Pre-Invoke;
+#clear APT::Update::Post-Invoke;
+#clear APT::Update::Post-Invoke-Success;
+#clear DPkg::Pre-Invoke;
+#clear DPkg::Pre-Install-Pkgs;
+#clear DPkg::Post-Invoke;
+#clear DPkg::Post-Invoke-Success;
+"""
+
+
 def _read_verified_archive_keyring(
     spec: ArchiveKeyringSpec,
     *,
@@ -522,13 +599,31 @@ def _prepare_isolated_apt_environment(
 
     source_file = root / "mclab-ubuntu.sources"
     source_parts = root / "sourceparts"
+    apt_config = root / "apt.conf"
+    apt_config_parts = root / "apt.conf.d"
+    preferences = root / "preferences"
+    preferences_parts = root / "preferences.d"
+    trusted_parts = root / "trusted.gpg.d"
+    auth = root / "auth.conf"
+    auth_parts = root / "auth.conf.d"
     lists = root / "lists"
+    cache = root / "cache"
     archives = root / "archives"
     try:
         os.chmod(root, 0o755)
         trusted_keyring = _write_trusted_archive_keyring(root, verified_archive_keyring)
         controlled_sources = _render_controlled_apt_sources(trusted_keyring)
-        for directory in (source_parts, lists, archives):
+        controlled_config = _render_controlled_apt_config(root)
+        for directory in (
+            source_parts,
+            apt_config_parts,
+            preferences_parts,
+            trusted_parts,
+            auth_parts,
+            lists,
+            cache,
+            archives,
+        ):
             directory.mkdir(mode=0o755)
         partial_directories = (lists / "partial", archives / "partial")
         for directory in partial_directories:
@@ -544,6 +639,12 @@ def _prepare_isolated_apt_environment(
                 os.chown(directory, apt_user.pw_uid, apt_user.pw_gid)
         source_file.write_text(controlled_sources, encoding="utf-8", newline="\n")
         source_file.chmod(0o644)
+        apt_config.write_text(controlled_config, encoding="utf-8", newline="\n")
+        apt_config.chmod(0o644)
+        for empty_file in (preferences, auth):
+            empty_file.write_bytes(b"")
+        preferences.chmod(0o644)
+        auth.chmod(0o600)
     except OSError as exc:
         raise PolicyError(f"cannot prepare isolated APT state below {root}: {exc}") from exc
 
@@ -554,7 +655,25 @@ def _prepare_isolated_apt_environment(
         "-o",
         f"Dir::Etc::sourceparts={source_parts}",
         "-o",
+        f"Dir::Etc::main={apt_config}",
+        "-o",
+        f"Dir::Etc::parts={apt_config_parts}",
+        "-o",
+        f"Dir::Etc::preferences={preferences}",
+        "-o",
+        f"Dir::Etc::preferencesparts={preferences_parts}",
+        "-o",
+        f"Dir::Etc::trusted={trusted_keyring}",
+        "-o",
+        f"Dir::Etc::trustedparts={trusted_parts}",
+        "-o",
+        f"Dir::Etc::netrc={auth}",
+        "-o",
+        f"Dir::Etc::netrcparts={auth_parts}",
+        "-o",
         f"Dir::State::lists={lists}",
+        "-o",
+        f"Dir::Cache={cache}",
         "-o",
         f"Dir::Cache::archives={archives}/",
         "-o",
@@ -562,54 +681,381 @@ def _prepare_isolated_apt_environment(
         "-o",
         "Acquire::AllowInsecureRepositories=false",
         "-o",
+        "Acquire::AllowWeakRepositories=false",
+        "-o",
         "Acquire::AllowDowngradeToInsecureRepositories=false",
         "-o",
         "APT::Get::AllowUnauthenticated=false",
+        "-o",
+        "Acquire::Check-Date=true",
+        "-o",
+        "Acquire::Check-Valid-Until=true",
+        "-o",
+        "Acquire::http::Proxy=false",
+        "-o",
+        "Acquire::https::Proxy=false",
+        "-o",
+        "Acquire::http::AllowRedirect=false",
+        "-o",
+        "Acquire::https::AllowRedirect=false",
+        "-o",
+        "Acquire::https::Verify-Peer=true",
+        "-o",
+        "Acquire::https::Verify-Host=true",
     ]
 
 
-def _snapshot_url_is_allowed(url: str, snapshot: str) -> bool:
-    cleaned = url.rstrip(".,);]")
+_LOGICAL_UBUNTU_REPOSITORIES = {
+    "archive.ubuntu.com": "/ubuntu",
+    "security.ubuntu.com": "/ubuntu",
+}
+_CONTROLLED_SUITE_REPOSITORIES = {
+    "noble": "archive.ubuntu.com",
+    "noble-updates": "archive.ubuntu.com",
+    "noble-backports": "archive.ubuntu.com",
+    "noble-security": "security.ubuntu.com",
+}
+
+
+def _strict_https_url_parts(url: str) -> tuple[str, str] | None:
+    """Return an exact HTTPS host/path pair without ambiguous URL features."""
+
     try:
-        parsed = urlsplit(cleaned)
+        parsed = urlsplit(url)
         port = parsed.port
     except ValueError:
-        return False
-    if parsed.scheme.lower() != "https" or parsed.hostname != "snapshot.ubuntu.com":
-        return False
+        return None
+    hostname = parsed.hostname
+    if parsed.scheme.lower() != "https" or hostname is None:
+        return None
     if parsed.username or parsed.password or port not in (None, 443):
-        return False
+        return None
+    expected_netloc = hostname if port is None else f"{hostname}:{port}"
+    if parsed.netloc.lower() != expected_netloc:
+        return None
     if parsed.query or parsed.fragment:
+        return None
+    return hostname, parsed.path
+
+
+def _repository_output_url_is_allowed(url: str, snapshot: str) -> bool:
+    parsed = _strict_https_url_parts(url)
+    if parsed is None:
         return False
-    prefix = f"/ubuntu/{snapshot}"
-    return parsed.path == prefix or parsed.path.startswith(f"{prefix}/")
+    hostname, path = parsed
+    if hostname == "snapshot.ubuntu.com":
+        prefix = f"/ubuntu/{snapshot}"
+        return path in {prefix, f"{prefix}/"}
+    logical_prefix = _LOGICAL_UBUNTU_REPOSITORIES.get(hostname)
+    return logical_prefix is not None and path in {
+        logical_prefix,
+        f"{logical_prefix}/",
+    }
+
+
+def _snapshot_preflight_route(
+    url: str,
+    snapshot: str,
+) -> tuple[str, str, tuple[str, ...]] | None:
+    """Classify one strictly normalized APT print-URIs route."""
+
+    parsed = _strict_https_url_parts(url)
+    if parsed is None:
+        return None
+    hostname, path = parsed
+    if "%" in path or "\\" in path or not path.startswith("/"):
+        return None
+    path_parts = path.split("/")
+    if any(
+        not part or part in {".", ".."} or not _APT_URI_SEGMENT_RE.fullmatch(part)
+        for part in path_parts[1:]
+    ):
+        return None
+
+    if hostname == "snapshot.ubuntu.com":
+        if len(path_parts) < 6 or path_parts[1:4] != ["ubuntu", snapshot, "dists"]:
+            return None
+        route = "snapshot"
+        suite = path_parts[4]
+        resource = tuple(path_parts[5:])
+    elif hostname in _LOGICAL_UBUNTU_REPOSITORIES:
+        if len(path_parts) < 5 or path_parts[1:3] != ["ubuntu", "dists"]:
+            return None
+        route = "logical"
+        suite = path_parts[3]
+        resource = tuple(path_parts[4:])
+        if _CONTROLLED_SUITE_REPOSITORIES.get(suite) != hostname:
+            return None
+    else:
+        return None
+
+    if suite not in _CONTROLLED_SUITE_REPOSITORIES or not resource:
+        return None
+    return route, suite, resource
+
+
+def validate_snapshot_preflight_output(
+    output: str,
+    snapshot: str = SNAPSHOT,
+) -> None:
+    """Verify APT planned every controlled suite through the exact snapshot."""
+
+    if len(output.encode("utf-8")) > _MAX_PREFLIGHT_OUTPUT_BYTES:
+        raise PolicyError("APT snapshot routing preflight output exceeds the safety limit")
+
+    expected_suites = set(_CONTROLLED_SUITE_REPOSITORIES)
+    snapshot_inrelease: set[str] = set()
+    logical_inrelease: set[str] = set()
+    seen_uris: set[str] = set()
+    seen_destinations: set[str] = set()
+    seen_routes: set[tuple[str, str, tuple[str, ...]]] = set()
+    snapshot_routes: set[tuple[str, tuple[str, ...]]] = set()
+    logical_routes: set[tuple[str, tuple[str, ...]]] = set()
+    lines = output.splitlines()
+    if len(lines) > _MAX_PREFLIGHT_RECORDS:
+        raise PolicyError("APT snapshot routing preflight emitted too many records")
+
+    for line in lines:
+        match = _PRINT_URI_LINE_RE.fullmatch(line)
+        if match is None:
+            raise PolicyError(f"malformed APT snapshot routing record: {line!r}")
+        url = match.group("uri")
+        if url in seen_uris:
+            raise PolicyError(f"duplicate APT snapshot routing URI: {url}")
+        seen_uris.add(url)
+        destination = match.group("destination")
+        if destination in seen_destinations:
+            raise PolicyError(
+                f"duplicate APT snapshot routing destination: {destination}"
+            )
+        seen_destinations.add(destination)
+
+        route = _snapshot_preflight_route(url, snapshot)
+        if route is None:
+            raise PolicyError(f"APT snapshot routing used an unapproved URI: {url}")
+        if route in seen_routes:
+            raise PolicyError(f"duplicate normalized APT snapshot routing URI: {url}")
+        seen_routes.add(route)
+        route_kind, suite, resource = route
+        normalized_route = (suite, resource)
+        if route_kind == "snapshot":
+            snapshot_routes.add(normalized_route)
+        else:
+            logical_routes.add(normalized_route)
+        if resource == ("InRelease",):
+            if route_kind == "snapshot":
+                snapshot_inrelease.add(suite)
+            else:
+                logical_inrelease.add(suite)
+
+    if snapshot_inrelease != expected_suites:
+        missing = sorted(expected_suites - snapshot_inrelease)
+        extra = sorted(snapshot_inrelease - expected_suites)
+        raise PolicyError(
+            "APT snapshot routing did not prove every physical InRelease; "
+            f"missing={missing}, extra={extra}"
+        )
+    if logical_inrelease != expected_suites:
+        missing = sorted(expected_suites - logical_inrelease)
+        extra = sorted(logical_inrelease - expected_suites)
+        raise PolicyError(
+            "APT snapshot routing did not expose every controlled logical InRelease; "
+            f"missing={missing}, extra={extra}"
+        )
+    if snapshot_routes != logical_routes:
+        missing_snapshot = sorted(logical_routes - snapshot_routes)
+        missing_logical = sorted(snapshot_routes - logical_routes)
+        raise PolicyError(
+            "APT snapshot routing physical/logical target parity failed; "
+            f"missing_snapshot={missing_snapshot}, missing_logical={missing_logical}"
+        )
+
+
+_PREFLIGHT_CONTROL_FILES = (
+    "apt.conf",
+    "auth.conf",
+    "mclab-ubuntu.sources",
+    "preferences",
+    "ubuntu-archive-keyring.gpg",
+)
+_PREFLIGHT_CONTROL_DIRECTORIES = (
+    ".",
+    "apt.conf.d",
+    "auth.conf.d",
+    "archives",
+    "archives/partial",
+    "cache",
+    "lists",
+    "lists/partial",
+    "preferences.d",
+    "sourceparts",
+    "trusted.gpg.d",
+)
+
+
+def _capture_preflight_filesystem_state(root: Path) -> dict[str, tuple[int, ...]]:
+    """Capture stable identity and metadata for every isolated APT control path."""
+
+    captured: dict[str, tuple[int, ...]] = {}
+    expected_types = {
+        **{relative: stat.S_ISREG for relative in _PREFLIGHT_CONTROL_FILES},
+        **{relative: stat.S_ISDIR for relative in _PREFLIGHT_CONTROL_DIRECTORIES},
+    }
+    for relative, expected_type in expected_types.items():
+        path = root if relative == "." else root / relative
+        try:
+            metadata = path.lstat()
+        except OSError as exc:
+            raise PolicyError(
+                f"cannot inspect isolated APT preflight path {relative}: {exc}"
+            ) from exc
+        if not expected_type(metadata.st_mode):
+            raise PolicyError(f"isolated APT preflight path has wrong type: {relative}")
+        captured[relative] = (
+            metadata.st_dev,
+            metadata.st_ino,
+            metadata.st_mode,
+            metadata.st_uid,
+            metadata.st_gid,
+            metadata.st_size,
+            metadata.st_mtime_ns,
+            metadata.st_ctime_ns,
+        )
+    return captured
+
+
+def _assert_preflight_left_apt_state_empty(
+    root: Path,
+    baseline: Mapping[str, tuple[int, ...]],
+) -> None:
+    """Fail if the no-fetch preflight changed isolated APT filesystem state."""
+
+    observed = _capture_preflight_filesystem_state(root)
+    if observed != baseline:
+        changed = sorted(
+            relative
+            for relative in set(baseline) | set(observed)
+            if baseline.get(relative) != observed.get(relative)
+        )
+        raise PolicyError(
+            f"APT snapshot routing preflight changed controlled metadata: {changed}"
+        )
+
+    expected_entries = {
+        root: {
+            *_PREFLIGHT_CONTROL_FILES,
+            *(
+                relative
+                for relative in _PREFLIGHT_CONTROL_DIRECTORIES
+                if "/" not in relative and relative != "."
+            ),
+        },
+        root / "lists": {"partial"},
+        root / "archives": {"partial"},
+        root / "cache": set(),
+        root / "sourceparts": set(),
+        root / "apt.conf.d": set(),
+        root / "preferences.d": set(),
+        root / "trusted.gpg.d": set(),
+        root / "auth.conf.d": set(),
+        root / "lists" / "partial": set(),
+        root / "archives" / "partial": set(),
+    }
+    for directory, expected in expected_entries.items():
+        try:
+            actual = {entry.name for entry in directory.iterdir()}
+        except OSError as exc:
+            raise PolicyError(f"cannot inspect isolated APT preflight state: {exc}") from exc
+        if actual != expected:
+            raise PolicyError(
+                "APT snapshot routing preflight mutated isolated state; "
+                f"directory={directory.name}, expected={sorted(expected)}, "
+                f"observed={sorted(actual)}"
+            )
+
+
+def _validate_preflight_control_files(
+    root: Path,
+    verified_archive_keyring: VerifiedArchiveKeyring,
+) -> None:
+    """Revalidate the exact source and keyring after the routing preflight."""
+
+    trusted_keyring = root / "ubuntu-archive-keyring.gpg"
+    source_file = root / "mclab-ubuntu.sources"
+    expected_sources = _render_controlled_apt_sources(trusted_keyring)
+    actual_sources = _read_control_file(source_file, reject_symlink=True)
+    try:
+        source_metadata = source_file.lstat()
+        keyring_metadata = trusted_keyring.lstat()
+    except OSError as exc:
+        raise PolicyError(f"cannot inspect isolated APT controls after preflight: {exc}") from exc
+    if (
+        not stat.S_ISREG(source_metadata.st_mode)
+        or stat.S_IMODE(source_metadata.st_mode) != 0o644
+        or source_metadata.st_uid != os.geteuid()
+        or source_metadata.st_gid != os.getegid()
+        or actual_sources != expected_sources
+    ):
+        raise PolicyError("isolated APT source drifted during snapshot routing preflight")
+    if (
+        not stat.S_ISREG(keyring_metadata.st_mode)
+        or stat.S_IMODE(keyring_metadata.st_mode) != 0o644
+        or keyring_metadata.st_uid != os.geteuid()
+        or keyring_metadata.st_gid != os.getegid()
+    ):
+        raise PolicyError("isolated Ubuntu archive keyring metadata drifted during preflight")
+
+    observed_keyring = _read_verified_archive_keyring(
+        verified_archive_keyring.spec,
+        path_override=trusted_keyring,
+    )
+    if observed_keyring != verified_archive_keyring:
+        raise PolicyError("isolated Ubuntu archive keyring drifted during routing preflight")
 
 
 def validate_snapshot_update_output(output: str, snapshot: str = SNAPSHOT) -> None:
-    """Require warning-free repository activity exclusively from the chosen snapshot."""
+    """Require warning-free activity from only the controlled snapshot sources.
 
-    saw_snapshot_repository = False
+    APT reports the configured logical archive URI even when an explicit Deb822
+    ``Snapshot`` field selects a timestamped backend.  The separate print-URIs
+    preflight validates the planned physical routes; this output check rejects
+    every repository identity outside those logical endpoints or the exact
+    snapshot endpoint.
+    """
+
+    saw_controlled_repository = False
     for line in output.splitlines():
         if _DIAGNOSTIC_RE.match(line):
             raise PolicyError(f"APT update emitted a warning or error: {line.strip()}")
-        repository_match = _REPOSITORY_LINE_RE.match(line)
-        if repository_match and repository_match.group(1).lower() in {"ign", "err"}:
-            raise PolicyError(f"APT update emitted failed repository activity: {line.strip()}")
+        repository_match = _REPOSITORY_ACTIVITY_RE.fullmatch(line)
+        if _REPOSITORY_ACTIVITY_PREFIX_RE.match(line) and repository_match is None:
+            raise PolicyError(f"malformed APT repository activity: {line.strip()}")
+        if repository_match:
+            activity = repository_match.group("kind").lower()
+            primary_url = repository_match.group("uri")
+            if activity in {"ign", "err"}:
+                raise PolicyError(
+                    f"APT update emitted failed repository activity: {line.strip()}"
+                )
+            if not _repository_output_url_is_allowed(primary_url, snapshot):
+                raise PolicyError(
+                    f"APT update used an unapproved primary repository URL: {primary_url}"
+                )
+            if "://" in repository_match.group("remainder"):
+                raise PolicyError(
+                    f"APT repository activity contained an unexpected secondary URI: {line.strip()}"
+                )
 
         urls = _URL_RE.findall(line)
         for url in urls:
-            if not _snapshot_url_is_allowed(url, snapshot):
-                raise PolicyError(f"APT update used a non-snapshot repository URL: {url}")
+            if not _repository_output_url_is_allowed(url, snapshot):
+                raise PolicyError(f"APT update used an unapproved repository URL: {url}")
 
-        if repository_match and repository_match.group(1).lower() in {"hit", "get"}:
-            if not urls:
-                raise PolicyError(
-                    f"APT repository activity did not expose a verifiable URL: {line.strip()}"
-                )
-            saw_snapshot_repository = True
+        if repository_match:
+            saw_controlled_repository = True
 
-    if not saw_snapshot_repository:
-        raise PolicyError("APT update output contains no verified snapshot repository activity")
+    if not saw_controlled_repository:
+        raise PolicyError("APT update output contains no verified controlled repository activity")
 
 
 def _normalize_binary_package(name: str) -> str:
@@ -690,15 +1136,38 @@ def validate_installed_versions(
     return installed
 
 
+def _controlled_apt_config_path(command: Sequence[str]) -> Path | None:
+    executable = command[0] if command else ""
+    if executable not in {APT_GET, APT_CACHE}:
+        return None
+    values = [
+        command[index + 1]
+        for index, argument in enumerate(command[:-1])
+        if argument == "-o"
+    ]
+    matches = [
+        value.split("=", 1)[1]
+        for value in values
+        if value.startswith("Dir::Etc::main=")
+    ]
+    if len(matches) != 1:
+        raise OSError("controlled APT command requires exactly one Dir::Etc::main option")
+    config_path = Path(matches[0])
+    if not config_path.is_absolute():
+        raise OSError("controlled APT_CONFIG path must be absolute")
+    return config_path
+
+
 def _run_command(command: Sequence[str], timeout_seconds: int) -> subprocess.CompletedProcess[str]:
-    environment = os.environ.copy()
-    environment.update(
-        {
-            "APT_LISTCHANGES_FRONTEND": "none",
-            "DEBIAN_FRONTEND": "noninteractive",
-            "LC_ALL": "C",
-        }
-    )
+    environment = {
+        "APT_LISTCHANGES_FRONTEND": "none",
+        "DEBIAN_FRONTEND": "noninteractive",
+        "LC_ALL": "C",
+        "PATH": "/usr/sbin:/usr/bin:/sbin:/bin",
+    }
+    apt_config = _controlled_apt_config_path(command)
+    if apt_config is not None:
+        environment["APT_CONFIG"] = apt_config.as_posix()
     return subprocess.run(
         list(command),
         capture_output=True,
@@ -1004,12 +1473,13 @@ def install_and_verify(
     )
 
     with tempfile.TemporaryDirectory(prefix="mclab-apt-") as temporary:
+        apt_root = Path(temporary)
         apt_options = _prepare_isolated_apt_environment(
-            Path(temporary),
+            apt_root,
             verified_archive_keyring=verified_archive_keyring,
         )
 
-        architecture_command = ["dpkg", "--print-architecture"]
+        architecture_command = [DPKG, "--print-architecture"]
         architecture_result = _invoke(runner, architecture_command, ARCH_TIMEOUT_SECONDS)
         _require_success(architecture_result, architecture_command)
         _require_no_diagnostics(
@@ -1024,8 +1494,28 @@ def install_and_verify(
                 f"observed={architecture_lines if architecture_lines else '(empty)'}"
             )
 
+        preflight_filesystem_state = _capture_preflight_filesystem_state(apt_root)
+        preflight_command = [
+            APT_GET,
+            *apt_options,
+            "--print-uris",
+            "-S",
+            manifest.snapshot,
+            "update",
+        ]
+        preflight_result = _invoke(runner, preflight_command, QUERY_TIMEOUT_SECONDS)
+        _require_success(preflight_result, preflight_command)
+        if preflight_result.stderr.strip():
+            raise PolicyError(
+                "APT snapshot routing preflight emitted unexpected stderr: "
+                f"{preflight_result.stderr.strip()[-1000:]!r}"
+            )
+        validate_snapshot_preflight_output(preflight_result.stdout, manifest.snapshot)
+        _assert_preflight_left_apt_state_empty(apt_root, preflight_filesystem_state)
+        _validate_preflight_control_files(apt_root, verified_archive_keyring)
+
         update_command = [
-            "apt-get",
+            APT_GET,
             *apt_options,
             "-S",
             manifest.snapshot,
@@ -1037,7 +1527,7 @@ def install_and_verify(
         _require_success(update_result, update_command)
 
         package_names = [name for name, _version in manifest.packages]
-        candidate_command = ["apt-cache", *apt_options, "policy", *package_names]
+        candidate_command = [APT_CACHE, *apt_options, "policy", *package_names]
         candidate_result = _invoke(runner, candidate_command, QUERY_TIMEOUT_SECONDS)
         _require_success(candidate_result, candidate_command)
         candidate_output = _combined_output(candidate_result)
@@ -1046,7 +1536,7 @@ def install_and_verify(
 
         requested_packages = [f"{name}={version}" for name, version in manifest.packages]
         install_command = [
-            "apt-get",
+            APT_GET,
             *apt_options,
             "-S",
             manifest.snapshot,
@@ -1061,7 +1551,7 @@ def install_and_verify(
         _require_no_diagnostics(_combined_output(install_result), "apt-get install")
 
         installed_command = [
-            "dpkg-query",
+            DPKG_QUERY,
             "-W",
             "-f=${binary:Package}\t${Version}\t${Architecture}\n",
             *package_names,

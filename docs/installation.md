@@ -45,12 +45,16 @@ The Linux desktop workflow installs its 22 direct Qt/XCB system packages from
 the committed Ubuntu 24.04 AMD64 manifest at
 `requirements/system/ubuntu-24.04-amd64.json`. The installer requires the
 `20260723T000000Z` Ubuntu snapshot, exact candidate and installed versions,
-warning-free snapshot-only repository output, and a verified evidence file.
-It uses a temporary official-Ubuntu-only Deb822 source file plus isolated
-package-list and archive state, so hosted-runner Microsoft, Docker, mirror, or
-cached indexes cannot enter candidate selection. Conflicting or disabling
-per-repository snapshot settings, snapshot-ID mismatch, mixed/live repository
-URLs, insecure or unauthenticated fallback, timeouts, and version or
+warning-free controlled repository output, and a verified evidence file.
+It uses a temporary official-Ubuntu-only Deb822 source file plus isolated APT
+configuration, source parts, preferences, authentication, trust, package-list,
+cache, and archive state. Host hooks and proxy variables are excluded, APT and
+dpkg use absolute system paths, and TLS peer/host, repository-strength, and
+metadata-date checks are explicitly enabled. Hosted-runner Microsoft, Docker,
+mirror, preference, hook, or cached-index configuration therefore cannot enter
+candidate selection. Conflicting or disabling
+per-repository snapshot settings, snapshot-ID mismatch, unapproved repository
+identities, insecure or unauthenticated fallback, timeouts, and version or
 architecture drift fail closed. The Ubuntu archive keyring is pinned to the
 official Noble `ubuntu-keyring==2023.11.28.1` payload (3,607 bytes, SHA-256
 `80a36b0a6de2f69f49d2df75ef473ccde121e9e190b9ea01d20a4f63778d5c31`). The
@@ -63,6 +67,19 @@ than the temporary copy path. This relies on the Ubuntu image's root-owned
 `/usr/share/keyrings` parent and excludes a concurrent hostile root process. This
 controls the direct package set and repository point in time; it is not a frozen
 base image or a complete native transitive-library inventory.
+
+APT's update status reports the configured logical Ubuntu archive URLs even
+when the Deb822 `Snapshot` field selects the timestamped backend. The installer
+therefore accepts status URLs only from those two exact HTTPS Ubuntu endpoints
+or the exact timestamped snapshot endpoint. Before any fetch, it runs APT's
+`--print-uris` planner against the same isolated state and validates the planned
+timestamped physical `InRelease` route for all four controlled suites, exact
+physical/logical target parity, and strict record syntax. It also requires the
+preflight to leave no detected metadata or content change in the isolated
+state. The explicit Deb822 `Snapshot` value is the binding selection; `-S` and
+`APT::Snapshot` are two spellings of the same redundant command-level guard.
+The subsequent real update validates reachability, system-CA TLS, Ubuntu-keyring
+signatures, candidates, and versions; the preflight is not network attestation.
 
 `assets install` downloads the pinned MuJoCo Menagerie commit, verifies the
 archive SHA-256, extracts only the tracked `franka_emika_panda` runtime files,
