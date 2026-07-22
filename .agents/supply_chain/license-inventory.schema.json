@@ -1118,6 +1118,12 @@
     "sources": {
       "additionalProperties": false,
       "properties": {
+        "app_dev_lock": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "app_lock": {
+          "$ref": "#/$defs/sourceRecord"
+        },
         "build_lock": {
           "$ref": "#/$defs/sourceRecord"
         },
@@ -1125,6 +1131,9 @@
           "$ref": "#/$defs/sourceRecord"
         },
         "checker": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "dev_lock": {
           "$ref": "#/$defs/sourceRecord"
         },
         "evidence_schema": {
@@ -1157,6 +1166,9 @@
         "project_license": {
           "$ref": "#/$defs/sourceRecord"
         },
+        "runtime_lock": {
+          "$ref": "#/$defs/sourceRecord"
+        },
         "registry_schema": {
           "$ref": "#/$defs/sourceRecord"
         },
@@ -1177,12 +1189,18 @@
         },
         "ubuntu_manifest": {
           "$ref": "#/$defs/sourceRecord"
+        },
+        "uv_tool_lock": {
+          "$ref": "#/$defs/sourceRecord"
         }
       },
       "required": [
+        "app_dev_lock",
+        "app_lock",
         "build_lock",
         "build_source",
         "checker",
+        "dev_lock",
         "evidence_schema",
         "font_license",
         "font_noto_sans_kr",
@@ -1193,13 +1211,15 @@
         "panda_manifest",
         "project",
         "project_license",
+        "runtime_lock",
         "registry_schema",
         "sbom_generator",
         "scanner",
         "supply_chain_tool_lock",
         "supply_chain_tool_source",
         "ubuntu_installer",
-        "ubuntu_manifest"
+        "ubuntu_manifest",
+        "uv_tool_lock"
       ],
       "type": "object"
     },

@@ -179,10 +179,12 @@ package set was fully recorded, while `compliance_status` remains
 gate can pass. These records are not legal advice, a complete notice bundle,
 or approval to distribute Qt/PySide or any other component.
 Hosted-interpreter bootstrap packages outside the reviewed package profile are
-not distribution inputs: the target probe requires every lock-derived package
-at its exact version, and `pip-licenses --packages` limits the evidence to that
-same deterministic set. Ambient packages therefore neither enter the evidence
-nor relax missing-package, version, or scanner-output coverage checks.
+explicitly excluded from this bounded scanner profile. That exclusion does not
+prove they are absent from a future shipped package; distribution closure
+remains pending. The target probe requires every lock-derived package at its
+exact version, and `pip-licenses --packages` limits this evidence to that same
+deterministic set. Ambient packages therefore neither enter this evidence nor
+relax missing-package, version, or scanner-output coverage checks.
 
 LIC-01A adds a committed, closed-schema inventory contract without adding
 third-party license or NOTICE bodies. The registry fixes all 49 package-lock
@@ -223,12 +225,13 @@ universal SBOM-input surfaces without claiming license review: 22 pinned direct
 Ubuntu packages, 72 Panda runtime files, 2 bundled font files, and all 6
 packaging data groups.
 
-The registry hashes every direct producer input, including the build and
-package locks, the supply-chain scanner-tool lock, schemas and checker/generator
-sources, project metadata and license, Ubuntu manifest and installer, Panda
-manifest, packaging specification, and each bundled font/license file. Missing
-or changed producer inputs fail regeneration before the committed registry can
-pass.
+The registry hashes every direct producer input, including all eight locks read
+by the scanner (`uv-tool`, `build`, `runtime`, `app`, `dev`, `app-dev`,
+`package`, and `supply-chain-tool`), schemas and checker/generator sources,
+project metadata and license, Ubuntu manifest and installer, Panda manifest,
+packaging specification, and each bundled font/license file. A test derives
+the expected lock set from the scanner itself. Missing or changed producer
+inputs fail regeneration before the committed registry can pass.
 
 ```bash
 python scripts/generate_license_inventory.py --check

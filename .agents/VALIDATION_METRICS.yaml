@@ -170,6 +170,13 @@ ci:
     threshold: "all jobs pass on push to main and on pull requests"
     evidence: ".github/workflows/ci.yml, Actions run log"
 
+supply_chain:
+  license_inventory_contract:
+    metric: "LIC-01A candidate, target-cell, observation, and direct-producer-input closure"
+    threshold: "checker exit 0; all 8 scanner-read locks hash-bound; missing metadata remains counted; compliance_status pending-lic-01; distribution closure unproven"
+    command: "python scripts/generate_license_inventory.py --check && python .agents/validation/check_license_inventory.py"
+    evidence: ".agents/supply_chain/license-inventory.json, CI simulator output, desktop matrix per-OS license evidence"
+
 operations:
   ci_reproducibility:
     metric: "CI commands reproducible locally"

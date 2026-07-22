@@ -2,10 +2,10 @@
 
 The registry is deliberately an inventory-coverage contract, not a notice
 bundle or legal conclusion. It closes every direct producer input by path and
-hash, including the reviewed build/package/scanner-tool locks and the existing
-SBOM surface inputs. Accepted SUP-01 target observations retain raw and
-canonical evidence provenance, but license and NOTICE bodies are never copied
-into the committed registry.
+hash, including every lock read by the scanner and the existing SBOM surface
+inputs. Accepted SUP-01 target observations retain raw and canonical evidence
+provenance, but license and NOTICE bodies are never copied into the committed
+registry.
 """
 
 from __future__ import annotations
@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from scripts import audit_supply_chain as audit  # noqa: E402
 from scripts import generate_sbom_inputs as supply  # noqa: E402
 
 
@@ -37,15 +38,19 @@ GENERATOR_PATH = "scripts/generate_license_inventory.py"
 CHECKER_PATH = ".agents/validation/check_license_inventory.py"
 SCANNER_PATH = "scripts/audit_supply_chain.py"
 SBOM_GENERATOR_PATH = "scripts/generate_sbom_inputs.py"
-BUILD_LOCK_PATH = "requirements/locks/build.txt"
+REVIEWED_LOCK_SOURCE_PATHS = {
+    f"{profile.replace('-', '_')}_lock": relative.as_posix()
+    for profile, relative in audit.REVIEWED_LOCKS
+}
+BUILD_LOCK_PATH = REVIEWED_LOCK_SOURCE_PATHS["build_lock"]
 BUILD_SOURCE_PATH = "requirements/build.in"
-PACKAGE_LOCK_PATH = "requirements/locks/package.txt"
-SUPPLY_CHAIN_TOOL_LOCK_PATH = "requirements/tools/supply-chain.txt"
+PACKAGE_LOCK_PATH = REVIEWED_LOCK_SOURCE_PATHS["package_lock"]
+SUPPLY_CHAIN_TOOL_LOCK_PATH = REVIEWED_LOCK_SOURCE_PATHS["supply_chain_tool_lock"]
 SUPPLY_CHAIN_TOOL_SOURCE_PATH = "requirements/tools/supply-chain.in"
 PROJECT_PATH = "pyproject.toml"
 
 SOURCE_PATHS = {
-    "build_lock": BUILD_LOCK_PATH,
+    **REVIEWED_LOCK_SOURCE_PATHS,
     "build_source": BUILD_SOURCE_PATH,
     "checker": CHECKER_PATH,
     "evidence_schema": EVIDENCE_SCHEMA_PATH,
@@ -53,7 +58,6 @@ SOURCE_PATHS = {
     "font_noto_sans_kr": supply.EXPECTED_FONT_FILES[0][1],
     "font_noto_sans_mono": supply.EXPECTED_FONT_FILES[1][1],
     "generator": GENERATOR_PATH,
-    "package_lock": PACKAGE_LOCK_PATH,
     "packaging_spec": supply.PACKAGING_SPEC_PATH,
     "panda_manifest": supply.PANDA_MANIFEST_PATH,
     "project": PROJECT_PATH,
@@ -61,7 +65,6 @@ SOURCE_PATHS = {
     "registry_schema": REGISTRY_SCHEMA_PATH,
     "scanner": SCANNER_PATH,
     "sbom_generator": SBOM_GENERATOR_PATH,
-    "supply_chain_tool_lock": SUPPLY_CHAIN_TOOL_LOCK_PATH,
     "supply_chain_tool_source": SUPPLY_CHAIN_TOOL_SOURCE_PATH,
     "ubuntu_installer": supply.UBUNTU_INSTALLER_PATH,
     "ubuntu_manifest": supply.UBUNTU_MANIFEST_PATH,

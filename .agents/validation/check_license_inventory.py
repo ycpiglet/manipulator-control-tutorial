@@ -26,7 +26,7 @@ from scripts import generate_license_inventory as inventory  # noqa: E402
 from scripts import generate_sbom_inputs as supply  # noqa: E402
 
 
-EXPECTED_REGISTRY_SCHEMA_SHA256 = "5c88315cf70baf1bf1c7d3221bcab73826aa455effc3645b28542225a603c44d"
+EXPECTED_REGISTRY_SCHEMA_SHA256 = "aa6343e2cc1d474ad5a650eee77059f787d09fdf59dc4cc0562a7539b0c73a3a"
 EXPECTED_EVIDENCE_SCHEMA_SHA256 = "b247efd4aa2e12e9b704954a291ac54a5d72a8f0e16f145d8c7ac1489ffdf3f6"
 
 REGISTRY_TOP_KEYS = {
@@ -54,28 +54,7 @@ CONTRACT_KEYS = {
     "target_cell_count",
 }
 SOURCE_KEYS = {"path", "sha256", "size"}
-SOURCE_NAMES = {
-    "build_lock",
-    "build_source",
-    "checker",
-    "evidence_schema",
-    "font_license",
-    "font_noto_sans_kr",
-    "font_noto_sans_mono",
-    "generator",
-    "package_lock",
-    "packaging_spec",
-    "panda_manifest",
-    "project",
-    "project_license",
-    "registry_schema",
-    "scanner",
-    "sbom_generator",
-    "supply_chain_tool_lock",
-    "supply_chain_tool_source",
-    "ubuntu_installer",
-    "ubuntu_manifest",
-}
+SOURCE_NAMES = frozenset(inventory.SOURCE_PATHS)
 CANDIDATE_KEYS = {"environment_ids", "marker", "name", "review_status", "version"}
 CELL_KEYS = {
     "candidate_count",

@@ -2851,6 +2851,16 @@
   ],
   "schema_version": 1,
   "sources": {
+    "app_dev_lock": {
+      "path": "requirements/locks/app-dev.txt",
+      "sha256": "bee5ecc19de758524fa6955f78b3228587e269ee44b4e255216aa8e426914e00",
+      "size": 109404
+    },
+    "app_lock": {
+      "path": "requirements/locks/app.txt",
+      "sha256": "8b2faa12a5637a320a423bc7e5c9a892f78ab88026f7bc06640480203b4cddf6",
+      "size": 61422
+    },
     "build_lock": {
       "path": "requirements/locks/build.txt",
       "sha256": "a5665dc6290d9cdc25bb20a984fa4e40197697194e834d422baa71db3326b6e1",
@@ -2863,8 +2873,13 @@
     },
     "checker": {
       "path": ".agents/validation/check_license_inventory.py",
-      "sha256": "1caf9f0cdde8b2ca26eedef93f579b7446b1bca01fb215c1b8687092e8f31499",
-      "size": 41162
+      "sha256": "971f5b4608ae7238720a3ff4f87ed99e472ab14afcf8e6e549d546d2e77b673e",
+      "size": 40756
+    },
+    "dev_lock": {
+      "path": "requirements/locks/dev.txt",
+      "sha256": "e5e6237f17b9b8abcc1ace2603edbece97c636244a2d23d96190bb9b758fcdde",
+      "size": 107352
     },
     "evidence_schema": {
       "path": ".agents/supply_chain/python-license-evidence.schema.json",
@@ -2888,8 +2903,8 @@
     },
     "generator": {
       "path": "scripts/generate_license_inventory.py",
-      "sha256": "83a442bbfb928fb760798f8d1641e067522aeb240fafce1ff5189920e8b4147a",
-      "size": 64660
+      "sha256": "a2de47aaf79d5e99637dade63afb019c5d86972697a7e9bb9d683f1367e36ec0",
+      "size": 64787
     },
     "package_lock": {
       "path": "requirements/locks/package.txt",
@@ -2918,8 +2933,13 @@
     },
     "registry_schema": {
       "path": ".agents/supply_chain/license-inventory.schema.json",
-      "sha256": "5c88315cf70baf1bf1c7d3221bcab73826aa455effc3645b28542225a603c44d",
-      "size": 29580
+      "sha256": "aa6343e2cc1d474ad5a650eee77059f787d09fdf59dc4cc0562a7539b0c73a3a",
+      "size": 30074
+    },
+    "runtime_lock": {
+      "path": "requirements/locks/runtime.txt",
+      "sha256": "5c0a5769a82c239388b11560fe8277e079a296594a13b790c617f272b1ec181a",
+      "size": 59378
     },
     "sbom_generator": {
       "path": "scripts/generate_sbom_inputs.py",
@@ -2928,8 +2948,8 @@
     },
     "scanner": {
       "path": "scripts/audit_supply_chain.py",
-      "sha256": "a4f505dd036d69647ce7492995cd9e0ab4bb46dfbc52a8ceca1dcf295e181e52",
-      "size": 41863
+      "sha256": "2f65e0b62dab793b72d8cd40b02a8cd06d532b901f638de78e40853fe90a3b5b",
+      "size": 41941
     },
     "supply_chain_tool_lock": {
       "path": "requirements/tools/supply-chain.txt",
@@ -2950,6 +2970,11 @@
       "path": "requirements/system/ubuntu-24.04-amd64.json",
       "sha256": "4f3ce81bc1d635a9242fba44f819fe2da89d2f722c12a01a88818f2976eb8feb",
       "size": 2189
+    },
+    "uv_tool_lock": {
+      "path": "requirements/tools/uv.txt",
+      "sha256": "4313f7dbcc2476ec3a7197776d14d95bb1d4d1efc053f96863be2a5b4ae0c824",
+      "size": 2526
     }
   },
   "target_cells": [

@@ -365,6 +365,13 @@ def test_registry_exact_integer_fields_reject_bool_and_float(
 def test_every_direct_producer_input_missing_and_drift_fails_closed(
     contract_repository: Path,
 ) -> None:
+    scanner_locks = {relative.as_posix() for _profile, relative in generator.audit.REVIEWED_LOCKS}
+    declared_scanner_locks = {
+        generator.SOURCE_PATHS[f"{profile.replace('-', '_')}_lock"]
+        for profile, _relative in generator.audit.REVIEWED_LOCKS
+    }
+    assert declared_scanner_locks == scanner_locks
+
     for source_name, relative in sorted(generator.SOURCE_PATHS.items()):
         source = contract_repository / relative
         baseline = source.read_bytes()
