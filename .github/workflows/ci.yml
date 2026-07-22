@@ -42,26 +42,19 @@ jobs:
       - name: Dependency lock byte reproducibility
         run: python scripts/manage_dependency_locks.py --check
 
+      - name: Asset supply-chain policy
+        run: python .agents/validation/check_asset_supply_chain.py
+
       - name: Install package with dev tools
         run: python scripts/install_locked.py --allow-external-env dev
 
       - name: README runtime CLI contract
         run: python .agents/validation/check_readme_contract.py --runtime-cli
 
-      - name: Cache MuJoCo Menagerie Panda assets
-        id: menagerie-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: third_party/mujoco_menagerie
-          key: menagerie-franka-panda-v1
-
-      - name: Fetch MuJoCo Menagerie (Panda only, sparse)
-        if: steps.menagerie-cache.outputs.cache-hit != 'true'
+      - name: Install and verify pinned Panda assets
         run: |
-          git clone --depth 1 --filter=blob:none --sparse \
-            https://github.com/google-deepmind/mujoco_menagerie.git \
-            third_party/mujoco_menagerie
-          git -C third_party/mujoco_menagerie sparse-checkout set franka_emika_panda
+          python -m mclab assets install
+          python -m mclab assets verify
 
       - name: Ruff lint
         run: python -m ruff check src tests scripts .agents/validation

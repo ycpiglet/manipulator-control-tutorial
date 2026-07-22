@@ -46,7 +46,47 @@ signed current Ubuntu repositories. Those apt packages are allowlisted but are
 not yet version/snapshot locked, so they are outside this Python-lock baseline
 and remain inputs for the later package inventory/SBOM gate.
 
-`assets install` downloads the pinned MuJoCo Menagerie commit, verifies SHA-256, extracts only `franka_emika_panda`, and preserves its license.
+`assets install` downloads the pinned MuJoCo Menagerie commit, verifies the
+archive SHA-256, extracts only the tracked `franka_emika_panda` runtime files,
+and preserves the upstream license. The installed tree is then checked against
+an embedded, version-controlled file inventory (path, size, and SHA-256 for
+every runtime file). Unknown, missing, modified, linked, reparse-point, and
+special-file entries fail closed.
+
+`python -m mclab doctor`, learner readiness screens, and every direct Panda
+model load enforce that installed-tree contract. Desktop packaging performs the
+same verification before PyInstaller starts and bundles only the verified
+runtime directory. A frozen application verifies the bundled copy below its
+PyInstaller runtime root (`_MEIPASS`) before MuJoCo loads it.
+
+Verify an existing installation without downloading or changing it:
+
+```bash
+python -m mclab assets verify
+```
+
+Strict verification also rejects legacy full-clone or cache-derived Panda
+directories when they contain extra documentation/examples or altered runtime
+files. Reinstall the canonical runtime subset instead of treating those extra
+files as harmless packaging input.
+
+If the Panda tree is absent, install it normally:
+
+```bash
+python -m mclab assets install
+```
+
+If a physical Panda tree exists but fails its inventory check, replace it only
+after reviewing the reported path:
+
+```bash
+python -m mclab assets install --force
+```
+
+Links, reparse points, and other unsafe filesystem objects are not replaced by
+`--force`; remove or investigate them explicitly. For a damaged packaged
+application, rebuild and reinstall the development bundle from the same
+reviewed source commit instead of modifying the bundle in place.
 
 ## OS launchers
 

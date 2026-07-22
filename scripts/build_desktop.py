@@ -14,11 +14,42 @@ ROOT = Path(__file__).resolve().parents[1]
 SIZE_LIMIT = 400 * 1024 * 1024
 
 
+def _verify_panda_assets() -> object:
+    source_path = str(ROOT / "src")
+    if source_path not in sys.path:
+        sys.path.insert(0, source_path)
+    from mclab.application.asset_readiness import classify_panda_asset_failure
+    from mclab.application.assets import verify_assets
+
+    try:
+        verification = verify_assets(root=ROOT)
+    except ValueError as exc:
+        readiness = classify_panda_asset_failure(ROOT, exc)
+        if readiness.code == "missing_asset":
+            repair = "Run `python -m mclab assets install` before packaging."
+        else:
+            repair = (
+                "For an invalid physical tree, run "
+                "`python -m mclab assets install --force`; inspect unsafe links or reparse "
+                "points manually."
+            )
+        raise RuntimeError(
+            "Desktop build blocked: Panda runtime asset verification failed: "
+            f"{exc}. {repair}"
+        ) from exc
+    print(
+        "Panda build input verified: "
+        f"{verification.file_count} files, {verification.total_bytes} bytes."
+    )
+    return verification
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--clean", action="store_true")
     parser.add_argument("--skip-size-gate", action="store_true")
     args = parser.parse_args()
+    _verify_panda_assets()
     if args.clean:
         shutil.rmtree(ROOT / "build", ignore_errors=True)
         shutil.rmtree(ROOT / "dist" / "MCLab", ignore_errors=True)

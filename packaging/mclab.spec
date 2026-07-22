@@ -4,23 +4,32 @@ from pathlib import Path
 
 ROOT = Path(SPECPATH).parent
 SRC = ROOT / "src"
+sys.path.insert(0, str(SRC))
+
+from mclab.application.asset_readiness import classify_panda_asset_failure
+from mclab.application.assets import verify_assets
+
+try:
+    PANDA_ASSETS = verify_assets(root=ROOT)
+except ValueError as exc:
+    readiness = classify_panda_asset_failure(ROOT, exc)
+    if readiness.code == "missing_asset":
+        repair = "Run `python -m mclab assets install` before packaging."
+    else:
+        repair = (
+            "For an invalid physical tree, run `python -m mclab assets install --force`; "
+            "inspect unsafe links or reparse points manually."
+        )
+    raise RuntimeError(
+        "PyInstaller input blocked: Panda runtime asset verification failed: "
+        f"{exc}. {repair}"
+    ) from exc
 
 datas = [
     (str(ROOT / "configs"), "configs"),
     (str(ROOT / "models"), "models"),
     (str(ROOT / "src/mclab/application/qml"), "mclab/application/qml"),
-    (str(ROOT / "third_party/mujoco_menagerie/franka_emika_panda/assets"),
-     "third_party/mujoco_menagerie/franka_emika_panda/assets"),
-    (str(ROOT / "third_party/mujoco_menagerie/franka_emika_panda/panda.xml"),
-     "third_party/mujoco_menagerie/franka_emika_panda"),
-    (str(ROOT / "third_party/mujoco_menagerie/franka_emika_panda/panda_nohand.xml"),
-     "third_party/mujoco_menagerie/franka_emika_panda"),
-    (str(ROOT / "third_party/mujoco_menagerie/franka_emika_panda/hand.xml"),
-     "third_party/mujoco_menagerie/franka_emika_panda"),
-    (str(ROOT / "third_party/mujoco_menagerie/franka_emika_panda/scene.xml"),
-     "third_party/mujoco_menagerie/franka_emika_panda"),
-    (str(ROOT / "third_party/mujoco_menagerie/franka_emika_panda/LICENSE"),
-     "third_party/mujoco_menagerie/franka_emika_panda"),
+    (str(PANDA_ASSETS.target), "third_party/mujoco_menagerie/franka_emika_panda"),
     (str(ROOT / "third_party/fonts/noto"), "third_party/fonts/noto"),
     (str(ROOT / "LICENSE"), "."),
 ]

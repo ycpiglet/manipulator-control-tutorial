@@ -4,8 +4,9 @@ setlocal
 cd /d "%~dp0"
 
 if not exist ".venv\Scripts\python.exe" goto setup
-if not exist "third_party\mujoco_menagerie\franka_emika_panda\scene.xml" goto setup
 ".venv\Scripts\python.exe" "scripts\install_locked.py" --check runtime >nul 2>&1
+if errorlevel 1 goto setup
+".venv\Scripts\python.exe" -m mclab assets verify >nul 2>&1
 if errorlevel 1 goto setup
 goto run
 

@@ -2,6 +2,15 @@
 
 This lab uses the Franka Emika Panda model from MuJoCo Menagerie.
 
+Before a Lab04 run, MCLab verifies every installed Panda runtime file against
+the pinned path/size/SHA-256 inventory. You can run the same read-only check
+explicitly with `python -m mclab assets verify`. A missing tree is installed
+with `python -m mclab assets install`; an existing physical tree that is partial,
+altered, or contains extra legacy clone/cache files must be replaced with
+`python -m mclab assets install --force`. Unsafe symlink or Windows reparse-point
+trees are rejected and require manual inspection/removal rather than automatic
+replacement.
+
 > **Recommended learner entry:** run `python -m mclab app` and use Learning
 > path or Explore. The `.cmd` and `run --viewer` instructions below are
 > advanced/compatibility paths that remain useful for prepared demonstrations.
@@ -176,8 +185,8 @@ Full viewer command:
 python -m mclab run lab04 --config configs/lab04_panda/joint_pd.yaml --viewer --realtime --pause-at-end --plot --plots essential
 ```
 
-If `third_party/mujoco_menagerie` is missing, run the project bootstrap:
+If the canonical Panda runtime tree is missing, install it directly:
 
 ```bash
-python scripts/bootstrap_and_run.py --setup-only
+python -m mclab assets install
 ```

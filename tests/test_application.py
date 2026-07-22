@@ -416,6 +416,81 @@ class ApplicationFoundationTests(unittest.TestCase):
         self.assertFalse(status["ready"])
         self.assertIn("MCLAB_DATA_DIR", status["action"])
 
+    def test_readiness_rejects_a_partial_panda_tree_with_force_guidance(self) -> None:
+        scenario = ScenarioCatalog.default().get("lab04.interactive-virtual-wall")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config_path = root / scenario.config_path
+            config_path.parent.mkdir(parents=True)
+            config_path.write_text("model_path: unused\n", encoding="utf-8")
+            scene = root / str(scenario.config["model_path"])
+            scene.parent.mkdir(parents=True)
+            scene.write_text("<mujoco/>\n", encoding="utf-8")
+
+            issue = scenario_readiness(scenario, root=root)
+
+        self.assertIsNotNone(issue)
+        self.assertEqual(issue.code, "invalid_asset")  # type: ignore[union-attr]
+        self.assertIn("missing runtime file", issue.detail)  # type: ignore[union-attr]
+        payload = scenario_readiness_payload(issue, Translator("en"))
+        self.assertIn("integrity check failed", payload["readinessDetail"])
+        self.assertIn("assets install --force", payload["readinessAction"])
+
+    def test_readiness_rejects_an_untracked_panda_model_member(self) -> None:
+        scenario = ScenarioCatalog.default().get("lab04.interactive-virtual-wall")
+        typo = replace(
+            scenario,
+            config_data={
+                **scenario.config,
+                "model_path": (
+                    "third_party/mujoco_menagerie/franka_emika_panda/typo.xml"
+                ),
+            },
+        )
+
+        issue = scenario_readiness(typo, root=ROOT)
+
+        self.assertIsNotNone(issue)
+        self.assertEqual(issue.code, "invalid_config")  # type: ignore[union-attr]
+        self.assertIn("tracked XML model", issue.detail)  # type: ignore[union-attr]
+
+    def test_app_readiness_hashes_the_panda_tree_once_for_multiple_cards(self) -> None:
+        from mclab.application.asset_readiness import clear_panda_asset_readiness_cache
+        from mclab.application.assets import AssetVerification
+
+        catalog = ScenarioCatalog.default()
+        scenarios = (
+            catalog.get("lab04.interactive-virtual-wall"),
+            catalog.get("lab04.neutral-hold"),
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            panda_root = (
+                root / "third_party" / "mujoco_menagerie" / "franka_emika_panda"
+            )
+            panda_root.mkdir(parents=True)
+            for scenario in scenarios:
+                config_path = root / scenario.config_path
+                config_path.parent.mkdir(parents=True, exist_ok=True)
+                config_path.write_text("model_path: unused\n", encoding="utf-8")
+            (panda_root / "scene.xml").write_text("<mujoco/>\n", encoding="utf-8")
+            verification = AssetVerification(panda_root, file_count=47, total_bytes=123)
+
+            clear_panda_asset_readiness_cache()
+            with patch(
+                "mclab.application.asset_readiness.verify_assets",
+                return_value=verification,
+            ) as verifier:
+                issues = app_readiness(
+                    ScenarioCatalog(scenarios),
+                    root=root,
+                    outputs=root / "outputs",
+                )
+            clear_panda_asset_readiness_cache()
+
+        self.assertEqual(issues, ())
+        verifier.assert_called_once_with(root=root)
+
     def test_integrated_lab03_and_lab04_cards_expose_at_most_five_core_controls(self) -> None:
         catalog = ScenarioCatalog.default()
         dls = catalog.get("lab03.condition-aware-dls-2dof")
@@ -3054,7 +3129,27 @@ class PlatformAndCliTests(unittest.TestCase):
                     info.size = len(content)
                     bundle.addfile(info, io.BytesIO(content))
             digest = hashlib.sha256(archive.read_bytes()).hexdigest()
-            with patch.object(asset_module, "MENAGERIE_ARCHIVE_SHA256", digest):
+            files = {"LICENSE": b"BSD-3-Clause", "scene.xml": b"<mujoco/>"}
+            manifest = tuple(
+                sorted(
+                    (
+                        name,
+                        len(content),
+                        hashlib.sha256(content).hexdigest(),
+                    )
+                    for name, content in files.items()
+                )
+            )
+            with (
+                patch.object(asset_module, "MENAGERIE_ARCHIVE_SHA256", digest),
+                patch.object(asset_module, "PANDA_RUNTIME_MANIFEST", manifest),
+                patch.object(asset_module, "PANDA_RUNTIME_FILE_COUNT", len(manifest)),
+                patch.object(
+                    asset_module,
+                    "PANDA_RUNTIME_TOTAL_BYTES",
+                    sum(len(content) for content in files.values()),
+                ),
+            ):
                 target = asset_module.install_assets(root, archive_path=archive)
 
             self.assertTrue((target / "scene.xml").is_file())

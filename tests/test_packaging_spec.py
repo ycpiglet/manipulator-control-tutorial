@@ -45,3 +45,16 @@ def test_production_bundle_exclusions_do_not_repeat_modules() -> None:
     exclusions = _analysis_exclusions()
 
     assert len(exclusions) == len(set(exclusions))
+
+
+def test_spec_verifies_and_bundles_only_the_canonical_panda_runtime_tree() -> None:
+    source = SPEC_PATH.read_text(encoding="utf-8")
+
+    assert source.index("verify_assets(root=ROOT)") < source.index("Analysis(")
+    assert (
+        '(str(PANDA_ASSETS.target), "third_party/mujoco_menagerie/franka_emika_panda")'
+        in source
+    )
+    assert "franka_emika_panda/assets" not in source
+    assert "franka_emika_panda/panda.xml" not in source
+    assert "assets install --force" in source

@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from mclab.doctor import (  # noqa: E402
     DoctorCheck,
+    _config_and_model_check,
     _outputs_writable_check,
     doctor_exit_code,
     format_doctor_report,
@@ -66,6 +67,83 @@ class DoctorTests(unittest.TestCase):
         self.assertIn("Missing model assets", report)
         self.assertIn("configs/demo/default.yaml -> models/demo/scene.xml", report)
         self.assertIn("Next learner step: fix the FAIL item(s) above", report)
+
+    def test_doctor_distinguishes_missing_and_partial_panda_trees(self) -> None:
+        from mclab.application.asset_readiness import clear_panda_asset_readiness_cache
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = root / "configs" / "lab04" / "default.yaml"
+            config.parent.mkdir(parents=True)
+            config.write_text(
+                "model_path: third_party/mujoco_menagerie/franka_emika_panda/scene.xml\n",
+                encoding="utf-8",
+            )
+
+            missing = _config_and_model_check(root)
+
+            panda_root = (
+                root / "third_party" / "mujoco_menagerie" / "franka_emika_panda"
+            )
+            panda_root.mkdir(parents=True)
+            (panda_root / "scene.xml").write_text("<mujoco/>\n", encoding="utf-8")
+
+            clear_panda_asset_readiness_cache()
+            partial = _config_and_model_check(root)
+
+        self.assertEqual(missing.status, "FAIL")
+        self.assertIn("Missing Panda runtime asset tree", missing.detail)
+        self.assertIn("assets install`", missing.fix)
+        self.assertNotIn("--force", missing.fix)
+        self.assertEqual(partial.status, "FAIL")
+        self.assertIn("verification failed", partial.detail)
+        self.assertIn("missing runtime file", partial.detail)
+        self.assertIn("assets install --force", partial.fix)
+
+    def test_doctor_classifies_an_unsafe_panda_root_as_invalid(self) -> None:
+        from mclab.application.assets import AssetSafetyError
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = root / "configs" / "lab04" / "default.yaml"
+            config.parent.mkdir(parents=True)
+            config.write_text(
+                "model_path: third_party/mujoco_menagerie/franka_emika_panda/scene.xml\n",
+                encoding="utf-8",
+            )
+            unsafe = AssetSafetyError(
+                root / "third_party" / "mujoco_menagerie" / "franka_emika_panda",
+                ["runtime tree is a link or reparse point"],
+            )
+
+            with patch(
+                "mclab.application.asset_readiness.verify_assets",
+                side_effect=unsafe,
+            ):
+                check = _config_and_model_check(root)
+
+        self.assertEqual(check.status, "FAIL")
+        self.assertIn("verification failed", check.detail)
+        self.assertIn("link or reparse point", check.detail)
+        self.assertIn("Inspect and remove unsafe links", check.fix)
+
+    def test_doctor_rejects_an_untracked_panda_model_member(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = root / "configs" / "lab04" / "default.yaml"
+            config.parent.mkdir(parents=True)
+            config.write_text(
+                "model_path: "
+                "third_party/mujoco_menagerie/franka_emika_panda/typo.xml\n",
+                encoding="utf-8",
+            )
+
+            check = _config_and_model_check(root)
+
+        self.assertEqual(check.status, "FAIL")
+        self.assertIn("Invalid Panda model_path values", check.detail)
+        self.assertIn("tracked XML model", check.detail)
+        self.assertIn("Use a tracked Panda XML model path", check.fix)
 
     def test_doctor_reports_learner_menu_readiness_failures(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

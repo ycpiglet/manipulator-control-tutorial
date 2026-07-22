@@ -4,6 +4,19 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+ASSET_VERIFY_PROBE = (
+    '".venv\\Scripts\\python.exe" -m mclab assets verify >nul 2>&1'
+)
+ASSET_LAUNCHERS = {
+    "run_mclab.cmd",
+    "run_all_batches.cmd",
+    "run_batch_lab04.cmd",
+    "run_batch_lab04_cartesian.cmd",
+    "run_lab04.cmd",
+    "run_lab04_cartesian_interactive.cmd",
+    "run_lab04_interactive.cmd",
+    "run_lab04_wall_interactive.cmd",
+}
 
 
 class LaunchScriptTests(unittest.TestCase):
@@ -26,17 +39,16 @@ class LaunchScriptTests(unittest.TestCase):
         self.assertIn(f"{lock_probe}\nif errorlevel 1 goto setup", text)
         self.assertIn(import_probe, text)
         self.assertIn(f"{import_probe}\nif errorlevel 1 goto setup", text)
+        self.assertIn(
+            f"{ASSET_VERIFY_PROBE}\nif errorlevel 1 goto setup",
+            text,
+        )
         self.assertIn(menu_command, text)
         self.assertIn(f"{menu_command}\nexit /b %errorlevel%", text)
-        self.assertLess(
-            text.index(
-                'if not exist "third_party\\mujoco_menagerie\\'
-                'franka_emika_panda\\scene.xml" goto setup'
-            ),
-            text.index(lock_probe),
-        )
+        self.assertNotIn("franka_emika_panda\\scene.xml", text)
         self.assertLess(text.index(lock_probe), text.index(import_probe))
-        self.assertLess(text.index(import_probe), text.index(":setup"))
+        self.assertLess(text.index(import_probe), text.index(ASSET_VERIFY_PROBE))
+        self.assertLess(text.index(ASSET_VERIFY_PROBE), text.index(":setup"))
 
     def test_lab_launchers_use_consistent_viewer_flags(self) -> None:
         expected = {
@@ -85,6 +97,14 @@ class LaunchScriptTests(unittest.TestCase):
                 self.assertIn(
                     '"scripts\\install_locked.py" --check runtime >nul 2>&1', text
                 )
+                if filename in ASSET_LAUNCHERS:
+                    self.assertIn(
+                        f"{ASSET_VERIFY_PROBE}\nif errorlevel 1 goto setup",
+                        text,
+                    )
+                    self.assertNotIn("franka_emika_panda\\scene.xml", text)
+                else:
+                    self.assertNotIn(ASSET_VERIFY_PROBE, text)
 
     def test_launchers_stop_when_setup_fails(self) -> None:
         setup_commands = (
@@ -124,12 +144,25 @@ class LaunchScriptTests(unittest.TestCase):
                     '"scripts\\install_locked.py" --check runtime >nul 2>&1', text
                 )
 
-        lab04_text = (ROOT / "run_batch_lab04.cmd").read_text(encoding="utf-8")
-        self.assertIn("third_party\\mujoco_menagerie\\franka_emika_panda\\scene.xml", lab04_text)
-        lab04_cartesian_text = (ROOT / "run_batch_lab04_cartesian.cmd").read_text(encoding="utf-8")
-        self.assertIn("third_party\\mujoco_menagerie\\franka_emika_panda\\scene.xml", lab04_cartesian_text)
-        all_text = (ROOT / "run_all_batches.cmd").read_text(encoding="utf-8")
-        self.assertIn("third_party\\mujoco_menagerie\\franka_emika_panda\\scene.xml", all_text)
+        for filename in expected:
+            text = (ROOT / filename).read_text(encoding="utf-8")
+            if filename in ASSET_LAUNCHERS:
+                self.assertIn(
+                    f"{ASSET_VERIFY_PROBE}\nif errorlevel 1 goto setup",
+                    text,
+                )
+                self.assertNotIn("franka_emika_panda\\scene.xml", text)
+            else:
+                self.assertNotIn(ASSET_VERIFY_PROBE, text)
+
+    def test_exact_asset_launcher_inventory_uses_verification_not_existence(self) -> None:
+        launchers_with_verify = {
+            path.name
+            for path in ROOT.glob("*.cmd")
+            if ASSET_VERIFY_PROBE in path.read_text(encoding="utf-8")
+        }
+
+        self.assertEqual(launchers_with_verify, ASSET_LAUNCHERS)
 
     def test_source_bootstraps_always_use_locked_dependency_reconciliation(self) -> None:
         app_source = (ROOT / "scripts/start_mclab.py").read_text(encoding="utf-8")

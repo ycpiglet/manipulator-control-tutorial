@@ -31,9 +31,34 @@ Safe mode keeps navigation, controls, logs, and reports available while disablin
 
 ## Panda model
 
+First rerun the setup diagnosis and read the exact missing or invalid path:
+
+```bash
+python -m mclab doctor
+python -m mclab assets verify
+```
+
+If the Panda runtime tree is missing, install the pinned asset set:
+
 ```bash
 python -m mclab assets install
 ```
+
+If the tree exists but the doctor, learner menu, application, model loader, or
+desktop build reports a size/hash/inventory mismatch, replace the physical tree:
+
+```bash
+python -m mclab assets install --force
+```
+
+The verifier rejects unknown or missing files, content changes, links, Windows
+reparse points, and special files. That includes legacy clone/cache trees with
+extra Menagerie documentation, examples, or altered assets. `--force` is only
+for an invalid physical directory and intentionally does not overwrite unsafe
+linked/reparse trees; inspect and remove those objects yourself. If the failure
+comes from an installed desktop bundle, rebuild and reinstall the development
+bundle from the same reviewed source commit rather than attempting an in-place
+asset repair.
 
 ## Corrupt replay
 

@@ -1404,6 +1404,87 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(ready.label, "Ready")
         self.assertIn("models/demo/scene.xml", ready.detail)
 
+    def test_menu_readiness_rejects_partial_panda_assets_and_shares_verification(self) -> None:
+        from mclab.application.asset_readiness import clear_panda_asset_readiness_cache
+        from mclab.application.assets import AssetVerification
+        from mclab.learner_menu import _action_readiness
+
+        actions = tuple(
+            MenuAction(
+                group="Panda",
+                label=f"Panda demo {index}",
+                lab_name="lab04",
+                config_path=f"configs/demo/panda_{index}.yaml",
+                plots="essential",
+                description="Demo",
+                try_this="Run it.",
+                watch="Output.",
+            )
+            for index in range(2)
+        )
+        model_path = "third_party/mujoco_menagerie/franka_emika_panda/scene.xml"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for action in actions:
+                config = root / action.config_path
+                config.parent.mkdir(parents=True, exist_ok=True)
+                config.write_text(f"model_path: {model_path}\n", encoding="utf-8")
+            panda_root = root / Path(model_path).parent
+            panda_root.mkdir(parents=True)
+            (panda_root / "scene.xml").write_text("<mujoco/>\n", encoding="utf-8")
+
+            clear_panda_asset_readiness_cache()
+            partial = action_readiness(actions[0], root=root)
+            clear_panda_asset_readiness_cache()
+            _action_readiness.cache_clear()
+
+            verification = AssetVerification(panda_root, file_count=47, total_bytes=123)
+            with patch(
+                "mclab.application.asset_readiness.verify_assets",
+                return_value=verification,
+            ) as verifier:
+                ready = tuple(action_readiness(action, root=root) for action in actions)
+            clear_panda_asset_readiness_cache()
+            _action_readiness.cache_clear()
+
+        self.assertEqual(partial.label, "Invalid Panda assets")
+        self.assertIn("missing runtime file", partial.detail)
+        self.assertIn("assets install --force", partial.fix)
+        self.assertTrue(all(item.status == "ok" for item in ready))
+        verifier.assert_called_once_with(root=root)
+
+    def test_menu_readiness_rejects_an_untracked_panda_model_member(self) -> None:
+        from mclab.learner_menu import _action_readiness
+
+        action = MenuAction(
+            group="Panda",
+            label="Typo demo",
+            lab_name="lab04",
+            config_path="configs/demo/panda_typo.yaml",
+            plots="essential",
+            description="Demo",
+            try_this="Run it.",
+            watch="Output.",
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = root / action.config_path
+            config.parent.mkdir(parents=True)
+            config.write_text(
+                "model_path: "
+                "third_party/mujoco_menagerie/franka_emika_panda/typo.xml\n",
+                encoding="utf-8",
+            )
+            _action_readiness.cache_clear()
+
+            readiness = action_readiness(action, root=root)
+
+            _action_readiness.cache_clear()
+
+        self.assertEqual(readiness.label, "Invalid Panda model path")
+        self.assertIn("tracked XML model", readiness.detail)
+        self.assertIn("tracked Panda XML model path", readiness.fix)
+
     def test_batch_readiness_checks_all_scenario_assets(self) -> None:
         lab01_batch = next(
             action for action in BATCH_ACTIONS if action.batch_name == "lab01_msd_compare"

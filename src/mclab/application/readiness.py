@@ -6,6 +6,11 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from mclab.application.asset_readiness import (
+    is_panda_model_path,
+    panda_asset_readiness,
+    resolve_panda_model_member,
+)
 from mclab.application.catalog import ScenarioCatalog, ScenarioDefinition
 from mclab.application.i18n import Translator
 from mclab.config import PROJECT_ROOT, default_outputs_root
@@ -41,7 +46,15 @@ def scenario_readiness(
     model_path = scenario.config.get("model_path")
     if not isinstance(model_path, str) or not model_path.strip():
         return ReadinessIssue("invalid_config", scenario.config_path, scenario.id)
-    if not (root / model_path).is_file():
+    if is_panda_model_path(model_path, root=root):
+        try:
+            resolve_panda_model_member(model_path, root=root)
+        except ValueError as exc:
+            return ReadinessIssue("invalid_config", str(exc), scenario.id)
+        asset_readiness = panda_asset_readiness(root)
+        if not asset_readiness.ready:
+            return ReadinessIssue(asset_readiness.code, asset_readiness.detail, scenario.id)
+    elif not (root / model_path).is_file():
         code = "missing_asset" if "mujoco_menagerie" in model_path else "missing_model"
         return ReadinessIssue(code, model_path, scenario.id)
     return None

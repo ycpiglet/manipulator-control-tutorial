@@ -16,6 +16,11 @@ from pathlib import Path
 from threading import Thread
 from typing import Any, TypeVar, cast
 
+from mclab.application.asset_readiness import (
+    is_panda_model_path,
+    panda_asset_readiness,
+    resolve_panda_model_member,
+)
 from mclab.application.catalog import (
     ALL_BATCH_TARGET_ID,
     BatchDefinition,
@@ -3232,10 +3237,37 @@ def _action_readiness(config_path: str, root: str) -> ActionReadiness:
     resolved_model = Path(model_path)
     if not resolved_model.is_absolute():
         resolved_model = project_root / resolved_model
-    if not resolved_model.exists():
+    is_panda_model = is_panda_model_path(model_path, root=project_root)
+    if is_panda_model:
+        try:
+            resolve_panda_model_member(model_path, root=project_root)
+        except ValueError as exc:
+            return ActionReadiness(
+                "fail",
+                "Invalid Panda model path",
+                str(exc),
+                "Use a tracked Panda XML model path in the YAML config.",
+            )
+        asset_readiness = panda_asset_readiness(project_root)
+        if asset_readiness.code == "missing_asset":
+            return ActionReadiness(
+                "fail",
+                "Missing Panda assets",
+                asset_readiness.detail,
+                "Run `python -m mclab assets install` to install the pinned Panda assets.",
+            )
+        if asset_readiness.code == "invalid_asset":
+            return ActionReadiness(
+                "fail",
+                "Invalid Panda assets",
+                asset_readiness.detail,
+                "For an invalid physical tree, run `python -m mclab assets install --force`. "
+                "Inspect unsafe links or reparse points manually, then check setup again.",
+            )
+    elif not resolved_model.exists():
         fix = "Run Check setup for diagnosis."
         if "mujoco_menagerie" in model_path.replace("\\", "/"):
-            fix = "Run `python scripts/bootstrap_and_run.py --setup-only` to fetch MuJoCo Menagerie."
+            fix = "Run `python -m mclab assets install` to install the pinned Panda assets."
         return ActionReadiness("fail", "Missing model", model_path, fix)
     return ActionReadiness("ok", "Ready", f"model: {model_path}")
 

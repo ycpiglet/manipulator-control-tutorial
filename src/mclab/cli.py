@@ -204,6 +204,9 @@ def build_parser() -> argparse.ArgumentParser:
     assets_install.add_argument(
         "--force", action="store_true", help="Replace an existing Panda model folder."
     )
+    assets_subparsers.add_parser(
+        "verify", help="Verify every installed Panda runtime file against the tracked manifest."
+    )
 
     coverage_parser = subparsers.add_parser(
         "coverage",
@@ -469,13 +472,35 @@ def main(argv: list[str] | None = None) -> int:
         return doctor_exit_code(checks)
 
     if args.command == "assets":
-        if args.assets_command != "install":
-            parser.error("assets requires a command; use `mclab assets install`.")
-        from mclab.application.assets import install_assets
+        from mclab.application.assets import (
+            AssetVerificationError,
+            install_assets,
+            sanitize_asset_diagnostic,
+            verify_assets,
+        )
 
-        target = install_assets(force=args.force)
-        print(f"Assets ready: {target}")
-        return 0
+        if args.assets_command == "install":
+            try:
+                target = install_assets(force=args.force)
+            except (AssetVerificationError, RuntimeError) as exc:
+                print(f"Asset error: {sanitize_asset_diagnostic(exc)}", file=sys.stderr)
+                return 1
+            print(f"Assets ready: {target}")
+            return 0
+        if args.assets_command == "verify":
+            try:
+                result = verify_assets()
+            except AssetVerificationError as exc:
+                print(f"Asset error: {sanitize_asset_diagnostic(exc)}", file=sys.stderr)
+                return 1
+            print(
+                f"Assets verified: {result.target} "
+                f"({result.file_count} files, {result.total_bytes} bytes)"
+            )
+            return 0
+        parser.error(
+            "assets requires a command; use `mclab assets install` or `mclab assets verify`."
+        )
 
     if args.command == "coverage":
         _print_experience_coverage(Path(args.output_dir), details=args.details)
