@@ -414,6 +414,19 @@ def test_new_raw_workflow_install_is_rejected(lock_root: Path) -> None:
     assert any(error.startswith("WORKFLOW_INSTALL_POLICY") for error in errors)
 
 
+def test_isolated_package_environment_install_is_a_static_contract(lock_root: Path) -> None:
+    workflow = lock_root / ".github" / "workflows" / "desktop.yml"
+    _replace(
+        workflow,
+        '          "$package_python" scripts/install_locked.py --allow-external-env package\n',
+        "",
+    )
+
+    errors = _errors(lock_root)
+
+    assert any(error.startswith("WORKFLOW_INSTALL_POLICY") for error in errors)
+
+
 def test_launcher_lock_probe_cannot_be_removed(lock_root: Path) -> None:
     launcher = lock_root / "run_lab01.cmd"
     _replace(launcher, "--check runtime", "--check app")
