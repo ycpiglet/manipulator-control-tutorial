@@ -120,6 +120,26 @@ def test_windows_mount_detection_relies_on_device_and_reparse_guards(
         assert not build_module._path_is_mount(candidate, frozenset())
 
 
+def test_windows_member_check_ignores_unstable_device_ids(build_module, tmp_path: Path) -> None:
+    candidate = tmp_path / "ordinary"
+    candidate.write_bytes(b"content")
+    metadata = candidate.lstat()
+    unstable_device = type(
+        "Metadata",
+        (),
+        {"st_dev": metadata.st_dev + 1},
+    )()
+
+    with patch.object(build_module.sys, "platform", "win32"):
+        build_module._assert_same_filesystem_member(
+            candidate,
+            unstable_device,
+            boundary_device=metadata.st_dev,
+            mount_points=frozenset({build_module._absolute_path(candidate)}),
+            label="ordinary Windows member",
+        )
+
+
 def test_package_operation_lock_is_single_writer_and_reusable(build_module, tmp_path: Path) -> None:
     dist = tmp_path / "dist"
     dist.mkdir()

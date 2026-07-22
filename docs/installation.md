@@ -267,9 +267,10 @@ python scripts/build_desktop.py --verify-only
 ```
 
 The builder safely replaces only fixed generated paths after rejecting linked
-roots or ancestors, Windows reparse points, nested mounts, cross-filesystem
-entries, and stale package transactions. Safe internal POSIX links are unlinked
-without following them. PyInstaller receives fresh empty outputs and is never
+roots or ancestors, Windows reparse points (including junctions and mounted
+folders), POSIX mount/device crossings, and stale package transactions. Safe
+internal POSIX links are unlinked without following them. PyInstaller receives
+fresh empty outputs and is never
 allowed to recursively replace a pre-existing live directory. The result
 includes the live `dist/MCLab/` one-folder tree plus `dist/MCLab-package/`,
 which contains an architecture-specific canonical tar/gzip archive and

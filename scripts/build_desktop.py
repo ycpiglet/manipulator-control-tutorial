@@ -201,7 +201,13 @@ def _assert_same_filesystem_member(
     mount_points: frozenset[Path],
     label: str,
 ) -> None:
-    if metadata.st_dev != boundary_device:
+    # CPython 3.11 on the GitHub Windows hosted filesystem reports different
+    # st_dev values for ordinary generated descendants on the same drive. The
+    # fixed lexical root plus rejection of every Windows reparse point covers
+    # drive escapes, junctions, and mounted folders there. POSIX retains both
+    # the device check and explicit mount detection (including Linux bind
+    # mounts from mountinfo).
+    if not sys.platform.startswith("win") and metadata.st_dev != boundary_device:
         raise PackageValidationError(f"{label} crosses a filesystem device boundary: {path}")
     if _path_is_mount(path, mount_points):
         raise PackageValidationError(f"{label} crosses a mount boundary: {path}")
