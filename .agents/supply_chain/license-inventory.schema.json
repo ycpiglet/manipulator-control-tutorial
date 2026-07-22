@@ -1,0 +1,1249 @@
+{
+  "$defs": {
+    "archiveKeyring": {
+      "additionalProperties": false,
+      "properties": {
+        "package": {
+          "const": "ubuntu-keyring"
+        },
+        "path": {
+          "const": "/usr/share/keyrings/ubuntu-archive-keyring.gpg"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "size": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "version": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "package",
+        "path",
+        "sha256",
+        "size",
+        "version"
+      ],
+      "type": "object"
+    },
+    "artifact": {
+      "additionalProperties": false,
+      "properties": {
+        "canonical_evidence_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "expires_at": {
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+          "type": "string"
+        },
+        "id": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "name": {
+          "pattern": "^mclab-supply-chain-(Linux|Windows|macOS)$",
+          "type": "string"
+        },
+        "normalization_algorithm": {
+          "const": "strict-json-sort-keys-indent-2-ensure-ascii-false-utf8-lf"
+        },
+        "normalization_version": {
+          "const": 1
+        },
+        "raw_evidence_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "canonical_evidence_sha256",
+        "expires_at",
+        "id",
+        "name",
+        "normalization_algorithm",
+        "normalization_version",
+        "raw_evidence_sha256"
+      ],
+      "type": "object"
+    },
+    "candidate": {
+      "additionalProperties": false,
+      "properties": {
+        "environment_ids": {
+          "items": {
+            "pattern": "^cpython-3\\.(10|11|12)-(linux-x86_64|win32-amd64|darwin-(arm64|x86_64))$",
+            "type": "string"
+          },
+          "maxItems": 12,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "marker": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "type": "string"
+        },
+        "review_status": {
+          "const": "pending"
+        },
+        "version": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "environment_ids",
+        "marker",
+        "name",
+        "review_status",
+        "version"
+      ],
+      "type": "object"
+    },
+    "dataGroup": {
+      "additionalProperties": false,
+      "properties": {
+        "destination": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "license_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "source": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "destination",
+        "id",
+        "license_ids",
+        "source"
+      ],
+      "type": "object"
+    },
+    "gapCounts": {
+      "additionalProperties": false,
+      "properties": {
+        "license": {
+          "maximum": 48,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "license_text": {
+          "maximum": 48,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "notice_text": {
+          "maximum": 48,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "url": {
+          "maximum": 48,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "license",
+        "license_text",
+        "notice_text",
+        "url"
+      ],
+      "type": "object"
+    },
+    "globalTransformRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "enum": [
+            "mujoco-manipulator-control-lab",
+            "setuptools"
+          ]
+        },
+        "reason": {
+          "enum": [
+            "editable-project-target-addition",
+            "explicit-target-scoped-scanner-exclusion"
+          ]
+        },
+        "target_ids": {
+          "items": {
+            "enum": [
+              "cpython-3.11-darwin-arm64",
+              "cpython-3.11-linux-x86_64",
+              "cpython-3.11-win32-amd64"
+            ]
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "version": {
+          "enum": [
+            "0.1.0",
+            "83.0.0"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "reason",
+        "target_ids",
+        "version"
+      ],
+      "type": "object"
+    },
+    "identifiedSpdxLicense": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "path": {
+          "pattern": "^[A-Za-z0-9._/,\\[\\]-]+$",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "size": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "spdx": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "path",
+        "sha256",
+        "size",
+        "spdx"
+      ],
+      "type": "object"
+    },
+    "identifiedSurfaceFile": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "path": {
+          "pattern": "^[A-Za-z0-9._/,\\[\\]-]+$",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "size": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "path",
+        "sha256",
+        "size"
+      ],
+      "type": "object"
+    },
+    "notApplicableRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "applicable_target_ids": {
+          "items": {
+            "enum": [
+              "cpython-3.10-darwin-arm64",
+              "cpython-3.10-darwin-x86_64",
+              "cpython-3.10-linux-x86_64",
+              "cpython-3.10-win32-amd64"
+            ]
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "name": {
+          "const": "exceptiongroup"
+        },
+        "reason": {
+          "const": "marker-not-applicable-to-observed-targets"
+        },
+        "version": {
+          "const": "1.3.1"
+        }
+      },
+      "required": [
+        "applicable_target_ids",
+        "name",
+        "reason",
+        "version"
+      ],
+      "type": "object"
+    },
+    "observedPackage": {
+      "additionalProperties": false,
+      "properties": {
+        "license_observation": {
+          "anyOf": [
+            {
+              "maxLength": 1048576,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "license_text_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "name": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "type": "string"
+        },
+        "notice_text_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "url_observation": {
+          "anyOf": [
+            {
+              "maxLength": 4096,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "version": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "license_observation",
+        "license_text_sha256",
+        "name",
+        "notice_text_sha256",
+        "url_observation",
+        "version"
+      ],
+      "type": "object"
+    },
+    "observedTarget": {
+      "additionalProperties": false,
+      "properties": {
+        "added_observation_rows": {
+          "items": {
+            "$ref": "#/$defs/targetTransformRecord"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "applicable_lock_candidate_count": {
+          "maximum": 48,
+          "minimum": 43,
+          "type": "integer"
+        },
+        "artifact": {
+          "$ref": "#/$defs/artifact"
+        },
+        "cell_id": {
+          "pattern": "^cpython-3\\.11-(linux-x86_64|win32-amd64|darwin-arm64)$",
+          "type": "string"
+        },
+        "excluded_applicable_lock_candidates": {
+          "items": {
+            "$ref": "#/$defs/targetTransformRecord"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "id": {
+          "pattern": "^github-hosted-(linux|windows|macos)-cpython-3\\.11$",
+          "type": "string"
+        },
+        "metadata_gaps": {
+          "$ref": "#/$defs/gapCounts"
+        },
+        "observation_row_count": {
+          "maximum": 48,
+          "minimum": 43,
+          "type": "integer"
+        },
+        "observed_locked_candidate_count": {
+          "maximum": 47,
+          "minimum": 42,
+          "type": "integer"
+        },
+        "package_count": {
+          "maximum": 48,
+          "minimum": 43,
+          "type": "integer"
+        },
+        "package_observations": {
+          "items": {
+            "$ref": "#/$defs/observedPackage"
+          },
+          "maxItems": 48,
+          "minItems": 43,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "recorded_target": {
+          "$ref": "#/$defs/recordedTarget"
+        },
+        "runner_os": {
+          "enum": [
+            "Linux",
+            "Windows",
+            "macOS"
+          ]
+        }
+      },
+      "required": [
+        "added_observation_rows",
+        "applicable_lock_candidate_count",
+        "artifact",
+        "cell_id",
+        "excluded_applicable_lock_candidates",
+        "id",
+        "metadata_gaps",
+        "observation_row_count",
+        "observed_locked_candidate_count",
+        "package_count",
+        "package_observations",
+        "recorded_target",
+        "runner_os"
+      ],
+      "type": "object"
+    },
+    "recordedTarget": {
+      "additionalProperties": false,
+      "properties": {
+        "implementation": {
+          "const": "CPython"
+        },
+        "implementation_name": {
+          "const": "cpython"
+        },
+        "machine": {
+          "enum": [
+            "AMD64",
+            "arm64",
+            "x86_64"
+          ]
+        },
+        "python_full_version": {
+          "pattern": "^3\\.11\\.[0-9]+$",
+          "type": "string"
+        },
+        "sys_platform": {
+          "enum": [
+            "darwin",
+            "linux",
+            "win32"
+          ]
+        }
+      },
+      "required": [
+        "implementation",
+        "implementation_name",
+        "machine",
+        "python_full_version",
+        "sys_platform"
+      ],
+      "type": "object"
+    },
+    "sourceRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "pattern": "^[A-Za-z0-9._/,\\[\\]-]+$",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "size": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "size"
+      ],
+      "type": "object"
+    },
+    "spdxLicense": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "pattern": "^[A-Za-z0-9._/,\\[\\]-]+$",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "size": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "spdx": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "size",
+        "spdx"
+      ],
+      "type": "object"
+    },
+    "surfaceFile": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "pattern": "^[A-Za-z0-9._/,\\[\\]-]+$",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "size": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "size"
+      ],
+      "type": "object"
+    },
+    "targetCell": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_count": {
+          "maximum": 48,
+          "minimum": 43,
+          "type": "integer"
+        },
+        "id": {
+          "pattern": "^cpython-3\\.(10|11|12)-(linux-x86_64|win32-amd64|darwin-(arm64|x86_64))$",
+          "type": "string"
+        },
+        "marker": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "platform_machine": {
+          "enum": [
+            "AMD64",
+            "arm64",
+            "x86_64"
+          ]
+        },
+        "python_version": {
+          "enum": [
+            "3.10",
+            "3.11",
+            "3.12"
+          ]
+        },
+        "sys_platform": {
+          "enum": [
+            "darwin",
+            "linux",
+            "win32"
+          ]
+        }
+      },
+      "required": [
+        "candidate_count",
+        "id",
+        "marker",
+        "platform_machine",
+        "python_version",
+        "sys_platform"
+      ],
+      "type": "object"
+    },
+    "targetTransformRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "enum": [
+            "mujoco-manipulator-control-lab",
+            "setuptools"
+          ]
+        },
+        "reason": {
+          "enum": [
+            "editable-project-target-addition",
+            "explicit-target-scoped-scanner-exclusion"
+          ]
+        },
+        "version": {
+          "enum": [
+            "0.1.0",
+            "83.0.0"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "reason",
+        "version"
+      ],
+      "type": "object"
+    },
+    "ubuntuDistribution": {
+      "additionalProperties": false,
+      "properties": {
+        "architecture": {
+          "const": "amd64"
+        },
+        "codename": {
+          "const": "noble"
+        },
+        "id": {
+          "const": "ubuntu"
+        },
+        "version_id": {
+          "const": "24.04"
+        }
+      },
+      "required": [
+        "architecture",
+        "codename",
+        "id",
+        "version_id"
+      ],
+      "type": "object"
+    },
+    "ubuntuPackage": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "version": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "type": "object"
+    },
+    "unobservedCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "const": "exceptiongroup"
+        },
+        "version": {
+          "const": "1.3.1"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/ycpiglet/manipulator-control-tutorial/blob/main/.agents/supply_chain/license-inventory.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "candidates": {
+      "items": {
+        "$ref": "#/$defs/candidate"
+      },
+      "maxItems": 49,
+      "minItems": 49,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "contract": {
+      "additionalProperties": false,
+      "properties": {
+        "blockers": {
+          "items": {
+            "enum": [
+              "copyright-attribution-review-pending",
+              "distribution-closure-unproven",
+              "license-expression-review-pending",
+              "license-text-coverage-pending",
+              "native-and-base-image-transitive-inventory-pending",
+              "notice-text-coverage-pending",
+              "qt-pyside-lgpl-compliance-decision-pending",
+              "source-offer-and-relinking-obligations-pending"
+            ]
+          },
+          "maxItems": 8,
+          "minItems": 8,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "candidate_count": {
+          "const": 49
+        },
+        "compliance_status": {
+          "const": "pending-lic-01"
+        },
+        "id": {
+          "const": "LIC-01A"
+        },
+        "legal_approval": {
+          "const": false
+        },
+        "notice_bundle_complete": {
+          "const": false
+        },
+        "observed_target_count": {
+          "const": 3
+        },
+        "public_distribution_authorized": {
+          "const": false
+        },
+        "purpose": {
+          "const": "deterministic inventory coverage contract; not legal approval"
+        },
+        "qt_pyside_lgpl_decision": {
+          "const": "pending"
+        },
+        "target_cell_count": {
+          "const": 12
+        }
+      },
+      "required": [
+        "blockers",
+        "candidate_count",
+        "compliance_status",
+        "id",
+        "legal_approval",
+        "notice_bundle_complete",
+        "observed_target_count",
+        "public_distribution_authorized",
+        "purpose",
+        "qt_pyside_lgpl_decision",
+        "target_cell_count"
+      ],
+      "type": "object"
+    },
+    "coverage": {
+      "additionalProperties": false,
+      "properties": {
+        "added_observation_rows": {
+          "items": {
+            "$ref": "#/$defs/globalTransformRecord"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "applicable_lock_candidate_union_count": {
+          "const": 48
+        },
+        "distribution_closure": {
+          "const": "unproven"
+        },
+        "distribution_surface_inventory": {
+          "const": "enumerated-not-license-reviewed"
+        },
+        "excluded_applicable_lock_candidates": {
+          "items": {
+            "$ref": "#/$defs/globalTransformRecord"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "license_observation_scope": {
+          "const": "python-package-input-only"
+        },
+        "lock_candidate_count": {
+          "const": 49
+        },
+        "not_applicable_to_observed_targets": {
+          "items": {
+            "$ref": "#/$defs/notApplicableRecord"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "observation_row_union_count": {
+          "const": 48
+        },
+        "observed_locked_candidate_union_count": {
+          "const": 47
+        },
+        "observed_target_count": {
+          "const": 3
+        },
+        "observed_target_ids": {
+          "items": {
+            "enum": [
+              "cpython-3.11-darwin-arm64",
+              "cpython-3.11-linux-x86_64",
+              "cpython-3.11-win32-amd64"
+            ]
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "unobserved_target_count": {
+          "const": 9
+        },
+        "unobserved_target_ids": {
+          "items": {
+            "enum": [
+              "cpython-3.10-darwin-arm64",
+              "cpython-3.10-darwin-x86_64",
+              "cpython-3.10-linux-x86_64",
+              "cpython-3.10-win32-amd64",
+              "cpython-3.11-darwin-x86_64",
+              "cpython-3.12-darwin-arm64",
+              "cpython-3.12-darwin-x86_64",
+              "cpython-3.12-linux-x86_64",
+              "cpython-3.12-win32-amd64"
+            ]
+          },
+          "maxItems": 9,
+          "minItems": 9,
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "added_observation_rows",
+        "applicable_lock_candidate_union_count",
+        "distribution_closure",
+        "distribution_surface_inventory",
+        "excluded_applicable_lock_candidates",
+        "license_observation_scope",
+        "lock_candidate_count",
+        "not_applicable_to_observed_targets",
+        "observation_row_union_count",
+        "observed_locked_candidate_union_count",
+        "observed_target_count",
+        "observed_target_ids",
+        "unobserved_target_count",
+        "unobserved_target_ids"
+      ],
+      "type": "object"
+    },
+    "distribution_surfaces": {
+      "additionalProperties": false,
+      "properties": {
+        "fonts": {
+          "additionalProperties": false,
+          "properties": {
+            "file_count": {
+              "const": 2
+            },
+            "files": {
+              "items": {
+                "$ref": "#/$defs/identifiedSurfaceFile"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "license": {
+              "$ref": "#/$defs/identifiedSpdxLicense"
+            }
+          },
+          "required": [
+            "file_count",
+            "files",
+            "license"
+          ],
+          "type": "object"
+        },
+        "inventory_status": {
+          "const": "enumerated-inputs-only-distribution-closure-unproven"
+        },
+        "packaging": {
+          "additionalProperties": false,
+          "properties": {
+            "data_group_count": {
+              "const": 6
+            },
+            "data_groups": {
+              "items": {
+                "$ref": "#/$defs/dataGroup"
+              },
+              "maxItems": 6,
+              "minItems": 6,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "root_licenses": {
+              "items": {
+                "$ref": "#/$defs/identifiedSpdxLicense"
+              },
+              "maxItems": 1,
+              "minItems": 1,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "source": {
+              "$ref": "#/$defs/sourceRecord"
+            }
+          },
+          "required": [
+            "data_group_count",
+            "data_groups",
+            "root_licenses",
+            "source"
+          ],
+          "type": "object"
+        },
+        "panda_runtime": {
+          "additionalProperties": false,
+          "properties": {
+            "archive_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "commit": {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            },
+            "file_count": {
+              "const": 72
+            },
+            "files": {
+              "items": {
+                "$ref": "#/$defs/surfaceFile"
+              },
+              "maxItems": 72,
+              "minItems": 72,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "license": {
+              "$ref": "#/$defs/spdxLicense"
+            },
+            "source": {
+              "$ref": "#/$defs/sourceRecord"
+            },
+            "upstream_repository": {
+              "const": "https://github.com/google-deepmind/mujoco_menagerie"
+            }
+          },
+          "required": [
+            "archive_sha256",
+            "commit",
+            "file_count",
+            "files",
+            "license",
+            "source",
+            "upstream_repository"
+          ],
+          "type": "object"
+        },
+        "ubuntu_system": {
+          "additionalProperties": false,
+          "properties": {
+            "archive_keyring": {
+              "$ref": "#/$defs/archiveKeyring"
+            },
+            "distribution": {
+              "$ref": "#/$defs/ubuntuDistribution"
+            },
+            "ecosystem": {
+              "const": "apt"
+            },
+            "installer": {
+              "$ref": "#/$defs/sourceRecord"
+            },
+            "package_count": {
+              "const": 22
+            },
+            "packages": {
+              "items": {
+                "$ref": "#/$defs/ubuntuPackage"
+              },
+              "maxItems": 22,
+              "minItems": 22,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "snapshot": {
+              "pattern": "^[0-9]{8}T[0-9]{6}Z$",
+              "type": "string"
+            },
+            "source": {
+              "$ref": "#/$defs/sourceRecord"
+            }
+          },
+          "required": [
+            "archive_keyring",
+            "distribution",
+            "ecosystem",
+            "installer",
+            "package_count",
+            "packages",
+            "snapshot",
+            "source"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "fonts",
+        "inventory_status",
+        "packaging",
+        "panda_runtime",
+        "ubuntu_system"
+      ],
+      "type": "object"
+    },
+    "observation_baseline": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_scope": {
+          "const": "short-lived development evidence; not release provenance"
+        },
+        "source_commit": {
+          "const": "6f0995bd8fe52f8fa6832a03f83254eb13ff9cc1"
+        },
+        "workflow_run_id": {
+          "const": 29950992873
+        }
+      },
+      "required": [
+        "evidence_scope",
+        "source_commit",
+        "workflow_run_id"
+      ],
+      "type": "object"
+    },
+    "observed_targets": {
+      "items": {
+        "$ref": "#/$defs/observedTarget"
+      },
+      "maxItems": 3,
+      "minItems": 3,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "sources": {
+      "additionalProperties": false,
+      "properties": {
+        "app_dev_lock": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "app_lock": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "build_lock": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "build_source": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "checker": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "dev_lock": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "evidence_schema": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "font_license": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "font_noto_sans_kr": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "font_noto_sans_mono": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "generator": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "package_lock": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "packaging_spec": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "panda_manifest": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "project": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "project_license": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "runtime_lock": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "registry_schema": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "sbom_generator": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "scanner": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "supply_chain_tool_lock": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "supply_chain_tool_source": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "ubuntu_installer": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "ubuntu_manifest": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "uv_tool_lock": {
+          "$ref": "#/$defs/sourceRecord"
+        }
+      },
+      "required": [
+        "app_dev_lock",
+        "app_lock",
+        "build_lock",
+        "build_source",
+        "checker",
+        "dev_lock",
+        "evidence_schema",
+        "font_license",
+        "font_noto_sans_kr",
+        "font_noto_sans_mono",
+        "generator",
+        "package_lock",
+        "packaging_spec",
+        "panda_manifest",
+        "project",
+        "project_license",
+        "runtime_lock",
+        "registry_schema",
+        "sbom_generator",
+        "scanner",
+        "supply_chain_tool_lock",
+        "supply_chain_tool_source",
+        "ubuntu_installer",
+        "ubuntu_manifest",
+        "uv_tool_lock"
+      ],
+      "type": "object"
+    },
+    "target_cells": {
+      "items": {
+        "$ref": "#/$defs/targetCell"
+      },
+      "maxItems": 12,
+      "minItems": 12,
+      "type": "array",
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "candidates",
+    "contract",
+    "coverage",
+    "distribution_surfaces",
+    "observation_baseline",
+    "observed_targets",
+    "schema_version",
+    "sources",
+    "target_cells"
+  ],
+  "title": "MCLab LIC-01A deterministic license inventory contract",
+  "type": "object"
+}

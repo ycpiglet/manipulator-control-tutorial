@@ -573,6 +573,37 @@ def test_workflow_contract_requires_audit_before_upload(repository: Path) -> Non
     assert any("reviewed order" in error for error in checker.workflow_policy_errors(repository))
 
 
+def test_desktop_workflow_validates_license_inventory_before_upload(
+    repository: Path,
+) -> None:
+    desktop = repository / checker.DESKTOP_WORKFLOW_PATH
+    names = (
+        "Audit package-profile licenses",
+        "Validate package-profile license inventory",
+        "Upload target supply-chain evidence",
+    )
+    blocks = []
+    for name in names:
+        policy = next(
+            candidate
+            for candidate in checker.WORKFLOW_STEP_POLICIES
+            if candidate.path == checker.DESKTOP_WORKFLOW_PATH
+            and candidate.name == name
+        )
+        blocks.append(
+            "\n".join(f"      {line}" for line in policy.expected_lines) + "\n"
+        )
+    sequence = "".join(blocks)
+    text = desktop.read_text(encoding="utf-8")
+    assert sequence in text
+    desktop.write_text(
+        text.replace(sequence, blocks[0] + blocks[2] + blocks[1], 1),
+        encoding="utf-8",
+    )
+
+    assert any("reviewed order" in error for error in checker.workflow_policy_errors(repository))
+
+
 @pytest.mark.parametrize(
     "tamper",
     (

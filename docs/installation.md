@@ -179,10 +179,73 @@ package set was fully recorded, while `compliance_status` remains
 gate can pass. These records are not legal advice, a complete notice bundle,
 or approval to distribute Qt/PySide or any other component.
 Hosted-interpreter bootstrap packages outside the reviewed package profile are
-not distribution inputs: the target probe requires every lock-derived package
-at its exact version, and `pip-licenses --packages` limits the evidence to that
-same deterministic set. Ambient packages therefore neither enter the evidence
-nor relax missing-package, version, or scanner-output coverage checks.
+explicitly excluded from this bounded scanner profile. That exclusion does not
+prove they are absent from a future shipped package; distribution closure
+remains pending. The target probe requires every lock-derived package at its
+exact version, and `pip-licenses --packages` limits this evidence to that same
+deterministic set. Ambient packages therefore neither enter this evidence nor
+relax missing-package, version, or scanner-output coverage checks.
+
+LIC-01A adds a committed, closed-schema inventory contract without adding
+third-party license or NOTICE bodies. The registry fixes all 49 package-lock
+candidates and their membership across the reviewed 12 CPython/platform cells,
+then records bounded summaries and SHA-256 provenance for the three accepted
+SUP-01 hosted observations. The hosted observations are short-lived development
+evidence, not release provenance. For package-evidence comparison, the checker
+explicitly excludes the bootstrap `pip`, `setuptools`, and `wheel` distributions
+and substitutes the editable MCLab project for the package lock's `setuptools`
+candidate, matching the existing scanner boundary.
+
+Each accepted target also pins normalized, per-package observations: the raw
+license string reported by package metadata, the reported project URL, and
+SHA-256 hashes of normalized license and NOTICE text when present. These values
+are evidence observations only. They are not reviewed SPDX expressions, legal
+interpretations, or approval of the reported terms.
+
+Each target also records the raw artifact SHA-256 and the canonical evidence
+SHA-256. Canonicalization version 1 strictly parses UTF-8 JSON, rejects duplicate
+keys and non-finite numbers, sorts object keys, renders with two-space
+indentation and unescaped Unicode, and terminates lines with LF plus one final
+LF. The accepted Windows artifact retains its historical CRLF raw hash while
+also recording the hash of the canonical LF form. Newly generated evidence must
+be canonical; the checker permits noncanonical bytes only when both hashes match
+that exact historical accepted artifact.
+
+The machine-readable coverage record makes the remaining boundary explicit.
+Only 3 of 12 target cells have accepted observations; the other 9 are listed by
+ID. Across those cells, 48 of 49 locked candidates are applicable, but only 47
+locked candidates appear in evidence: `setuptools==83.0.0` is explicitly
+excluded on each observed target. The editable
+`mujoco-manipulator-control-lab==0.1.0` row is added on each target, producing 48
+distinct observation rows. `exceptiongroup==1.3.1` is the sole lock candidate
+whose marker is not applicable to any observed target. These absences and the
+target-scoped exclusion/addition reasons are machine-readable. Distribution
+closure remains `unproven`. The registry nevertheless enumerates the existing
+universal SBOM-input surfaces without claiming license review: 22 pinned direct
+Ubuntu packages, 72 Panda runtime files, 2 bundled font files, and all 6
+packaging data groups.
+
+The registry hashes every direct producer input, including all eight locks read
+by the scanner (`uv-tool`, `build`, `runtime`, `app`, `dev`, `app-dev`,
+`package`, and `supply-chain-tool`), schemas and checker/generator sources,
+project metadata and license, Ubuntu manifest and installer, Panda manifest,
+packaging specification, and each bundled font/license file. A test derives
+the expected lock set from the scanner itself. Missing or changed producer
+inputs fail regeneration before the committed registry can pass.
+
+```bash
+python scripts/generate_license_inventory.py --check
+python .agents/validation/check_license_inventory.py
+```
+
+Every desktop matrix cell validates its fresh `python-licenses.json` against
+that registry before evidence upload. Candidate review status nevertheless
+remains `pending`, and the contract keeps license-expression, copyright,
+license-text, NOTICE, source/relinking, native/base-image, and Qt/PySide LGPL
+decisions plus unproven distribution closure as explicit blockers. This
+contract is not legal approval, a complete notice bundle, public-distribution
+authorization, or permission to reinterpret the existing unsigned development
+artifacts as release evidence.
 
 `scripts/generate_sbom_inputs.py` combines the reviewed Python locks, Ubuntu
 direct-package manifest, pinned Panda runtime inventory, bundled fonts, and

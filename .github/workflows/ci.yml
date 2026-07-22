@@ -49,6 +49,9 @@ jobs:
       - name: Supply-chain static policy
         run: python .agents/validation/check_supply_chain_policy.py
 
+      - name: License inventory contract
+        run: python .agents/validation/check_license_inventory.py
+
       - name: Generate deterministic universal SBOM inputs
         run: |
           python scripts/generate_sbom_inputs.py --source-commit "$GITHUB_SHA" --output /tmp/mclab-sbom-inputs-1.json

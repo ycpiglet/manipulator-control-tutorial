@@ -94,6 +94,14 @@ WORKFLOW_STEP_POLICIES = (
     ),
     WorkflowStepPolicy(
         CI_WORKFLOW_PATH,
+        "License inventory contract",
+        (
+            "- name: License inventory contract",
+            "  run: python .agents/validation/check_license_inventory.py",
+        ),
+    ),
+    WorkflowStepPolicy(
+        CI_WORKFLOW_PATH,
         "Generate deterministic universal SBOM inputs",
         (
             "- name: Generate deterministic universal SBOM inputs",
@@ -168,6 +176,17 @@ WORKFLOW_STEP_POLICIES = (
     ),
     WorkflowStepPolicy(
         DESKTOP_WORKFLOW_PATH,
+        "Validate package-profile license inventory",
+        (
+            "- name: Validate package-profile license inventory",
+            "  shell: bash",
+            "  run: python .agents/validation/check_license_inventory.py --evidence "
+            "build/validation/supply-chain-${RUNNER_OS}/python-licenses.json "
+            '--runner-os "$RUNNER_OS"',
+        ),
+    ),
+    WorkflowStepPolicy(
+        DESKTOP_WORKFLOW_PATH,
         "Upload target supply-chain evidence",
         (
             "- name: Upload target supply-chain evidence",
@@ -185,6 +204,7 @@ WORKFLOW_STEP_POLICIES = (
 WORKFLOW_STEP_ORDER = {
     CI_WORKFLOW_PATH: (
         "Supply-chain static policy",
+        "License inventory contract",
         "Generate deterministic universal SBOM inputs",
         "Audit reviewed Python vulnerabilities",
         "Upload universal supply-chain evidence",
@@ -194,6 +214,7 @@ WORKFLOW_STEP_ORDER = {
         "Install desktop, test, and packaging dependencies",
         "Select package-profile Python",
         "Audit package-profile licenses",
+        "Validate package-profile license inventory",
         "Upload target supply-chain evidence",
     ),
 }

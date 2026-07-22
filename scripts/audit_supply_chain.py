@@ -55,8 +55,9 @@ LICENSE_PROFILE_LOCKS = {
     "package": ("build", "package"),
 }
 # These bootstrap distributions are installed by the locked installer but are
-# not distribution components reviewed by pip-licenses.  ``--with-system`` plus
-# this explicit list avoids pip-licenses' Python-version-dependent hidden list.
+# excluded from this bounded pip-licenses profile.  The exclusion does not prove
+# that they are absent from a future shipped package. ``--with-system`` plus this
+# explicit list avoids pip-licenses' Python-version-dependent hidden list.
 LICENSE_EXCLUDED_PACKAGES = frozenset({"pip", "setuptools", "wheel"})
 
 _NAME_NORMALIZER = re.compile(r"[-_.]+")
@@ -938,11 +939,12 @@ def validated_target_python_path(target_python: Path, *, root: Path = ROOT) -> P
 
 def write_evidence(path: Path, evidence: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    payload = json.dumps(evidence, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+    payload = (
+        json.dumps(evidence, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+    ).encode("utf-8")
     try:
         with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
+            mode="wb",
             dir=path.parent,
             prefix=f".{path.name}.",
             suffix=".tmp",

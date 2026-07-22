@@ -710,6 +710,19 @@ def test_output_path_rejects_external_lexical_alias_of_repository(tmp_path: Path
         alias.unlink(missing_ok=True)
 
 
+def test_evidence_writer_emits_canonical_utf8_lf_bytes(tmp_path: Path) -> None:
+    destination = tmp_path / "build/validation/evidence.json"
+    evidence = {"z": "한글", "a": {"value": "line one\nline two"}}
+
+    AUDIT.write_evidence(destination, evidence)
+
+    payload = destination.read_bytes()
+    assert payload == (
+        json.dumps(evidence, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+    ).encode("utf-8")
+    assert b"\r" not in payload
+
+
 def test_target_python_validation_preserves_venv_symlink_invocation(tmp_path: Path) -> None:
     interpreter = tmp_path / "system-python"
     interpreter.write_text("placeholder", encoding="utf-8")

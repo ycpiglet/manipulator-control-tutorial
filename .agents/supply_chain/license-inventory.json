@@ -1,0 +1,3078 @@
+{
+  "candidates": [
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "absl-py",
+      "review_status": "pending",
+      "version": "2.5.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "altgraph",
+      "review_status": "pending",
+      "version": "0.17.5"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "ast-serialize",
+      "review_status": "pending",
+      "version": "0.6.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "axe-playwright-python",
+      "review_status": "pending",
+      "version": "0.1.7"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32'",
+      "name": "colorama",
+      "review_status": "pending",
+      "version": "0.4.6"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "contourpy",
+      "review_status": "pending",
+      "version": "1.3.2"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "coverage",
+      "review_status": "pending",
+      "version": "7.15.2"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "cycler",
+      "review_status": "pending",
+      "version": "0.12.1"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "etils",
+      "review_status": "pending",
+      "version": "1.13.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.11' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.11' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.11' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.11' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "exceptiongroup",
+      "review_status": "pending",
+      "version": "1.3.1"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "fonttools",
+      "review_status": "pending",
+      "version": "4.63.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "fsspec",
+      "review_status": "pending",
+      "version": "2026.6.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "glfw",
+      "review_status": "pending",
+      "version": "2.10.2"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "greenlet",
+      "review_status": "pending",
+      "version": "3.5.3"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "importlib-resources",
+      "review_status": "pending",
+      "version": "7.1.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "iniconfig",
+      "review_status": "pending",
+      "version": "2.3.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "kiwisolver",
+      "review_status": "pending",
+      "version": "1.5.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and platform_python_implementation != 'PyPy' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and platform_python_implementation != 'PyPy' and sys_platform == 'win32')",
+      "name": "librt",
+      "review_status": "pending",
+      "version": "0.13.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin')",
+      "name": "macholib",
+      "review_status": "pending",
+      "version": "1.16.4"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "matplotlib",
+      "review_status": "pending",
+      "version": "3.10.9"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "mujoco",
+      "review_status": "pending",
+      "version": "3.10.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "mypy",
+      "review_status": "pending",
+      "version": "2.3.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "mypy-extensions",
+      "review_status": "pending",
+      "version": "1.1.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "numpy",
+      "review_status": "pending",
+      "version": "2.2.6"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "packaging",
+      "review_status": "pending",
+      "version": "26.2"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "pathspec",
+      "review_status": "pending",
+      "version": "1.1.1"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32'",
+      "name": "pefile",
+      "review_status": "pending",
+      "version": "2024.8.26"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "pillow",
+      "review_status": "pending",
+      "version": "12.3.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "playwright",
+      "review_status": "pending",
+      "version": "1.61.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "pluggy",
+      "review_status": "pending",
+      "version": "1.6.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "pyee",
+      "review_status": "pending",
+      "version": "13.0.1"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "pygments",
+      "review_status": "pending",
+      "version": "2.20.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "pyinstaller",
+      "review_status": "pending",
+      "version": "6.21.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "pyinstaller-hooks-contrib",
+      "review_status": "pending",
+      "version": "2026.6"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "pyopengl",
+      "review_status": "pending",
+      "version": "3.1.10"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "pyparsing",
+      "review_status": "pending",
+      "version": "3.3.2"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "pyside6-essentials",
+      "review_status": "pending",
+      "version": "6.11.1"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "pytest",
+      "review_status": "pending",
+      "version": "9.1.1"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "pytest-cov",
+      "review_status": "pending",
+      "version": "7.1.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "python-dateutil",
+      "review_status": "pending",
+      "version": "2.9.0.post0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32'",
+      "name": "pywin32-ctypes",
+      "review_status": "pending",
+      "version": "0.2.3"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "pyyaml",
+      "review_status": "pending",
+      "version": "6.0.3"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "ruff",
+      "review_status": "pending",
+      "version": "0.15.22"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "setuptools",
+      "review_status": "pending",
+      "version": "83.0.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "shiboken6",
+      "review_status": "pending",
+      "version": "6.11.1"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "six",
+      "review_status": "pending",
+      "version": "1.17.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64"
+      ],
+      "marker": "(python_full_version <= '3.11' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version <= '3.11' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version <= '3.11' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version <= '3.11' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "tomli",
+      "review_status": "pending",
+      "version": "2.4.1"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "typing-extensions",
+      "review_status": "pending",
+      "version": "4.16.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "zipp",
+      "review_status": "pending",
+      "version": "4.1.0"
+    }
+  ],
+  "contract": {
+    "blockers": [
+      "copyright-attribution-review-pending",
+      "distribution-closure-unproven",
+      "license-expression-review-pending",
+      "license-text-coverage-pending",
+      "native-and-base-image-transitive-inventory-pending",
+      "notice-text-coverage-pending",
+      "qt-pyside-lgpl-compliance-decision-pending",
+      "source-offer-and-relinking-obligations-pending"
+    ],
+    "candidate_count": 49,
+    "compliance_status": "pending-lic-01",
+    "id": "LIC-01A",
+    "legal_approval": false,
+    "notice_bundle_complete": false,
+    "observed_target_count": 3,
+    "public_distribution_authorized": false,
+    "purpose": "deterministic inventory coverage contract; not legal approval",
+    "qt_pyside_lgpl_decision": "pending",
+    "target_cell_count": 12
+  },
+  "coverage": {
+    "added_observation_rows": [
+      {
+        "name": "mujoco-manipulator-control-lab",
+        "reason": "editable-project-target-addition",
+        "target_ids": [
+          "cpython-3.11-darwin-arm64",
+          "cpython-3.11-linux-x86_64",
+          "cpython-3.11-win32-amd64"
+        ],
+        "version": "0.1.0"
+      }
+    ],
+    "applicable_lock_candidate_union_count": 48,
+    "distribution_closure": "unproven",
+    "distribution_surface_inventory": "enumerated-not-license-reviewed",
+    "excluded_applicable_lock_candidates": [
+      {
+        "name": "setuptools",
+        "reason": "explicit-target-scoped-scanner-exclusion",
+        "target_ids": [
+          "cpython-3.11-darwin-arm64",
+          "cpython-3.11-linux-x86_64",
+          "cpython-3.11-win32-amd64"
+        ],
+        "version": "83.0.0"
+      }
+    ],
+    "license_observation_scope": "python-package-input-only",
+    "lock_candidate_count": 49,
+    "not_applicable_to_observed_targets": [
+      {
+        "applicable_target_ids": [
+          "cpython-3.10-darwin-arm64",
+          "cpython-3.10-darwin-x86_64",
+          "cpython-3.10-linux-x86_64",
+          "cpython-3.10-win32-amd64"
+        ],
+        "name": "exceptiongroup",
+        "reason": "marker-not-applicable-to-observed-targets",
+        "version": "1.3.1"
+      }
+    ],
+    "observation_row_union_count": 48,
+    "observed_locked_candidate_union_count": 47,
+    "observed_target_count": 3,
+    "observed_target_ids": [
+      "cpython-3.11-darwin-arm64",
+      "cpython-3.11-linux-x86_64",
+      "cpython-3.11-win32-amd64"
+    ],
+    "unobserved_target_count": 9,
+    "unobserved_target_ids": [
+      "cpython-3.10-darwin-arm64",
+      "cpython-3.10-darwin-x86_64",
+      "cpython-3.10-linux-x86_64",
+      "cpython-3.10-win32-amd64",
+      "cpython-3.11-darwin-x86_64",
+      "cpython-3.12-darwin-arm64",
+      "cpython-3.12-darwin-x86_64",
+      "cpython-3.12-linux-x86_64",
+      "cpython-3.12-win32-amd64"
+    ]
+  },
+  "distribution_surfaces": {
+    "fonts": {
+      "file_count": 2,
+      "files": [
+        {
+          "id": "noto-sans-kr-variable",
+          "path": "third_party/fonts/noto/NotoSansKR[wght].ttf",
+          "sha256": "194018e6b2b293a7964f037b25c0249ce1418bc9ab3c971060a03aa57861e252",
+          "size": 10414588
+        },
+        {
+          "id": "noto-sans-mono-variable",
+          "path": "third_party/fonts/noto/NotoSansMono[wdth,wght].ttf",
+          "sha256": "2cb2adb378a8f574213e23df697050b83c54c27df465a2015552740b2769a081",
+          "size": 1708408
+        }
+      ],
+      "license": {
+        "id": "noto-ofl-1.1",
+        "path": "third_party/fonts/noto/OFL.txt",
+        "sha256": "1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9",
+        "size": 4388,
+        "spdx": "OFL-1.1"
+      }
+    },
+    "inventory_status": "enumerated-inputs-only-distribution-closure-unproven",
+    "packaging": {
+      "data_group_count": 6,
+      "data_groups": [
+        {
+          "destination": "configs",
+          "id": "configs",
+          "license_ids": [
+            "project-apache-2.0"
+          ],
+          "source": "configs"
+        },
+        {
+          "destination": "models",
+          "id": "models",
+          "license_ids": [
+            "project-apache-2.0"
+          ],
+          "source": "models"
+        },
+        {
+          "destination": "third_party/fonts/noto",
+          "id": "noto-fonts",
+          "license_ids": [
+            "noto-ofl-1.1"
+          ],
+          "source": "third_party/fonts/noto"
+        },
+        {
+          "destination": "third_party/mujoco_menagerie/franka_emika_panda",
+          "id": "panda-runtime",
+          "license_ids": [
+            "panda-apache-2.0"
+          ],
+          "source": "managed-panda-runtime"
+        },
+        {
+          "destination": ".",
+          "id": "project-license",
+          "license_ids": [
+            "project-apache-2.0"
+          ],
+          "source": "LICENSE"
+        },
+        {
+          "destination": "mclab/application/qml",
+          "id": "qml",
+          "license_ids": [
+            "project-apache-2.0"
+          ],
+          "source": "src/mclab/application/qml"
+        }
+      ],
+      "root_licenses": [
+        {
+          "id": "project-apache-2.0",
+          "path": "LICENSE",
+          "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+          "size": 11357,
+          "spdx": "Apache-2.0"
+        }
+      ],
+      "source": {
+        "path": "packaging/mclab.spec",
+        "sha256": "f0bb1a83b72937bb8bcc7f5b3220830112d1c517623c0299c689eab16f36b84a",
+        "size": 3119
+      }
+    },
+    "panda_runtime": {
+      "archive_sha256": "000b9f51abb404efb1de2b88b3c738674c472a85b6c4143168859abc4c98d423",
+      "commit": "71f066ad0be9cd271f7ed58c030243ef157af9f4",
+      "file_count": 72,
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9",
+          "size": 10173
+        },
+        {
+          "path": "assets/finger_0.obj",
+          "sha256": "215098c0fcdf7192f6c503a37cf49e3efecf8a9e1320f02b17c5584d89cc5b2c",
+          "size": 87872
+        },
+        {
+          "path": "assets/finger_1.obj",
+          "sha256": "cf239e9aca26bba09dbbf1c544c47d87cfc9a2f0637c8bb786af750b6d4eca44",
+          "size": 64651
+        },
+        {
+          "path": "assets/hand.stl",
+          "sha256": "94493e94f30fe940f2c8ca2f155c3bbe67bbff406d3edf5e261670d2f0f6e2ed",
+          "size": 10084
+        },
+        {
+          "path": "assets/hand_0.obj",
+          "sha256": "b94aab901086f85df04c019b30f43bf9aa23a7ad0443ec80a8c14662a41cabd2",
+          "size": 9091
+        },
+        {
+          "path": "assets/hand_1.obj",
+          "sha256": "cd76f7494bb314406a1819c46eb826ee254894f87235714f604a470653d9badb",
+          "size": 121863
+        },
+        {
+          "path": "assets/hand_2.obj",
+          "sha256": "e0f44a71712afa5b98eb20355eff17763d3e2e19f459b2bef19abed3727e64b3",
+          "size": 596001
+        },
+        {
+          "path": "assets/hand_3.obj",
+          "sha256": "a431a06d99e88a1b322b3122a01424ee7704daeaad0bc343b90b9604f014ad0c",
+          "size": 902145
+        },
+        {
+          "path": "assets/hand_4.obj",
+          "sha256": "21f96ef6a8de082e41b1ea9834f1043de359e5d60305541bcb63539581f53bff",
+          "size": 151988
+        },
+        {
+          "path": "assets/link0.stl",
+          "sha256": "dfc6d94330de8ddb005b311bfdba9f3b8e1aa7c256b71592ee7ff32cb9a9a5aa",
+          "size": 10084
+        },
+        {
+          "path": "assets/link0_0.obj",
+          "sha256": "6b9f41a4c203540daaeb7a33cc3d0d6c6a32dc8bba187074eeaf97b3e36b3f9c",
+          "size": 296497
+        },
+        {
+          "path": "assets/link0_1.obj",
+          "sha256": "57673d2ee2a9db2e10c8986ae57c56a7c39c012b60fd26d7d8549553b664a5ed",
+          "size": 103978
+        },
+        {
+          "path": "assets/link0_10.obj",
+          "sha256": "c9198b9d8534d628d097b0f2b239bb30343353182df098ce0d9db6bc13326848",
+          "size": 343308
+        },
+        {
+          "path": "assets/link0_11.obj",
+          "sha256": "f0adec78d6677b7799d25121981270e8bfe119b5c18d08a91ee37a54ad75f65c",
+          "size": 22295
+        },
+        {
+          "path": "assets/link0_2.obj",
+          "sha256": "1ca435a2a87a9608a146a47955724d43dd7ce10fc3dd3018800aa98f8ba86e05",
+          "size": 590892
+        },
+        {
+          "path": "assets/link0_3.obj",
+          "sha256": "3e9c6334d2b3b47944af3458ee5f20519abc20fe7ee23063bb53405ccab28046",
+          "size": 47588
+        },
+        {
+          "path": "assets/link0_4.obj",
+          "sha256": "215d25789704936120f119c0bc1cc7f68516dd3f8f1df61457b71acac3873f26",
+          "size": 211200
+        },
+        {
+          "path": "assets/link0_5.obj",
+          "sha256": "9361b104e93743045107aa5b15fb1a0835ba9c1f355aae71f56403cf6a9c33f6",
+          "size": 17023
+        },
+        {
+          "path": "assets/link0_7.obj",
+          "sha256": "2dc0b8ebbbc80e4c065d71e195adbc384f673438641fac82b07b801b4d2837cb",
+          "size": 30699
+        },
+        {
+          "path": "assets/link0_8.obj",
+          "sha256": "3b8c436999db5586b8eb47bed2b0aa7de6993868b2681b4c04246eeac42fdb7a",
+          "size": 3263194
+        },
+        {
+          "path": "assets/link0_9.obj",
+          "sha256": "45178f97d2b5da6bce11f610212c4ef7d08c73db33a4fc38e1b7f66b93d023f5",
+          "size": 105629
+        },
+        {
+          "path": "assets/link1.obj",
+          "sha256": "51091e776b16babdbe2f3849b5c041f921d1f11dd94ac19a0f1c81abf496fbae",
+          "size": 3274995
+        },
+        {
+          "path": "assets/link1.stl",
+          "sha256": "e41a39a94108fcf56aacff603fc91ec80541f4c1af17b51a0de5617f5566e6d2",
+          "size": 15084
+        },
+        {
+          "path": "assets/link2.obj",
+          "sha256": "5c9f8e715de52c3eb71b475de35993b3b96081e02abea9f28c414768877fc59b",
+          "size": 3295608
+        },
+        {
+          "path": "assets/link2.stl",
+          "sha256": "370f7605a0fae3529db169ded50f52f171024aa792d4d773bc84197301f6a039",
+          "size": 15084
+        },
+        {
+          "path": "assets/link3.stl",
+          "sha256": "0a8d638b9349c6c0eefc4e888636ac4838c4b27170f18a51699321118af709c1",
+          "size": 15084
+        },
+        {
+          "path": "assets/link3_0.obj",
+          "sha256": "ce2da87f51708e11b189249d41401065dabe89a06e251185a06cef4d5ff27178",
+          "size": 3046804
+        },
+        {
+          "path": "assets/link3_1.obj",
+          "sha256": "2880b7753a7173f38fa87ee21da4dfc7fa7be46fbe07bac5aef9e128513cb118",
+          "size": 65260
+        },
+        {
+          "path": "assets/link3_2.obj",
+          "sha256": "670cff81ae84693769ca4ae658c154cf909d81167e7c8d22b70ea977f2504efa",
+          "size": 83591
+        },
+        {
+          "path": "assets/link3_3.obj",
+          "sha256": "30ede0c812efd0e0b767d134a4eae0b84e0fa407bb6325a5a555e0569b3a3ffd",
+          "size": 457684
+        },
+        {
+          "path": "assets/link4.stl",
+          "sha256": "0180ebb5772ec9840cb049750cffb29a9ddc90311752a16ea34757782ef9e48d",
+          "size": 15084
+        },
+        {
+          "path": "assets/link4_0.obj",
+          "sha256": "443bf6d178177cf347951ecf107ccd10ca444e605e375b67304579e5f948806f",
+          "size": 83486
+        },
+        {
+          "path": "assets/link4_1.obj",
+          "sha256": "ca935ec7cc8b3f0e86aa079c76b0b3bf593b1e9830bab0fa7131ac51577c74f0",
+          "size": 3148001
+        },
+        {
+          "path": "assets/link4_2.obj",
+          "sha256": "c89caf26d379c35bb9e191ee2d91d09ab29ecc792b48d8bc10b39e5b38222175",
+          "size": 455522
+        },
+        {
+          "path": "assets/link4_3.obj",
+          "sha256": "1495d17f45bdb230cf58b0beef9da4e8c9cfe76a3d2d38da89017efe5e093136",
+          "size": 67497
+        },
+        {
+          "path": "assets/link5_0.obj",
+          "sha256": "a3238b8f2af0f2eb66d9fe63dc5d41ac52d5d38507241b5ed10e3cb019ab3e71",
+          "size": 824158
+        },
+        {
+          "path": "assets/link5_1.obj",
+          "sha256": "9d994bbf83ec241e301b5197a6846da13f2a4a0582edb2c0f76962c5549649d6",
+          "size": 63174
+        },
+        {
+          "path": "assets/link5_2.obj",
+          "sha256": "83b4ffe9f772cd7fe182e98640650eebc899aaf01842656574b0416c90dd40a4",
+          "size": 3856621
+        },
+        {
+          "path": "assets/link5_collision_0.obj",
+          "sha256": "3e5aa75fb13f193555c3dfb999df91d81df25006a5c3af5338297d78137c129b",
+          "size": 3861
+        },
+        {
+          "path": "assets/link5_collision_1.obj",
+          "sha256": "87cd8f621071df010f774cbde789282b8463840dfe704f8bdfa2e29be0142e15",
+          "size": 2412
+        },
+        {
+          "path": "assets/link5_collision_2.obj",
+          "sha256": "823ab6c8f7b1d79e0844fa071d82a03499ff68e34fddb1ba3451032c22736040",
+          "size": 3786
+        },
+        {
+          "path": "assets/link6.stl",
+          "sha256": "20b768e99a0e0440b5754dcca108016434e57937cc356acd9c352ccd3cb27f77",
+          "size": 10084
+        },
+        {
+          "path": "assets/link6_0.obj",
+          "sha256": "0504c70ebf1b284ee8faae7dcb896b8830bc672a6552015dd5dbd121fa031fb9",
+          "size": 157563
+        },
+        {
+          "path": "assets/link6_1.obj",
+          "sha256": "45f7ca77695198b6d86ec2417ad4e42e6275044f0f96266699ee8e1057757ac1",
+          "size": 27106
+        },
+        {
+          "path": "assets/link6_10.obj",
+          "sha256": "365f26c21d10332cab8d8704645cb46930c30b3085956f2d097498c793f24db4",
+          "size": 368502
+        },
+        {
+          "path": "assets/link6_11.obj",
+          "sha256": "8ae61e08b3ad064f25bbf03b22e59cc15d65883b5a7ce92711aff29df2493901",
+          "size": 32653
+        },
+        {
+          "path": "assets/link6_12.obj",
+          "sha256": "f28d1bfd62b0244ffd19fb35fe9edefdf583d3c9167db944e87185d919e1d021",
+          "size": 3894
+        },
+        {
+          "path": "assets/link6_13.obj",
+          "sha256": "0a55fa92dccb261d07200e6565fca4c850fd17f0c1ecf38821c0b97d51796c7d",
+          "size": 3798
+        },
+        {
+          "path": "assets/link6_14.obj",
+          "sha256": "750ae3ee4781e62e3a045c662195247b03f6642b05aa93104f08258e5f6eba26",
+          "size": 444469
+        },
+        {
+          "path": "assets/link6_15.obj",
+          "sha256": "5999c1c2497a004a7c4bbe034cdf13744f839d85ae7a11b1bc386c48a3e642e6",
+          "size": 668552
+        },
+        {
+          "path": "assets/link6_16.obj",
+          "sha256": "551d7a8b37c53e7a152d008b4e36992e5b5abe74a4be18b57ee6319c27def09f",
+          "size": 3675358
+        },
+        {
+          "path": "assets/link6_2.obj",
+          "sha256": "e54eee4d8232947ee8af65afd5a067e09dac2da6e7e585cb1dccb65496457da0",
+          "size": 9916
+        },
+        {
+          "path": "assets/link6_3.obj",
+          "sha256": "d4f6a25ef32fa1fa4734146981994ee760232cb077c80fea6487d78a077c7f27",
+          "size": 11943
+        },
+        {
+          "path": "assets/link6_4.obj",
+          "sha256": "be353480fe71d46f7a96f0a3cbb7e112caaf8d88368826f321a36a253c8749b2",
+          "size": 13846
+        },
+        {
+          "path": "assets/link6_5.obj",
+          "sha256": "7c87664623c3e1a6cb330db273227a69626dc5e53b4caff1d4ee7911eb3340c6",
+          "size": 11841
+        },
+        {
+          "path": "assets/link6_6.obj",
+          "sha256": "8fbc031e0d07b795ebf99115c75223141caaba317cab569159f3d477a7821681",
+          "size": 12597
+        },
+        {
+          "path": "assets/link6_7.obj",
+          "sha256": "7dc5ebb799fe281aab27d6e84e7a4efa0a8e42da2369ec83de3ea3f206f62d73",
+          "size": 4382
+        },
+        {
+          "path": "assets/link6_8.obj",
+          "sha256": "e3f77381817a341030f9dcc4c4aa7c559f80411b453fd87eb0fefecca82151bf",
+          "size": 9131
+        },
+        {
+          "path": "assets/link6_9.obj",
+          "sha256": "25a56ea9b02a03b6cb5a81f31c54f54d0185e1a0b3937c37e4289d896e50215a",
+          "size": 17616
+        },
+        {
+          "path": "assets/link7.stl",
+          "sha256": "92ac6afcf7574c034d3170d8a68e95ac9048ab9d0dd5bbd8311b86e551b9ab1c",
+          "size": 10084
+        },
+        {
+          "path": "assets/link7_0.obj",
+          "sha256": "04586b0bde011715cfc22072ac72fe0717eb4d4817bcf665987ce6cd88eb2b93",
+          "size": 1362355
+        },
+        {
+          "path": "assets/link7_1.obj",
+          "sha256": "c3f72289f394c9d6749a4a327fb11f05b203c37c95032c92f28019b40ebe7e00",
+          "size": 121358
+        },
+        {
+          "path": "assets/link7_2.obj",
+          "sha256": "d2faecedb304d0989040d082410378dc949dbbda23bd18c05134f08aae984db5",
+          "size": 208907
+        },
+        {
+          "path": "assets/link7_3.obj",
+          "sha256": "b62d87c4d4bdb7b281ed341d347c39dad0e50bf36aed8ac11d050073701d5f70",
+          "size": 123684
+        },
+        {
+          "path": "assets/link7_4.obj",
+          "sha256": "cb78ccb61fd4ad6c7bff4c4d2e6cb41e1964a5a3e1a28e67c0c6202371cfc018",
+          "size": 85732
+        },
+        {
+          "path": "assets/link7_5.obj",
+          "sha256": "099071d3090b51471ba52f4f90814fd3089f4975d196e4d488117073d0bfe491",
+          "size": 226402
+        },
+        {
+          "path": "assets/link7_6.obj",
+          "sha256": "99469e2d95ab74ce0292f2f16954c87a8a7dc16652e62e970fe37c94330a81bb",
+          "size": 99900
+        },
+        {
+          "path": "assets/link7_7.obj",
+          "sha256": "426c3db8a19373f3dc73d4bec672e948121b2914c10e2e7b9c7ea80643a19e54",
+          "size": 792162
+        },
+        {
+          "path": "hand.xml",
+          "sha256": "d2a6539d0fd7c55c75c14f11c78f04505ee33f31d93e6112e3ad7120e5ee786a",
+          "size": 4547
+        },
+        {
+          "path": "panda.xml",
+          "sha256": "96ad67da03710f17f798c9478fd9e9efdf24a3bf8359f05e456dd9fb158ea273",
+          "size": 14438
+        },
+        {
+          "path": "panda_nohand.xml",
+          "sha256": "e7090a5e2384b18a223ef532d98bf914f7f9a6b74dc8bc9f74c8291201074071",
+          "size": 11246
+        },
+        {
+          "path": "scene.xml",
+          "sha256": "4b08c2e5108f0ed67fa689e096e58850210130c3e6ef889b1e22822d369fd8c3",
+          "size": 819
+        }
+      ],
+      "license": {
+        "path": "LICENSE",
+        "sha256": "a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9",
+        "size": 10173,
+        "spdx": "Apache-2.0"
+      },
+      "source": {
+        "path": "src/mclab/application/panda_runtime_manifest.py",
+        "sha256": "41d476063ef9c5aab6d86ee915b2b907ede5743b7c067b3a0aea34c9c978eb36",
+        "size": 10371
+      },
+      "upstream_repository": "https://github.com/google-deepmind/mujoco_menagerie"
+    },
+    "ubuntu_system": {
+      "archive_keyring": {
+        "package": "ubuntu-keyring",
+        "path": "/usr/share/keyrings/ubuntu-archive-keyring.gpg",
+        "sha256": "80a36b0a6de2f69f49d2df75ef473ccde121e9e190b9ea01d20a4f63778d5c31",
+        "size": 3607,
+        "version": "2023.11.28.1"
+      },
+      "distribution": {
+        "architecture": "amd64",
+        "codename": "noble",
+        "id": "ubuntu",
+        "version_id": "24.04"
+      },
+      "ecosystem": "apt",
+      "installer": {
+        "path": "scripts/install_ubuntu_system_packages.py",
+        "sha256": "5e2f372ff5f0dff37930d05ed1ade5bd8a6d3387ca8fd03e2e8ee75b0bb8a7e5",
+        "size": 62209
+      },
+      "package_count": 22,
+      "packages": [
+        {
+          "name": "libdbus-1-3",
+          "version": "1.14.10-4ubuntu4.1"
+        },
+        {
+          "name": "libegl1",
+          "version": "1.7.0-1build1"
+        },
+        {
+          "name": "libfontconfig1",
+          "version": "2.15.0-1.1ubuntu2"
+        },
+        {
+          "name": "libgl1",
+          "version": "1.7.0-1build1"
+        },
+        {
+          "name": "libglib2.0-0t64",
+          "version": "2.80.0-6ubuntu3.8"
+        },
+        {
+          "name": "libgssapi-krb5-2",
+          "version": "1.20.1-6ubuntu2.7"
+        },
+        {
+          "name": "libx11-xcb1",
+          "version": "2:1.8.7-1build1"
+        },
+        {
+          "name": "libxcb-cursor0",
+          "version": "0.1.4-1build1"
+        },
+        {
+          "name": "libxcb-icccm4",
+          "version": "0.4.1-1.1build3"
+        },
+        {
+          "name": "libxcb-image0",
+          "version": "0.4.0-2build1"
+        },
+        {
+          "name": "libxcb-keysyms1",
+          "version": "0.4.0-1build4"
+        },
+        {
+          "name": "libxcb-randr0",
+          "version": "1.15-1ubuntu2"
+        },
+        {
+          "name": "libxcb-render-util0",
+          "version": "0.3.9-1build4"
+        },
+        {
+          "name": "libxcb-shape0",
+          "version": "1.15-1ubuntu2"
+        },
+        {
+          "name": "libxcb-shm0",
+          "version": "1.15-1ubuntu2"
+        },
+        {
+          "name": "libxcb-sync1",
+          "version": "1.15-1ubuntu2"
+        },
+        {
+          "name": "libxcb-xfixes0",
+          "version": "1.15-1ubuntu2"
+        },
+        {
+          "name": "libxcb-xinerama0",
+          "version": "1.15-1ubuntu2"
+        },
+        {
+          "name": "libxcb-xkb1",
+          "version": "1.15-1ubuntu2"
+        },
+        {
+          "name": "libxkbcommon-x11-0",
+          "version": "1.6.0-1build1"
+        },
+        {
+          "name": "xauth",
+          "version": "1:1.1.2-1build1"
+        },
+        {
+          "name": "xvfb",
+          "version": "2:21.1.12-1ubuntu1.6"
+        }
+      ],
+      "snapshot": "20260723T000000Z",
+      "source": {
+        "path": "requirements/system/ubuntu-24.04-amd64.json",
+        "sha256": "4f3ce81bc1d635a9242fba44f819fe2da89d2f722c12a01a88818f2976eb8feb",
+        "size": 2189
+      }
+    }
+  },
+  "observation_baseline": {
+    "evidence_scope": "short-lived development evidence; not release provenance",
+    "source_commit": "6f0995bd8fe52f8fa6832a03f83254eb13ff9cc1",
+    "workflow_run_id": 29950992873
+  },
+  "observed_targets": [
+    {
+      "added_observation_rows": [
+        {
+          "name": "mujoco-manipulator-control-lab",
+          "reason": "editable-project-target-addition",
+          "version": "0.1.0"
+        }
+      ],
+      "applicable_lock_candidate_count": 44,
+      "artifact": {
+        "canonical_evidence_sha256": "cea1db18977740f449f413d87e13ee2c85707f6bcbc2684b020f396c82635d83",
+        "expires_at": "2026-08-05T19:27:49Z",
+        "id": 8542125543,
+        "name": "mclab-supply-chain-Linux",
+        "normalization_algorithm": "strict-json-sort-keys-indent-2-ensure-ascii-false-utf8-lf",
+        "normalization_version": 1,
+        "raw_evidence_sha256": "cea1db18977740f449f413d87e13ee2c85707f6bcbc2684b020f396c82635d83"
+      },
+      "cell_id": "cpython-3.11-linux-x86_64",
+      "excluded_applicable_lock_candidates": [
+        {
+          "name": "setuptools",
+          "reason": "explicit-target-scoped-scanner-exclusion",
+          "version": "83.0.0"
+        }
+      ],
+      "id": "github-hosted-linux-cpython-3.11",
+      "metadata_gaps": {
+        "license": 1,
+        "license_text": 3,
+        "notice_text": 43,
+        "url": 2
+      },
+      "observation_row_count": 44,
+      "observed_locked_candidate_count": 43,
+      "package_count": 44,
+      "package_observations": [
+        {
+          "license_observation": "Apache-2.0",
+          "license_text_sha256": "283ea6cc2997a1a70da0049e09adf9317bb60ca1b51279b65196b83a69e1996b",
+          "name": "absl-py",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/abseil/abseil-py",
+          "version": "2.5.0"
+        },
+        {
+          "license_observation": "MIT License",
+          "license_text_sha256": "6aedd24b2bb1c39278030dc031ac338a0b1ba5c748f8c55109b0e2024cf52575",
+          "name": "altgraph",
+          "notice_text_sha256": null,
+          "url_observation": "https://altgraph.readthedocs.io",
+          "version": "0.17.5"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "b8099477985fcd55f7af91efd698c27eec182f0c7d5d62c5d2cfb28ce53ecaf5",
+          "name": "ast-serialize",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/mypyc/ast_serialize",
+          "version": "0.6.0"
+        },
+        {
+          "license_observation": null,
+          "license_text_sha256": "e69be8261723b83133cef88b9e07452794f86ebf0b595766eb22ffe780835a3b",
+          "name": "axe-playwright-python",
+          "notice_text_sha256": null,
+          "url_observation": "https://pamelafox.github.io/axe-playwright-python",
+          "version": "0.1.7"
+        },
+        {
+          "license_observation": "BSD License",
+          "license_text_sha256": "4e85324de598a629b159b1bc8184391b995a224e94b653464c782b3be4c80e0d",
+          "name": "contourpy",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/contourpy/contourpy",
+          "version": "1.3.2"
+        },
+        {
+          "license_observation": "Apache-2.0",
+          "license_text_sha256": "4bf96504d6e83ce5c6fc7167f1795d9ceaa68e70ab86bc5d08ab93184262bbbe",
+          "name": "coverage",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/coveragepy/coveragepy",
+          "version": "7.15.2"
+        },
+        {
+          "license_observation": "BSD License",
+          "license_text_sha256": "f1218143d766da3fea66f13396b7f15df46a83303f29bf96ba6e98eb4d42f408",
+          "name": "cycler",
+          "notice_text_sha256": null,
+          "url_observation": "https://matplotlib.org/cycler/",
+          "version": "0.12.1"
+        },
+        {
+          "license_observation": "Apache Software License",
+          "license_text_sha256": "283ea6cc2997a1a70da0049e09adf9317bb60ca1b51279b65196b83a69e1996b",
+          "name": "etils",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/google/etils",
+          "version": "1.13.0"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "bcf9c4f3815a8ef8945325d6900169c034994e6f4a3c4ff11455cbcee43ff23f",
+          "name": "fonttools",
+          "notice_text_sha256": null,
+          "url_observation": "http://github.com/fonttools/fonttools",
+          "version": "4.63.0"
+        },
+        {
+          "license_observation": "BSD-3-Clause",
+          "license_text_sha256": "c03b1c97bf1e47e8f003ac479ba4cd9d2860827d340db50746b79ca5d3e921ca",
+          "name": "fsspec",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/fsspec/filesystem_spec",
+          "version": "2026.6.0"
+        },
+        {
+          "license_observation": "MIT License",
+          "license_text_sha256": "02f881774a8ff27734660cab4c4023fa716ef3f6401487fe373138882dca6b3d",
+          "name": "glfw",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/FlorianRhiem/pyGLFW",
+          "version": "2.10.2"
+        },
+        {
+          "license_observation": "MIT AND PSF-2.0",
+          "license_text_sha256": "3db20b97e24acc77b0eac77195e4eaf4ee23b64c0049585be5a5edadaa7e20a8",
+          "name": "greenlet",
+          "notice_text_sha256": null,
+          "url_observation": "https://greenlet.readthedocs.io",
+          "version": "3.5.3"
+        },
+        {
+          "license_observation": "Apache-2.0",
+          "license_text_sha256": "36368470ab75b8642a1017023e3e069d548ae83b44f516d7c9a0435fe32b7531",
+          "name": "importlib-resources",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/python/importlib_resources",
+          "version": "7.1.0"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "b25ef321fa3d1d268e71c366a7a0b43a85c4adc92d413f4213bf8a4fcc2186a8",
+          "name": "iniconfig",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/pytest-dev/iniconfig",
+          "version": "2.3.0"
+        },
+        {
+          "license_observation": "BSD License",
+          "license_text_sha256": "9ebedced2216050cefa62c4832c13109a54de9aa3ad9bb0ff42fdb878d80443f",
+          "name": "kiwisolver",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/nucleic/kiwi",
+          "version": "1.5.0"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "aed81b48b09b6510920fca77e470d03c1db19759e19fd3f6c5d71526568faf60",
+          "name": "librt",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/mypyc/librt",
+          "version": "0.13.0"
+        },
+        {
+          "license_observation": "Python Software Foundation License",
+          "license_text_sha256": "329a9d7b2bb9b0190cb6d1441d048720dd4a4658e96dacaee376398c04788607",
+          "name": "matplotlib",
+          "notice_text_sha256": null,
+          "url_observation": "https://matplotlib.org",
+          "version": "3.10.9"
+        },
+        {
+          "license_observation": "Apache-2.0",
+          "license_text_sha256": "283ea6cc2997a1a70da0049e09adf9317bb60ca1b51279b65196b83a69e1996b",
+          "name": "mujoco",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/google-deepmind/mujoco",
+          "version": "3.10.0"
+        },
+        {
+          "license_observation": "Apache-2.0",
+          "license_text_sha256": "283ea6cc2997a1a70da0049e09adf9317bb60ca1b51279b65196b83a69e1996b",
+          "name": "mujoco-manipulator-control-lab",
+          "notice_text_sha256": null,
+          "url_observation": null,
+          "version": "0.1.0"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "b30156c32682d5cb5821fc9e3a88ca82cc3852da46a30ea5b3c9c188dff92a6e",
+          "name": "mypy",
+          "notice_text_sha256": null,
+          "url_observation": "https://www.mypy-lang.org/",
+          "version": "2.3.0"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "873caa95fa01cebbed0594fe2ab5b94fcf4d8c3cf35ed62477b57a9a1bb0a24d",
+          "name": "mypy-extensions",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/python/mypy_extensions",
+          "version": "1.1.0"
+        },
+        {
+          "license_observation": "BSD License",
+          "license_text_sha256": "2943ca732b32b4405aac3d4e77e2f4dfcff4f3eb47768aea6bee2fa9bd489b4d",
+          "name": "numpy",
+          "notice_text_sha256": null,
+          "url_observation": "https://numpy.org",
+          "version": "2.2.6"
+        },
+        {
+          "license_observation": "Apache-2.0 OR BSD-2-Clause",
+          "license_text_sha256": "e4dce5f35b25e78e3cfce568d20f4125821bfd61bce2d008f28656c4b576bd35",
+          "name": "packaging",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/pypa/packaging",
+          "version": "26.2"
+        },
+        {
+          "license_observation": "Mozilla Public License 2.0 (MPL 2.0)",
+          "license_text_sha256": "4b89d4518bd135ab4ee154a7bce722246b57a98c3d7efc1a09409898160c2bd1",
+          "name": "pathspec",
+          "notice_text_sha256": null,
+          "url_observation": "https://python-path-specification.readthedocs.io/en/latest/index.html",
+          "version": "1.1.1"
+        },
+        {
+          "license_observation": "MIT-CMU",
+          "license_text_sha256": "62b280c1bcf9ab52ab601801c0561be70141de2774da018317c3b8ff49b00cf8",
+          "name": "pillow",
+          "notice_text_sha256": null,
+          "url_observation": "https://python-pillow.github.io",
+          "version": "12.3.0"
+        },
+        {
+          "license_observation": "Apache-2.0",
+          "license_text_sha256": "5b475effab78d12623dfa54915387571ec075e7f7e026cc0a196cfce2d764049",
+          "name": "playwright",
+          "notice_text_sha256": "7b1444e03705067d36e59fc8cd3260daf245b8d06006cad06d462578fb92eab5",
+          "url_observation": "https://github.com/Microsoft/playwright-python",
+          "version": "1.61.0"
+        },
+        {
+          "license_observation": "MIT License",
+          "license_text_sha256": "8360099724c6348aeb42a434fea463674af3c5f71223b835825afe784566af03",
+          "name": "pluggy",
+          "notice_text_sha256": null,
+          "url_observation": null,
+          "version": "1.6.0"
+        },
+        {
+          "license_observation": "MIT License",
+          "license_text_sha256": "0f54cdb831bdbb6125bbd5f8d41f5c5fabd1982912f85ecd85e79be1ef4f9163",
+          "name": "pyee",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/jfhbrook/pyee",
+          "version": "13.0.1"
+        },
+        {
+          "license_observation": "BSD-2-Clause",
+          "license_text_sha256": "e0a04358a9a926507ae497776b472aa19cb233a897aa0eccb5a2e11b8f955f91",
+          "name": "pygments",
+          "notice_text_sha256": null,
+          "url_observation": "https://pygments.org",
+          "version": "2.20.0"
+        },
+        {
+          "license_observation": "GNU General Public License v2 (GPLv2)",
+          "license_text_sha256": "fd1ffa8eb114741cea84dcd57cecc853c2b0fd5375a9ce61c219248e7d2bc58a",
+          "name": "pyinstaller",
+          "notice_text_sha256": null,
+          "url_observation": "https://pyinstaller.org",
+          "version": "6.21.0"
+        },
+        {
+          "license_observation": "Apache Software License; GNU General Public License v2 (GPLv2)",
+          "license_text_sha256": "e0f26791e2ae4726a8b7e8cde0e1fb4ccb0eabfe1be921781f6cf2db918612b3",
+          "name": "pyinstaller-hooks-contrib",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/pyinstaller/pyinstaller-hooks-contrib",
+          "version": "2026.6"
+        },
+        {
+          "license_observation": "BSD License",
+          "license_text_sha256": null,
+          "name": "pyopengl",
+          "notice_text_sha256": null,
+          "url_observation": "https://mcfletch.github.io/pyopengl/",
+          "version": "3.1.10"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "5f7d6cb9b616fcfb5a5cc958aaf3ca752158e350bcc9138df97acf5d71719888",
+          "name": "pyparsing",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/pyparsing/pyparsing/",
+          "version": "3.3.2"
+        },
+        {
+          "license_observation": "LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+          "license_text_sha256": null,
+          "name": "pyside6-essentials",
+          "notice_text_sha256": null,
+          "url_observation": "https://pyside.org",
+          "version": "6.11.1"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "f62c36bc71fefd24bbdd659c1003d49650c7930aa6763ad6a529314163e4f9ed",
+          "name": "pytest",
+          "notice_text_sha256": null,
+          "url_observation": "https://docs.pytest.org/en/latest/",
+          "version": "9.1.1"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "f8f8d8f8f567083839566b05b066c25684a81b6aec4b930da88c6c7ccb9ad392",
+          "name": "pytest-cov",
+          "notice_text_sha256": null,
+          "url_observation": "https://pytest-cov.readthedocs.io/en/latest/changelog.html",
+          "version": "7.1.0"
+        },
+        {
+          "license_observation": "Apache Software License; BSD License",
+          "license_text_sha256": "ba00f51a0d92823b5a1cde27d8b5b9d2321e67ed8da9bc163eff96d5e17e577e",
+          "name": "python-dateutil",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/dateutil/dateutil",
+          "version": "2.9.0.post0"
+        },
+        {
+          "license_observation": "MIT License",
+          "license_text_sha256": "d387564cc3a28ec35ea44a033c74dae724dbd31457fdbba30f1ee2f7090c4e40",
+          "name": "pyyaml",
+          "notice_text_sha256": null,
+          "url_observation": "https://pyyaml.org/",
+          "version": "6.0.3"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "aaa18222a10861f3210e4c843794bf87cc56ce62f6732caa52b9525c2117ab25",
+          "name": "ruff",
+          "notice_text_sha256": null,
+          "url_observation": "https://docs.astral.sh/ruff",
+          "version": "0.15.22"
+        },
+        {
+          "license_observation": "LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+          "license_text_sha256": null,
+          "name": "shiboken6",
+          "notice_text_sha256": null,
+          "url_observation": "https://pyside.org",
+          "version": "6.11.1"
+        },
+        {
+          "license_observation": "MIT License",
+          "license_text_sha256": "0a088cc4562b84017c036b81b663aad07829223c55abff490609470419f7be46",
+          "name": "six",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/benjaminp/six",
+          "version": "1.17.0"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "bea8ef66252796e862df522e75b3251f7502ff6d8cf01d66125ac72621493d73",
+          "name": "tomli",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/hukkin/tomli",
+          "version": "2.4.1"
+        },
+        {
+          "license_observation": "PSF-2.0",
+          "license_text_sha256": "0e700f6605c5b82ecda8eba25e24577f7ea7a9842266777093f8756216cabe1e",
+          "name": "typing-extensions",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/python/typing_extensions",
+          "version": "4.16.0"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "65a93b2a7c8bb79f09454834295034917075c80a5b4e4a688e97ea35798bde58",
+          "name": "zipp",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/jaraco/zipp",
+          "version": "4.1.0"
+        }
+      ],
+      "recorded_target": {
+        "implementation": "CPython",
+        "implementation_name": "cpython",
+        "machine": "x86_64",
+        "python_full_version": "3.11.15",
+        "sys_platform": "linux"
+      },
+      "runner_os": "Linux"
+    },
+    {
+      "added_observation_rows": [
+        {
+          "name": "mujoco-manipulator-control-lab",
+          "reason": "editable-project-target-addition",
+          "version": "0.1.0"
+        }
+      ],
+      "applicable_lock_candidate_count": 45,
+      "artifact": {
+        "canonical_evidence_sha256": "fdc73a10a3e5a9bad525604d1ff7450021182fbb78965b7407da7620d50d44de",
+        "expires_at": "2026-08-05T19:27:32Z",
+        "id": 8542118388,
+        "name": "mclab-supply-chain-macOS",
+        "normalization_algorithm": "strict-json-sort-keys-indent-2-ensure-ascii-false-utf8-lf",
+        "normalization_version": 1,
+        "raw_evidence_sha256": "fdc73a10a3e5a9bad525604d1ff7450021182fbb78965b7407da7620d50d44de"
+      },
+      "cell_id": "cpython-3.11-darwin-arm64",
+      "excluded_applicable_lock_candidates": [
+        {
+          "name": "setuptools",
+          "reason": "explicit-target-scoped-scanner-exclusion",
+          "version": "83.0.0"
+        }
+      ],
+      "id": "github-hosted-macos-cpython-3.11",
+      "metadata_gaps": {
+        "license": 1,
+        "license_text": 3,
+        "notice_text": 44,
+        "url": 2
+      },
+      "observation_row_count": 45,
+      "observed_locked_candidate_count": 44,
+      "package_count": 45,
+      "package_observations": [
+        {
+          "license_observation": "Apache-2.0",
+          "license_text_sha256": "283ea6cc2997a1a70da0049e09adf9317bb60ca1b51279b65196b83a69e1996b",
+          "name": "absl-py",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/abseil/abseil-py",
+          "version": "2.5.0"
+        },
+        {
+          "license_observation": "MIT License",
+          "license_text_sha256": "6aedd24b2bb1c39278030dc031ac338a0b1ba5c748f8c55109b0e2024cf52575",
+          "name": "altgraph",
+          "notice_text_sha256": null,
+          "url_observation": "https://altgraph.readthedocs.io",
+          "version": "0.17.5"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "b8099477985fcd55f7af91efd698c27eec182f0c7d5d62c5d2cfb28ce53ecaf5",
+          "name": "ast-serialize",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/mypyc/ast_serialize",
+          "version": "0.6.0"
+        },
+        {
+          "license_observation": null,
+          "license_text_sha256": "e69be8261723b83133cef88b9e07452794f86ebf0b595766eb22ffe780835a3b",
+          "name": "axe-playwright-python",
+          "notice_text_sha256": null,
+          "url_observation": "https://pamelafox.github.io/axe-playwright-python",
+          "version": "0.1.7"
+        },
+        {
+          "license_observation": "BSD License",
+          "license_text_sha256": "4e85324de598a629b159b1bc8184391b995a224e94b653464c782b3be4c80e0d",
+          "name": "contourpy",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/contourpy/contourpy",
+          "version": "1.3.2"
+        },
+        {
+          "license_observation": "Apache-2.0",
+          "license_text_sha256": "4bf96504d6e83ce5c6fc7167f1795d9ceaa68e70ab86bc5d08ab93184262bbbe",
+          "name": "coverage",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/coveragepy/coveragepy",
+          "version": "7.15.2"
+        },
+        {
+          "license_observation": "BSD License",
+          "license_text_sha256": "f1218143d766da3fea66f13396b7f15df46a83303f29bf96ba6e98eb4d42f408",
+          "name": "cycler",
+          "notice_text_sha256": null,
+          "url_observation": "https://matplotlib.org/cycler/",
+          "version": "0.12.1"
+        },
+        {
+          "license_observation": "Apache Software License",
+          "license_text_sha256": "283ea6cc2997a1a70da0049e09adf9317bb60ca1b51279b65196b83a69e1996b",
+          "name": "etils",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/google/etils",
+          "version": "1.13.0"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "bcf9c4f3815a8ef8945325d6900169c034994e6f4a3c4ff11455cbcee43ff23f",
+          "name": "fonttools",
+          "notice_text_sha256": null,
+          "url_observation": "http://github.com/fonttools/fonttools",
+          "version": "4.63.0"
+        },
+        {
+          "license_observation": "BSD-3-Clause",
+          "license_text_sha256": "c03b1c97bf1e47e8f003ac479ba4cd9d2860827d340db50746b79ca5d3e921ca",
+          "name": "fsspec",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/fsspec/filesystem_spec",
+          "version": "2026.6.0"
+        },
+        {
+          "license_observation": "MIT License",
+          "license_text_sha256": "02f881774a8ff27734660cab4c4023fa716ef3f6401487fe373138882dca6b3d",
+          "name": "glfw",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/FlorianRhiem/pyGLFW",
+          "version": "2.10.2"
+        },
+        {
+          "license_observation": "MIT AND PSF-2.0",
+          "license_text_sha256": "3db20b97e24acc77b0eac77195e4eaf4ee23b64c0049585be5a5edadaa7e20a8",
+          "name": "greenlet",
+          "notice_text_sha256": null,
+          "url_observation": "https://greenlet.readthedocs.io",
+          "version": "3.5.3"
+        },
+        {
+          "license_observation": "Apache-2.0",
+          "license_text_sha256": "36368470ab75b8642a1017023e3e069d548ae83b44f516d7c9a0435fe32b7531",
+          "name": "importlib-resources",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/python/importlib_resources",
+          "version": "7.1.0"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "b25ef321fa3d1d268e71c366a7a0b43a85c4adc92d413f4213bf8a4fcc2186a8",
+          "name": "iniconfig",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/pytest-dev/iniconfig",
+          "version": "2.3.0"
+        },
+        {
+          "license_observation": "BSD License",
+          "license_text_sha256": "9ebedced2216050cefa62c4832c13109a54de9aa3ad9bb0ff42fdb878d80443f",
+          "name": "kiwisolver",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/nucleic/kiwi",
+          "version": "1.5.0"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "aed81b48b09b6510920fca77e470d03c1db19759e19fd3f6c5d71526568faf60",
+          "name": "librt",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/mypyc/librt",
+          "version": "0.13.0"
+        },
+        {
+          "license_observation": "MIT License",
+          "license_text_sha256": "5584285723baac3023c145c533edbbee6f36b21baeeba059378a6f3d744ec389",
+          "name": "macholib",
+          "notice_text_sha256": null,
+          "url_observation": "http://github.com/ronaldoussoren/macholib",
+          "version": "1.16.4"
+        },
+        {
+          "license_observation": "Python Software Foundation License",
+          "license_text_sha256": "329a9d7b2bb9b0190cb6d1441d048720dd4a4658e96dacaee376398c04788607",
+          "name": "matplotlib",
+          "notice_text_sha256": null,
+          "url_observation": "https://matplotlib.org",
+          "version": "3.10.9"
+        },
+        {
+          "license_observation": "Apache-2.0",
+          "license_text_sha256": "283ea6cc2997a1a70da0049e09adf9317bb60ca1b51279b65196b83a69e1996b",
+          "name": "mujoco",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/google-deepmind/mujoco",
+          "version": "3.10.0"
+        },
+        {
+          "license_observation": "Apache-2.0",
+          "license_text_sha256": "283ea6cc2997a1a70da0049e09adf9317bb60ca1b51279b65196b83a69e1996b",
+          "name": "mujoco-manipulator-control-lab",
+          "notice_text_sha256": null,
+          "url_observation": null,
+          "version": "0.1.0"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "b30156c32682d5cb5821fc9e3a88ca82cc3852da46a30ea5b3c9c188dff92a6e",
+          "name": "mypy",
+          "notice_text_sha256": null,
+          "url_observation": "https://www.mypy-lang.org/",
+          "version": "2.3.0"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "873caa95fa01cebbed0594fe2ab5b94fcf4d8c3cf35ed62477b57a9a1bb0a24d",
+          "name": "mypy-extensions",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/python/mypy_extensions",
+          "version": "1.1.0"
+        },
+        {
+          "license_observation": "BSD License",
+          "license_text_sha256": "9c8c492908b4fcce4d2f8a336130c069ca441e9d8a76ca744f9fc3386168f3fe",
+          "name": "numpy",
+          "notice_text_sha256": null,
+          "url_observation": "https://numpy.org",
+          "version": "2.2.6"
+        },
+        {
+          "license_observation": "Apache-2.0 OR BSD-2-Clause",
+          "license_text_sha256": "e4dce5f35b25e78e3cfce568d20f4125821bfd61bce2d008f28656c4b576bd35",
+          "name": "packaging",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/pypa/packaging",
+          "version": "26.2"
+        },
+        {
+          "license_observation": "Mozilla Public License 2.0 (MPL 2.0)",
+          "license_text_sha256": "4b89d4518bd135ab4ee154a7bce722246b57a98c3d7efc1a09409898160c2bd1",
+          "name": "pathspec",
+          "notice_text_sha256": null,
+          "url_observation": "https://python-path-specification.readthedocs.io/en/latest/index.html",
+          "version": "1.1.1"
+        },
+        {
+          "license_observation": "MIT-CMU",
+          "license_text_sha256": "62b280c1bcf9ab52ab601801c0561be70141de2774da018317c3b8ff49b00cf8",
+          "name": "pillow",
+          "notice_text_sha256": null,
+          "url_observation": "https://python-pillow.github.io",
+          "version": "12.3.0"
+        },
+        {
+          "license_observation": "Apache-2.0",
+          "license_text_sha256": "5b475effab78d12623dfa54915387571ec075e7f7e026cc0a196cfce2d764049",
+          "name": "playwright",
+          "notice_text_sha256": "7b1444e03705067d36e59fc8cd3260daf245b8d06006cad06d462578fb92eab5",
+          "url_observation": "https://github.com/Microsoft/playwright-python",
+          "version": "1.61.0"
+        },
+        {
+          "license_observation": "MIT License",
+          "license_text_sha256": "8360099724c6348aeb42a434fea463674af3c5f71223b835825afe784566af03",
+          "name": "pluggy",
+          "notice_text_sha256": null,
+          "url_observation": null,
+          "version": "1.6.0"
+        },
+        {
+          "license_observation": "MIT License",
+          "license_text_sha256": "0f54cdb831bdbb6125bbd5f8d41f5c5fabd1982912f85ecd85e79be1ef4f9163",
+          "name": "pyee",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/jfhbrook/pyee",
+          "version": "13.0.1"
+        },
+        {
+          "license_observation": "BSD-2-Clause",
+          "license_text_sha256": "e0a04358a9a926507ae497776b472aa19cb233a897aa0eccb5a2e11b8f955f91",
+          "name": "pygments",
+          "notice_text_sha256": null,
+          "url_observation": "https://pygments.org",
+          "version": "2.20.0"
+        },
+        {
+          "license_observation": "GNU General Public License v2 (GPLv2)",
+          "license_text_sha256": "fd1ffa8eb114741cea84dcd57cecc853c2b0fd5375a9ce61c219248e7d2bc58a",
+          "name": "pyinstaller",
+          "notice_text_sha256": null,
+          "url_observation": "https://pyinstaller.org",
+          "version": "6.21.0"
+        },
+        {
+          "license_observation": "Apache Software License; GNU General Public License v2 (GPLv2)",
+          "license_text_sha256": "e0f26791e2ae4726a8b7e8cde0e1fb4ccb0eabfe1be921781f6cf2db918612b3",
+          "name": "pyinstaller-hooks-contrib",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/pyinstaller/pyinstaller-hooks-contrib",
+          "version": "2026.6"
+        },
+        {
+          "license_observation": "BSD License",
+          "license_text_sha256": null,
+          "name": "pyopengl",
+          "notice_text_sha256": null,
+          "url_observation": "https://mcfletch.github.io/pyopengl/",
+          "version": "3.1.10"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "5f7d6cb9b616fcfb5a5cc958aaf3ca752158e350bcc9138df97acf5d71719888",
+          "name": "pyparsing",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/pyparsing/pyparsing/",
+          "version": "3.3.2"
+        },
+        {
+          "license_observation": "LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+          "license_text_sha256": null,
+          "name": "pyside6-essentials",
+          "notice_text_sha256": null,
+          "url_observation": "https://pyside.org",
+          "version": "6.11.1"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "f62c36bc71fefd24bbdd659c1003d49650c7930aa6763ad6a529314163e4f9ed",
+          "name": "pytest",
+          "notice_text_sha256": null,
+          "url_observation": "https://docs.pytest.org/en/latest/",
+          "version": "9.1.1"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "f8f8d8f8f567083839566b05b066c25684a81b6aec4b930da88c6c7ccb9ad392",
+          "name": "pytest-cov",
+          "notice_text_sha256": null,
+          "url_observation": "https://pytest-cov.readthedocs.io/en/latest/changelog.html",
+          "version": "7.1.0"
+        },
+        {
+          "license_observation": "Apache Software License; BSD License",
+          "license_text_sha256": "ba00f51a0d92823b5a1cde27d8b5b9d2321e67ed8da9bc163eff96d5e17e577e",
+          "name": "python-dateutil",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/dateutil/dateutil",
+          "version": "2.9.0.post0"
+        },
+        {
+          "license_observation": "MIT License",
+          "license_text_sha256": "d387564cc3a28ec35ea44a033c74dae724dbd31457fdbba30f1ee2f7090c4e40",
+          "name": "pyyaml",
+          "notice_text_sha256": null,
+          "url_observation": "https://pyyaml.org/",
+          "version": "6.0.3"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "aaa18222a10861f3210e4c843794bf87cc56ce62f6732caa52b9525c2117ab25",
+          "name": "ruff",
+          "notice_text_sha256": null,
+          "url_observation": "https://docs.astral.sh/ruff",
+          "version": "0.15.22"
+        },
+        {
+          "license_observation": "LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+          "license_text_sha256": null,
+          "name": "shiboken6",
+          "notice_text_sha256": null,
+          "url_observation": "https://pyside.org",
+          "version": "6.11.1"
+        },
+        {
+          "license_observation": "MIT License",
+          "license_text_sha256": "0a088cc4562b84017c036b81b663aad07829223c55abff490609470419f7be46",
+          "name": "six",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/benjaminp/six",
+          "version": "1.17.0"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "bea8ef66252796e862df522e75b3251f7502ff6d8cf01d66125ac72621493d73",
+          "name": "tomli",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/hukkin/tomli",
+          "version": "2.4.1"
+        },
+        {
+          "license_observation": "PSF-2.0",
+          "license_text_sha256": "0e700f6605c5b82ecda8eba25e24577f7ea7a9842266777093f8756216cabe1e",
+          "name": "typing-extensions",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/python/typing_extensions",
+          "version": "4.16.0"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "65a93b2a7c8bb79f09454834295034917075c80a5b4e4a688e97ea35798bde58",
+          "name": "zipp",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/jaraco/zipp",
+          "version": "4.1.0"
+        }
+      ],
+      "recorded_target": {
+        "implementation": "CPython",
+        "implementation_name": "cpython",
+        "machine": "arm64",
+        "python_full_version": "3.11.9",
+        "sys_platform": "darwin"
+      },
+      "runner_os": "macOS"
+    },
+    {
+      "added_observation_rows": [
+        {
+          "name": "mujoco-manipulator-control-lab",
+          "reason": "editable-project-target-addition",
+          "version": "0.1.0"
+        }
+      ],
+      "applicable_lock_candidate_count": 47,
+      "artifact": {
+        "canonical_evidence_sha256": "dadbc2a1741e76909c18979045b98c62477ff819a44c90944e7c010ec0f09379",
+        "expires_at": "2026-08-05T19:29:22Z",
+        "id": 8542166959,
+        "name": "mclab-supply-chain-Windows",
+        "normalization_algorithm": "strict-json-sort-keys-indent-2-ensure-ascii-false-utf8-lf",
+        "normalization_version": 1,
+        "raw_evidence_sha256": "bd9540d0b5a21f0772d9722b5fbf61e63902547074ac738d874da2bc9dfb987f"
+      },
+      "cell_id": "cpython-3.11-win32-amd64",
+      "excluded_applicable_lock_candidates": [
+        {
+          "name": "setuptools",
+          "reason": "explicit-target-scoped-scanner-exclusion",
+          "version": "83.0.0"
+        }
+      ],
+      "id": "github-hosted-windows-cpython-3.11",
+      "metadata_gaps": {
+        "license": 1,
+        "license_text": 1,
+        "notice_text": 46,
+        "url": 2
+      },
+      "observation_row_count": 47,
+      "observed_locked_candidate_count": 46,
+      "package_count": 47,
+      "package_observations": [
+        {
+          "license_observation": "Apache-2.0",
+          "license_text_sha256": "283ea6cc2997a1a70da0049e09adf9317bb60ca1b51279b65196b83a69e1996b",
+          "name": "absl-py",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/abseil/abseil-py",
+          "version": "2.5.0"
+        },
+        {
+          "license_observation": "MIT License",
+          "license_text_sha256": "6aedd24b2bb1c39278030dc031ac338a0b1ba5c748f8c55109b0e2024cf52575",
+          "name": "altgraph",
+          "notice_text_sha256": null,
+          "url_observation": "https://altgraph.readthedocs.io",
+          "version": "0.17.5"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "b8099477985fcd55f7af91efd698c27eec182f0c7d5d62c5d2cfb28ce53ecaf5",
+          "name": "ast-serialize",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/mypyc/ast_serialize",
+          "version": "0.6.0"
+        },
+        {
+          "license_observation": null,
+          "license_text_sha256": "e69be8261723b83133cef88b9e07452794f86ebf0b595766eb22ffe780835a3b",
+          "name": "axe-playwright-python",
+          "notice_text_sha256": null,
+          "url_observation": "https://pamelafox.github.io/axe-playwright-python",
+          "version": "0.1.7"
+        },
+        {
+          "license_observation": "BSD License",
+          "license_text_sha256": "77f8a85bf994bd02d124fdd6afb44768c4fd6f361844f992cc1c81f4f6bba74f",
+          "name": "colorama",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/tartley/colorama",
+          "version": "0.4.6"
+        },
+        {
+          "license_observation": "BSD License",
+          "license_text_sha256": "4e85324de598a629b159b1bc8184391b995a224e94b653464c782b3be4c80e0d",
+          "name": "contourpy",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/contourpy/contourpy",
+          "version": "1.3.2"
+        },
+        {
+          "license_observation": "Apache-2.0",
+          "license_text_sha256": "4bf96504d6e83ce5c6fc7167f1795d9ceaa68e70ab86bc5d08ab93184262bbbe",
+          "name": "coverage",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/coveragepy/coveragepy",
+          "version": "7.15.2"
+        },
+        {
+          "license_observation": "BSD License",
+          "license_text_sha256": "f1218143d766da3fea66f13396b7f15df46a83303f29bf96ba6e98eb4d42f408",
+          "name": "cycler",
+          "notice_text_sha256": null,
+          "url_observation": "https://matplotlib.org/cycler/",
+          "version": "0.12.1"
+        },
+        {
+          "license_observation": "Apache Software License",
+          "license_text_sha256": "283ea6cc2997a1a70da0049e09adf9317bb60ca1b51279b65196b83a69e1996b",
+          "name": "etils",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/google/etils",
+          "version": "1.13.0"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "bcf9c4f3815a8ef8945325d6900169c034994e6f4a3c4ff11455cbcee43ff23f",
+          "name": "fonttools",
+          "notice_text_sha256": null,
+          "url_observation": "http://github.com/fonttools/fonttools",
+          "version": "4.63.0"
+        },
+        {
+          "license_observation": "BSD-3-Clause",
+          "license_text_sha256": "c03b1c97bf1e47e8f003ac479ba4cd9d2860827d340db50746b79ca5d3e921ca",
+          "name": "fsspec",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/fsspec/filesystem_spec",
+          "version": "2026.6.0"
+        },
+        {
+          "license_observation": "MIT License",
+          "license_text_sha256": "02f881774a8ff27734660cab4c4023fa716ef3f6401487fe373138882dca6b3d",
+          "name": "glfw",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/FlorianRhiem/pyGLFW",
+          "version": "2.10.2"
+        },
+        {
+          "license_observation": "MIT AND PSF-2.0",
+          "license_text_sha256": "3db20b97e24acc77b0eac77195e4eaf4ee23b64c0049585be5a5edadaa7e20a8",
+          "name": "greenlet",
+          "notice_text_sha256": null,
+          "url_observation": "https://greenlet.readthedocs.io",
+          "version": "3.5.3"
+        },
+        {
+          "license_observation": "Apache-2.0",
+          "license_text_sha256": "36368470ab75b8642a1017023e3e069d548ae83b44f516d7c9a0435fe32b7531",
+          "name": "importlib-resources",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/python/importlib_resources",
+          "version": "7.1.0"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "b25ef321fa3d1d268e71c366a7a0b43a85c4adc92d413f4213bf8a4fcc2186a8",
+          "name": "iniconfig",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/pytest-dev/iniconfig",
+          "version": "2.3.0"
+        },
+        {
+          "license_observation": "BSD License",
+          "license_text_sha256": "9ebedced2216050cefa62c4832c13109a54de9aa3ad9bb0ff42fdb878d80443f",
+          "name": "kiwisolver",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/nucleic/kiwi",
+          "version": "1.5.0"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "aed81b48b09b6510920fca77e470d03c1db19759e19fd3f6c5d71526568faf60",
+          "name": "librt",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/mypyc/librt",
+          "version": "0.13.0"
+        },
+        {
+          "license_observation": "Python Software Foundation License",
+          "license_text_sha256": "329a9d7b2bb9b0190cb6d1441d048720dd4a4658e96dacaee376398c04788607",
+          "name": "matplotlib",
+          "notice_text_sha256": null,
+          "url_observation": "https://matplotlib.org",
+          "version": "3.10.9"
+        },
+        {
+          "license_observation": "Apache-2.0",
+          "license_text_sha256": "283ea6cc2997a1a70da0049e09adf9317bb60ca1b51279b65196b83a69e1996b",
+          "name": "mujoco",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/google-deepmind/mujoco",
+          "version": "3.10.0"
+        },
+        {
+          "license_observation": "Apache-2.0",
+          "license_text_sha256": "283ea6cc2997a1a70da0049e09adf9317bb60ca1b51279b65196b83a69e1996b",
+          "name": "mujoco-manipulator-control-lab",
+          "notice_text_sha256": null,
+          "url_observation": null,
+          "version": "0.1.0"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "b30156c32682d5cb5821fc9e3a88ca82cc3852da46a30ea5b3c9c188dff92a6e",
+          "name": "mypy",
+          "notice_text_sha256": null,
+          "url_observation": "https://www.mypy-lang.org/",
+          "version": "2.3.0"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "873caa95fa01cebbed0594fe2ab5b94fcf4d8c3cf35ed62477b57a9a1bb0a24d",
+          "name": "mypy-extensions",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/python/mypy_extensions",
+          "version": "1.1.0"
+        },
+        {
+          "license_observation": "BSD License",
+          "license_text_sha256": "fd485e1a0840a773ecdce55f12343b5ebf251edfc5037575151ffdb16ce98594",
+          "name": "numpy",
+          "notice_text_sha256": null,
+          "url_observation": "https://numpy.org",
+          "version": "2.2.6"
+        },
+        {
+          "license_observation": "Apache-2.0 OR BSD-2-Clause",
+          "license_text_sha256": "e4dce5f35b25e78e3cfce568d20f4125821bfd61bce2d008f28656c4b576bd35",
+          "name": "packaging",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/pypa/packaging",
+          "version": "26.2"
+        },
+        {
+          "license_observation": "Mozilla Public License 2.0 (MPL 2.0)",
+          "license_text_sha256": "4b89d4518bd135ab4ee154a7bce722246b57a98c3d7efc1a09409898160c2bd1",
+          "name": "pathspec",
+          "notice_text_sha256": null,
+          "url_observation": "https://python-path-specification.readthedocs.io/en/latest/index.html",
+          "version": "1.1.1"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "d79c2b7f75de76042dd415655923fe474cba16aa0effb022fa356665aba0cc0d",
+          "name": "pefile",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/erocarrera/pefile",
+          "version": "2024.8.26"
+        },
+        {
+          "license_observation": "MIT-CMU",
+          "license_text_sha256": "12c1f21bf2645be6b312b4ece5ebbd5203a39d621ffe7a434062d419fb60644d",
+          "name": "pillow",
+          "notice_text_sha256": null,
+          "url_observation": "https://python-pillow.github.io",
+          "version": "12.3.0"
+        },
+        {
+          "license_observation": "Apache-2.0",
+          "license_text_sha256": "5b475effab78d12623dfa54915387571ec075e7f7e026cc0a196cfce2d764049",
+          "name": "playwright",
+          "notice_text_sha256": "7b1444e03705067d36e59fc8cd3260daf245b8d06006cad06d462578fb92eab5",
+          "url_observation": "https://github.com/Microsoft/playwright-python",
+          "version": "1.61.0"
+        },
+        {
+          "license_observation": "MIT License",
+          "license_text_sha256": "8360099724c6348aeb42a434fea463674af3c5f71223b835825afe784566af03",
+          "name": "pluggy",
+          "notice_text_sha256": null,
+          "url_observation": null,
+          "version": "1.6.0"
+        },
+        {
+          "license_observation": "MIT License",
+          "license_text_sha256": "0f54cdb831bdbb6125bbd5f8d41f5c5fabd1982912f85ecd85e79be1ef4f9163",
+          "name": "pyee",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/jfhbrook/pyee",
+          "version": "13.0.1"
+        },
+        {
+          "license_observation": "BSD-2-Clause",
+          "license_text_sha256": "e0a04358a9a926507ae497776b472aa19cb233a897aa0eccb5a2e11b8f955f91",
+          "name": "pygments",
+          "notice_text_sha256": null,
+          "url_observation": "https://pygments.org",
+          "version": "2.20.0"
+        },
+        {
+          "license_observation": "GNU General Public License v2 (GPLv2)",
+          "license_text_sha256": "fd1ffa8eb114741cea84dcd57cecc853c2b0fd5375a9ce61c219248e7d2bc58a",
+          "name": "pyinstaller",
+          "notice_text_sha256": null,
+          "url_observation": "https://pyinstaller.org",
+          "version": "6.21.0"
+        },
+        {
+          "license_observation": "Apache Software License; GNU General Public License v2 (GPLv2)",
+          "license_text_sha256": "e0f26791e2ae4726a8b7e8cde0e1fb4ccb0eabfe1be921781f6cf2db918612b3",
+          "name": "pyinstaller-hooks-contrib",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/pyinstaller/pyinstaller-hooks-contrib",
+          "version": "2026.6"
+        },
+        {
+          "license_observation": "BSD License",
+          "license_text_sha256": null,
+          "name": "pyopengl",
+          "notice_text_sha256": null,
+          "url_observation": "https://mcfletch.github.io/pyopengl/",
+          "version": "3.1.10"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "5f7d6cb9b616fcfb5a5cc958aaf3ca752158e350bcc9138df97acf5d71719888",
+          "name": "pyparsing",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/pyparsing/pyparsing/",
+          "version": "3.3.2"
+        },
+        {
+          "license_observation": "LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+          "license_text_sha256": "ae27b47d47e55078a2bb282cb447eaef5c033874fa7103a13087bbc78967e103",
+          "name": "pyside6-essentials",
+          "notice_text_sha256": null,
+          "url_observation": "https://pyside.org",
+          "version": "6.11.1"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "f62c36bc71fefd24bbdd659c1003d49650c7930aa6763ad6a529314163e4f9ed",
+          "name": "pytest",
+          "notice_text_sha256": null,
+          "url_observation": "https://docs.pytest.org/en/latest/",
+          "version": "9.1.1"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "f8f8d8f8f567083839566b05b066c25684a81b6aec4b930da88c6c7ccb9ad392",
+          "name": "pytest-cov",
+          "notice_text_sha256": null,
+          "url_observation": "https://pytest-cov.readthedocs.io/en/latest/changelog.html",
+          "version": "7.1.0"
+        },
+        {
+          "license_observation": "Apache Software License; BSD License",
+          "license_text_sha256": "ba00f51a0d92823b5a1cde27d8b5b9d2321e67ed8da9bc163eff96d5e17e577e",
+          "name": "python-dateutil",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/dateutil/dateutil",
+          "version": "2.9.0.post0"
+        },
+        {
+          "license_observation": "BSD-3-Clause",
+          "license_text_sha256": "b46622ea2bc08df44e0052c2c31664327f3359c1f7b3ed0402562f504c4556bf",
+          "name": "pywin32-ctypes",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/enthought/pywin32-ctypes",
+          "version": "0.2.3"
+        },
+        {
+          "license_observation": "MIT License",
+          "license_text_sha256": "d387564cc3a28ec35ea44a033c74dae724dbd31457fdbba30f1ee2f7090c4e40",
+          "name": "pyyaml",
+          "notice_text_sha256": null,
+          "url_observation": "https://pyyaml.org/",
+          "version": "6.0.3"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "aaa18222a10861f3210e4c843794bf87cc56ce62f6732caa52b9525c2117ab25",
+          "name": "ruff",
+          "notice_text_sha256": null,
+          "url_observation": "https://docs.astral.sh/ruff",
+          "version": "0.15.22"
+        },
+        {
+          "license_observation": "LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+          "license_text_sha256": "ae27b47d47e55078a2bb282cb447eaef5c033874fa7103a13087bbc78967e103",
+          "name": "shiboken6",
+          "notice_text_sha256": null,
+          "url_observation": "https://pyside.org",
+          "version": "6.11.1"
+        },
+        {
+          "license_observation": "MIT License",
+          "license_text_sha256": "0a088cc4562b84017c036b81b663aad07829223c55abff490609470419f7be46",
+          "name": "six",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/benjaminp/six",
+          "version": "1.17.0"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "bea8ef66252796e862df522e75b3251f7502ff6d8cf01d66125ac72621493d73",
+          "name": "tomli",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/hukkin/tomli",
+          "version": "2.4.1"
+        },
+        {
+          "license_observation": "PSF-2.0",
+          "license_text_sha256": "0e700f6605c5b82ecda8eba25e24577f7ea7a9842266777093f8756216cabe1e",
+          "name": "typing-extensions",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/python/typing_extensions",
+          "version": "4.16.0"
+        },
+        {
+          "license_observation": "MIT",
+          "license_text_sha256": "65a93b2a7c8bb79f09454834295034917075c80a5b4e4a688e97ea35798bde58",
+          "name": "zipp",
+          "notice_text_sha256": null,
+          "url_observation": "https://github.com/jaraco/zipp",
+          "version": "4.1.0"
+        }
+      ],
+      "recorded_target": {
+        "implementation": "CPython",
+        "implementation_name": "cpython",
+        "machine": "AMD64",
+        "python_full_version": "3.11.9",
+        "sys_platform": "win32"
+      },
+      "runner_os": "Windows"
+    }
+  ],
+  "schema_version": 1,
+  "sources": {
+    "app_dev_lock": {
+      "path": "requirements/locks/app-dev.txt",
+      "sha256": "bee5ecc19de758524fa6955f78b3228587e269ee44b4e255216aa8e426914e00",
+      "size": 109404
+    },
+    "app_lock": {
+      "path": "requirements/locks/app.txt",
+      "sha256": "8b2faa12a5637a320a423bc7e5c9a892f78ab88026f7bc06640480203b4cddf6",
+      "size": 61422
+    },
+    "build_lock": {
+      "path": "requirements/locks/build.txt",
+      "sha256": "a5665dc6290d9cdc25bb20a984fa4e40197697194e834d422baa71db3326b6e1",
+      "size": 7874
+    },
+    "build_source": {
+      "path": "requirements/build.in",
+      "sha256": "939d67d7dad683e2df98c63d2e69eb9152c373c4dc3d7ee92f285f064a353de7",
+      "size": 58
+    },
+    "checker": {
+      "path": ".agents/validation/check_license_inventory.py",
+      "sha256": "971f5b4608ae7238720a3ff4f87ed99e472ab14afcf8e6e549d546d2e77b673e",
+      "size": 40756
+    },
+    "dev_lock": {
+      "path": "requirements/locks/dev.txt",
+      "sha256": "e5e6237f17b9b8abcc1ace2603edbece97c636244a2d23d96190bb9b758fcdde",
+      "size": 107352
+    },
+    "evidence_schema": {
+      "path": ".agents/supply_chain/python-license-evidence.schema.json",
+      "sha256": "b247efd4aa2e12e9b704954a291ac54a5d72a8f0e16f145d8c7ac1489ffdf3f6",
+      "size": 4824
+    },
+    "font_license": {
+      "path": "third_party/fonts/noto/OFL.txt",
+      "sha256": "1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9",
+      "size": 4388
+    },
+    "font_noto_sans_kr": {
+      "path": "third_party/fonts/noto/NotoSansKR[wght].ttf",
+      "sha256": "194018e6b2b293a7964f037b25c0249ce1418bc9ab3c971060a03aa57861e252",
+      "size": 10414588
+    },
+    "font_noto_sans_mono": {
+      "path": "third_party/fonts/noto/NotoSansMono[wdth,wght].ttf",
+      "sha256": "2cb2adb378a8f574213e23df697050b83c54c27df465a2015552740b2769a081",
+      "size": 1708408
+    },
+    "generator": {
+      "path": "scripts/generate_license_inventory.py",
+      "sha256": "a2de47aaf79d5e99637dade63afb019c5d86972697a7e9bb9d683f1367e36ec0",
+      "size": 64787
+    },
+    "package_lock": {
+      "path": "requirements/locks/package.txt",
+      "sha256": "074ec183ec50c6824aa5ba3d6b32e22ebdb7b0277e0e4442f8bb9d96eecfb547",
+      "size": 114504
+    },
+    "packaging_spec": {
+      "path": "packaging/mclab.spec",
+      "sha256": "f0bb1a83b72937bb8bcc7f5b3220830112d1c517623c0299c689eab16f36b84a",
+      "size": 3119
+    },
+    "panda_manifest": {
+      "path": "src/mclab/application/panda_runtime_manifest.py",
+      "sha256": "41d476063ef9c5aab6d86ee915b2b907ede5743b7c067b3a0aea34c9c978eb36",
+      "size": 10371
+    },
+    "project": {
+      "path": "pyproject.toml",
+      "sha256": "3e778ccd63a0d42e799f95681fa9bb1fccc5846b89b6aaa0ba5ba1e06e75c7c8",
+      "size": 4711
+    },
+    "project_license": {
+      "path": "LICENSE",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "size": 11357
+    },
+    "registry_schema": {
+      "path": ".agents/supply_chain/license-inventory.schema.json",
+      "sha256": "aa6343e2cc1d474ad5a650eee77059f787d09fdf59dc4cc0562a7539b0c73a3a",
+      "size": 30074
+    },
+    "runtime_lock": {
+      "path": "requirements/locks/runtime.txt",
+      "sha256": "5c0a5769a82c239388b11560fe8277e079a296594a13b790c617f272b1ec181a",
+      "size": 59378
+    },
+    "sbom_generator": {
+      "path": "scripts/generate_sbom_inputs.py",
+      "sha256": "5ba1307ea4379d0a432e385e06e21069fcf6d3d61fefb78135e4dadca8327e42",
+      "size": 43451
+    },
+    "scanner": {
+      "path": "scripts/audit_supply_chain.py",
+      "sha256": "2f65e0b62dab793b72d8cd40b02a8cd06d532b901f638de78e40853fe90a3b5b",
+      "size": 41941
+    },
+    "supply_chain_tool_lock": {
+      "path": "requirements/tools/supply-chain.txt",
+      "sha256": "1cc4c046cd655dec82df30ff0c41037457fd630ba42c8820ce383afe8ecb40b3",
+      "size": 41147
+    },
+    "supply_chain_tool_source": {
+      "path": "requirements/tools/supply-chain.in",
+      "sha256": "f391648c7f639b5f60ba57c66e70a483367666b0fe8c6f898c0f5b9d81bf7099",
+      "size": 38
+    },
+    "ubuntu_installer": {
+      "path": "scripts/install_ubuntu_system_packages.py",
+      "sha256": "5e2f372ff5f0dff37930d05ed1ade5bd8a6d3387ca8fd03e2e8ee75b0bb8a7e5",
+      "size": 62209
+    },
+    "ubuntu_manifest": {
+      "path": "requirements/system/ubuntu-24.04-amd64.json",
+      "sha256": "4f3ce81bc1d635a9242fba44f819fe2da89d2f722c12a01a88818f2976eb8feb",
+      "size": 2189
+    },
+    "uv_tool_lock": {
+      "path": "requirements/tools/uv.txt",
+      "sha256": "4313f7dbcc2476ec3a7197776d14d95bb1d4d1efc053f96863be2a5b4ae0c824",
+      "size": 2526
+    }
+  },
+  "target_cells": [
+    {
+      "candidate_count": 46,
+      "id": "cpython-3.10-darwin-arm64",
+      "marker": "implementation_name == 'cpython' and python_version == '3.10' and sys_platform == 'darwin' and platform_machine == 'arm64'",
+      "platform_machine": "arm64",
+      "python_version": "3.10",
+      "sys_platform": "darwin"
+    },
+    {
+      "candidate_count": 46,
+      "id": "cpython-3.10-darwin-x86_64",
+      "marker": "implementation_name == 'cpython' and python_version == '3.10' and sys_platform == 'darwin' and platform_machine == 'x86_64'",
+      "platform_machine": "x86_64",
+      "python_version": "3.10",
+      "sys_platform": "darwin"
+    },
+    {
+      "candidate_count": 45,
+      "id": "cpython-3.10-linux-x86_64",
+      "marker": "implementation_name == 'cpython' and python_version == '3.10' and sys_platform == 'linux' and platform_machine == 'x86_64'",
+      "platform_machine": "x86_64",
+      "python_version": "3.10",
+      "sys_platform": "linux"
+    },
+    {
+      "candidate_count": 48,
+      "id": "cpython-3.10-win32-amd64",
+      "marker": "implementation_name == 'cpython' and python_version == '3.10' and sys_platform == 'win32' and platform_machine == 'AMD64'",
+      "platform_machine": "AMD64",
+      "python_version": "3.10",
+      "sys_platform": "win32"
+    },
+    {
+      "candidate_count": 45,
+      "id": "cpython-3.11-darwin-arm64",
+      "marker": "implementation_name == 'cpython' and python_version == '3.11' and sys_platform == 'darwin' and platform_machine == 'arm64'",
+      "platform_machine": "arm64",
+      "python_version": "3.11",
+      "sys_platform": "darwin"
+    },
+    {
+      "candidate_count": 45,
+      "id": "cpython-3.11-darwin-x86_64",
+      "marker": "implementation_name == 'cpython' and python_version == '3.11' and sys_platform == 'darwin' and platform_machine == 'x86_64'",
+      "platform_machine": "x86_64",
+      "python_version": "3.11",
+      "sys_platform": "darwin"
+    },
+    {
+      "candidate_count": 44,
+      "id": "cpython-3.11-linux-x86_64",
+      "marker": "implementation_name == 'cpython' and python_version == '3.11' and sys_platform == 'linux' and platform_machine == 'x86_64'",
+      "platform_machine": "x86_64",
+      "python_version": "3.11",
+      "sys_platform": "linux"
+    },
+    {
+      "candidate_count": 47,
+      "id": "cpython-3.11-win32-amd64",
+      "marker": "implementation_name == 'cpython' and python_version == '3.11' and sys_platform == 'win32' and platform_machine == 'AMD64'",
+      "platform_machine": "AMD64",
+      "python_version": "3.11",
+      "sys_platform": "win32"
+    },
+    {
+      "candidate_count": 44,
+      "id": "cpython-3.12-darwin-arm64",
+      "marker": "implementation_name == 'cpython' and python_version == '3.12' and sys_platform == 'darwin' and platform_machine == 'arm64'",
+      "platform_machine": "arm64",
+      "python_version": "3.12",
+      "sys_platform": "darwin"
+    },
+    {
+      "candidate_count": 44,
+      "id": "cpython-3.12-darwin-x86_64",
+      "marker": "implementation_name == 'cpython' and python_version == '3.12' and sys_platform == 'darwin' and platform_machine == 'x86_64'",
+      "platform_machine": "x86_64",
+      "python_version": "3.12",
+      "sys_platform": "darwin"
+    },
+    {
+      "candidate_count": 43,
+      "id": "cpython-3.12-linux-x86_64",
+      "marker": "implementation_name == 'cpython' and python_version == '3.12' and sys_platform == 'linux' and platform_machine == 'x86_64'",
+      "platform_machine": "x86_64",
+      "python_version": "3.12",
+      "sys_platform": "linux"
+    },
+    {
+      "candidate_count": 46,
+      "id": "cpython-3.12-win32-amd64",
+      "marker": "implementation_name == 'cpython' and python_version == '3.12' and sys_platform == 'win32' and platform_machine == 'AMD64'",
+      "platform_machine": "AMD64",
+      "python_version": "3.12",
+      "sys_platform": "win32"
+    }
+  ]
+}

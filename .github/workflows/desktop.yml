@@ -52,6 +52,10 @@ jobs:
         shell: bash
         run: python scripts/audit_supply_chain.py licenses --target-python "$MCLAB_PACKAGE_PYTHON" --profile package --output build/validation/supply-chain-${RUNNER_OS}/python-licenses.json
 
+      - name: Validate package-profile license inventory
+        shell: bash
+        run: python .agents/validation/check_license_inventory.py --evidence build/validation/supply-chain-${RUNNER_OS}/python-licenses.json --runner-os "$RUNNER_OS"
+
       - name: Upload target supply-chain evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
