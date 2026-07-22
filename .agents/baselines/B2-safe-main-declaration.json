@@ -1,0 +1,417 @@
+{
+  "schema": "mclab.baseline-declaration.v1",
+  "schema_version": 1,
+  "record_kind": "baseline_declaration",
+  "baseline": {
+    "id": "B2",
+    "work_item": "BASE-01",
+    "name": "safe-main",
+    "gate_id": "G1",
+    "lifecycle": "declared",
+    "declaration_status": "declared",
+    "g1_status": "pass",
+    "g1_metrics": {
+      "total": 12,
+      "passed": 12,
+      "pending": 0,
+      "failed": 0
+    },
+    "pending_metric_ids": [],
+    "known_b2_scope_code_config_blockers": 0
+  },
+  "declared_at": {
+    "utc": "2026-07-22T02:50:57Z",
+    "kst": "2026-07-22T11:50:57+09:00"
+  },
+  "declaration_authority": {
+    "recorded_by": "repository_readiness_process",
+    "decision_authority": "owner_exact_sha_risk_acceptance",
+    "owner_acceptance_actor": "ycpiglet",
+    "basis": "exact_sha_owner_acceptance_after_exact_head_checks_and_review_and_before_protected_merge",
+    "declared_at_is_separate_from_owner_acceptance_event": true
+  },
+  "controlled_subject": {
+    "commit_sha": "ae4d40371b9a3fe4d7078822e1fc541a72defe2d",
+    "tree_sha": "b5f4cb03abbf1e66c14c27c720c737ef2fc4f798",
+    "ref_at_freeze": "refs/heads/main",
+    "remains_the_owner_accepted_b2_subject": true
+  },
+  "candidate_record_integrity": {
+    "preserved_unchanged": true,
+    "recording_semantics": "immutable record-creation snapshots; later declaration evidence is append-only",
+    "files": [
+      {
+        "path": ".agents/baselines/B2-safe-main.md",
+        "git_blob": "1f4aad89b14551e15e9ccf843786360e7dfba25d",
+        "content_sha256": "6d4dfb594d9fae56af520d691c8f325169cfc7467fffcf1ad229089d3fd75e6a"
+      },
+      {
+        "path": ".agents/baselines/B2-safe-main.json",
+        "git_blob": "403a8d604e0eb6e6f639c178d0435cd71d08d372",
+        "content_sha256": "404cab59c43c3f331394f990185317180ad9b70b297a412f7bec5d84c740ac2c"
+      }
+    ]
+  },
+  "audit_source_integrity": {
+    "path": ".agents/reviews/20260720_enterprise_readiness_audit.md",
+    "preserved_unchanged": true,
+    "git_blob": "ac963c1041636706ef40f3a80e56e796086d0ae8",
+    "content_sha256": "fffc946c3597ebc3255938fcee656a29117a9cd31db1f75d8420cb0261e349ec"
+  },
+  "live_governance_revalidation": {
+    "captured_at_utc": "2026-07-22T02:46:52Z",
+    "status": "pass_no_drift",
+    "active_rulesets": 1,
+    "main_ruleset": {
+      "id": 19209773,
+      "name": "Protect main (GOV-01B)",
+      "enforcement": "active",
+      "deletion_blocked": true,
+      "non_fast_forward_blocked": true,
+      "pull_request_required": true,
+      "review_thread_resolution_required": true,
+      "strict_required_status_checks": true,
+      "required_approvals": 0,
+      "required_check_count": 6,
+      "required_check_integration_id": 15368,
+      "admin_bypass": "pull_request_only"
+    },
+    "direct_collaborators": [
+      {
+        "login": "ycpiglet",
+        "role": "admin"
+      }
+    ],
+    "codeowners": "* @ycpiglet",
+    "vulnerability_alerts_enabled": true,
+    "dependabot_security_updates_enabled": true,
+    "private_vulnerability_reporting_enabled": true,
+    "secret_scanning_enabled": true,
+    "secret_scanning_push_protection_enabled": true,
+    "actions_enabled": true,
+    "actions_allowed": "all",
+    "action_sha_pinning_required": true,
+    "default_workflow_permissions": "read",
+    "workflows_can_approve_pull_requests": false
+  },
+  "candidate_pr": {
+    "number": 56,
+    "url": "https://github.com/ycpiglet/manipulator-control-tutorial/pull/56",
+    "base_sha": "ae4d40371b9a3fe4d7078822e1fc541a72defe2d",
+    "accepted_head_sha": "370b10186864e6b9e2bc73978da13671a54628de",
+    "accepted_head_tree_sha": "b2ccf3ded8cfd43f15cf24fd9871779fc09e7426",
+    "exact_head_required_checks": {
+      "status": "success",
+      "passed": 6,
+      "required": 6,
+      "run_ids": {
+        "ci": 29878466416,
+        "desktop": 29878466425
+      },
+      "jobs": {
+        "simulator_lint_and_tests": 88793981071,
+        "paper_citation_and_formula_gates": 88793981035,
+        "paper_latex_build": 88793981049,
+        "windows_unsigned_development_build": 88793980937,
+        "ubuntu_unsigned_development_build": 88793980960,
+        "macos_unsigned_development_build": 88793980939
+      },
+      "simulator": {
+        "passed": 822,
+        "skipped": 12,
+        "subtests_passed": 2420,
+        "coverage_percent": 82.2,
+        "coverage_floor_percent": 80,
+        "ruff_findings": 0
+      },
+      "python_3_10_floor": {
+        "passed": 109,
+        "skipped": 6,
+        "subtests_passed": 20
+      },
+      "desktop_foundation": {
+        "windows": {
+          "passed": 228,
+          "skipped": 17,
+          "subtests_passed": 389
+        },
+        "ubuntu": {
+          "passed": 238,
+          "skipped": 7,
+          "subtests_passed": 394,
+          "cleanup_ui_passed": 18,
+          "cleanup_ui_total": 18
+        },
+        "macos": {
+          "passed": 238,
+          "skipped": 7,
+          "subtests_passed": 394
+        }
+      }
+    }
+  },
+  "review_evidence": {
+    "status": "pass",
+    "independent_read_only_agent_reviews": 3,
+    "finding_counts": {
+      "p0": 0,
+      "p1": 0,
+      "p2": 0,
+      "p3": 0
+    },
+    "formal_independent_human_approval": false,
+    "exact_head_checkpoint_url": "https://github.com/ycpiglet/manipulator-control-tutorial/pull/56#issuecomment-5040323727",
+    "github_codex_result_url": "https://github.com/ycpiglet/manipulator-control-tutorial/pull/56#issuecomment-5040275964",
+    "corrected_thread": {
+      "id": "PRRT_kwDOTF1rrM6SwUvQ",
+      "status_before_acceptance": "resolved_and_outdated",
+      "reply_url": "https://github.com/ycpiglet/manipulator-control-tutorial/pull/56#discussion_r3626464067"
+    }
+  },
+  "owner_acceptance": {
+    "required": true,
+    "status": "accepted",
+    "accepted": true,
+    "actor": "ycpiglet",
+    "actor_association": "OWNER",
+    "accepted_at_utc": "2026-07-22T02:20:30Z",
+    "accepted_subject_sha": "ae4d40371b9a3fe4d7078822e1fc541a72defe2d",
+    "accepted_candidate_pr_head_sha": "370b10186864e6b9e2bc73978da13671a54628de",
+    "evidence_url": "https://github.com/ycpiglet/manipulator-control-tutorial/pull/56#issuecomment-5041091056",
+    "scope": "B2 safe-main development baseline only",
+    "does_not_authorize_public_beta_or_release_or_cleanup": true
+  },
+  "candidate_record_merge": {
+    "commit_sha": "ee5b89c4116e789c35c76ec82e61d63fd56e5bc8",
+    "tree_sha": "b2ccf3ded8cfd43f15cf24fd9871779fc09e7426",
+    "merged_at_utc": "2026-07-22T02:21:03Z",
+    "merged_by": "ycpiglet",
+    "parent_shas": [
+      "ae4d40371b9a3fe4d7078822e1fc541a72defe2d",
+      "370b10186864e6b9e2bc73978da13671a54628de"
+    ],
+    "source_and_merge_tree_equal": true,
+    "replaces_controlled_subject": false
+  },
+  "post_merge_evidence": {
+    "subject_sha": "ee5b89c4116e789c35c76ec82e61d63fd56e5bc8",
+    "head_drift_observed": false,
+    "required_checks": {
+      "status": "success",
+      "passed": 6,
+      "required": 6,
+      "run_ids": {
+        "ci": 29885579962,
+        "desktop": 29885580009
+      },
+      "jobs": {
+        "simulator_lint_and_tests": 88815333538,
+        "paper_citation_and_formula_gates": 88815333483,
+        "paper_latex_build": 88815333490,
+        "windows_unsigned_development_build": 88815333496,
+        "ubuntu_unsigned_development_build": 88815333509,
+        "macos_unsigned_development_build": 88815333543
+      },
+      "last_job_completed_at_utc": "2026-07-22T02:35:26Z",
+      "simulator": {
+        "passed": 822,
+        "skipped": 12,
+        "subtests_passed": 2420,
+        "coverage_percent": 82.2,
+        "coverage_floor_percent": 80,
+        "ruff_findings": 0
+      },
+      "python_3_10_floor": {
+        "passed": 109,
+        "skipped": 6,
+        "subtests_passed": 20
+      },
+      "desktop_foundation": {
+        "windows": {
+          "passed": 228,
+          "skipped": 17,
+          "subtests_passed": 389
+        },
+        "ubuntu": {
+          "passed": 238,
+          "skipped": 7,
+          "subtests_passed": 394,
+          "cleanup_ui_passed": 18,
+          "cleanup_ui_total": 18
+        },
+        "macos": {
+          "passed": 238,
+          "skipped": 7,
+          "subtests_passed": 394
+        }
+      }
+    }
+  },
+  "g1_resolution": {
+    "status": "pass",
+    "review_topology": {
+      "status": "pass_with_owner_accepted_single_maintainer_exception",
+      "owner_acceptance_closes_metric": true,
+      "required_approvals": 0,
+      "direct_collaborators": 1,
+      "formal_independent_human_approval": false
+    },
+    "all_final_head_workflow_prerequisites_complete": true,
+    "blocking_reasons": []
+  },
+  "residual_risks": [
+    {
+      "id": "producer_long_lived_pin",
+      "severity": "P2",
+      "status": "deferred"
+    },
+    {
+      "id": "cleanup_operability_platform_limits",
+      "status": "deferred_fail_closed"
+    },
+    {
+      "id": "node20_action_compatibility_warnings",
+      "status": "deferred_to_SUP-01"
+    },
+    {
+      "id": "dependency_lock_absent",
+      "status": "deferred_to_SUP-01"
+    },
+    {
+      "id": "ci_menagerie_mutable_checkout",
+      "status": "deferred_to_SUP-01"
+    },
+    {
+      "id": "third_party_notices_absent",
+      "status": "deferred_to_LIC-01"
+    },
+    {
+      "id": "unsigned_unpacked_distribution",
+      "status": "deferred_to_G2_G3_G4"
+    },
+    {
+      "id": "tags_and_releases_absent",
+      "status": "deferred_to_REL"
+    },
+    {
+      "id": "real_output_dry_run_not_performed",
+      "status": "separate_owner_participating_task"
+    }
+  ],
+  "authorization": {
+    "b2_dependent_work_allowed": true,
+    "work_registry": [
+      {
+        "id": "STATE-01",
+        "start_scope": "implementation_and_first_merge",
+        "prerequisites": [
+          "B2"
+        ]
+      },
+      {
+        "id": "IA-00",
+        "start_scope": "parallel_no_move_inventory_and_adr_draft; merge_after_STATE-01",
+        "prerequisites": [
+          "B2_for_draft",
+          "STATE-01_for_merge"
+        ]
+      },
+      {
+        "id": "INT-01",
+        "start_scope": "review_and_disposition_after_STATE-01",
+        "prerequisites": [
+          "STATE-01"
+        ]
+      },
+      {
+        "id": "SUP-01",
+        "start_scope": "technical_baseline_after_STATE-01",
+        "prerequisites": [
+          "STATE-01"
+        ]
+      },
+      {
+        "id": "OPS-01",
+        "start_scope": "independent_lane_after_STATE-01",
+        "prerequisites": [
+          "STATE-01"
+        ]
+      },
+      {
+        "id": "EDU-01",
+        "start_scope": "independent_lane_after_STATE-01",
+        "prerequisites": [
+          "STATE-01"
+        ]
+      },
+      {
+        "id": "MAINT-01",
+        "start_scope": "small_debt_reduction_prs_after_STATE-01",
+        "prerequisites": [
+          "STATE-01"
+        ]
+      },
+      {
+        "id": "IA-01",
+        "start_scope": "blocked_until_prerequisites",
+        "prerequisites": [
+          "IA-00_GO"
+        ]
+      },
+      {
+        "id": "LIC-01",
+        "start_scope": "blocked_until_prerequisites",
+        "prerequisites": [
+          "SUP-01"
+        ]
+      },
+      {
+        "id": "PKG-01",
+        "start_scope": "blocked_until_prerequisites",
+        "prerequisites": [
+          "IA-00_decision",
+          "IA-01_if_IA-00_GO",
+          "INT-01_disposition"
+        ]
+      },
+      {
+        "id": "E2E-01",
+        "start_scope": "blocked_until_prerequisites",
+        "prerequisites": [
+          "SUP-01_merged",
+          "PKG-01_merged"
+        ]
+      }
+    ],
+    "downstream_dependency_and_review_gates_still_apply": true,
+    "public_beta": false,
+    "signed_distribution": false,
+    "release_or_doi_publication": false,
+    "real_output_cleanup_dry_run": false,
+    "cleanup_apply": false,
+    "repository_structure_change": false,
+    "ia_00_no_move_decision_allowed": true,
+    "separate_compatibility_pr_required_for_any_later_structure_change": true
+  },
+  "next_work": {
+    "first_merge_lane": "STATE-01",
+    "parallel_read_only_or_draft_lane": "IA-00",
+    "ia_00_scope": "no-move inventory and launcher compatibility decision only",
+    "old_draft_prs_must_not_merge_wholesale": [
+      37,
+      38
+    ],
+    "first_technical_baseline_lane": "SUP-01"
+  },
+  "safety": {
+    "real_learner_outputs_modified": false,
+    "real_output_cleanup_dry_run_run": false,
+    "cleanup_apply_run": false,
+    "cleanup_apply_authorized": false,
+    "audit_source_modified": false
+  },
+  "record_provenance": {
+    "self_referential_declaration_commit_embedded": false,
+    "authoritative_record_commit_source": "Git history and protected-PR metadata that introduce this file"
+  }
+}

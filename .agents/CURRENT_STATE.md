@@ -24,29 +24,26 @@ Immediate order of work:
 
 1. preserve the completed GOV-01, SAFE-01, DOC-01, COMP-01, COMP-02, and
    durable PR #55 handoff evidence without touching real learner outputs;
-2. record the BASE-01 candidate for frozen subject
-   `ae4d40371b9a3fe4d7078822e1fc541a72defe2d` and tree
-   `b5f4cb03abbf1e66c14c27c720c737ef2fc4f798`;
-3. open the BASE-01 candidate PR, obtain independent read-only review, and
-   pass all six required checks at its exact head;
-4. keep B2 undeclared until the owner explicitly accepts the documented
-   single-maintainer residual risk for that exact subject and PR head, then
-   follow gates G2 through G5.
+2. preserve the immutable BASE-01 candidate records and the append-only
+   [B2 declaration](baselines/B2-safe-main-declaration.md) for controlled
+   subject `ae4d40371b9a3fe4d7078822e1fc541a72defe2d`;
+3. merge STATE-01 first, while IA-00 may be drafted as a no-move decision and
+   rebased after STATE-01 if their handoff files overlap;
+4. follow G2 through G5 without treating B2 as public-beta, signing, release,
+   DOI, real-output cleanup, or repository-move authorization.
 
-Current exact next action: publish the collected BASE-01 evidence as
-`CANDIDATE — CHECKS, REVIEW, AND OWNER ACCEPTANCE PENDING AT RECORD CREATION`.
-G1 has 11 of 12 metric rows passing: the sole pending metric row is review
-topology, which ultimately requires exact-subject/exact-PR-head owner
-acceptance. That metric count is not a count of remaining BASE-01 workflow
-prerequisites. Candidate exact-head six checks, independent read-only review,
-and exact-SHA owner acceptance must all be confirmed on the same final head.
-General permission to continue is not that acceptance. A real-root cleanup
-dry-run remains a separate owner-participating activity and is not a BASE-01
-prerequisite.
+Current exact next action: create a new clean `agent/project-state-ledger`
+worktree from the latest `origin/main` and execute STATE-01. Keep the
+authoritative live state concise, archive older history, and add an immutable
+audit finding-status ledger without editing the audit source. IA-00 may be
+prepared in parallel but is a no-move inventory/ADR only. Any later launcher
+change requires IA-00 GO and a separate compatibility PR.
+
+A real-root cleanup dry-run remains a separate owner-participating activity.
 Do not apply any plan to the real outputs root until the owner has reviewed
 that exact dry-run and separately authorized apply.
 
-### 2026-07-22 COMP-02 complete; durable handoff merged; BASE-01 candidate pending
+### 2026-07-22 COMP-02 complete; BASE-01 complete; B2 declared
 
 - Objective: connect desktop, menu, CLI, outputs index, report, worksheet,
   coverage, and path progress to the COMP-01 canonical evaluator without
@@ -99,11 +96,15 @@ that exact dry-run and separately authorized apply.
   `b5f4cb03abbf1e66c14c27c720c737ef2fc4f798`. Exact-head CI
   `29871635697` and desktop `29871635771`, then post-merge CI
   `29873178744` and desktop `29873178702`, each passed 6/6.
-- BASE-01 evidence status: the frozen subject is clean and equal to
-  `origin/main`; 11 of 12 G1 metric rows pass, with review topology the sole
-  pending metric row. Candidate exact-head checks, independent review, and
-  exact-subject/exact-head owner acceptance are distinct workflow prerequisites
-  for the same final head. Deferred dependency-lock, mutable CI Menagerie
+- BASE-01/B2 status: PR #56 accepted head
+  `370b10186864e6b9e2bc73978da13671a54628de` passed exact-head 6/6, independent
+  read-only review, and the corrected late-thread gate. Owner `ycpiglet`
+  accepted the single-maintainer risk for that head and frozen subject before
+  merge. PR #56 merged as `ee5b89c4116e789c35c76ec82e61d63fd56e5bc8`;
+  source/merge trees are both `b2ccf3ded8cfd43f15cf24fd9871779fc09e7426`,
+  and merge-SHA CI `29885579962` plus desktop `29885580009` passed 6/6. The
+  append-only declaration records G1 12/12 while preserving the candidate
+  Markdown/JSON unchanged. Deferred dependency-lock, mutable CI Menagerie
   fetch, notice inventory, unsigned distribution, and long-lived producer-pin
   risks remain recorded and do not become public-beta approval.
 - Compatibility/rollback: schema-1 remains versioned and read-only; invalid or
@@ -116,10 +117,10 @@ that exact dry-run and separately authorized apply.
   under one long-lived pinned lease. The strict reader rejects any changed or
   redirected bytes, so this cannot grant false completion and is a nonblocking
   P2 writer-hardening follow-up and the only expected code residual after the
-  late thread correction. Exact-SHA single-maintainer owner risk acceptance
-  remains required for B2, which is not a public-beta GO.
-- Single next action: create the BASE-01 candidate records and PR, then run
-  exact-head review/checks before requesting exact-SHA owner acceptance.
+  late thread correction. B2 is declared but remains only a development
+  baseline and is not a public-beta GO.
+- Single next action: execute STATE-01 from a new clean latest-main worktree;
+  keep IA-00 to a parallel no-move inventory/ADR until STATE-01 lands.
 
 ### 2026-07-21 COMP-01 complete; COMP-02 next
 
