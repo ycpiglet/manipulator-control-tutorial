@@ -2,14 +2,16 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed final decision; STATE-01 is accepted and IA-00 acceptance gates remain |
+| Status | **Accepted**; PR #59 exact-head and post-merge gates passed |
 | Decision | **FREEZE** the current root launcher paths through the v0.1 line and B4 |
 | IA-01 | Not required while this FREEZE remains in force |
 | Date | 2026-07-22 KST |
-| Subject commit | `6c06de439fbee22ee2591dc47846194484cad517` |
-| Subject tree | `2749c852d5eaa04676bc2654af3634b5243b650f` |
+| Inventory subject commit | `6c06de439fbee22ee2591dc47846194484cad517` |
+| Inventory subject tree | `2749c852d5eaa04676bc2654af3634b5243b650f` |
 | STATE-01 source / merge | `ba74114126ff875be2f11810c5a0064f50b49000` / `6c06de439fbee22ee2591dc47846194484cad517`; source/merge tree equivalence PASS |
 | STATE-01 checks | Exact-head CI `29890342037`, desktop `29890341985`; post-merge CI `29891148900`, desktop `29891148887`; required checks 6/6 PASS at both SHAs |
+| IA-00 source / merge | `d7d3c168308c753279c20c4833e29cdd7ef94269` / `23689849b31302fab5a370a463f8054f438d0057`; source/merge tree `333607829fcd12513ac42161796ac3880f338fe1`, equivalence PASS |
+| IA-00 checks | Exact-head CI `29892385400`, desktop `29892385399`; post-merge CI `29893191982`, desktop `29893192024`; required checks 6/6 PASS at both SHAs |
 | Inventory | 23 tracked root launchers: 20 `.cmd`, one `.command`, one `.sh`, one `.ps1` |
 | Inventory digest | SHA-256 `879ecf4613b780aaaf777f0785a506103439d06bbeaac58fd9c9a944939e6807` over the C-locale-sorted, newline-terminated path list |
 
@@ -29,12 +31,12 @@ conditional compatibility implementation PR and is therefore **not required**
 for this disposition. PKG-01 may proceed after this decision is accepted and
 the other prerequisites in the execution plan are satisfied.
 
-This draft began at B2 and has been fast-forwarded onto the accepted STATE-01
-merge. It becomes the accepted IA-00 record only after the normal IA-00 review,
-exact-head, protected-merge, and post-merge controls have succeeded. It does
-not edit a handoff, move a path, or change a consumer.
+This record began as a B2 draft, was fast-forwarded onto the accepted STATE-01
+merge, and was accepted through PR #59 after normal IA-00 review, exact-head,
+protected-merge, source/merge tree-equivalence, and post-merge controls all
+succeeded. The accepted change did not move a path or change a consumer.
 
-The B2 acknowledgment and this IA-00 draft do **not** authorize a public beta,
+The B2 acknowledgment and this IA-00 record do **not** authorize a public beta,
 signed distribution, release or DOI publication, a real-output cleanup
 dry-run, cleanup apply, external contact or participant recruitment, or any
 repository move. Those remain governed by their separate gates and explicit
@@ -194,29 +196,24 @@ IA-01, provided they keep all 23 paths and their documented roles stable:
 
 Any such change still needs its own scope, validation, and rollback evidence.
 
-## Required in-place launcher hardening
+## Accepted in-place launcher hardening
 
 The inventory review found one concrete clean-setup defect below the frozen
-path boundary. On a fresh checkout, `run_mclab.cmd` invokes
-`scripts/bootstrap_and_run.py --setup-only`. That helper installs `.[dev]`,
-while `PySide6-Essentials` is present only in the `app` optional dependency;
-the launcher then invokes `python -m mclab menu`, whose Qt application requires
-PySide6. The current text-only launcher test checks the delegate and failure
-guard but cannot prove that this dependency chain launches the menu.
+path boundary: `run_mclab.cmd` could treat a dev-only venv without PySide6 as
+ready and then fail to launch its Qt menu target. Focused PR #61 fixed this in
+place without changing the frozen path or learner-visible menu intent.
 
-A separate focused correctness PR must reconcile that bootstrap dependency
-path before PKG-01/E2E-01 acceptance. It may install the required app extra or
-route setup through the shared desktop bootstrap, but it must keep
-`run_mclab.cmd` at the root, preserve its learner-visible menu intent and exit
-code behavior. Its regression matrix must cover both a clean environment and
-an existing dev-only venv where the venv and Panda scene are present but
-PySide6 is absent. The latter currently skips setup entirely, so changing only
-the helper's install extra is insufficient unless the launcher guard or
-delegate also re-enters dependency repair. This is allowed in-place hardening
-under FREEZE; it is not IA-01 and does not authorize a path move. Until that PR
-passes, clean-checkout and pre-existing-environment execution of
-`run_mclab.cmd` remain unproven and must not be cited as package or E2E
-evidence.
+The launcher now probes both `mclab` and PySide6, routes a missing or incomplete
+environment through the shared locked desktop bootstrap, and propagates setup
+and child exit codes. Its native Windows matrix covers both a clean checkout
+and an existing dev-only venv with the Panda scene present but PySide6 absent.
+Exact head `846eba67df3bbf2cf2bb26eb2414ba0a534bc4f6` and protected merge
+`bc156c2628145fbfa7313de2eaea2323f44dc551` share tree
+`82dcb512ca6fc187e84f77b14a5364a0ba790d6f`. Exact-head CI
+`29895830563` / desktop `29895830557` and post-merge CI `29896661780` /
+desktop `29896661773` each passed all six required checks. This closes the
+specific bootstrap prerequisite for PKG-01/E2E-01; it does not itself provide
+package or E2E evidence and does not authorize a path move.
 
 ## Forbidden changes while frozen
 
@@ -254,19 +251,19 @@ not permission to change a launcher path.
    added `.cmd` could escape that check.
 3. `run_all.ps1` has no command/delegate assertion and is not executed by the
    launcher test suite.
-4. Compatibility `.cmd` files are checked as text, not executed on Windows.
-   The desktop workflow executes only the recommended `START_HERE.cmd` setup
-   path, not every viewer or comparison shortcut.
+4. Most compatibility `.cmd` files are checked as text, not executed on
+   Windows. The desktop workflow now executes `run_mclab.cmd` in its clean and
+   dev-only repair states plus the recommended `START_HERE.cmd` setup path, but
+   it does not execute every viewer or comparison shortcut.
 5. There is no explicit package test asserting that root launchers remain out
    of the PyInstaller analysis/data manifest.
 6. Exact per-file documentation references are distributed across lab guides;
    the structure checker accepts wildcard group labels instead of reconciling
    every documented launcher with the tracked inventory.
-7. The `run_mclab.cmd` setup path installs `.[dev]` rather than the `app` extra
-   needed by its subsequent Qt menu target. Its venv-and-scene guard also
-   treats an existing Qt-missing dev-only venv as ready. No clean or
-   pre-existing-environment Windows execution test currently exercises that
-   compatibility path; the required in-place hardening above owns this gap.
+
+The former `run_mclab.cmd` dependency/guard gap is closed by PR #61 as recorded
+above. Preserve its two-state native Windows regression when changing launcher
+bootstrap behavior.
 
 A future hardening PR may add an exact manifest test, validate the PowerShell
 delegate, reconcile docs against the manifest, and assert the package boundary.
@@ -370,19 +367,18 @@ Shim removal is a later release decision after at least one released-version
 window and evidence that supported callers have migrated. It cannot be bundled
 into the initial move.
 
-## Acceptance gate
+## Acceptance evidence
 
-Before this draft can merge as IA-00:
+The original IA-00 acceptance gate is satisfied:
 
-1. STATE-01 must be accepted first, including post-merge evidence, and this
-   branch must remain based on its resulting protected-main baseline.
-2. The exact 23-path inventory must still reconcile with the new baseline; any
-   delta requires re-review rather than silent regeneration.
-3. Local links, the README contract, and focused launcher tests must pass.
-4. Review must confirm that FREEZE, “IA-01 not required,” the v0.1/B4 boundary,
-   and all non-authorizations remain explicit.
-5. The merge must contain this decision record only, apart from conflict-only
-   rebase metadata that does not alter another handoff.
+1. STATE-01 was accepted first with its exact-head and post-merge evidence;
+   IA-00 was based on that protected-main merge.
+2. The exact 23-path inventory reconciled with zero delta at the IA-00 head.
+3. Local links, the README contract, and focused launcher tests passed.
+4. Independent review confirmed FREEZE, “IA-01 not required,” the v0.1/B4
+   boundary, and all non-authorizations remained explicit.
+5. PR #59 contained only this decision record; its source and protected-merge
+   trees were identical, and all six post-merge checks passed.
 
 Acceptance of IA-00 closes the launcher-path decision for the stated boundary;
 it does not advance B4 or any release, signing, cleanup, external-contact,

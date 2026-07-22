@@ -153,3 +153,29 @@ all P2 rows map to the seven bullets under [Maintainability, teaching operations
 - Real-output cleanup dry-run is not authorized by this ledger. Cleanup apply
   remains prohibited until an owner reviews one exact dry-run plan and then
   separately and explicitly authorizes that same plan.
+
+## Accepted-State Reconciliation Events — 2026-07-23
+
+These events append the accepted PR #58–#64 evidence evaluated at protected
+`main@a216ee8b326008ffeae3e139fad65716c19ed341`. They do not rewrite the
+initial registry, initial events, audit source, B2 records, or historical
+promotion summary above.
+
+| Event | Recorded at UTC | Evaluated commit | Finding/component | Status | Evidence state | Evidence and scope | Remaining gate | Supersedes |
+|---|---|---|---|---|---|---|---|---|
+| FS-20260723-021 | 2026-07-22T15:13:38Z | `a216ee8b326008ffeae3e139fad65716c19ed341` | P0-05 | partial | confirmed | [PR #62](https://github.com/ycpiglet/manipulator-control-tutorial/pull/62), [PR #63](https://github.com/ycpiglet/manipulator-control-tutorial/pull/63), and [PR #64](https://github.com/ycpiglet/manipulator-control-tutorial/pull/64) accepted Node24 Action control, universal hashed Python locks, and pinned Panda runtime assets; each exact head and merge passed required checks 6/6; [live state](../CURRENT_STATE.md) | Vulnerability/license scans, Linux package evidence, SBOM/provenance, and immutable release remain | FS-20260722-005 |
+| FS-20260723-022 | 2026-07-22T15:13:38Z | `a216ee8b326008ffeae3e139fad65716c19ed341` | P1-05 | partial | confirmed | [PR #63](https://github.com/ycpiglet/manipulator-control-tutorial/pull/63) fixed runtime/build Python versions and hashes; [PR #64](https://github.com/ycpiglet/manipulator-control-tutorial/pull/64) fixed Panda runtime bytes; [current-main CI](https://github.com/ycpiglet/manipulator-control-tutorial/actions/runs/29927483939) and [desktop](https://github.com/ycpiglet/manipulator-control-tutorial/actions/runs/29927484655) passed 6/6 | SUP-01 scan/SBOM/system-package work, then LIC-01 distribution inventory | FS-20260722-010 |
+| FS-20260723-023 | 2026-07-22T15:13:38Z | `a216ee8b326008ffeae3e139fad65716c19ed341` | P0-05 dependency lock/constraints | closed_for_scope | confirmed | [PR #63](https://github.com/ycpiglet/manipulator-control-tutorial/pull/63) exact head `f754a09aad3ab26a411b5a9d3caaf5cbe565398e`, merge `941925263e478a68678ccaf21cade22cddddc1ff`; exact-head and post-merge checks 6/6 | Preserve lock byte reproducibility; non-Python/system and release inputs remain separate | FS-20260722-005-C |
+| FS-20260723-024 | 2026-07-22T15:13:38Z | `a216ee8b326008ffeae3e139fad65716c19ed341` | P0-05 pinned simulator-CI Menagerie source | closed_for_scope | confirmed | [PR #64](https://github.com/ycpiglet/manipulator-control-tutorial/pull/64) exact head `316d24973e040c2382efc470c446fa17b6c58fe8`, merge `a216ee8b326008ffeae3e139fad65716c19ed341`; 72 files / 34,333,936 bytes verified and exact-head/post-merge checks 6/6 | Preserve asset manifest/policy; final release SBOM/provenance and notices remain | FS-20260722-005-E |
+| FS-20260723-025 | 2026-07-22T15:13:38Z | `a216ee8b326008ffeae3e139fad65716c19ed341` | P0-05 immutable Action refs | closed_for_scope | confirmed | [PR #62](https://github.com/ycpiglet/manipulator-control-tutorial/pull/62) accepted 14 full-SHA uses across five verified Node24 Action releases and a machine lock; exact head `b9ae8ccdf2ec015d6c17f1bbb385efb5b4c1c977`, merge `53f9e84e240f70b0d4223fbcd7cd71fe81cc8af2`, checks 6/6 at both | Continue reviewed lock updates; release provenance remains separate | FS-20260722-005-D |
+| FS-20260723-026 | 2026-07-22T15:13:38Z | `a216ee8b326008ffeae3e139fad65716c19ed341` | P1-07 | partial | confirmed | [PR #60](https://github.com/ycpiglet/manipulator-control-tutorial/pull/60) structurally excluded source-only Qt audit modules; [exact-head desktop](https://github.com/ycpiglet/manipulator-control-tutorial/actions/runs/29893963327) measured Windows 250.2 MB, Ubuntu 329.0 MB, macOS 186.5 MB, all below 400 MiB; exact-head/post-merge checks passed 6/6 | PKG-01 must measure deterministic archives against 300 MiB, cold launch, and packaged QML; thresholds may not be promoted from this partial evidence | FS-20260722-012 |
+
+### Current promotion summary at this event
+
+- STATE-01 and IA-00 are accepted; IA-00 is FREEZE and IA-01 is not required.
+- INT-01 disposition is complete: Draft #37 was superseded by bounded PR #60,
+  and Draft #38 was closed without forward-port. Neither was merged wholesale.
+- SUP-01 is partial through A/B/C. B3 remains blocked on the remaining SUP-01
+  scan/SBOM/system-package work, PKG-01, and E2E-01.
+- B4–B6 and real-output cleanup retain every prior authorization and external
+  evidence gate; no promotion or destructive-work authority is added here.
