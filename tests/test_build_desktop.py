@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import errno
 import importlib.util
 import gzip
 import json
@@ -980,7 +981,12 @@ def test_cross_platform_unsafe_member_name_fails_closed(build_module, tmp_path: 
 def test_undecodable_member_name_fails_closed(build_module, tmp_path: Path) -> None:
     bundle = _make_bundle(build_module, tmp_path)
     bad_path = os.fsencode(bundle) + b"/bad-\xff"
-    descriptor = os.open(bad_path, os.O_WRONLY | os.O_CREAT, 0o644)
+    try:
+        descriptor = os.open(bad_path, os.O_WRONLY | os.O_CREAT, 0o644)
+    except OSError as exc:
+        if exc.errno == errno.EILSEQ:
+            pytest.skip("fixture filesystem rejects undecodable byte names")
+        raise
     try:
         os.write(descriptor, b"unsafe")
     finally:
@@ -993,8 +999,12 @@ def test_undecodable_member_name_fails_closed(build_module, tmp_path: Path) -> N
 @pytest.mark.skipif(os.name == "nt", reason="case-distinct fixtures are not portable on Windows")
 def test_case_colliding_member_names_fail_closed(build_module, tmp_path: Path) -> None:
     bundle = _make_bundle(build_module, tmp_path)
-    (bundle / "Case.txt").write_bytes(b"upper")
-    (bundle / "case.txt").write_bytes(b"lower")
+    upper = bundle / "Case.txt"
+    lower = bundle / "case.txt"
+    upper.write_bytes(b"upper")
+    lower.write_bytes(b"lower")
+    if upper.samefile(lower):
+        pytest.skip("fixture filesystem is case-insensitive")
 
     with pytest.raises(build_module.PackageValidationError, match="collide"):
         build_module._inventory_bundle(bundle)
