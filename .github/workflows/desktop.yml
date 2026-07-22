@@ -211,6 +211,7 @@ jobs:
           tests/test_batch.py
           tests/test_output_cleanup.py
           tests/test_cli_imports.py
+          tests/test_build_desktop.py
 
       - name: Saved-run cleanup confirmation audit
         if: runner.os == 'Linux'

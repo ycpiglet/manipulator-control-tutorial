@@ -265,12 +265,17 @@ def test_build_preflight_and_marker_run_before_package_inventory(
             side_effect=lambda: events.append("verify"),
         ),
         patch.object(build_module.subprocess, "run", side_effect=fake_pyinstaller),
+        patch.object(
+            build_module,
+            "_retire_pyinstaller_work_tree",
+            side_effect=lambda: events.append("retire"),
+        ),
         patch.object(build_module, "_finalize_package", side_effect=fake_finalize),
         patch.object(sys, "argv", ["build_desktop.py", "--skip-size-gate"]),
     ):
         assert build_module.main() == 0
 
-    assert events == ["verify", "pyinstaller", "inventory"]
+    assert events == ["verify", "pyinstaller", "retire", "inventory"]
     assert "--noconfirm" not in build_module._PYINSTALLER_COMMAND
     assert "--clean" in build_module._PYINSTALLER_COMMAND
 
@@ -885,6 +890,72 @@ def test_hardlinked_regular_file_fails_closed(build_module, tmp_path: Path) -> N
 
     with pytest.raises(build_module.PackageValidationError, match="Hard-linked"):
         build_module._inventory_bundle(bundle)
+
+
+def test_retiring_owned_pyinstaller_tree_breaks_bundle_hardlink(
+    build_module, tmp_path: Path
+) -> None:
+    work_tree = tmp_path / build_module._PYINSTALLER_WORK_DIRECTORY
+    work_tree.mkdir(parents=True)
+    work_executable = work_tree / "MCLab.exe"
+    work_executable.write_bytes(b"generated executable")
+    bundle = tmp_path / "dist" / build_module.BUNDLE_NAME
+    bundle.mkdir(parents=True)
+    bundle_executable = bundle / "MCLab.exe"
+    try:
+        os.link(work_executable, bundle_executable)
+    except (NotImplementedError, OSError):
+        pytest.skip("hard links are unavailable on this filesystem")
+    assert bundle_executable.stat().st_nlink >= 2
+
+    with patch.object(build_module, "ROOT", tmp_path):
+        build_module._retire_pyinstaller_work_tree()
+
+    assert not work_tree.exists()
+    assert bundle_executable.read_bytes() == b"generated executable"
+    assert bundle_executable.stat().st_nlink == 1
+
+
+def test_retiring_pyinstaller_tree_does_not_accept_external_hardlink(
+    build_module, tmp_path: Path
+) -> None:
+    bundle = _make_bundle(build_module, tmp_path)
+    external_alias = tmp_path / "external-alias"
+    try:
+        os.link(bundle / "MCLab", external_alias)
+    except (NotImplementedError, OSError):
+        pytest.skip("hard links are unavailable on this filesystem")
+
+    with patch.object(build_module, "ROOT", tmp_path):
+        build_module._retire_pyinstaller_work_tree()
+
+    with pytest.raises(build_module.PackageValidationError, match="Hard-linked"):
+        build_module._inventory_bundle(bundle)
+    assert external_alias.read_bytes() == b"payload\n"
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX symlink semantics")
+def test_retiring_unsafe_pyinstaller_tree_preserves_bundle_and_external_target(
+    build_module, tmp_path: Path
+) -> None:
+    bundle = _make_bundle(build_module, tmp_path)
+    bundle_bytes = (bundle / "MCLab").read_bytes()
+    external = tmp_path / "external-work"
+    external.mkdir()
+    canary = external / "canary.txt"
+    canary.write_bytes(b"preserve")
+    work_parent = tmp_path / "build"
+    work_parent.mkdir()
+    os.symlink(external, work_parent / "mclab")
+
+    with (
+        patch.object(build_module, "ROOT", tmp_path),
+        pytest.raises(build_module.PackageValidationError, match="Refusing to clean unsafe"),
+    ):
+        build_module._retire_pyinstaller_work_tree()
+
+    assert canary.read_bytes() == b"preserve"
+    assert (bundle / "MCLab").read_bytes() == bundle_bytes
 
 
 @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="FIFO is POSIX-only")

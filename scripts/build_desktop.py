@@ -103,6 +103,7 @@ _STALE_TRANSACTION_PREFIXES = (
     f".{PACKAGE_DIRECTORY_NAME}.stage-",
 )
 _PACKAGE_OPERATION_LOCK_NAME = ".mclab-package-operation.lock"
+_PYINSTALLER_WORK_DIRECTORY = Path("build") / "mclab"
 
 
 class PackageValidationError(RuntimeError):
@@ -1885,6 +1886,25 @@ def _clean_build_outputs() -> None:
         _remove_owned_directory(path, boundary=repository, label=label)
 
 
+def _retire_pyinstaller_work_tree() -> None:
+    """Remove the owned work tree before enforcing single-link bundle files.
+
+    PyInstaller can leave the Windows onedir executable hard-linked to its
+    fixed ``build/mclab`` intermediate. The package verifier intentionally
+    rejects every multiply linked deliverable, so retire only that freshly
+    generated, mount-aware work tree before measuring the bundle. Any alias
+    outside this owned path remains visible to the strict inventory and fails
+    closed.
+    """
+
+    work_tree = _absolute_path(ROOT / _PYINSTALLER_WORK_DIRECTORY)
+    _remove_owned_directory(
+        work_tree,
+        boundary=_absolute_path(ROOT),
+        label="PyInstaller work directory",
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -1940,6 +1960,7 @@ def main() -> int:
         subprocess.run(_PYINSTALLER_COMMAND, cwd=ROOT, check=True)
         bundle = _bundle_root()
         _require_real_directory(bundle, label="PyInstaller one-folder output")
+        _retire_pyinstaller_work_tree()
         previous_marker = _capture_marker(bundle)
         try:
             _atomic_replace_marker(bundle, UNSIGNED_MARKER_BYTES)
