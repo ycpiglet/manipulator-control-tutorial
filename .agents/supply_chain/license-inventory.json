@@ -1,0 +1,1178 @@
+{
+  "candidates": [
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "absl-py",
+      "review_status": "pending",
+      "version": "2.5.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "altgraph",
+      "review_status": "pending",
+      "version": "0.17.5"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "ast-serialize",
+      "review_status": "pending",
+      "version": "0.6.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "axe-playwright-python",
+      "review_status": "pending",
+      "version": "0.1.7"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32'",
+      "name": "colorama",
+      "review_status": "pending",
+      "version": "0.4.6"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "contourpy",
+      "review_status": "pending",
+      "version": "1.3.2"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "coverage",
+      "review_status": "pending",
+      "version": "7.15.2"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "cycler",
+      "review_status": "pending",
+      "version": "0.12.1"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "etils",
+      "review_status": "pending",
+      "version": "1.13.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.11' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.11' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.11' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.11' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "exceptiongroup",
+      "review_status": "pending",
+      "version": "1.3.1"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "fonttools",
+      "review_status": "pending",
+      "version": "4.63.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "fsspec",
+      "review_status": "pending",
+      "version": "2026.6.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "glfw",
+      "review_status": "pending",
+      "version": "2.10.2"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "greenlet",
+      "review_status": "pending",
+      "version": "3.5.3"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "importlib-resources",
+      "review_status": "pending",
+      "version": "7.1.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "iniconfig",
+      "review_status": "pending",
+      "version": "2.3.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "kiwisolver",
+      "review_status": "pending",
+      "version": "1.5.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and platform_python_implementation != 'PyPy' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and platform_python_implementation != 'PyPy' and sys_platform == 'win32')",
+      "name": "librt",
+      "review_status": "pending",
+      "version": "0.13.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin')",
+      "name": "macholib",
+      "review_status": "pending",
+      "version": "1.16.4"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "matplotlib",
+      "review_status": "pending",
+      "version": "3.10.9"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "mujoco",
+      "review_status": "pending",
+      "version": "3.10.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "mypy",
+      "review_status": "pending",
+      "version": "2.3.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "mypy-extensions",
+      "review_status": "pending",
+      "version": "1.1.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "numpy",
+      "review_status": "pending",
+      "version": "2.2.6"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "packaging",
+      "review_status": "pending",
+      "version": "26.2"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "pathspec",
+      "review_status": "pending",
+      "version": "1.1.1"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32'",
+      "name": "pefile",
+      "review_status": "pending",
+      "version": "2024.8.26"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "pillow",
+      "review_status": "pending",
+      "version": "12.3.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "playwright",
+      "review_status": "pending",
+      "version": "1.61.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "pluggy",
+      "review_status": "pending",
+      "version": "1.6.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "pyee",
+      "review_status": "pending",
+      "version": "13.0.1"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "pygments",
+      "review_status": "pending",
+      "version": "2.20.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "pyinstaller",
+      "review_status": "pending",
+      "version": "6.21.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "pyinstaller-hooks-contrib",
+      "review_status": "pending",
+      "version": "2026.6"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "pyopengl",
+      "review_status": "pending",
+      "version": "3.1.10"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "pyparsing",
+      "review_status": "pending",
+      "version": "3.3.2"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "pyside6-essentials",
+      "review_status": "pending",
+      "version": "6.11.1"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "pytest",
+      "review_status": "pending",
+      "version": "9.1.1"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "pytest-cov",
+      "review_status": "pending",
+      "version": "7.1.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "python-dateutil",
+      "review_status": "pending",
+      "version": "2.9.0.post0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32'",
+      "name": "pywin32-ctypes",
+      "review_status": "pending",
+      "version": "0.2.3"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "pyyaml",
+      "review_status": "pending",
+      "version": "6.0.3"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "ruff",
+      "review_status": "pending",
+      "version": "0.15.22"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "setuptools",
+      "review_status": "pending",
+      "version": "83.0.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "shiboken6",
+      "review_status": "pending",
+      "version": "6.11.1"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "six",
+      "review_status": "pending",
+      "version": "1.17.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64"
+      ],
+      "marker": "(python_full_version <= '3.11' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version <= '3.11' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version <= '3.11' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version <= '3.11' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "tomli",
+      "review_status": "pending",
+      "version": "2.4.1"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "typing-extensions",
+      "review_status": "pending",
+      "version": "4.16.0"
+    },
+    {
+      "environment_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "marker": "(python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32')",
+      "name": "zipp",
+      "review_status": "pending",
+      "version": "4.1.0"
+    }
+  ],
+  "contract": {
+    "blockers": [
+      "copyright-attribution-review-pending",
+      "license-expression-review-pending",
+      "license-text-coverage-pending",
+      "native-and-base-image-transitive-inventory-pending",
+      "notice-text-coverage-pending",
+      "qt-pyside-lgpl-compliance-decision-pending",
+      "source-offer-and-relinking-obligations-pending"
+    ],
+    "candidate_count": 49,
+    "compliance_status": "pending-lic-01",
+    "id": "LIC-01A",
+    "legal_approval": false,
+    "notice_bundle_complete": false,
+    "observed_target_count": 3,
+    "public_distribution_authorized": false,
+    "purpose": "deterministic inventory coverage contract; not legal approval",
+    "qt_pyside_lgpl_decision": "pending",
+    "target_cell_count": 12
+  },
+  "observation_baseline": {
+    "evidence_scope": "short-lived development evidence; not release provenance",
+    "source_commit": "6f0995bd8fe52f8fa6832a03f83254eb13ff9cc1",
+    "workflow_run_id": 29950992873
+  },
+  "observed_targets": [
+    {
+      "artifact": {
+        "evidence_sha256": "cea1db18977740f449f413d87e13ee2c85707f6bcbc2684b020f396c82635d83",
+        "expires_at": "2026-08-05T19:27:49Z",
+        "id": 8542125543,
+        "name": "mclab-supply-chain-Linux"
+      },
+      "cell_id": "cpython-3.11-linux-x86_64",
+      "id": "github-hosted-linux-cpython-3.11",
+      "metadata_gaps": {
+        "license": 1,
+        "license_text": 3,
+        "notice_text": 43,
+        "url": 2
+      },
+      "package_count": 44,
+      "recorded_target": {
+        "implementation": "CPython",
+        "implementation_name": "cpython",
+        "machine": "x86_64",
+        "python_full_version": "3.11.15",
+        "sys_platform": "linux"
+      },
+      "runner_os": "Linux"
+    },
+    {
+      "artifact": {
+        "evidence_sha256": "fdc73a10a3e5a9bad525604d1ff7450021182fbb78965b7407da7620d50d44de",
+        "expires_at": "2026-08-05T19:27:32Z",
+        "id": 8542118388,
+        "name": "mclab-supply-chain-macOS"
+      },
+      "cell_id": "cpython-3.11-darwin-arm64",
+      "id": "github-hosted-macos-cpython-3.11",
+      "metadata_gaps": {
+        "license": 1,
+        "license_text": 3,
+        "notice_text": 44,
+        "url": 2
+      },
+      "package_count": 45,
+      "recorded_target": {
+        "implementation": "CPython",
+        "implementation_name": "cpython",
+        "machine": "arm64",
+        "python_full_version": "3.11.9",
+        "sys_platform": "darwin"
+      },
+      "runner_os": "macOS"
+    },
+    {
+      "artifact": {
+        "evidence_sha256": "bd9540d0b5a21f0772d9722b5fbf61e63902547074ac738d874da2bc9dfb987f",
+        "expires_at": "2026-08-05T19:29:22Z",
+        "id": 8542166959,
+        "name": "mclab-supply-chain-Windows"
+      },
+      "cell_id": "cpython-3.11-win32-amd64",
+      "id": "github-hosted-windows-cpython-3.11",
+      "metadata_gaps": {
+        "license": 1,
+        "license_text": 1,
+        "notice_text": 46,
+        "url": 2
+      },
+      "package_count": 47,
+      "recorded_target": {
+        "implementation": "CPython",
+        "implementation_name": "cpython",
+        "machine": "AMD64",
+        "python_full_version": "3.11.9",
+        "sys_platform": "win32"
+      },
+      "runner_os": "Windows"
+    }
+  ],
+  "schema_version": 1,
+  "sources": {
+    "checker": {
+      "path": ".agents/validation/check_license_inventory.py",
+      "sha256": "30b7ec797a4f0fca504b9a456db2c79f077979d4d1ee037207924d9c5fb50f59",
+      "size": 24798
+    },
+    "evidence_schema": {
+      "path": ".agents/supply_chain/python-license-evidence.schema.json",
+      "sha256": "b247efd4aa2e12e9b704954a291ac54a5d72a8f0e16f145d8c7ac1489ffdf3f6",
+      "size": 4824
+    },
+    "generator": {
+      "path": "scripts/generate_license_inventory.py",
+      "sha256": "ad53f902b1609292dfe4830810a0776a38d5a9778b570ac1b550ba05ff2d8d0d",
+      "size": 13146
+    },
+    "package_lock": {
+      "path": "requirements/locks/package.txt",
+      "sha256": "074ec183ec50c6824aa5ba3d6b32e22ebdb7b0277e0e4442f8bb9d96eecfb547",
+      "size": 114504
+    },
+    "project": {
+      "path": "pyproject.toml",
+      "sha256": "3e778ccd63a0d42e799f95681fa9bb1fccc5846b89b6aaa0ba5ba1e06e75c7c8",
+      "size": 4711
+    },
+    "registry_schema": {
+      "path": ".agents/supply_chain/license-inventory.schema.json",
+      "sha256": "34df37e8de8d7bf785cca984d430f7c03270f5be56af7fbc8c6bb4f3e7be7487",
+      "size": 9899
+    },
+    "scanner": {
+      "path": "scripts/audit_supply_chain.py",
+      "sha256": "a4f505dd036d69647ce7492995cd9e0ab4bb46dfbc52a8ceca1dcf295e181e52",
+      "size": 41863
+    }
+  },
+  "target_cells": [
+    {
+      "candidate_count": 46,
+      "id": "cpython-3.10-darwin-arm64",
+      "marker": "implementation_name == 'cpython' and python_version == '3.10' and sys_platform == 'darwin' and platform_machine == 'arm64'",
+      "platform_machine": "arm64",
+      "python_version": "3.10",
+      "sys_platform": "darwin"
+    },
+    {
+      "candidate_count": 46,
+      "id": "cpython-3.10-darwin-x86_64",
+      "marker": "implementation_name == 'cpython' and python_version == '3.10' and sys_platform == 'darwin' and platform_machine == 'x86_64'",
+      "platform_machine": "x86_64",
+      "python_version": "3.10",
+      "sys_platform": "darwin"
+    },
+    {
+      "candidate_count": 45,
+      "id": "cpython-3.10-linux-x86_64",
+      "marker": "implementation_name == 'cpython' and python_version == '3.10' and sys_platform == 'linux' and platform_machine == 'x86_64'",
+      "platform_machine": "x86_64",
+      "python_version": "3.10",
+      "sys_platform": "linux"
+    },
+    {
+      "candidate_count": 48,
+      "id": "cpython-3.10-win32-amd64",
+      "marker": "implementation_name == 'cpython' and python_version == '3.10' and sys_platform == 'win32' and platform_machine == 'AMD64'",
+      "platform_machine": "AMD64",
+      "python_version": "3.10",
+      "sys_platform": "win32"
+    },
+    {
+      "candidate_count": 45,
+      "id": "cpython-3.11-darwin-arm64",
+      "marker": "implementation_name == 'cpython' and python_version == '3.11' and sys_platform == 'darwin' and platform_machine == 'arm64'",
+      "platform_machine": "arm64",
+      "python_version": "3.11",
+      "sys_platform": "darwin"
+    },
+    {
+      "candidate_count": 45,
+      "id": "cpython-3.11-darwin-x86_64",
+      "marker": "implementation_name == 'cpython' and python_version == '3.11' and sys_platform == 'darwin' and platform_machine == 'x86_64'",
+      "platform_machine": "x86_64",
+      "python_version": "3.11",
+      "sys_platform": "darwin"
+    },
+    {
+      "candidate_count": 44,
+      "id": "cpython-3.11-linux-x86_64",
+      "marker": "implementation_name == 'cpython' and python_version == '3.11' and sys_platform == 'linux' and platform_machine == 'x86_64'",
+      "platform_machine": "x86_64",
+      "python_version": "3.11",
+      "sys_platform": "linux"
+    },
+    {
+      "candidate_count": 47,
+      "id": "cpython-3.11-win32-amd64",
+      "marker": "implementation_name == 'cpython' and python_version == '3.11' and sys_platform == 'win32' and platform_machine == 'AMD64'",
+      "platform_machine": "AMD64",
+      "python_version": "3.11",
+      "sys_platform": "win32"
+    },
+    {
+      "candidate_count": 44,
+      "id": "cpython-3.12-darwin-arm64",
+      "marker": "implementation_name == 'cpython' and python_version == '3.12' and sys_platform == 'darwin' and platform_machine == 'arm64'",
+      "platform_machine": "arm64",
+      "python_version": "3.12",
+      "sys_platform": "darwin"
+    },
+    {
+      "candidate_count": 44,
+      "id": "cpython-3.12-darwin-x86_64",
+      "marker": "implementation_name == 'cpython' and python_version == '3.12' and sys_platform == 'darwin' and platform_machine == 'x86_64'",
+      "platform_machine": "x86_64",
+      "python_version": "3.12",
+      "sys_platform": "darwin"
+    },
+    {
+      "candidate_count": 43,
+      "id": "cpython-3.12-linux-x86_64",
+      "marker": "implementation_name == 'cpython' and python_version == '3.12' and sys_platform == 'linux' and platform_machine == 'x86_64'",
+      "platform_machine": "x86_64",
+      "python_version": "3.12",
+      "sys_platform": "linux"
+    },
+    {
+      "candidate_count": 46,
+      "id": "cpython-3.12-win32-amd64",
+      "marker": "implementation_name == 'cpython' and python_version == '3.12' and sys_platform == 'win32' and platform_machine == 'AMD64'",
+      "platform_machine": "AMD64",
+      "python_version": "3.12",
+      "sys_platform": "win32"
+    }
+  ]
+}

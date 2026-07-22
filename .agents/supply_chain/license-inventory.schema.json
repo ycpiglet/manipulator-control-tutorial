@@ -1,0 +1,425 @@
+{
+  "$defs": {
+    "artifact": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "expires_at": {
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+          "type": "string"
+        },
+        "id": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "name": {
+          "pattern": "^mclab-supply-chain-(Linux|Windows|macOS)$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "evidence_sha256",
+        "expires_at",
+        "id",
+        "name"
+      ],
+      "type": "object"
+    },
+    "candidate": {
+      "additionalProperties": false,
+      "properties": {
+        "environment_ids": {
+          "items": {
+            "pattern": "^cpython-3\\.(10|11|12)-(linux-x86_64|win32-amd64|darwin-(arm64|x86_64))$",
+            "type": "string"
+          },
+          "maxItems": 12,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "marker": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "type": "string"
+        },
+        "review_status": {
+          "const": "pending"
+        },
+        "version": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "environment_ids",
+        "marker",
+        "name",
+        "review_status",
+        "version"
+      ],
+      "type": "object"
+    },
+    "gapCounts": {
+      "additionalProperties": false,
+      "properties": {
+        "license": {
+          "maximum": 48,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "license_text": {
+          "maximum": 48,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "notice_text": {
+          "maximum": 48,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "url": {
+          "maximum": 48,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "license",
+        "license_text",
+        "notice_text",
+        "url"
+      ],
+      "type": "object"
+    },
+    "observedTarget": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact": {
+          "$ref": "#/$defs/artifact"
+        },
+        "cell_id": {
+          "pattern": "^cpython-3\\.11-(linux-x86_64|win32-amd64|darwin-arm64)$",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^github-hosted-(linux|windows|macos)-cpython-3\\.11$",
+          "type": "string"
+        },
+        "metadata_gaps": {
+          "$ref": "#/$defs/gapCounts"
+        },
+        "package_count": {
+          "maximum": 48,
+          "minimum": 43,
+          "type": "integer"
+        },
+        "recorded_target": {
+          "$ref": "#/$defs/recordedTarget"
+        },
+        "runner_os": {
+          "enum": [
+            "Linux",
+            "Windows",
+            "macOS"
+          ]
+        }
+      },
+      "required": [
+        "artifact",
+        "cell_id",
+        "id",
+        "metadata_gaps",
+        "package_count",
+        "recorded_target",
+        "runner_os"
+      ],
+      "type": "object"
+    },
+    "recordedTarget": {
+      "additionalProperties": false,
+      "properties": {
+        "implementation": {
+          "const": "CPython"
+        },
+        "implementation_name": {
+          "const": "cpython"
+        },
+        "machine": {
+          "enum": [
+            "AMD64",
+            "arm64",
+            "x86_64"
+          ]
+        },
+        "python_full_version": {
+          "pattern": "^3\\.11\\.[0-9]+$",
+          "type": "string"
+        },
+        "sys_platform": {
+          "enum": [
+            "darwin",
+            "linux",
+            "win32"
+          ]
+        }
+      },
+      "required": [
+        "implementation",
+        "implementation_name",
+        "machine",
+        "python_full_version",
+        "sys_platform"
+      ],
+      "type": "object"
+    },
+    "sourceRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "pattern": "^[A-Za-z0-9._/-]+$",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "size": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "size"
+      ],
+      "type": "object"
+    },
+    "targetCell": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_count": {
+          "maximum": 48,
+          "minimum": 43,
+          "type": "integer"
+        },
+        "id": {
+          "pattern": "^cpython-3\\.(10|11|12)-(linux-x86_64|win32-amd64|darwin-(arm64|x86_64))$",
+          "type": "string"
+        },
+        "marker": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "platform_machine": {
+          "enum": [
+            "AMD64",
+            "arm64",
+            "x86_64"
+          ]
+        },
+        "python_version": {
+          "enum": [
+            "3.10",
+            "3.11",
+            "3.12"
+          ]
+        },
+        "sys_platform": {
+          "enum": [
+            "darwin",
+            "linux",
+            "win32"
+          ]
+        }
+      },
+      "required": [
+        "candidate_count",
+        "id",
+        "marker",
+        "platform_machine",
+        "python_version",
+        "sys_platform"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/ycpiglet/manipulator-control-tutorial/blob/main/.agents/supply_chain/license-inventory.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "candidates": {
+      "items": {
+        "$ref": "#/$defs/candidate"
+      },
+      "maxItems": 49,
+      "minItems": 49,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "contract": {
+      "additionalProperties": false,
+      "properties": {
+        "blockers": {
+          "items": {
+            "enum": [
+              "copyright-attribution-review-pending",
+              "license-expression-review-pending",
+              "license-text-coverage-pending",
+              "native-and-base-image-transitive-inventory-pending",
+              "notice-text-coverage-pending",
+              "qt-pyside-lgpl-compliance-decision-pending",
+              "source-offer-and-relinking-obligations-pending"
+            ]
+          },
+          "maxItems": 7,
+          "minItems": 7,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "candidate_count": {
+          "const": 49
+        },
+        "compliance_status": {
+          "const": "pending-lic-01"
+        },
+        "id": {
+          "const": "LIC-01A"
+        },
+        "legal_approval": {
+          "const": false
+        },
+        "notice_bundle_complete": {
+          "const": false
+        },
+        "observed_target_count": {
+          "const": 3
+        },
+        "public_distribution_authorized": {
+          "const": false
+        },
+        "purpose": {
+          "const": "deterministic inventory coverage contract; not legal approval"
+        },
+        "qt_pyside_lgpl_decision": {
+          "const": "pending"
+        },
+        "target_cell_count": {
+          "const": 12
+        }
+      },
+      "required": [
+        "blockers",
+        "candidate_count",
+        "compliance_status",
+        "id",
+        "legal_approval",
+        "notice_bundle_complete",
+        "observed_target_count",
+        "public_distribution_authorized",
+        "purpose",
+        "qt_pyside_lgpl_decision",
+        "target_cell_count"
+      ],
+      "type": "object"
+    },
+    "observation_baseline": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_scope": {
+          "const": "short-lived development evidence; not release provenance"
+        },
+        "source_commit": {
+          "const": "6f0995bd8fe52f8fa6832a03f83254eb13ff9cc1"
+        },
+        "workflow_run_id": {
+          "const": 29950992873
+        }
+      },
+      "required": [
+        "evidence_scope",
+        "source_commit",
+        "workflow_run_id"
+      ],
+      "type": "object"
+    },
+    "observed_targets": {
+      "items": {
+        "$ref": "#/$defs/observedTarget"
+      },
+      "maxItems": 3,
+      "minItems": 3,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "sources": {
+      "additionalProperties": false,
+      "properties": {
+        "checker": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "evidence_schema": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "generator": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "package_lock": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "project": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "registry_schema": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "scanner": {
+          "$ref": "#/$defs/sourceRecord"
+        }
+      },
+      "required": [
+        "checker",
+        "evidence_schema",
+        "generator",
+        "package_lock",
+        "project",
+        "registry_schema",
+        "scanner"
+      ],
+      "type": "object"
+    },
+    "target_cells": {
+      "items": {
+        "$ref": "#/$defs/targetCell"
+      },
+      "maxItems": 12,
+      "minItems": 12,
+      "type": "array",
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "candidates",
+    "contract",
+    "observation_baseline",
+    "observed_targets",
+    "schema_version",
+    "sources",
+    "target_cells"
+  ],
+  "title": "MCLab LIC-01A deterministic license inventory contract",
+  "type": "object"
+}

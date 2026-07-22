@@ -1,0 +1,236 @@
+{
+  "$defs": {
+    "gapCounts": {
+      "additionalProperties": false,
+      "properties": {
+        "license": {
+          "maximum": 48,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "license_text": {
+          "maximum": 48,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "notice_text": {
+          "maximum": 48,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "url": {
+          "maximum": 48,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "license",
+        "license_text",
+        "notice_text",
+        "url"
+      ],
+      "type": "object"
+    },
+    "nullableText": {
+      "anyOf": [
+        {
+          "maxLength": 1048576,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "package": {
+      "additionalProperties": false,
+      "properties": {
+        "license": {
+          "$ref": "#/$defs/nullableText"
+        },
+        "license_text": {
+          "$ref": "#/$defs/nullableText"
+        },
+        "name": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "type": "string"
+        },
+        "notice_text": {
+          "$ref": "#/$defs/nullableText"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "maxLength": 4096,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "version": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "license",
+        "license_text",
+        "name",
+        "notice_text",
+        "url",
+        "version"
+      ],
+      "type": "object"
+    },
+    "target": {
+      "additionalProperties": false,
+      "properties": {
+        "implementation": {
+          "const": "CPython"
+        },
+        "implementation_name": {
+          "const": "cpython"
+        },
+        "machine": {
+          "enum": [
+            "AMD64",
+            "arm64",
+            "x86_64"
+          ]
+        },
+        "python_version": {
+          "pattern": "^3\\.(10|11|12)\\.[0-9]+$",
+          "type": "string"
+        },
+        "sys_platform": {
+          "enum": [
+            "darwin",
+            "linux",
+            "win32"
+          ]
+        }
+      },
+      "required": [
+        "implementation",
+        "implementation_name",
+        "machine",
+        "python_version",
+        "sys_platform"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/ycpiglet/manipulator-control-tutorial/blob/main/.agents/supply_chain/python-license-evidence.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "audit": {
+      "const": "python-licenses"
+    },
+    "compliance_status": {
+      "const": "pending-lic-01"
+    },
+    "excluded_system_packages": {
+      "items": false,
+      "maxItems": 3,
+      "minItems": 3,
+      "prefixItems": [
+        {
+          "const": "pip"
+        },
+        {
+          "const": "setuptools"
+        },
+        {
+          "const": "wheel"
+        }
+      ],
+      "type": "array"
+    },
+    "input_lock_profiles": {
+      "items": false,
+      "maxItems": 2,
+      "minItems": 2,
+      "prefixItems": [
+        {
+          "const": "build"
+        },
+        {
+          "const": "package"
+        }
+      ],
+      "type": "array"
+    },
+    "metadata_gaps": {
+      "$ref": "#/$defs/gapCounts"
+    },
+    "package_count": {
+      "maximum": 48,
+      "minimum": 43,
+      "type": "integer"
+    },
+    "packages": {
+      "items": {
+        "$ref": "#/$defs/package"
+      },
+      "maxItems": 48,
+      "minItems": 43,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "profile": {
+      "const": "package"
+    },
+    "purpose": {
+      "const": "LIC-01 input only; not legal approval"
+    },
+    "result": {
+      "const": "inventory-complete"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "target": {
+      "$ref": "#/$defs/target"
+    },
+    "tool": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "const": "pip-licenses"
+        },
+        "version": {
+          "const": "5.5.5"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "audit",
+    "compliance_status",
+    "excluded_system_packages",
+    "input_lock_profiles",
+    "metadata_gaps",
+    "package_count",
+    "packages",
+    "profile",
+    "purpose",
+    "result",
+    "schema_version",
+    "target",
+    "tool"
+  ],
+  "title": "MCLab normalized package-profile license evidence",
+  "type": "object"
+}

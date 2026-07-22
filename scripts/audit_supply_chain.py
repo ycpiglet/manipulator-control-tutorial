@@ -938,11 +938,12 @@ def validated_target_python_path(target_python: Path, *, root: Path = ROOT) -> P
 
 def write_evidence(path: Path, evidence: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    payload = json.dumps(evidence, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+    payload = (
+        json.dumps(evidence, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+    ).encode("utf-8")
     try:
         with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
+            mode="wb",
             dir=path.parent,
             prefix=f".{path.name}.",
             suffix=".tmp",

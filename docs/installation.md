@@ -184,6 +184,29 @@ at its exact version, and `pip-licenses --packages` limits the evidence to that
 same deterministic set. Ambient packages therefore neither enter the evidence
 nor relax missing-package, version, or scanner-output coverage checks.
 
+LIC-01A adds a committed, closed-schema inventory contract without adding
+third-party license or NOTICE bodies. The registry fixes all 49 package-lock
+candidates and their membership across the reviewed 12 CPython/platform cells,
+then records bounded summaries and SHA-256 provenance for the three accepted
+SUP-01 hosted observations. The hosted observations are short-lived development
+evidence, not release provenance. For package-evidence comparison, the checker
+explicitly excludes the bootstrap `pip`, `setuptools`, and `wheel` distributions
+and substitutes the editable MCLab project for the package lock's `setuptools`
+candidate, matching the existing scanner boundary.
+
+```bash
+python scripts/generate_license_inventory.py --check
+python .agents/validation/check_license_inventory.py
+```
+
+Every desktop matrix cell validates its fresh `python-licenses.json` against
+that registry before evidence upload. Candidate review status nevertheless
+remains `pending`, and the contract keeps license-expression, copyright,
+license-text, NOTICE, source/relinking, native/base-image, and Qt/PySide LGPL
+decisions as explicit blockers. This contract is not legal approval, a complete
+notice bundle, public-distribution authorization, or permission to reinterpret
+the existing unsigned development artifacts as release evidence.
+
 `scripts/generate_sbom_inputs.py` combines the reviewed Python locks, Ubuntu
 direct-package manifest, pinned Panda runtime inventory, bundled fonts, and
 immutable GitHub Action references into deterministic SBOM inputs. Generation
