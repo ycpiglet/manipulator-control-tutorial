@@ -14,20 +14,27 @@
 실행 순서와 승격 gate는 `READINESS_EXECUTION_PLAN.md`가 정합니다. 오래되거나 dirty한
 checkout에서 release/readiness 작업을 이어가지 말고 최신 `origin/main`에서 clean
 worktree를 만듭니다. PR #35, B1, GOV-01, SAFE-01, DOC-01, COMP-01,
-COMP-02, BASE-01은 완료됐습니다. Original COMP-02 PR #53 뒤 late review가 찾은
-desktop legacy-ID reason parity 누락은 corrective PR #54로 보수됐고 exact-head와
+COMP-02, BASE-01은 완료됐고 STATE-01 change set은 준비됐습니다. Original COMP-02
+PR #53 뒤 late review가 찾은 desktop legacy-ID reason parity 누락은 corrective
+PR #54로 보수됐고 exact-head와
 post-merge 6/6 및 review-thread resolution을 통과했습니다. Durable handoff PR #55도 exact-head와
 post-merge 6/6을 통과하고 `ae4d40371b9a3fe4d7078822e1fc541a72defe2d`로
 병합됐습니다. BASE-01 PR #56은 frozen subject
 `ae4d40371b9a3fe4d7078822e1fc541a72defe2d`와 accepted head
 `370b10186864e6b9e2bc73978da13671a54628de`에 대한 owner acceptance, exact-head와
 post-merge 6/6, 독립 review, source/merge tree equivalence를 통과했습니다. G1은
-12/12 PASS이며 B2 `safe-main`은 append-only record로 선언됐습니다. 기존 candidate
-Markdown/JSON은 수정하지 않습니다. 다음 merge lane은 STATE-01이고 IA-00은 병렬
-no-move inventory/ADR로만 준비합니다. 구조 변경은 IA-00 GO 뒤 별도 compatibility
-PR로 처리합니다. SAFE-01 PASS와 B2 선언 뒤에도 실제 learner outputs의 dry-run은
-owner가 참여하는 별도 작업으로만 수행하고, owner가 같은 plan을 검토한 뒤 다시
-명시적으로 승인하기 전에는 `--apply`를 실행하지 않습니다.
+12/12 PASS이며 B2 `safe-main`은 append-only record로 선언됐습니다. 그 declaration
+record는 PR #57로 병합되고 exact-head와 post-merge 6/6을 통과했습니다. 기존 candidate,
+declaration Markdown/JSON과 감사 원문은 수정하지 않습니다. STATE-01 change set은 live state를
+active handoff로 축소하고 과거 이력과 감사 finding-status를 별도 append-only 기록으로
+분리합니다. STATE-01 acceptance는 이 문구가 아니라 exact-head checks, protected merge,
+post-merge checks로 판정합니다. 그 뒤 다음 merge lane은 IA-00 no-move ADR입니다.
+현재 read-only inventory의 권고는 기존 launcher를 v0.1/B4까지 동결하고 IA-01을
+수행하지 않는 것입니다. 구조
+변경은 IA-00 GO 뒤 별도 compatibility PR로만 처리합니다. SAFE-01 PASS와 B2 선언
+뒤에도 실제 learner outputs의 dry-run은 현재 승인되지 않았습니다. 향후에도 owner가
+참여하는 별도 작업으로만 수행하고, owner가 같은 plan을 검토한 뒤 다시 명시적으로
+승인하기 전에는 `--apply`를 실행하지 않습니다.
 
 ## Project Intent
 
@@ -577,11 +584,15 @@ The full project is course-demo ready when:
 
 ## Next Best Task
 
-Follow the active readiness work order: the durable COMP-02 handoff is merged
-and BASE-01/B2 is declared at G1 12/12 for frozen subject
-`ae4d40371b9a3fe4d7078822e1fc541a72defe2d`. Start STATE-01 from a new clean
-latest-main worktree, and keep any parallel IA-00 work to a no-move inventory
-and launcher decision. Rebase IA-00 after STATE-01 when handoff files overlap.
-Do not treat B2 as public-beta, signing, release/DOI, real-output cleanup, or
+Follow the active readiness work order: BASE-01/B2 is declared at G1 12/12 for
+frozen subject `ae4d40371b9a3fe4d7078822e1fc541a72defe2d`, its declaration record is
+merged at `9eb8eb19cc488d47954268439834667d452d32eb`. The STATE-01 change set
+establishes the compact live handoff and append-only finding ledger; accept it
+only through exact-head checks, protected merge, and post-merge checks. Then
+rebase and merge the separate IA-00 no-move ADR; the reviewed recommendation is
+to freeze all current launcher paths through v0.1/B4, so IA-01 should remain
+absent unless the ADR records a contrary GO. Then progress SUP-01 and the disjoint INT/OPS/EDU/
+MAINT lanes from new clean latest-main worktrees. Do not treat B2 or STATE-01 as
+public-beta, signing, release/DOI, external-contact, real-output cleanup, or
 repository-move approval. Do not merge old Draft PR #37/#38 wholesale or add
 web, ROS2, or Isaac Sim scope ahead of the readiness gates.
