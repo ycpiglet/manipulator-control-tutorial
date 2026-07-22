@@ -63,6 +63,8 @@ from mclab.application.presentation import (  # noqa: E402
 from mclab.application.readiness import (  # noqa: E402
     app_readiness,
     readiness_payload,
+    refresh_app_readiness,
+    refresh_scenario_readiness,
     scenario_readiness,
     scenario_readiness_payload,
 )
@@ -490,6 +492,55 @@ class ApplicationFoundationTests(unittest.TestCase):
 
         self.assertEqual(issues, ())
         verifier.assert_called_once_with(root=root)
+
+    def test_app_readiness_refresh_recovers_after_external_asset_install(self) -> None:
+        from mclab.application.asset_readiness import clear_panda_asset_readiness_cache
+        from mclab.application.assets import AssetVerification, AssetVerificationError
+
+        scenario = ScenarioCatalog.default().get("lab04.interactive-virtual-wall")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config_path = root / scenario.config_path
+            config_path.parent.mkdir(parents=True)
+            config_path.write_text("model_path: unused\n", encoding="utf-8")
+            target = (
+                root / "third_party" / "mujoco_menagerie" / "franka_emika_panda"
+            )
+            catalog = ScenarioCatalog((scenario,))
+            outputs = root / "test-results"
+            missing_error = AssetVerificationError(target, ["runtime tree is missing"])
+            verification = AssetVerification(target, file_count=72, total_bytes=34_333_936)
+
+            clear_panda_asset_readiness_cache()
+            with patch(
+                "mclab.application.asset_readiness.verify_assets",
+                side_effect=(missing_error, verification),
+            ) as verifier:
+                missing = app_readiness(catalog, root=root, outputs=outputs)
+                still_cached = app_readiness(catalog, root=root, outputs=outputs)
+                repaired = refresh_app_readiness(catalog, root=root, outputs=outputs)
+            clear_panda_asset_readiness_cache()
+
+        self.assertEqual(missing[0].code, "missing_asset")
+        self.assertEqual(still_cached[0].code, "missing_asset")
+        self.assertEqual(repaired, ())
+        self.assertEqual(verifier.call_count, 2)
+
+    def test_scenario_retry_only_invalidates_assets_for_managed_panda_models(self) -> None:
+        catalog = ScenarioCatalog.default()
+        lab01 = catalog.get("lab01.default")
+        lab04 = catalog.get("lab04.interactive-virtual-wall")
+
+        with (
+            patch("mclab.application.readiness.scenario_readiness", return_value=None),
+            patch(
+                "mclab.application.readiness.clear_panda_asset_readiness_cache"
+            ) as clear_cache,
+        ):
+            self.assertIsNone(refresh_scenario_readiness(lab01, root=ROOT))
+            clear_cache.assert_not_called()
+            self.assertIsNone(refresh_scenario_readiness(lab04, root=ROOT))
+            clear_cache.assert_called_once_with()
 
     def test_integrated_lab03_and_lab04_cards_expose_at_most_five_core_controls(self) -> None:
         catalog = ScenarioCatalog.default()
@@ -1086,8 +1137,16 @@ class ApplicationFoundationTests(unittest.TestCase):
         self.assertIn("backend.rerunSavedRun(modelData.path, false)", results)
         explore = (qml_root / "ExplorePage.qml").read_text(encoding="utf-8")
         scenario_card = (qml_root / "ScenarioCard.qml").read_text(encoding="utf-8")
+        backend_source = (ROOT / "src/mclab/application/qt_app.py").read_text(
+            encoding="utf-8"
+        )
         self.assertIn("property var scenarioItems: backend.scenarios", explore)
         self.assertEqual(explore.count("backend.scenarios"), 1)
+        self.assertIn('text: backend.localizedText(backend.language, "setup.review")', explore)
+        self.assertIn('onClicked: backend.navigate("explore")', explore)
+        self.assertIn('onClicked: backend.navigate("explore")', environment_source)
+        self.assertIn('if page == "explore":', backend_source)
+        self.assertIn("refresh_app_readiness(self.catalog)", backend_source)
         self.assertIn("ScrollFocusHelper", explore)
         self.assertIn("onFocusRevealRequested", explore)
         self.assertIn("scenarioFocusScroll.reveal", explore)

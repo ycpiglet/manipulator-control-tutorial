@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from mclab.application.asset_readiness import (
+    clear_panda_asset_readiness_cache,
     is_panda_model_path,
     panda_asset_readiness,
     resolve_panda_model_member,
@@ -60,6 +61,19 @@ def scenario_readiness(
     return None
 
 
+def refresh_scenario_readiness(
+    scenario: ScenarioDefinition,
+    *,
+    root: Path = PROJECT_ROOT,
+) -> ReadinessIssue | None:
+    """Recheck one scenario after an external setup repair."""
+
+    model_path = scenario.config.get("model_path")
+    if isinstance(model_path, str) and is_panda_model_path(model_path, root=root):
+        clear_panda_asset_readiness_cache()
+    return scenario_readiness(scenario, root=root)
+
+
 def app_readiness(
     catalog: ScenarioCatalog,
     *,
@@ -75,6 +89,18 @@ def app_readiness(
     )
     output_issue = _output_issue(outputs or default_outputs_root())
     return issues + ((output_issue,) if output_issue else ())
+
+
+def refresh_app_readiness(
+    catalog: ScenarioCatalog,
+    *,
+    root: Path = PROJECT_ROOT,
+    outputs: Path | None = None,
+) -> tuple[ReadinessIssue, ...]:
+    """Recheck the application after an external setup repair."""
+
+    clear_panda_asset_readiness_cache()
+    return app_readiness(catalog, root=root, outputs=outputs)
 
 
 def readiness_payload(

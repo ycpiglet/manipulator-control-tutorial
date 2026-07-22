@@ -27,6 +27,7 @@ from mclab.learner_menu import (  # noqa: E402
     LearningPathProgress,
     MENU_ACTIONS,
     MenuAction,
+    _clear_menu_readiness_caches,
     _launch_batch_from_menu,
     _launch_from_menu,
     _launch_learning_path_tuned_replay_from_menu,
@@ -1452,6 +1453,55 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertIn("assets install --force", partial.fix)
         self.assertTrue(all(item.status == "ok" for item in ready))
         verifier.assert_called_once_with(root=root)
+
+    def test_menu_readiness_refresh_recovers_after_external_asset_install(self) -> None:
+        from mclab import learner_menu as learner_menu_module
+        from mclab.application.asset_readiness import PandaAssetReadiness
+
+        action = MenuAction(
+            group="Panda",
+            label="Panda repair",
+            lab_name="lab04",
+            config_path="configs/demo/panda_repair.yaml",
+            plots="essential",
+            description="Demo",
+            try_this="Run it.",
+            watch="Output.",
+        )
+        model_path = "third_party/mujoco_menagerie/franka_emika_panda/scene.xml"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = root / action.config_path
+            config.parent.mkdir(parents=True)
+            config.write_text(f"model_path: {model_path}\n", encoding="utf-8")
+
+            _clear_menu_readiness_caches()
+            with patch(
+                "mclab.learner_menu.panda_asset_readiness",
+                side_effect=(
+                    PandaAssetReadiness("missing_asset", "missing"),
+                    PandaAssetReadiness("ready", "installed", 72, 34_333_936),
+                ),
+            ) as readiness:
+                missing = action_readiness(action, root=root)
+                still_cached = action_readiness(action, root=root)
+                batch_readiness(BATCH_ACTIONS[0], root=root)
+                _clear_menu_readiness_caches()
+                self.assertEqual(
+                    learner_menu_module._action_readiness.cache_info().currsize,
+                    0,
+                )
+                self.assertEqual(
+                    learner_menu_module._batch_readiness.cache_info().currsize,
+                    0,
+                )
+                repaired = action_readiness(action, root=root)
+            _clear_menu_readiness_caches()
+
+        self.assertEqual(missing.label, "Missing Panda assets")
+        self.assertEqual(still_cached.label, "Missing Panda assets")
+        self.assertEqual(repaired.label, "Ready")
+        self.assertEqual(readiness.call_count, 2)
 
     def test_menu_readiness_rejects_an_untracked_panda_model_member(self) -> None:
         from mclab.learner_menu import _action_readiness
@@ -3764,23 +3814,29 @@ class LearnerMenuTests(unittest.TestCase):
         worksheet_button = FakeButton()
         folder_button = FakeButton()
         handoff_button = FakeButton()
+        launch_button = FakeButton()
 
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)
-            refresh_batch_menu_state(
-                (
+            with patch(
+                "mclab.learner_menu.batch_readiness",
+                return_value=ActionReadiness("fail", "Missing model"),
+            ):
+                refresh_batch_menu_state(
                     (
-                        lab01_batch,
-                        text_variable,
-                        report_button,
-                        plot_button,
-                        worksheet_button,
-                        folder_button,
-                        handoff_button,
+                        (
+                            lab01_batch,
+                            text_variable,
+                            report_button,
+                            plot_button,
+                            worksheet_button,
+                            folder_button,
+                            handoff_button,
+                            launch_button,
+                        ),
                     ),
-                ),
-                outputs,
-            )
+                    outputs,
+                )
 
             self.assertIn("History: Not run yet", text_variable.value)
             self.assertIn("Plots: Not saved yet", text_variable.value)
@@ -3795,6 +3851,7 @@ class LearnerMenuTests(unittest.TestCase):
             self.assertEqual(worksheet_button.state_calls[-1], ["disabled"])
             self.assertEqual(folder_button.state_calls[-1], ["disabled"])
             self.assertEqual(handoff_button.state_calls[-1], ["disabled"])
+            self.assertEqual(launch_button.state_calls[-1], ["disabled"])
 
             batch_path = outputs / "batch_lab01"
             batch_path.mkdir()
@@ -3814,20 +3871,25 @@ class LearnerMenuTests(unittest.TestCase):
             (batch_path / "comparison_plots" / "position_compare.png").write_bytes(b"fake-png")
             _finalize_batch_run(batch_path, lab01_batch.batch_name)
 
-            refresh_batch_menu_state(
-                (
+            with patch(
+                "mclab.learner_menu.batch_readiness",
+                return_value=ActionReadiness("ok", "Ready"),
+            ):
+                refresh_batch_menu_state(
                     (
-                        lab01_batch,
-                        text_variable,
-                        report_button,
-                        plot_button,
-                        worksheet_button,
-                        folder_button,
-                        handoff_button,
+                        (
+                            lab01_batch,
+                            text_variable,
+                            report_button,
+                            plot_button,
+                            worksheet_button,
+                            folder_button,
+                            handoff_button,
+                            launch_button,
+                        ),
                     ),
-                ),
-                outputs,
-            )
+                    outputs,
+                )
 
         self.assertIn("History: Latest batch_lab01", text_variable.value)
         self.assertIn("Plots: Latest position_compare.png", text_variable.value)
@@ -3844,6 +3906,7 @@ class LearnerMenuTests(unittest.TestCase):
         self.assertEqual(worksheet_button.state_calls[-1], ["!disabled"])
         self.assertEqual(folder_button.state_calls[-1], ["!disabled"])
         self.assertEqual(handoff_button.state_calls[-1], ["!disabled"])
+        self.assertEqual(launch_button.state_calls[-1], ["!disabled"])
 
     def test_launch_latest_output_opens_report_when_available(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
