@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "minimum_actions_runner": "2.327.1",
+  "policy": {
+    "require_full_commit_sha": true,
+    "require_release_comment": true,
+    "required_runtime": "node24"
+  },
+  "actions": {
+    "WtfJoke/setup-tectonic": {
+      "release": "v4.0.5",
+      "runtime": "node24",
+      "sha": "eb29fd68b7d3f76011906b6e45ea4320c8de5d2f",
+      "source": "https://github.com/WtfJoke/setup-tectonic/releases/tag/v4.0.5",
+      "upstream_commit_verified": true
+    },
+    "actions/cache": {
+      "release": "v6.1.0",
+      "runtime": "node24",
+      "sha": "55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
+      "source": "https://github.com/actions/cache/releases/tag/v6.1.0",
+      "upstream_commit_verified": true
+    },
+    "actions/checkout": {
+      "release": "v7.0.1",
+      "runtime": "node24",
+      "sha": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+      "source": "https://github.com/actions/checkout/releases/tag/v7.0.1",
+      "upstream_commit_verified": true
+    },
+    "actions/setup-python": {
+      "release": "v7.0.0",
+      "runtime": "node24",
+      "sha": "5fda3b95a4ea91299a34e894583c3862153e4b97",
+      "source": "https://github.com/actions/setup-python/releases/tag/v7.0.0",
+      "upstream_commit_verified": true
+    },
+    "actions/upload-artifact": {
+      "release": "v7.0.1",
+      "runtime": "node24",
+      "sha": "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+      "source": "https://github.com/actions/upload-artifact/releases/tag/v7.0.1",
+      "upstream_commit_verified": true
+    }
+  }
+}
