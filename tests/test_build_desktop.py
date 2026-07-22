@@ -43,6 +43,24 @@ def _make_bundle(module, repository: Path, *, payload: bytes = b"payload\n") -> 
     return bundle
 
 
+_REAL_SCANDIR = os.scandir
+
+
+def _scandir_with_unusable_entry_stat(path: os.PathLike[str] | str):
+    """Expose real names/paths while making cached DirEntry metadata unusable."""
+
+    class Entry:
+        def __init__(self, source: os.DirEntry[str]) -> None:
+            self.name = source.name
+            self.path = source.path
+
+        def stat(self, *, follow_symlinks: bool = True):
+            raise AssertionError("security checks must use path-based lstat metadata")
+
+    with _REAL_SCANDIR(path) as entries:
+        return [Entry(entry) for entry in entries]
+
+
 def _provenance(module, system_name: str = "Linux") -> dict[str, object]:
     distributions = [
         {"name": "mujoco-manipulator-control-lab", "version": "0.1.0"},
@@ -379,6 +397,43 @@ def test_inventory_is_sorted_deterministic_and_identity_covers_marker(
     assert first_inventory["one_folder_bytes"] == sum(
         path.stat().st_size for path in bundle.rglob("*") if path.is_file()
     )
+
+
+def test_inventory_uses_path_lstat_instead_of_direntry_stat(build_module, tmp_path: Path) -> None:
+    bundle = _make_bundle(build_module, tmp_path)
+
+    with patch.object(build_module.os, "scandir", side_effect=_scandir_with_unusable_entry_stat):
+        inventory, _ = build_module._inventory_bundle(bundle)
+
+    assert {member["path"] for member in inventory["members"]} >= {
+        build_module.UNSIGNED_MARKER_NAME,
+        "MCLab",
+        "data/lesson.txt",
+    }
+
+
+def test_package_file_check_uses_path_lstat_instead_of_direntry_stat(
+    build_module, tmp_path: Path
+) -> None:
+    package = tmp_path / "package"
+    package.mkdir()
+    archive_name = "MCLab-test.tar.gz"
+    (package / archive_name).write_bytes(b"archive")
+    (package / build_module.EVIDENCE_NAME).write_bytes(b"{}\n")
+
+    with patch.object(build_module.os, "scandir", side_effect=_scandir_with_unusable_entry_stat):
+        build_module._require_exact_package_files(package, archive_name)
+
+
+def test_owned_tree_preflight_uses_path_lstat_instead_of_direntry_stat(
+    build_module, tmp_path: Path
+) -> None:
+    owned = tmp_path / "owned"
+    (owned / "nested").mkdir(parents=True)
+    (owned / "nested" / "file.txt").write_bytes(b"content")
+
+    with patch.object(build_module.os, "scandir", side_effect=_scandir_with_unusable_entry_stat):
+        build_module._validate_owned_tree_for_removal(owned, label="test owned tree")
 
 
 def test_archive_is_byte_deterministic_and_has_normalized_metadata(

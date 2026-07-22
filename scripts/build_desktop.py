@@ -509,7 +509,10 @@ def _inventory_bundle(bundle_root: Path) -> tuple[dict[str, object], str]:
                 )
             child = Path(entry.path)
             try:
-                metadata = entry.stat(follow_symlinks=False)
+                # On Windows, DirEntry.stat() does not populate the stable file
+                # identity fields used by the hard-link and race checks below.
+                # Always obtain fresh, path-based no-follow metadata instead.
+                metadata = child.lstat()
             except OSError as exc:
                 raise PackageValidationError(
                     f"Could not inspect package member {child}: {exc}"
@@ -1217,11 +1220,12 @@ def _require_exact_package_files(package_root: Path, archive_name: str) -> None:
     actual: set[str] = set()
     for entry in os.scandir(package_root):
         _validate_component(entry.name)
-        metadata = entry.stat(follow_symlinks=False)
+        child = Path(entry.path)
+        metadata = child.lstat()
         if stat.S_ISLNK(metadata.st_mode) or _is_reparse_point(metadata):
             raise PackageValidationError(f"Package evidence entry must not be linked: {entry.path}")
         _assert_same_filesystem_member(
-            Path(entry.path),
+            child,
             metadata,
             boundary_device=root_before.st_dev,
             mount_points=mount_points,
@@ -1574,7 +1578,7 @@ def _validate_owned_tree_for_removal(path: Path, *, label: str) -> None:
             _validate_component(entry.name)
             child = Path(entry.path)
             try:
-                metadata = entry.stat(follow_symlinks=False)
+                metadata = child.lstat()
             except OSError as exc:
                 raise PackageValidationError(
                     f"Could not inspect owned member before removal {child}: {exc}"
@@ -1887,14 +1891,12 @@ def _clean_build_outputs() -> None:
 
 
 def _retire_pyinstaller_work_tree() -> None:
-    """Remove the owned work tree before enforcing single-link bundle files.
+    """Retire the owned PyInstaller work tree before bundle measurement.
 
-    PyInstaller can leave the Windows onedir executable hard-linked to its
-    fixed ``build/mclab`` intermediate. The package verifier intentionally
-    rejects every multiply linked deliverable, so retire only that freshly
-    generated, mount-aware work tree before measuring the bundle. Any alias
-    outside this owned path remains visible to the strict inventory and fails
-    closed.
+    This defense-in-depth cleanup removes only the freshly generated,
+    mount-aware ``build/mclab`` intermediate. The package verifier still
+    rejects every multiply linked deliverable, including aliases outside this
+    owned path.
     """
 
     work_tree = _absolute_path(ROOT / _PYINSTALLER_WORK_DIRECTORY)
