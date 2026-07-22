@@ -181,8 +181,9 @@ def _path_is_mount(path: Path, mount_points: frozenset[Path]) -> bool:
     # Windows volume mount points and junctions carry the reparse attribute and
     # are rejected before this helper. ``os.path.ismount`` can nevertheless
     # classify ordinary hosted-runner directories as mount points, so use the
-    # stable device/reparse checks there. Linux still needs mountinfo for
-    # same-device bind mounts; POSIX ``ismount`` covers other mount boundaries.
+    # fixed lexical containment and reparse checks there. Linux still needs
+    # mountinfo for same-device bind mounts; POSIX ``ismount`` covers other
+    # mount boundaries.
     if sys.platform.startswith("win"):
         return False
     try:

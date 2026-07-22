@@ -108,7 +108,7 @@ def test_size_limits_are_exact_binary_mib_and_independent(build_module) -> None:
     assert build_module.ARCHIVE_LIMIT_BYTES == 300 * 1024 * 1024
 
 
-def test_windows_mount_detection_relies_on_device_and_reparse_guards(
+def test_windows_mount_detection_relies_on_fixed_layout_and_reparse_guards(
     build_module, tmp_path: Path
 ) -> None:
     candidate = tmp_path / "ordinary"
