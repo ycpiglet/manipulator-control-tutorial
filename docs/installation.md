@@ -51,11 +51,18 @@ package-list and archive state, so hosted-runner Microsoft, Docker, mirror, or
 cached indexes cannot enter candidate selection. Conflicting or disabling
 per-repository snapshot settings, snapshot-ID mismatch, mixed/live repository
 URLs, insecure or unauthenticated fallback, timeouts, and version or
-architecture drift fail closed. The Ubuntu archive keyring must be a nonempty,
-regular, non-symlink root:root file with the hosted-runner-supported mode
-`0644` or `0664`; every other ownership or mode is rejected. This controls the
-direct package set and repository point in time; it is not a frozen base image
-or a complete native transitive-library inventory.
+architecture drift fail closed. The Ubuntu archive keyring is pinned to the
+official Noble `ubuntu-keyring==2023.11.28.1` payload (3,607 bytes, SHA-256
+`80a36b0a6de2f69f49d2df75ef473ccde121e9e190b9ea01d20a4f63778d5c31`). The
+installer opens the source without following symlinks, verifies the exact bytes,
+and gives APT only a new `0644` copy inside its isolated temporary state. A loose
+host-image mode such as `0777` is therefore not treated as trust. The keyring pin
+is a closed field in the Ubuntu manifest and generated SBOM-input contract, and
+the installation evidence records the observed verified size and digest rather
+than the temporary copy path. This relies on the Ubuntu image's root-owned
+`/usr/share/keyrings` parent and excludes a concurrent hostile root process. This
+controls the direct package set and repository point in time; it is not a frozen
+base image or a complete native transitive-library inventory.
 
 `assets install` downloads the pinned MuJoCo Menagerie commit, verifies the
 archive SHA-256, extracts only the tracked `franka_emika_panda` runtime files,

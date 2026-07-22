@@ -153,6 +153,10 @@ def test_generator_is_canonical_deterministic_and_complete(baseline_root: Path) 
     assert len(requirements) == 213
     assert sum(len(requirement["hashes"]) for requirement in requirements) == 4465
     assert all(requirement["hash_scope"] == generator.HASH_SCOPE for requirement in requirements)
+    assert (
+        first["ubuntu_system"]["archive_keyring"]
+        == generator.EXPECTED_UBUNTU_ARCHIVE_KEYRING
+    )
     assert set(generator.represented_repository_paths(first)) == set(generator.INPUT_PATHS)
 
 
@@ -197,6 +201,25 @@ def test_schema_closes_every_fixed_inventory(baseline_root: Path) -> None:
         assert inventory["minItems"] == cardinality
         assert inventory["maxItems"] == cardinality
         assert inventory["uniqueItems"] is True
+
+
+def test_schema_requires_exact_ubuntu_archive_keyring_contract(
+    baseline_root: Path,
+) -> None:
+    schema = json.loads((baseline_root / generator.SCHEMA_PATH).read_text(encoding="utf-8"))
+    archive_keyring = schema["properties"]["ubuntu_system"]["properties"][
+        "archive_keyring"
+    ]
+    assert archive_keyring == {
+        "additionalProperties": False,
+        "properties": {
+            key: {"const": value}
+            for key, value in generator.EXPECTED_UBUNTU_ARCHIVE_KEYRING.items()
+        },
+        "required": sorted(generator.EXPECTED_UBUNTU_ARCHIVE_KEYRING),
+        "type": "object",
+    }
+    assert "archive_keyring" in schema["properties"]["ubuntu_system"]["required"]
 
 
 @pytest.mark.parametrize("source_commit", ["", "A" * 40, "0" * 39, "g" * 40])
@@ -324,6 +347,60 @@ def test_ubuntu_package_drift_and_order_are_rejected(repository: Path) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
     with pytest.raises(generator.SupplyChainInputError, match="UBUNTU_PACKAGE_DRIFT_OR_ORDER"):
         _build_document(repository)
+
+
+@pytest.mark.parametrize(
+    ("field", "drifted_value"),
+    [
+        ("package", "drifted-keyring"),
+        ("version", "0"),
+        ("path", "/tmp/drifted-keyring.gpg"),
+        ("size", 3608),
+        ("size", 3607.0),
+        ("sha256", "0" * 64),
+    ],
+)
+def test_ubuntu_archive_keyring_value_drift_is_rejected(
+    repository: Path,
+    field: str,
+    drifted_value: object,
+) -> None:
+    path = repository / generator.UBUNTU_MANIFEST_PATH
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["archive_keyring"][field] = drifted_value
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(generator.SupplyChainInputError, match="UBUNTU_ARCHIVE_KEYRING_DRIFT"):
+        _build_document(repository)
+
+
+@pytest.mark.parametrize("mutation", ["missing", "extra"])
+def test_ubuntu_archive_keyring_keys_are_closed(repository: Path, mutation: str) -> None:
+    path = repository / generator.UBUNTU_MANIFEST_PATH
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if mutation == "missing":
+        del payload["archive_keyring"]["sha256"]
+    else:
+        payload["archive_keyring"]["unexpected"] = True
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(generator.SupplyChainInputError, match="UNEXPECTED_KEYS"):
+        _build_document(repository)
+
+
+@pytest.mark.parametrize("mutation", ["missing", "extra", "value"])
+def test_static_policy_rejects_ubuntu_archive_keyring_drift(
+    baseline_document: dict[str, object],
+    mutation: str,
+) -> None:
+    document = copy.deepcopy(baseline_document)
+    archive_keyring = document["ubuntu_system"]["archive_keyring"]
+    if mutation == "missing":
+        del archive_keyring["sha256"]
+    elif mutation == "extra":
+        archive_keyring["unexpected"] = True
+    else:
+        archive_keyring["version"] = "0"
+    errors = checker.document_policy_errors(document)
+    assert any("ubuntu_system.archive_keyring" in error for error in errors)
 
 
 def test_packaging_data_group_drift_is_rejected(repository: Path) -> None:

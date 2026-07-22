@@ -21,7 +21,7 @@ from scripts import generate_sbom_inputs as sbom  # noqa: E402
 CI_WORKFLOW_PATH = ".github/workflows/ci.yml"
 DESKTOP_WORKFLOW_PATH = ".github/workflows/desktop.yml"
 EXPECTED_SCHEMA_SHA256 = (
-    "1f5ccce3c487124078777d29f8521db1e157c7eec30ea88d9804ccd8b3d9fc30"
+    "af81128ce11a065b788959cf910a8a1613f514faed4d258dc08662c12d40318c"
 )
 TOP_LEVEL_KEYS = {
     "contract",
@@ -572,7 +572,15 @@ def document_policy_errors(document: object, expected: object | None = None) -> 
     expected_packages = [
         {"name": name, "version": version} for name, version in sbom.EXPECTED_UBUNTU_PACKAGES
     ]
-    ubuntu_keys = {"distribution", "ecosystem", "installer", "packages", "snapshot", "source"}
+    ubuntu_keys = {
+        "archive_keyring",
+        "distribution",
+        "ecosystem",
+        "installer",
+        "packages",
+        "snapshot",
+        "source",
+    }
     if _exact_keys(ubuntu, ubuntu_keys, "ubuntu_system", errors):
         assert isinstance(ubuntu, dict)
         if (
@@ -582,6 +590,19 @@ def document_policy_errors(document: object, expected: object | None = None) -> 
             or ubuntu["packages"] != expected_packages
         ):
             errors.append("ubuntu_system: reviewed sorted package manifest drift")
+        _exact_keys(
+            ubuntu["archive_keyring"],
+            set(sbom.EXPECTED_UBUNTU_ARCHIVE_KEYRING),
+            "ubuntu_system.archive_keyring",
+            errors,
+        )
+        archive_keyring = ubuntu["archive_keyring"]
+        if (
+            archive_keyring != sbom.EXPECTED_UBUNTU_ARCHIVE_KEYRING
+            or not isinstance(archive_keyring, dict)
+            or type(archive_keyring.get("size")) is not int
+        ):
+            errors.append("ubuntu_system.archive_keyring: reviewed identity drift")
         _exact_keys(
             ubuntu["distribution"],
             {"architecture", "codename", "id", "version_id"},

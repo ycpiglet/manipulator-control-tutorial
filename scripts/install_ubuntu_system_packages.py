@@ -30,6 +30,10 @@ ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = ROOT / "requirements" / "system" / "ubuntu-24.04-amd64.json"
 OS_RELEASE_PATH = Path("/etc/os-release")
 APT_ARCHIVE_KEYRING = Path("/usr/share/keyrings/ubuntu-archive-keyring.gpg")
+APT_ARCHIVE_KEYRING_PACKAGE = "ubuntu-keyring"
+APT_ARCHIVE_KEYRING_VERSION = "2023.11.28.1"
+APT_ARCHIVE_KEYRING_SIZE = 3607
+APT_ARCHIVE_KEYRING_SHA256 = "80a36b0a6de2f69f49d2df75ef473ccde121e9e190b9ea01d20a4f63778d5c31"
 VALIDATION_ROOT = ROOT / "build" / "validation"
 
 SCHEMA_VERSION = 1
@@ -65,26 +69,38 @@ EXPECTED_PACKAGES = (
     ("xvfb", "2:21.1.12-1ubuntu1.6"),
 )
 
-CONTROLLED_APT_SOURCES = f"""\
+_CONTROLLED_APT_SOURCES_TEMPLATE = """\
 Types: deb
 URIs: https://archive.ubuntu.com/ubuntu
 Suites: noble noble-updates noble-backports
 Components: main universe
 Architectures: amd64
-Snapshot: {SNAPSHOT}
-Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+Snapshot: {snapshot}
+Signed-By: {archive_keyring}
 
 Types: deb
 URIs: https://security.ubuntu.com/ubuntu
 Suites: noble-security
 Components: main universe
 Architectures: amd64
-Snapshot: {SNAPSHOT}
-Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+Snapshot: {snapshot}
+Signed-By: {archive_keyring}
 """
+CONTROLLED_APT_SOURCES = _CONTROLLED_APT_SOURCES_TEMPLATE.format(
+    archive_keyring=APT_ARCHIVE_KEYRING.as_posix(),
+    snapshot=SNAPSHOT,
+)
 
-_ROOT_KEYS = {"schema_version", "ecosystem", "distribution", "snapshot", "packages"}
+_ROOT_KEYS = {
+    "schema_version",
+    "ecosystem",
+    "distribution",
+    "snapshot",
+    "archive_keyring",
+    "packages",
+}
 _DISTRIBUTION_KEYS = {"id", "version_id", "codename", "architecture"}
+_ARCHIVE_KEYRING_KEYS = {"package", "version", "path", "size", "sha256"}
 _PACKAGE_KEYS = {"name", "version"}
 _PACKAGE_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9+.-]*$")
 _VERSION_RE = re.compile(r"^[!-~]+$")
@@ -106,9 +122,27 @@ class PolicyError(RuntimeError):
 
 
 @dataclass(frozen=True)
+class ArchiveKeyringSpec:
+    package: str
+    version: str
+    path: Path
+    size: int
+    sha256: str
+
+
+@dataclass(frozen=True)
+class VerifiedArchiveKeyring:
+    spec: ArchiveKeyringSpec
+    payload: bytes
+    observed_size: int
+    observed_sha256: str
+
+
+@dataclass(frozen=True)
 class UbuntuManifest:
     snapshot: str
     distribution: Mapping[str, str]
+    archive_keyring: ArchiveKeyringSpec
     packages: tuple[tuple[str, str], ...]
     canonical_sha256: str
 
@@ -186,6 +220,31 @@ def load_manifest(path: Path = MANIFEST_PATH) -> UbuntuManifest:
     if snapshot != SNAPSHOT:
         raise PolicyError(f"manifest snapshot must be exactly {SNAPSHOT}")
 
+    archive_keyring_record = _require_exact_keys(
+        root["archive_keyring"],
+        _ARCHIVE_KEYRING_KEYS,
+        "manifest.archive_keyring",
+    )
+    approved_archive_keyring = {
+        "package": APT_ARCHIVE_KEYRING_PACKAGE,
+        "version": APT_ARCHIVE_KEYRING_VERSION,
+        "path": APT_ARCHIVE_KEYRING.as_posix(),
+        "size": APT_ARCHIVE_KEYRING_SIZE,
+        "sha256": APT_ARCHIVE_KEYRING_SHA256,
+    }
+    if (
+        archive_keyring_record != approved_archive_keyring
+        or type(archive_keyring_record["size"]) is not int
+    ):
+        raise PolicyError("manifest archive keyring pin differs from the approved baseline")
+    archive_keyring = ArchiveKeyringSpec(
+        package=APT_ARCHIVE_KEYRING_PACKAGE,
+        version=APT_ARCHIVE_KEYRING_VERSION,
+        path=APT_ARCHIVE_KEYRING,
+        size=APT_ARCHIVE_KEYRING_SIZE,
+        sha256=APT_ARCHIVE_KEYRING_SHA256,
+    )
+
     package_records = root["packages"]
     if not isinstance(package_records, list):
         raise PolicyError("manifest.packages must be a JSON array")
@@ -216,6 +275,7 @@ def load_manifest(path: Path = MANIFEST_PATH) -> UbuntuManifest:
     return UbuntuManifest(
         snapshot=SNAPSHOT,
         distribution=dict(TARGET_DISTRIBUTION),
+        archive_keyring=archive_keyring,
         packages=tuple(packages),
         canonical_sha256=hashlib.sha256(canonical).hexdigest(),
     )
@@ -294,40 +354,180 @@ def validate_no_snapshot_overrides(source_files: Mapping[str, str]) -> None:
                             )
 
 
-def _validate_archive_keyring(path: Path = APT_ARCHIVE_KEYRING) -> None:
+def _render_controlled_apt_sources(archive_keyring: Path) -> str:
+    rendered_path = archive_keyring.as_posix()
+    if (
+        not archive_keyring.is_absolute()
+        or re.fullmatch(r"/[A-Za-z0-9._/-]+", rendered_path) is None
+    ):
+        raise PolicyError("trusted Ubuntu archive keyring path is not APT-safe")
+    return _CONTROLLED_APT_SOURCES_TEMPLATE.format(
+        archive_keyring=rendered_path,
+        snapshot=SNAPSHOT,
+    )
+
+
+def _read_verified_archive_keyring(
+    spec: ArchiveKeyringSpec,
+    *,
+    path_override: Path | None = None,
+) -> VerifiedArchiveKeyring:
+    required_flags = ("O_NOFOLLOW", "O_NONBLOCK", "O_CLOEXEC")
+    if any(not hasattr(os, name) for name in required_flags):
+        raise PolicyError("secure Ubuntu archive keyring verification is unavailable")
+    source_path = spec.path if path_override is None else path_override
+    flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC
     try:
-        metadata = path.lstat()
+        descriptor = os.open(source_path, flags)
     except OSError as exc:
-        raise PolicyError(f"cannot inspect Ubuntu archive keyring {path}: {exc}") from exc
-    if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISREG(metadata.st_mode):
-        raise PolicyError(f"Ubuntu archive keyring must be a regular non-symlink file: {path}")
-    if metadata.st_size <= 0:
-        raise PolicyError(f"Ubuntu archive keyring must be nonempty: {path}")
-    if metadata.st_uid != 0 or metadata.st_gid != 0:
         raise PolicyError(
-            "Ubuntu archive keyring must be owned by root:root: "
-            f"{path} (uid={metadata.st_uid}, gid={metadata.st_gid})"
-        )
-    permissions = stat.S_IMODE(metadata.st_mode)
-    if permissions not in {0o644, 0o664}:
+            "cannot open Ubuntu archive keyring as a regular non-symlink file: "
+            f"{source_path}: {exc}"
+        ) from exc
+    try:
+        before = os.fstat(descriptor)
+        if not stat.S_ISREG(before.st_mode):
+            raise PolicyError(f"Ubuntu archive keyring must be a regular file: {source_path}")
+        if before.st_size != spec.size:
+            raise PolicyError(
+                "Ubuntu archive keyring size drift: "
+                f"{source_path} (expected={spec.size}, observed={before.st_size})"
+            )
+        payload = bytearray()
+        while len(payload) <= spec.size:
+            chunk = os.read(descriptor, min(65_536, spec.size + 1 - len(payload)))
+            if not chunk:
+                break
+            payload.extend(chunk)
+        after = os.fstat(descriptor)
+    except OSError as exc:
         raise PolicyError(
-            "Ubuntu archive keyring must have mode 0644 or 0664: "
-            f"{path} (observed={permissions:#06o})"
+            f"cannot read Ubuntu archive keyring {source_path}: {exc}"
+        ) from exc
+    finally:
+        os.close(descriptor)
+    stable_fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
+    if any(getattr(before, field) != getattr(after, field) for field in stable_fields):
+        raise PolicyError(f"Ubuntu archive keyring changed while it was read: {source_path}")
+    if len(payload) != spec.size:
+        raise PolicyError(
+            "Ubuntu archive keyring read size drift: "
+            f"expected={spec.size}, observed={len(payload)}"
         )
-    if not os.access(path, os.R_OK):
-        raise PolicyError(f"Ubuntu archive keyring is not readable: {path}")
+    digest = hashlib.sha256(payload).hexdigest()
+    if digest != spec.sha256:
+        raise PolicyError(
+            "Ubuntu archive keyring SHA-256 drift: "
+            f"expected={spec.sha256}, observed={digest}"
+        )
+    return VerifiedArchiveKeyring(
+        spec=spec,
+        payload=bytes(payload),
+        observed_size=len(payload),
+        observed_sha256=digest,
+    )
 
 
-def _prepare_isolated_apt_environment(root: Path) -> list[str]:
+def _validate_verified_archive_keyring(
+    verified: VerifiedArchiveKeyring,
+    *,
+    expected_spec: ArchiveKeyringSpec | None = None,
+) -> None:
+    if not isinstance(verified, VerifiedArchiveKeyring):
+        raise PolicyError("trusted Ubuntu archive keyring record has an invalid type")
+    if expected_spec is not None and verified.spec != expected_spec:
+        raise PolicyError("trusted Ubuntu archive keyring record does not match the manifest")
+    if not isinstance(verified.payload, bytes):
+        raise PolicyError("trusted Ubuntu archive keyring payload must be immutable bytes")
+    observed_size = len(verified.payload)
+    observed_sha256 = hashlib.sha256(verified.payload).hexdigest()
+    if (
+        observed_size != verified.spec.size
+        or observed_size != verified.observed_size
+        or observed_sha256 != verified.spec.sha256
+        or observed_sha256 != verified.observed_sha256
+    ):
+        raise PolicyError("trusted Ubuntu archive keyring record failed revalidation")
+
+
+def _write_trusted_archive_keyring(
+    root: Path, verified: VerifiedArchiveKeyring
+) -> Path:
+    _validate_verified_archive_keyring(verified)
+    destination = root / "ubuntu-archive-keyring.gpg"
+    required_flags = ("O_NOFOLLOW", "O_CLOEXEC")
+    if any(not hasattr(os, name) for name in required_flags):
+        raise PolicyError("secure trusted-keyring publication is unavailable")
+    flags = os.O_RDWR | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC
+    created = False
+    try:
+        descriptor = os.open(destination, flags, 0o600)
+        created = True
+        try:
+            remaining = memoryview(verified.payload)
+            while remaining:
+                written = os.write(descriptor, remaining)
+                if written <= 0:
+                    raise OSError("short write while publishing trusted archive keyring")
+                remaining = remaining[written:]
+            os.fchmod(descriptor, 0o644)
+            os.fsync(descriptor)
+            os.lseek(descriptor, 0, os.SEEK_SET)
+            copied = bytearray()
+            while len(copied) <= verified.spec.size:
+                chunk = os.read(
+                    descriptor,
+                    min(65_536, verified.spec.size + 1 - len(copied)),
+                )
+                if not chunk:
+                    break
+                copied.extend(chunk)
+            metadata = os.fstat(descriptor)
+            path_metadata = destination.lstat()
+            if (
+                not stat.S_ISREG(metadata.st_mode)
+                or stat.S_IMODE(metadata.st_mode) != 0o644
+                or metadata.st_size != verified.spec.size
+                or metadata.st_uid != os.geteuid()
+                or metadata.st_gid != os.getegid()
+                or (metadata.st_dev, metadata.st_ino)
+                != (path_metadata.st_dev, path_metadata.st_ino)
+            ):
+                raise PolicyError("trusted Ubuntu archive keyring copy metadata drift")
+            if (
+                len(copied) != verified.spec.size
+                or hashlib.sha256(copied).hexdigest() != verified.spec.sha256
+            ):
+                raise PolicyError("trusted Ubuntu archive keyring copy content drift")
+        finally:
+            os.close(descriptor)
+    except (OSError, PolicyError) as exc:
+        if created:
+            try:
+                destination.unlink(missing_ok=True)
+            except OSError:
+                pass
+        if isinstance(exc, PolicyError):
+            raise
+        raise PolicyError(f"cannot publish trusted Ubuntu archive keyring copy: {exc}") from exc
+    return destination
+
+
+def _prepare_isolated_apt_environment(
+    root: Path,
+    *,
+    verified_archive_keyring: VerifiedArchiveKeyring,
+) -> list[str]:
     """Create fixed Ubuntu-only APT inputs and return shared command options."""
 
-    _validate_archive_keyring()
     source_file = root / "mclab-ubuntu.sources"
     source_parts = root / "sourceparts"
     lists = root / "lists"
     archives = root / "archives"
     try:
         os.chmod(root, 0o755)
+        trusted_keyring = _write_trusted_archive_keyring(root, verified_archive_keyring)
+        controlled_sources = _render_controlled_apt_sources(trusted_keyring)
         for directory in (source_parts, lists, archives):
             directory.mkdir(mode=0o755)
         partial_directories = (lists / "partial", archives / "partial")
@@ -342,12 +542,12 @@ def _prepare_isolated_apt_environment(root: Path) -> list[str]:
                 raise PolicyError("cannot resolve the required Ubuntu _apt account") from exc
             for directory in partial_directories:
                 os.chown(directory, apt_user.pw_uid, apt_user.pw_gid)
-        source_file.write_text(CONTROLLED_APT_SOURCES, encoding="utf-8", newline="\n")
+        source_file.write_text(controlled_sources, encoding="utf-8", newline="\n")
         source_file.chmod(0o644)
     except OSError as exc:
         raise PolicyError(f"cannot prepare isolated APT state below {root}: {exc}") from exc
 
-    validate_no_snapshot_overrides({str(source_file): CONTROLLED_APT_SOURCES})
+    validate_no_snapshot_overrides({str(source_file): controlled_sources})
     return [
         "-o",
         f"Dir::Etc::sourcelist={source_file}",
@@ -548,7 +748,14 @@ def _require_no_diagnostics(output: str, label: str) -> None:
             raise PolicyError(f"{label} emitted a warning or error: {line.strip()}")
 
 
-def build_evidence(manifest: UbuntuManifest) -> dict[str, object]:
+def build_evidence(
+    manifest: UbuntuManifest,
+    verified_archive_keyring: VerifiedArchiveKeyring,
+) -> dict[str, object]:
+    _validate_verified_archive_keyring(
+        verified_archive_keyring,
+        expected_spec=manifest.archive_keyring,
+    )
     packages = [
         {
             "architecture": TARGET_DISTRIBUTION["architecture"],
@@ -560,6 +767,15 @@ def build_evidence(manifest: UbuntuManifest) -> dict[str, object]:
         for name, version in manifest.packages
     ]
     return {
+        "archive_keyring": {
+            "package": verified_archive_keyring.spec.package,
+            "version": verified_archive_keyring.spec.version,
+            "path": verified_archive_keyring.spec.path.as_posix(),
+            "sha256": verified_archive_keyring.observed_sha256,
+            "size": verified_archive_keyring.observed_size,
+            "trusted_copy_mode": "0644",
+            "verification": "stable-fd-sha256-then-isolated-copy",
+        },
         "artifact": "ubuntu-system-package-installation",
         "manifest_canonical_sha256": manifest.canonical_sha256,
         "packages": packages,
@@ -775,15 +991,23 @@ def install_and_verify(
     runner: CommandRunner = _run_command,
     manifest_path: Path = MANIFEST_PATH,
     evidence_writer: EvidenceWriter = write_evidence,
+    archive_keyring_path: Path | None = None,
 ) -> dict[str, object]:
     """Perform the controlled install and return the deterministic evidence object."""
 
     manifest = load_manifest(manifest_path)
     validate_host_os(os_release_text)
     validate_no_snapshot_overrides(source_files)
+    verified_archive_keyring = _read_verified_archive_keyring(
+        manifest.archive_keyring,
+        path_override=archive_keyring_path,
+    )
 
     with tempfile.TemporaryDirectory(prefix="mclab-apt-") as temporary:
-        apt_options = _prepare_isolated_apt_environment(Path(temporary))
+        apt_options = _prepare_isolated_apt_environment(
+            Path(temporary),
+            verified_archive_keyring=verified_archive_keyring,
+        )
 
         architecture_command = ["dpkg", "--print-architecture"]
         architecture_result = _invoke(runner, architecture_command, ARCH_TIMEOUT_SECONDS)
@@ -847,7 +1071,7 @@ def install_and_verify(
         _require_no_diagnostics(_combined_output(installed_result), "dpkg-query")
         validate_installed_versions(installed_result.stdout, manifest.packages)
 
-    evidence = build_evidence(manifest)
+    evidence = build_evidence(manifest, verified_archive_keyring)
     evidence_writer(output_path, evidence)
     return evidence
 

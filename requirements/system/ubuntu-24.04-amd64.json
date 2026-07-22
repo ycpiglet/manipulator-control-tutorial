@@ -8,6 +8,13 @@
     "architecture": "amd64"
   },
   "snapshot": "20260723T000000Z",
+  "archive_keyring": {
+    "package": "ubuntu-keyring",
+    "version": "2023.11.28.1",
+    "path": "/usr/share/keyrings/ubuntu-archive-keyring.gpg",
+    "size": 3607,
+    "sha256": "80a36b0a6de2f69f49d2df75ef473ccde121e9e190b9ea01d20a4f63778d5c31"
+  },
   "packages": [
     {
       "name": "libdbus-1-3",

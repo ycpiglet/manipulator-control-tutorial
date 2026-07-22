@@ -477,6 +477,34 @@
     "ubuntu_system": {
       "additionalProperties": false,
       "properties": {
+        "archive_keyring": {
+          "additionalProperties": false,
+          "properties": {
+            "package": {
+              "const": "ubuntu-keyring"
+            },
+            "path": {
+              "const": "/usr/share/keyrings/ubuntu-archive-keyring.gpg"
+            },
+            "sha256": {
+              "const": "80a36b0a6de2f69f49d2df75ef473ccde121e9e190b9ea01d20a4f63778d5c31"
+            },
+            "size": {
+              "const": 3607
+            },
+            "version": {
+              "const": "2023.11.28.1"
+            }
+          },
+          "required": [
+            "package",
+            "path",
+            "sha256",
+            "size",
+            "version"
+          ],
+          "type": "object"
+        },
         "distribution": {
           "additionalProperties": false,
           "properties": {
@@ -562,6 +590,7 @@
         }
       },
       "required": [
+        "archive_keyring",
         "distribution",
         "ecosystem",
         "installer",

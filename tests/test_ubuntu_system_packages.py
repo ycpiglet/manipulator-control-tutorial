@@ -1,14 +1,16 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import os
 import stat
 import subprocess
 import sys
 import tempfile
 import unittest
 from copy import deepcopy
+from dataclasses import replace
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Sequence
 from unittest.mock import patch
 
@@ -39,6 +41,41 @@ Hit:2 https://snapshot.ubuntu.com/ubuntu/20260723T000000Z noble-updates InReleas
 Get:3 https://snapshot.ubuntu.com/ubuntu/20260723T000000Z noble-security InRelease [126 kB]
 Reading package lists... Done
 """
+TEST_ARCHIVE_KEYRING = b"deterministic test-only Ubuntu archive keyring bytes\n"
+TEST_ARCHIVE_KEYRING_SHA256 = hashlib.sha256(TEST_ARCHIVE_KEYRING).hexdigest()
+TEST_ARCHIVE_KEYRING_SPEC = ubuntu_packages.ArchiveKeyringSpec(
+    package="test-only-ubuntu-keyring",
+    version="1.test",
+    path=Path("/usr/share/keyrings/test-only-ubuntu-archive-keyring.gpg"),
+    size=len(TEST_ARCHIVE_KEYRING),
+    sha256=TEST_ARCHIVE_KEYRING_SHA256,
+)
+_REAL_LOAD_MANIFEST = ubuntu_packages.load_manifest
+
+
+def _test_verified_archive_keyring() -> ubuntu_packages.VerifiedArchiveKeyring:
+    return ubuntu_packages.VerifiedArchiveKeyring(
+        spec=TEST_ARCHIVE_KEYRING_SPEC,
+        payload=TEST_ARCHIVE_KEYRING,
+        observed_size=len(TEST_ARCHIVE_KEYRING),
+        observed_sha256=TEST_ARCHIVE_KEYRING_SHA256,
+    )
+
+
+def _install_and_verify(*args: object, **kwargs: object) -> dict[str, object]:
+    manifest_path = kwargs.get("manifest_path", ubuntu_packages.MANIFEST_PATH)
+    assert isinstance(manifest_path, Path)
+    manifest = replace(
+        _REAL_LOAD_MANIFEST(manifest_path),
+        archive_keyring=TEST_ARCHIVE_KEYRING_SPEC,
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        source_path = Path(tmp) / "source-keyring.gpg"
+        source_path.write_bytes(TEST_ARCHIVE_KEYRING)
+        source_path.chmod(0o777)
+        kwargs["archive_keyring_path"] = source_path
+        with patch.object(ubuntu_packages, "load_manifest", return_value=manifest):
+            return ubuntu_packages.install_and_verify(*args, **kwargs)
 
 
 def _repository_document() -> dict[str, object]:
@@ -78,22 +115,6 @@ def _installed_output(
         installed_version = version_overrides.get(name, version)
         lines.append(f"{name}:amd64\t{installed_version}\t{architecture}")
     return "\n".join(lines) + "\n"
-
-
-def _archive_keyring_metadata(
-    *,
-    permissions: int = 0o644,
-    size: int = 1,
-    uid: int = 0,
-    gid: int = 0,
-    file_type: int = stat.S_IFREG,
-) -> SimpleNamespace:
-    return SimpleNamespace(
-        st_mode=file_type | permissions,
-        st_size=size,
-        st_uid=uid,
-        st_gid=gid,
-    )
 
 
 class FakeRunner:
@@ -153,6 +174,25 @@ class ManifestPolicyTests(unittest.TestCase):
 
         self.assertEqual(manifest.snapshot, "20260723T000000Z")
         self.assertEqual(manifest.distribution["architecture"], "amd64")
+        self.assertEqual(ubuntu_packages.APT_ARCHIVE_KEYRING_PACKAGE, "ubuntu-keyring")
+        self.assertEqual(ubuntu_packages.APT_ARCHIVE_KEYRING_VERSION, "2023.11.28.1")
+        self.assertEqual(ubuntu_packages.APT_ARCHIVE_KEYRING_SIZE, 3607)
+        self.assertEqual(
+            ubuntu_packages.APT_ARCHIVE_KEYRING_SHA256,
+            "80a36b0a6de2f69f49d2df75ef473ccde121e9e190b9ea01d20a4f63778d5c31",
+        )
+        self.assertEqual(
+            manifest.archive_keyring,
+            ubuntu_packages.ArchiveKeyringSpec(
+                package="ubuntu-keyring",
+                version="2023.11.28.1",
+                path=Path("/usr/share/keyrings/ubuntu-archive-keyring.gpg"),
+                size=3607,
+                sha256=(
+                    "80a36b0a6de2f69f49d2df75ef473ccde121e9e190b9ea01d20a4f63778d5c31"
+                ),
+            ),
+        )
         self.assertEqual(len(manifest.packages), 22)
         self.assertEqual(manifest.packages, ubuntu_packages.EXPECTED_PACKAGES)
         self.assertEqual(
@@ -220,12 +260,41 @@ class ManifestPolicyTests(unittest.TestCase):
             with self.assertRaisesRegex(ubuntu_packages.PolicyError, "approved baseline"):
                 ubuntu_packages.load_manifest(path)
 
+    def test_archive_keyring_schema_and_identity_drift_are_rejected(self) -> None:
+        cases: tuple[tuple[str, object, str], ...] = (
+            ("version", "2023.11.28.2", "archive keyring pin"),
+            ("size", 3608, "archive keyring pin"),
+            ("size", 3607.0, "archive keyring pin"),
+            ("sha256", "0" * 64, "archive keyring pin"),
+        )
+        for key, value, message in cases:
+            with self.subTest(key=key), tempfile.TemporaryDirectory() as tmp:
+                document = _repository_document()
+                archive_keyring = document["archive_keyring"]
+                assert isinstance(archive_keyring, dict)
+                archive_keyring[key] = value
+                path = self._write_document(tmp, document)
+                with self.assertRaisesRegex(ubuntu_packages.PolicyError, message):
+                    ubuntu_packages.load_manifest(path)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            document = _repository_document()
+            archive_keyring = document["archive_keyring"]
+            assert isinstance(archive_keyring, dict)
+            archive_keyring["unexpected"] = "not allowed"
+            path = self._write_document(tmp, document)
+            with self.assertRaisesRegex(ubuntu_packages.PolicyError, "keys do not match"):
+                ubuntu_packages.load_manifest(path)
+
 
 class HostAndSourcePolicyTests(unittest.TestCase):
     def test_isolated_apt_state_uses_only_fixed_ubuntu_sources(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            options = ubuntu_packages._prepare_isolated_apt_environment(root)
+            options = ubuntu_packages._prepare_isolated_apt_environment(
+                root,
+                verified_archive_keyring=_test_verified_archive_keyring(),
+            )
             self.assertEqual(options[::2], ["-o"] * 8)
             values = options[1::2]
             settings = dict(value.split("=", 1) for value in values)
@@ -234,9 +303,16 @@ class HostAndSourcePolicyTests(unittest.TestCase):
             lists = Path(settings["Dir::State::lists"])
             archives = Path(settings["Dir::Cache::archives"])
 
-            self.assertEqual(
-                source.read_text(encoding="utf-8"),
-                ubuntu_packages.CONTROLLED_APT_SOURCES,
+            trusted_keyring = root / "ubuntu-archive-keyring.gpg"
+            self.assertEqual(trusted_keyring.read_bytes(), TEST_ARCHIVE_KEYRING)
+            self.assertEqual(stat.S_IMODE(trusted_keyring.stat().st_mode), 0o644)
+            controlled_sources = ubuntu_packages._render_controlled_apt_sources(
+                trusted_keyring
+            )
+            self.assertEqual(source.read_text(encoding="utf-8"), controlled_sources)
+            self.assertEqual(controlled_sources.count(f"Signed-By: {trusted_keyring}"), 2)
+            self.assertNotIn(
+                TEST_ARCHIVE_KEYRING_SPEC.path.as_posix(), controlled_sources
             )
             self.assertEqual(list(source_parts.iterdir()), [])
             self.assertTrue(lists.is_relative_to(root))
@@ -260,43 +336,256 @@ class HostAndSourcePolicyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             target = root / "keyring.gpg"
-            target.write_bytes(b"trusted fixture")
+            target.write_bytes(TEST_ARCHIVE_KEYRING)
             link = root / "keyring-link.gpg"
             link.symlink_to(target)
             with self.assertRaisesRegex(ubuntu_packages.PolicyError, "non-symlink"):
-                ubuntu_packages._validate_archive_keyring(link)
+                ubuntu_packages._read_verified_archive_keyring(
+                    TEST_ARCHIVE_KEYRING_SPEC,
+                    path_override=link,
+                )
 
-    def test_archive_keyring_accepts_exact_reviewed_root_modes(self) -> None:
-        path = Path("/synthetic/ubuntu-archive-keyring.gpg")
-        for permissions in (0o644, 0o664):
-            with self.subTest(permissions=oct(permissions)):
-                metadata = _archive_keyring_metadata(permissions=permissions)
-                with (
-                    patch.object(Path, "lstat", return_value=metadata),
-                    patch.object(ubuntu_packages.os, "access", return_value=True),
-                ):
-                    ubuntu_packages._validate_archive_keyring(path)
+    def test_archive_keyring_exact_digest_is_accepted_despite_source_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "keyring.gpg"
+            path.write_bytes(TEST_ARCHIVE_KEYRING)
+            path.chmod(0o777)
+            verified = ubuntu_packages._read_verified_archive_keyring(
+                TEST_ARCHIVE_KEYRING_SPEC,
+                path_override=path,
+            )
+            self.assertEqual(verified, _test_verified_archive_keyring())
 
-    def test_archive_keyring_rejects_unreviewed_metadata(self) -> None:
-        path = Path("/synthetic/ubuntu-archive-keyring.gpg")
-        cases = (
-            ("non-root owner", _archive_keyring_metadata(uid=1000), "root:root"),
-            ("non-root group", _archive_keyring_metadata(gid=1000), "root:root"),
-            ("mode 0666", _archive_keyring_metadata(permissions=0o666), "0644 or 0664"),
-            ("empty", _archive_keyring_metadata(size=0), "nonempty"),
+    def test_archive_keyring_rejects_size_hash_and_nonregular_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = root / "keyring.gpg"
+            path.write_bytes(TEST_ARCHIVE_KEYRING)
+            with self.assertRaisesRegex(ubuntu_packages.PolicyError, "size drift"):
+                ubuntu_packages._read_verified_archive_keyring(
+                    replace(
+                        TEST_ARCHIVE_KEYRING_SPEC,
+                        size=len(TEST_ARCHIVE_KEYRING) + 1,
+                    ),
+                    path_override=path,
+                )
+            with self.assertRaisesRegex(ubuntu_packages.PolicyError, "SHA-256 drift"):
+                ubuntu_packages._read_verified_archive_keyring(
+                    replace(TEST_ARCHIVE_KEYRING_SPEC, sha256="0" * 64),
+                    path_override=path,
+                )
+            directory = root / "directory"
+            directory.mkdir()
+            with self.assertRaisesRegex(ubuntu_packages.PolicyError, "regular file"):
+                ubuntu_packages._read_verified_archive_keyring(
+                    TEST_ARCHIVE_KEYRING_SPEC,
+                    path_override=directory,
+                )
+
+    def test_archive_keyring_open_is_nonblocking_and_fifo_is_rejected(self) -> None:
+        if not hasattr(os, "mkfifo"):
+            self.skipTest("FIFO fixtures are unavailable")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "keyring.gpg"
+            source.write_bytes(TEST_ARCHIVE_KEYRING)
+            real_open = os.open
+            observed_flags: list[int] = []
+
+            def capture_open(path: object, flags: int, *args: object, **kwargs: object) -> int:
+                observed_flags.append(flags)
+                return real_open(path, flags, *args, **kwargs)
+
+            with patch.object(ubuntu_packages.os, "open", side_effect=capture_open):
+                ubuntu_packages._read_verified_archive_keyring(
+                    TEST_ARCHIVE_KEYRING_SPEC,
+                    path_override=source,
+                )
+            self.assertEqual(len(observed_flags), 1)
+            self.assertTrue(observed_flags[0] & os.O_NOFOLLOW)
+            self.assertTrue(observed_flags[0] & os.O_NONBLOCK)
+            self.assertTrue(observed_flags[0] & os.O_CLOEXEC)
+
+            fifo = root / "keyring.fifo"
+            os.mkfifo(fifo)
+            with self.assertRaisesRegex(ubuntu_packages.PolicyError, "regular file"):
+                ubuntu_packages._read_verified_archive_keyring(
+                    TEST_ARCHIVE_KEYRING_SPEC,
+                    path_override=fifo,
+                )
+
+    def test_archive_keyring_rejects_short_oversized_and_same_size_wrong_bytes(self) -> None:
+        fixtures = (
+            ("short", TEST_ARCHIVE_KEYRING[:-1], "size drift"),
+            ("oversized", TEST_ARCHIVE_KEYRING + b"x", "size drift"),
             (
-                "nonregular",
-                _archive_keyring_metadata(file_type=stat.S_IFDIR),
-                "regular non-symlink",
+                "wrong hash",
+                b"x" * len(TEST_ARCHIVE_KEYRING),
+                "SHA-256 drift",
             ),
         )
-        for label, metadata, message in cases:
-            with self.subTest(case=label):
-                with (
-                    patch.object(Path, "lstat", return_value=metadata),
-                    self.assertRaisesRegex(ubuntu_packages.PolicyError, message),
-                ):
-                    ubuntu_packages._validate_archive_keyring(path)
+        for label, payload, message in fixtures:
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as tmp:
+                source = Path(tmp) / "keyring.gpg"
+                source.write_bytes(payload)
+                with self.assertRaisesRegex(ubuntu_packages.PolicyError, message):
+                    ubuntu_packages._read_verified_archive_keyring(
+                        TEST_ARCHIVE_KEYRING_SPEC,
+                        path_override=source,
+                    )
+
+    def test_archive_keyring_path_replacement_after_open_cannot_replace_fd_bytes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "keyring.gpg"
+            opened_source = root / "opened-keyring.gpg"
+            source.write_bytes(TEST_ARCHIVE_KEYRING)
+            replacement = b"x" * len(TEST_ARCHIVE_KEYRING)
+            real_open = os.open
+            swapped = False
+
+            def open_then_swap(
+                path: object, flags: int, *args: object, **kwargs: object
+            ) -> int:
+                nonlocal swapped
+                descriptor = real_open(path, flags, *args, **kwargs)
+                if Path(path) == source and not swapped:
+                    swapped = True
+                    source.rename(opened_source)
+                    source.write_bytes(replacement)
+                return descriptor
+
+            with patch.object(ubuntu_packages.os, "open", side_effect=open_then_swap):
+                verified = ubuntu_packages._read_verified_archive_keyring(
+                    TEST_ARCHIVE_KEYRING_SPEC,
+                    path_override=source,
+                )
+            self.assertEqual(verified.payload, TEST_ARCHIVE_KEYRING)
+            self.assertEqual(source.read_bytes(), replacement)
+
+    def test_archive_keyring_in_place_change_during_read_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "keyring.gpg"
+            source.write_bytes(TEST_ARCHIVE_KEYRING)
+            original_mtime_ns = source.stat().st_mtime_ns
+            real_read = os.read
+            changed = False
+
+            def read_then_change_metadata(descriptor: int, size: int) -> bytes:
+                nonlocal changed
+                payload = real_read(descriptor, size)
+                if not changed:
+                    changed = True
+                    os.utime(
+                        source,
+                        ns=(original_mtime_ns, original_mtime_ns + 1_000_000_000),
+                    )
+                return payload
+
+            with (
+                patch.object(
+                    ubuntu_packages.os,
+                    "read",
+                    side_effect=read_then_change_metadata,
+                ),
+                self.assertRaisesRegex(ubuntu_packages.PolicyError, "changed while"),
+            ):
+                ubuntu_packages._read_verified_archive_keyring(
+                    TEST_ARCHIVE_KEYRING_SPEC,
+                    path_override=source,
+                )
+
+    def test_trusted_keyring_copy_rejects_forgery_and_existing_destinations(self) -> None:
+        forged = replace(
+            _test_verified_archive_keyring(),
+            payload=b"x" * len(TEST_ARCHIVE_KEYRING),
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaisesRegex(ubuntu_packages.PolicyError, "revalidation"):
+                ubuntu_packages._write_trusted_archive_keyring(Path(tmp), forged)
+
+        for destination_type in ("file", "symlink"):
+            with (
+                self.subTest(destination_type=destination_type),
+                tempfile.TemporaryDirectory() as tmp,
+            ):
+                root = Path(tmp)
+                destination = root / "ubuntu-archive-keyring.gpg"
+                target = root / "preserved-target.gpg"
+                target.write_bytes(b"preserve target\n")
+                if destination_type == "file":
+                    destination.write_bytes(b"preserve destination\n")
+                else:
+                    destination.symlink_to(target)
+                with self.assertRaisesRegex(ubuntu_packages.PolicyError, "cannot publish"):
+                    ubuntu_packages._write_trusted_archive_keyring(
+                        root,
+                        _test_verified_archive_keyring(),
+                    )
+                self.assertEqual(target.read_bytes(), b"preserve target\n")
+                if destination_type == "file":
+                    self.assertEqual(destination.read_bytes(), b"preserve destination\n")
+                else:
+                    self.assertTrue(destination.is_symlink())
+
+    def test_trusted_keyring_copy_retries_short_writes_and_rejects_zero_write(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            real_write = os.write
+            first_write = True
+
+            def short_then_normal(descriptor: int, payload: object) -> int:
+                nonlocal first_write
+                if first_write:
+                    first_write = False
+                    return real_write(descriptor, payload[:3])
+                return real_write(descriptor, payload)
+
+            with patch.object(ubuntu_packages.os, "write", side_effect=short_then_normal):
+                destination = ubuntu_packages._write_trusted_archive_keyring(
+                    root,
+                    _test_verified_archive_keyring(),
+                )
+            self.assertEqual(destination.read_bytes(), TEST_ARCHIVE_KEYRING)
+            self.assertEqual(stat.S_IMODE(destination.stat().st_mode), 0o644)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            destination = root / "ubuntu-archive-keyring.gpg"
+            with (
+                patch.object(ubuntu_packages.os, "write", return_value=0),
+                self.assertRaisesRegex(ubuntu_packages.PolicyError, "short write"),
+            ):
+                ubuntu_packages._write_trusted_archive_keyring(
+                    root,
+                    _test_verified_archive_keyring(),
+                )
+            self.assertFalse(destination.exists())
+
+    def test_bad_archive_keyring_fails_before_runner_and_evidence(self) -> None:
+        runner = FakeRunner()
+        manifest = replace(
+            _REAL_LOAD_MANIFEST(),
+            archive_keyring=TEST_ARCHIVE_KEYRING_SPEC,
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "keyring.gpg"
+            source.write_bytes(b"x" * len(TEST_ARCHIVE_KEYRING))
+            output = root / "evidence.json"
+            with (
+                patch.object(ubuntu_packages, "load_manifest", return_value=manifest),
+                self.assertRaisesRegex(ubuntu_packages.PolicyError, "SHA-256 drift"),
+            ):
+                ubuntu_packages.install_and_verify(
+                    output,
+                    os_release_text=VALID_OS_RELEASE,
+                    source_files=VALID_SOURCES,
+                    runner=runner,
+                    archive_keyring_path=source,
+                )
+            self.assertEqual(runner.calls, [])
+            self.assertFalse(output.exists())
 
     def test_wrong_os_is_rejected_before_any_command(self) -> None:
         runner = FakeRunner()
@@ -304,7 +593,7 @@ class HostAndSourcePolicyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "evidence.json"
             with self.assertRaisesRegex(ubuntu_packages.PolicyError, "Ubuntu 24.04 noble"):
-                ubuntu_packages.install_and_verify(
+                _install_and_verify(
                     output,
                     os_release_text=wrong_os,
                     source_files=VALID_SOURCES,
@@ -318,7 +607,7 @@ class HostAndSourcePolicyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "evidence.json"
             with self.assertRaisesRegex(ubuntu_packages.PolicyError, "must be amd64"):
-                ubuntu_packages.install_and_verify(
+                _install_and_verify(
                     output,
                     os_release_text=VALID_OS_RELEASE,
                     source_files=VALID_SOURCES,
@@ -431,7 +720,7 @@ class CommandAndVerificationTests(unittest.TestCase):
         runner = FakeRunner()
         with tempfile.TemporaryDirectory() as tmp:
             first_output = Path(tmp) / "first.json"
-            evidence = ubuntu_packages.install_and_verify(
+            evidence = _install_and_verify(
                 first_output,
                 os_release_text=VALID_OS_RELEASE,
                 source_files=VALID_SOURCES,
@@ -440,7 +729,7 @@ class CommandAndVerificationTests(unittest.TestCase):
             first_bytes = first_output.read_bytes()
 
             second_output = Path(tmp) / "second.json"
-            ubuntu_packages.install_and_verify(
+            _install_and_verify(
                 second_output,
                 os_release_text=VALID_OS_RELEASE,
                 source_files=VALID_SOURCES,
@@ -499,6 +788,7 @@ class CommandAndVerificationTests(unittest.TestCase):
         self.assertEqual(
             set(evidence),
             {
+                "archive_keyring",
                 "artifact",
                 "manifest_canonical_sha256",
                 "packages",
@@ -511,13 +801,34 @@ class CommandAndVerificationTests(unittest.TestCase):
         self.assertEqual(evidence["schema_version"], 1)
         self.assertEqual(evidence["status"], "verified")
         self.assertEqual(len(evidence["packages"]), 22)
+        self.assertEqual(
+            evidence["archive_keyring"],
+            {
+                "package": TEST_ARCHIVE_KEYRING_SPEC.package,
+                "version": TEST_ARCHIVE_KEYRING_SPEC.version,
+                "path": TEST_ARCHIVE_KEYRING_SPEC.path.as_posix(),
+                "sha256": TEST_ARCHIVE_KEYRING_SHA256,
+                "size": len(TEST_ARCHIVE_KEYRING),
+                "trusted_copy_mode": "0644",
+                "verification": "stable-fd-sha256-then-isolated-copy",
+            },
+        )
+        self.assertNotIn(tempfile.gettempdir(), json.dumps(evidence, sort_keys=True))
+
+    def test_evidence_rejects_keyring_record_that_does_not_match_manifest(self) -> None:
+        manifest = _REAL_LOAD_MANIFEST()
+        with self.assertRaisesRegex(ubuntu_packages.PolicyError, "does not match"):
+            ubuntu_packages.build_evidence(
+                manifest,
+                _test_verified_archive_keyring(),
+            )
 
     def test_timeouts_at_every_command_stage_fail_closed_without_evidence(self) -> None:
         for stage in ("architecture", "update", "candidate", "install", "installed"):
             with self.subTest(stage=stage), tempfile.TemporaryDirectory() as tmp:
                 output = Path(tmp) / "evidence.json"
                 with self.assertRaisesRegex(ubuntu_packages.PolicyError, "timed out"):
-                    ubuntu_packages.install_and_verify(
+                    _install_and_verify(
                         output,
                         os_release_text=VALID_OS_RELEASE,
                         source_files=VALID_SOURCES,
@@ -533,7 +844,7 @@ class CommandAndVerificationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "evidence.json"
             with self.assertRaisesRegex(ubuntu_packages.PolicyError, "candidate drift"):
-                ubuntu_packages.install_and_verify(
+                _install_and_verify(
                     output,
                     os_release_text=VALID_OS_RELEASE,
                     source_files=VALID_SOURCES,
@@ -552,7 +863,7 @@ class CommandAndVerificationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "evidence.json"
             with self.assertRaisesRegex(ubuntu_packages.PolicyError, "installed version drift"):
-                ubuntu_packages.install_and_verify(
+                _install_and_verify(
                     output,
                     os_release_text=VALID_OS_RELEASE,
                     source_files=VALID_SOURCES,
@@ -568,7 +879,7 @@ class CommandAndVerificationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "evidence.json"
             with self.assertRaisesRegex(ubuntu_packages.PolicyError, "architecture drift"):
-                ubuntu_packages.install_and_verify(
+                _install_and_verify(
                     output,
                     os_release_text=VALID_OS_RELEASE,
                     source_files=VALID_SOURCES,
@@ -581,7 +892,7 @@ class CommandAndVerificationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "evidence.json"
             with self.assertRaisesRegex(ubuntu_packages.PolicyError, "warning or error"):
-                ubuntu_packages.install_and_verify(
+                _install_and_verify(
                     output,
                     os_release_text=VALID_OS_RELEASE,
                     source_files=VALID_SOURCES,

@@ -192,6 +192,13 @@ EXPECTED_UBUNTU_DISTRIBUTION = {
     "version_id": "24.04",
 }
 EXPECTED_UBUNTU_SNAPSHOT = "20260723T000000Z"
+EXPECTED_UBUNTU_ARCHIVE_KEYRING = {
+    "package": "ubuntu-keyring",
+    "path": "/usr/share/keyrings/ubuntu-archive-keyring.gpg",
+    "sha256": "80a36b0a6de2f69f49d2df75ef473ccde121e9e190b9ea01d20a4f63778d5c31",
+    "size": 3607,
+    "version": "2023.11.28.1",
+}
 EXPECTED_UBUNTU_PACKAGES = (
     ("libdbus-1-3", "1.14.10-4ubuntu4.1"),
     ("libegl1", "1.7.0-1build1"),
@@ -762,7 +769,14 @@ def _ubuntu(root: Path) -> dict[str, object]:
     payload = strict_json(root, UBUNTU_MANIFEST_PATH)
     _expect_keys(
         payload,
-        {"distribution", "ecosystem", "packages", "schema_version", "snapshot"},
+        {
+            "archive_keyring",
+            "distribution",
+            "ecosystem",
+            "packages",
+            "schema_version",
+            "snapshot",
+        },
         UBUNTU_MANIFEST_PATH,
     )
     if payload.get("schema_version") != 1 or payload.get("ecosystem") != "apt":
@@ -779,6 +793,19 @@ def _ubuntu(root: Path) -> dict[str, object]:
         raise SupplyChainInputError("UBUNTU_DISTRIBUTION_DRIFT")
     if payload.get("snapshot") != EXPECTED_UBUNTU_SNAPSHOT:
         raise SupplyChainInputError("UBUNTU_SNAPSHOT_DRIFT")
+    archive_keyring = payload.get("archive_keyring")
+    if not isinstance(archive_keyring, dict):
+        raise SupplyChainInputError("UBUNTU_ARCHIVE_KEYRING_INVALID")
+    _expect_keys(
+        archive_keyring,
+        set(EXPECTED_UBUNTU_ARCHIVE_KEYRING),
+        f"{UBUNTU_MANIFEST_PATH}:archive_keyring",
+    )
+    if (
+        archive_keyring != EXPECTED_UBUNTU_ARCHIVE_KEYRING
+        or type(archive_keyring.get("size")) is not int
+    ):
+        raise SupplyChainInputError("UBUNTU_ARCHIVE_KEYRING_DRIFT")
     packages = payload.get("packages")
     if not isinstance(packages, list):
         raise SupplyChainInputError("UBUNTU_PACKAGES_INVALID")
@@ -795,6 +822,7 @@ def _ubuntu(root: Path) -> dict[str, object]:
     if tuple(actual) != EXPECTED_UBUNTU_PACKAGES:
         raise SupplyChainInputError("UBUNTU_PACKAGE_DRIFT_OR_ORDER")
     return {
+        "archive_keyring": dict(EXPECTED_UBUNTU_ARCHIVE_KEYRING),
         "distribution": dict(EXPECTED_UBUNTU_DISTRIBUTION),
         "ecosystem": "apt",
         "installer": source_record(root, UBUNTU_INSTALLER_PATH),
