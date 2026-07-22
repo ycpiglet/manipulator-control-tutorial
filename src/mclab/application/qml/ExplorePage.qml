@@ -65,6 +65,11 @@ Item {
                 Accessible.role: Accessible.StaticText
                 Accessible.name: text
             }
+            MButton {
+                secondary: true
+                text: backend.localizedText(backend.language, "setup.review")
+                onClicked: backend.navigate("explore")
+            }
         }
         ActiveSessionBar {}
         BatchSessionBar {}

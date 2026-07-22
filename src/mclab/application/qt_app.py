@@ -38,7 +38,7 @@ from mclab.application.presentation import (
 from mclab.application.readiness import (
     app_readiness,
     readiness_payload,
-    scenario_readiness,
+    refresh_app_readiness, refresh_scenario_readiness,
     scenario_readiness_payload,
 )
 from mclab.application.repositories import ArtifactRepository
@@ -155,7 +155,7 @@ def run_app(
                 catalog=self.catalog,
             )
 
-        @Property("QVariantMap", notify=language_changed)
+        @Property("QVariantMap", notify=results_changed)
         def setupStatus(self) -> dict[str, object]:  # noqa: N802
             return readiness_payload(self._setup_issues, self.translator)
         @Property(str, notify=results_changed)
@@ -263,7 +263,6 @@ def run_app(
             self.selected_changed.emit()
             self.telemetry_changed.emit()
             self.results_changed.emit()
-
         @Slot(str)
         def navigate(self, page: str) -> None:
             if page not in {"home", "path", "explore", "results", "experiment"}:
@@ -271,9 +270,10 @@ def run_app(
             pause_before_navigation(self, page)
             self._page = page
             self.page_changed.emit()
-            if page == "results":
+            if page == "explore":
+                self._setup_issues = refresh_app_readiness(self.catalog)
+            if page in {"explore", "results"}:
                 self.results_changed.emit()
-
         @Slot()
         def returnToActiveExperiment(self) -> None:  # noqa: N802
             if self.hasActiveExperiment:
@@ -315,7 +315,7 @@ def run_app(
             self.selectScenario(scenario)
             if self._selected is None:
                 return
-            issue = scenario_readiness(self._selected)
+            issue = refresh_scenario_readiness(self._selected)
             if issue is not None:
                 blocked = scenario_readiness_payload(issue, self.translator)
                 self._error = str(blocked["readinessDetail"])

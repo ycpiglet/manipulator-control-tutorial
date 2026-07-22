@@ -65,12 +65,10 @@ jobs:
       - name: Install desktop, test, and packaging dependencies
         run: python scripts/install_locked.py --allow-external-env package
 
-      - name: Cache pinned Panda assets
-        id: panda-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: third_party/mujoco_menagerie/franka_emika_panda
-          key: panda-71f066ad-${{ runner.os }}
+      - name: Install and verify pinned Panda assets
+        run: |
+          python -m mclab assets install
+          python -m mclab assets verify
 
       - name: Windows compatibility launcher repair matrix
         if: runner.os == 'Windows'

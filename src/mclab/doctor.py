@@ -8,6 +8,12 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from mclab.application.asset_readiness import (
+    clear_panda_asset_readiness_cache,
+    is_panda_model_path,
+    panda_asset_readiness,
+    resolve_panda_model_member,
+)
 from mclab.config import PROJECT_ROOT, default_outputs_root, is_frozen_bundle, load_config
 
 DEFAULT_REQUIRED_MODULES = ("mujoco", "numpy", "matplotlib", "yaml")
@@ -28,6 +34,9 @@ def run_doctor_checks(
     required_modules: tuple[str, ...] = DEFAULT_REQUIRED_MODULES,
 ) -> list[DoctorCheck]:
     project_root = Path(root)
+    # One doctor invocation is one readiness refresh. The config and learner-menu
+    # checks below share this result instead of hashing the Panda tree per card.
+    clear_panda_asset_readiness_cache()
     checks = [
         _python_runtime_check(),
         _required_modules_check(required_modules),
@@ -168,8 +177,10 @@ def _config_and_model_check(root: Path) -> DoctorCheck:
         )
 
     config_errors: list[str] = []
+    invalid_panda_models: list[str] = []
     missing_models: list[str] = []
     model_paths: set[str] = set()
+    uses_panda_assets = False
     for config_path in config_paths:
         relative_config = config_path.relative_to(root).as_posix()
         try:
@@ -183,7 +194,14 @@ def _config_and_model_check(root: Path) -> DoctorCheck:
             continue
         resolved_model = _resolve_from_root(root, model_path)
         model_paths.add(resolved_model.as_posix())
-        if not resolved_model.exists():
+        is_panda_model = is_panda_model_path(model_path, root=root)
+        uses_panda_assets = uses_panda_assets or is_panda_model
+        if is_panda_model:
+            try:
+                resolve_panda_model_member(model_path, root=root)
+            except ValueError as exc:
+                invalid_panda_models.append(f"{relative_config} -> {exc}")
+        elif not resolved_model.exists():
             missing_models.append(f"{relative_config} -> {model_path}")
 
     if config_errors:
@@ -193,20 +211,54 @@ def _config_and_model_check(root: Path) -> DoctorCheck:
             _limited_list("Config load issues", config_errors),
             "Open the listed YAML files and fix syntax or required keys.",
         )
+    if invalid_panda_models:
+        return DoctorCheck(
+            "Configs and models",
+            "FAIL",
+            _limited_list("Invalid Panda model_path values", invalid_panda_models),
+            "Use a tracked Panda XML model path in the listed YAML files, then rerun "
+            "`python -m mclab doctor`.",
+        )
     if missing_models:
         fix = "Check model_path values and restore missing model files."
         if any("mujoco_menagerie" in item for item in missing_models):
-            fix = "Run `python scripts/bootstrap_and_run.py --setup-only` to fetch MuJoCo Menagerie assets."
+            fix = "Run `python -m mclab assets install` to install the pinned Panda assets."
         return DoctorCheck(
             "Configs and models",
             "FAIL",
             _limited_list("Missing model assets", missing_models),
             fix,
         )
+    if uses_panda_assets:
+        panda_readiness = panda_asset_readiness(root)
+        if panda_readiness.code == "missing_asset":
+            return DoctorCheck(
+                "Configs and models",
+                "FAIL",
+                f"Missing Panda runtime asset tree: {panda_readiness.detail}",
+                "Run `python -m mclab assets install` to install the pinned Panda assets, "
+                "then rerun `python -m mclab doctor`.",
+            )
+        if panda_readiness.code == "invalid_asset":
+            return DoctorCheck(
+                "Configs and models",
+                "FAIL",
+                f"Panda runtime asset verification failed: {panda_readiness.detail}",
+                "For an invalid physical tree, run `python -m mclab assets install --force`. "
+                "Inspect and remove unsafe links or reparse points manually, then rerun "
+                "`python -m mclab doctor`.",
+            )
+        panda_detail = (
+            f" Panda inventory verified ({panda_readiness.file_count} files, "
+            f"{panda_readiness.total_bytes} bytes)."
+        )
+    else:
+        panda_detail = ""
     return DoctorCheck(
         "Configs and models",
         "OK",
-        f"{len(config_paths)} configs load and {len(model_paths)} unique model assets exist.",
+        f"{len(config_paths)} configs load and {len(model_paths)} unique model assets exist."
+        f"{panda_detail}",
     )
 
 

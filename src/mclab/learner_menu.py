@@ -16,6 +16,12 @@ from pathlib import Path
 from threading import Thread
 from typing import Any, TypeVar, cast
 
+from mclab.application.asset_readiness import (
+    clear_panda_asset_readiness_cache,
+    is_panda_model_path,
+    panda_asset_readiness,
+    resolve_panda_model_member,
+)
 from mclab.application.catalog import (
     ALL_BATCH_TARGET_ID,
     BatchDefinition,
@@ -177,6 +183,7 @@ BatchMenuStateItem = tuple[BatchMenuAction, Any, Any, Any]
 BatchMenuStateItemWithWorksheet = tuple[BatchMenuAction, Any, Any, Any, Any]
 BatchMenuStateItemWithFolder = tuple[BatchMenuAction, Any, Any, Any, Any, Any]
 BatchMenuStateItemWithHandoff = tuple[BatchMenuAction, Any, Any, Any, Any, Any, Any]
+BatchMenuStateItemWithLaunch = tuple[BatchMenuAction, Any, Any, Any, Any, Any, Any, Any]
 VIEWER_HANDOFF_FRAGMENT = "viewer-handoff"
 
 EXPERIENCE_COVERAGE_TARGETS: dict[str, tuple[str, str, str]] = {
@@ -2981,7 +2988,8 @@ def action_replay_text(action: MenuAction, outputs_root: Path | None = None) -> 
 @with_completion_snapshot
 def refresh_batch_menu_state(
     items: tuple[
-        BatchMenuStateItem | BatchMenuStateItemWithWorksheet | BatchMenuStateItemWithFolder | BatchMenuStateItemWithHandoff,
+        BatchMenuStateItem | BatchMenuStateItemWithWorksheet | BatchMenuStateItemWithFolder
+        | BatchMenuStateItemWithHandoff | BatchMenuStateItemWithLaunch,
         ...,
     ],
     outputs_root: Path | None = None,
@@ -2991,6 +2999,7 @@ def refresh_batch_menu_state(
         worksheet_button = item[4] if len(item) > 4 else None
         folder_button = item[5] if len(item) > 5 else None
         handoff_button = item[6] if len(item) > 6 else None
+        launch_button = item[7] if len(item) > 7 else None
         latest_output = action_latest_output(action, outputs_root)
         text_variable.set(lesson_text_for_batch(action, outputs_root))
         report_button.state(["!disabled"] if latest_output is not None else ["disabled"])
@@ -3004,6 +3013,10 @@ def refresh_batch_menu_state(
         if handoff_button is not None:
             handoff_button.state(
                 ["!disabled"] if action_latest_viewer_handoff_uri(action, outputs_root) else ["disabled"]
+            )
+        if launch_button is not None:
+            launch_button.state(
+                ["!disabled"] if batch_readiness(action).status == "ok" else ["disabled"]
             )
 
 
@@ -3201,6 +3214,14 @@ def batch_readiness(action: BatchMenuAction, root: Path | None = None) -> Action
     return _batch_readiness(action.batch_name, str(project_root))
 
 
+def _clear_menu_readiness_caches() -> None:
+    """Invalidate every readiness layer before a learner retry or refresh."""
+
+    clear_panda_asset_readiness_cache()
+    _action_readiness.cache_clear()
+    _batch_readiness.cache_clear()
+
+
 @lru_cache(maxsize=256)
 def _action_readiness(config_path: str, root: str) -> ActionReadiness:
     project_root = Path(root)
@@ -3232,10 +3253,37 @@ def _action_readiness(config_path: str, root: str) -> ActionReadiness:
     resolved_model = Path(model_path)
     if not resolved_model.is_absolute():
         resolved_model = project_root / resolved_model
-    if not resolved_model.exists():
+    is_panda_model = is_panda_model_path(model_path, root=project_root)
+    if is_panda_model:
+        try:
+            resolve_panda_model_member(model_path, root=project_root)
+        except ValueError as exc:
+            return ActionReadiness(
+                "fail",
+                "Invalid Panda model path",
+                str(exc),
+                "Use a tracked Panda XML model path in the YAML config.",
+            )
+        asset_readiness = panda_asset_readiness(project_root)
+        if asset_readiness.code == "missing_asset":
+            return ActionReadiness(
+                "fail",
+                "Missing Panda assets",
+                asset_readiness.detail,
+                "Run `python -m mclab assets install` to install the pinned Panda assets.",
+            )
+        if asset_readiness.code == "invalid_asset":
+            return ActionReadiness(
+                "fail",
+                "Invalid Panda assets",
+                asset_readiness.detail,
+                "For an invalid physical tree, run `python -m mclab assets install --force`. "
+                "Inspect unsafe links or reparse points manually, then check setup again.",
+            )
+    elif not resolved_model.exists():
         fix = "Run Check setup for diagnosis."
         if "mujoco_menagerie" in model_path.replace("\\", "/"):
-            fix = "Run `python scripts/bootstrap_and_run.py --setup-only` to fetch MuJoCo Menagerie."
+            fix = "Run `python -m mclab assets install` to install the pinned Panda assets."
         return ActionReadiness("fail", "Missing model", model_path, fix)
     return ActionReadiness("ok", "Ready", f"model: {model_path}")
 
@@ -4586,7 +4634,8 @@ def main() -> int:
     next_review_button_ref: dict[str, Any | None] = {"button": None}
     coverage_next_button_ref: dict[str, Any | None] = {"button": None}
     batch_state_items: list[
-        BatchMenuStateItem | BatchMenuStateItemWithWorksheet | BatchMenuStateItemWithFolder | BatchMenuStateItemWithHandoff
+        BatchMenuStateItem | BatchMenuStateItemWithWorksheet | BatchMenuStateItemWithFolder
+        | BatchMenuStateItemWithHandoff | BatchMenuStateItemWithLaunch
     ] = []
     post_run_refresh_ref: dict[str, Callable[[], None]] = {}
     review_queue = tk.StringVar(value=review_queue_summary_text())
@@ -4985,7 +5034,16 @@ def main() -> int:
             anchor="w", pady=(4, 0)
         )
         batch_state_items.append(
-            (action, batch_text, report_button, plot_button, worksheet_button, folder_button, handoff_button)
+            (
+                action,
+                batch_text,
+                report_button,
+                plot_button,
+                worksheet_button,
+                folder_button,
+                handoff_button,
+                batch_button,
+            )
         )
 
     canvas = tk.Canvas(outer, highlightthickness=0)
@@ -5240,6 +5298,7 @@ def main() -> int:
         canvas.configure(scrollregion=canvas.bbox("all"))
 
     def refresh_progress_and_actions() -> None:
+        _clear_menu_readiness_caches()
         refresh_learning_path_progress()
         refresh_batch_cards()
         render_actions()
@@ -5335,6 +5394,7 @@ def _launch_from_menu(
     latest_replay_button: Any | None = None,
     progress_callback: Callable[[], None] | None = None,
 ) -> None:
+    _clear_menu_readiness_caches()
     readiness = action_readiness(action)
     if readiness.status != "ok":
         detail = f" - {readiness.detail}" if readiness.detail else ""
@@ -5443,6 +5503,7 @@ def _launch_batch_from_menu(
     latest_replay_button: Any | None = None,
     progress_callback: Callable[[], None] | None = None,
 ) -> None:
+    _clear_menu_readiness_caches()
     readiness = batch_readiness(action)
     if readiness.status != "ok":
         detail = f" - {readiness.detail}" if readiness.detail else ""

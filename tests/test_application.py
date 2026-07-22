@@ -63,6 +63,8 @@ from mclab.application.presentation import (  # noqa: E402
 from mclab.application.readiness import (  # noqa: E402
     app_readiness,
     readiness_payload,
+    refresh_app_readiness,
+    refresh_scenario_readiness,
     scenario_readiness,
     scenario_readiness_payload,
 )
@@ -415,6 +417,130 @@ class ApplicationFoundationTests(unittest.TestCase):
         status = readiness_payload(issues, Translator("en"))
         self.assertFalse(status["ready"])
         self.assertIn("MCLAB_DATA_DIR", status["action"])
+
+    def test_readiness_rejects_a_partial_panda_tree_with_force_guidance(self) -> None:
+        scenario = ScenarioCatalog.default().get("lab04.interactive-virtual-wall")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config_path = root / scenario.config_path
+            config_path.parent.mkdir(parents=True)
+            config_path.write_text("model_path: unused\n", encoding="utf-8")
+            scene = root / str(scenario.config["model_path"])
+            scene.parent.mkdir(parents=True)
+            scene.write_text("<mujoco/>\n", encoding="utf-8")
+
+            issue = scenario_readiness(scenario, root=root)
+
+        self.assertIsNotNone(issue)
+        self.assertEqual(issue.code, "invalid_asset")  # type: ignore[union-attr]
+        self.assertIn("missing runtime file", issue.detail)  # type: ignore[union-attr]
+        payload = scenario_readiness_payload(issue, Translator("en"))
+        self.assertIn("integrity check failed", payload["readinessDetail"])
+        self.assertIn("assets install --force", payload["readinessAction"])
+
+    def test_readiness_rejects_an_untracked_panda_model_member(self) -> None:
+        scenario = ScenarioCatalog.default().get("lab04.interactive-virtual-wall")
+        typo = replace(
+            scenario,
+            config_data={
+                **scenario.config,
+                "model_path": (
+                    "third_party/mujoco_menagerie/franka_emika_panda/typo.xml"
+                ),
+            },
+        )
+
+        issue = scenario_readiness(typo, root=ROOT)
+
+        self.assertIsNotNone(issue)
+        self.assertEqual(issue.code, "invalid_config")  # type: ignore[union-attr]
+        self.assertIn("tracked XML model", issue.detail)  # type: ignore[union-attr]
+
+    def test_app_readiness_hashes_the_panda_tree_once_for_multiple_cards(self) -> None:
+        from mclab.application.asset_readiness import clear_panda_asset_readiness_cache
+        from mclab.application.assets import AssetVerification
+
+        catalog = ScenarioCatalog.default()
+        scenarios = (
+            catalog.get("lab04.interactive-virtual-wall"),
+            catalog.get("lab04.neutral-hold"),
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            panda_root = (
+                root / "third_party" / "mujoco_menagerie" / "franka_emika_panda"
+            )
+            panda_root.mkdir(parents=True)
+            for scenario in scenarios:
+                config_path = root / scenario.config_path
+                config_path.parent.mkdir(parents=True, exist_ok=True)
+                config_path.write_text("model_path: unused\n", encoding="utf-8")
+            (panda_root / "scene.xml").write_text("<mujoco/>\n", encoding="utf-8")
+            verification = AssetVerification(panda_root, file_count=47, total_bytes=123)
+
+            clear_panda_asset_readiness_cache()
+            with patch(
+                "mclab.application.asset_readiness.verify_assets",
+                return_value=verification,
+            ) as verifier:
+                issues = app_readiness(
+                    ScenarioCatalog(scenarios),
+                    root=root,
+                    outputs=root / "outputs",
+                )
+            clear_panda_asset_readiness_cache()
+
+        self.assertEqual(issues, ())
+        verifier.assert_called_once_with(root=root)
+
+    def test_app_readiness_refresh_recovers_after_external_asset_install(self) -> None:
+        from mclab.application.asset_readiness import clear_panda_asset_readiness_cache
+        from mclab.application.assets import AssetVerification, AssetVerificationError
+
+        scenario = ScenarioCatalog.default().get("lab04.interactive-virtual-wall")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config_path = root / scenario.config_path
+            config_path.parent.mkdir(parents=True)
+            config_path.write_text("model_path: unused\n", encoding="utf-8")
+            target = (
+                root / "third_party" / "mujoco_menagerie" / "franka_emika_panda"
+            )
+            catalog = ScenarioCatalog((scenario,))
+            outputs = root / "test-results"
+            missing_error = AssetVerificationError(target, ["runtime tree is missing"])
+            verification = AssetVerification(target, file_count=72, total_bytes=34_333_936)
+
+            clear_panda_asset_readiness_cache()
+            with patch(
+                "mclab.application.asset_readiness.verify_assets",
+                side_effect=(missing_error, verification),
+            ) as verifier:
+                missing = app_readiness(catalog, root=root, outputs=outputs)
+                still_cached = app_readiness(catalog, root=root, outputs=outputs)
+                repaired = refresh_app_readiness(catalog, root=root, outputs=outputs)
+            clear_panda_asset_readiness_cache()
+
+        self.assertEqual(missing[0].code, "missing_asset")
+        self.assertEqual(still_cached[0].code, "missing_asset")
+        self.assertEqual(repaired, ())
+        self.assertEqual(verifier.call_count, 2)
+
+    def test_scenario_retry_only_invalidates_assets_for_managed_panda_models(self) -> None:
+        catalog = ScenarioCatalog.default()
+        lab01 = catalog.get("lab01.default")
+        lab04 = catalog.get("lab04.interactive-virtual-wall")
+
+        with (
+            patch("mclab.application.readiness.scenario_readiness", return_value=None),
+            patch(
+                "mclab.application.readiness.clear_panda_asset_readiness_cache"
+            ) as clear_cache,
+        ):
+            self.assertIsNone(refresh_scenario_readiness(lab01, root=ROOT))
+            clear_cache.assert_not_called()
+            self.assertIsNone(refresh_scenario_readiness(lab04, root=ROOT))
+            clear_cache.assert_called_once_with()
 
     def test_integrated_lab03_and_lab04_cards_expose_at_most_five_core_controls(self) -> None:
         catalog = ScenarioCatalog.default()
@@ -1011,8 +1137,16 @@ class ApplicationFoundationTests(unittest.TestCase):
         self.assertIn("backend.rerunSavedRun(modelData.path, false)", results)
         explore = (qml_root / "ExplorePage.qml").read_text(encoding="utf-8")
         scenario_card = (qml_root / "ScenarioCard.qml").read_text(encoding="utf-8")
+        backend_source = (ROOT / "src/mclab/application/qt_app.py").read_text(
+            encoding="utf-8"
+        )
         self.assertIn("property var scenarioItems: backend.scenarios", explore)
         self.assertEqual(explore.count("backend.scenarios"), 1)
+        self.assertIn('text: backend.localizedText(backend.language, "setup.review")', explore)
+        self.assertIn('onClicked: backend.navigate("explore")', explore)
+        self.assertIn('onClicked: backend.navigate("explore")', environment_source)
+        self.assertIn('if page == "explore":', backend_source)
+        self.assertIn("refresh_app_readiness(self.catalog)", backend_source)
         self.assertIn("ScrollFocusHelper", explore)
         self.assertIn("onFocusRevealRequested", explore)
         self.assertIn("scenarioFocusScroll.reveal", explore)
@@ -3054,7 +3188,27 @@ class PlatformAndCliTests(unittest.TestCase):
                     info.size = len(content)
                     bundle.addfile(info, io.BytesIO(content))
             digest = hashlib.sha256(archive.read_bytes()).hexdigest()
-            with patch.object(asset_module, "MENAGERIE_ARCHIVE_SHA256", digest):
+            files = {"LICENSE": b"BSD-3-Clause", "scene.xml": b"<mujoco/>"}
+            manifest = tuple(
+                sorted(
+                    (
+                        name,
+                        len(content),
+                        hashlib.sha256(content).hexdigest(),
+                    )
+                    for name, content in files.items()
+                )
+            )
+            with (
+                patch.object(asset_module, "MENAGERIE_ARCHIVE_SHA256", digest),
+                patch.object(asset_module, "PANDA_RUNTIME_MANIFEST", manifest),
+                patch.object(asset_module, "PANDA_RUNTIME_FILE_COUNT", len(manifest)),
+                patch.object(
+                    asset_module,
+                    "PANDA_RUNTIME_TOTAL_BYTES",
+                    sum(len(content) for content in files.values()),
+                ),
+            ):
                 target = asset_module.install_assets(root, archive_path=archive)
 
             self.assertTrue((target / "scene.xml").is_file())

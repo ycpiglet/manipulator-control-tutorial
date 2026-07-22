@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import tempfile
 import types
 import unittest
 from pathlib import Path
@@ -13,6 +14,7 @@ from mclab.sim.mujoco_utils import (  # noqa: E402
     add_viewer_box,
     add_viewer_sphere,
     hide_viewer_side_panels,
+    load_model_and_data,
     maybe_launch_viewer,
     realtime_wall_start,
     reset_viewer_overlays,
@@ -23,6 +25,120 @@ from mclab.sim.runner import run_fixed_step_loop  # noqa: E402
 
 
 class ViewerUtilityTests(unittest.TestCase):
+    def test_panda_model_load_performs_fresh_verification_each_time(self) -> None:
+        from mclab.application.assets import AssetVerification
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            panda_root = (
+                root / "third_party" / "mujoco_menagerie" / "franka_emika_panda"
+            )
+            panda_root.mkdir(parents=True)
+            scene = panda_root / "scene.xml"
+            scene.write_text("<mujoco/>\n", encoding="utf-8")
+            verification = AssetVerification(panda_root, file_count=47, total_bytes=123)
+            model = object()
+            data = object()
+            fake_mujoco = types.SimpleNamespace(
+                MjModel=types.SimpleNamespace(from_xml_path=Mock(return_value=model)),
+                MjData=Mock(return_value=data),
+            )
+
+            with (
+                patch("mclab.config.PROJECT_ROOT", root),
+                patch("mclab.sim.mujoco_utils.PROJECT_ROOT", root),
+                patch(
+                    "mclab.sim.mujoco_utils.verify_assets",
+                    return_value=verification,
+                ) as verifier,
+                patch(
+                    "mclab.sim.mujoco_utils.import_mujoco",
+                    return_value=fake_mujoco,
+                ),
+            ):
+                first = load_model_and_data(
+                    "third_party/mujoco_menagerie/franka_emika_panda/scene.xml"
+                )
+                second = load_model_and_data(
+                    "third_party/mujoco_menagerie/franka_emika_panda/scene.xml"
+                )
+
+        self.assertEqual(first, (fake_mujoco, model, data))
+        self.assertEqual(second, first)
+        self.assertEqual(verifier.call_count, 2)
+        fake_mujoco.MjModel.from_xml_path.assert_called_with(str(scene))
+
+    def test_panda_model_load_fails_closed_before_importing_mujoco(self) -> None:
+        from mclab.application.assets import AssetVerificationError
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            scene = (
+                root
+                / "third_party"
+                / "mujoco_menagerie"
+                / "franka_emika_panda"
+                / "scene.xml"
+            )
+            scene.parent.mkdir(parents=True)
+            scene.write_text("tampered\n", encoding="utf-8")
+            failure = AssetVerificationError(scene.parent, ["SHA-256 mismatch for scene.xml"])
+
+            with (
+                patch("mclab.config.PROJECT_ROOT", root),
+                patch("mclab.sim.mujoco_utils.PROJECT_ROOT", root),
+                patch("mclab.sim.mujoco_utils.verify_assets", side_effect=failure),
+                patch("mclab.sim.mujoco_utils.import_mujoco") as importer,
+            ):
+                with self.assertRaisesRegex(RuntimeError, "assets install --force"):
+                    load_model_and_data(
+                        "third_party/mujoco_menagerie/franka_emika_panda/scene.xml"
+                    )
+
+        importer.assert_not_called()
+
+    def test_panda_model_load_gives_non_force_guidance_when_assets_are_absent(self) -> None:
+        from mclab.application.assets import AssetVerificationError
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            panda_root = (
+                root / "third_party" / "mujoco_menagerie" / "franka_emika_panda"
+            )
+            failure = AssetVerificationError(panda_root, ["runtime tree is missing"])
+
+            with (
+                patch("mclab.config.PROJECT_ROOT", root),
+                patch("mclab.sim.mujoco_utils.PROJECT_ROOT", root),
+                patch("mclab.sim.mujoco_utils.verify_assets", side_effect=failure),
+                patch("mclab.sim.mujoco_utils.import_mujoco") as importer,
+            ):
+                with self.assertRaises(RuntimeError) as raised:
+                    load_model_and_data(
+                        "third_party/mujoco_menagerie/franka_emika_panda/scene.xml"
+                    )
+
+        self.assertIn("assets install`", str(raised.exception))
+        self.assertNotIn("--force", str(raised.exception))
+        importer.assert_not_called()
+
+    def test_panda_model_load_rejects_an_untracked_model_member(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with (
+                patch("mclab.config.PROJECT_ROOT", root),
+                patch("mclab.sim.mujoco_utils.PROJECT_ROOT", root),
+                patch("mclab.sim.mujoco_utils.verify_assets") as verifier,
+                patch("mclab.sim.mujoco_utils.import_mujoco") as importer,
+            ):
+                with self.assertRaisesRegex(RuntimeError, "tracked XML model"):
+                    load_model_and_data(
+                        "third_party/mujoco_menagerie/franka_emika_panda/typo.xml"
+                    )
+
+        verifier.assert_not_called()
+        importer.assert_not_called()
+
     def test_viewer_side_panels_are_hidden_by_default(self) -> None:
         launch_passive = Mock(return_value="viewer-handle")
         viewer_module = types.SimpleNamespace(launch_passive=launch_passive)

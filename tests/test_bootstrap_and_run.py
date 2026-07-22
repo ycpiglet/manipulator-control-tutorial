@@ -135,6 +135,22 @@ class BootstrapVerifyTests(unittest.TestCase):
         self.assertNotIn('"pip", "install"', source)
         self.assertNotIn('"--upgrade"', source)
 
+    def test_menagerie_setup_delegates_only_to_the_pinned_asset_installer(self) -> None:
+        python = Path("/project/.venv/bin/python")
+        with (
+            patch.object(bootstrap_and_run, "VENV_PYTHON", python),
+            patch.object(bootstrap_and_run, "run") as run,
+        ):
+            bootstrap_and_run.ensure_menagerie()
+
+        run.assert_called_once_with(
+            [str(python), "-m", "mclab", "assets", "install"]
+        )
+        source = (ROOT / "scripts/bootstrap_and_run.py").read_text(encoding="utf-8")
+        self.assertNotIn("mujoco_menagerie.git", source)
+        self.assertNotIn("sparse-checkout", source)
+        self.assertNotIn('"git", "clone"', source)
+
     def test_verify_output_artifacts_accepts_complete_plotted_run(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "run"

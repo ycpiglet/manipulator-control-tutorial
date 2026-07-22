@@ -14,13 +14,6 @@
       "source": "https://github.com/WtfJoke/setup-tectonic/releases/tag/v4.0.5",
       "upstream_commit_verified": true
     },
-    "actions/cache": {
-      "release": "v6.1.0",
-      "runtime": "node24",
-      "sha": "55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
-      "source": "https://github.com/actions/cache/releases/tag/v6.1.0",
-      "upstream_commit_verified": true
-    },
     "actions/checkout": {
       "release": "v7.0.1",
       "runtime": "node24",

@@ -7,7 +7,13 @@ from time import perf_counter, sleep
 from collections.abc import Sequence
 from typing import Any
 
-from mclab.config import resolve_project_path
+from mclab.application.asset_readiness import (
+    classify_panda_asset_failure,
+    is_panda_model_path,
+    resolve_panda_model_member,
+)
+from mclab.application.assets import verify_assets
+from mclab.config import PROJECT_ROOT, resolve_project_path
 
 
 def import_mujoco() -> Any:
@@ -22,8 +28,30 @@ def import_mujoco() -> Any:
 
 
 def load_model_and_data(model_path: str | Path) -> tuple[Any, Any, Any]:
-    mujoco = import_mujoco()
     resolved = resolve_project_path(model_path)
+    if is_panda_model_path(resolved, root=PROJECT_ROOT):
+        try:
+            relative_model = resolve_panda_model_member(resolved, root=PROJECT_ROOT)
+        except ValueError as exc:
+            raise RuntimeError(f"Invalid Panda model path: {exc}") from exc
+        try:
+            verification = verify_assets(root=PROJECT_ROOT)
+        except ValueError as exc:
+            readiness = classify_panda_asset_failure(PROJECT_ROOT, exc)
+            if readiness.code == "missing_asset":
+                repair = "Run `python -m mclab assets install` to install the assets."
+            else:
+                repair = (
+                    "For an invalid physical tree, run "
+                    "`python -m mclab assets install --force`; inspect and remove unsafe "
+                    "links or reparse points manually."
+                )
+            raise RuntimeError(
+                "Panda runtime asset verification failed before MuJoCo model loading: "
+                f"{exc}. {repair}"
+            ) from exc
+        resolved = verification.target / relative_model
+    mujoco = import_mujoco()
     model = mujoco.MjModel.from_xml_path(str(resolved))
     data = mujoco.MjData(model)
     return mujoco, model, data
