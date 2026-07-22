@@ -1,43 +1,50 @@
 # User Actions & Decisions (사용자 결정·행동 필요 항목)
 
-Updated: 2026-07-05 (KST)
-자율 루프에서 분리된, 사용자만 할 수 있거나 사용자 결정이 필요한 항목.
-에이전트는 초안·조사까지 준비하고 여기서 멈춘다.
+Updated: 2026-07-22 (KST)
 
-## A. 발송 필요 (초안 준비됨 — 아래 첨부)
+이 문서는 사용자 결정과 외부 의존성을 기록하는 대기열이다. 항목이 여기에 있다는
+사실은 실행 권한이 아니다. 에이전트는 내부 초안·조사까지만 진행하고, 외부 연락,
+가입·결제, participant 모집, credential 사용, 공개 게시, release/tag, DOI 발행은
+해당 gate와 사용자의 별도 명시적 승인 전에는 실행하지 않는다.
 
-| # | 대상 | 목적 | 상태 |
+현재 owner의 exact-SHA 위험 수용은 B2 `safe-main` 개발 기준선에만 적용된다.
+Public beta, signed distribution, release/DOI publication, real-output cleanup
+dry-run, cleanup apply는 승인되지 않았다.
+
+## 현재 결정 대기열
+
+| ID | 필요한 결정 또는 외부 입력 | 현재 기본값 | 선행 gate |
 |---|---|---|---|
-| A1 | 한국로봇학회(KROS) 편집위원회 | 총설(리뷰) 유형 게재 가능 여부 + 독립연구자 소속 표기 + 회원/심사료 안내 | 초안 ↓ |
-| A2 | IEEE CSM Editor-in-Chief | 임피던스 튜토리얼 기사 사전 문의(pre-submission inquiry) | 초안 ↓ (영문) |
-| A3 | JOSE 편집팀(필요 시) | 공개 이력 요건(레포 공개 2026-06-26) 적용 여부 | 초안 ↓ (영문) — 우선 공식 문서 재확인 후 필요 시만 발송 |
+| UA-01 | 목표 배포 수준과 공식 지원 OS | supervised/source development만 유지 | PKG-01, E2E-01 |
+| UA-02 | Windows signing 및 Apple notarization 자격 확보 여부 | 취득·사용하지 않음 | REL-01 뒤 REL-02 |
+| UA-03 | 초보자 6명 이상, 교육자 1명, 접근성 검토자와 실제 장비 | 모집·연락하지 않음 | EDU-01, E2E-01 뒤 HUM-01 |
+| UA-04 | 첫 prerelease 버전과 공개 지원 채널 | tag/release 생성하지 않음 | G3/REL-01 |
+| UA-05 | 외부 license 검토 필요성과 담당자 | 외부 연락하지 않음 | SUP-01 inventory 뒤 LIC-01 |
+| UA-06 | Zenodo, preprint, JOSE, KROS/CSM 진행 순서 | 제출·게시·DOI 발행하지 않음 | immutable REL-01 뒤 PUB-01 |
+| UA-07 | 실제 learner outputs의 cleanup 계획 검토 | dry-run도 실행하지 않음 | owner 참여 별도 작업 |
 
-## P. 포트폴리오 패키지 (Track C — 전부 무료, 3분 내외)
+## Cleanup 승인 경계
 
-| # | 항목 | 방법 | 효과 |
-|---|---|---|---|
-| P1 | Zenodo DOI 발급 | zenodo.org GitHub 로그인 → 레포 토글 ON → GitHub 릴리스 생성 (`.agents/PORTFOLIO_PACKAGE.md` 절차) | 레포가 인용 가능한 영구 학술 산출물이 됨. DOI 알려주면 배지·CITATION.cff 반영 대행 |
-| P2 | 블로그 게시 | `outreach/blog_failure_gallery_ko.md` 를 velog/tistory/GitHub Pages 등에 게시 | 초보자 도달 + "설명 능력" 포트폴리오. 플랫폼 정하면 포맷 조정 대행 |
-| A4 | KROS 투고 시스템(journal.kros.org) 회원가입·로그인 → 논문 견본(docx)+커버레터 양식 다운로드 | A1 회신 무관하게 미리 가능 | U3 DOCX 변환 착수 가능(변환은 대행) |
-| P3 (선택) | engrXiv/EdArXiv 프리프린트 | U3(한국어) 또는 U5(영문) 완성본 업로드 (무료 DOI) | 무게이트 "첫 단독 논문" 경험 |
+- 실제 learner outputs에 대한 dry-run은 아직 실행되지 않았고 현재 승인도 없다.
+- 향후 owner가 별도로 명시 승인하고 참여하는 작업에서만 기본 dry-run을 만들 수
+  있다. 원격에는 raw run name이나 사용자 경로를 올리지 않고 inventory hash,
+  plan ID, 집계와 제외 사유만 기록한다.
+- 같은 exact plan을 owner가 검토한 뒤에도 `--apply`는 자동 승인되지 않는다.
+  Owner가 그 plan을 다시 명시적으로 승인해야만 apply가 가능하다.
 
-## B. 결제·가입 필요
+## 해결된 과거 결정
 
-| # | 항목 | 시점 |
-|---|---|---|
-| B1 | KROS 회원 가입 + 연회비 (공동저자 전원) | KROS 투고 직전 (A1 회신 후) |
-| B2 | (해당 시) MDPI APC CHF 1,800 예산 승인 | U5 투고 시점 (12월~2027 Q1) |
+- 저자 표기: Youncheol Jung / 정윤철 / ORCID
+  `0009-0000-5282-881X` / Independent Researcher.
+- 해외 본편은 SCIE 필수 아님; 무료 경로 우선, 유료 APC는 별도 승인 전 사용하지 않음.
+- 실패 사례의 1인칭 서사는 익명 일반 서사를 유지한다.
+- README는 한국어 `README.md`와 영어 `README.en.md`를 병행한다.
 
-## C. 결정 대기
+## 보존된 발송 초안 — 현재 발송 금지
 
-| # | 결정 | 기본값 (미결정 시) |
-|---|---|---|
-| C1 | 해외 본편 SCIE 필수 여부 | MDPI Robotics (비SCIE)로 진행 |
-| C2 | 실패 사례의 1인칭 서사 수위 | "저자가 실제 로봇에서 겪은 실수" 익명 일반 서사 (현재 적용됨) |
-| C3 | README 언어 구조 | 한국어 README.md 유지 + README.en.md 병행 (2026-07-05 적용됨) |
-| C4 | JOSE 논문 저자 표기 | `jose/paper.md`의 TODO-AUTHOR-NAME / TODO-ORCID — 출판용 실명(영문)과 ORCID 필요. 없으면 ORCID 무료 발급(orcid.org) 권장 |
-
-## 발송 최종본 (2026-07-06 다듬음 — 복사해서 그대로 발송 가능)
+아래 A1–A3 문안은 2026-07-06에 만든 historical draft다. 주소·정책·원고 수치가
+stale할 수 있으며, PUB-01 시점의 공식 정보 재검증과 owner 승인을 거치기 전에는
+복사·발송하지 않는다.
 
 ### A1. KROS 편집국 → **journal@kros.org** (검증됨: journal.kros.org 안내)
 
@@ -111,10 +118,11 @@ Updated: 2026-07-05 (KST)
 > Youncheol Jung
 > Independent Researcher, Republic of Korea | ORCID: 0009-0000-5282-881X
 
-### 발송 순서 권고
+### Historical sequence note — 실행 지시 아님
 
-A3(JOSE)를 먼저 — 회신이 오면 U1 투고가 그날 가능. A1(KROS)은 같은 날 발송
-권장(회신까지 수 주 걸릴 수 있음). A2(CSM)는 여유 있게 — U5 착수는 10월.
+과거 초안은 A3, A1, A2 순서를 제안했지만 현재 순서로 사용하지 않는다. PUB-01에서
+공식 접수 상태, 연락처, manuscript facts, immutable release identity를 다시 검증한
+뒤 owner가 승인한 항목만 발송한다.
 
 ## 처리 로그
 
@@ -124,4 +132,6 @@ A3(JOSE)를 먼저 — 회신이 오면 U1 투고가 그날 가능. A1(KROS)은 
   MDPI는 승인 후 최후 옵션.
 - 2026-07-06: C2 확정 — 익명 유지.
 - 2026-07-06: B2 갱신 — MDPI APC는 무료 경로 소진 후에만 재상정.
-- 2026-07-06: A1~A3 발송문 다듬기 요청 접수 — 채널 조사 후 최종본 제공 예정.
+- 2026-07-06: A1~A3 발송문 초안 정리.
+- 2026-07-22: STATE-01에서 A1~A3를 dormant draft로 전환. Release/DOI,
+  submission, external contact, real-output dry-run/apply는 승인되지 않음.
