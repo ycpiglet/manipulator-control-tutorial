@@ -13,20 +13,19 @@
 
 실행 순서와 승격 gate는 `READINESS_EXECUTION_PLAN.md`가 정합니다. 오래되거나 dirty한
 checkout에서 release/readiness 작업을 이어가지 말고 최신 `origin/main`에서 clean
-worktree를 만듭니다. PR #35, B1, GOV-01, SAFE-01, DOC-01, COMP-01, COMP-02는
-완료됐습니다. Original COMP-02 PR #53 뒤 late review가 찾은 desktop legacy-ID
-reason parity 누락은 corrective PR #54로 보수됐고 exact-head와 post-merge 6/6 및
-review-thread resolution을 통과했습니다. Durable handoff PR #55도 exact-head와
+worktree를 만듭니다. PR #35, B1, GOV-01, SAFE-01, DOC-01, COMP-01,
+COMP-02, BASE-01은 완료됐습니다. Original COMP-02 PR #53 뒤 late review가 찾은
+desktop legacy-ID reason parity 누락은 corrective PR #54로 보수됐고 exact-head와
+post-merge 6/6 및 review-thread resolution을 통과했습니다. Durable handoff PR #55도 exact-head와
 post-merge 6/6을 통과하고 `ae4d40371b9a3fe4d7078822e1fc541a72defe2d`로
-병합됐습니다. BASE-01은 이 clean main을 subject로 고정해 G1과 live-governance
-evidence 11/12를 수집했습니다. 이제 candidate PR의 독립 review와 exact-head six
-checks를 수행하며, owner가 exact subject와 PR head에 대해 single-maintainer 잔여
-위험을 명시적으로 수용하기 전에는 B2를 선언하지 않습니다. 여기서 11/12의 한
-pending은 G1 metric row 수이며, BASE-01 workflow prerequisite가 owner acceptance
-하나뿐이라는 뜻이 아닙니다. 독립 review, exact-head six checks, exact-SHA owner
-acceptance를 같은 final head에서 모두 확인합니다. 구조 변경은 B2
-뒤 IA-00 결정과 별도
-compatibility PR로 처리합니다. SAFE-01 PASS 뒤에도 실제 learner outputs의 dry-run은
+병합됐습니다. BASE-01 PR #56은 frozen subject
+`ae4d40371b9a3fe4d7078822e1fc541a72defe2d`와 accepted head
+`370b10186864e6b9e2bc73978da13671a54628de`에 대한 owner acceptance, exact-head와
+post-merge 6/6, 독립 review, source/merge tree equivalence를 통과했습니다. G1은
+12/12 PASS이며 B2 `safe-main`은 append-only record로 선언됐습니다. 기존 candidate
+Markdown/JSON은 수정하지 않습니다. 다음 merge lane은 STATE-01이고 IA-00은 병렬
+no-move inventory/ADR로만 준비합니다. 구조 변경은 IA-00 GO 뒤 별도 compatibility
+PR로 처리합니다. SAFE-01 PASS와 B2 선언 뒤에도 실제 learner outputs의 dry-run은
 owner가 참여하는 별도 작업으로만 수행하고, owner가 같은 plan을 검토한 뒤 다시
 명시적으로 승인하기 전에는 `--apply`를 실행하지 않습니다.
 
@@ -579,11 +578,10 @@ The full project is course-demo ready when:
 ## Next Best Task
 
 Follow the active readiness work order: the durable COMP-02 handoff is merged
-and 11 of 12 BASE-01 G1 metric rows pass for frozen subject
-`ae4d40371b9a3fe4d7078822e1fc541a72defe2d`. Create the candidate records and
-PR, complete independent read-only review and all six exact-head checks, then
-request explicit owner acceptance for that subject and final PR head. Keep B2
-undeclared until that acceptance. Do not treat B2 as public-beta approval,
-move directories before IA-00, touch real learner outputs, or resume optional
-lesson expansion ahead of the readiness gates. Do not add web, ROS2, or Isaac
-Sim scope before the local MuJoCo labs are stable.
+and BASE-01/B2 is declared at G1 12/12 for frozen subject
+`ae4d40371b9a3fe4d7078822e1fc541a72defe2d`. Start STATE-01 from a new clean
+latest-main worktree, and keep any parallel IA-00 work to a no-move inventory
+and launcher decision. Rebase IA-00 after STATE-01 when handoff files overlap.
+Do not treat B2 as public-beta, signing, release/DOI, real-output cleanup, or
+repository-move approval. Do not merge old Draft PR #37/#38 wholesale or add
+web, ROS2, or Isaac Sim scope ahead of the readiness gates.
