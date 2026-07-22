@@ -46,6 +46,11 @@ a = Analysis(
         "PySide6.QtWebEngineWidgets",
         "PySide6.QtCharts",
         "PySide6.Qt3DCore",
+        # QtTest is used only by source UI-audit actions. The packaged learner
+        # app uses QGuiApplication and Qt Quick, so exclude QtTest and its
+        # QtWidgets dependency while keeping both available to source audits.
+        "PySide6.QtTest",
+        "PySide6.QtWidgets",
         "matplotlib.backends.backend_qt5agg",
         "matplotlib.backends.backend_tkagg",
     ],
