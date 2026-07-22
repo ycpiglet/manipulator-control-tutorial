@@ -194,6 +194,20 @@ explicitly excludes the bootstrap `pip`, `setuptools`, and `wheel` distributions
 and substitutes the editable MCLab project for the package lock's `setuptools`
 candidate, matching the existing scanner boundary.
 
+Each accepted target also pins normalized, per-package observations: the raw
+license string reported by package metadata, the reported project URL, and
+SHA-256 hashes of normalized license and NOTICE text when present. These values
+are evidence observations only. They are not reviewed SPDX expressions, legal
+interpretations, or approval of the reported terms.
+
+The machine-readable coverage record makes the remaining boundary explicit.
+Only 3 of 12 target cells have accepted observations; the other 9 are listed by
+ID. Their union observes 48 of the 49 lock candidates, leaving
+`exceptiongroup==1.3.1` unobserved. Distribution closure remains `unproven`.
+The registry nevertheless enumerates the existing universal SBOM-input surfaces
+without claiming license review: 22 pinned direct Ubuntu packages, 72 Panda
+runtime files, 2 bundled font files, and all 6 packaging data groups.
+
 ```bash
 python scripts/generate_license_inventory.py --check
 python .agents/validation/check_license_inventory.py
@@ -203,9 +217,10 @@ Every desktop matrix cell validates its fresh `python-licenses.json` against
 that registry before evidence upload. Candidate review status nevertheless
 remains `pending`, and the contract keeps license-expression, copyright,
 license-text, NOTICE, source/relinking, native/base-image, and Qt/PySide LGPL
-decisions as explicit blockers. This contract is not legal approval, a complete
-notice bundle, public-distribution authorization, or permission to reinterpret
-the existing unsigned development artifacts as release evidence.
+decisions plus unproven distribution closure as explicit blockers. This
+contract is not legal approval, a complete notice bundle, public-distribution
+authorization, or permission to reinterpret the existing unsigned development
+artifacts as release evidence.
 
 `scripts/generate_sbom_inputs.py` combines the reviewed Python locks, Ubuntu
 direct-package manifest, pinned Panda runtime inventory, bundled fonts, and

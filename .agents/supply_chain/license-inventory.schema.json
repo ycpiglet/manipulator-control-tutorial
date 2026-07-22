@@ -1,5 +1,36 @@
 {
   "$defs": {
+    "archiveKeyring": {
+      "additionalProperties": false,
+      "properties": {
+        "package": {
+          "const": "ubuntu-keyring"
+        },
+        "path": {
+          "const": "/usr/share/keyrings/ubuntu-archive-keyring.gpg"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "size": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "version": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "package",
+        "path",
+        "sha256",
+        "size",
+        "version"
+      ],
+      "type": "object"
+    },
     "artifact": {
       "additionalProperties": false,
       "properties": {
@@ -69,6 +100,40 @@
       ],
       "type": "object"
     },
+    "dataGroup": {
+      "additionalProperties": false,
+      "properties": {
+        "destination": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "license_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "source": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "destination",
+        "id",
+        "license_ids",
+        "source"
+      ],
+      "type": "object"
+    },
     "gapCounts": {
       "additionalProperties": false,
       "properties": {
@@ -101,6 +166,136 @@
       ],
       "type": "object"
     },
+    "identifiedSpdxLicense": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "path": {
+          "pattern": "^[A-Za-z0-9._/,\\[\\]-]+$",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "size": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "spdx": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "path",
+        "sha256",
+        "size",
+        "spdx"
+      ],
+      "type": "object"
+    },
+    "identifiedSurfaceFile": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "path": {
+          "pattern": "^[A-Za-z0-9._/,\\[\\]-]+$",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "size": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "path",
+        "sha256",
+        "size"
+      ],
+      "type": "object"
+    },
+    "observedPackage": {
+      "additionalProperties": false,
+      "properties": {
+        "license_observation": {
+          "anyOf": [
+            {
+              "maxLength": 1048576,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "license_text_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "name": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "type": "string"
+        },
+        "notice_text_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "url_observation": {
+          "anyOf": [
+            {
+              "maxLength": 4096,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "version": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "license_observation",
+        "license_text_sha256",
+        "name",
+        "notice_text_sha256",
+        "url_observation",
+        "version"
+      ],
+      "type": "object"
+    },
     "observedTarget": {
       "additionalProperties": false,
       "properties": {
@@ -123,6 +318,15 @@
           "minimum": 43,
           "type": "integer"
         },
+        "package_observations": {
+          "items": {
+            "$ref": "#/$defs/observedPackage"
+          },
+          "maxItems": 48,
+          "minItems": 43,
+          "type": "array",
+          "uniqueItems": true
+        },
         "recorded_target": {
           "$ref": "#/$defs/recordedTarget"
         },
@@ -140,6 +344,7 @@
         "id",
         "metadata_gaps",
         "package_count",
+        "package_observations",
         "recorded_target",
         "runner_os"
       ],
@@ -205,6 +410,57 @@
       ],
       "type": "object"
     },
+    "spdxLicense": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "pattern": "^[A-Za-z0-9._/,\\[\\]-]+$",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "size": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "spdx": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "size",
+        "spdx"
+      ],
+      "type": "object"
+    },
+    "surfaceFile": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "pattern": "^[A-Za-z0-9._/,\\[\\]-]+$",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "size": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "size"
+      ],
+      "type": "object"
+    },
     "targetCell": {
       "additionalProperties": false,
       "properties": {
@@ -252,6 +508,64 @@
         "sys_platform"
       ],
       "type": "object"
+    },
+    "ubuntuDistribution": {
+      "additionalProperties": false,
+      "properties": {
+        "architecture": {
+          "const": "amd64"
+        },
+        "codename": {
+          "const": "noble"
+        },
+        "id": {
+          "const": "ubuntu"
+        },
+        "version_id": {
+          "const": "24.04"
+        }
+      },
+      "required": [
+        "architecture",
+        "codename",
+        "id",
+        "version_id"
+      ],
+      "type": "object"
+    },
+    "ubuntuPackage": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "version": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "type": "object"
+    },
+    "unobservedCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "const": "exceptiongroup"
+        },
+        "version": {
+          "const": "1.3.1"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "type": "object"
     }
   },
   "$id": "https://github.com/ycpiglet/manipulator-control-tutorial/blob/main/.agents/supply_chain/license-inventory.schema.json",
@@ -274,6 +588,7 @@
           "items": {
             "enum": [
               "copyright-attribution-review-pending",
+              "distribution-closure-unproven",
               "license-expression-review-pending",
               "license-text-coverage-pending",
               "native-and-base-image-transitive-inventory-pending",
@@ -282,8 +597,8 @@
               "source-offer-and-relinking-obligations-pending"
             ]
           },
-          "maxItems": 7,
-          "minItems": 7,
+          "maxItems": 8,
+          "minItems": 8,
           "type": "array",
           "uniqueItems": true
         },
@@ -330,6 +645,255 @@
         "purpose",
         "qt_pyside_lgpl_decision",
         "target_cell_count"
+      ],
+      "type": "object"
+    },
+    "coverage": {
+      "additionalProperties": false,
+      "properties": {
+        "distribution_closure": {
+          "const": "unproven"
+        },
+        "distribution_surface_inventory": {
+          "const": "enumerated-not-license-reviewed"
+        },
+        "license_observation_scope": {
+          "const": "python-package-input-only"
+        },
+        "lock_candidate_count": {
+          "const": 49
+        },
+        "observed_candidate_union_count": {
+          "const": 48
+        },
+        "observed_target_count": {
+          "const": 3
+        },
+        "observed_target_ids": {
+          "items": {
+            "enum": [
+              "cpython-3.11-darwin-arm64",
+              "cpython-3.11-linux-x86_64",
+              "cpython-3.11-win32-amd64"
+            ]
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "unobserved_candidates": {
+          "items": {
+            "$ref": "#/$defs/unobservedCandidate"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "unobserved_target_count": {
+          "const": 9
+        },
+        "unobserved_target_ids": {
+          "items": {
+            "enum": [
+              "cpython-3.10-darwin-arm64",
+              "cpython-3.10-darwin-x86_64",
+              "cpython-3.10-linux-x86_64",
+              "cpython-3.10-win32-amd64",
+              "cpython-3.11-darwin-x86_64",
+              "cpython-3.12-darwin-arm64",
+              "cpython-3.12-darwin-x86_64",
+              "cpython-3.12-linux-x86_64",
+              "cpython-3.12-win32-amd64"
+            ]
+          },
+          "maxItems": 9,
+          "minItems": 9,
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "distribution_closure",
+        "distribution_surface_inventory",
+        "license_observation_scope",
+        "lock_candidate_count",
+        "observed_candidate_union_count",
+        "observed_target_count",
+        "observed_target_ids",
+        "unobserved_candidates",
+        "unobserved_target_count",
+        "unobserved_target_ids"
+      ],
+      "type": "object"
+    },
+    "distribution_surfaces": {
+      "additionalProperties": false,
+      "properties": {
+        "fonts": {
+          "additionalProperties": false,
+          "properties": {
+            "file_count": {
+              "const": 2
+            },
+            "files": {
+              "items": {
+                "$ref": "#/$defs/identifiedSurfaceFile"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "license": {
+              "$ref": "#/$defs/identifiedSpdxLicense"
+            }
+          },
+          "required": [
+            "file_count",
+            "files",
+            "license"
+          ],
+          "type": "object"
+        },
+        "inventory_status": {
+          "const": "enumerated-inputs-only-distribution-closure-unproven"
+        },
+        "packaging": {
+          "additionalProperties": false,
+          "properties": {
+            "data_group_count": {
+              "const": 6
+            },
+            "data_groups": {
+              "items": {
+                "$ref": "#/$defs/dataGroup"
+              },
+              "maxItems": 6,
+              "minItems": 6,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "root_licenses": {
+              "items": {
+                "$ref": "#/$defs/identifiedSpdxLicense"
+              },
+              "maxItems": 1,
+              "minItems": 1,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "source": {
+              "$ref": "#/$defs/sourceRecord"
+            }
+          },
+          "required": [
+            "data_group_count",
+            "data_groups",
+            "root_licenses",
+            "source"
+          ],
+          "type": "object"
+        },
+        "panda_runtime": {
+          "additionalProperties": false,
+          "properties": {
+            "archive_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "commit": {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            },
+            "file_count": {
+              "const": 72
+            },
+            "files": {
+              "items": {
+                "$ref": "#/$defs/surfaceFile"
+              },
+              "maxItems": 72,
+              "minItems": 72,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "license": {
+              "$ref": "#/$defs/spdxLicense"
+            },
+            "source": {
+              "$ref": "#/$defs/sourceRecord"
+            },
+            "upstream_repository": {
+              "const": "https://github.com/google-deepmind/mujoco_menagerie"
+            }
+          },
+          "required": [
+            "archive_sha256",
+            "commit",
+            "file_count",
+            "files",
+            "license",
+            "source",
+            "upstream_repository"
+          ],
+          "type": "object"
+        },
+        "ubuntu_system": {
+          "additionalProperties": false,
+          "properties": {
+            "archive_keyring": {
+              "$ref": "#/$defs/archiveKeyring"
+            },
+            "distribution": {
+              "$ref": "#/$defs/ubuntuDistribution"
+            },
+            "ecosystem": {
+              "const": "apt"
+            },
+            "installer": {
+              "$ref": "#/$defs/sourceRecord"
+            },
+            "package_count": {
+              "const": 22
+            },
+            "packages": {
+              "items": {
+                "$ref": "#/$defs/ubuntuPackage"
+              },
+              "maxItems": 22,
+              "minItems": 22,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "snapshot": {
+              "pattern": "^[0-9]{8}T[0-9]{6}Z$",
+              "type": "string"
+            },
+            "source": {
+              "$ref": "#/$defs/sourceRecord"
+            }
+          },
+          "required": [
+            "archive_keyring",
+            "distribution",
+            "ecosystem",
+            "installer",
+            "package_count",
+            "packages",
+            "snapshot",
+            "source"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "fonts",
+        "inventory_status",
+        "packaging",
+        "panda_runtime",
+        "ubuntu_system"
       ],
       "type": "object"
     },
@@ -386,6 +950,9 @@
         "registry_schema": {
           "$ref": "#/$defs/sourceRecord"
         },
+        "sbom_generator": {
+          "$ref": "#/$defs/sourceRecord"
+        },
         "scanner": {
           "$ref": "#/$defs/sourceRecord"
         }
@@ -397,6 +964,7 @@
         "package_lock",
         "project",
         "registry_schema",
+        "sbom_generator",
         "scanner"
       ],
       "type": "object"
@@ -414,6 +982,8 @@
   "required": [
     "candidates",
     "contract",
+    "coverage",
+    "distribution_surfaces",
     "observation_baseline",
     "observed_targets",
     "schema_version",

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import copy
+import hashlib
 import importlib.util
 import json
 import shutil
@@ -17,9 +19,7 @@ CHECKER_PATH = ROOT / ".agents/validation/check_license_inventory.py"
 
 
 def _load_checker():
-    spec = importlib.util.spec_from_file_location(
-        "_test_license_inventory_checker", CHECKER_PATH
-    )
+    spec = importlib.util.spec_from_file_location("_test_license_inventory_checker", CHECKER_PATH)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
@@ -42,6 +42,14 @@ def contract_repository(tmp_path: Path) -> Path:
         generator.SCANNER_PATH,
         generator.PACKAGE_LOCK_PATH,
         generator.PROJECT_PATH,
+        generator.SBOM_GENERATOR_PATH,
+        generator.supply.PANDA_MANIFEST_PATH,
+        generator.supply.PACKAGING_SPEC_PATH,
+        generator.supply.PROJECT_LICENSE_PATH,
+        generator.supply.UBUNTU_INSTALLER_PATH,
+        generator.supply.UBUNTU_MANIFEST_PATH,
+        *(path for _identifier, path, _digest in generator.supply.EXPECTED_FONT_FILES),
+        generator.supply.EXPECTED_FONT_LICENSE[0],
     }
     for relative in sorted(paths):
         source = ROOT / relative
@@ -55,9 +63,7 @@ def _registry() -> dict[str, object]:
     return json.loads((ROOT / generator.REGISTRY_PATH).read_text(encoding="utf-8"))
 
 
-def _evidence_document(
-    registry: dict[str, object], runner_os: str
-) -> dict[str, Any]:
+def _evidence_document(registry: dict[str, object], runner_os: str) -> dict[str, Any]:
     observed = checker.EXPECTED_OBSERVED[runner_os]
     expected_packages = checker._expected_packages(registry, observed["cell_id"])
     packages = [
@@ -97,6 +103,35 @@ def _evidence_document(
     }
 
 
+def _registry_with_evidence_observations(
+    registry: dict[str, object],
+    runner_os: str,
+    evidence: dict[str, Any],
+) -> dict[str, object]:
+    updated = copy.deepcopy(registry)
+    target = next(item for item in updated["observed_targets"] if item["runner_os"] == runner_os)
+    target["package_observations"] = [
+        {
+            "license_observation": package["license"],
+            "license_text_sha256": (
+                hashlib.sha256(package["license_text"].encode("utf-8")).hexdigest()
+                if package["license_text"] is not None
+                else None
+            ),
+            "name": package["name"],
+            "notice_text_sha256": (
+                hashlib.sha256(package["notice_text"].encode("utf-8")).hexdigest()
+                if package["notice_text"] is not None
+                else None
+            ),
+            "url_observation": package["url"],
+            "version": package["version"],
+        }
+        for package in evidence["packages"]
+    ]
+    return updated
+
+
 def _write_evidence(
     root: Path,
     document: dict[str, Any],
@@ -106,9 +141,7 @@ def _write_evidence(
     relative = Path("build/validation/license-test/python-licenses.json")
     target = root / relative
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_bytes(
-        generator.canonical_json_bytes(document) if payload is None else payload
-    )
+    target.write_bytes(generator.canonical_json_bytes(document) if payload is None else payload)
     return relative
 
 
@@ -126,13 +159,35 @@ def test_committed_inventory_is_deterministic_closed_and_pending() -> None:
     assert registry["contract"]["notice_bundle_complete"] is False
     assert registry["contract"]["public_distribution_authorized"] is False
     assert registry["contract"]["qt_pyside_lgpl_decision"] == "pending"
+    assert registry["coverage"] == checker.EXPECTED_COVERAGE
+    assert registry["coverage"]["observed_candidate_union_count"] == 48
+    assert registry["coverage"]["unobserved_candidates"] == [
+        {"name": "exceptiongroup", "version": "1.3.1"}
+    ]
+    assert registry["coverage"]["distribution_closure"] == "unproven"
+    assert len(registry["coverage"]["observed_target_ids"]) == 3
+    assert len(registry["coverage"]["unobserved_target_ids"]) == 9
+    assert [len(target["package_observations"]) for target in registry["observed_targets"]] == [
+        44,
+        45,
+        47,
+    ]
     assert all(
-        candidate["review_status"] == "pending"
-        for candidate in registry["candidates"]
+        set(package) == checker.OBSERVED_PACKAGE_KEYS
+        for target in registry["observed_targets"]
+        for package in target["package_observations"]
     )
-    assert generator.canonical_json_bytes(generator.build_registry(ROOT)) == (
-        ROOT / generator.REGISTRY_PATH
-    ).read_bytes()
+    surfaces = registry["distribution_surfaces"]
+    assert surfaces == generator._distribution_surfaces(ROOT)
+    assert surfaces["ubuntu_system"]["package_count"] == 22
+    assert surfaces["panda_runtime"]["file_count"] == 72
+    assert surfaces["fonts"]["file_count"] == 2
+    assert surfaces["packaging"]["data_group_count"] == 6
+    assert all(candidate["review_status"] == "pending" for candidate in registry["candidates"])
+    assert (
+        generator.canonical_json_bytes(generator.build_registry(ROOT))
+        == (ROOT / generator.REGISTRY_PATH).read_bytes()
+    )
     assert generator.canonical_json_bytes(generator.build_registry(ROOT)) == (
         generator.canonical_json_bytes(generator.build_registry(ROOT))
     )
@@ -178,11 +233,15 @@ def test_schemas_close_every_object_and_exact_inventory_lengths() -> None:
         "extra-key",
         "cell-count",
         "observed-summary",
+        "observed-license",
+        "observed-url",
+        "observed-license-hash",
+        "observed-notice-hash",
+        "coverage",
+        "distribution-surface",
     ),
 )
-def test_registry_tampering_fails_closed(
-    contract_repository: Path, tamper: str
-) -> None:
+def test_registry_tampering_fails_closed(contract_repository: Path, tamper: str) -> None:
     path = contract_repository / generator.REGISTRY_PATH
     document = json.loads(path.read_text(encoding="utf-8"))
     if tamper == "candidate-status":
@@ -201,8 +260,24 @@ def test_registry_tampering_fails_closed(
         document["unexpected"] = True
     elif tamper == "cell-count":
         document["target_cells"][0]["candidate_count"] += 1
-    else:
+    elif tamper == "observed-summary":
         document["observed_targets"][0]["package_count"] += 1
+    elif tamper == "observed-license":
+        document["observed_targets"][0]["package_observations"][1]["license_observation"] = (
+            "changed observation"
+        )
+    elif tamper == "observed-url":
+        document["observed_targets"][0]["package_observations"][2]["url_observation"] = (
+            "https://changed.invalid"
+        )
+    elif tamper == "observed-license-hash":
+        document["observed_targets"][0]["package_observations"][3]["license_text_sha256"] = "0" * 64
+    elif tamper == "observed-notice-hash":
+        document["observed_targets"][0]["package_observations"][-1]["notice_text_sha256"] = "0" * 64
+    elif tamper == "coverage":
+        document["coverage"]["distribution_closure"] = "proven"
+    else:
+        document["distribution_surfaces"]["packaging"]["data_group_count"] = 5
     path.write_bytes(generator.canonical_json_bytes(document))
 
     _registry, errors = checker.registry_policy_errors(contract_repository)
@@ -213,9 +288,7 @@ def test_registry_tampering_fails_closed(
 def test_source_and_schema_drift_fail_closed(contract_repository: Path) -> None:
     lock = contract_repository / generator.PACKAGE_LOCK_PATH
     lock.write_text(
-        lock.read_text(encoding="utf-8").replace(
-            "mujoco==3.10.0", "mujoco==3.10.1", 1
-        ),
+        lock.read_text(encoding="utf-8").replace("mujoco==3.10.0", "mujoco==3.10.1", 1),
         encoding="utf-8",
     )
     schema = contract_repository / generator.REGISTRY_SCHEMA_PATH
@@ -243,13 +316,11 @@ def test_package_profile_evidence_matches_each_observed_target(
     tmp_path: Path, runner_os: str
 ) -> None:
     registry = _registry()
-    relative = _write_evidence(
-        tmp_path, _evidence_document(registry, runner_os)
-    )
+    evidence = _evidence_document(registry, runner_os)
+    registry = _registry_with_evidence_observations(registry, runner_os, evidence)
+    relative = _write_evidence(tmp_path, evidence)
 
-    assert checker.evidence_policy_errors(
-        tmp_path, registry, relative, runner_os
-    ) == []
+    assert checker.evidence_policy_errors(tmp_path, registry, relative, runner_os) == []
 
 
 @pytest.mark.parametrize(
@@ -261,14 +332,17 @@ def test_package_profile_evidence_matches_each_observed_target(
         "wrong-version",
         "extra-package",
         "gap-summary",
+        "license-observation",
+        "url-observation",
+        "license-text-observation",
+        "notice-text-observation",
         "crlf",
     ),
 )
-def test_package_profile_evidence_tampering_fails_closed(
-    tmp_path: Path, tamper: str
-) -> None:
+def test_package_profile_evidence_tampering_fails_closed(tmp_path: Path, tamper: str) -> None:
     registry = _registry()
     document = _evidence_document(registry, "Linux")
+    registry = _registry_with_evidence_observations(registry, "Linux", document)
     payload = None
     if tamper == "status":
         document["compliance_status"] = "complete"
@@ -292,11 +366,33 @@ def test_package_profile_evidence_tampering_fails_closed(
         document["package_count"] += 1
     elif tamper == "gap-summary":
         document["metadata_gaps"]["url"] += 1
+    elif tamper == "license-observation":
+        document["packages"][1]["license"] = "changed observation"
+    elif tamper == "url-observation":
+        document["packages"][2]["url"] = "https://changed.invalid"
+    elif tamper == "license-text-observation":
+        document["packages"][3]["license_text"] = "changed observation"
+    elif tamper == "notice-text-observation":
+        document["packages"][-1]["notice_text"] = "changed observation"
     else:
         payload = generator.canonical_json_bytes(document).replace(b"\n", b"\r\n")
     relative = _write_evidence(tmp_path, document, payload=payload)
 
-    assert checker.evidence_policy_errors(tmp_path, registry, relative, "Linux")
+    errors = checker.evidence_policy_errors(tmp_path, registry, relative, "Linux")
+
+    assert errors
+    observation_fields = {
+        "license-observation": "license_observation",
+        "url-observation": "url_observation",
+        "license-text-observation": "license_text_sha256",
+        "notice-text-observation": "notice_text_sha256",
+    }
+    if tamper in observation_fields:
+        assert any(
+            "accepted normalized metadata observation drift" in error
+            and observation_fields[tamper] in error
+            for error in errors
+        )
 
 
 @pytest.mark.parametrize(
@@ -321,8 +417,6 @@ def test_evidence_parser_rejects_ambiguous_json(payload: bytes) -> None:
         Path("build/validation/python-licenses.txt"),
     ),
 )
-def test_evidence_path_is_bounded_to_validation_json(
-    tmp_path: Path, path: Path
-) -> None:
+def test_evidence_path_is_bounded_to_validation_json(tmp_path: Path, path: Path) -> None:
     with pytest.raises(generator.LicenseInventoryError, match="build/validation"):
         checker._safe_evidence_bytes(tmp_path, path)

@@ -10,6 +10,7 @@ provenance.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -25,16 +26,14 @@ from scripts import generate_license_inventory as inventory  # noqa: E402
 from scripts import generate_sbom_inputs as supply  # noqa: E402
 
 
-EXPECTED_REGISTRY_SCHEMA_SHA256 = (
-    "34df37e8de8d7bf785cca984d430f7c03270f5be56af7fbc8c6bb4f3e7be7487"
-)
-EXPECTED_EVIDENCE_SCHEMA_SHA256 = (
-    "b247efd4aa2e12e9b704954a291ac54a5d72a8f0e16f145d8c7ac1489ffdf3f6"
-)
+EXPECTED_REGISTRY_SCHEMA_SHA256 = "20aa69e6853f317009ced2297da8162a3b51aa720e1a019834deff2f5503ee40"
+EXPECTED_EVIDENCE_SCHEMA_SHA256 = "b247efd4aa2e12e9b704954a291ac54a5d72a8f0e16f145d8c7ac1489ffdf3f6"
 
 REGISTRY_TOP_KEYS = {
     "candidates",
     "contract",
+    "coverage",
+    "distribution_surfaces",
     "observation_baseline",
     "observed_targets",
     "schema_version",
@@ -63,6 +62,7 @@ SOURCE_NAMES = {
     "project",
     "registry_schema",
     "scanner",
+    "sbom_generator",
 }
 CANDIDATE_KEYS = {"environment_ids", "marker", "name", "review_status", "version"}
 CELL_KEYS = {
@@ -79,8 +79,17 @@ OBSERVED_KEYS = {
     "id",
     "metadata_gaps",
     "package_count",
+    "package_observations",
     "recorded_target",
     "runner_os",
+}
+OBSERVED_PACKAGE_KEYS = {
+    "license_observation",
+    "license_text_sha256",
+    "name",
+    "notice_text_sha256",
+    "url_observation",
+    "version",
 }
 ARTIFACT_KEYS = {"evidence_sha256", "expires_at", "id", "name"}
 TARGET_KEYS = {
@@ -119,6 +128,7 @@ PACKAGE_KEYS = {"license", "license_text", "name", "notice_text", "url", "versio
 EXPECTED_CONTRACT = {
     "blockers": [
         "copyright-attribution-review-pending",
+        "distribution-closure-unproven",
         "license-expression-review-pending",
         "license-text-coverage-pending",
         "native-and-base-image-transitive-inventory-pending",
@@ -137,6 +147,32 @@ EXPECTED_CONTRACT = {
     "qt_pyside_lgpl_decision": "pending",
     "target_cell_count": 12,
 }
+EXPECTED_COVERAGE = {
+    "distribution_closure": "unproven",
+    "distribution_surface_inventory": "enumerated-not-license-reviewed",
+    "license_observation_scope": "python-package-input-only",
+    "lock_candidate_count": 49,
+    "observed_candidate_union_count": 48,
+    "observed_target_count": 3,
+    "observed_target_ids": [
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+    ],
+    "unobserved_candidates": [{"name": "exceptiongroup", "version": "1.3.1"}],
+    "unobserved_target_count": 9,
+    "unobserved_target_ids": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64",
+    ],
+}
 EXPECTED_OBSERVATION_BASELINE = {
     "evidence_scope": "short-lived development evidence; not release provenance",
     "source_commit": "6f0995bd8fe52f8fa6832a03f83254eb13ff9cc1",
@@ -147,9 +183,7 @@ EXPECTED_OBSERVED = {
         "artifact_id": 8542125543,
         "artifact_name": "mclab-supply-chain-Linux",
         "cell_id": "cpython-3.11-linux-x86_64",
-        "evidence_sha256": (
-            "cea1db18977740f449f413d87e13ee2c85707f6bcbc2684b020f396c82635d83"
-        ),
+        "evidence_sha256": ("cea1db18977740f449f413d87e13ee2c85707f6bcbc2684b020f396c82635d83"),
         "expires_at": "2026-08-05T19:27:49Z",
         "id": "github-hosted-linux-cpython-3.11",
         "machine": "x86_64",
@@ -167,9 +201,7 @@ EXPECTED_OBSERVED = {
         "artifact_id": 8542118388,
         "artifact_name": "mclab-supply-chain-macOS",
         "cell_id": "cpython-3.11-darwin-arm64",
-        "evidence_sha256": (
-            "fdc73a10a3e5a9bad525604d1ff7450021182fbb78965b7407da7620d50d44de"
-        ),
+        "evidence_sha256": ("fdc73a10a3e5a9bad525604d1ff7450021182fbb78965b7407da7620d50d44de"),
         "expires_at": "2026-08-05T19:27:32Z",
         "id": "github-hosted-macos-cpython-3.11",
         "machine": "arm64",
@@ -187,9 +219,7 @@ EXPECTED_OBSERVED = {
         "artifact_id": 8542166959,
         "artifact_name": "mclab-supply-chain-Windows",
         "cell_id": "cpython-3.11-win32-amd64",
-        "evidence_sha256": (
-            "bd9540d0b5a21f0772d9722b5fbf61e63902547074ac738d874da2bc9dfb987f"
-        ),
+        "evidence_sha256": ("bd9540d0b5a21f0772d9722b5fbf61e63902547074ac738d874da2bc9dfb987f"),
         "expires_at": "2026-08-05T19:29:22Z",
         "id": "github-hosted-windows-cpython-3.11",
         "machine": "AMD64",
@@ -313,6 +343,79 @@ def _source_errors(root: Path, source: object, label: str) -> list[str]:
     return errors
 
 
+def _observed_package_errors(
+    registry: Mapping[str, object],
+    target: Mapping[str, object],
+    label: str,
+) -> list[str]:
+    errors: list[str] = []
+    observations = target.get("package_observations")
+    package_count = target.get("package_count")
+    if not isinstance(observations, list) or len(observations) != package_count:
+        return [f"{label}.package_observations: exact package_count records required"]
+    try:
+        expected_versions = _expected_packages(registry, str(target.get("cell_id")))
+    except inventory.LicenseInventoryError as exc:
+        return [f"{label}.package_observations: {exc}"]
+    actual_versions: dict[str, str] = {}
+    names: list[str] = []
+    calculated_gaps = {key: 0 for key in sorted(GAP_KEYS)}
+    for index, package in enumerate(observations):
+        package_label = f"{label}.package_observations[{index}]"
+        if not _exact_keys(package, OBSERVED_PACKAGE_KEYS, package_label, errors):
+            continue
+        assert isinstance(package, dict)
+        name = package.get("name")
+        version = package.get("version")
+        if not isinstance(name, str) or supply._normalise_name(name) != name:
+            errors.append(f"{package_label}.name: normalized name required")
+            continue
+        if name in actual_versions:
+            errors.append(f"{package_label}.name: duplicate package {name}")
+            continue
+        if not isinstance(version, str) or not version:
+            errors.append(f"{package_label}.version: nonempty string required")
+            continue
+        names.append(name)
+        actual_versions[name] = version
+        for field in ("license_observation", "url_observation"):
+            value = package.get(field)
+            gap_name = "license" if field == "license_observation" else "url"
+            if value is None:
+                calculated_gaps[gap_name] += 1
+            elif (
+                not isinstance(value, str)
+                or not _normalized_text(value)
+                or _normalized_text(value) != value
+                or len(value.encode("utf-8")) > 1024 * 1024
+            ):
+                errors.append(f"{package_label}.{field}: normalized bounded text required")
+        license_value = package.get("license_observation")
+        if isinstance(license_value, str):
+            parts = [part.strip() for part in license_value.split(";") if part.strip()]
+            normalized_license = "; ".join(
+                sorted(set(parts), key=lambda item: (item.casefold(), item))
+            )
+            if normalized_license != license_value:
+                errors.append(f"{package_label}.license_observation: sorted unique list required")
+        for field, gap_name in (
+            ("license_text_sha256", "license_text"),
+            ("notice_text_sha256", "notice_text"),
+        ):
+            value = package.get(field)
+            if value is None:
+                calculated_gaps[gap_name] += 1
+            elif not isinstance(value, str) or supply.SHA256_RE.fullmatch(value) is None:
+                errors.append(f"{package_label}.{field}: lowercase SHA-256 or null required")
+    if names != sorted(names):
+        errors.append(f"{label}.package_observations: package names must be sorted")
+    if actual_versions != expected_versions:
+        errors.append(f"{label}.package_observations: package lock coverage drift")
+    if calculated_gaps != target.get("metadata_gaps"):
+        errors.append(f"{label}.package_observations: metadata gap summary drift")
+    return errors
+
+
 def registry_policy_errors(root: Path) -> tuple[dict[str, object] | None, list[str]]:
     errors: list[str] = []
     try:
@@ -326,6 +429,15 @@ def registry_policy_errors(root: Path) -> tuple[dict[str, object] | None, list[s
         errors.append("registry.schema_version: expected 1")
     if registry.get("contract") != EXPECTED_CONTRACT:
         errors.append("registry.contract: pending LIC-01A boundary drift")
+    if registry.get("coverage") != EXPECTED_COVERAGE:
+        errors.append("registry.coverage: observed/unobserved scope drift")
+    try:
+        expected_surfaces = inventory._distribution_surfaces(root)
+    except (inventory.LicenseInventoryError, supply.SupplyChainInputError) as exc:
+        errors.append(str(exc))
+    else:
+        if registry.get("distribution_surfaces") != expected_surfaces:
+            errors.append("registry.distribution_surfaces: reviewed SBOM-input enumeration drift")
     if registry.get("observation_baseline") != EXPECTED_OBSERVATION_BASELINE:
         errors.append("registry.observation_baseline: accepted SUP-01 evidence drift")
 
@@ -434,6 +546,7 @@ def registry_policy_errors(root: Path) -> tuple[dict[str, object] | None, list[s
         }
         if actual_summary != expected:
             errors.append(f"{label}: accepted observed-target summary drift")
+        errors.extend(_observed_package_errors(registry, target, label))
     if runners != set(EXPECTED_OBSERVED):
         errors.append("registry.observed_targets: Linux/Windows/macOS coverage required")
     return registry, errors
@@ -459,9 +572,7 @@ def _normalized_text(value: str) -> str:
     return "\n".join(line.rstrip() for line in unix.split("\n")).strip()
 
 
-def _expected_packages(
-    registry: Mapping[str, object], cell_id: str
-) -> dict[str, str]:
+def _expected_packages(registry: Mapping[str, object], cell_id: str) -> dict[str, str]:
     candidates = registry["candidates"]
     assert isinstance(candidates, list)
     packages = {
@@ -524,16 +635,41 @@ def evidence_policy_errors(
     if any(target.get(key) != value for key, value in expected_target.items()):
         errors.append(f"evidence.target: {runner_os} target identity drift")
     python_full_version = target.get("python_version")
-    if not isinstance(python_full_version, str) or re.fullmatch(
-        r"3\.11\.[0-9]+", python_full_version
-    ) is None:
+    if (
+        not isinstance(python_full_version, str)
+        or re.fullmatch(r"3\.11\.[0-9]+", python_full_version) is None
+    ):
         errors.append("evidence.target.python_version: CPython 3.11 patch required")
 
     packages = evidence.get("packages")
     if not isinstance(packages, list):
         return errors + ["evidence.packages: expected list"]
-    expected_packages = _expected_packages(registry, str(expected_observed["cell_id"]))
+    try:
+        expected_packages = _expected_packages(registry, str(expected_observed["cell_id"]))
+    except inventory.LicenseInventoryError as exc:
+        return errors + [str(exc)]
+    registry_targets = registry.get("observed_targets")
+    matching_targets = (
+        [
+            target
+            for target in registry_targets
+            if isinstance(target, dict) and target.get("runner_os") == runner_os
+        ]
+        if isinstance(registry_targets, list)
+        else []
+    )
+    if len(matching_targets) != 1:
+        return errors + [f"registry.observed_targets: one {runner_os} target required"]
+    expected_observation_rows = matching_targets[0].get("package_observations")
+    if not isinstance(expected_observation_rows, list):
+        return errors + [f"registry.observed_targets: {runner_os} package observations required"]
+    expected_observations = {
+        str(package["name"]): package
+        for package in expected_observation_rows
+        if isinstance(package, dict) and "name" in package
+    }
     actual_packages: dict[str, str] = {}
+    actual_observations: dict[str, dict[str, object]] = {}
     calculated_gaps = {key: 0 for key in sorted(GAP_KEYS)}
     names: list[str] = []
     for index, package in enumerate(packages):
@@ -575,6 +711,28 @@ def evidence_policy_errors(
             )
             if normalized_license != license_value:
                 errors.append(f"{label}.license: sorted unique identifier list required")
+        actual_observations[name] = {
+            "license_observation": (
+                _normalized_text(license_value) if isinstance(license_value, str) else None
+            ),
+            "license_text_sha256": (
+                hashlib.sha256(
+                    _normalized_text(package["license_text"]).encode("utf-8")
+                ).hexdigest()
+                if isinstance(package.get("license_text"), str)
+                else None
+            ),
+            "name": name,
+            "notice_text_sha256": (
+                hashlib.sha256(_normalized_text(package["notice_text"]).encode("utf-8")).hexdigest()
+                if isinstance(package.get("notice_text"), str)
+                else None
+            ),
+            "url_observation": (
+                _normalized_text(package["url"]) if isinstance(package.get("url"), str) else None
+            ),
+            "version": version,
+        }
     if names != sorted(names):
         errors.append("evidence.packages: package names must be sorted")
     if actual_packages != expected_packages:
@@ -588,6 +746,22 @@ def evidence_policy_errors(
         errors.append(
             "evidence.packages: package lock coverage drift "
             f"missing={missing}, extra={extra}, version_mismatch={mismatched}"
+        )
+    if actual_observations != expected_observations:
+        drift: list[str] = []
+        for name in sorted(set(actual_observations) | set(expected_observations)):
+            actual = actual_observations.get(name)
+            expected = expected_observations.get(name)
+            if actual is None or expected is None:
+                drift.append(f"{name}:record")
+                continue
+            fields = sorted(
+                field for field in OBSERVED_PACKAGE_KEYS if actual.get(field) != expected.get(field)
+            )
+            if fields:
+                drift.append(f"{name}:{','.join(fields)}")
+        errors.append(
+            f"evidence.packages: accepted normalized metadata observation drift fields={drift}"
         )
     if evidence.get("package_count") != len(packages):
         errors.append("evidence.package_count: must equal package list length")
