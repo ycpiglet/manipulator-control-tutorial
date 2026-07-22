@@ -110,13 +110,17 @@ def test_size_limits_are_exact_binary_mib_and_independent(build_module) -> None:
 
 def test_desktop_workflow_verifies_and_retains_exact_package_evidence() -> None:
     workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+    isolated = workflow.index("- name: Create isolated package-build environment")
     build = workflow.index("- name: Build unsigned one-folder app")
     diagnostics = workflow.index("- name: Verify packaged app and diagnostics")
     verify = workflow.index("- name: Verify package identity and size evidence")
     upload = workflow.index("- name: Upload unsigned development package")
 
-    assert build < diagnostics < verify < upload
-    assert "run: python scripts/build_desktop.py --verify-only" in workflow
+    assert isolated < build < diagnostics < verify < upload
+    assert 'package_env="$RUNNER_TEMP/mclab-package-build"' in workflow
+    assert '"$package_python" scripts/install_locked.py --allow-external-env package' in workflow
+    assert "run: '\"$MCLAB_BUILD_PYTHON\" scripts/build_desktop.py --clean'" in workflow
+    assert "run: '\"$MCLAB_BUILD_PYTHON\" scripts/build_desktop.py --verify-only'" in workflow
     assert "Mark build as unsigned development artifact" not in workflow
     upload_block = workflow[upload:]
     assert "dist/MCLab\n" in upload_block
