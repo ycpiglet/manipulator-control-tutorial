@@ -49,20 +49,26 @@ Jacobian/DLS, 7DOF Franka Panda의 Cartesian 제어와 가상 벽 접촉까지
 
 ## 빠른 시작
 
-Python 3.10 이상이 필요합니다. 첫 실행은 전용 `.venv`를 만들고 의존성과
-검증된 Panda asset을 내려받으므로 인터넷 연결과 몇 분이 필요할 수
-있습니다.
+CPython 3.10, 3.11 또는 3.12가 필요합니다. 첫 실행은 전용 `.venv`를 만들고
+hash로 잠근 wheel 의존성과 검증된 Panda asset을 내려받으므로 인터넷 연결과
+몇 분이 필요할 수 있습니다.
 
 ```bash
 git clone https://github.com/ycpiglet/manipulator-control-tutorial.git
 cd manipulator-control-tutorial
 ```
 
-| 운영체제 | 권장 실행 |
+| 검토된 의존성 잠금 대상 | 권장 실행 |
 |---|---|
-| Windows | `START_HERE.cmd` 더블클릭 |
-| Ubuntu/Linux | `./start_here.sh` |
-| macOS | `./START_HERE.command` |
+| Windows 10 1809 이상 또는 Windows 11, AMD64 | `START_HERE.cmd` 더블클릭 |
+| Linux x86-64, glibc 2.34 이상 | `./start_here.sh` |
+| macOS 13 이상, Apple Silicon 또는 Intel | `./START_HERE.command` |
+
+이 표는 데스크톱 앱의 의존성 잠금 대상이며 전체 호환성 인증표는 아닙니다.
+Windows·Linux·macOS native CI는 CPython 3.11을 실행하고, Linux headless CI는
+3.10과 3.12도 실행합니다. 나머지 조합은 cross-target wheel 검증까지만 완료되어
+native 검증이 남아 있습니다. 그 밖의 OS·아키텍처에서는 설치기가 네트워크 접근
+전에 잠금 대상이 아님을 설명하고 중단합니다.
 
 앱이 열리면 다음 순서로 첫 결과를 만듭니다.
 
@@ -100,7 +106,7 @@ source .venv/bin/activate
 가상환경을 활성화한 뒤 모든 OS에서:
 
 ```bash
-python -m pip install -e ".[app]"
+python scripts/install_locked.py app
 python -m mclab assets install
 python -m mclab doctor
 python -m mclab app
@@ -109,7 +115,7 @@ python -m mclab app
 Qt 앱 없이 첫 headless report와 plot을 만들 수도 있습니다.
 
 ```bash
-python -m pip install -e .
+python scripts/install_locked.py runtime
 python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot --plots essential
 ```
 
@@ -238,7 +244,7 @@ python -m mclab clean --restore RECEIPT_ID_FROM_LIST
 ## 개발과 기여
 
 ```bash
-python -m pip install -e ".[app,dev]"
+python scripts/install_locked.py app-dev
 python -m pytest -q
 python -m ruff check src tests scripts .agents/validation
 python -m mclab app --self-test

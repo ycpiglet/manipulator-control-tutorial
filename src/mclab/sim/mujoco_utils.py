@@ -16,7 +16,7 @@ def import_mujoco() -> Any:
     except ModuleNotFoundError as exc:
         raise RuntimeError(
             "MuJoCo is required to run this lab. Install the project with "
-            "`pip install -e .` or install the `mujoco` package."
+            "`python scripts/install_locked.py runtime` from the repository root."
         ) from exc
     return mujoco
 

@@ -8,9 +8,15 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+try:
+    from scripts.install_locked import project_venv_redirect_error, support_error
+except ModuleNotFoundError:  # Direct execution puts scripts/ first on sys.path.
+    from install_locked import project_venv_redirect_error, support_error
+
 
 ROOT = Path(__file__).resolve().parents[1]
-VENV_PYTHON = ROOT / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+VENV = ROOT / ".venv"
+VENV_PYTHON = VENV / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
 MENAGERIE = ROOT / "third_party" / "mujoco_menagerie"
 
 
@@ -71,8 +77,9 @@ def main() -> int:
     parser.add_argument("--skip-tests", action="store_true", help="Skip pytest and ruff checks.")
     args = parser.parse_args()
 
-    ensure_venv()
-    ensure_dependencies()
+    profile = "runtime" if args.setup_only or args.skip_tests else "dev"
+    ensure_venv(profile)
+    ensure_dependencies(profile)
     ensure_menagerie()
 
     if args.setup_only:
@@ -111,15 +118,28 @@ def main() -> int:
     return 0
 
 
-def ensure_venv() -> None:
+def ensure_venv(profile: str = "runtime") -> None:
+    redirect_error = project_venv_redirect_error(VENV)
+    if redirect_error:
+        raise RuntimeError(
+            f"Refusing unsafe project environment {VENV}: {redirect_error}. "
+            "Remove it before setup."
+        )
     if VENV_PYTHON.exists():
         return
-    run([sys.executable, "-m", "venv", str(ROOT / ".venv")])
+    if VENV.exists():
+        raise RuntimeError(
+            f"Refusing to overwrite incomplete project environment {VENV}. "
+            "Remove it before setup."
+        )
+    error = support_error(profile)
+    if error:
+        raise RuntimeError(error)
+    run([sys.executable, "-m", "venv", str(VENV)])
 
 
-def ensure_dependencies() -> None:
-    run([str(VENV_PYTHON), "-m", "pip", "install", "--upgrade", "pip"])
-    run([str(VENV_PYTHON), "-m", "pip", "install", "-e", ".[dev]"])
+def ensure_dependencies(profile: str = "runtime") -> None:
+    run([str(VENV_PYTHON), str(ROOT / "scripts" / "install_locked.py"), profile])
 
 
 def ensure_menagerie() -> None:

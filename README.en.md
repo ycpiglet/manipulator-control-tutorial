@@ -51,20 +51,27 @@ guided baseline, comparison, and failure scenarios.
 
 ## Quick start
 
-Python 3.10 or newer is required. The first launch creates a dedicated
-`.venv`, installs dependencies, and downloads the verified Panda asset, so it
-needs an internet connection and may take a few minutes.
+CPython 3.10, 3.11, or 3.12 is required. The first launch creates a dedicated
+`.venv`, installs hash-locked wheel dependencies, and downloads the verified
+Panda asset, so it needs an internet connection and may take a few minutes.
 
 ```bash
 git clone https://github.com/ycpiglet/manipulator-control-tutorial.git
 cd manipulator-control-tutorial
 ```
 
-| Platform | Recommended launcher |
+| Reviewed dependency-lock target | Recommended launcher |
 |---|---|
-| Windows | Double-click `START_HERE.cmd` |
-| Ubuntu/Linux | `./start_here.sh` |
-| macOS | `./START_HERE.command` |
+| Windows 10 1809+ or Windows 11, AMD64 | Double-click `START_HERE.cmd` |
+| Linux x86-64 with glibc 2.34+ | `./start_here.sh` |
+| macOS 13+ on Apple Silicon or Intel | `./START_HERE.command` |
+
+This table defines dependency-lock targets, not a complete compatibility
+certification matrix. Native Windows, Linux, and macOS CI runs CPython 3.11;
+Linux headless CI also runs 3.10 and 3.12. The remaining combinations have
+cross-target wheel validation only and still need native validation. Other
+operating systems and architectures are not current lock targets; the installer
+stops before network access with an actionable message.
 
 After the app opens:
 
@@ -103,7 +110,7 @@ source .venv/bin/activate
 Then, on every platform:
 
 ```bash
-python -m pip install -e ".[app]"
+python scripts/install_locked.py app
 python -m mclab assets install
 python -m mclab doctor
 python -m mclab app
@@ -112,7 +119,7 @@ python -m mclab app
 You can also create a first headless report and plot without Qt:
 
 ```bash
-python -m pip install -e .
+python scripts/install_locked.py runtime
 python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot --plots essential
 ```
 
@@ -248,7 +255,7 @@ authoritative work order.
 ## Development and contributing
 
 ```bash
-python -m pip install -e ".[app,dev]"
+python scripts/install_locked.py app-dev
 python -m pytest -q
 python -m ruff check src tests scripts .agents/validation
 python -m mclab app --self-test

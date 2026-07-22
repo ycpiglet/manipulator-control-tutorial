@@ -4,6 +4,8 @@ setlocal
 cd /d "%~dp0"
 
 if not exist ".venv\Scripts\python.exe" goto setup
+".venv\Scripts\python.exe" "scripts\install_locked.py" --check runtime >nul 2>&1
+if errorlevel 1 goto setup
 goto run
 
 :setup
