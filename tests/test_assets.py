@@ -578,6 +578,38 @@ class AssetContractTests(unittest.TestCase):
 
             self.assertTrue(swapped)
 
+    def test_verifier_does_not_depend_on_incomplete_direntry_stat_metadata(self) -> None:
+        files = {"assets/link.obj": b"trusted", "scene.xml": b"scene"}
+        with tempfile.TemporaryDirectory() as tmp, _runtime_contract(files):
+            root = Path(tmp)
+            _write_runtime_tree(root, files)
+            original_scandir = os.scandir
+
+            class WindowsLikeDirEntry:
+                """Expose names and paths but reject cached DirEntry metadata."""
+
+                def __init__(self, entry: os.DirEntry[str]) -> None:
+                    self.name = entry.name
+                    self.path = entry.path
+
+                def stat(self, *, follow_symlinks: bool = True) -> os.stat_result:
+                    del follow_symlinks
+                    raise AssertionError(
+                        "verification must use lstat instead of incomplete DirEntry.stat data"
+                    )
+
+            @contextmanager
+            def windows_like_scandir(path: str | os.PathLike[str]):
+                with original_scandir(path) as scanned:
+                    entries = [WindowsLikeDirEntry(entry) for entry in scanned]
+                yield entries
+
+            with patch.object(assets.os, "scandir", side_effect=windows_like_scandir):
+                result = assets.verify_assets(root)
+
+            self.assertEqual(result.file_count, 2)
+            self.assertEqual(result.total_bytes, 12)
+
     def test_reparse_attribute_is_rejected_without_platform_privileges(self) -> None:
         metadata = SimpleNamespace(
             st_mode=stat.S_IFDIR,

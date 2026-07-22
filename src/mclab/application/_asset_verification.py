@@ -127,7 +127,11 @@ def verify_runtime_tree(
             relative = f"{relative_parent}/{entry.name}" if relative_parent else entry.name
             path = Path(entry.path)
             try:
-                metadata = entry.stat(follow_symlinks=False)
+                # Windows DirEntry.stat() leaves st_ino, st_dev, and st_nlink at
+                # zero, so its cached result cannot be compared safely with the
+                # later lstat/fstat snapshots.  Use one fresh no-follow snapshot
+                # for every platform and retain it for the existing lease checks.
+                metadata = os.lstat(path)
             except OSError as exc:
                 safety_issues.append(f"could not inspect {relative}: {exc}")
                 continue
