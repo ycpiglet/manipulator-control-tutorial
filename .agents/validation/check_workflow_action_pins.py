@@ -67,6 +67,46 @@ def _file_uses(path: Path) -> list[tuple[int, str]]:
         raise ValueError(f"could not parse action source {path}: {exc}") from exc
 
 
+def _mapping_values(node: Node, key: str) -> list[Node]:
+    if not isinstance(node, MappingNode):
+        return []
+    return [
+        value_node
+        for key_node, value_node in node.value
+        if isinstance(key_node, ScalarNode) and key_node.value == key
+    ]
+
+
+def _validate_local_action_definition(path: Path, reference: str) -> None:
+    """Allow only auditable composite repository-local actions."""
+
+    try:
+        documents = list(
+            yaml.compose_all(
+                path.read_text(encoding="utf-8"),
+                Loader=yaml.SafeLoader,
+            )
+        )
+    except (OSError, yaml.YAMLError) as exc:
+        raise ValueError(f"could not parse local action {reference}: {exc}") from exc
+    if len(documents) != 1 or not isinstance(documents[0], MappingNode):
+        raise ValueError(f"local action must contain one YAML mapping: {reference}")
+
+    runs_nodes = _mapping_values(documents[0], "runs")
+    if len(runs_nodes) != 1 or not isinstance(runs_nodes[0], MappingNode):
+        raise ValueError(f"local action must contain exactly one runs mapping: {reference}")
+    using_nodes = _mapping_values(runs_nodes[0], "using")
+    if (
+        len(using_nodes) != 1
+        or not isinstance(using_nodes[0], ScalarNode)
+        or using_nodes[0].value != "composite"
+    ):
+        raise ValueError(
+            "local action must use runs.using: composite; "
+            f"non-composite local actions are not allowed: {reference}"
+        )
+
+
 def _resolve_local_action(reference: str, repository_root: Path) -> Path:
     root = repository_root.resolve()
     candidate = (root / reference.removeprefix("./")).resolve()
@@ -88,6 +128,7 @@ def _resolve_local_action(reference: str, repository_root: Path) -> Path:
     definition = definitions[0].resolve()
     if not definition.is_relative_to(root):
         raise ValueError(f"local action definition escapes repository root: {reference}")
+    _validate_local_action_definition(definition, reference)
     return definition
 
 

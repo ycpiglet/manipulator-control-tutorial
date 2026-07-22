@@ -126,6 +126,144 @@ class WorkflowActionPinTests(unittest.TestCase):
         )
         self.assertEqual(len(CHECKER.unpinned_references(references)), 1)
 
+    def test_local_non_composite_actions_are_rejected(self) -> None:
+        for runtime, descriptor in (
+            (
+                "docker",
+                "runs: {using: docker, image: 'docker://alpine:latest'}\n",
+            ),
+            ("node24", "runs:\n  using: node24\n  main: dist/index.js\n"),
+        ):
+            with self.subTest(runtime=runtime), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                workflows = root / "workflows"
+                action_dir = root / "actions" / "demo"
+                workflows.mkdir()
+                action_dir.mkdir(parents=True)
+                (workflows / "ci.yml").write_text(
+                    "steps:\n  - uses: ./actions/demo\n",
+                    encoding="utf-8",
+                )
+                (action_dir / "action.yml").write_text(
+                    descriptor,
+                    encoding="utf-8",
+                )
+
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "non-composite local actions are not allowed",
+                ):
+                    CHECKER.external_action_references(
+                        CHECKER.workflow_files(workflows),
+                        repository_root=root,
+                    )
+
+    def test_ambiguous_or_incomplete_local_action_metadata_is_rejected(self) -> None:
+        fixtures = (
+            (
+                "duplicate-runs",
+                "runs:\n  using: composite\nruns:\n  using: docker\n",
+                "exactly one runs mapping",
+            ),
+            (
+                "duplicate-escaped-using",
+                'runs:\n  using: composite\n  "\\x75sing": docker\n',
+                "non-composite local actions are not allowed",
+            ),
+            (
+                "multiple-documents",
+                "runs:\n  using: composite\n---\nruns:\n  using: composite\n",
+                "one YAML mapping",
+            ),
+            (
+                "empty-document-prefix",
+                "---\n---\nruns:\n  using: composite\n",
+                "one YAML mapping",
+            ),
+            (
+                "non-mapping-document",
+                "- runs:\n    using: composite\n",
+                "one YAML mapping",
+            ),
+            (
+                "missing-runs",
+                "name: incomplete action\n",
+                "exactly one runs mapping",
+            ),
+        )
+        for name, descriptor, expected_error in fixtures:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                workflows = root / "workflows"
+                action_dir = root / "actions" / "demo"
+                workflows.mkdir()
+                action_dir.mkdir(parents=True)
+                (workflows / "ci.yml").write_text(
+                    "steps:\n  - uses: ./actions/demo\n",
+                    encoding="utf-8",
+                )
+                (action_dir / "action.yml").write_text(
+                    descriptor,
+                    encoding="utf-8",
+                )
+
+                with self.assertRaisesRegex(ValueError, expected_error):
+                    CHECKER.external_action_references(
+                        CHECKER.workflow_files(workflows),
+                        repository_root=root,
+                    )
+
+    def test_local_reusable_workflow_dependencies_are_scanned(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            workflows = root / "workflows"
+            workflows.mkdir()
+            entry = workflows / "ci.yml"
+            entry.write_text(
+                "jobs:\n  call:\n    uses: ./workflows/reusable.yml\n",
+                encoding="utf-8",
+            )
+            reusable = workflows / "reusable.yml"
+            reusable.write_text(
+                "jobs:\n  nested:\n    steps:\n      - uses: attacker/action@v1\n",
+                encoding="utf-8",
+            )
+
+            references = CHECKER.external_action_references(
+                [entry],
+                repository_root=root,
+            )
+
+        self.assertEqual(
+            [reference for _path, _line, reference in references],
+            ["attacker/action@v1"],
+        )
+
+    @unittest.skipIf(sys.platform.startswith("win"), "file symlink fixture requires POSIX")
+    def test_local_reusable_workflow_symlink_cannot_escape_repository(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            temp = Path(tmp)
+            root = temp / "repo"
+            workflows = root / "workflows"
+            workflows.mkdir(parents=True)
+            entry = workflows / "ci.yml"
+            entry.write_text(
+                "jobs:\n  call:\n    uses: ./workflows/reusable.yml\n",
+                encoding="utf-8",
+            )
+            outside = temp / "outside-reusable.yml"
+            outside.write_text(
+                "jobs:\n  nested:\n    steps:\n      - uses: attacker/action@v1\n",
+                encoding="utf-8",
+            )
+            (workflows / "reusable.yml").symlink_to(outside)
+
+            with self.assertRaisesRegex(ValueError, "escapes repository root"):
+                CHECKER.external_action_references(
+                    [entry],
+                    repository_root=root,
+                )
+
     @unittest.skipIf(sys.platform.startswith("win"), "file symlink fixture requires POSIX")
     def test_local_action_definition_symlink_cannot_escape_repository(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
