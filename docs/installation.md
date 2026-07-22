@@ -266,16 +266,24 @@ python scripts/build_desktop.py --clean
 python scripts/build_desktop.py --verify-only
 ```
 
-The builder safely replaces only fixed generated paths after rejecting links,
-reparse points, nested mounts, cross-filesystem entries, and stale package
-transactions. PyInstaller receives fresh empty outputs and is never allowed to
-recursively replace a pre-existing live directory. The result includes the
-live `dist/MCLab/` one-folder tree plus `dist/MCLab-package/`, which contains an
-architecture-specific canonical tar/gzip archive and
+The builder safely replaces only fixed generated paths after rejecting linked
+roots or ancestors, Windows reparse points, nested mounts, cross-filesystem
+entries, and stale package transactions. Safe internal POSIX links are unlinked
+without following them. PyInstaller receives fresh empty outputs and is never
+allowed to recursively replace a pre-existing live directory. The result
+includes the live `dist/MCLab/` one-folder tree plus `dist/MCLab-package/`,
+which contains an architecture-specific canonical tar/gzip archive and
 `package-metrics.json`. Verification reconstructs the canonical archive bytes
 and binds the record to the clean commit, packaging spec, supported OS/CPU
 tuple, CPython/zlib runtime, all distributions and RECORD hashes in the exact
 locked `package` profile, and its lock inputs.
+
+Build and verification commands for the same checkout share a nonblocking
+advisory operation lock under `dist/`; a second cooperating invocation fails
+before it scans, removes, or publishes package data. This is a single-writer
+development contract, not protection from an untrusted process that ignores
+the lock and changes the source, `build/`, or `dist/` trees concurrently. Run
+packaging only on a trusted local filesystem with no such concurrent mutator.
 
 This provenance is intentionally bounded. Native libraries, the runner/base
 image, inherited operating-system state, signature identity, and final SBOM

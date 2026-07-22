@@ -2,10 +2,12 @@
 
 The generated package is deliberately an unsigned development artifact.  Its
 canonical evidence is an integrity record, not a signature or an authenticity
-claim. Publication is rollback-safe for caught exceptions. A process kill or
-power loss can leave a dot-prefixed transaction directory; later build/verify
-operations reject that state for manual inspection rather than claiming
-cross-directory crash atomicity.
+claim. Cooperating build and verification invocations for one checkout are
+serialized, and the source/generated filesystem is assumed not to be changed
+by an untrusted concurrent process. Publication is rollback-safe for caught
+exceptions. A process kill or power loss can leave a dot-prefixed transaction
+directory; later build/verify operations reject that state for manual
+inspection rather than claiming cross-directory crash atomicity.
 """
 
 from __future__ import annotations
@@ -100,10 +102,15 @@ _STALE_TRANSACTION_PREFIXES = (
     f".{PACKAGE_DIRECTORY_NAME}.failed-",
     f".{PACKAGE_DIRECTORY_NAME}.stage-",
 )
+_PACKAGE_OPERATION_LOCK_NAME = ".mclab-package-operation.lock"
 
 
 class PackageValidationError(RuntimeError):
     """Raised when a package cannot be measured or verified safely."""
+
+
+class PackageBusyError(PackageValidationError):
+    """Raised when another cooperating package operation owns the checkout."""
 
 
 def _bundle_root() -> Path:
@@ -171,6 +178,13 @@ def _linux_mount_points() -> frozenset[Path]:
 
 def _path_is_mount(path: Path, mount_points: frozenset[Path]) -> bool:
     candidate = _absolute_path(path)
+    # Windows volume mount points and junctions carry the reparse attribute and
+    # are rejected before this helper. ``os.path.ismount`` can nevertheless
+    # classify ordinary hosted-runner directories as mount points, so use the
+    # stable device/reparse checks there. Linux still needs mountinfo for
+    # same-device bind mounts; POSIX ``ismount`` covers other mount boundaries.
+    if sys.platform.startswith("win"):
+        return False
     try:
         return candidate in mount_points or os.path.ismount(candidate)
     except OSError as exc:
@@ -187,8 +201,10 @@ def _assert_same_filesystem_member(
     mount_points: frozenset[Path],
     label: str,
 ) -> None:
-    if metadata.st_dev != boundary_device or _path_is_mount(path, mount_points):
-        raise PackageValidationError(f"{label} crosses a filesystem or mount boundary: {path}")
+    if metadata.st_dev != boundary_device:
+        raise PackageValidationError(f"{label} crosses a filesystem device boundary: {path}")
+    if _path_is_mount(path, mount_points):
+        raise PackageValidationError(f"{label} crosses a mount boundary: {path}")
 
 
 def _require_real_directory_chain(boundary: Path, target: Path, *, label: str) -> None:
@@ -1216,7 +1232,7 @@ def _require_exact_package_files(package_root: Path, archive_name: str) -> None:
         raise PackageValidationError("Package evidence directory changed during verification")
 
 
-def verify_package(
+def _verify_package_unlocked(
     bundle_root: Path | None = None,
     package_root: Path | None = None,
     *,
@@ -1224,7 +1240,7 @@ def verify_package(
     provenance_mode: str = PROVENANCE_MODE_CHECKOUT,
     _allow_staging_package: bool = False,
 ) -> dict[str, object]:
-    """Verify saved evidence without rewriting it.
+    """Verify saved evidence without rewriting it while the operation lock is held.
 
     The default binds the recorded clean checkout, supported platform tuple,
     exact locked Python package profile, installed RECORD fingerprint, and
@@ -1374,6 +1390,138 @@ def verify_package(
             "but source provenance is self-asserted and was not authenticated."
         )
     return payload
+
+
+def _package_layout_roots(
+    bundle_root: Path | None,
+    package_root: Path | None,
+) -> tuple[Path, Path, Path, Path]:
+    bundle = _absolute_path(bundle_root or _bundle_root())
+    package = _absolute_path(package_root or _package_root())
+    if bundle.parent != package.parent or bundle.parent.name != "dist":
+        raise PackageValidationError("Bundle and package evidence do not use the fixed dist layout")
+    dist = bundle.parent
+    return bundle, package, dist.parent, dist
+
+
+def _lock_descriptor_nonblocking(descriptor: int) -> None:
+    os.lseek(descriptor, 0, os.SEEK_SET)
+    if os.name == "nt":  # pragma: no cover - exercised by Windows CI
+        import msvcrt
+
+        msvcrt.locking(descriptor, msvcrt.LK_NBLCK, 1)
+        return
+    import fcntl
+
+    fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+
+def _unlock_descriptor(descriptor: int) -> None:
+    os.lseek(descriptor, 0, os.SEEK_SET)
+    if os.name == "nt":  # pragma: no cover - exercised by Windows CI
+        import msvcrt
+
+        msvcrt.locking(descriptor, msvcrt.LK_UNLCK, 1)
+        return
+    import fcntl
+
+    fcntl.flock(descriptor, fcntl.LOCK_UN)
+
+
+@contextlib.contextmanager
+def _package_operation_lock(repository_root: Path, dist: Path) -> Iterator[None]:
+    """Serialize cooperating package operations for one physical checkout.
+
+    The persistent lock file is ignored build state under ``dist``. It prevents
+    two supported CLI invocations from racing, but deliberately does not claim
+    protection from a process that ignores the advisory lock and mutates the
+    checkout or generated trees.
+    """
+
+    repository = _absolute_path(repository_root)
+    distribution = _absolute_path(dist)
+    if distribution != repository / "dist":
+        raise PackageValidationError("Package operation lock requires the fixed dist layout")
+    _require_real_directory(repository, label="Repository root")
+    _require_real_directory_chain(
+        repository,
+        distribution,
+        label="Distribution directory",
+    )
+    lock_path = distribution / _PACKAGE_OPERATION_LOCK_NAME
+    flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_BINARY", 0)
+    flags |= (
+        getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOINHERIT", 0) | getattr(os, "O_NOFOLLOW", 0)
+    )
+    try:
+        descriptor = os.open(lock_path, flags, 0o600)
+    except OSError as exc:
+        raise PackageValidationError(f"Could not open package operation lock: {exc}") from exc
+    locked = False
+    try:
+        opened = os.fstat(descriptor)
+        try:
+            named = lock_path.lstat()
+        except OSError as exc:
+            raise PackageValidationError(
+                f"Could not inspect package operation lock: {exc}"
+            ) from exc
+        if (
+            not stat.S_ISREG(opened.st_mode)
+            or opened.st_nlink != 1
+            or stat.S_ISLNK(named.st_mode)
+            or _is_reparse_point(named)
+            or not _same_file_identity(opened, named)
+        ):
+            raise PackageValidationError(
+                f"Package operation lock must be one stable regular file: {lock_path}"
+            )
+        if opened.st_size == 0:
+            os.write(descriptor, b"\0")
+            os.fsync(descriptor)
+            opened = os.fstat(descriptor)
+            named = lock_path.lstat()
+        dist_before = _require_real_directory(distribution, label="Distribution directory")
+        try:
+            _lock_descriptor_nonblocking(descriptor)
+        except (BlockingIOError, OSError) as exc:
+            raise PackageBusyError(
+                "Another package build or verification operation is active for this checkout"
+            ) from exc
+        locked = True
+        if not _same_file_identity(named, lock_path.lstat()):
+            raise PackageValidationError("Package operation lock changed during acquisition")
+        dist_after = _require_real_directory(distribution, label="Distribution directory")
+        if not _same_file_identity(dist_before, dist_after):
+            raise PackageValidationError("Distribution directory changed during lock acquisition")
+        yield
+    finally:
+        try:
+            if locked:
+                _unlock_descriptor(descriptor)
+        finally:
+            os.close(descriptor)
+
+
+def verify_package(
+    bundle_root: Path | None = None,
+    package_root: Path | None = None,
+    *,
+    require_size_gates: bool = True,
+    provenance_mode: str = PROVENANCE_MODE_CHECKOUT,
+    _allow_staging_package: bool = False,
+) -> dict[str, object]:
+    """Verify one package while excluding cooperating builds and verifiers."""
+
+    bundle, package, repository, dist = _package_layout_roots(bundle_root, package_root)
+    with _package_operation_lock(repository, dist):
+        return _verify_package_unlocked(
+            bundle,
+            package,
+            require_size_gates=require_size_gates,
+            provenance_mode=provenance_mode,
+            _allow_staging_package=_allow_staging_package,
+        )
 
 
 def _prepare_dist_directory() -> Path:
@@ -1599,7 +1747,7 @@ def _finalize_package(bundle_root: Path, *, enforce_size_gate: bool) -> Path:
             size_gate_enforced=enforce_size_gate,
         )
         _write_bytes(stage / EVIDENCE_NAME, _canonical_json_bytes(evidence))
-        verify_package(
+        _verify_package_unlocked(
             bundle_root,
             stage,
             require_size_gates=enforce_size_gate,
@@ -1772,30 +1920,31 @@ def main() -> int:
     if args.offline_self_asserted:
         parser.error("--offline-self-asserted requires --verify-only")
 
-    _verify_panda_assets()
-    _require_safe_distribution_directory(action="build desktop package")
     dist = _prepare_dist_directory()
-    _reject_stale_package_transactions(dist)
-    # PyInstaller never receives --noconfirm and therefore never owns recursive
-    # replacement of a pre-existing live path. Validate every owned tree first,
-    # then remove all of them through the mount-aware path regardless of the
-    # compatibility --clean spelling.
-    _clean_build_outputs()
-    subprocess.run(_PYINSTALLER_COMMAND, cwd=ROOT, check=True)
-    bundle = _bundle_root()
-    _require_real_directory(bundle, label="PyInstaller one-folder output")
-    previous_marker = _capture_marker(bundle)
-    try:
-        _atomic_replace_marker(bundle, UNSIGNED_MARKER_BYTES)
-        package = _finalize_package(bundle, enforce_size_gate=not args.skip_size_gate)
-    except BaseException:
+    with _package_operation_lock(ROOT, dist):
+        _verify_panda_assets()
+        _require_safe_distribution_directory(action="build desktop package")
+        _reject_stale_package_transactions(dist)
+        # PyInstaller never receives --noconfirm and therefore never owns recursive
+        # replacement of a pre-existing live path. Validate every owned tree first,
+        # then remove all of them through the mount-aware path regardless of the
+        # compatibility --clean spelling.
+        _clean_build_outputs()
+        subprocess.run(_PYINSTALLER_COMMAND, cwd=ROOT, check=True)
+        bundle = _bundle_root()
+        _require_real_directory(bundle, label="PyInstaller one-folder output")
+        previous_marker = _capture_marker(bundle)
         try:
-            _restore_marker(bundle, previous_marker)
-        except BaseException as restore_error:
-            raise PackageValidationError(
-                "Package finalization failed and the unsigned marker could not be restored"
-            ) from restore_error
-        raise
+            _atomic_replace_marker(bundle, UNSIGNED_MARKER_BYTES)
+            package = _finalize_package(bundle, enforce_size_gate=not args.skip_size_gate)
+        except BaseException:
+            try:
+                _restore_marker(bundle, previous_marker)
+            except BaseException as restore_error:
+                raise PackageValidationError(
+                    "Package finalization failed and the unsigned marker could not be restored"
+                ) from restore_error
+            raise
     print(f"Package archive and canonical evidence: {package}")
     return 0
 

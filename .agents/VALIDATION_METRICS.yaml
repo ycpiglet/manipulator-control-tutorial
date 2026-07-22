@@ -180,7 +180,7 @@ supply_chain:
 packaging:
   unsigned_development_identity:
     metric: "checkout-bound one-folder inventory, canonical archive bytes, unsigned marker, and bounded Python build provenance"
-    threshold: "verify-only exit 0 on each supported desktop OS; exact locked package profile and RECORD fingerprint; stale transaction and mount crossings rejected"
+    threshold: "verify-only exit 0 on each supported desktop OS; exact locked package profile and RECORD fingerprint; stale transaction and mount crossings rejected; cooperating operations serialized; hostile concurrent filesystem mutation out of scope"
     command: "python scripts/build_desktop.py --verify-only"
     evidence: "retained per-OS dist/MCLab-package/package-metrics.json and architecture-specific archive"
   independent_size_gates:

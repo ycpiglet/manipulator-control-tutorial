@@ -108,6 +108,50 @@ def test_size_limits_are_exact_binary_mib_and_independent(build_module) -> None:
     assert build_module.ARCHIVE_LIMIT_BYTES == 300 * 1024 * 1024
 
 
+def test_windows_mount_detection_relies_on_device_and_reparse_guards(
+    build_module, tmp_path: Path
+) -> None:
+    candidate = tmp_path / "ordinary"
+    candidate.mkdir()
+    with (
+        patch.object(build_module.sys, "platform", "win32"),
+        patch.object(build_module.os.path, "ismount", side_effect=AssertionError),
+    ):
+        assert not build_module._path_is_mount(candidate, frozenset())
+
+
+def test_package_operation_lock_is_single_writer_and_reusable(build_module, tmp_path: Path) -> None:
+    dist = tmp_path / "dist"
+    dist.mkdir()
+
+    with build_module._package_operation_lock(tmp_path, dist):
+        lock_path = dist / build_module._PACKAGE_OPERATION_LOCK_NAME
+        assert lock_path.read_bytes() == b"\0"
+        with pytest.raises(build_module.PackageBusyError, match="Another package build"):
+            with build_module._package_operation_lock(tmp_path, dist):
+                pytest.fail("a second package operation acquired the held lock")
+
+    with build_module._package_operation_lock(tmp_path, dist):
+        pass
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX symlink semantics")
+def test_package_operation_lock_rejects_link_without_mutating_target(
+    build_module, tmp_path: Path
+) -> None:
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    outside = tmp_path / "outside.txt"
+    outside.write_bytes(b"preserve")
+    os.symlink(outside, dist / build_module._PACKAGE_OPERATION_LOCK_NAME)
+
+    with pytest.raises(build_module.PackageValidationError, match="operation lock"):
+        with build_module._package_operation_lock(tmp_path, dist):
+            pytest.fail("a linked package operation lock was accepted")
+
+    assert outside.read_bytes() == b"preserve"
+
+
 def test_desktop_workflow_verifies_and_retains_exact_package_evidence() -> None:
     workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
     isolated = workflow.index("- name: Create isolated package-build environment")
@@ -904,7 +948,7 @@ def test_filesystem_identity_check_rejects_cross_device_member(
         {"st_dev": metadata.st_dev + 1},
     )()
 
-    with pytest.raises(build_module.PackageValidationError, match="filesystem or mount"):
+    with pytest.raises(build_module.PackageValidationError, match="filesystem device"):
         build_module._assert_same_filesystem_member(
             path,
             different_device,
