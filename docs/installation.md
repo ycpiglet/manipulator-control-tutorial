@@ -41,10 +41,19 @@ untrusted local process, remove it and create a new one from a trusted CPython;
 the installer deliberately refuses automatic repair when recorded state or
 RECORD integrity is invalid.
 
-The Linux desktop workflow also installs its Qt/XCB system libraries from the
-signed current Ubuntu repositories. Those apt packages are allowlisted but are
-not yet version/snapshot locked, so they are outside this Python-lock baseline
-and remain inputs for the later package inventory/SBOM gate.
+The Linux desktop workflow installs its 22 direct Qt/XCB system packages from
+the committed Ubuntu 24.04 AMD64 manifest at
+`requirements/system/ubuntu-24.04-amd64.json`. The installer requires the
+`20260723T000000Z` Ubuntu snapshot, exact candidate and installed versions,
+warning-free snapshot-only repository output, and a verified evidence file.
+It uses a temporary official-Ubuntu-only Deb822 source file plus isolated
+package-list and archive state, so hosted-runner Microsoft, Docker, mirror, or
+cached indexes cannot enter candidate selection. Conflicting or disabling
+per-repository snapshot settings, snapshot-ID mismatch, mixed/live repository
+URLs, insecure or unauthenticated fallback, timeouts, and version or
+architecture drift fail closed. This controls the direct package set and
+repository point in time; it is not a frozen base image or a complete native
+transitive-library inventory.
 
 `assets install` downloads the pinned MuJoCo Menagerie commit, verifies the
 archive SHA-256, extracts only the tracked `franka_emika_panda` runtime files,
@@ -106,8 +115,9 @@ in-place repair.
 ## Updating dependency locks
 
 Dependency updates are reviewable changes, not an implicit install-time
-resolution. After editing exact pins in `pyproject.toml` or
-`requirements/build.in`, run the generator in its disposable tool environment:
+resolution. After editing exact pins in `pyproject.toml`,
+`requirements/build.in`, or a reviewed file below `requirements/tools/`, run
+the generator in its disposable tool environment:
 
 ```bash
 python scripts/manage_dependency_locks.py --write
@@ -120,6 +130,37 @@ coverage before committing all regenerated files together. The generator is
 pinned separately, runs in a fresh temporary venv, and is deleted afterward;
 it is never installed into the project `.venv` or learner profiles. The build
 profile also pins `tomli` so the policy checker works under CPython 3.10.
+
+## Supply-chain evidence
+
+CI installs `pip-audit==2.10.1` and `pip-licenses==5.5.5` only in a disposable
+environment from the separate hash-locked scanner profile; the vulnerability
+service cache is disposable with it. The universal
+vulnerability input removes environment markers only after proving complete
+coverage of every package/version pair in all eight reviewed lock profiles
+across the 12 target environments. Any scanner failure, malformed response,
+uncovered dependency, vulnerability finding, or nonempty waiver registry fails
+the gate. Scanner output is normalized before evidence is written so aliases
+and service ordering cannot change the committed contract.
+
+The desktop matrix also records a deterministic package-profile license input
+for each supported OS family. Missing or unknown license identifiers, license
+texts, package URLs, and NOTICE files remain explicit null values and are
+counted in `metadata_gaps`; package names, versions, and exact lock coverage
+still fail closed on any mismatch. `inventory-complete` means the reviewed
+package set was fully recorded, while `compliance_status` remains
+`pending-lic-01`. LIC-01 must resolve those gaps before its UNKNOWN=0 release
+gate can pass. These records are not legal advice, a complete notice bundle,
+or approval to distribute Qt/PySide or any other component.
+
+`scripts/generate_sbom_inputs.py` combines the reviewed Python locks, Ubuntu
+direct-package manifest, pinned Panda runtime inventory, bundled fonts, and
+immutable GitHub Action references into deterministic SBOM inputs. Generation
+requires the supplied source commit to equal a clean checked-out Git `HEAD`.
+This is not an OS-specific final SBOM, build provenance, signature, or release artifact.
+Native transitive libraries, the trusted CPython/base image, and binary
+internals remain outside the Python vulnerability scanner and must be closed
+by the later LIC/PKG/REL gates before public distribution.
 
 ## Release policy
 

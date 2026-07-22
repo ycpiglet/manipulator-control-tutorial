@@ -96,9 +96,18 @@ EXPECTED_BUILD_INPUT_PINS = {
     "wheel": "0.47.0",
 }
 EXPECTED_UV_INPUT_PINS = {"uv": UV_VERSION}
+EXPECTED_SUPPLY_CHAIN_INPUT_PINS = {
+    "pip-audit": "2.10.1",
+    "pip-licenses": "5.5.5",
+}
 
 EXPECTED_PROFILES = (
     LockProfile("uv-tool", "requirements/tools/uv.in", "requirements/tools/uv.txt"),
+    LockProfile(
+        "supply-chain-tool",
+        "requirements/tools/supply-chain.in",
+        "requirements/tools/supply-chain.txt",
+    ),
     LockProfile("build", "requirements/build.in", "requirements/locks/build.txt"),
     LockProfile("runtime", "pyproject.toml", "requirements/locks/runtime.txt"),
     LockProfile("app", "pyproject.toml", "requirements/locks/app.txt", ("app",)),
@@ -418,6 +427,7 @@ def _validate_inputs(root: Path, errors: list[str]) -> None:
     for relative, expected in (
         ("requirements/build.in", EXPECTED_BUILD_INPUT_PINS),
         ("requirements/tools/uv.in", EXPECTED_UV_INPUT_PINS),
+        ("requirements/tools/supply-chain.in", EXPECTED_SUPPLY_CHAIN_INPUT_PINS),
     ):
         text = _read_policy_file(root, relative, errors)
         if text is None:
@@ -577,6 +587,19 @@ def _validate_locks(root: Path, errors: list[str]) -> dict[str, LockData]:
         errors.append(
             f"UV_TOOL_LOCK_MISMATCH expected {EXPECTED_UV_INPUT_PINS}, got {uv_tool.packages}"
         )
+    supply_chain_tool = locks.get("supply-chain-tool")
+    if supply_chain_tool is not None:
+        actual_supply_chain_direct = {
+            name: supply_chain_tool.packages[name]
+            for name in EXPECTED_SUPPLY_CHAIN_INPUT_PINS
+            if name in supply_chain_tool.packages
+        }
+        if actual_supply_chain_direct != EXPECTED_SUPPLY_CHAIN_INPUT_PINS:
+            errors.append(
+                "SUPPLY_CHAIN_TOOL_LOCK_MISMATCH "
+                f"expected {EXPECTED_SUPPLY_CHAIN_INPUT_PINS}, "
+                f"got {actual_supply_chain_direct}"
+            )
     build = locks.get("build")
     if build is not None:
         actual_build_direct = {
@@ -604,9 +627,20 @@ def _validate_locks(root: Path, errors: list[str]) -> dict[str, LockData]:
                 f"LOCK_PROFILE_DIRECT_MISMATCH {profile}: expected {expected}, got {actual}"
             )
 
+    tool_owners = {
+        "uv": "uv-tool",
+        "pip-audit": "supply-chain-tool",
+        "pip-licenses": "supply-chain-tool",
+    }
     for profile, lock in locks.items():
-        if profile != "uv-tool" and "uv" in lock.packages:
-            errors.append(f"BUILD_TOOL_SEPARATION {profile}: uv must remain generator-only")
+        for package, owner in tool_owners.items():
+            if profile != owner and package in lock.packages:
+                separation = (
+                    "generator-only" if package == "uv" else "supply-chain-tool-only"
+                )
+                errors.append(
+                    f"BUILD_TOOL_SEPARATION {profile}: {package} must remain {separation}"
+                )
     return locks
 
 
@@ -1352,6 +1386,7 @@ def _pip_install_list_count(module: ast.Module) -> int:
 
 def _validate_script_install_inventory(root: Path, errors: list[str]) -> None:
     expected_pip_installs = {
+        "scripts/audit_supply_chain.py": 1,
         "scripts/install_locked.py": 2,
         "scripts/manage_dependency_locks.py": 1,
     }
@@ -1435,10 +1470,10 @@ def validate(root: Path = ROOT) -> tuple[list[Metric], list[str]]:
     metrics.append(
         _stage_metric(
             "generator input separation",
-            "pip/setuptools/tomli/wheel exact; uv==0.11.31 generator-only",
+            "build, uv, and supply-chain tools exact and profile-separated",
             errors,
             start,
-            "4 build pins; 1 tool pin",
+            "4 build pins; 1 generator pin; 2 scanner pins",
         )
     )
 
@@ -1447,10 +1482,10 @@ def validate(root: Path = ROOT) -> tuple[list[Metric], list[str]]:
     metrics.append(
         _stage_metric(
             "hashed lock profiles",
-            "7/7 reviewed profiles; every requirement exact+sha256; unsafe sources 0",
+            "8/8 reviewed profiles; every requirement exact+sha256; unsafe sources 0",
             errors,
             start,
-            f"{len(locks)}/7 profiles; "
+            f"{len(locks)}/8 profiles; "
             f"{sum(lock.requirements for lock in locks.values())} requirements; "
             f"{sum(lock.hashes for lock in locks.values())} hashes",
         )
@@ -1461,10 +1496,10 @@ def validate(root: Path = ROOT) -> tuple[list[Metric], list[str]]:
     metrics.append(
         _stage_metric(
             "lock generator policy",
-            "uv 0.11.31; cutoff 2026-07-22T07:45:00Z; 7 profiles; reviewed flags",
+            "uv 0.11.31; cutoff 2026-07-22T07:45:00Z; 8 profiles; reviewed flags",
             errors,
             start,
-            "7 profiles; universal/binary/hash/no-sources flags",
+            "8 profiles; universal/binary/hash/no-sources flags",
         )
     )
 

@@ -1,0 +1,703 @@
+{
+  "$id": "https://github.com/ycpiglet/manipulator-control-tutorial/blob/main/.agents/supply_chain/sbom-inputs.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "contract": {
+      "additionalProperties": false,
+      "properties": {
+        "generator": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "schema": {
+          "$ref": "#/$defs/sourceRecord"
+        }
+      },
+      "required": [
+        "generator",
+        "schema"
+      ],
+      "type": "object"
+    },
+    "fonts": {
+      "additionalProperties": false,
+      "properties": {
+        "files": {
+          "items": {
+            "$ref": "#/$defs/identifiedSourceRecord"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "license": {
+          "$ref": "#/$defs/licenseSourceRecord"
+        }
+      },
+      "required": [
+        "files",
+        "license"
+      ],
+      "type": "object"
+    },
+    "github_actions": {
+      "additionalProperties": false,
+      "properties": {
+        "actions": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "enum": [
+                  "WtfJoke/setup-tectonic",
+                  "actions/checkout",
+                  "actions/setup-python",
+                  "actions/upload-artifact"
+                ],
+                "type": "string"
+              },
+              "release": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "runtime": {
+                "const": "node24"
+              },
+              "sha": {
+                "$ref": "#/$defs/commit"
+              },
+              "source": {
+                "format": "uri",
+                "type": "string"
+              },
+              "upstream_commit_verified": {
+                "const": true
+              }
+            },
+            "required": [
+              "name",
+              "release",
+              "runtime",
+              "sha",
+              "source",
+              "upstream_commit_verified"
+            ],
+            "type": "object"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "minimum_actions_runner": {
+          "const": "2.327.1"
+        },
+        "policy": {
+          "additionalProperties": false,
+          "properties": {
+            "require_full_commit_sha": {
+              "const": true
+            },
+            "require_release_comment": {
+              "const": true
+            },
+            "required_runtime": {
+              "const": "node24"
+            }
+          },
+          "required": [
+            "require_full_commit_sha",
+            "require_release_comment",
+            "required_runtime"
+          ],
+          "type": "object"
+        },
+        "source": {
+          "$ref": "#/$defs/sourceRecord"
+        }
+      },
+      "required": [
+        "actions",
+        "minimum_actions_runner",
+        "policy",
+        "source"
+      ],
+      "type": "object"
+    },
+    "packaging": {
+      "additionalProperties": false,
+      "properties": {
+        "data_groups": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "destination": {
+                "type": "string"
+              },
+              "id": {
+                "enum": [
+                  "configs",
+                  "models",
+                  "noto-fonts",
+                  "panda-runtime",
+                  "project-license",
+                  "qml"
+                ],
+                "type": "string"
+              },
+              "license_ids": {
+                "items": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array",
+                "uniqueItems": true
+              },
+              "source": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "destination",
+              "id",
+              "license_ids",
+              "source"
+            ],
+            "type": "object"
+          },
+          "maxItems": 6,
+          "minItems": 6,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "root_licenses": {
+          "items": {
+            "$ref": "#/$defs/licenseSourceRecord"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "source": {
+          "$ref": "#/$defs/sourceRecord"
+        }
+      },
+      "required": [
+        "data_groups",
+        "root_licenses",
+        "source"
+      ],
+      "type": "object"
+    },
+    "panda_runtime": {
+      "additionalProperties": false,
+      "properties": {
+        "archive_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "commit": {
+          "$ref": "#/$defs/commit"
+        },
+        "files": {
+          "items": {
+            "$ref": "#/$defs/sourceRecord"
+          },
+          "maxItems": 72,
+          "minItems": 72,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "license": {
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "const": "LICENSE"
+            },
+            "sha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "size": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "spdx": {
+              "const": "Apache-2.0"
+            }
+          },
+          "required": [
+            "path",
+            "sha256",
+            "size",
+            "spdx"
+          ],
+          "type": "object"
+        },
+        "source": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "upstream_repository": {
+          "const": "https://github.com/google-deepmind/mujoco_menagerie"
+        }
+      },
+      "required": [
+        "archive_sha256",
+        "commit",
+        "files",
+        "license",
+        "source",
+        "upstream_repository"
+      ],
+      "type": "object"
+    },
+    "project": {
+      "additionalProperties": false,
+      "properties": {
+        "license": {
+          "const": "Apache-2.0"
+        },
+        "name": {
+          "const": "mujoco-manipulator-control-lab"
+        },
+        "requires_python": {
+          "const": ">=3.10,<3.13"
+        },
+        "source": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "version": {
+          "const": "0.1.0"
+        }
+      },
+      "required": [
+        "license",
+        "name",
+        "requires_python",
+        "source",
+        "version"
+      ],
+      "type": "object"
+    },
+    "python_lock_profiles": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "extras": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "id": {
+            "enum": [
+              "app",
+              "app-dev",
+              "build",
+              "dev",
+              "package",
+              "runtime",
+              "supply-chain-tool",
+              "uv-tool"
+            ],
+            "type": "string"
+          },
+          "lock": {
+            "$ref": "#/$defs/sourceRecord"
+          },
+          "requirements": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "environment_ids": {
+                  "items": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "minItems": 1,
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "extras": {
+                  "items": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "hash_scope": {
+                  "const": "candidate-artifacts-not-mapped-to-environments"
+                },
+                "hashes": {
+                  "items": {
+                    "$ref": "#/$defs/sha256"
+                  },
+                  "minItems": 1,
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "marker": {
+                  "oneOf": [
+                    {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "name": {
+                  "pattern": "^[a-z0-9][a-z0-9-]*$",
+                  "type": "string"
+                },
+                "version": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "environment_ids",
+                "extras",
+                "hash_scope",
+                "hashes",
+                "marker",
+                "name",
+                "version"
+              ],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array",
+            "uniqueItems": true
+          },
+          "source": {
+            "$ref": "#/$defs/sourceRecord"
+          }
+        },
+        "required": [
+          "extras",
+          "id",
+          "lock",
+          "requirements",
+          "source"
+        ],
+        "type": "object"
+      },
+      "maxItems": 8,
+      "minItems": 8,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "source_commit": {
+      "$ref": "#/$defs/commit"
+    },
+    "target_environments": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "enum": [
+              "cpython-3.10-darwin-arm64",
+              "cpython-3.10-darwin-x86_64",
+              "cpython-3.10-linux-x86_64",
+              "cpython-3.10-win32-amd64",
+              "cpython-3.11-darwin-arm64",
+              "cpython-3.11-darwin-x86_64",
+              "cpython-3.11-linux-x86_64",
+              "cpython-3.11-win32-amd64",
+              "cpython-3.12-darwin-arm64",
+              "cpython-3.12-darwin-x86_64",
+              "cpython-3.12-linux-x86_64",
+              "cpython-3.12-win32-amd64"
+            ],
+            "type": "string"
+          },
+          "implementation_name": {
+            "const": "cpython"
+          },
+          "marker": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "platform_machine": {
+            "enum": [
+              "AMD64",
+              "arm64",
+              "x86_64"
+            ]
+          },
+          "platform_python_implementation": {
+            "const": "CPython"
+          },
+          "python_full_version": {
+            "pattern": "^3\\.(10|11|12)\\.0$",
+            "type": "string"
+          },
+          "python_version": {
+            "enum": [
+              "3.10",
+              "3.11",
+              "3.12"
+            ]
+          },
+          "sys_platform": {
+            "enum": [
+              "darwin",
+              "linux",
+              "win32"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "implementation_name",
+          "marker",
+          "platform_machine",
+          "platform_python_implementation",
+          "python_full_version",
+          "python_version",
+          "sys_platform"
+        ],
+        "type": "object"
+      },
+      "maxItems": 12,
+      "minItems": 12,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "ubuntu_system": {
+      "additionalProperties": false,
+      "properties": {
+        "distribution": {
+          "additionalProperties": false,
+          "properties": {
+            "architecture": {
+              "const": "amd64"
+            },
+            "codename": {
+              "const": "noble"
+            },
+            "id": {
+              "const": "ubuntu"
+            },
+            "version_id": {
+              "const": "24.04"
+            }
+          },
+          "required": [
+            "architecture",
+            "codename",
+            "id",
+            "version_id"
+          ],
+          "type": "object"
+        },
+        "ecosystem": {
+          "const": "apt"
+        },
+        "installer": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "packages": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "enum": [
+                  "libdbus-1-3",
+                  "libegl1",
+                  "libfontconfig1",
+                  "libgl1",
+                  "libglib2.0-0t64",
+                  "libgssapi-krb5-2",
+                  "libx11-xcb1",
+                  "libxcb-cursor0",
+                  "libxcb-icccm4",
+                  "libxcb-image0",
+                  "libxcb-keysyms1",
+                  "libxcb-randr0",
+                  "libxcb-render-util0",
+                  "libxcb-shape0",
+                  "libxcb-shm0",
+                  "libxcb-sync1",
+                  "libxcb-xfixes0",
+                  "libxcb-xinerama0",
+                  "libxcb-xkb1",
+                  "libxkbcommon-x11-0",
+                  "xauth",
+                  "xvfb"
+                ],
+                "type": "string"
+              },
+              "version": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "version"
+            ],
+            "type": "object"
+          },
+          "maxItems": 22,
+          "minItems": 22,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "snapshot": {
+          "const": "20260723T000000Z"
+        },
+        "source": {
+          "$ref": "#/$defs/sourceRecord"
+        }
+      },
+      "required": [
+        "distribution",
+        "ecosystem",
+        "installer",
+        "packages",
+        "snapshot",
+        "source"
+      ],
+      "type": "object"
+    },
+    "vulnerability_policy": {
+      "additionalProperties": false,
+      "properties": {
+        "auditor": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "waiver_source": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "waivers": {
+          "maxItems": 0,
+          "type": "array"
+        }
+      },
+      "required": [
+        "auditor",
+        "waiver_source",
+        "waivers"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "contract",
+    "fonts",
+    "github_actions",
+    "packaging",
+    "panda_runtime",
+    "project",
+    "python_lock_profiles",
+    "schema_version",
+    "source_commit",
+    "target_environments",
+    "ubuntu_system",
+    "vulnerability_policy"
+  ],
+  "title": "MCLab deterministic SBOM input contract",
+  "type": "object",
+  "$defs": {
+    "commit": {
+      "pattern": "^[0-9a-f]{40}$",
+      "type": "string"
+    },
+    "identifiedSourceRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "size": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "path",
+        "sha256",
+        "size"
+      ],
+      "type": "object"
+    },
+    "licenseSourceRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "size": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "spdx": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "path",
+        "sha256",
+        "size",
+        "spdx"
+      ],
+      "type": "object"
+    },
+    "sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "sourceRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "size": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "size"
+      ],
+      "type": "object"
+    }
+  }
+}
