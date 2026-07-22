@@ -34,7 +34,7 @@
     "artifact": {
       "additionalProperties": false,
       "properties": {
-        "evidence_sha256": {
+        "canonical_evidence_sha256": {
           "pattern": "^[0-9a-f]{64}$",
           "type": "string"
         },
@@ -49,13 +49,26 @@
         "name": {
           "pattern": "^mclab-supply-chain-(Linux|Windows|macOS)$",
           "type": "string"
+        },
+        "normalization_algorithm": {
+          "const": "strict-json-sort-keys-indent-2-ensure-ascii-false-utf8-lf"
+        },
+        "normalization_version": {
+          "const": 1
+        },
+        "raw_evidence_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
         }
       },
       "required": [
-        "evidence_sha256",
+        "canonical_evidence_sha256",
         "expires_at",
         "id",
-        "name"
+        "name",
+        "normalization_algorithm",
+        "normalization_version",
+        "raw_evidence_sha256"
       ],
       "type": "object"
     },
@@ -166,6 +179,49 @@
       ],
       "type": "object"
     },
+    "globalTransformRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "enum": [
+            "mujoco-manipulator-control-lab",
+            "setuptools"
+          ]
+        },
+        "reason": {
+          "enum": [
+            "editable-project-target-addition",
+            "explicit-target-scoped-scanner-exclusion"
+          ]
+        },
+        "target_ids": {
+          "items": {
+            "enum": [
+              "cpython-3.11-darwin-arm64",
+              "cpython-3.11-linux-x86_64",
+              "cpython-3.11-win32-amd64"
+            ]
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "version": {
+          "enum": [
+            "0.1.0",
+            "83.0.0"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "reason",
+        "target_ids",
+        "version"
+      ],
+      "type": "object"
+    },
     "identifiedSpdxLicense": {
       "additionalProperties": false,
       "properties": {
@@ -224,6 +280,41 @@
         "path",
         "sha256",
         "size"
+      ],
+      "type": "object"
+    },
+    "notApplicableRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "applicable_target_ids": {
+          "items": {
+            "enum": [
+              "cpython-3.10-darwin-arm64",
+              "cpython-3.10-darwin-x86_64",
+              "cpython-3.10-linux-x86_64",
+              "cpython-3.10-win32-amd64"
+            ]
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "name": {
+          "const": "exceptiongroup"
+        },
+        "reason": {
+          "const": "marker-not-applicable-to-observed-targets"
+        },
+        "version": {
+          "const": "1.3.1"
+        }
+      },
+      "required": [
+        "applicable_target_ids",
+        "name",
+        "reason",
+        "version"
       ],
       "type": "object"
     },
@@ -299,6 +390,20 @@
     "observedTarget": {
       "additionalProperties": false,
       "properties": {
+        "added_observation_rows": {
+          "items": {
+            "$ref": "#/$defs/targetTransformRecord"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "applicable_lock_candidate_count": {
+          "maximum": 48,
+          "minimum": 43,
+          "type": "integer"
+        },
         "artifact": {
           "$ref": "#/$defs/artifact"
         },
@@ -306,12 +411,31 @@
           "pattern": "^cpython-3\\.11-(linux-x86_64|win32-amd64|darwin-arm64)$",
           "type": "string"
         },
+        "excluded_applicable_lock_candidates": {
+          "items": {
+            "$ref": "#/$defs/targetTransformRecord"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
         "id": {
           "pattern": "^github-hosted-(linux|windows|macos)-cpython-3\\.11$",
           "type": "string"
         },
         "metadata_gaps": {
           "$ref": "#/$defs/gapCounts"
+        },
+        "observation_row_count": {
+          "maximum": 48,
+          "minimum": 43,
+          "type": "integer"
+        },
+        "observed_locked_candidate_count": {
+          "maximum": 47,
+          "minimum": 42,
+          "type": "integer"
         },
         "package_count": {
           "maximum": 48,
@@ -339,10 +463,15 @@
         }
       },
       "required": [
+        "added_observation_rows",
+        "applicable_lock_candidate_count",
         "artifact",
         "cell_id",
+        "excluded_applicable_lock_candidates",
         "id",
         "metadata_gaps",
+        "observation_row_count",
+        "observed_locked_candidate_count",
         "package_count",
         "package_observations",
         "recorded_target",
@@ -391,7 +520,7 @@
       "additionalProperties": false,
       "properties": {
         "path": {
-          "pattern": "^[A-Za-z0-9._/-]+$",
+          "pattern": "^[A-Za-z0-9._/,\\[\\]-]+$",
           "type": "string"
         },
         "sha256": {
@@ -506,6 +635,35 @@
         "platform_machine",
         "python_version",
         "sys_platform"
+      ],
+      "type": "object"
+    },
+    "targetTransformRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "enum": [
+            "mujoco-manipulator-control-lab",
+            "setuptools"
+          ]
+        },
+        "reason": {
+          "enum": [
+            "editable-project-target-addition",
+            "explicit-target-scoped-scanner-exclusion"
+          ]
+        },
+        "version": {
+          "enum": [
+            "0.1.0",
+            "83.0.0"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "reason",
+        "version"
       ],
       "type": "object"
     },
@@ -651,11 +809,32 @@
     "coverage": {
       "additionalProperties": false,
       "properties": {
+        "added_observation_rows": {
+          "items": {
+            "$ref": "#/$defs/globalTransformRecord"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "applicable_lock_candidate_union_count": {
+          "const": 48
+        },
         "distribution_closure": {
           "const": "unproven"
         },
         "distribution_surface_inventory": {
           "const": "enumerated-not-license-reviewed"
+        },
+        "excluded_applicable_lock_candidates": {
+          "items": {
+            "$ref": "#/$defs/globalTransformRecord"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
         },
         "license_observation_scope": {
           "const": "python-package-input-only"
@@ -663,8 +842,20 @@
         "lock_candidate_count": {
           "const": 49
         },
-        "observed_candidate_union_count": {
+        "not_applicable_to_observed_targets": {
+          "items": {
+            "$ref": "#/$defs/notApplicableRecord"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "observation_row_union_count": {
           "const": 48
+        },
+        "observed_locked_candidate_union_count": {
+          "const": 47
         },
         "observed_target_count": {
           "const": 3
@@ -679,15 +870,6 @@
           },
           "maxItems": 3,
           "minItems": 3,
-          "type": "array",
-          "uniqueItems": true
-        },
-        "unobserved_candidates": {
-          "items": {
-            "$ref": "#/$defs/unobservedCandidate"
-          },
-          "maxItems": 1,
-          "minItems": 1,
           "type": "array",
           "uniqueItems": true
         },
@@ -715,14 +897,18 @@
         }
       },
       "required": [
+        "added_observation_rows",
+        "applicable_lock_candidate_union_count",
         "distribution_closure",
         "distribution_surface_inventory",
+        "excluded_applicable_lock_candidates",
         "license_observation_scope",
         "lock_candidate_count",
-        "observed_candidate_union_count",
+        "not_applicable_to_observed_targets",
+        "observation_row_union_count",
+        "observed_locked_candidate_union_count",
         "observed_target_count",
         "observed_target_ids",
-        "unobserved_candidates",
         "unobserved_target_count",
         "unobserved_target_ids"
       ],
@@ -932,10 +1118,25 @@
     "sources": {
       "additionalProperties": false,
       "properties": {
+        "build_lock": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "build_source": {
+          "$ref": "#/$defs/sourceRecord"
+        },
         "checker": {
           "$ref": "#/$defs/sourceRecord"
         },
         "evidence_schema": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "font_license": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "font_noto_sans_kr": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "font_noto_sans_mono": {
           "$ref": "#/$defs/sourceRecord"
         },
         "generator": {
@@ -944,7 +1145,16 @@
         "package_lock": {
           "$ref": "#/$defs/sourceRecord"
         },
+        "packaging_spec": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "panda_manifest": {
+          "$ref": "#/$defs/sourceRecord"
+        },
         "project": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "project_license": {
           "$ref": "#/$defs/sourceRecord"
         },
         "registry_schema": {
@@ -955,17 +1165,41 @@
         },
         "scanner": {
           "$ref": "#/$defs/sourceRecord"
+        },
+        "supply_chain_tool_lock": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "supply_chain_tool_source": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "ubuntu_installer": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "ubuntu_manifest": {
+          "$ref": "#/$defs/sourceRecord"
         }
       },
       "required": [
+        "build_lock",
+        "build_source",
         "checker",
         "evidence_schema",
+        "font_license",
+        "font_noto_sans_kr",
+        "font_noto_sans_mono",
         "generator",
         "package_lock",
+        "packaging_spec",
+        "panda_manifest",
         "project",
+        "project_license",
         "registry_schema",
         "sbom_generator",
-        "scanner"
+        "scanner",
+        "supply_chain_tool_lock",
+        "supply_chain_tool_source",
+        "ubuntu_installer",
+        "ubuntu_manifest"
       ],
       "type": "object"
     },

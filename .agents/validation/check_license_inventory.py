@@ -26,7 +26,7 @@ from scripts import generate_license_inventory as inventory  # noqa: E402
 from scripts import generate_sbom_inputs as supply  # noqa: E402
 
 
-EXPECTED_REGISTRY_SCHEMA_SHA256 = "20aa69e6853f317009ced2297da8162a3b51aa720e1a019834deff2f5503ee40"
+EXPECTED_REGISTRY_SCHEMA_SHA256 = "5c88315cf70baf1bf1c7d3221bcab73826aa455effc3645b28542225a603c44d"
 EXPECTED_EVIDENCE_SCHEMA_SHA256 = "b247efd4aa2e12e9b704954a291ac54a5d72a8f0e16f145d8c7ac1489ffdf3f6"
 
 REGISTRY_TOP_KEYS = {
@@ -55,14 +55,26 @@ CONTRACT_KEYS = {
 }
 SOURCE_KEYS = {"path", "sha256", "size"}
 SOURCE_NAMES = {
+    "build_lock",
+    "build_source",
     "checker",
     "evidence_schema",
+    "font_license",
+    "font_noto_sans_kr",
+    "font_noto_sans_mono",
     "generator",
     "package_lock",
+    "packaging_spec",
+    "panda_manifest",
     "project",
+    "project_license",
     "registry_schema",
     "scanner",
     "sbom_generator",
+    "supply_chain_tool_lock",
+    "supply_chain_tool_source",
+    "ubuntu_installer",
+    "ubuntu_manifest",
 }
 CANDIDATE_KEYS = {"environment_ids", "marker", "name", "review_status", "version"}
 CELL_KEYS = {
@@ -74,10 +86,15 @@ CELL_KEYS = {
     "sys_platform",
 }
 OBSERVED_KEYS = {
+    "added_observation_rows",
+    "applicable_lock_candidate_count",
     "artifact",
     "cell_id",
+    "excluded_applicable_lock_candidates",
     "id",
     "metadata_gaps",
+    "observation_row_count",
+    "observed_locked_candidate_count",
     "package_count",
     "package_observations",
     "recorded_target",
@@ -91,7 +108,16 @@ OBSERVED_PACKAGE_KEYS = {
     "url_observation",
     "version",
 }
-ARTIFACT_KEYS = {"evidence_sha256", "expires_at", "id", "name"}
+ARTIFACT_KEYS = {
+    "canonical_evidence_sha256",
+    "expires_at",
+    "id",
+    "name",
+    "normalization_algorithm",
+    "normalization_version",
+    "raw_evidence_sha256",
+}
+TARGET_TRANSFORM_KEYS = {"name", "reason", "version"}
 TARGET_KEYS = {
     "implementation",
     "implementation_name",
@@ -148,18 +174,56 @@ EXPECTED_CONTRACT = {
     "target_cell_count": 12,
 }
 EXPECTED_COVERAGE = {
+    "added_observation_rows": [
+        {
+            "name": "mujoco-manipulator-control-lab",
+            "reason": "editable-project-target-addition",
+            "target_ids": [
+                "cpython-3.11-darwin-arm64",
+                "cpython-3.11-linux-x86_64",
+                "cpython-3.11-win32-amd64",
+            ],
+            "version": "0.1.0",
+        }
+    ],
+    "applicable_lock_candidate_union_count": 48,
     "distribution_closure": "unproven",
     "distribution_surface_inventory": "enumerated-not-license-reviewed",
+    "excluded_applicable_lock_candidates": [
+        {
+            "name": "setuptools",
+            "reason": "explicit-target-scoped-scanner-exclusion",
+            "target_ids": [
+                "cpython-3.11-darwin-arm64",
+                "cpython-3.11-linux-x86_64",
+                "cpython-3.11-win32-amd64",
+            ],
+            "version": "83.0.0",
+        }
+    ],
     "license_observation_scope": "python-package-input-only",
     "lock_candidate_count": 49,
-    "observed_candidate_union_count": 48,
+    "not_applicable_to_observed_targets": [
+        {
+            "applicable_target_ids": [
+                "cpython-3.10-darwin-arm64",
+                "cpython-3.10-darwin-x86_64",
+                "cpython-3.10-linux-x86_64",
+                "cpython-3.10-win32-amd64",
+            ],
+            "name": "exceptiongroup",
+            "reason": "marker-not-applicable-to-observed-targets",
+            "version": "1.3.1",
+        }
+    ],
+    "observation_row_union_count": 48,
+    "observed_locked_candidate_union_count": 47,
     "observed_target_count": 3,
     "observed_target_ids": [
         "cpython-3.11-darwin-arm64",
         "cpython-3.11-linux-x86_64",
         "cpython-3.11-win32-amd64",
     ],
-    "unobserved_candidates": [{"name": "exceptiongroup", "version": "1.3.1"}],
     "unobserved_target_count": 9,
     "unobserved_target_ids": [
         "cpython-3.10-darwin-arm64",
@@ -173,6 +237,20 @@ EXPECTED_COVERAGE = {
         "cpython-3.12-win32-amd64",
     ],
 }
+EXPECTED_TARGET_ADDITION = [
+    {
+        "name": "mujoco-manipulator-control-lab",
+        "reason": "editable-project-target-addition",
+        "version": "0.1.0",
+    }
+]
+EXPECTED_TARGET_EXCLUSION = [
+    {
+        "name": "setuptools",
+        "reason": "explicit-target-scoped-scanner-exclusion",
+        "version": "83.0.0",
+    }
+]
 EXPECTED_OBSERVATION_BASELINE = {
     "evidence_scope": "short-lived development evidence; not release provenance",
     "source_commit": "6f0995bd8fe52f8fa6832a03f83254eb13ff9cc1",
@@ -180,10 +258,13 @@ EXPECTED_OBSERVATION_BASELINE = {
 }
 EXPECTED_OBSERVED = {
     "Linux": {
+        "applicable_lock_candidate_count": 44,
         "artifact_id": 8542125543,
         "artifact_name": "mclab-supply-chain-Linux",
+        "canonical_evidence_sha256": (
+            "cea1db18977740f449f413d87e13ee2c85707f6bcbc2684b020f396c82635d83"
+        ),
         "cell_id": "cpython-3.11-linux-x86_64",
-        "evidence_sha256": ("cea1db18977740f449f413d87e13ee2c85707f6bcbc2684b020f396c82635d83"),
         "expires_at": "2026-08-05T19:27:49Z",
         "id": "github-hosted-linux-cpython-3.11",
         "machine": "x86_64",
@@ -193,15 +274,23 @@ EXPECTED_OBSERVED = {
             "notice_text": 43,
             "url": 2,
         },
+        "normalization_algorithm": ("strict-json-sort-keys-indent-2-ensure-ascii-false-utf8-lf"),
+        "normalization_version": 1,
+        "observation_row_count": 44,
+        "observed_locked_candidate_count": 43,
         "package_count": 44,
         "python_full_version": "3.11.15",
+        "raw_evidence_sha256": ("cea1db18977740f449f413d87e13ee2c85707f6bcbc2684b020f396c82635d83"),
         "sys_platform": "linux",
     },
     "macOS": {
+        "applicable_lock_candidate_count": 45,
         "artifact_id": 8542118388,
         "artifact_name": "mclab-supply-chain-macOS",
+        "canonical_evidence_sha256": (
+            "fdc73a10a3e5a9bad525604d1ff7450021182fbb78965b7407da7620d50d44de"
+        ),
         "cell_id": "cpython-3.11-darwin-arm64",
-        "evidence_sha256": ("fdc73a10a3e5a9bad525604d1ff7450021182fbb78965b7407da7620d50d44de"),
         "expires_at": "2026-08-05T19:27:32Z",
         "id": "github-hosted-macos-cpython-3.11",
         "machine": "arm64",
@@ -211,15 +300,23 @@ EXPECTED_OBSERVED = {
             "notice_text": 44,
             "url": 2,
         },
+        "normalization_algorithm": ("strict-json-sort-keys-indent-2-ensure-ascii-false-utf8-lf"),
+        "normalization_version": 1,
+        "observation_row_count": 45,
+        "observed_locked_candidate_count": 44,
         "package_count": 45,
         "python_full_version": "3.11.9",
+        "raw_evidence_sha256": ("fdc73a10a3e5a9bad525604d1ff7450021182fbb78965b7407da7620d50d44de"),
         "sys_platform": "darwin",
     },
     "Windows": {
+        "applicable_lock_candidate_count": 47,
         "artifact_id": 8542166959,
         "artifact_name": "mclab-supply-chain-Windows",
+        "canonical_evidence_sha256": (
+            "dadbc2a1741e76909c18979045b98c62477ff819a44c90944e7c010ec0f09379"
+        ),
         "cell_id": "cpython-3.11-win32-amd64",
-        "evidence_sha256": ("bd9540d0b5a21f0772d9722b5fbf61e63902547074ac738d874da2bc9dfb987f"),
         "expires_at": "2026-08-05T19:29:22Z",
         "id": "github-hosted-windows-cpython-3.11",
         "machine": "AMD64",
@@ -229,8 +326,13 @@ EXPECTED_OBSERVED = {
             "notice_text": 46,
             "url": 2,
         },
+        "normalization_algorithm": ("strict-json-sort-keys-indent-2-ensure-ascii-false-utf8-lf"),
+        "normalization_version": 1,
+        "observation_row_count": 47,
+        "observed_locked_candidate_count": 46,
         "package_count": 47,
         "python_full_version": "3.11.9",
+        "raw_evidence_sha256": ("bd9540d0b5a21f0772d9722b5fbf61e63902547074ac738d874da2bc9dfb987f"),
         "sys_platform": "win32",
     },
 }
@@ -244,6 +346,25 @@ def _exact_keys(value: object, expected: set[str], label: str, errors: list[str]
         errors.append(f"{label}: keys must be {sorted(expected)}")
         return False
     return True
+
+
+def _exact_int(value: object, label: str, errors: list[str]) -> bool:
+    if type(value) is not int:
+        errors.append(f"{label}: exact integer required")
+        return False
+    return True
+
+
+def _metadata_gap_errors(value: object, label: str) -> list[str]:
+    errors: list[str] = []
+    if not _exact_keys(value, GAP_KEYS, label, errors):
+        return errors
+    assert isinstance(value, dict)
+    for field in sorted(GAP_KEYS):
+        gap = value[field]
+        if _exact_int(gap, f"{label}.{field}", errors) and gap < 0:
+            errors.append(f"{label}.{field}: nonnegative integer required")
+    return errors
 
 
 def _strict_json_bytes(payload: bytes, label: str) -> dict[str, object]:
@@ -351,6 +472,9 @@ def _observed_package_errors(
     errors: list[str] = []
     observations = target.get("package_observations")
     package_count = target.get("package_count")
+    if not _exact_int(package_count, f"{label}.package_count", errors):
+        return errors
+    assert isinstance(package_count, int)
     if not isinstance(observations, list) or len(observations) != package_count:
         return [f"{label}.package_observations: exact package_count records required"]
     try:
@@ -425,12 +549,34 @@ def registry_policy_errors(root: Path) -> tuple[dict[str, object] | None, list[s
     errors.extend(generation_errors)
     if not _exact_keys(registry, REGISTRY_TOP_KEYS, "registry", errors):
         return registry, errors
-    if registry.get("schema_version") != 1:
+    if (
+        _exact_int(registry.get("schema_version"), "registry.schema_version", errors)
+        and registry.get("schema_version") != 1
+    ):
         errors.append("registry.schema_version: expected 1")
-    if registry.get("contract") != EXPECTED_CONTRACT:
+    contract = registry.get("contract")
+    if contract != EXPECTED_CONTRACT:
         errors.append("registry.contract: pending LIC-01A boundary drift")
-    if registry.get("coverage") != EXPECTED_COVERAGE:
+    if isinstance(contract, dict):
+        for field in (
+            "candidate_count",
+            "observed_target_count",
+            "target_cell_count",
+        ):
+            _exact_int(contract.get(field), f"registry.contract.{field}", errors)
+    coverage = registry.get("coverage")
+    if coverage != EXPECTED_COVERAGE:
         errors.append("registry.coverage: observed/unobserved scope drift")
+    if isinstance(coverage, dict):
+        for field in (
+            "applicable_lock_candidate_union_count",
+            "lock_candidate_count",
+            "observation_row_union_count",
+            "observed_locked_candidate_union_count",
+            "observed_target_count",
+            "unobserved_target_count",
+        ):
+            _exact_int(coverage.get(field), f"registry.coverage.{field}", errors)
     try:
         expected_surfaces = inventory._distribution_surfaces(root)
     except (inventory.LicenseInventoryError, supply.SupplyChainInputError) as exc:
@@ -445,6 +591,12 @@ def registry_policy_errors(root: Path) -> tuple[dict[str, object] | None, list[s
     if _exact_keys(sources, SOURCE_NAMES, "registry.sources", errors):
         assert isinstance(sources, dict)
         for name in sorted(sources):
+            source = sources[name]
+            expected_path = inventory.SOURCE_PATHS[name]
+            if not isinstance(source, dict) or source.get("path") != expected_path:
+                errors.append(
+                    f"registry.sources.{name}: expected direct producer path {expected_path}"
+                )
             errors.extend(_source_errors(root, sources[name], f"registry.sources.{name}"))
 
     candidates = registry.get("candidates")
@@ -531,17 +683,56 @@ def registry_policy_errors(root: Path) -> tuple[dict[str, object] | None, list[s
         _exact_keys(recorded, RECORDED_TARGET_KEYS, f"{label}.recorded_target", errors)
         if not isinstance(artifact, dict) or not isinstance(recorded, dict):
             continue
+        for field in (
+            "applicable_lock_candidate_count",
+            "observation_row_count",
+            "observed_locked_candidate_count",
+            "package_count",
+        ):
+            _exact_int(target.get(field), f"{label}.{field}", errors)
+        errors.extend(_metadata_gap_errors(target.get("metadata_gaps"), f"{label}.metadata_gaps"))
+        _exact_int(artifact.get("id"), f"{label}.artifact.id", errors)
+        _exact_int(
+            artifact.get("normalization_version"),
+            f"{label}.artifact.normalization_version",
+            errors,
+        )
+        if target.get("added_observation_rows") != EXPECTED_TARGET_ADDITION:
+            errors.append(f"{label}.added_observation_rows: editable project addition drift")
+        if target.get("excluded_applicable_lock_candidates") != EXPECTED_TARGET_EXCLUSION:
+            errors.append(
+                f"{label}.excluded_applicable_lock_candidates: setuptools exclusion drift"
+            )
+        for transform_name in (
+            "added_observation_rows",
+            "excluded_applicable_lock_candidates",
+        ):
+            transforms = target.get(transform_name)
+            if isinstance(transforms, list):
+                for transform_index, transform in enumerate(transforms):
+                    _exact_keys(
+                        transform,
+                        TARGET_TRANSFORM_KEYS,
+                        f"{label}.{transform_name}[{transform_index}]",
+                        errors,
+                    )
         actual_summary = {
+            "applicable_lock_candidate_count": target.get("applicable_lock_candidate_count"),
             "artifact_id": artifact.get("id"),
             "artifact_name": artifact.get("name"),
+            "canonical_evidence_sha256": artifact.get("canonical_evidence_sha256"),
             "cell_id": target.get("cell_id"),
-            "evidence_sha256": artifact.get("evidence_sha256"),
             "expires_at": artifact.get("expires_at"),
             "id": target.get("id"),
             "machine": recorded.get("machine"),
             "metadata_gaps": target.get("metadata_gaps"),
+            "normalization_algorithm": artifact.get("normalization_algorithm"),
+            "normalization_version": artifact.get("normalization_version"),
+            "observation_row_count": target.get("observation_row_count"),
+            "observed_locked_candidate_count": target.get("observed_locked_candidate_count"),
             "package_count": target.get("package_count"),
             "python_full_version": recorded.get("python_full_version"),
+            "raw_evidence_sha256": artifact.get("raw_evidence_sha256"),
             "sys_platform": recorded.get("sys_platform"),
         }
         if actual_summary != expected:
@@ -602,7 +793,33 @@ def evidence_policy_errors(
         evidence = _strict_json_bytes(payload, "package-profile license evidence")
     except (inventory.LicenseInventoryError, supply.SupplyChainInputError) as exc:
         return [str(exc)]
-    if inventory.canonical_json_bytes(evidence) != payload:
+    registry_targets = registry.get("observed_targets")
+    matching_targets = (
+        [
+            target
+            for target in registry_targets
+            if isinstance(target, dict) and target.get("runner_os") == runner_os
+        ]
+        if isinstance(registry_targets, list)
+        else []
+    )
+    if len(matching_targets) != 1:
+        return [f"registry.observed_targets: one {runner_os} target required"]
+    accepted_artifact = matching_targets[0].get("artifact")
+    if not isinstance(accepted_artifact, dict):
+        return [f"registry.observed_targets: {runner_os} artifact provenance required"]
+    canonical_payload = inventory.canonical_json_bytes(evidence)
+    raw_sha256 = hashlib.sha256(payload).hexdigest()
+    canonical_sha256 = hashlib.sha256(canonical_payload).hexdigest()
+    historical_noncanonical_evidence = (
+        raw_sha256 == accepted_artifact.get("raw_evidence_sha256")
+        and canonical_sha256 == accepted_artifact.get("canonical_evidence_sha256")
+        and accepted_artifact.get("normalization_algorithm")
+        == inventory.EVIDENCE_NORMALIZATION_ALGORITHM
+        and accepted_artifact.get("normalization_version")
+        == inventory.EVIDENCE_NORMALIZATION_VERSION
+    )
+    if canonical_payload != payload and not historical_noncanonical_evidence:
         errors.append("license evidence must be canonical sorted JSON")
     if not _exact_keys(evidence, EVIDENCE_TOP_KEYS, "evidence", errors):
         return errors
@@ -617,6 +834,9 @@ def evidence_policy_errors(
         "schema_version": 1,
         "tool": {"name": "pip-licenses", "version": "5.5.5"},
     }
+    _exact_int(evidence.get("schema_version"), "evidence.schema_version", errors)
+    _exact_int(evidence.get("package_count"), "evidence.package_count", errors)
+    errors.extend(_metadata_gap_errors(evidence.get("metadata_gaps"), "evidence.metadata_gaps"))
     for key, expected_value in expected_fixed.items():
         if evidence.get(key) != expected_value:
             errors.append(f"evidence.{key}: reviewed pending contract drift")
@@ -648,18 +868,6 @@ def evidence_policy_errors(
         expected_packages = _expected_packages(registry, str(expected_observed["cell_id"]))
     except inventory.LicenseInventoryError as exc:
         return errors + [str(exc)]
-    registry_targets = registry.get("observed_targets")
-    matching_targets = (
-        [
-            target
-            for target in registry_targets
-            if isinstance(target, dict) and target.get("runner_os") == runner_os
-        ]
-        if isinstance(registry_targets, list)
-        else []
-    )
-    if len(matching_targets) != 1:
-        return errors + [f"registry.observed_targets: one {runner_os} target required"]
     expected_observation_rows = matching_targets[0].get("package_observations")
     if not isinstance(expected_observation_rows, list):
         return errors + [f"registry.observed_targets: {runner_os} package observations required"]

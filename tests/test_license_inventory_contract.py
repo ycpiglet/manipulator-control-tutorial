@@ -33,24 +33,7 @@ checker = _load_checker()
 @pytest.fixture
 def contract_repository(tmp_path: Path) -> Path:
     root = tmp_path / "repository"
-    paths = {
-        generator.REGISTRY_PATH,
-        generator.REGISTRY_SCHEMA_PATH,
-        generator.EVIDENCE_SCHEMA_PATH,
-        generator.GENERATOR_PATH,
-        generator.CHECKER_PATH,
-        generator.SCANNER_PATH,
-        generator.PACKAGE_LOCK_PATH,
-        generator.PROJECT_PATH,
-        generator.SBOM_GENERATOR_PATH,
-        generator.supply.PANDA_MANIFEST_PATH,
-        generator.supply.PACKAGING_SPEC_PATH,
-        generator.supply.PROJECT_LICENSE_PATH,
-        generator.supply.UBUNTU_INSTALLER_PATH,
-        generator.supply.UBUNTU_MANIFEST_PATH,
-        *(path for _identifier, path, _digest in generator.supply.EXPECTED_FONT_FILES),
-        generator.supply.EXPECTED_FONT_LICENSE[0],
-    }
+    paths = {generator.REGISTRY_PATH, *generator.SOURCE_PATHS.values()}
     for relative in sorted(paths):
         source = ROOT / relative
         target = root / relative
@@ -160,10 +143,22 @@ def test_committed_inventory_is_deterministic_closed_and_pending() -> None:
     assert registry["contract"]["public_distribution_authorized"] is False
     assert registry["contract"]["qt_pyside_lgpl_decision"] == "pending"
     assert registry["coverage"] == checker.EXPECTED_COVERAGE
-    assert registry["coverage"]["observed_candidate_union_count"] == 48
-    assert registry["coverage"]["unobserved_candidates"] == [
-        {"name": "exceptiongroup", "version": "1.3.1"}
-    ]
+    assert registry["coverage"]["applicable_lock_candidate_union_count"] == 48
+    assert registry["coverage"]["observed_locked_candidate_union_count"] == 47
+    assert registry["coverage"]["observation_row_union_count"] == 48
+    assert registry["coverage"]["not_applicable_to_observed_targets"][0]["name"] == "exceptiongroup"
+    assert registry["coverage"]["excluded_applicable_lock_candidates"][0] == {
+        "name": "setuptools",
+        "reason": "explicit-target-scoped-scanner-exclusion",
+        "target_ids": registry["coverage"]["observed_target_ids"],
+        "version": "83.0.0",
+    }
+    assert registry["coverage"]["added_observation_rows"][0] == {
+        "name": "mujoco-manipulator-control-lab",
+        "reason": "editable-project-target-addition",
+        "target_ids": registry["coverage"]["observed_target_ids"],
+        "version": "0.1.0",
+    }
     assert registry["coverage"]["distribution_closure"] == "unproven"
     assert len(registry["coverage"]["observed_target_ids"]) == 3
     assert len(registry["coverage"]["unobserved_target_ids"]) == 9
@@ -172,10 +167,58 @@ def test_committed_inventory_is_deterministic_closed_and_pending() -> None:
         45,
         47,
     ]
+    assert [
+        target["applicable_lock_candidate_count"] for target in registry["observed_targets"]
+    ] == [44, 45, 47]
+    assert [
+        target["observed_locked_candidate_count"] for target in registry["observed_targets"]
+    ] == [43, 44, 46]
+    assert [target["observation_row_count"] for target in registry["observed_targets"]] == [
+        44,
+        45,
+        47,
+    ]
+    assert all(
+        target["excluded_applicable_lock_candidates"] == checker.EXPECTED_TARGET_EXCLUSION
+        and target["added_observation_rows"] == checker.EXPECTED_TARGET_ADDITION
+        for target in registry["observed_targets"]
+    )
     assert all(
         set(package) == checker.OBSERVED_PACKAGE_KEYS
         for target in registry["observed_targets"]
         for package in target["package_observations"]
+    )
+    candidate_names = {candidate["name"] for candidate in registry["candidates"]}
+    observed_row_names = {
+        package["name"]
+        for target in registry["observed_targets"]
+        for package in target["package_observations"]
+    }
+    assert len(candidate_names - {"exceptiongroup", "setuptools"}) == 47
+    assert len(observed_row_names & candidate_names) == 47
+    assert len(observed_row_names) == 48
+    assert "setuptools" not in observed_row_names
+    assert "exceptiongroup" not in observed_row_names
+    assert "mujoco-manipulator-control-lab" in observed_row_names
+    assert set(registry["sources"]) == set(generator.SOURCE_PATHS)
+    assert {
+        name: source["path"] for name, source in registry["sources"].items()
+    } == generator.SOURCE_PATHS
+    artifacts = {target["runner_os"]: target["artifact"] for target in registry["observed_targets"]}
+    assert all(
+        artifact["normalization_algorithm"] == generator.EVIDENCE_NORMALIZATION_ALGORITHM
+        and artifact["normalization_version"] == generator.EVIDENCE_NORMALIZATION_VERSION
+        for artifact in artifacts.values()
+    )
+    assert (
+        artifacts["Linux"]["raw_evidence_sha256"] == artifacts["Linux"]["canonical_evidence_sha256"]
+    )
+    assert (
+        artifacts["macOS"]["raw_evidence_sha256"] == artifacts["macOS"]["canonical_evidence_sha256"]
+    )
+    assert (
+        artifacts["Windows"]["raw_evidence_sha256"]
+        != artifacts["Windows"]["canonical_evidence_sha256"]
     )
     surfaces = registry["distribution_surfaces"]
     assert surfaces == generator._distribution_surfaces(ROOT)
@@ -285,6 +328,59 @@ def test_registry_tampering_fails_closed(contract_repository: Path, tamper: str)
     assert errors
 
 
+def test_registry_exact_integer_fields_reject_bool_and_float(
+    contract_repository: Path,
+) -> None:
+    path = contract_repository / generator.REGISTRY_PATH
+    baseline = json.loads(path.read_text(encoding="utf-8"))
+    field_paths: list[tuple[object, ...]] = [("schema_version",)]
+    for target_index in range(len(baseline["observed_targets"])):
+        field_paths.append(("observed_targets", target_index, "package_count"))
+        field_paths.extend(
+            ("observed_targets", target_index, "metadata_gaps", field)
+            for field in sorted(checker.GAP_KEYS)
+        )
+    for field_path in field_paths:
+        original: Any = baseline
+        for part in field_path:
+            original = original[part]
+        for invalid in (True, float(original)):
+            document = copy.deepcopy(baseline)
+            parent: Any = document
+            for part in field_path[:-1]:
+                parent = parent[part]
+            parent[field_path[-1]] = invalid
+            path.write_bytes(generator.canonical_json_bytes(document))
+
+            _registry_value, errors = checker.registry_policy_errors(contract_repository)
+
+            label = ".".join(str(part) for part in field_path)
+            assert any(
+                "exact integer required" in error and label.split(".")[-1] in error
+                for error in errors
+            ), (field_path, invalid, errors)
+    path.write_bytes(generator.canonical_json_bytes(baseline))
+
+
+def test_every_direct_producer_input_missing_and_drift_fails_closed(
+    contract_repository: Path,
+) -> None:
+    for source_name, relative in sorted(generator.SOURCE_PATHS.items()):
+        source = contract_repository / relative
+        baseline = source.read_bytes()
+
+        source.unlink()
+        _registry_value, missing_errors = checker.registry_policy_errors(contract_repository)
+        assert missing_errors, source_name
+        source.parent.mkdir(parents=True, exist_ok=True)
+        source.write_bytes(baseline)
+
+        source.write_bytes(baseline + b"\n")
+        _registry_value, drift_errors = checker.registry_policy_errors(contract_repository)
+        assert drift_errors, source_name
+        source.write_bytes(baseline)
+
+
 def test_source_and_schema_drift_fail_closed(contract_repository: Path) -> None:
     lock = contract_repository / generator.PACKAGE_LOCK_PATH
     lock.write_text(
@@ -321,6 +417,62 @@ def test_package_profile_evidence_matches_each_observed_target(
     relative = _write_evidence(tmp_path, evidence)
 
     assert checker.evidence_policy_errors(tmp_path, registry, relative, runner_os) == []
+
+
+def test_evidence_exact_integer_fields_reject_bool_and_float(tmp_path: Path) -> None:
+    registry = _registry()
+    baseline = _evidence_document(registry, "Linux")
+    registry = _registry_with_evidence_observations(registry, "Linux", baseline)
+    field_paths: list[tuple[str, ...]] = [
+        ("schema_version",),
+        ("package_count",),
+        *(("metadata_gaps", field) for field in sorted(checker.GAP_KEYS)),
+    ]
+    for field_path in field_paths:
+        original: Any = baseline
+        for part in field_path:
+            original = original[part]
+        for invalid in (True, float(original)):
+            document = copy.deepcopy(baseline)
+            parent: Any = document
+            for part in field_path[:-1]:
+                parent = parent[part]
+            parent[field_path[-1]] = invalid
+            relative = _write_evidence(tmp_path, document)
+
+            errors = checker.evidence_policy_errors(tmp_path, registry, relative, "Linux")
+
+            assert any(
+                "exact integer required" in error and field_path[-1] in error for error in errors
+            )
+
+
+def test_historical_noncanonical_evidence_requires_both_provenance_hashes(
+    tmp_path: Path,
+) -> None:
+    registry = _registry()
+    evidence = _evidence_document(registry, "Linux")
+    registry = _registry_with_evidence_observations(registry, "Linux", evidence)
+    canonical = generator.canonical_json_bytes(evidence)
+    historical_raw = canonical.replace(b"\n", b"\r\n")
+    target = next(item for item in registry["observed_targets"] if item["runner_os"] == "Linux")
+    target["artifact"].update(
+        {
+            "canonical_evidence_sha256": hashlib.sha256(canonical).hexdigest(),
+            "normalization_algorithm": generator.EVIDENCE_NORMALIZATION_ALGORITHM,
+            "normalization_version": generator.EVIDENCE_NORMALIZATION_VERSION,
+            "raw_evidence_sha256": hashlib.sha256(historical_raw).hexdigest(),
+        }
+    )
+    relative = _write_evidence(tmp_path, evidence, payload=historical_raw)
+
+    assert checker.evidence_policy_errors(tmp_path, registry, relative, "Linux") == []
+
+    target["artifact"]["raw_evidence_sha256"] = "0" * 64
+    assert any(
+        "canonical sorted JSON" in error
+        for error in checker.evidence_policy_errors(tmp_path, registry, relative, "Linux")
+    )
 
 
 @pytest.mark.parametrize(

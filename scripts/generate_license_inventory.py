@@ -1,10 +1,10 @@
 """Generate the bounded LIC-01A package-license inventory contract.
 
 The registry is deliberately an inventory-coverage contract, not a notice
-bundle or legal conclusion.  It reads only the reviewed package lock,
-12-target policy, closed schemas, scanner, and its own checker/generator
-sources.  Accepted SUP-01 target observations are represented only by their
-bounded summary and evidence hash; license and NOTICE bodies are never copied
+bundle or legal conclusion. It closes every direct producer input by path and
+hash, including the reviewed build/package/scanner-tool locks and the existing
+SBOM surface inputs. Accepted SUP-01 target observations retain raw and
+canonical evidence provenance, but license and NOTICE bodies are never copied
 into the committed registry.
 """
 
@@ -27,6 +27,8 @@ SCHEMA_VERSION = 1
 CANDIDATE_COUNT = 49
 TARGET_CELL_COUNT = 12
 OBSERVED_TARGET_COUNT = 3
+EVIDENCE_NORMALIZATION_ALGORITHM = "strict-json-sort-keys-indent-2-ensure-ascii-false-utf8-lf"
+EVIDENCE_NORMALIZATION_VERSION = 1
 
 REGISTRY_PATH = ".agents/supply_chain/license-inventory.json"
 REGISTRY_SCHEMA_PATH = ".agents/supply_chain/license-inventory.schema.json"
@@ -35,8 +37,42 @@ GENERATOR_PATH = "scripts/generate_license_inventory.py"
 CHECKER_PATH = ".agents/validation/check_license_inventory.py"
 SCANNER_PATH = "scripts/audit_supply_chain.py"
 SBOM_GENERATOR_PATH = "scripts/generate_sbom_inputs.py"
+BUILD_LOCK_PATH = "requirements/locks/build.txt"
+BUILD_SOURCE_PATH = "requirements/build.in"
 PACKAGE_LOCK_PATH = "requirements/locks/package.txt"
+SUPPLY_CHAIN_TOOL_LOCK_PATH = "requirements/tools/supply-chain.txt"
+SUPPLY_CHAIN_TOOL_SOURCE_PATH = "requirements/tools/supply-chain.in"
 PROJECT_PATH = "pyproject.toml"
+
+SOURCE_PATHS = {
+    "build_lock": BUILD_LOCK_PATH,
+    "build_source": BUILD_SOURCE_PATH,
+    "checker": CHECKER_PATH,
+    "evidence_schema": EVIDENCE_SCHEMA_PATH,
+    "font_license": supply.EXPECTED_FONT_LICENSE[0],
+    "font_noto_sans_kr": supply.EXPECTED_FONT_FILES[0][1],
+    "font_noto_sans_mono": supply.EXPECTED_FONT_FILES[1][1],
+    "generator": GENERATOR_PATH,
+    "package_lock": PACKAGE_LOCK_PATH,
+    "packaging_spec": supply.PACKAGING_SPEC_PATH,
+    "panda_manifest": supply.PANDA_MANIFEST_PATH,
+    "project": PROJECT_PATH,
+    "project_license": supply.PROJECT_LICENSE_PATH,
+    "registry_schema": REGISTRY_SCHEMA_PATH,
+    "scanner": SCANNER_PATH,
+    "sbom_generator": SBOM_GENERATOR_PATH,
+    "supply_chain_tool_lock": SUPPLY_CHAIN_TOOL_LOCK_PATH,
+    "supply_chain_tool_source": SUPPLY_CHAIN_TOOL_SOURCE_PATH,
+    "ubuntu_installer": supply.UBUNTU_INSTALLER_PATH,
+    "ubuntu_manifest": supply.UBUNTU_MANIFEST_PATH,
+}
+
+SCANNER_EXCLUDED_PACKAGES = frozenset({"pip", "setuptools", "wheel"})
+EXPECTED_PIP_LICENSES_VERSION = "5.5.5"
+EXPECTED_SETUPTOOLS_VERSION = "83.0.0"
+NOT_APPLICABLE_REASON = "marker-not-applicable-to-observed-targets"
+SETUPTOOLS_EXCLUSION_REASON = "explicit-target-scoped-scanner-exclusion"
+EDITABLE_PROJECT_ADDITION_REASON = "editable-project-target-addition"
 
 BLOCKERS = (
     "copyright-attribution-review-pending",
@@ -73,10 +109,17 @@ OBSERVATION_BASELINE = {
 OBSERVED_TARGETS = (
     {
         "artifact": {
-            "evidence_sha256": ("cea1db18977740f449f413d87e13ee2c85707f6bcbc2684b020f396c82635d83"),
+            "canonical_evidence_sha256": (
+                "cea1db18977740f449f413d87e13ee2c85707f6bcbc2684b020f396c82635d83"
+            ),
             "expires_at": "2026-08-05T19:27:49Z",
             "id": 8542125543,
             "name": "mclab-supply-chain-Linux",
+            "normalization_algorithm": EVIDENCE_NORMALIZATION_ALGORITHM,
+            "normalization_version": EVIDENCE_NORMALIZATION_VERSION,
+            "raw_evidence_sha256": (
+                "cea1db18977740f449f413d87e13ee2c85707f6bcbc2684b020f396c82635d83"
+            ),
         },
         "cell_id": "cpython-3.11-linux-x86_64",
         "id": "github-hosted-linux-cpython-3.11",
@@ -98,10 +141,17 @@ OBSERVED_TARGETS = (
     },
     {
         "artifact": {
-            "evidence_sha256": ("fdc73a10a3e5a9bad525604d1ff7450021182fbb78965b7407da7620d50d44de"),
+            "canonical_evidence_sha256": (
+                "fdc73a10a3e5a9bad525604d1ff7450021182fbb78965b7407da7620d50d44de"
+            ),
             "expires_at": "2026-08-05T19:27:32Z",
             "id": 8542118388,
             "name": "mclab-supply-chain-macOS",
+            "normalization_algorithm": EVIDENCE_NORMALIZATION_ALGORITHM,
+            "normalization_version": EVIDENCE_NORMALIZATION_VERSION,
+            "raw_evidence_sha256": (
+                "fdc73a10a3e5a9bad525604d1ff7450021182fbb78965b7407da7620d50d44de"
+            ),
         },
         "cell_id": "cpython-3.11-darwin-arm64",
         "id": "github-hosted-macos-cpython-3.11",
@@ -123,10 +173,17 @@ OBSERVED_TARGETS = (
     },
     {
         "artifact": {
-            "evidence_sha256": ("bd9540d0b5a21f0772d9722b5fbf61e63902547074ac738d874da2bc9dfb987f"),
+            "canonical_evidence_sha256": (
+                "dadbc2a1741e76909c18979045b98c62477ff819a44c90944e7c010ec0f09379"
+            ),
             "expires_at": "2026-08-05T19:29:22Z",
             "id": 8542166959,
             "name": "mclab-supply-chain-Windows",
+            "normalization_algorithm": EVIDENCE_NORMALIZATION_ALGORITHM,
+            "normalization_version": EVIDENCE_NORMALIZATION_VERSION,
+            "raw_evidence_sha256": (
+                "bd9540d0b5a21f0772d9722b5fbf61e63902547074ac738d874da2bc9dfb987f"
+            ),
         },
         "cell_id": "cpython-3.11-win32-amd64",
         "id": "github-hosted-windows-cpython-3.11",
@@ -1230,11 +1287,27 @@ class LicenseInventoryError(RuntimeError):
     """Raised when the bounded LIC-01A contract cannot be generated safely."""
 
 
-def _package_profile() -> supply.LockProfile:
-    matches = [profile for profile in supply.LOCK_PROFILES if profile.identifier == "package"]
-    if len(matches) != 1 or matches[0].lock_path != PACKAGE_LOCK_PATH:
-        raise LicenseInventoryError("package lock profile identity drift")
+def _exact_int(value: object, label: str) -> int:
+    if type(value) is not int:
+        raise LicenseInventoryError(f"{label} must be an exact integer")
+    return value
+
+
+def _lock_profile(
+    identifier: str, expected_path: str, expected_source_path: str
+) -> supply.LockProfile:
+    matches = [profile for profile in supply.LOCK_PROFILES if profile.identifier == identifier]
+    if (
+        len(matches) != 1
+        or matches[0].lock_path != expected_path
+        or matches[0].source_path != expected_source_path
+    ):
+        raise LicenseInventoryError(f"{identifier} lock profile identity drift")
     return matches[0]
+
+
+def _package_profile() -> supply.LockProfile:
+    return _lock_profile("package", PACKAGE_LOCK_PATH, PROJECT_PATH)
 
 
 def _candidate_records(root: Path, environments: list[dict[str, str]]) -> list[dict[str, object]]:
@@ -1264,6 +1337,72 @@ def _candidate_records(root: Path, environments: list[dict[str, str]]) -> list[d
     return candidates
 
 
+def _validate_direct_lock_inputs(
+    root: Path,
+    environments: list[dict[str, str]],
+    candidates: list[dict[str, object]],
+) -> None:
+    build = supply._parse_lock(
+        root,
+        _lock_profile("build", BUILD_LOCK_PATH, BUILD_SOURCE_PATH),
+        environments,
+    )["requirements"]
+    scanner_tools = supply._parse_lock(
+        root,
+        _lock_profile(
+            "supply-chain-tool",
+            SUPPLY_CHAIN_TOOL_LOCK_PATH,
+            SUPPLY_CHAIN_TOOL_SOURCE_PATH,
+        ),
+        environments,
+    )["requirements"]
+    if not isinstance(build, list) or not isinstance(scanner_tools, list):
+        raise LicenseInventoryError("direct scanner lock requirements must be lists")
+    pip_licenses = [
+        requirement
+        for requirement in scanner_tools
+        if isinstance(requirement, dict) and requirement.get("name") == "pip-licenses"
+    ]
+    if (
+        len(pip_licenses) != 1
+        or pip_licenses[0].get("version") != EXPECTED_PIP_LICENSES_VERSION
+        or pip_licenses[0].get("environment_ids")
+        != sorted(environment["id"] for environment in environments)
+    ):
+        raise LicenseInventoryError("pip-licenses scanner-tool lock identity drift")
+
+    package_by_name = {str(candidate["name"]): candidate for candidate in candidates}
+    setuptools = package_by_name.get("setuptools")
+    if setuptools is None or setuptools.get("version") != EXPECTED_SETUPTOOLS_VERSION:
+        raise LicenseInventoryError("package lock setuptools identity drift")
+    observed_target_ids = {str(target["cell_id"]) for target in OBSERVED_TARGETS}
+    for environment in environments:
+        cell_id = environment["id"]
+        if cell_id not in observed_target_ids:
+            continue
+        combined = {
+            str(candidate["name"]): str(candidate["version"])
+            for candidate in candidates
+            if cell_id in candidate["environment_ids"]
+        }
+        for requirement in build:
+            if not isinstance(requirement, dict) or cell_id not in requirement.get(
+                "environment_ids", []
+            ):
+                continue
+            name = str(requirement["name"])
+            version = str(requirement["version"])
+            previous = combined.get(name)
+            if previous is not None and previous != version:
+                raise LicenseInventoryError(f"build/package lock conflict for {cell_id}:{name}")
+            combined[name] = version
+        for excluded in SCANNER_EXCLUDED_PACKAGES:
+            combined.pop(excluded, None)
+        combined[str(supply.EXPECTED_PROJECT["name"])] = str(supply.EXPECTED_PROJECT["version"])
+        if dict(sorted(combined.items())) != _expected_observed_packages(candidates, cell_id):
+            raise LicenseInventoryError(f"build/package scanner transformation drift for {cell_id}")
+
+
 def _target_cells(
     environments: list[dict[str, str]], candidates: list[dict[str, object]]
 ) -> list[dict[str, object]]:
@@ -1291,17 +1430,7 @@ def _target_cells(
 
 
 def _source_records(root: Path) -> dict[str, dict[str, object]]:
-    paths = {
-        "checker": CHECKER_PATH,
-        "evidence_schema": EVIDENCE_SCHEMA_PATH,
-        "generator": GENERATOR_PATH,
-        "package_lock": PACKAGE_LOCK_PATH,
-        "project": PROJECT_PATH,
-        "registry_schema": REGISTRY_SCHEMA_PATH,
-        "scanner": SCANNER_PATH,
-        "sbom_generator": SBOM_GENERATOR_PATH,
-    }
-    return {name: supply.source_record(root, path) for name, path in paths.items()}
+    return {name: supply.source_record(root, path) for name, path in sorted(SOURCE_PATHS.items())}
 
 
 def _normalized_observation_text(value: str) -> str:
@@ -1406,16 +1535,83 @@ def _observed_target_records(
         cell_id = str(target["cell_id"])
         expected = _expected_observed_packages(candidates, cell_id)
         metadata_gaps = target["metadata_gaps"]
-        if not isinstance(metadata_gaps, dict):
+        if not isinstance(metadata_gaps, dict) or set(metadata_gaps) != {
+            "license",
+            "license_text",
+            "notice_text",
+            "url",
+        }:
             raise LicenseInventoryError(f"invalid observed metadata gaps for {runner_os}")
+        exact_gaps = {
+            str(key): _exact_int(value, f"{runner_os} metadata_gaps.{key}")
+            for key, value in metadata_gaps.items()
+        }
+        package_count = _exact_int(target["package_count"], f"{runner_os} package_count")
+        artifact = target.get("artifact")
+        if not isinstance(artifact, dict):
+            raise LicenseInventoryError(f"invalid artifact record for {runner_os}")
+        _exact_int(artifact.get("id"), f"{runner_os} artifact.id")
+        if (
+            _exact_int(
+                artifact.get("normalization_version"),
+                f"{runner_os} artifact.normalization_version",
+            )
+            != EVIDENCE_NORMALIZATION_VERSION
+        ):
+            raise LicenseInventoryError(f"normalization version drift for {runner_os}")
+        if artifact.get("normalization_algorithm") != EVIDENCE_NORMALIZATION_ALGORITHM:
+            raise LicenseInventoryError(f"normalization algorithm drift for {runner_os}")
+        for field in ("raw_evidence_sha256", "canonical_evidence_sha256"):
+            digest = artifact.get(field)
+            if not isinstance(digest, str) or supply.SHA256_RE.fullmatch(digest) is None:
+                raise LicenseInventoryError(f"invalid {field} provenance for {runner_os}")
         package_observations = _observed_package_records(
             runner_os,
             expected,
-            {str(key): int(value) for key, value in metadata_gaps.items()},
+            exact_gaps,
         )
-        if len(package_observations) != target["package_count"]:
+        if len(package_observations) != package_count:
             raise LicenseInventoryError(f"observed package count drift for {runner_os}")
-        records.append({**target, "package_observations": package_observations})
+        applicable = [
+            candidate for candidate in candidates if cell_id in candidate["environment_ids"]
+        ]
+        excluded = [candidate for candidate in applicable if candidate["name"] == "setuptools"]
+        if (
+            len(excluded) != 1
+            or excluded[0]["version"] != EXPECTED_SETUPTOOLS_VERSION
+            or excluded[0]["review_status"] != "pending"
+        ):
+            raise LicenseInventoryError(f"target-scoped setuptools exclusion drift for {runner_os}")
+        observed_locked_names = {
+            str(package["name"])
+            for package in package_observations
+            if package["name"] in {candidate["name"] for candidate in applicable}
+        }
+        if len(observed_locked_names) != len(applicable) - 1:
+            raise LicenseInventoryError(f"observed locked-candidate count drift for {runner_os}")
+        records.append(
+            {
+                **target,
+                "added_observation_rows": [
+                    {
+                        "name": str(supply.EXPECTED_PROJECT["name"]),
+                        "reason": EDITABLE_PROJECT_ADDITION_REASON,
+                        "version": str(supply.EXPECTED_PROJECT["version"]),
+                    }
+                ],
+                "applicable_lock_candidate_count": len(applicable),
+                "excluded_applicable_lock_candidates": [
+                    {
+                        "name": "setuptools",
+                        "reason": SETUPTOOLS_EXCLUSION_REASON,
+                        "version": EXPECTED_SETUPTOOLS_VERSION,
+                    }
+                ],
+                "observation_row_count": len(package_observations),
+                "observed_locked_candidate_count": len(observed_locked_names),
+                "package_observations": package_observations,
+            }
+        )
     return records
 
 
@@ -1425,32 +1621,84 @@ def _coverage_record(
     observed_target_ids = sorted(str(target["cell_id"]) for target in OBSERVED_TARGETS)
     all_target_ids = sorted(str(cell["id"]) for cell in target_cells)
     unobserved_target_ids = sorted(set(all_target_ids) - set(observed_target_ids))
-    observed_candidates = [
+    applicable_candidates = [
         candidate
         for candidate in candidates
         if set(candidate["environment_ids"]).intersection(observed_target_ids)
     ]
-    unobserved_candidates = [
-        {"name": candidate["name"], "version": candidate["version"]}
+    not_applicable_candidates = [
+        {
+            "applicable_target_ids": candidate["environment_ids"],
+            "name": candidate["name"],
+            "reason": NOT_APPLICABLE_REASON,
+            "version": candidate["version"],
+        }
         for candidate in candidates
         if not set(candidate["environment_ids"]).intersection(observed_target_ids)
     ]
+    excluded_candidates = [
+        candidate for candidate in applicable_candidates if candidate["name"] == "setuptools"
+    ]
+    observed_locked_candidates = [
+        candidate for candidate in applicable_candidates if candidate["name"] != "setuptools"
+    ]
+    observation_row_names = {
+        name
+        for target_id in observed_target_ids
+        for name in _expected_observed_packages(candidates, target_id)
+    }
     if (
         len(observed_target_ids) != 3
         or len(unobserved_target_ids) != 9
-        or len(observed_candidates) != 48
-        or unobserved_candidates != [{"name": "exceptiongroup", "version": "1.3.1"}]
+        or len(applicable_candidates) != 48
+        or len(observed_locked_candidates) != 47
+        or len(observation_row_names) != 48
+        or len(excluded_candidates) != 1
+        or excluded_candidates[0]["name"] != "setuptools"
+        or excluded_candidates[0]["version"] != EXPECTED_SETUPTOOLS_VERSION
+        or not_applicable_candidates
+        != [
+            {
+                "applicable_target_ids": [
+                    "cpython-3.10-darwin-arm64",
+                    "cpython-3.10-darwin-x86_64",
+                    "cpython-3.10-linux-x86_64",
+                    "cpython-3.10-win32-amd64",
+                ],
+                "name": "exceptiongroup",
+                "reason": NOT_APPLICABLE_REASON,
+                "version": "1.3.1",
+            }
+        ]
     ):
         raise LicenseInventoryError("reviewed observed/unobserved coverage drift")
     return {
+        "added_observation_rows": [
+            {
+                "name": str(supply.EXPECTED_PROJECT["name"]),
+                "reason": EDITABLE_PROJECT_ADDITION_REASON,
+                "target_ids": observed_target_ids,
+                "version": str(supply.EXPECTED_PROJECT["version"]),
+            }
+        ],
+        "applicable_lock_candidate_union_count": len(applicable_candidates),
         "distribution_closure": "unproven",
         "distribution_surface_inventory": "enumerated-not-license-reviewed",
+        "excluded_applicable_lock_candidates": [
+            {
+                "name": "setuptools",
+                "reason": SETUPTOOLS_EXCLUSION_REASON,
+                "target_ids": observed_target_ids,
+                "version": EXPECTED_SETUPTOOLS_VERSION,
+            }
+        ],
         "license_observation_scope": "python-package-input-only",
         "lock_candidate_count": len(candidates),
-        "observed_candidate_union_count": len(observed_candidates),
+        "not_applicable_to_observed_targets": not_applicable_candidates,
+        "observation_row_union_count": len(observation_row_names),
+        "observed_locked_candidate_union_count": len(observed_locked_candidates),
         "observed_target_count": len(observed_target_ids),
         "observed_target_ids": observed_target_ids,
-        "unobserved_candidates": unobserved_candidates,
         "unobserved_target_count": len(unobserved_target_ids),
         "unobserved_target_ids": unobserved_target_ids,
     }
@@ -1482,6 +1730,7 @@ def build_registry(root: Path = ROOT) -> dict[str, object]:
             f"target cell count drift: {len(environments)} != {TARGET_CELL_COUNT}"
         )
     candidates = _candidate_records(root, environments)
+    _validate_direct_lock_inputs(root, environments, candidates)
     target_cells = _target_cells(environments, candidates)
     cell_counts = {str(cell["id"]): int(cell["candidate_count"]) for cell in target_cells}
     if len(OBSERVED_TARGETS) != OBSERVED_TARGET_COUNT:

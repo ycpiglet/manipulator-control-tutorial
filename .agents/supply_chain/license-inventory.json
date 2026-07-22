@@ -959,22 +959,55 @@
     "target_cell_count": 12
   },
   "coverage": {
+    "added_observation_rows": [
+      {
+        "name": "mujoco-manipulator-control-lab",
+        "reason": "editable-project-target-addition",
+        "target_ids": [
+          "cpython-3.11-darwin-arm64",
+          "cpython-3.11-linux-x86_64",
+          "cpython-3.11-win32-amd64"
+        ],
+        "version": "0.1.0"
+      }
+    ],
+    "applicable_lock_candidate_union_count": 48,
     "distribution_closure": "unproven",
     "distribution_surface_inventory": "enumerated-not-license-reviewed",
+    "excluded_applicable_lock_candidates": [
+      {
+        "name": "setuptools",
+        "reason": "explicit-target-scoped-scanner-exclusion",
+        "target_ids": [
+          "cpython-3.11-darwin-arm64",
+          "cpython-3.11-linux-x86_64",
+          "cpython-3.11-win32-amd64"
+        ],
+        "version": "83.0.0"
+      }
+    ],
     "license_observation_scope": "python-package-input-only",
     "lock_candidate_count": 49,
-    "observed_candidate_union_count": 48,
+    "not_applicable_to_observed_targets": [
+      {
+        "applicable_target_ids": [
+          "cpython-3.10-darwin-arm64",
+          "cpython-3.10-darwin-x86_64",
+          "cpython-3.10-linux-x86_64",
+          "cpython-3.10-win32-amd64"
+        ],
+        "name": "exceptiongroup",
+        "reason": "marker-not-applicable-to-observed-targets",
+        "version": "1.3.1"
+      }
+    ],
+    "observation_row_union_count": 48,
+    "observed_locked_candidate_union_count": 47,
     "observed_target_count": 3,
     "observed_target_ids": [
       "cpython-3.11-darwin-arm64",
       "cpython-3.11-linux-x86_64",
       "cpython-3.11-win32-amd64"
-    ],
-    "unobserved_candidates": [
-      {
-        "name": "exceptiongroup",
-        "version": "1.3.1"
-      }
     ],
     "unobserved_target_count": 9,
     "unobserved_target_ids": [
@@ -1587,13 +1620,31 @@
   },
   "observed_targets": [
     {
+      "added_observation_rows": [
+        {
+          "name": "mujoco-manipulator-control-lab",
+          "reason": "editable-project-target-addition",
+          "version": "0.1.0"
+        }
+      ],
+      "applicable_lock_candidate_count": 44,
       "artifact": {
-        "evidence_sha256": "cea1db18977740f449f413d87e13ee2c85707f6bcbc2684b020f396c82635d83",
+        "canonical_evidence_sha256": "cea1db18977740f449f413d87e13ee2c85707f6bcbc2684b020f396c82635d83",
         "expires_at": "2026-08-05T19:27:49Z",
         "id": 8542125543,
-        "name": "mclab-supply-chain-Linux"
+        "name": "mclab-supply-chain-Linux",
+        "normalization_algorithm": "strict-json-sort-keys-indent-2-ensure-ascii-false-utf8-lf",
+        "normalization_version": 1,
+        "raw_evidence_sha256": "cea1db18977740f449f413d87e13ee2c85707f6bcbc2684b020f396c82635d83"
       },
       "cell_id": "cpython-3.11-linux-x86_64",
+      "excluded_applicable_lock_candidates": [
+        {
+          "name": "setuptools",
+          "reason": "explicit-target-scoped-scanner-exclusion",
+          "version": "83.0.0"
+        }
+      ],
       "id": "github-hosted-linux-cpython-3.11",
       "metadata_gaps": {
         "license": 1,
@@ -1601,6 +1652,8 @@
         "notice_text": 43,
         "url": 2
       },
+      "observation_row_count": 44,
+      "observed_locked_candidate_count": 43,
       "package_count": 44,
       "package_observations": [
         {
@@ -1966,13 +2019,31 @@
       "runner_os": "Linux"
     },
     {
+      "added_observation_rows": [
+        {
+          "name": "mujoco-manipulator-control-lab",
+          "reason": "editable-project-target-addition",
+          "version": "0.1.0"
+        }
+      ],
+      "applicable_lock_candidate_count": 45,
       "artifact": {
-        "evidence_sha256": "fdc73a10a3e5a9bad525604d1ff7450021182fbb78965b7407da7620d50d44de",
+        "canonical_evidence_sha256": "fdc73a10a3e5a9bad525604d1ff7450021182fbb78965b7407da7620d50d44de",
         "expires_at": "2026-08-05T19:27:32Z",
         "id": 8542118388,
-        "name": "mclab-supply-chain-macOS"
+        "name": "mclab-supply-chain-macOS",
+        "normalization_algorithm": "strict-json-sort-keys-indent-2-ensure-ascii-false-utf8-lf",
+        "normalization_version": 1,
+        "raw_evidence_sha256": "fdc73a10a3e5a9bad525604d1ff7450021182fbb78965b7407da7620d50d44de"
       },
       "cell_id": "cpython-3.11-darwin-arm64",
+      "excluded_applicable_lock_candidates": [
+        {
+          "name": "setuptools",
+          "reason": "explicit-target-scoped-scanner-exclusion",
+          "version": "83.0.0"
+        }
+      ],
       "id": "github-hosted-macos-cpython-3.11",
       "metadata_gaps": {
         "license": 1,
@@ -1980,6 +2051,8 @@
         "notice_text": 44,
         "url": 2
       },
+      "observation_row_count": 45,
+      "observed_locked_candidate_count": 44,
       "package_count": 45,
       "package_observations": [
         {
@@ -2353,13 +2426,31 @@
       "runner_os": "macOS"
     },
     {
+      "added_observation_rows": [
+        {
+          "name": "mujoco-manipulator-control-lab",
+          "reason": "editable-project-target-addition",
+          "version": "0.1.0"
+        }
+      ],
+      "applicable_lock_candidate_count": 47,
       "artifact": {
-        "evidence_sha256": "bd9540d0b5a21f0772d9722b5fbf61e63902547074ac738d874da2bc9dfb987f",
+        "canonical_evidence_sha256": "dadbc2a1741e76909c18979045b98c62477ff819a44c90944e7c010ec0f09379",
         "expires_at": "2026-08-05T19:29:22Z",
         "id": 8542166959,
-        "name": "mclab-supply-chain-Windows"
+        "name": "mclab-supply-chain-Windows",
+        "normalization_algorithm": "strict-json-sort-keys-indent-2-ensure-ascii-false-utf8-lf",
+        "normalization_version": 1,
+        "raw_evidence_sha256": "bd9540d0b5a21f0772d9722b5fbf61e63902547074ac738d874da2bc9dfb987f"
       },
       "cell_id": "cpython-3.11-win32-amd64",
+      "excluded_applicable_lock_candidates": [
+        {
+          "name": "setuptools",
+          "reason": "explicit-target-scoped-scanner-exclusion",
+          "version": "83.0.0"
+        }
+      ],
       "id": "github-hosted-windows-cpython-3.11",
       "metadata_gaps": {
         "license": 1,
@@ -2367,6 +2458,8 @@
         "notice_text": 46,
         "url": 2
       },
+      "observation_row_count": 47,
+      "observed_locked_candidate_count": 46,
       "package_count": 47,
       "package_observations": [
         {
@@ -2758,35 +2851,75 @@
   ],
   "schema_version": 1,
   "sources": {
+    "build_lock": {
+      "path": "requirements/locks/build.txt",
+      "sha256": "a5665dc6290d9cdc25bb20a984fa4e40197697194e834d422baa71db3326b6e1",
+      "size": 7874
+    },
+    "build_source": {
+      "path": "requirements/build.in",
+      "sha256": "939d67d7dad683e2df98c63d2e69eb9152c373c4dc3d7ee92f285f064a353de7",
+      "size": 58
+    },
     "checker": {
       "path": ".agents/validation/check_license_inventory.py",
-      "sha256": "1c8417ae4fc0b56d7d7ccff6cbdccc461c1f64b8c71b92473092f08c2cdf2982",
-      "size": 32758
+      "sha256": "1caf9f0cdde8b2ca26eedef93f579b7446b1bca01fb215c1b8687092e8f31499",
+      "size": 41162
     },
     "evidence_schema": {
       "path": ".agents/supply_chain/python-license-evidence.schema.json",
       "sha256": "b247efd4aa2e12e9b704954a291ac54a5d72a8f0e16f145d8c7ac1489ffdf3f6",
       "size": 4824
     },
+    "font_license": {
+      "path": "third_party/fonts/noto/OFL.txt",
+      "sha256": "1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9",
+      "size": 4388
+    },
+    "font_noto_sans_kr": {
+      "path": "third_party/fonts/noto/NotoSansKR[wght].ttf",
+      "sha256": "194018e6b2b293a7964f037b25c0249ce1418bc9ab3c971060a03aa57861e252",
+      "size": 10414588
+    },
+    "font_noto_sans_mono": {
+      "path": "third_party/fonts/noto/NotoSansMono[wdth,wght].ttf",
+      "sha256": "2cb2adb378a8f574213e23df697050b83c54c27df465a2015552740b2769a081",
+      "size": 1708408
+    },
     "generator": {
       "path": "scripts/generate_license_inventory.py",
-      "sha256": "b61a0637db1594583be527ad3547b3b226c90432331d9b8c22457adbc65ec092",
-      "size": 53889
+      "sha256": "83a442bbfb928fb760798f8d1641e067522aeb240fafce1ff5189920e8b4147a",
+      "size": 64660
     },
     "package_lock": {
       "path": "requirements/locks/package.txt",
       "sha256": "074ec183ec50c6824aa5ba3d6b32e22ebdb7b0277e0e4442f8bb9d96eecfb547",
       "size": 114504
     },
+    "packaging_spec": {
+      "path": "packaging/mclab.spec",
+      "sha256": "f0bb1a83b72937bb8bcc7f5b3220830112d1c517623c0299c689eab16f36b84a",
+      "size": 3119
+    },
+    "panda_manifest": {
+      "path": "src/mclab/application/panda_runtime_manifest.py",
+      "sha256": "41d476063ef9c5aab6d86ee915b2b907ede5743b7c067b3a0aea34c9c978eb36",
+      "size": 10371
+    },
     "project": {
       "path": "pyproject.toml",
       "sha256": "3e778ccd63a0d42e799f95681fa9bb1fccc5846b89b6aaa0ba5ba1e06e75c7c8",
       "size": 4711
     },
+    "project_license": {
+      "path": "LICENSE",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "size": 11357
+    },
     "registry_schema": {
       "path": ".agents/supply_chain/license-inventory.schema.json",
-      "sha256": "20aa69e6853f317009ced2297da8162a3b51aa720e1a019834deff2f5503ee40",
-      "size": 23450
+      "sha256": "5c88315cf70baf1bf1c7d3221bcab73826aa455effc3645b28542225a603c44d",
+      "size": 29580
     },
     "sbom_generator": {
       "path": "scripts/generate_sbom_inputs.py",
@@ -2797,6 +2930,26 @@
       "path": "scripts/audit_supply_chain.py",
       "sha256": "a4f505dd036d69647ce7492995cd9e0ab4bb46dfbc52a8ceca1dcf295e181e52",
       "size": 41863
+    },
+    "supply_chain_tool_lock": {
+      "path": "requirements/tools/supply-chain.txt",
+      "sha256": "1cc4c046cd655dec82df30ff0c41037457fd630ba42c8820ce383afe8ecb40b3",
+      "size": 41147
+    },
+    "supply_chain_tool_source": {
+      "path": "requirements/tools/supply-chain.in",
+      "sha256": "f391648c7f639b5f60ba57c66e70a483367666b0fe8c6f898c0f5b9d81bf7099",
+      "size": 38
+    },
+    "ubuntu_installer": {
+      "path": "scripts/install_ubuntu_system_packages.py",
+      "sha256": "5e2f372ff5f0dff37930d05ed1ade5bd8a6d3387ca8fd03e2e8ee75b0bb8a7e5",
+      "size": 62209
+    },
+    "ubuntu_manifest": {
+      "path": "requirements/system/ubuntu-24.04-amd64.json",
+      "sha256": "4f3ce81bc1d635a9242fba44f819fe2da89d2f722c12a01a88818f2976eb8feb",
+      "size": 2189
     }
   },
   "target_cells": [

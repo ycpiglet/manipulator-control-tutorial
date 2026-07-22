@@ -200,13 +200,35 @@ SHA-256 hashes of normalized license and NOTICE text when present. These values
 are evidence observations only. They are not reviewed SPDX expressions, legal
 interpretations, or approval of the reported terms.
 
+Each target also records the raw artifact SHA-256 and the canonical evidence
+SHA-256. Canonicalization version 1 strictly parses UTF-8 JSON, rejects duplicate
+keys and non-finite numbers, sorts object keys, renders with two-space
+indentation and unescaped Unicode, and terminates lines with LF plus one final
+LF. The accepted Windows artifact retains its historical CRLF raw hash while
+also recording the hash of the canonical LF form. Newly generated evidence must
+be canonical; the checker permits noncanonical bytes only when both hashes match
+that exact historical accepted artifact.
+
 The machine-readable coverage record makes the remaining boundary explicit.
 Only 3 of 12 target cells have accepted observations; the other 9 are listed by
-ID. Their union observes 48 of the 49 lock candidates, leaving
-`exceptiongroup==1.3.1` unobserved. Distribution closure remains `unproven`.
-The registry nevertheless enumerates the existing universal SBOM-input surfaces
-without claiming license review: 22 pinned direct Ubuntu packages, 72 Panda
-runtime files, 2 bundled font files, and all 6 packaging data groups.
+ID. Across those cells, 48 of 49 locked candidates are applicable, but only 47
+locked candidates appear in evidence: `setuptools==83.0.0` is explicitly
+excluded on each observed target. The editable
+`mujoco-manipulator-control-lab==0.1.0` row is added on each target, producing 48
+distinct observation rows. `exceptiongroup==1.3.1` is the sole lock candidate
+whose marker is not applicable to any observed target. These absences and the
+target-scoped exclusion/addition reasons are machine-readable. Distribution
+closure remains `unproven`. The registry nevertheless enumerates the existing
+universal SBOM-input surfaces without claiming license review: 22 pinned direct
+Ubuntu packages, 72 Panda runtime files, 2 bundled font files, and all 6
+packaging data groups.
+
+The registry hashes every direct producer input, including the build and
+package locks, the supply-chain scanner-tool lock, schemas and checker/generator
+sources, project metadata and license, Ubuntu manifest and installer, Panda
+manifest, packaging specification, and each bundled font/license file. Missing
+or changed producer inputs fail regeneration before the committed registry can
+pass.
 
 ```bash
 python scripts/generate_license_inventory.py --check
