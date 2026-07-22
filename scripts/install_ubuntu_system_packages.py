@@ -304,9 +304,16 @@ def _validate_archive_keyring(path: Path = APT_ARCHIVE_KEYRING) -> None:
     if metadata.st_size <= 0:
         raise PolicyError(f"Ubuntu archive keyring must be nonempty: {path}")
     if metadata.st_uid != 0 or metadata.st_gid != 0:
-        raise PolicyError(f"Ubuntu archive keyring must be owned by root:root: {path}")
-    if stat.S_IMODE(metadata.st_mode) not in {0o644, 0o664}:
-        raise PolicyError(f"Ubuntu archive keyring must have mode 0644 or 0664: {path}")
+        raise PolicyError(
+            "Ubuntu archive keyring must be owned by root:root: "
+            f"{path} (uid={metadata.st_uid}, gid={metadata.st_gid})"
+        )
+    permissions = stat.S_IMODE(metadata.st_mode)
+    if permissions not in {0o644, 0o664}:
+        raise PolicyError(
+            "Ubuntu archive keyring must have mode 0644 or 0664: "
+            f"{path} (observed={permissions:#06o})"
+        )
     if not os.access(path, os.R_OK):
         raise PolicyError(f"Ubuntu archive keyring is not readable: {path}")
 
