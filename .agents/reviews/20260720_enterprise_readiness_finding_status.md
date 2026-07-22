@@ -179,3 +179,28 @@ promotion summary above.
   scan/SBOM/system-package work, PKG-01, and E2E-01.
 - B4–B6 and real-output cleanup retain every prior authorization and external
   evidence gate; no promotion or destructive-work authority is added here.
+
+## SUP-01 Aggregate Reconciliation Events — 2026-07-23
+
+These events append accepted PR #66 evidence evaluated at protected
+`main@6f0995bd8fe52f8fa6832a03f83254eb13ff9cc1`. They do not rewrite the
+audit, registry, initial events, B2 records, prior ledger rows, or earlier
+promotion summaries.
+
+| Event | Recorded at UTC | Evaluated commit | Finding/component | Status | Evidence state | Evidence and scope | Remaining gate | Supersedes |
+|---|---|---|---|---|---|---|---|---|
+| FS-20260723-027 | 2026-07-22T19:48:43Z | `6f0995bd8fe52f8fa6832a03f83254eb13ff9cc1` | P0-05 | partial | confirmed | [PR #66](https://github.com/ycpiglet/manipulator-control-tutorial/pull/66) accepted exact head `387dd331a408d46beffb80483916401bf2e08c73`, merge `6f0995bd8fe52f8fa6832a03f83254eb13ff9cc1`, and common source/merge tree `ac5d9ba1720911357a02c665787ec50ed50eaf5f`; exact-head [CI](https://github.com/ycpiglet/manipulator-control-tutorial/actions/runs/29949569945), [desktop](https://github.com/ycpiglet/manipulator-control-tutorial/actions/runs/29949569735), post-merge [CI](https://github.com/ycpiglet/manipulator-control-tutorial/actions/runs/29950993214), and [desktop](https://github.com/ycpiglet/manipulator-control-tutorial/actions/runs/29950992873) passed required checks 6/6; fail-closed scans, pinned Ubuntu direct-package evidence, and deterministic SBOM inputs close the SUP repository input-gate scope | P0-05 remains partial: immutable tag/release is REL-01; final per-OS SBOM/provenance and hosted base/native transitive evidence remain | FS-20260723-021 |
+| FS-20260723-028 | 2026-07-22T19:48:43Z | `6f0995bd8fe52f8fa6832a03f83254eb13ff9cc1` | P1-05 | closed_for_scope | confirmed | PR #62–#64 and [PR #66](https://github.com/ycpiglet/manipulator-control-tutorial/pull/66) provide reviewed Action/runtime locks, exact Python hashes, pinned Panda bytes, a 78-dependency vulnerability scan with 0 findings/waivers, hosted package-profile license inventories, 22 pinned Ubuntu direct packages, and deterministic SBOM inputs; post-merge Ubuntu artifact `8542125543` verified snapshot `20260723T000000Z` and expires `2026-08-05T19:27:49Z`; license results remain explicitly `inventory-complete` / `pending-lic-01` | LIC-01 must close reviewed SPDX/copyright/text/source/NOTICE coverage and Qt/PySide obligations; final OS SBOM/provenance and native/base transitive inventory remain release gates | FS-20260723-022 |
+
+### Current promotion summary at SUP-01 aggregate acceptance
+
+- SUP-01 is accepted only for the repository lock, scanner, Ubuntu
+  direct-package, and deterministic SBOM-input gate.
+- LIC-01 is next. `pending-lic-01` is not legal approval, notice completion, or
+  public-distribution authority.
+- B3 remains blocked on PKG-01 and integrated E2E-01. B4 remains blocked on
+  LIC-01, OPS-01, final SBOM/provenance, immutable release identity, and every
+  other G3 condition.
+- B5/B6 and real-output cleanup retain every prior authorization and external
+  evidence gate. No public-beta, signing, release/DOI, external-contact, or
+  destructive-work authority is added here.
