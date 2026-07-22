@@ -14,6 +14,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = ROOT / "scripts" / "build_desktop.py"
+WORKFLOW_PATH = ROOT / ".github" / "workflows" / "desktop.yml"
 
 
 def _load_build_module():
@@ -105,6 +106,22 @@ def _verify(module, bundle: Path, package: Path, **kwargs):
 def test_size_limits_are_exact_binary_mib_and_independent(build_module) -> None:
     assert build_module.ONE_FOLDER_LIMIT_BYTES == 400 * 1024 * 1024
     assert build_module.ARCHIVE_LIMIT_BYTES == 300 * 1024 * 1024
+
+
+def test_desktop_workflow_verifies_and_retains_exact_package_evidence() -> None:
+    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+    build = workflow.index("- name: Build unsigned one-folder app")
+    diagnostics = workflow.index("- name: Verify packaged app and diagnostics")
+    verify = workflow.index("- name: Verify package identity and size evidence")
+    upload = workflow.index("- name: Upload unsigned development package")
+
+    assert build < diagnostics < verify < upload
+    assert "run: python scripts/build_desktop.py --verify-only" in workflow
+    assert "Mark build as unsigned development artifact" not in workflow
+    upload_block = workflow[upload:]
+    assert "dist/MCLab\n" in upload_block
+    assert "dist/MCLab-package\n" in upload_block
+    assert "if-no-files-found: error" in upload_block
 
 
 def test_archive_names_are_architecture_specific_and_normalized(build_module) -> None:

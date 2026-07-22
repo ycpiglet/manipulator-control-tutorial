@@ -260,13 +260,15 @@ jobs:
           "$app" app --self-test --lang en
           "$app" doctor --json
 
-      - name: Mark build as unsigned development artifact
-        shell: bash
-        run: echo "UNSIGNED DEVELOPMENT BUILD - NOT FOR PRODUCTION" > dist/MCLab/UNSIGNED-DEVELOPMENT-BUILD.txt
+      - name: Verify package identity and size evidence
+        run: python scripts/build_desktop.py --verify-only
 
-      - name: Upload unsigned development bundle
+      - name: Upload unsigned development package
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: MCLab-${{ runner.os }}-unsigned-development
-          path: dist/MCLab
+          path: |
+            dist/MCLab
+            dist/MCLab-package
+          if-no-files-found: error
           retention-days: 7
