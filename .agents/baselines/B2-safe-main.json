@@ -1,0 +1,647 @@
+{
+  "schema": "mclab.baseline-candidate.v1",
+  "schema_version": 1,
+  "record_kind": "baseline_candidate",
+  "baseline": {
+    "id": "B2",
+    "work_item": "BASE-01",
+    "name": "safe-main",
+    "gate_id": "G1",
+    "lifecycle": "candidate",
+    "declaration_status": "not_declared",
+    "promotion_allowed": false,
+    "g1_status": "pending",
+    "g1_metrics": {
+      "total": 12,
+      "passed": 11,
+      "pending": 1,
+      "failed": 0
+    },
+    "pending_metric_ids": [
+      "review_topology"
+    ],
+    "pending_metric_count_scope": "G1 metric rows only; candidate exact-head checks, independent read-only review, and exact-SHA owner acceptance are separately tracked workflow prerequisites and must all bind the same final head",
+    "known_b2_scope_code_config_blockers": 0
+  },
+  "captured_at": {
+    "utc": "2026-07-21T22:58:00Z",
+    "kst": "2026-07-22T07:58:00+09:00"
+  },
+  "subject": {
+    "repository": "ycpiglet/manipulator-control-tutorial",
+    "ref": "refs/heads/main",
+    "commit_sha": "ae4d40371b9a3fe4d7078822e1fc541a72defe2d",
+    "tree_sha": "b5f4cb03abbf1e66c14c27c720c737ef2fc4f798",
+    "parent_shas": [
+      "a2266b4f21f9a794998a98e71fa93643cacd1b64",
+      "1399921a3d96f8a67a8b3d3ea5a44a56c6e94685"
+    ],
+    "commit_timestamp": "2026-07-22T07:16:31+09:00",
+    "pre_record_capture_cleanliness": {
+      "head_equals_origin_main": true,
+      "ahead": 0,
+      "behind": 0,
+      "tracked_status": "clean",
+      "index_diff": "clean",
+      "worktree_diff": "clean"
+    }
+  },
+  "source_handoff": {
+    "pull_request_number": 55,
+    "pull_request_url": "https://github.com/ycpiglet/manipulator-control-tutorial/pull/55",
+    "head_sha": "1399921a3d96f8a67a8b3d3ea5a44a56c6e94685",
+    "merge_sha": "ae4d40371b9a3fe4d7078822e1fc541a72defe2d",
+    "source_tree_sha": "b5f4cb03abbf1e66c14c27c720c737ef2fc4f798",
+    "merge_tree_sha": "b5f4cb03abbf1e66c14c27c720c737ef2fc4f798",
+    "tree_equivalent": true,
+    "reviews": 0,
+    "comments": 0,
+    "review_threads": 0
+  },
+  "candidate_change_policy": {
+    "head_ref": "agent/safe-main-baseline",
+    "base_ref": "main",
+    "controlled_product_changes_allowed": false,
+    "real_learner_outputs_modified": false,
+    "real_output_cleanup_dry_run_performed": false,
+    "cleanup_apply_performed": false,
+    "repository_structure_change_performed": false
+  },
+  "controlled_items": {
+    "subject_sha": "ae4d40371b9a3fe4d7078822e1fc541a72defe2d",
+    "inventory_algorithm": "LC_ALL=C git ls-tree -r --full-tree <subject-sha> -- <all-paths-in-one-invocation> | sha256sum",
+    "groups": [
+      {
+        "id": "product",
+        "paths": [
+          "src/mclab"
+        ],
+        "entry_count": 113,
+        "git_objects": {
+          "src/mclab": "2a951a41394d5021f0a0fc0c49d130be89728b5a"
+        },
+        "inventory_sha256": "8d722c57efe216a0c015c05cd06b8e3c8a11c7a09db4973904a4a8b3c0ba38ad"
+      },
+      {
+        "id": "configs",
+        "paths": [
+          "configs"
+        ],
+        "entry_count": 78,
+        "git_objects": {
+          "configs": "fe2cbe3a402eaf12944f20198240e99cd246780e"
+        },
+        "inventory_sha256": "b1108fd870d5368ab21afda9cdce8f1dd9d87759dab0e283fe6bb5bfcf624a99"
+      },
+      {
+        "id": "models",
+        "paths": [
+          "models"
+        ],
+        "entry_count": 8,
+        "git_objects": {
+          "models": "0e4f3ed4da2ed9d388cc81ac2c254fcfd4842dbd"
+        },
+        "inventory_sha256": "1de2bc233d7f36c07c831b9a74a525a4328fee0b53f1fde002912d151b1ac052"
+      },
+      {
+        "id": "third_party",
+        "paths": [
+          "third_party"
+        ],
+        "entry_count": 5,
+        "git_objects": {
+          "third_party": "b91d29b1c5a0d8916c390a78c46046162bc796c6"
+        },
+        "inventory_sha256": "fb986ed36f21f275caf0515b236ffbc41c00d74f8cd0a4bc8625d8c9d2152106"
+      },
+      {
+        "id": "validation",
+        "paths": [
+          "tests",
+          "scripts",
+          ".agents/validation",
+          ".github/workflows"
+        ],
+        "entry_count": 55,
+        "git_objects": {
+          "tests": "4e82ebbe76bb888eed68de9ca699f7bda1037358",
+          "scripts": "48f90d2f1314ec8cd46ee648f291681fbd5eb8d4",
+          ".agents/validation": "219e37a928dee6cdc341e4260d6de2eed670c290",
+          ".github/workflows": "f917ce6e2cb82845112c3843f61f6683ac62dc2d"
+        },
+        "inventory_sha256": "afa476d6ad8d78bb15f4b986ac14f8a08db5f97cf75265505130326b45bde855"
+      },
+      {
+        "id": "distribution",
+        "paths": [
+          "packaging",
+          "pyproject.toml"
+        ],
+        "entry_count": 4,
+        "git_objects": {
+          "packaging": "a5b1a9ec2a12d600c7ae7b1ad178d6b0205869a6",
+          "pyproject.toml": "5cdb5afddf274f7af01e1f98d246ea39931cc9e6"
+        },
+        "inventory_sha256": "45d3c4ab3a067f0d3d2caeb343888f4204c447747ee840118e319be25872ad00"
+      },
+      {
+        "id": "newcomer_public_contract",
+        "paths": [
+          "README.md",
+          "README.en.md",
+          "docs",
+          ".github/SECURITY.md",
+          ".github/SUPPORT.md"
+        ],
+        "entry_count": 20,
+        "git_objects": {
+          "README.md": "763a13b4b7f9369b6e6e3211188f4a9018e6d53e",
+          "README.en.md": "43486a413e66017bbf5443eb271dc9126b0824fd",
+          "docs": "72f4748141c67693921a4a38ae56484d631e95cd",
+          ".github/SECURITY.md": "770b66405e2653b4a3dfda71522c6f121502d20a",
+          ".github/SUPPORT.md": "c81d8e6c16c7df5870402e9a04d986add3ed5f33"
+        },
+        "inventory_sha256": "97e9e285c93e9c1727797a072c71e33312bbf7f1914735096f149a871fa34fb2"
+      },
+      {
+        "id": "publication",
+        "paths": [
+          "paper",
+          "jose",
+          "CITATION.cff"
+        ],
+        "entry_count": 43,
+        "git_objects": {
+          "paper": "8afc23e05df674817274eda048d111ba2fd3673c",
+          "jose": "54945f777a282a573e934fa19fe430b9fb30130e",
+          "CITATION.cff": "bd41048c27205341122ba6ae0a44dfa5eda4e5be"
+        },
+        "inventory_sha256": "a907013c7f35d8892078e33cb591d511416aa78a551ec3c192d18c5e8d8099e1"
+      },
+      {
+        "id": "all_controlled",
+        "paths": [
+          "src/mclab",
+          "configs",
+          "models",
+          "third_party",
+          "tests",
+          "scripts",
+          ".agents/validation",
+          ".github/workflows",
+          "packaging",
+          "pyproject.toml",
+          "README.md",
+          "README.en.md",
+          "docs",
+          ".github/SECURITY.md",
+          ".github/SUPPORT.md",
+          "paper",
+          "jose",
+          "CITATION.cff"
+        ],
+        "entry_count": 326,
+        "inventory_sha256": "622cb98bba31dae38bdab0d480ccdb019afe0295f4b4245c54771ad595811ec9"
+      }
+    ],
+    "workflow_only_inventory": {
+      "entry_count": 2,
+      "inventory_sha256": "b40e6b37c4d25c9563416bb055a80a5b485c68349bb3bf5eb497b6630d2e43d9"
+    }
+  },
+  "dependency_and_license_state": {
+    "dependency_lock": {
+      "status": "not_applicable_at_b2",
+      "tracked_file_count": 0,
+      "recorded_value": "N/A — SUP-01 pending"
+    },
+    "third_party_notice": {
+      "status": "absent",
+      "tracked_file_count": 0,
+      "next_gate": "LIC-01"
+    },
+    "repository_licenses": [
+      {
+        "path": "LICENSE",
+        "git_blob": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+        "content_sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+      },
+      {
+        "path": "LICENSE-docs",
+        "git_blob": "590b9d45401387639cb53808d8afa06dc914accc",
+        "content_sha256": "a0992f79d9b2ce39263b9369ed7dbdc68b40be7191636c063fc19fb3045e38d3"
+      }
+    ],
+    "pyproject_toml": {
+      "git_blob": "5cdb5afddf274f7af01e1f98d246ea39931cc9e6",
+      "content_sha256": "9feb516ebc54f9b7bc220574cc87cbc8f9013d71c15edb2b0c6ba48becc256ca"
+    },
+    "menagerie_installer": {
+      "commit": "71f066ad0be9cd271f7ed58c030243ef157af9f4",
+      "archive_sha256": "000b9f51abb404efb1de2b88b3c738674c472a85b6c4143168859abc4c98d423",
+      "assets_py_path": "src/mclab/application/assets.py",
+      "assets_py_git_blob": "b7f4fa26711c48f00645043051759b2160d678f2",
+      "assets_py_content_sha256": "c4b0604dbf64a984bb56628080ef5f2fbdfb6a95ab6e80f74f21122ef2abb5fa",
+      "desktop_uses_pinned_installer": true,
+      "simulator_ci_uses_mutable_default_head": true
+    }
+  },
+  "validation_environment": {
+    "os": "Ubuntu 22.04.5 LTS",
+    "kernel": "Linux 6.8.0-134-generic",
+    "architecture": "x86_64",
+    "git": "2.34.1",
+    "git_object_format": "sha1",
+    "python": "3.10.12",
+    "gcc": "11.4.0",
+    "bash": "5.1.16",
+    "coreutils": "8.32",
+    "inventory_locale": "LC_ALL=C",
+    "temporary_validation_root": "/tmp/mclab-base01-validation.j1QyGV",
+    "real_outputs_used": false
+  },
+  "subject_validation": {
+    "status": "pass",
+    "local": {
+      "safe_union": {
+        "passed": 286,
+        "skipped": 7,
+        "subtests": 396
+      },
+      "cleanup_only": {
+        "passed": 62,
+        "skipped": 6,
+        "subtests": 16
+      },
+      "completion_accepted_union": {
+        "passed": 145,
+        "skipped": 0,
+        "subtests": 1306
+      },
+      "completion_expanded_learner_menu_union": {
+        "passed": 231,
+        "skipped": 0,
+        "subtests": 1756
+      },
+      "completion_core_surface_parity": {
+        "passed": 24,
+        "skipped": 0,
+        "subtests": 1082
+      },
+      "focused_legacy_id_parity": {
+        "passed": 7,
+        "skipped": 0,
+        "subtests": 6
+      },
+      "readme_contract": {
+        "metrics_passed": 25,
+        "metrics_total": 25,
+        "links_checked": 82,
+        "link_errors": 0
+      },
+      "workflow_action_pins": {
+        "passed": 14,
+        "total": 14
+      },
+      "ruff_findings": 0,
+      "pre_asset_diagnostic_excluded_from_acceptance": true
+    },
+    "github_exact_source_head": {
+      "commit_sha": "1399921a3d96f8a67a8b3d3ea5a44a56c6e94685",
+      "required_checks": {
+        "status": "pass",
+        "passed": 6,
+        "required": 6
+      },
+      "ci_run_id": 29871635697,
+      "desktop_run_id": 29871635771,
+      "job_ids": {
+        "simulator": 88772870420,
+        "paper_citation": 88772870454,
+        "paper_latex": 88772870379,
+        "windows": 88772870588,
+        "ubuntu": 88772870631,
+        "macos": 88772870813
+      }
+    },
+    "github_frozen_subject_post_merge": {
+      "commit_sha": "ae4d40371b9a3fe4d7078822e1fc541a72defe2d",
+      "required_checks": {
+        "status": "pass",
+        "passed": 6,
+        "required": 6
+      },
+      "ci_run_id": 29873178744,
+      "desktop_run_id": 29873178702,
+      "simulator": {
+        "job_id": 88777768364,
+        "passed": 822,
+        "skipped": 12,
+        "subtests": 2420,
+        "coverage_percent": 82.2,
+        "ruff_findings": 0,
+        "python_3_10_floor": {
+          "passed": 109,
+          "skipped": 6,
+          "subtests": 20
+        }
+      },
+      "paper_citation_job_id": 88777768308,
+      "paper_latex_job_id": 88777768293,
+      "desktop_jobs": [
+        {
+          "platform": "windows-2025",
+          "job_id": 88777768052,
+          "passed": 228,
+          "skipped": 17,
+          "subtests": 389
+        },
+        {
+          "platform": "ubuntu-24.04",
+          "job_id": 88777768079,
+          "passed": 238,
+          "skipped": 7,
+          "subtests": 394,
+          "cleanup_ui_audit_passed": 18,
+          "cleanup_ui_audit_total": 18
+        },
+        {
+          "platform": "macos-15",
+          "job_id": 88777768116,
+          "passed": 238,
+          "skipped": 7,
+          "subtests": 394
+        }
+      ]
+    }
+  },
+  "governance_snapshot": {
+    "status": "pass_for_b2_scope",
+    "window_utc": {
+      "start": "2026-07-21T22:35:43Z",
+      "end": "2026-07-21T22:37:47Z"
+    },
+    "window_kst": {
+      "start": "2026-07-22T07:35:43+09:00",
+      "end": "2026-07-22T07:37:47+09:00"
+    },
+    "ruleset": {
+      "count_for_main": 1,
+      "id": 19209773,
+      "name": "Protect main (GOV-01B)",
+      "enforcement": "active",
+      "requires_pull_request": true,
+      "requires_conversation_resolution": true,
+      "requires_up_to_date_branch": true,
+      "required_approvals": 0,
+      "blocks_deletion": true,
+      "blocks_non_fast_forward": true,
+      "admin_bypass": "pull_request_only"
+    },
+    "required_checks": {
+      "count": 6,
+      "github_actions_app_id": 15368,
+      "contexts": [
+        "Simulator lint and tests",
+        "Paper citation and formula gates",
+        "Paper LaTeX build",
+        "Unsigned development build (windows-2025)",
+        "Unsigned development build (ubuntu-24.04)",
+        "Unsigned development build (macos-15)"
+      ]
+    },
+    "direct_collaborators": {
+      "count": 1,
+      "owner": "ycpiglet",
+      "role": "admin",
+      "formal_independent_human_approval_available": false
+    },
+    "codeowners": "* @ycpiglet",
+    "security": {
+      "vulnerability_alerts": true,
+      "dependabot_security_updates": true,
+      "dependabot_paused": false,
+      "private_vulnerability_reporting": true,
+      "secret_scanning": true,
+      "push_protection": true,
+      "actions_sha_pinning_required": true,
+      "default_actions_token": "read",
+      "workflows_may_approve_pull_requests": false
+    },
+    "tags": 0,
+    "releases": 0
+  },
+  "g1_assessment": {
+    "status": "pending",
+    "metrics": [
+      {
+        "id": "cleanup_selection",
+        "status": "pass",
+        "measurement": "4/4 valid selected in mixed fixture; 0 invalid/internal/link selected; deterministic property and mutation tables pass"
+      },
+      {
+        "id": "protected_roots",
+        "status": "pass",
+        "measurement": "broad root, ancestor, link, mount, alias, junction, and handle cases reject as required"
+      },
+      {
+        "id": "cleanup_intent",
+        "status": "pass",
+        "measurement": "default dry-run; zero movement without exact plan ID plus --yes"
+      },
+      {
+        "id": "cleanup_result",
+        "status": "pass",
+        "measurement": "selected/executed equality and recoverable receipt/list/restore/rollback/interruption paths pass"
+      },
+      {
+        "id": "completion_truth",
+        "status": "pass",
+        "measurement": "1024/1024 exhaustive evidence combinations pass"
+      },
+      {
+        "id": "surface_parity",
+        "status": "pass",
+        "measurement": "78 targets, 292 surface cases, 12 strict axes, 0 mismatches"
+      },
+      {
+        "id": "legacy_data",
+        "status": "pass",
+        "measurement": "0 rewrites; immutable fixtures; stable versioned reasons; focused parity 7 tests and 6 subtests"
+      },
+      {
+        "id": "repository_rules",
+        "status": "pass",
+        "measurement": "one active main ruleset; PR/conversation/up-to-date; deletion and non-FF blocked; six exact checks"
+      },
+      {
+        "id": "security_settings",
+        "status": "pass",
+        "measurement": "required 3/3 enabled; secret scanning and push protection also enabled"
+      },
+      {
+        "id": "workflow_provenance",
+        "status": "pass",
+        "measurement": "14/14 full-SHA references; SHA enforcement true; exact/post-merge six checks pass"
+      },
+      {
+        "id": "review_topology",
+        "status": "pending",
+        "reason": "Exact-subject and exact-candidate-PR-head owner risk acceptance is absent."
+      },
+      {
+        "id": "base_quality",
+        "status": "pass",
+        "measurement": "Ruff 0; remote pytest failure 0; coverage 82.20 percent"
+      }
+    ]
+  },
+  "audit_p0_disposition": [
+    {
+      "id": "P0-01",
+      "status": "closed_for_b2",
+      "basis": "SAFE-01"
+    },
+    {
+      "id": "P0-02",
+      "status": "closed_for_b2",
+      "basis": "COMP-01 plus corrective COMP-02"
+    },
+    {
+      "id": "P0-03",
+      "status": "technical_condition_satisfied_formal_acceptance_pending",
+      "basis": "clean frozen subject and candidate record"
+    },
+    {
+      "id": "P0-04",
+      "status": "deferred_not_b2_blocker",
+      "next_gates": [
+        "LIC-01",
+        "PKG-01",
+        "REL-01",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "P0-05",
+      "status": "split",
+      "closed_for_b2": [
+        "repository_rules",
+        "security_settings",
+        "immutable_action_references"
+      ],
+      "deferred": [
+        "dependency_lock",
+        "simulator_ci_menagerie_pin",
+        "scans_and_sbom",
+        "tags_and_releases"
+      ]
+    }
+  ],
+  "candidate_pr_evidence": {
+    "status": "pending",
+    "recording_semantics": "record-creation snapshot; current PR head, check rollup, and review evidence are authoritative in GitHub and must be revalidated for every changed head",
+    "pull_request_number": null,
+    "pull_request_url": null,
+    "head_sha": null,
+    "exact_head_required_checks": {
+      "status": "not_run",
+      "passed": null,
+      "required": 6,
+      "run_ids": null,
+      "job_ids": null
+    },
+    "independent_read_only_review": {
+      "status": "pending",
+      "finding_counts": null,
+      "evidence_url": null
+    },
+    "authoritative_head_source": "GitHub PullRequest.headRefOid at owner-acceptance time"
+  },
+  "owner_acceptance": {
+    "required": true,
+    "status": "pending",
+    "accepted": false,
+    "required_subject_sha": "ae4d40371b9a3fe4d7078822e1fc541a72defe2d",
+    "accepted_subject_sha": null,
+    "accepted_candidate_pr_head_sha": null,
+    "actor": null,
+    "accepted_at": null,
+    "evidence_url": null,
+    "general_permission_to_continue_counts_as_acceptance": false,
+    "statement_template_only": "I reviewed B2 subject {subject_sha} and BASE-01 PR head {candidate_pr_head_sha}. I acknowledge that required approvals are 0 because there is one direct collaborator and that no formal independent human approval exists. I accept the documented residual risks solely for the B2 safe-main development baseline. This does not authorize public beta, signed distribution, release/DOI publication, real-output cleanup dry-run, or cleanup apply."
+  },
+  "residual_risks": [
+    {
+      "id": "single_maintainer",
+      "severity": "b2_gate",
+      "status": "pending_exact_sha_owner_acceptance"
+    },
+    {
+      "id": "producer_long_lived_pin",
+      "severity": "P2",
+      "status": "deferred"
+    },
+    {
+      "id": "cleanup_operability_platform_limits",
+      "status": "deferred_fail_closed"
+    },
+    {
+      "id": "node20_action_compatibility_warnings",
+      "status": "deferred_to_SUP-01"
+    },
+    {
+      "id": "dependency_lock_absent",
+      "status": "deferred_to_SUP-01"
+    },
+    {
+      "id": "ci_menagerie_mutable_checkout",
+      "status": "deferred_to_SUP-01"
+    },
+    {
+      "id": "third_party_notices_absent",
+      "status": "deferred_to_LIC-01"
+    },
+    {
+      "id": "unsigned_unpacked_distribution",
+      "status": "deferred_to_G2_G3_G4"
+    },
+    {
+      "id": "tags_and_releases_absent",
+      "tags": 0,
+      "releases": 0,
+      "status": "deferred_to_REL"
+    },
+    {
+      "id": "real_output_dry_run_not_performed",
+      "status": "separate_owner_participating_task"
+    }
+  ],
+  "authorization_limits": {
+    "public_beta": false,
+    "signed_distribution": false,
+    "release_or_doi_publication": false,
+    "real_output_cleanup_dry_run": false,
+    "cleanup_apply": false,
+    "repository_structure_change": false,
+    "b2_dependent_merge_work": false
+  },
+  "declaration": {
+    "status": "not_declared",
+    "declared": false,
+    "declared_at": null,
+    "declared_by": null,
+    "evidence_url": null,
+    "merge_commit_sha": null,
+    "blocking_reasons": [
+      "candidate_pr_exact_head_checks_pending",
+      "independent_review_pending",
+      "exact_sha_owner_acceptance_pending"
+    ],
+    "blocking_reason_scope": "three distinct BASE-01 workflow prerequisites; the 11/12 value counts G1 metric rows and does not reduce this list to owner acceptance alone",
+    "all_blocking_reasons_must_bind_same_final_head": true,
+    "append_only_final_record_required": true
+  }
+}
