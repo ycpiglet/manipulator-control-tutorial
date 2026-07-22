@@ -14,19 +14,21 @@
 실행 순서와 승격 gate는 `READINESS_EXECUTION_PLAN.md`가 정합니다. 오래되거나 dirty한
 checkout에서 release/readiness 작업을 이어가지 말고 최신 `origin/main`에서 clean
 worktree를 만듭니다. PR #35, B1, GOV-01, SAFE-01, DOC-01, COMP-01/02,
-BASE-01/B2, STATE-01, IA-00, INT-01 disposition은 완료됐습니다. IA-00은 root
-launcher 23개를 v0.1/B4까지 **FREEZE**하므로 IA-01은 수행하지 않습니다. PR #60은
-Draft #37의 package exclusion만 제한적으로 채택했고 #38은 forward-port 없이
-종료됐으며, 어느 Draft도 wholesale merge하지 않았습니다. PR #61은 FREEZE 아래의
-`run_mclab.cmd` bootstrap 결함을 제자리에서 보수했습니다.
+BASE-01/B2, STATE-01, IA-00, INT-01 disposition과 SUP-01은 완료됐습니다. IA-00은
+root launcher 23개를 v0.1/B4까지 **FREEZE**하므로 IA-01은 수행하지 않습니다.
+PR #60은 Draft #37의 package exclusion만 제한적으로 채택했고 #38은 forward-port
+없이 종료됐으며, 어느 Draft도 wholesale merge하지 않았습니다. PR #61은 FREEZE
+아래의 `run_mclab.cmd` bootstrap 결함을 제자리에서 보수했습니다.
 
-현재 accepted implementation subject는 SUP-01C merge
-`a216ee8b326008ffeae3e139fad65716c19ed341`입니다. SUP-01A/B/C에서 Node24 Action,
-hash-locked Python dependency, pinned Panda runtime asset 범위가 완료됐고, 다음
-critical-path 작업은 vulnerability/license scan, Linux system-package evidence,
-SBOM input을 닫는 SUP-01 후속입니다. LIC-01은 accepted SUP-01 뒤 수행합니다.
-PKG-01은 IA/INT 결정이 끝나 착수할 수 있지만 E2E-01은 SUP-01과 PKG-01이 모두
-병합된 뒤 수행합니다. 기존 B2 candidate/declaration Markdown/JSON, 과거 archive,
+현재 accepted implementation subject는 SUP-01 aggregate merge
+`6f0995bd8fe52f8fa6832a03f83254eb13ff9cc1`입니다. SUP-01 acceptance는
+repository lock, fail-closed vulnerability/license inventory, pinned Ubuntu
+direct-package evidence와 deterministic SBOM-input gate에 한정됩니다. License
+evidence는 `pending-lic-01`이고 final per-OS SBOM/provenance나 hosted base/native
+transitive inventory가 아니므로 다음 ordered compliance 작업은 LIC-01입니다.
+PKG-01→E2E-01은 B3 technical-preview critical path이며 PKG-01은 IA/INT 결정이 끝나
+병렬 착수할 수 있고 E2E-01은 accepted PKG-01이 추가된 exact main에서 수행합니다.
+기존 B2 candidate/declaration Markdown/JSON, 과거 archive,
 감사 원문과 이전 finding-ledger event는 수정하지 않습니다.
 
 SAFE-01 PASS와 B2 선언 뒤에도 실제 learner outputs의 dry-run은 승인되지 않았습니다.
@@ -586,12 +588,13 @@ The full project is course-demo ready when:
 Follow the active readiness work order: BASE-01/B2 remains declared at G1
 12/12 for frozen subject `ae4d40371b9a3fe4d7078822e1fc541a72defe2d`.
 STATE-01, IA-00 FREEZE, INT-01 disposition, launcher bootstrap hardening, and
-SUP-01A/B/C are accepted through `main@a216ee8b326008ffeae3e139fad65716c19ed341`.
-After the state/ledger reconciliation, finish SUP-01's vulnerability/license
-scan, Linux system-package, and SBOM-input work from a new clean latest-main
-worktree. LIC-01 follows accepted SUP-01; E2E-01 follows accepted SUP-01 and
-PKG-01. IA-01 remains absent unless a superseding ADR changes FREEZE to GO.
-Do not treat any internal baseline as public-beta, signing, release/DOI,
+SUP-01 are accepted through `main@6f0995bd8fe52f8fa6832a03f83254eb13ff9cc1`.
+Start LIC-01 from that accepted inventory without treating `pending-lic-01` as
+legal approval. PKG-01 may proceed in a disjoint clean branch; E2E-01 follows
+accepted PKG-01 on the exact main already containing SUP-01. IA-01 remains
+absent unless a superseding ADR changes FREEZE to GO. Do not treat deterministic
+SBOM inputs or short-lived CI artifacts as final release SBOM/provenance. Do
+not treat any internal baseline as public-beta, signing, release/DOI,
 external-contact, real-output cleanup, or repository-move approval. Do not
 reopen or wholesale merge superseded Draft PR #37/#38, or add web, ROS2, or
 Isaac Sim scope ahead of the readiness gates.
