@@ -64,6 +64,81 @@ jobs:
           path: third_party/mujoco_menagerie/franka_emika_panda
           key: panda-71f066ad-${{ runner.os }}
 
+      - name: Windows compatibility launcher repair matrix
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          MCLAB_SELF_TEST: "1"
+          MCLAB_APP_AUTO_QUIT_MS: "750"
+        run: |
+          $repo = (Get-Location).Path
+          $launcher = Join-Path $repo "run_mclab.cmd"
+          $venv = Join-Path $repo ".venv"
+          $venvPython = Join-Path $venv "Scripts\python.exe"
+          $pandaScene = Join-Path $repo "third_party\mujoco_menagerie\franka_emika_panda\scene.xml"
+
+          if (Test-Path $venv) {
+            throw "Expected no .venv before the clean compatibility-launcher check."
+          }
+
+          Push-Location $env:RUNNER_TEMP
+          try {
+            & $launcher
+            if ($LASTEXITCODE -ne 0) {
+              throw "Clean run_mclab.cmd failed with exit code $LASTEXITCODE."
+            }
+          } finally {
+            Pop-Location
+          }
+
+          & $venvPython -c "import mclab, PySide6"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Clean run_mclab.cmd did not install the desktop runtime."
+          }
+          if (-not (Test-Path $pandaScene)) {
+            throw "Clean run_mclab.cmd did not install the pinned Panda scene."
+          }
+
+          Remove-Item -Recurse -Force $venv
+          python -m venv $venv
+          if ($LASTEXITCODE -ne 0) {
+            throw "Could not construct the Qt-missing compatibility state."
+          }
+          & $venvPython -m pip install -e ".[dev]"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Could not construct the dev-only compatibility state."
+          }
+          & $venvPython -c "import mclab"
+          if ($LASTEXITCODE -ne 0) {
+            throw "The dev-only venv must still import mclab."
+          }
+          & $venvPython -c "import PySide6" 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            throw "The dev-only venv unexpectedly retained PySide6."
+          }
+          if (-not (Test-Path $pandaScene)) {
+            throw "The dev-only state must retain the Panda scene."
+          }
+
+          Push-Location $env:RUNNER_TEMP
+          try {
+            & $launcher
+            if ($LASTEXITCODE -ne 0) {
+              throw "Qt-missing run_mclab.cmd repair failed with exit code $LASTEXITCODE."
+            }
+          } finally {
+            Pop-Location
+          }
+
+          & $venvPython -c "import mclab, PySide6"
+          if ($LASTEXITCODE -ne 0) {
+            throw "run_mclab.cmd did not repair the Qt-missing venv."
+          }
+          & $venvPython -m pip check
+          if ($LASTEXITCODE -ne 0) {
+            throw "The repaired compatibility environment failed pip check."
+          }
+
       - name: Windows recommended launcher setup smoke
         if: runner.os == 'Windows'
         shell: cmd

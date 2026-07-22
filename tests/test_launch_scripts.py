@@ -9,8 +9,27 @@ ROOT = Path(__file__).resolve().parents[1]
 class LaunchScriptTests(unittest.TestCase):
     def test_top_level_menu_launcher_exists(self) -> None:
         text = (ROOT / "run_mclab.cmd").read_text(encoding="utf-8")
-        self.assertIn("scripts\\bootstrap_and_run.py", text)
-        self.assertIn("-m mclab menu", text)
+        setup_command = 'python "scripts\\start_mclab.py" --setup-only'
+        import_probe = (
+            '".venv\\Scripts\\python.exe" -c "import mclab, PySide6" >nul 2>&1'
+        )
+        menu_command = '".venv\\Scripts\\python.exe" -m mclab menu'
+
+        self.assertIn('cd /d "%~dp0"', text)
+        self.assertIn(setup_command, text)
+        self.assertNotIn("scripts\\bootstrap_and_run.py", text)
+        self.assertIn(import_probe, text)
+        self.assertIn(f"{import_probe}\nif errorlevel 1 goto setup", text)
+        self.assertIn(menu_command, text)
+        self.assertIn(f"{menu_command}\nexit /b %errorlevel%", text)
+        self.assertLess(
+            text.index(
+                'if not exist "third_party\\mujoco_menagerie\\'
+                'franka_emika_panda\\scene.xml" goto setup'
+            ),
+            text.index(import_probe),
+        )
+        self.assertLess(text.index(import_probe), text.index(":setup"))
 
     def test_lab_launchers_use_consistent_viewer_flags(self) -> None:
         expected = {
@@ -58,16 +77,21 @@ class LaunchScriptTests(unittest.TestCase):
                 self.assertIn("scripts\\bootstrap_and_run.py", text)
 
     def test_launchers_stop_when_setup_fails(self) -> None:
-        setup_command = 'scripts\\bootstrap_and_run.py" --setup-only'
+        setup_commands = (
+            'scripts\\bootstrap_and_run.py" --setup-only',
+            'scripts\\start_mclab.py" --setup-only',
+        )
         guard_command = "if errorlevel 1 exit /b %errorlevel%"
 
         for path in sorted(ROOT.glob("*.cmd")):
             with self.subTest(filename=path.name):
                 text = path.read_text(encoding="utf-8")
-                if setup_command not in text:
+                matched_commands = [command for command in setup_commands if command in text]
+                if not matched_commands:
                     continue
+                self.assertEqual(len(matched_commands), 1)
                 self.assertIn(guard_command, text)
-                self.assertLess(text.index(setup_command), text.index(guard_command))
+                self.assertLess(text.index(matched_commands[0]), text.index(guard_command))
 
     def test_batch_launchers_use_headless_comparison_batches(self) -> None:
         expected = {

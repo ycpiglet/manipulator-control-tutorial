@@ -5,11 +5,14 @@ cd /d "%~dp0"
 
 if not exist ".venv\Scripts\python.exe" goto setup
 if not exist "third_party\mujoco_menagerie\franka_emika_panda\scene.xml" goto setup
+".venv\Scripts\python.exe" -c "import mclab, PySide6" >nul 2>&1
+if errorlevel 1 goto setup
 goto run
 
 :setup
-python "scripts\bootstrap_and_run.py" --setup-only
+python "scripts\start_mclab.py" --setup-only
 if errorlevel 1 exit /b %errorlevel%
 
 :run
 ".venv\Scripts\python.exe" -m mclab menu
+exit /b %errorlevel%
