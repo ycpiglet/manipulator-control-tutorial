@@ -28,6 +28,7 @@ POLICY_FILES = (
     CHECKER.PAPER_LOCK,
     "requirements/build.in",
     "requirements/tools/uv.in",
+    "requirements/tools/supply-chain.in",
     "scripts/install_locked.py",
     "scripts/lock_requirements.py",
     "scripts/manage_dependency_locks.py",
@@ -70,7 +71,7 @@ def test_current_repository_dependency_lock_policy_passes() -> None:
     assert len(metrics) == 5
     assert all(metric.passed for metric in metrics)
     lock_metric = next(metric for metric in metrics if metric.name == "hashed lock profiles")
-    assert "7/7 profiles" in lock_metric.measured
+    assert "8/8 profiles" in lock_metric.measured
     assert "requirements" in lock_metric.measured
     assert "hashes" in lock_metric.measured
     install_metric = next(metric for metric in metrics if metric.name == "install surface policy")
@@ -97,16 +98,21 @@ def test_python_policy_and_every_direct_project_pin_are_exact(lock_root: Path) -
     assert any("DIRECT_PINS_MISMATCH optional-dependencies.dev" in error for error in errors)
 
 
-def test_build_and_uv_inputs_remain_exact_and_separate(lock_root: Path) -> None:
+def test_build_uv_and_scanner_inputs_remain_exact_and_separate(lock_root: Path) -> None:
     build_input = lock_root / "requirements" / "build.in"
     uv_input = lock_root / "requirements" / "tools" / "uv.in"
+    scanner_input = lock_root / "requirements" / "tools" / "supply-chain.in"
     build_input.write_text(build_input.read_text(encoding="utf-8") + "uv==0.11.31\n")
     uv_input.write_text("uv>=0.11.31\n", encoding="utf-8")
+    scanner_input.write_text("pip-audit>=2.10.1\npip-licenses==5.5.5\n", encoding="utf-8")
 
     errors = _errors(lock_root)
 
     assert any("DIRECT_PINS_MISMATCH requirements/build.in" in error for error in errors)
     assert any("INPUT_PIN_FORMAT requirements/tools/uv.in" in error for error in errors)
+    assert any(
+        "INPUT_PIN_FORMAT requirements/tools/supply-chain.in" in error for error in errors
+    )
 
 
 def test_uv_cannot_enter_a_learner_or_build_lock(lock_root: Path) -> None:
@@ -121,7 +127,21 @@ def test_uv_cannot_enter_a_learner_or_build_lock(lock_root: Path) -> None:
     )
 
 
-def test_lock_inventory_requires_exactly_the_seven_reviewed_profiles(lock_root: Path) -> None:
+def test_scanners_cannot_enter_a_learner_or_build_lock(lock_root: Path) -> None:
+    build_lock = lock_root / "requirements" / "locks" / "build.txt"
+    digest = "0" * 64
+    _inject_lock_line(build_lock, f"pip-audit==2.10.1 --hash=sha256:{digest}")
+
+    errors = _errors(lock_root)
+
+    assert any(
+        error
+        == "BUILD_TOOL_SEPARATION build: pip-audit must remain supply-chain-tool-only"
+        for error in errors
+    )
+
+
+def test_lock_inventory_requires_exactly_the_eight_reviewed_profiles(lock_root: Path) -> None:
     (lock_root / "requirements" / "locks" / "runtime.txt").unlink()
     (lock_root / "requirements" / "locks" / "unreviewed.txt").write_text(
         "--only-binary :all:\n", encoding="utf-8"

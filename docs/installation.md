@@ -41,10 +41,45 @@ untrusted local process, remove it and create a new one from a trusted CPython;
 the installer deliberately refuses automatic repair when recorded state or
 RECORD integrity is invalid.
 
-The Linux desktop workflow also installs its Qt/XCB system libraries from the
-signed current Ubuntu repositories. Those apt packages are allowlisted but are
-not yet version/snapshot locked, so they are outside this Python-lock baseline
-and remain inputs for the later package inventory/SBOM gate.
+The Linux desktop workflow installs its 22 direct Qt/XCB system packages from
+the committed Ubuntu 24.04 AMD64 manifest at
+`requirements/system/ubuntu-24.04-amd64.json`. The installer requires the
+`20260723T000000Z` Ubuntu snapshot, exact candidate and installed versions,
+warning-free controlled repository output, and a verified evidence file.
+It uses a temporary official-Ubuntu-only Deb822 source file plus isolated APT
+configuration, source parts, preferences, authentication, trust, package-list,
+cache, and archive state. Host hooks and proxy variables are excluded, APT and
+dpkg use absolute system paths, and TLS peer/host, repository-strength, and
+metadata-date checks are explicitly enabled. Hosted-runner Microsoft, Docker,
+mirror, preference, hook, or cached-index configuration therefore cannot enter
+candidate selection. Conflicting or disabling
+per-repository snapshot settings, snapshot-ID mismatch, unapproved repository
+identities, insecure or unauthenticated fallback, timeouts, and version or
+architecture drift fail closed. The Ubuntu archive keyring is pinned to the
+official Noble `ubuntu-keyring==2023.11.28.1` payload (3,607 bytes, SHA-256
+`80a36b0a6de2f69f49d2df75ef473ccde121e9e190b9ea01d20a4f63778d5c31`). The
+installer opens the source without following symlinks, verifies the exact bytes,
+and gives APT only a new `0644` copy inside its isolated temporary state. A loose
+host-image mode such as `0777` is therefore not treated as trust. The keyring pin
+is a closed field in the Ubuntu manifest and generated SBOM-input contract, and
+the installation evidence records the observed verified size and digest rather
+than the temporary copy path. This relies on the Ubuntu image's root-owned
+`/usr/share/keyrings` parent and excludes a concurrent hostile root process. This
+controls the direct package set and repository point in time; it is not a frozen
+base image or a complete native transitive-library inventory.
+
+APT's update status reports the configured logical Ubuntu archive URLs even
+when the Deb822 `Snapshot` field selects the timestamped backend. The installer
+therefore accepts status URLs only from those two exact HTTPS Ubuntu endpoints
+or the exact timestamped snapshot endpoint. Before any fetch, it runs APT's
+`--print-uris` planner against the same isolated state and validates the planned
+timestamped physical `InRelease` route for all four controlled suites, exact
+physical/logical target parity, and strict record syntax. It also requires the
+preflight to leave no detected metadata or content change in the isolated
+state. The explicit Deb822 `Snapshot` value is the binding selection; `-S` and
+`APT::Snapshot` are two spellings of the same redundant command-level guard.
+The subsequent real update validates reachability, system-CA TLS, Ubuntu-keyring
+signatures, candidates, and versions; the preflight is not network attestation.
 
 `assets install` downloads the pinned MuJoCo Menagerie commit, verifies the
 archive SHA-256, extracts only the tracked `franka_emika_panda` runtime files,
@@ -106,8 +141,9 @@ in-place repair.
 ## Updating dependency locks
 
 Dependency updates are reviewable changes, not an implicit install-time
-resolution. After editing exact pins in `pyproject.toml` or
-`requirements/build.in`, run the generator in its disposable tool environment:
+resolution. After editing exact pins in `pyproject.toml`,
+`requirements/build.in`, or a reviewed file below `requirements/tools/`, run
+the generator in its disposable tool environment:
 
 ```bash
 python scripts/manage_dependency_locks.py --write
@@ -120,6 +156,42 @@ coverage before committing all regenerated files together. The generator is
 pinned separately, runs in a fresh temporary venv, and is deleted afterward;
 it is never installed into the project `.venv` or learner profiles. The build
 profile also pins `tomli` so the policy checker works under CPython 3.10.
+
+## Supply-chain evidence
+
+CI installs `pip-audit==2.10.1` and `pip-licenses==5.5.5` only in a disposable
+environment from the separate hash-locked scanner profile; the vulnerability
+service cache is disposable with it. The universal
+vulnerability input removes environment markers only after proving complete
+coverage of every package/version pair in all eight reviewed lock profiles
+across the 12 target environments. Any scanner failure, malformed response,
+uncovered dependency, vulnerability finding, or nonempty waiver registry fails
+the gate. Scanner output is normalized before evidence is written so aliases
+and service ordering cannot change the committed contract.
+
+The desktop matrix also records a deterministic package-profile license input
+for each supported OS family. Missing or unknown license identifiers, license
+texts, package URLs, and NOTICE files remain explicit null values and are
+counted in `metadata_gaps`; package names, versions, and exact lock coverage
+still fail closed on any mismatch. `inventory-complete` means the reviewed
+package set was fully recorded, while `compliance_status` remains
+`pending-lic-01`. LIC-01 must resolve those gaps before its UNKNOWN=0 release
+gate can pass. These records are not legal advice, a complete notice bundle,
+or approval to distribute Qt/PySide or any other component.
+Hosted-interpreter bootstrap packages outside the reviewed package profile are
+not distribution inputs: the target probe requires every lock-derived package
+at its exact version, and `pip-licenses --packages` limits the evidence to that
+same deterministic set. Ambient packages therefore neither enter the evidence
+nor relax missing-package, version, or scanner-output coverage checks.
+
+`scripts/generate_sbom_inputs.py` combines the reviewed Python locks, Ubuntu
+direct-package manifest, pinned Panda runtime inventory, bundled fonts, and
+immutable GitHub Action references into deterministic SBOM inputs. Generation
+requires the supplied source commit to equal a clean checked-out Git `HEAD`.
+This is not an OS-specific final SBOM, build provenance, signature, or release artifact.
+Native transitive libraries, the trusted CPython/base image, and binary
+internals remain outside the Python vulnerability scanner and must be closed
+by the later LIC/PKG/REL gates before public distribution.
 
 ## Release policy
 

@@ -31,39 +31,35 @@ jobs:
           cache: pip
           cache-dependency-path: |
             pyproject.toml
+            requirements/tools/supply-chain.txt
             requirements/locks/build.txt
             requirements/locks/package.txt
 
-      - name: Install Linux Qt runtime libraries
+      - name: Install pinned Linux Qt runtime libraries
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes \
-            libdbus-1-3 \
-            libegl1 \
-            libfontconfig1 \
-            libgl1 \
-            libglib2.0-0t64 \
-            libgssapi-krb5-2 \
-            libx11-xcb1 \
-            libxcb-cursor0 \
-            libxcb-icccm4 \
-            libxcb-image0 \
-            libxcb-keysyms1 \
-            libxcb-randr0 \
-            libxcb-render-util0 \
-            libxcb-shape0 \
-            libxcb-shm0 \
-            libxcb-sync1 \
-            libxcb-xfixes0 \
-            libxcb-xinerama0 \
-            libxcb-xkb1 \
-            libxkbcommon-x11-0 \
-            xauth \
-            xvfb
+          mkdir -p build/validation/supply-chain-Linux
+          sudo /usr/bin/python3 scripts/install_ubuntu_system_packages.py --install --output build/validation/supply-chain-Linux/ubuntu-system-packages.json
 
       - name: Install desktop, test, and packaging dependencies
         run: python scripts/install_locked.py --allow-external-env package
+
+      - name: Select package-profile Python
+        shell: bash
+        run: echo "MCLAB_PACKAGE_PYTHON=$(python -c 'import sys; print(sys.executable)')" >> "$GITHUB_ENV"
+
+      - name: Audit package-profile licenses
+        shell: bash
+        run: python scripts/audit_supply_chain.py licenses --target-python "$MCLAB_PACKAGE_PYTHON" --profile package --output build/validation/supply-chain-${RUNNER_OS}/python-licenses.json
+
+      - name: Upload target supply-chain evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mclab-supply-chain-${{ runner.os }}
+          path: build/validation/supply-chain-${{ runner.os }}
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Install and verify pinned Panda assets
         run: |

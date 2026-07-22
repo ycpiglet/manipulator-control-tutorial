@@ -30,6 +30,7 @@ jobs:
           cache-dependency-path: |
             pyproject.toml
             requirements/tools/uv.txt
+            requirements/tools/supply-chain.txt
             requirements/locks/build.txt
             requirements/locks/dev.txt
 
@@ -44,6 +45,29 @@ jobs:
 
       - name: Asset supply-chain policy
         run: python .agents/validation/check_asset_supply_chain.py
+
+      - name: Supply-chain static policy
+        run: python .agents/validation/check_supply_chain_policy.py
+
+      - name: Generate deterministic universal SBOM inputs
+        run: |
+          python scripts/generate_sbom_inputs.py --source-commit "$GITHUB_SHA" --output /tmp/mclab-sbom-inputs-1.json
+          python scripts/generate_sbom_inputs.py --source-commit "$GITHUB_SHA" --output /tmp/mclab-sbom-inputs-2.json
+          cmp /tmp/mclab-sbom-inputs-1.json /tmp/mclab-sbom-inputs-2.json
+
+      - name: Audit reviewed Python vulnerabilities
+        run: python scripts/audit_supply_chain.py vulnerabilities --output build/validation/supply-chain/python-vulnerabilities.json
+
+      - name: Upload universal supply-chain evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mclab-supply-chain-universal
+          path: |
+            /tmp/mclab-sbom-inputs-1.json
+            build/validation/supply-chain/python-vulnerabilities.json
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Install package with dev tools
         run: python scripts/install_locked.py --allow-external-env dev

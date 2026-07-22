@@ -26,6 +26,11 @@ class LockProfile:
 
 LOCK_PROFILES = (
     LockProfile("uv-tool", "requirements/tools/uv.in", "requirements/tools/uv.txt"),
+    LockProfile(
+        "supply-chain-tool",
+        "requirements/tools/supply-chain.in",
+        "requirements/tools/supply-chain.txt",
+    ),
     LockProfile("build", "requirements/build.in", "requirements/locks/build.txt"),
     LockProfile("runtime", "pyproject.toml", "requirements/locks/runtime.txt"),
     LockProfile("app", "pyproject.toml", "requirements/locks/app.txt", ("app",)),
