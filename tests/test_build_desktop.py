@@ -165,11 +165,11 @@ def test_package_operation_lock_is_single_writer_and_reusable(build_module, tmp_
 
     with build_module._package_operation_lock(tmp_path, dist):
         lock_path = dist / build_module._PACKAGE_OPERATION_LOCK_NAME
-        assert lock_path.read_bytes() == b"\0"
         with pytest.raises(build_module.PackageBusyError, match="Another package build"):
             with build_module._package_operation_lock(tmp_path, dist):
                 pytest.fail("a second package operation acquired the held lock")
 
+    assert lock_path.read_bytes() == b"\0"
     with build_module._package_operation_lock(tmp_path, dist):
         pass
 
@@ -787,6 +787,7 @@ def test_evidence_reader_rejects_noncanonical_json_and_duplicate_keys(
         b"[" * 1200 + b"0" + b"]" * 1200,
         b'{"value":' + b"9" * 100_000 + b"}\n",
     ],
+    ids=("deep-nesting", "oversized-integer"),
 )
 def test_evidence_reader_bounds_deep_or_oversized_integer_json(
     build_module, tmp_path: Path, payload: bytes
@@ -1075,6 +1076,7 @@ def test_linked_bundle_root_fails_closed(build_module, tmp_path: Path) -> None:
         build_module._inventory_bundle(linked_bundle)
 
 
+@pytest.mark.skipif(os.name == "nt", reason="POSIX mount-boundary policy")
 def test_inventory_rejects_nested_same_device_mount_boundary(build_module, tmp_path: Path) -> None:
     bundle = _make_bundle(build_module, tmp_path)
     mounted = bundle / "mounted"
@@ -1092,6 +1094,7 @@ def test_inventory_rejects_nested_same_device_mount_boundary(build_module, tmp_p
         build_module._inventory_bundle(bundle)
 
 
+@pytest.mark.skipif(os.name == "nt", reason="POSIX device-boundary policy")
 def test_filesystem_identity_check_rejects_cross_device_member(
     build_module, tmp_path: Path
 ) -> None:
@@ -1332,6 +1335,7 @@ def test_clean_directory_chain_uses_windows_reparse_flag_abstraction(
     assert keep.read_bytes() == b"must survive"
 
 
+@pytest.mark.skipif(os.name == "nt", reason="POSIX mount-boundary policy")
 def test_nested_mount_preflight_blocks_all_deletion_and_pyinstaller(
     build_module, tmp_path: Path
 ) -> None:
