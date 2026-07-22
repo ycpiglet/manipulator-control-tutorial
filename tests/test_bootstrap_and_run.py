@@ -4,14 +4,137 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from scripts import bootstrap_and_run, start_mclab  # noqa: E402
 from scripts.bootstrap_and_run import verify_output_artifacts  # noqa: E402
 
 
 class BootstrapVerifyTests(unittest.TestCase):
+    def test_bootstrap_refuses_linked_venv_before_running_commands(self) -> None:
+        with (
+            patch.object(bootstrap_and_run, "VENV", Path("/project/.venv")),
+            patch.object(bootstrap_and_run, "VENV_PYTHON", Path("/project/.venv/bin/python")),
+            patch.object(
+                bootstrap_and_run,
+                "project_venv_redirect_error",
+                return_value="lib is a link or reparse point",
+            ),
+            patch.object(bootstrap_and_run, "run") as run,
+        ):
+            with self.assertRaisesRegex(RuntimeError, "unsafe project environment"):
+                bootstrap_and_run.ensure_venv()
+
+        run.assert_not_called()
+
+    def test_bootstrap_refuses_incomplete_venv_before_running_commands(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            venv = Path(tmp) / ".venv"
+            venv.mkdir()
+            with (
+                patch.object(bootstrap_and_run, "VENV", venv),
+                patch.object(bootstrap_and_run, "VENV_PYTHON", venv / "bin/python"),
+                patch.object(bootstrap_and_run, "run") as run,
+            ):
+                with self.assertRaisesRegex(RuntimeError, "incomplete project environment"):
+                    bootstrap_and_run.ensure_venv()
+
+            run.assert_not_called()
+
+    def test_app_bootstrap_refuses_incomplete_venv_before_running_commands(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            venv = Path(tmp) / ".venv"
+            venv.mkdir()
+            with (
+                patch.object(start_mclab, "VENV", venv),
+                patch.object(start_mclab, "VENV_PYTHON", venv / "bin/python"),
+                patch.object(start_mclab, "_run") as run,
+            ):
+                with self.assertRaisesRegex(RuntimeError, "incomplete project environment"):
+                    start_mclab._ensure_venv()
+
+            run.assert_not_called()
+
+    def test_bootstrap_checks_full_platform_support_before_creation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            venv = Path(tmp) / ".venv"
+            with (
+                patch.object(bootstrap_and_run, "VENV", venv),
+                patch.object(bootstrap_and_run, "VENV_PYTHON", venv / "bin/python"),
+                patch.object(
+                    bootstrap_and_run,
+                    "support_error",
+                    return_value="unsupported platform",
+                ) as support,
+                patch.object(bootstrap_and_run, "run") as run,
+            ):
+                with self.assertRaisesRegex(RuntimeError, "unsupported platform"):
+                    bootstrap_and_run.ensure_venv("dev")
+
+            support.assert_called_once_with("dev")
+            run.assert_not_called()
+
+    def test_app_bootstrap_reuses_existing_venv_without_host_support_check(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            venv = Path(tmp) / ".venv"
+            python = venv / "bin/python"
+            python.parent.mkdir(parents=True)
+            python.touch()
+            with (
+                patch.object(start_mclab, "VENV", venv),
+                patch.object(start_mclab, "VENV_PYTHON", python),
+                patch.object(start_mclab, "support_error") as support,
+                patch.object(start_mclab, "_run") as run,
+            ):
+                start_mclab._ensure_venv()
+
+            support.assert_not_called()
+            run.assert_not_called()
+
+    def test_setup_only_reconciles_the_runtime_profile(self) -> None:
+        with (
+            patch.object(sys, "argv", ["bootstrap_and_run.py", "--setup-only"]),
+            patch.object(bootstrap_and_run, "ensure_venv") as ensure_venv,
+            patch.object(bootstrap_and_run, "ensure_dependencies") as ensure_dependencies,
+            patch.object(bootstrap_and_run, "ensure_menagerie"),
+        ):
+            self.assertEqual(bootstrap_and_run.main(), 0)
+
+        ensure_venv.assert_called_once_with("runtime")
+        ensure_dependencies.assert_called_once_with("runtime")
+
+    def test_skip_tests_reconciles_runtime_while_tested_runs_use_dev(self) -> None:
+        for arguments, expected_profile in ((["--skip-tests", "--no-plot"], "runtime"), ([], "dev")):
+            with self.subTest(arguments=arguments), tempfile.TemporaryDirectory() as tmp:
+                with (
+                    patch.object(sys, "argv", ["bootstrap_and_run.py", *arguments]),
+                    patch.object(bootstrap_and_run, "ROOT", Path(tmp)),
+                    patch.object(bootstrap_and_run, "ensure_venv") as ensure_venv,
+                    patch.object(
+                        bootstrap_and_run, "ensure_dependencies"
+                    ) as ensure_dependencies,
+                    patch.object(bootstrap_and_run, "ensure_menagerie"),
+                    patch.object(bootstrap_and_run, "run"),
+                    patch.object(bootstrap_and_run, "verify_output_artifacts"),
+                ):
+                    self.assertEqual(bootstrap_and_run.main(), 0)
+
+                ensure_venv.assert_called_once_with(expected_profile)
+                ensure_dependencies.assert_called_once_with(expected_profile)
+
+    def test_dependency_reconciliation_uses_only_the_locked_installer(self) -> None:
+        with patch.object(bootstrap_and_run, "run") as run:
+            bootstrap_and_run.ensure_dependencies("dev")
+
+        command = run.call_args.args[0]
+        self.assertEqual(command[-2:], [str(ROOT / "scripts" / "install_locked.py"), "dev"])
+        source = (ROOT / "scripts/bootstrap_and_run.py").read_text(encoding="utf-8")
+        self.assertNotIn('"pip", "install"', source)
+        self.assertNotIn('"--upgrade"', source)
+
     def test_verify_output_artifacts_accepts_complete_plotted_run(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "run"

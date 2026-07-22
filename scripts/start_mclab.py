@@ -8,8 +8,14 @@ import subprocess
 import sys
 from pathlib import Path
 
+try:
+    from scripts.install_locked import project_venv_redirect_error, support_error
+except ModuleNotFoundError:  # Direct execution puts scripts/ first on sys.path.
+    from install_locked import project_venv_redirect_error, support_error
+
 ROOT = Path(__file__).resolve().parents[1]
-VENV_PYTHON = ROOT / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+VENV = ROOT / ".venv"
+VENV_PYTHON = VENV / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
 
 
 def main() -> int:
@@ -19,10 +25,8 @@ def main() -> int:
     parser.add_argument("--setup-only", action="store_true")
     args = parser.parse_args()
 
-    if not VENV_PYTHON.exists():
-        _run([sys.executable, "-m", "venv", str(ROOT / ".venv")])
-    if not _module_available("PySide6") or not _module_available("mclab"):
-        _run([str(VENV_PYTHON), "-m", "pip", "install", "-e", ".[app]"])
+    _ensure_venv()
+    _run([str(VENV_PYTHON), str(ROOT / "scripts" / "install_locked.py"), "app"])
     _run([str(VENV_PYTHON), "-m", "mclab", "assets", "install"])
     if args.setup_only:
         _run([str(VENV_PYTHON), "-m", "mclab", "app", "--self-test"])
@@ -36,15 +40,24 @@ def main() -> int:
     return 0
 
 
-def _module_available(name: str) -> bool:
-    result = subprocess.run(
-        [str(VENV_PYTHON), "-c", f"import {name}"],
-        cwd=ROOT,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        check=False,
-    )
-    return result.returncode == 0
+def _ensure_venv() -> None:
+    redirect_error = project_venv_redirect_error(VENV)
+    if redirect_error:
+        raise RuntimeError(
+            f"Refusing unsafe project environment {VENV}: {redirect_error}. "
+            "Remove it before setup."
+        )
+    if VENV_PYTHON.exists():
+        return
+    if VENV.exists():
+        raise RuntimeError(
+            f"Refusing to overwrite incomplete project environment {VENV}. "
+            "Remove it before setup."
+        )
+    error = support_error("app")
+    if error:
+        raise RuntimeError(error)
+    _run([sys.executable, "-m", "venv", str(VENV)])
 
 
 def _run(command: list[str], *, accepted: tuple[int, ...] = (0,)) -> None:

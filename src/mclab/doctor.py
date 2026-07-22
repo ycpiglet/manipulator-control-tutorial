@@ -98,13 +98,20 @@ def _doctor_next_step_lines(fail_count: int) -> list[str]:
 
 def _python_runtime_check() -> DoctorCheck:
     version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-    if sys.version_info >= (3, 10):
+    if (3, 10) <= sys.version_info < (3, 13):
         return DoctorCheck("Python runtime", "OK", f"Python {version} is supported.")
+    if sys.version_info >= (3, 13):
+        return DoctorCheck(
+            "Python runtime",
+            "FAIL",
+            f"Python {version} is newer than the reviewed lock range (3.10-3.12).",
+            "Install CPython 3.10, 3.11, or 3.12 and recreate .venv.",
+        )
     return DoctorCheck(
         "Python runtime",
         "FAIL",
-        f"Python {version} is too old; this project requires Python 3.10 or newer.",
-        "Install Python 3.10+ and recreate .venv.",
+        f"Python {version} is too old; the reviewed lock range is 3.10-3.12.",
+        "Install CPython 3.10, 3.11, or 3.12 and recreate .venv.",
     )
 
 
@@ -124,7 +131,7 @@ def _required_modules_check(required_modules: tuple[str, ...]) -> DoctorCheck:
             "Python packages",
             "FAIL",
             "Missing or broken package imports: " + ", ".join(failed),
-            "Run `python -m pip install -e .[dev]` inside the project virtual environment.",
+            "Run `python scripts/install_locked.py runtime` inside the project virtual environment.",
         )
     return DoctorCheck("Python packages", "OK", "Required packages import successfully.")
 
@@ -308,7 +315,7 @@ def _desktop_app_check(root: Path) -> DoctorCheck:
             "Desktop app",
             "WARN",
             f"Headless tools are ready, but the optional Qt app is unavailable ({exc.__class__.__name__}).",
-            "Run `python -m pip install -e '.[app]'` to enable `mclab app` and `mclab menu`.",
+            "Run `python scripts/install_locked.py app` to enable `mclab app` and `mclab menu`.",
         )
     return DoctorCheck("Desktop app", "OK", "PySide6 Qt Quick runtime imports successfully.")
 

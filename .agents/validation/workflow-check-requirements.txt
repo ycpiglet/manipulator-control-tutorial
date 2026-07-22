@@ -1,4 +1,5 @@
-# The paper gate runs on CPython 3.11 / Ubuntu x86_64. Keep this parser input
-# wheel-only and hash-locked; SUP-01B will move it into the canonical build lock.
+# The paper gate runs on CPython 3.11 / Ubuntu x86_64. This purpose-specific
+# parser lock keeps the paper-only job small and is enforced by the canonical
+# dependency-policy validator.
 PyYAML==6.0.3 \
     --hash=sha256:b8bb0864c5a28024fac8a632c443c87c5aa6f215c0b126c449ae1a150412f31d

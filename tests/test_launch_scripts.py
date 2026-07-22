@@ -13,11 +13,17 @@ class LaunchScriptTests(unittest.TestCase):
         import_probe = (
             '".venv\\Scripts\\python.exe" -c "import mclab, PySide6" >nul 2>&1'
         )
+        lock_probe = (
+            '".venv\\Scripts\\python.exe" "scripts\\install_locked.py" '
+            "--check app >nul 2>&1"
+        )
         menu_command = '".venv\\Scripts\\python.exe" -m mclab menu'
 
         self.assertIn('cd /d "%~dp0"', text)
         self.assertIn(setup_command, text)
         self.assertNotIn("scripts\\bootstrap_and_run.py", text)
+        self.assertIn(lock_probe, text)
+        self.assertIn(f"{lock_probe}\nif errorlevel 1 goto setup", text)
         self.assertIn(import_probe, text)
         self.assertIn(f"{import_probe}\nif errorlevel 1 goto setup", text)
         self.assertIn(menu_command, text)
@@ -27,8 +33,9 @@ class LaunchScriptTests(unittest.TestCase):
                 'if not exist "third_party\\mujoco_menagerie\\'
                 'franka_emika_panda\\scene.xml" goto setup'
             ),
-            text.index(import_probe),
+            text.index(lock_probe),
         )
+        self.assertLess(text.index(lock_probe), text.index(import_probe))
         self.assertLess(text.index(import_probe), text.index(":setup"))
 
     def test_lab_launchers_use_consistent_viewer_flags(self) -> None:
@@ -75,6 +82,9 @@ class LaunchScriptTests(unittest.TestCase):
                 self.assertNotIn("--show-viewer-ui", text)
                 self.assertIn("--open-report", text)
                 self.assertIn("scripts\\bootstrap_and_run.py", text)
+                self.assertIn(
+                    '"scripts\\install_locked.py" --check runtime >nul 2>&1', text
+                )
 
     def test_launchers_stop_when_setup_fails(self) -> None:
         setup_commands = (
@@ -110,6 +120,9 @@ class LaunchScriptTests(unittest.TestCase):
                 self.assertIn("--open-report", text)
                 self.assertNotIn("--viewer", text)
                 self.assertIn("scripts\\bootstrap_and_run.py", text)
+                self.assertIn(
+                    '"scripts\\install_locked.py" --check runtime >nul 2>&1', text
+                )
 
         lab04_text = (ROOT / "run_batch_lab04.cmd").read_text(encoding="utf-8")
         self.assertIn("third_party\\mujoco_menagerie\\franka_emika_panda\\scene.xml", lab04_text)
@@ -117,3 +130,12 @@ class LaunchScriptTests(unittest.TestCase):
         self.assertIn("third_party\\mujoco_menagerie\\franka_emika_panda\\scene.xml", lab04_cartesian_text)
         all_text = (ROOT / "run_all_batches.cmd").read_text(encoding="utf-8")
         self.assertIn("third_party\\mujoco_menagerie\\franka_emika_panda\\scene.xml", all_text)
+
+    def test_source_bootstraps_always_use_locked_dependency_reconciliation(self) -> None:
+        app_source = (ROOT / "scripts/start_mclab.py").read_text(encoding="utf-8")
+        bootstrap_source = (ROOT / "scripts/bootstrap_and_run.py").read_text(encoding="utf-8")
+
+        self.assertIn('"install_locked.py"), "app"', app_source)
+        self.assertIn('"install_locked.py"), profile', bootstrap_source)
+        self.assertNotIn('"pip", "install"', app_source)
+        self.assertNotIn('"pip", "install"', bootstrap_source)
