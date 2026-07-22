@@ -99,7 +99,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Tectonic
-        uses: WtfJoke/setup-tectonic@8a63d072f8390efdff59da7fa08aa49e3c1f5e1b # v3.1.5
+        uses: WtfJoke/setup-tectonic@eb29fd68b7d3f76011906b6e45ea4320c8de5d2f # v4.0.5
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           tectonic-version: "0.16.9"
