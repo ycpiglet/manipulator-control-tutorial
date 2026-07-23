@@ -20,7 +20,7 @@ class WorkflowActionPinTests(unittest.TestCase):
     def test_repository_workflows_pin_every_external_action(self) -> None:
         references = CHECKER.external_action_references(CHECKER.workflow_files())
         action_lock = CHECKER.load_action_lock()
-        self.assertEqual(len(references), 15)
+        self.assertEqual(len(references), 16)
         self.assertEqual(CHECKER.unpinned_references(references), [])
         self.assertEqual(CHECKER.action_lock_metadata_errors(action_lock), [])
         self.assertEqual(CHECKER.reviewed_reference_errors(references, action_lock), [])
