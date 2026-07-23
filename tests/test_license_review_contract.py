@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 
 from scripts import generate_license_review as generator
+from scripts import import_license_corpus as corpus_importer
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,10 +36,12 @@ def contract_repository(tmp_path: Path) -> Path:
     files = {
         generator.CONTRACT_PATH,
         generator.GENERATOR_PATH,
+        generator.IMPORT_MANIFEST_PATH,
         generator.IMPORTER_PATH,
         generator.INPUT_PATH,
         generator.INVENTORY_PATH,
         generator.NOTICE_PATH,
+        generator.PACKAGE_BUILDER_PATH,
         generator.PACKAGING_HOOK_PATH,
         generator.SCHEMA_PATH,
         "packaging/mclab.spec",
@@ -98,6 +101,49 @@ def test_declared_scope_has_no_missing_or_unknown_component_evidence() -> None:
     assert not checker._unresolved_values(contract)
 
 
+def test_corpus_import_manifest_is_explicit_hash_anchored_and_retention_open() -> None:
+    manifest = json.loads(
+        (ROOT / generator.IMPORT_MANIFEST_PATH).read_text(encoding="utf-8")
+    )
+    assert manifest["raw_evidence_retention"] == "open-owner-decision-required"
+    assert manifest["replay_command"] == corpus_importer.EXPECTED_REPLAY_COMMAND
+    supplements = manifest["supplemental_inputs"]
+    assert corpus_importer._import_manifest() == {
+        label: {
+            "archive_sha256": record["archive_sha256"],
+            "kind": record["kind"],
+            "license_members": frozenset(record["license_members"]),
+        }
+        for label, record in supplements.items()
+    }
+    package_lock = (ROOT / "requirements/locks/package.txt").read_text(encoding="utf-8")
+    build_lock = (ROOT / "requirements/locks/build.txt").read_text(encoding="utf-8")
+    assert supplements["exceptiongroup"]["archive_sha256"] in package_lock
+    assert supplements["pyopengl"]["archive_sha256"] in package_lock
+    assert supplements["setuptools"]["archive_sha256"] in build_lock
+    inventory = (ROOT / generator.INVENTORY_PATH).read_text(encoding="utf-8")
+    assert supplements["panda-runtime"]["archive_sha256"] in inventory
+
+
+def test_corpus_import_manifest_retention_decision_fails_closed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    manifest_path = tmp_path / "manifest.json"
+    document = json.loads(
+        (ROOT / generator.IMPORT_MANIFEST_PATH).read_text(encoding="utf-8")
+    )
+    document["raw_evidence_retention"] = "complete"
+    manifest_path.write_text(
+        json.dumps(document, sort_keys=True, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(corpus_importer, "IMPORT_MANIFEST_PATH", manifest_path)
+
+    with pytest.raises(corpus_importer.CorpusImportError, match="remain.*open"):
+        corpus_importer._import_manifest()
+
+
 def test_qt_rows_are_explicit_partial_blockers_and_governance_stays_open() -> None:
     contract = json.loads((ROOT / generator.CONTRACT_PATH).read_text(encoding="utf-8"))
     components = {component["id"]: component for component in contract["components"]}
@@ -138,7 +184,7 @@ def test_review_input_fails_closed_on_unknown_or_governance_promotion(
     assert isinstance(expressions, dict)
     expressions["python:numpy"] = "UNKNOWN"
     _write_inputs(contract_repository, document)
-    with pytest.raises(generator.LicenseReviewError, match="unresolved"):
+    with pytest.raises(generator.LicenseReviewError, match="SPDX"):
         generator.build_contract(contract_repository)
 
     document = _inputs(ROOT)
@@ -148,6 +194,73 @@ def test_review_input_fails_closed_on_unknown_or_governance_promotion(
     _write_inputs(contract_repository, document)
     with pytest.raises(generator.LicenseReviewError, match="governance"):
         generator.build_contract(contract_repository)
+
+
+@pytest.mark.parametrize(
+    "expression",
+    [
+        "TBD",
+        "NONE",
+        "foo",
+        "MIT XOR BSD-3-Clause",
+        "MIT AND",
+        "MIT OR OR BSD-3-Clause",
+        "MIT or BSD-3-Clause",
+        "LicenseRef-Undefined",
+        "(MIT)",
+        "MIT  AND PSF-2.0",
+    ],
+)
+def test_review_input_rejects_unresolved_or_malformed_spdx_expressions(
+    contract_repository: Path,
+    expression: str,
+) -> None:
+    document = _inputs(contract_repository)
+    expressions = document["component_evidence_expressions"]
+    assert isinstance(expressions, dict)
+    expressions["python:numpy"] = expression
+    _write_inputs(contract_repository, document)
+
+    with pytest.raises(generator.LicenseReviewError, match="SPDX"):
+        generator.build_contract(contract_repository)
+
+
+def test_review_input_requires_exact_licenseref_definition_coverage(
+    contract_repository: Path,
+) -> None:
+    document = _inputs(contract_repository)
+    definitions = document["license_ref_components"]
+    assert isinstance(definitions, dict)
+    definitions.pop("LicenseRef-NumPy-2.2.6")
+    _write_inputs(contract_repository, document)
+    with pytest.raises(generator.LicenseReviewError, match="undefined LicenseRef"):
+        generator.build_contract(contract_repository)
+
+    document = _inputs(ROOT)
+    definitions = document["license_ref_components"]
+    assert isinstance(definitions, dict)
+    definitions["LicenseRef-Unused-1.0"] = "python:numpy"
+    _write_inputs(contract_repository, document)
+    with pytest.raises(generator.LicenseReviewError, match="definition coverage"):
+        generator.build_contract(contract_repository)
+
+
+def test_checker_recognizes_broader_exact_unresolved_sentinels() -> None:
+    for value in ("TBD", "NONE", "N/A", "NOASSERTION", "UNKNOWN"):
+        assert checker._unresolved_values({"evidence_expression": value}) == [
+            "$.evidence_expression: unresolved sentinel is not allowed: "
+            f"{value!r}"
+        ]
+
+
+def test_contract_generation_for_an_explicit_root_does_not_mutate_module_root(
+    contract_repository: Path,
+) -> None:
+    original_root = generator.ROOT
+
+    generator.build_contract(contract_repository)
+
+    assert generator.ROOT == original_root
 
 
 def test_corpus_tamper_and_unreferenced_file_fail_closed(
@@ -179,9 +292,14 @@ def test_stale_notice_is_rejected_even_when_contract_is_current(
     assert errors == [f"generated artifact is stale: {generator.NOTICE_PATH}"]
 
 
-def test_packaging_hook_bundles_the_notice_at_bundle_root() -> None:
+def test_packaging_hook_and_builder_attest_the_notice_at_bundle_root() -> None:
     namespace = runpy.run_path(str(ROOT / generator.PACKAGING_HOOK_PATH))
 
     assert namespace["datas"] == [(str(ROOT / generator.NOTICE_PATH), ".")]
     spec = (ROOT / "packaging/mclab.spec").read_text(encoding="utf-8")
     assert 'hookspath=[str(ROOT / "packaging/hooks")]' in spec
+    builder = runpy.run_path(str(ROOT / generator.PACKAGE_BUILDER_PATH))
+    assert builder["THIRD_PARTY_NOTICES_NAME"] == generator.NOTICE_PATH
+    assert builder["EVIDENCE_SCHEMA"] == "mclab.package-metrics.v2"
+    assert callable(builder["_atomic_replace_third_party_notices"])
+    assert callable(builder["_third_party_notices_evidence"])
