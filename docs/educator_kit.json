@@ -1,0 +1,684 @@
+{
+  "canonical_sources": {
+    "catalog_target_ids": "src/mclab/application/catalog.py:LEARNING_PATH_TARGET_IDS",
+    "completion_evaluator": "src/mclab/completion.py:evaluate_completion",
+    "completion_rules": "src/mclab/application/catalog.py:ScenarioCatalog.default",
+    "educator_guide": "docs/educator_guide.md",
+    "learning_path": "src/mclab/learner_menu.py:LEARNING_PATH",
+    "pilot_protocol": "docs/educator_pilot_protocol.md"
+  },
+  "kit_id": "EDU-01A-repository-pilot-kit",
+  "learning_outcomes": [
+    {
+      "assessment_evidence": [
+        "prediction",
+        "priority-plot",
+        "worksheet-explanation"
+      ],
+      "id": "LO-01",
+      "statement": "Predict and explain how mass, damping, and stiffness change a one-dimensional dynamic response.",
+      "steps": [
+        1,
+        2
+      ],
+      "summative_steps": [
+        2
+      ]
+    },
+    {
+      "assessment_evidence": [
+        "control-change",
+        "error-and-effort-plot",
+        "tradeoff-explanation"
+      ],
+      "id": "LO-02",
+      "statement": "Tune proportional, integral, and derivative action and explain tracking, overshoot, settling, saturation, and effort tradeoffs.",
+      "steps": [
+        3,
+        4
+      ],
+      "summative_steps": [
+        4
+      ]
+    },
+    {
+      "assessment_evidence": [
+        "joint-and-task-space-plots",
+        "singularity-prediction",
+        "dls-comparison-explanation"
+      ],
+      "id": "LO-03",
+      "statement": "Relate joint-space and task-space control through the Jacobian and explain why damped least squares changes behavior near singularity.",
+      "steps": [
+        5,
+        6,
+        7,
+        8
+      ],
+      "summative_steps": [
+        7,
+        8
+      ]
+    },
+    {
+      "assessment_evidence": [
+        "cartesian-error-plot",
+        "wall-force-components",
+        "required-wall-preset-sequence"
+      ],
+      "id": "LO-04",
+      "statement": "Interpret Panda Cartesian tracking and virtual-wall contact evidence, including target gap, penetration, damping force, and retreat.",
+      "steps": [
+        9,
+        10,
+        11
+      ],
+      "summative_steps": [
+        10,
+        11
+      ]
+    },
+    {
+      "assessment_evidence": [
+        "manifest",
+        "report-and-worksheet",
+        "replay-or-rerun-rationale",
+        "course-comparison-prediction-checks"
+      ],
+      "id": "LO-05",
+      "statement": "Produce and audit reproducible experiment evidence using a controlled config, saved artifacts, replay or rerun reasoning, and cross-lab comparison.",
+      "steps": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "summative_steps": [
+        12
+      ]
+    }
+  ],
+  "learning_path": [
+    {
+      "action_kind": "run",
+      "canonical_completion_evidence": {
+        "minimum_plot_count": 1,
+        "record_kind": "manifest_v1",
+        "required_artifacts": [],
+        "required_presets": [],
+        "requires_learner_control": false,
+        "requires_note": false,
+        "requires_observation": false,
+        "requires_plot": true,
+        "requires_prediction": false,
+        "requires_run": true,
+        "status": "completed"
+      },
+      "command": "python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --plot --plots essential --open-report",
+      "description": "Start with position, velocity, force, and energy.",
+      "educator_review_evidence": [
+        "priority-plot-interpretation",
+        "report",
+        "worksheet"
+      ],
+      "group": "Lab01 Mass-Spring-Damper",
+      "label": "Auto demo",
+      "mode": "automatic",
+      "order": 1,
+      "outcome_ids": [
+        "LO-01",
+        "LO-05"
+      ],
+      "planned_minutes": 10,
+      "target_id": "lab01.default",
+      "title": "1. Feel 1D physics"
+    },
+    {
+      "action_kind": "run",
+      "canonical_completion_evidence": {
+        "minimum_plot_count": 1,
+        "record_kind": "manifest_v1",
+        "required_artifacts": [],
+        "required_presets": [],
+        "requires_learner_control": true,
+        "requires_note": true,
+        "requires_observation": true,
+        "requires_plot": true,
+        "requires_prediction": true,
+        "requires_run": true,
+        "status": "completed"
+      },
+      "command": "python -m mclab run lab01 --config configs/lab01_msd/interactive_pull.yaml --viewer --realtime --pause-at-end --plot --plots essential --open-report",
+      "description": "Push the mass and tune mass, damping, and stiffness live.",
+      "educator_review_evidence": [
+        "post-completion-outcome-review",
+        "report",
+        "worksheet"
+      ],
+      "group": "Lab01 Mass-Spring-Damper",
+      "label": "Interactive",
+      "mode": "hands-on",
+      "order": 2,
+      "outcome_ids": [
+        "LO-01",
+        "LO-05"
+      ],
+      "planned_minutes": 15,
+      "target_id": "lab01.interactive-pull",
+      "title": "2. Disturb and tune"
+    },
+    {
+      "action_kind": "run",
+      "canonical_completion_evidence": {
+        "minimum_plot_count": 1,
+        "record_kind": "manifest_v1",
+        "required_artifacts": [],
+        "required_presets": [],
+        "requires_learner_control": false,
+        "requires_note": false,
+        "requires_observation": false,
+        "requires_plot": true,
+        "requires_prediction": false,
+        "requires_run": true,
+        "status": "completed"
+      },
+      "command": "python -m mclab run lab02 --config configs/lab02_pid/default.yaml --headless --plot --plots essential --open-report",
+      "description": "Watch PID tracking, error, and control force.",
+      "educator_review_evidence": [
+        "priority-plot-interpretation",
+        "report",
+        "worksheet"
+      ],
+      "group": "Lab02 PID Control",
+      "label": "Auto demo",
+      "mode": "automatic",
+      "order": 3,
+      "outcome_ids": [
+        "LO-02",
+        "LO-05"
+      ],
+      "planned_minutes": 10,
+      "target_id": "lab02.default",
+      "title": "3. Close the loop"
+    },
+    {
+      "action_kind": "run",
+      "canonical_completion_evidence": {
+        "minimum_plot_count": 1,
+        "record_kind": "manifest_v1",
+        "required_artifacts": [],
+        "required_presets": [],
+        "requires_learner_control": true,
+        "requires_note": true,
+        "requires_observation": true,
+        "requires_plot": true,
+        "requires_prediction": true,
+        "requires_run": true,
+        "status": "completed"
+      },
+      "command": "python -m mclab run lab02 --config configs/lab02_pid/interactive_disturbance.yaml --viewer --realtime --pause-at-end --plot --plots essential --open-report",
+      "description": "Disturb the plant and tune target, Kp, Ki, Kd, and force limit.",
+      "educator_review_evidence": [
+        "post-completion-outcome-review",
+        "report",
+        "worksheet"
+      ],
+      "group": "Lab02 PID Control",
+      "label": "Interactive",
+      "mode": "hands-on",
+      "order": 4,
+      "outcome_ids": [
+        "LO-02",
+        "LO-05"
+      ],
+      "planned_minutes": 15,
+      "target_id": "lab02.interactive-disturbance",
+      "title": "4. Tune PID live"
+    },
+    {
+      "action_kind": "run",
+      "canonical_completion_evidence": {
+        "minimum_plot_count": 1,
+        "record_kind": "manifest_v1",
+        "required_artifacts": [],
+        "required_presets": [],
+        "requires_learner_control": false,
+        "requires_note": false,
+        "requires_observation": false,
+        "requires_plot": true,
+        "requires_prediction": false,
+        "requires_run": true,
+        "status": "completed"
+      },
+      "command": "python -m mclab run lab03 --config configs/lab03_2dof/joint_space_2dof.yaml --headless --plot --plots essential --open-report",
+      "description": "Track shoulder and elbow targets on the two-link arm.",
+      "educator_review_evidence": [
+        "priority-plot-interpretation",
+        "report",
+        "worksheet"
+      ],
+      "group": "Lab03 2DOF Arm and Trajectories",
+      "label": "2DOF joint-space",
+      "mode": "automatic",
+      "order": 5,
+      "outcome_ids": [
+        "LO-03",
+        "LO-05"
+      ],
+      "planned_minutes": 15,
+      "target_id": "lab03.joint-space-2dof",
+      "title": "5. Move 2DOF joints"
+    },
+    {
+      "action_kind": "run",
+      "canonical_completion_evidence": {
+        "minimum_plot_count": 1,
+        "record_kind": "manifest_v1",
+        "required_artifacts": [],
+        "required_presets": [],
+        "requires_learner_control": false,
+        "requires_note": false,
+        "requires_observation": false,
+        "requires_plot": true,
+        "requires_prediction": false,
+        "requires_run": true,
+        "status": "completed"
+      },
+      "command": "python -m mclab run lab03 --config configs/lab03_2dof/task_space_2dof.yaml --headless --plot --plots task --open-report",
+      "description": "Move the end-effector toward an XY target with the Jacobian.",
+      "educator_review_evidence": [
+        "priority-plot-interpretation",
+        "report",
+        "worksheet"
+      ],
+      "group": "Lab03 2DOF Arm and Trajectories",
+      "label": "2DOF task-space",
+      "mode": "automatic",
+      "order": 6,
+      "outcome_ids": [
+        "LO-03",
+        "LO-05"
+      ],
+      "planned_minutes": 15,
+      "target_id": "lab03.task-space-2dof",
+      "title": "6. Control the hand"
+    },
+    {
+      "action_kind": "run",
+      "canonical_completion_evidence": {
+        "minimum_plot_count": 1,
+        "record_kind": "manifest_v1",
+        "required_artifacts": [],
+        "required_presets": [],
+        "requires_learner_control": true,
+        "requires_note": true,
+        "requires_observation": true,
+        "requires_plot": true,
+        "requires_prediction": true,
+        "requires_run": true,
+        "status": "completed"
+      },
+      "command": "python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_2dof.yaml --viewer --realtime --pause-at-end --plot --plots dls_disturbance --open-report",
+      "description": "Use DLS damping when the arm approaches poor Jacobian conditioning.",
+      "educator_review_evidence": [
+        "post-completion-outcome-review",
+        "report",
+        "worksheet"
+      ],
+      "group": "Lab03 2DOF Arm and Trajectories",
+      "label": "2DOF condition-aware DLS",
+      "mode": "hands-on",
+      "order": 7,
+      "outcome_ids": [
+        "LO-03",
+        "LO-05"
+      ],
+      "planned_minutes": 20,
+      "target_id": "lab03.condition-aware-dls-2dof",
+      "title": "7. Handle singularity"
+    },
+    {
+      "action_kind": "run",
+      "canonical_completion_evidence": {
+        "minimum_plot_count": 1,
+        "record_kind": "manifest_v1",
+        "required_artifacts": [],
+        "required_presets": [],
+        "requires_learner_control": false,
+        "requires_note": false,
+        "requires_observation": false,
+        "requires_plot": true,
+        "requires_prediction": false,
+        "requires_run": true,
+        "status": "completed"
+      },
+      "command": "python -m mclab run lab03 --config configs/lab03_2dof/condition_aware_dls_adaptive_speed_retarget_2dof.yaml --headless --plot --plots dls --open-report",
+      "description": "Compare a near-edge retarget path with an adaptive task-speed schedule before moving to Panda.",
+      "educator_review_evidence": [
+        "priority-plot-interpretation",
+        "report",
+        "worksheet"
+      ],
+      "group": "Lab03 2DOF Arm and Trajectories",
+      "label": "2DOF adaptive-speed retarget DLS",
+      "mode": "automatic",
+      "order": 8,
+      "outcome_ids": [
+        "LO-03",
+        "LO-05"
+      ],
+      "planned_minutes": 15,
+      "target_id": "lab03.condition-aware-dls-adaptive-speed-retarget-2dof",
+      "title": "8. Compare DLS retarget"
+    },
+    {
+      "action_kind": "run",
+      "canonical_completion_evidence": {
+        "minimum_plot_count": 1,
+        "record_kind": "manifest_v1",
+        "required_artifacts": [],
+        "required_presets": [],
+        "requires_learner_control": false,
+        "requires_note": false,
+        "requires_observation": false,
+        "requires_plot": true,
+        "requires_prediction": false,
+        "requires_run": true,
+        "status": "completed"
+      },
+      "command": "python -m mclab run lab04 --config configs/lab04_panda/neutral_hold.yaml --headless --plot --plots essential --open-report",
+      "description": "Use a stable neutral pose as the full manipulator baseline.",
+      "educator_review_evidence": [
+        "priority-plot-interpretation",
+        "report",
+        "worksheet"
+      ],
+      "group": "Lab04 Panda Manipulator",
+      "label": "Neutral hold",
+      "mode": "automatic",
+      "order": 9,
+      "outcome_ids": [
+        "LO-04",
+        "LO-05"
+      ],
+      "planned_minutes": 10,
+      "target_id": "lab04.neutral-hold",
+      "title": "9. Hold Panda"
+    },
+    {
+      "action_kind": "run",
+      "canonical_completion_evidence": {
+        "minimum_plot_count": 1,
+        "record_kind": "manifest_v1",
+        "required_artifacts": [],
+        "required_presets": [],
+        "requires_learner_control": false,
+        "requires_note": false,
+        "requires_observation": false,
+        "requires_plot": true,
+        "requires_prediction": false,
+        "requires_run": true,
+        "status": "completed"
+      },
+      "command": "python -m mclab run lab04 --config configs/lab04_panda/cartesian_reach.yaml --headless --plot --plots cartesian_reach --open-report",
+      "description": "Move the Panda hand toward an XYZ target before adding wall response.",
+      "educator_review_evidence": [
+        "priority-plot-interpretation",
+        "report",
+        "worksheet"
+      ],
+      "group": "Lab04 Panda Manipulator",
+      "label": "Cartesian reach",
+      "mode": "automatic",
+      "order": 10,
+      "outcome_ids": [
+        "LO-04",
+        "LO-05"
+      ],
+      "planned_minutes": 15,
+      "target_id": "lab04.cartesian-reach",
+      "title": "10. Reach in Cartesian"
+    },
+    {
+      "action_kind": "run",
+      "canonical_completion_evidence": {
+        "minimum_plot_count": 1,
+        "record_kind": "manifest_v1",
+        "required_artifacts": [],
+        "required_presets": [
+          "Close wall",
+          "Back away",
+          "Re-enter wall"
+        ],
+        "requires_learner_control": true,
+        "requires_note": true,
+        "requires_observation": true,
+        "requires_plot": true,
+        "requires_prediction": true,
+        "requires_run": true,
+        "status": "completed"
+      },
+      "command": "python -m mclab run lab04 --config configs/lab04_panda/interactive_virtual_wall.yaml --viewer --realtime --pause-at-end --plot --plots wall --open-report",
+      "description": "Tune wall position, stiffness, damping, and retreat gain.",
+      "educator_review_evidence": [
+        "post-completion-outcome-review",
+        "report",
+        "worksheet"
+      ],
+      "group": "Lab04 Panda Manipulator",
+      "label": "Virtual wall",
+      "mode": "hands-on",
+      "order": 11,
+      "outcome_ids": [
+        "LO-04",
+        "LO-05"
+      ],
+      "planned_minutes": 25,
+      "target_id": "lab04.interactive-virtual-wall",
+      "title": "11. Touch virtual wall"
+    },
+    {
+      "action_kind": "batch",
+      "canonical_completion_evidence": {
+        "minimum_plot_count": 0,
+        "record_kind": "manifest_v1",
+        "required_artifacts": [
+          "report",
+          "worksheet",
+          "batch.lab01_msd_compare",
+          "batch.lab02_pid_compare",
+          "batch.lab03_2dof_compare",
+          "batch.lab04_wall_compare",
+          "batch.lab04_cartesian_compare"
+        ],
+        "required_presets": [],
+        "requires_learner_control": false,
+        "requires_note": false,
+        "requires_observation": false,
+        "requires_plot": false,
+        "requires_prediction": false,
+        "requires_run": true,
+        "status": "completed"
+      },
+      "command": "python -m mclab batch all --open-report",
+      "description": "Generate the full comparison report set across all labs.",
+      "educator_review_evidence": [
+        "answered-prediction-check-prompts-external",
+        "cross-lab-claim",
+        "priority-plot-selection"
+      ],
+      "group": "Comparison Batches",
+      "label": "All compare",
+      "mode": "comparison",
+      "order": 12,
+      "outcome_ids": [
+        "LO-05"
+      ],
+      "planned_minutes": 45,
+      "target_id": "batch.all",
+      "title": "12. Compare the course"
+    }
+  ],
+  "pilot": {
+    "authorization": "not-authorized",
+    "educator_completed": 0,
+    "educator_recruited": 0,
+    "educator_target": 1,
+    "gates": [
+      {
+        "id": "novice-sample",
+        "threshold": "exactly 6 novices in the fixed primary cohort supply a recorded result for every required measure; withdrawals or missing measures fail the gate and are not replaced or pooled"
+      },
+      {
+        "id": "educator-adoption",
+        "threshold": "at least 1 independent educator passes every frozen Lab01 adoption checklist item using only the guides"
+      },
+      {
+        "id": "first-report-time",
+        "threshold": "the fixed 6-person primary cohort median time to first valid Lab01 default report is at most 10 minutes"
+      },
+      {
+        "id": "learning-comprehension",
+        "threshold": "at least 5 of the fixed 6-person primary novice cohort pass all four frozen predict-manipulate-observe-replay comprehension items"
+      },
+      {
+        "id": "novice-core-flow",
+        "threshold": "at least 5 of the fixed 6-person primary novice cohort pass every frozen core-flow item with at most one non-directive hint and no directive hint"
+      },
+      {
+        "id": "severity",
+        "threshold": "zero unresolved severity-1 or severity-2 findings"
+      },
+      {
+        "id": "sus",
+        "threshold": "the mean standard System Usability Scale score across all 6 primary novices is at least 68 with no missing item or participant total"
+      }
+    ],
+    "novice_completed": 0,
+    "novice_recruited": 0,
+    "novice_target": 6,
+    "results": {
+      "educator_adoption_success_count": null,
+      "first_report_median_minutes": null,
+      "learning_comprehension_count": null,
+      "novice_core_flow_success_count": null,
+      "sev1_count": null,
+      "sev2_count": null,
+      "sus_mean": null
+    },
+    "status": "not-run"
+  },
+  "rubric": {
+    "aggregation": "no-total-score",
+    "dimensions": [
+      {
+        "id": "R-01",
+        "levels": {
+          "0": "No relevant prediction or a claim unrelated to the changed variable.",
+          "1": "Names a likely direction but gives little causal reasoning.",
+          "2": "Predicts the direction and connects it to the controller or dynamics with a mostly correct reason.",
+          "3": "Makes a testable causal prediction, identifies a competing effect or tradeoff, and states what evidence would change the claim."
+        },
+        "name": "Prediction and causal reasoning",
+        "outcome_ids": [
+          "LO-01",
+          "LO-02",
+          "LO-03",
+          "LO-04"
+        ]
+      },
+      {
+        "id": "R-02",
+        "levels": {
+          "0": "No attributable learner control or more than one uncontrolled variable changes without justification.",
+          "1": "Changes a relevant control but cannot isolate its effect.",
+          "2": "Changes one relevant variable or follows the required preset sequence and records the action.",
+          "3": "Uses a controlled comparison, explains why other variables are held fixed, and can reproduce the manipulation from saved settings."
+        },
+        "name": "Controlled manipulation",
+        "outcome_ids": [
+          "LO-01",
+          "LO-02",
+          "LO-03",
+          "LO-04",
+          "LO-05"
+        ]
+      },
+      {
+        "id": "R-03",
+        "levels": {
+          "0": "Provides no saved evidence or interprets an unrelated artifact.",
+          "1": "Points to a plot or live value but describes it without connecting it to the prediction.",
+          "2": "Uses the priority plot or observation record to decide whether the prediction matched and cites a relevant metric or visible event.",
+          "3": "Triangulates plot, observation, and comparison evidence; explains uncertainty or an alternative interpretation."
+        },
+        "name": "Evidence interpretation",
+        "outcome_ids": [
+          "LO-01",
+          "LO-02",
+          "LO-03",
+          "LO-04",
+          "LO-05"
+        ]
+      },
+      {
+        "id": "R-04",
+        "levels": {
+          "0": "Cannot identify the run, settings, or saved evidence used.",
+          "1": "Finds some artifacts but omits the config, outcome review, or replay-versus-rerun distinction.",
+          "2": "Identifies the manifest, config, report, worksheet, and appropriate replay or rerun path.",
+          "3": "Audits provenance and completion evidence, reproduces or replays appropriately, and proposes a bounded next experiment."
+        },
+        "name": "Reproducibility and reflection",
+        "outcome_ids": [
+          "LO-05"
+        ]
+      }
+    ],
+    "not_assessed": "Use not_assessed when required evidence was not collected; do not convert missing evidence to score 0.",
+    "score_values": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "use": "formative-not-canonical-completion-or-g4"
+  },
+  "schema_version": 1,
+  "scope": {
+    "actual_accessibility_validation": "not-run",
+    "external_contact_authorized": false,
+    "g4_satisfied": false,
+    "human_evidence": false,
+    "participant_recruitment_authorized": false,
+    "pilot_execution": "not-run",
+    "repository_only": true,
+    "timing_basis": "planned-not-measured"
+  },
+  "unresolved_decisions": [
+    {
+      "id": "consent-and-institutional-review",
+      "status": "owner-or-institution-decision"
+    },
+    {
+      "id": "participant-and-educator-coordinator",
+      "status": "owner-decision"
+    },
+    {
+      "id": "pilot-data-retention-and-access",
+      "status": "owner-or-institution-decision"
+    },
+    {
+      "id": "supported-real-device-and-assistive-technology-matrix",
+      "status": "owner-decision"
+    }
+  ]
+}
