@@ -1,0 +1,428 @@
+{
+  "$defs": {
+    "corpusFile": {
+      "additionalProperties": false,
+      "properties": {
+        "component_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "path": {
+          "pattern": "^third_party/licenses/corpus/[0-9a-f]{64}\\.txt$",
+          "type": "string"
+        },
+        "roles": {
+          "items": {
+            "enum": [
+              "license",
+              "notice"
+            ]
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "size": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "component_ids",
+        "path",
+        "roles",
+        "sha256",
+        "size"
+      ],
+      "type": "object"
+    },
+    "sourceRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "size": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "size"
+      ],
+      "type": "object"
+    },
+    "textRef": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "pattern": "^third_party/licenses/corpus/[0-9a-f]{64}\\.txt$",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "size": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "size"
+      ],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "components": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "actual_distribution_status": {
+            "const": "candidate-input-not-actual-package-closure"
+          },
+          "applicable_targets": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array",
+            "uniqueItems": true
+          },
+          "evidence_expression": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "evidence_review_status": {
+            "const": "repository-evidence-checked"
+          },
+          "id": {
+            "pattern": "^(python|static):[a-z0-9]+(?:[-.][a-z0-9]+)*$",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "python",
+              "static"
+            ]
+          },
+          "license_text_detail": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "license_text_status": {
+            "enum": [
+              "complete-within-declared-evidence-scope",
+              "partial-explicit-blocker"
+            ]
+          },
+          "license_texts": {
+            "items": {
+              "$ref": "#/$defs/textRef"
+            },
+            "minItems": 1,
+            "type": "array",
+            "uniqueItems": true
+          },
+          "name": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "notice_status": {
+            "enum": [
+              "captured-obligation-review-pending",
+              "no-separate-text-observed-obligation-review-pending"
+            ]
+          },
+          "notice_texts": {
+            "items": {
+              "$ref": "#/$defs/textRef"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "role": {
+            "enum": [
+              "project-package-profile-input",
+              "python-package-profile-input",
+              "repository-static-bundle-input"
+            ]
+          },
+          "source_url": {
+            "pattern": "^https://",
+            "type": "string"
+          },
+          "version": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "actual_distribution_status",
+          "applicable_targets",
+          "evidence_expression",
+          "evidence_review_status",
+          "id",
+          "kind",
+          "license_text_detail",
+          "license_text_status",
+          "license_texts",
+          "name",
+          "notice_status",
+          "notice_texts",
+          "role",
+          "source_url",
+          "version"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "contract": {
+      "additionalProperties": false,
+      "properties": {
+        "blockers": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "declared_scope": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "distribution_closure": {
+          "const": "unproven"
+        },
+        "external_legal_review": {
+          "const": "not-authorized"
+        },
+        "g3_license_gate": {
+          "const": "open"
+        },
+        "id": {
+          "const": "LIC-01B"
+        },
+        "legal_approval": {
+          "const": false
+        },
+        "lic_aggregate": {
+          "const": "open"
+        },
+        "native_and_base_image_closure": {
+          "const": "unproven"
+        },
+        "notice_bundle_complete": {
+          "const": false
+        },
+        "public_distribution_authorized": {
+          "const": false
+        },
+        "purpose": {
+          "const": "deterministic repository evidence corpus; not legal approval or distribution closure"
+        },
+        "qt_pyside_lgpl_decision": {
+          "const": "pending"
+        },
+        "status": {
+          "const": "bounded-candidate-evidence-only"
+        }
+      },
+      "required": [
+        "blockers",
+        "declared_scope",
+        "distribution_closure",
+        "external_legal_review",
+        "g3_license_gate",
+        "id",
+        "legal_approval",
+        "lic_aggregate",
+        "native_and_base_image_closure",
+        "notice_bundle_complete",
+        "public_distribution_authorized",
+        "purpose",
+        "qt_pyside_lgpl_decision",
+        "status"
+      ],
+      "type": "object"
+    },
+    "corpus": {
+      "additionalProperties": false,
+      "properties": {
+        "byte_count": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "directory": {
+          "const": "third_party/licenses/corpus"
+        },
+        "file_count": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "files": {
+          "items": {
+            "$ref": "#/$defs/corpusFile"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "license_body_count": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "notice_body_count": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "byte_count",
+        "directory",
+        "file_count",
+        "files",
+        "license_body_count",
+        "notice_body_count"
+      ],
+      "type": "object"
+    },
+    "coverage": {
+      "additionalProperties": false,
+      "properties": {
+        "component_count": {
+          "const": 53
+        },
+        "evidence_expression_count": {
+          "const": 53
+        },
+        "license_text_complete_count": {
+          "const": 51
+        },
+        "license_text_partial_count": {
+          "const": 2
+        },
+        "notice_text_captured_component_count": {
+          "const": 1
+        },
+        "python_component_count": {
+          "const": 50
+        },
+        "source_url_count": {
+          "const": 53
+        },
+        "static_component_count": {
+          "const": 3
+        },
+        "unknown_value_count": {
+          "const": 0
+        }
+      },
+      "required": [
+        "component_count",
+        "evidence_expression_count",
+        "license_text_complete_count",
+        "license_text_partial_count",
+        "notice_text_captured_component_count",
+        "python_component_count",
+        "source_url_count",
+        "static_component_count",
+        "unknown_value_count"
+      ],
+      "type": "object"
+    },
+    "notice_artifact": {
+      "additionalProperties": false,
+      "properties": {
+        "format": {
+          "const": "deterministic-markdown-utf8-lf"
+        },
+        "package_destination": {
+          "const": "THIRD_PARTY_NOTICES.md"
+        },
+        "path": {
+          "const": "THIRD_PARTY_NOTICES.md"
+        }
+      },
+      "required": [
+        "format",
+        "package_destination",
+        "path"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "sources": {
+      "additionalProperties": false,
+      "properties": {
+        "corpus_importer": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "generator": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "license_inventory": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "packaging_hook": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "review_inputs": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "review_schema": {
+          "$ref": "#/$defs/sourceRecord"
+        }
+      },
+      "required": [
+        "corpus_importer",
+        "generator",
+        "license_inventory",
+        "packaging_hook",
+        "review_inputs",
+        "review_schema"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "components",
+    "contract",
+    "corpus",
+    "coverage",
+    "notice_artifact",
+    "schema_version",
+    "sources"
+  ],
+  "title": "MCLab LIC-01B reviewed repository evidence contract",
+  "type": "object"
+}
