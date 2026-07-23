@@ -84,8 +84,10 @@ repository moves.
   Windows `259,148,501 / 93,923,818` bytes, Ubuntu
   `342,402,649 / 123,143,362` bytes, and macOS
   `192,875,997 / 65,943,576` bytes for one-folder/archive respectively.
-- Current remote state at this snapshot: one open Draft PR (#70), zero tags,
-  and zero releases.
+- Pre-existing remote state before opening this reconciliation candidate: one
+  open Draft PR (#70), zero tags, and zero releases. The reconciliation
+  candidate itself must remain visible as an additional Draft PR until it is
+  separately reviewed and accepted.
 
 ## Open Decisions
 
