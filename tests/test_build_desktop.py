@@ -8,6 +8,7 @@ import os
 import sys
 import tarfile
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -157,6 +158,60 @@ def test_windows_member_check_ignores_unstable_device_ids(build_module, tmp_path
             mount_points=frozenset({build_module._absolute_path(candidate)}),
             label="ordinary Windows member",
         )
+
+
+def test_windows_path_to_handle_identity_ignores_only_filename_mode_bits(build_module) -> None:
+    path_metadata = SimpleNamespace(
+        st_dev=17,
+        st_ino=29,
+        st_mode=build_module.stat.S_IFREG | 0o777,
+        st_size=31,
+        st_mtime_ns=37,
+    )
+    handle_metadata = SimpleNamespace(
+        st_dev=17,
+        st_ino=29,
+        st_mode=build_module.stat.S_IFREG | 0o666,
+        st_size=31,
+        st_mtime_ns=37,
+    )
+
+    with patch.object(build_module.sys, "platform", "win32"):
+        assert build_module._same_open_file_identity(path_metadata, handle_metadata)
+        assert not build_module._same_file_identity(path_metadata, handle_metadata)
+        for changed_field, changed_value in (
+            ("st_dev", 18),
+            ("st_ino", 0),
+            ("st_ino", 30),
+            ("st_mode", build_module.stat.S_IFDIR | 0o666),
+            ("st_mode", build_module.stat.S_IFREG | 0o444),
+            ("st_size", 32),
+            ("st_mtime_ns", 38),
+        ):
+            changed = SimpleNamespace(**vars(handle_metadata))
+            setattr(changed, changed_field, changed_value)
+            assert not build_module._same_open_file_identity(path_metadata, changed)
+
+    with patch.object(build_module.sys, "platform", "linux"):
+        assert not build_module._same_open_file_identity(path_metadata, handle_metadata)
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows filename-derived executable mode")
+def test_windows_executable_path_and_handle_identity_match(build_module, tmp_path: Path) -> None:
+    executable = tmp_path / "MCLab.exe"
+    payload = b"ordinary executable payload"
+    executable.write_bytes(payload)
+    path_metadata = executable.lstat()
+    descriptor = os.open(executable, os.O_RDONLY | getattr(os, "O_BINARY", 0))
+    try:
+        handle_metadata = os.fstat(descriptor)
+    finally:
+        os.close(descriptor)
+
+    assert path_metadata.st_mode != handle_metadata.st_mode
+    assert build_module._same_open_file_identity(path_metadata, handle_metadata)
+    with build_module._open_regular_file(executable, expected_size=len(payload)) as handle:
+        assert handle.read() == payload
 
 
 def test_package_operation_lock_is_single_writer_and_reusable(build_module, tmp_path: Path) -> None:

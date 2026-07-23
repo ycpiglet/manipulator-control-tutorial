@@ -251,6 +251,22 @@ def _same_file_identity(left: os.stat_result, right: os.stat_result) -> bool:
     )
 
 
+def _same_open_file_identity(left: os.stat_result, right: os.stat_result) -> bool:
+    """Compare path and handle metadata without Windows filename mode synthesis."""
+
+    if sys.platform != "win32":
+        return _same_file_identity(left, right)
+    identity_matches = left.st_dev == right.st_dev
+    if left.st_ino or right.st_ino:
+        identity_matches = identity_matches and left.st_ino == right.st_ino
+    return (
+        identity_matches
+        and (left.st_mode & ~0o111) == (right.st_mode & ~0o111)
+        and left.st_size == right.st_size
+        and left.st_mtime_ns == right.st_mtime_ns
+    )
+
+
 def _validate_component(component: str) -> None:
     if component in {"", ".", ".."}:
         raise PackageValidationError(
@@ -314,7 +330,7 @@ def _open_regular_file(path: Path, *, expected_size: int | None = None) -> Itera
     try:
         opened = os.fstat(handle.fileno())
         _assert_regular_metadata(path, opened, expected_size=expected_size)
-        if not _same_file_identity(before, opened):
+        if not _same_open_file_identity(before, opened):
             raise PackageValidationError(f"Package file changed before it was opened: {path}")
         yield handle
         after = os.fstat(handle.fileno())
