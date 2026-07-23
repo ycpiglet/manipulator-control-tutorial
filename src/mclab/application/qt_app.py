@@ -16,7 +16,7 @@ from mclab.application.i18n import TRANSLATIONS, Translator, normalize_language
 from mclab.application.launcher import create_scenario_adapter
 from mclab.application.platform import PlatformServices
 from mclab.application.qt_batch import create_batch_backend_mixin, create_batch_controller
-from mclab.application.qt_course_records import course_records_or_strict
+from mclab.application.qt_course_records import course_records_or_strict, result_records_or_strict
 from mclab.application.qt_evidence import create_evidence_backend_mixin
 from mclab.application.qt_fonts import configure_font_environment
 from mclab.application.qt_frame import create_frame_provider
@@ -44,7 +44,6 @@ from mclab.application.readiness import (
     refresh_app_readiness, refresh_scenario_readiness,
     scenario_readiness_payload,
 )
-from mclab.application.repositories import ArtifactRepository
 from mclab.application.rendering import can_reuse_adapter_render_resources
 from mclab.application.saved_runs import resolve_saved_run_launch
 from mclab.application.session import SessionState, SimulationSession
@@ -224,7 +223,8 @@ def run_app(
 
         @Property("QVariantList", notify=results_changed)
         def results(self) -> list[dict[str, Any]]:
-            records = ArtifactRepository().list_runs(validate_replays=True)
+            records = getattr(self, "_course_records_snapshot", None)
+            records = result_records_or_strict(records)
             active = self._batch.output if self._batch.running else None
             return result_payloads(records, self.translator, self.catalog, active)
 

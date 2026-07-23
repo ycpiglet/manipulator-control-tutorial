@@ -16,6 +16,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from .application.batch_runs import BATCH_PROGRESS_PREFIX
+from .application.qt_batch_probe import hold_batch_worker_at_lifecycle_safe_point
 from .application.catalog import ScenarioCatalog, target_from_legacy_summary
 from .application.repositories import ArtifactRecord
 from .batch import ALL_BATCH_NAME, BATCH_SETS, run_all_batches, run_batch
@@ -592,8 +593,11 @@ def main(argv: list[str] | None = None) -> int:
             output_path = run_all_batches(
                 **batch_kwargs,
                 handoff_token=args.handoff_token,
-                on_progress=lambda current, total, name: print(
-                    f"{BATCH_PROGRESS_PREFIX}{current}/{total} {name}", flush=True
+                on_progress=lambda current, total, name: _publish_batch_progress(
+                    current,
+                    total,
+                    name,
+                    handoff_token=args.handoff_token,
                 ),
             )
         else:
@@ -606,6 +610,17 @@ def main(argv: list[str] | None = None) -> int:
 
     parser.error(f"Unknown command: {args.command}")
     return 2
+
+
+def _publish_batch_progress(
+    current: int,
+    total: int,
+    name: str,
+    *,
+    handoff_token: str | None,
+) -> None:
+    print(f"{BATCH_PROGRESS_PREFIX}{current}/{total} {name}", flush=True)
+    hold_batch_worker_at_lifecycle_safe_point(current, handoff_token)
 
 
 def _validate_run_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:

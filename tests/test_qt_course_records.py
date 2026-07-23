@@ -5,11 +5,12 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 
 from mclab.application.qt_course_records import (
     course_records_or_strict,
     emit_with_course_records,
+    result_records_or_strict,
     strict_course_records,
 )
 from mclab.application.artifacts import write_manifest
@@ -30,25 +31,32 @@ def test_strict_course_records_reuses_the_full_repository_inventory() -> None:
             '{"lab_name":"lab01_msd","config_name":"default"}',
             encoding="utf-8",
         )
+        (run / "replay.npz").write_bytes(b"not a valid replay archive")
         write_manifest(
             run,
             scenario_id="lab01.default",
             status="completed",
             config={"sim_time": 1.0},
         )
-        expected = ArtifactRepository(root).list_runs()
+        expected = ArtifactRepository(root).list_runs(validate_replays=True)
         original_list_runs = ArtifactRepository.list_runs
         with patch.object(
             ArtifactRepository,
             "list_runs",
             autospec=True,
-            side_effect=lambda repository: original_list_runs(repository),
+            side_effect=lambda repository, **kwargs: original_list_runs(
+                repository,
+                **kwargs,
+            ),
         ) as list_runs:
             actual = strict_course_records(str(output))
 
     assert actual == expected
     assert [record.scenario_id for record in actual] == ["lab01.default"]
+    assert not actual[0].replay_available
+    assert actual[0].replay_reason
     assert list_runs.call_count == 1
+    list_runs.assert_called_once_with(ANY, validate_replays=True)
 
 
 def test_strict_course_records_rejects_a_non_runtime_root_without_scanning() -> None:
@@ -98,6 +106,20 @@ def test_missing_snapshot_retains_the_strict_repository_fallback() -> None:
     list_runs.assert_called_once_with()
 
 
+def test_results_snapshot_avoids_replay_validation_on_ui_thread() -> None:
+    sentinel = (object(),)
+    with patch.object(ArtifactRepository, "list_runs") as list_runs:
+        assert result_records_or_strict(sentinel) is sentinel
+    list_runs.assert_not_called()
+
+
+def test_missing_results_snapshot_retains_replay_validated_fallback() -> None:
+    sentinel = (object(),)
+    with patch.object(ArtifactRepository, "list_runs", return_value=sentinel) as list_runs:
+        assert result_records_or_strict(None) is sentinel
+    list_runs.assert_called_once_with(validate_replays=True)
+
+
 @unittest.skipUnless(importlib.util.find_spec("PySide6"), "PySide6 is not installed")
 def test_qml_notify_consumes_snapshot_before_it_is_cleared() -> None:
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -115,6 +137,11 @@ def test_qml_notify_consumes_snapshot_before_it_is_cleared() -> None:
             records = getattr(self, "_course_records_snapshot", None)
             return list(course_records_or_strict(records))
 
+        @Property("QVariantList", notify=results_changed)
+        def resultRecords(self) -> list[object]:  # noqa: N802
+            records = getattr(self, "_course_records_snapshot", None)
+            return list(result_records_or_strict(records))
+
     backend = Backend()
     engine = QQmlEngine()
     engine.rootContext().setContextProperty("backend", backend)
@@ -122,7 +149,9 @@ def test_qml_notify_consumes_snapshot_before_it_is_cleared() -> None:
     component.setData(
         b'import QtQml\nQtObject {'
         b' property var course: backend.courseRecords;'
-        b' property int observedCount: course.length }',
+        b' property var results: backend.resultRecords;'
+        b' property int observedCount: course.length;'
+        b' property int observedResultCount: results.length }',
         QUrl(),
     )
     with patch.object(ArtifactRepository, "list_runs", return_value=()):
@@ -140,6 +169,10 @@ def test_qml_notify_consumes_snapshot_before_it_is_cleared() -> None:
 
     list_runs.assert_not_called()
     assert root.property("observedCount") == 1
+    assert root.property("observedResultCount") == 1
     assert backend._course_records_snapshot is None  # noqa: SLF001
+    with patch.object(ArtifactRepository, "list_runs", return_value=()) as list_runs:
+        assert backend.resultRecords == []
+    list_runs.assert_called_once_with(validate_replays=True)
     root.deleteLater()
     engine.deleteLater()

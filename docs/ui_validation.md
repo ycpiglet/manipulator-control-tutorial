@@ -72,7 +72,9 @@ OS file cache는 비우지 않으며, 이 정의를 evidence의 `cold_definition
 comparison plot 5개 이상, manifest 60개와 hash error 0, transient transaction 0,
 300초 이하, output 150 MiB 이하, UI heartbeat 최대 gap 500 ms 이하다. terminal
 settlement 구간도 heartbeat gap에 포함한다. 별도의 cancel/close probe는 인증된 첫
-progress와 child PID가 기록된 ready 파일을 확인한 뒤에만 요청을 보낸다. 각 probe는
+progress 뒤 worker가 첫 child batch 시작 전 safe-point marker에 진입했고 child PID도
+확인된 ready 파일을 받은 뒤, 감사 도구가 1,024-byte 이하 marker의 정확한 schema/action을
+독립 검증한 경우에만 요청을 보낸다. 각 probe는
 strict `stopped` manifest와 batch residue 0을 확인하고, PID와 creation marker로 관찰한
 GUI/worker descendant가 10초 안에 모두 사라져야 한다. 강제 종료가 필요하면 해당 case는
 실패이며 강제 종료는 실패 기록 뒤 runner 정리 용도로만 수행한다.

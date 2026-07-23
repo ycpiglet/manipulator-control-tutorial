@@ -628,6 +628,11 @@ def test_lifecycle_probe_settles_tree_after_repeated_popen_wait_timeouts(
         patch.object(e2e_module, "_read_probe_if_ready", return_value=None),
         patch.object(e2e_module, "read_json_mapping", return_value={}),
         patch.object(e2e_module, "validate_probe_payload", return_value=[]),
+        patch.object(
+            e2e_module,
+            "validate_worker_safe_point_payload",
+            return_value=None,
+        ),
         patch.object(e2e_module, "_safe_output_from_probe", return_value=output),
         patch.object(e2e_module, "verify_manifest_tree", return_value=integrity),
         patch.object(e2e_module, "verify_terminal_batch_output", return_value=[]),
@@ -710,6 +715,9 @@ def _run_lifecycle_failure_fixture(
     ready: dict[str, object],
     terminal: dict[str, object],
     ready_during_run: bool = True,
+    worker_safe_point_action: str | None = None,
+    worker_safe_point_final_action: str | None = None,
+    worker_safe_point_present: bool = True,
     settlement: tuple[list[object], list[object], float, float, str] = (
         [],
         [],
@@ -722,9 +730,27 @@ def _run_lifecycle_failure_fixture(
     executable.write_bytes(b"executable")
     executable.chmod(0o755)
     root = e2e_module.ProcessIdentity(654, 1, "root-start")
+    worker_safe_point = {
+        "action": worker_safe_point_action or action,
+        "schema": e2e_module.WORKER_SAFE_POINT_SCHEMA,
+    }
+    worker_safe_point_reads = 0
 
     def read_probe(path, **_kwargs):
-        return ready if path.name == "ready.json" else terminal
+        nonlocal worker_safe_point_reads
+        if path.name == "ready.json":
+            return ready
+        if path.name == ".mclab-worker-safe-point.json":
+            if not worker_safe_point_present:
+                raise e2e_module.AuditError("json_not_regular")
+            worker_safe_point_reads += 1
+            if worker_safe_point_reads > 1 and worker_safe_point_final_action:
+                return {
+                    **worker_safe_point,
+                    "action": worker_safe_point_final_action,
+                }
+            return worker_safe_point
+        return terminal
 
     with (
         patch.object(e2e_module.subprocess, "Popen", return_value=_ExitedPopen(654)),
@@ -797,6 +823,8 @@ def test_lifecycle_terminal_contract_failure_preserves_only_bounded_diagnostics(
     assert payload["observed_terminal_status"] == "error"
     assert payload["observed_probe_error_code"] == "batch_failed"
     assert payload["checks"]["terminal_probe_contract"] is False
+    assert payload["checks"]["worker_safe_point"] is True
+    assert payload["worker_safe_point_validation_error_code"] == ""
     assert payload["checks"]["process_containment"] is False
     assert payload["command"]["process_lifecycle_passed"] is False
     assert payload["command"]["process_orphan_count"] == 1
@@ -850,11 +878,116 @@ def test_lifecycle_ready_contract_failure_is_distinguished_and_skips_outputs(
     assert payload["observed_probe_error_code"] == ""
     assert payload["checks"]["ready_probe_contract"] is False
     assert payload["checks"]["terminal_probe_contract"] is True
+    assert payload["checks"]["worker_safe_point"] is False
+    assert payload["worker_safe_point_validation_error_code"] == ""
     assert payload["checks"]["process_containment"] is True
     assert payload["orphan_count"] == 0
     assert payload["post_cleanup_survivor_count"] == 0
     safe_output.assert_not_called()
     verify_integrity.assert_not_called()
+    e2e_module._assert_no_absolute_strings(payload)
+
+
+@pytest.mark.parametrize(
+    ("worker_safe_point_present", "worker_safe_point_action", "expected_error"),
+    [
+        (False, None, "worker_safe_point_read_invalid"),
+        (True, "close", "worker_safe_point_action_invalid"),
+    ],
+)
+def test_lifecycle_ready_without_exact_worker_safe_point_never_sends_request(
+    e2e_module,
+    tmp_path: Path,
+    worker_safe_point_present: bool,
+    worker_safe_point_action: str | None,
+    expected_error: str,
+) -> None:
+    output = tmp_path / "private-state" / "outputs" / "course"
+    ready = _lifecycle_probe_payload(
+        e2e_module,
+        output,
+        action="cancel",
+        phase="ready",
+        status="running",
+    )
+    terminal = _lifecycle_probe_payload(
+        e2e_module,
+        output,
+        action="cancel",
+        phase="terminal",
+        status="stopped",
+    )
+    payload, safe_output, verify_integrity, verify_terminal = (
+        _run_lifecycle_failure_fixture(
+            e2e_module,
+            tmp_path,
+            action="cancel",
+            ready=ready,
+            terminal=terminal,
+            worker_safe_point_action=worker_safe_point_action,
+            worker_safe_point_present=worker_safe_point_present,
+        )
+    )
+
+    request = tmp_path / "lifecycle-invalid-cancel" / "request.json"
+    assert not request.exists()
+    assert payload["passed"] is False
+    assert payload["error_code"] == expected_error
+    assert payload["worker_safe_point_validation_error_code"] == expected_error
+    assert payload["checks"]["authenticated_ready"] is False
+    assert payload["checks"]["worker_safe_point"] is False
+    safe_output.assert_not_called()
+    verify_integrity.assert_not_called()
+    verify_terminal.assert_not_called()
+    e2e_module._assert_no_absolute_strings(payload)
+
+
+def test_lifecycle_worker_safe_point_final_reread_fails_closed(
+    e2e_module,
+    tmp_path: Path,
+) -> None:
+    output = tmp_path / "private-state" / "outputs" / "course"
+    ready = _lifecycle_probe_payload(
+        e2e_module,
+        output,
+        action="cancel",
+        phase="ready",
+        status="running",
+    )
+    terminal = _lifecycle_probe_payload(
+        e2e_module,
+        output,
+        action="cancel",
+        phase="terminal",
+        status="stopped",
+    )
+    payload, safe_output, verify_integrity, verify_terminal = (
+        _run_lifecycle_failure_fixture(
+            e2e_module,
+            tmp_path,
+            action="cancel",
+            ready=ready,
+            terminal=terminal,
+            worker_safe_point_final_action="close",
+        )
+    )
+
+    request = tmp_path / "lifecycle-invalid-cancel" / "request.json"
+    assert json.loads(request.read_text(encoding="utf-8")) == {
+        "action": "cancel",
+        "schema": e2e_module.REQUEST_SCHEMA,
+    }
+    assert payload["passed"] is False
+    assert payload["error_code"] == "worker_safe_point_action_invalid"
+    assert (
+        payload["worker_safe_point_validation_error_code"]
+        == "worker_safe_point_action_invalid"
+    )
+    assert payload["checks"]["authenticated_ready"] is False
+    assert payload["checks"]["worker_safe_point"] is False
+    safe_output.assert_not_called()
+    verify_integrity.assert_not_called()
+    verify_terminal.assert_not_called()
     e2e_module._assert_no_absolute_strings(payload)
 
 
@@ -906,6 +1039,7 @@ def test_package_audit_retains_bounded_lifecycle_failure_payload(
         "post_cleanup_survivor_count": 0,
         "ready_validation_error_code": "",
         "terminal_validation_error_code": "probe_status_invalid",
+        "worker_safe_point_validation_error_code": "",
     }
     metadata = {
         "passed_inherited_names": [],
@@ -1301,6 +1435,34 @@ def test_probe_environment_and_contract_require_separate_authenticated_ready_fil
                 action="batch_probe_cancel",
                 phase="ready",
                 status="running",
+            )
+
+    worker_safe_point = {
+        "action": "cancel",
+        "schema": e2e_module.WORKER_SAFE_POINT_SCHEMA,
+    }
+    e2e_module.validate_worker_safe_point_payload(
+        worker_safe_point,
+        action="cancel",
+    )
+    for invalid, code in (
+        (
+            {**worker_safe_point, "unexpected": True},
+            "worker_safe_point_keys_invalid",
+        ),
+        (
+            {**worker_safe_point, "schema": "mismatch"},
+            "worker_safe_point_schema_invalid",
+        ),
+        (
+            {**worker_safe_point, "action": "close"},
+            "worker_safe_point_action_invalid",
+        ),
+    ):
+        with pytest.raises(e2e_module.AuditError, match=code):
+            e2e_module.validate_worker_safe_point_payload(
+                invalid,
+                action="cancel",
             )
 
 

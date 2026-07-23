@@ -16,15 +16,27 @@ def course_records_or_strict(
     return records if records is not None else ArtifactRepository().list_runs()
 
 
+def result_records_or_strict(
+    records: tuple[ArtifactRecord, ...] | None,
+) -> tuple[ArtifactRecord, ...]:
+    """Use an off-thread snapshot, or retain replay validation as fallback."""
+
+    return (
+        records
+        if records is not None
+        else ArtifactRepository().list_runs(validate_replays=True)
+    )
+
+
 def strict_course_records(output: str) -> tuple[ArtifactRecord, ...] | None:
-    """Read the normal strict inventory off-thread for the exact runtime root."""
+    """Read the replay-validated inventory off-thread for the exact runtime root."""
 
     root = Path(output).parent
     repository = ArtifactRepository()
     if root != repository.outputs_root:
         return None
     try:
-        return repository.list_runs()
+        return repository.list_runs(validate_replays=True)
     except Exception:
         return None
 

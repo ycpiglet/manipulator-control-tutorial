@@ -24,6 +24,7 @@ from mclab.application.qt_batch_probe import (  # noqa: E402
     _BatchLifecycleProbe,
     _atomic_probe_write,
     _read_batch_probe_request,
+    hold_batch_worker_at_lifecycle_safe_point,
 )
 
 
@@ -312,6 +313,299 @@ class BatchProbeTests(unittest.TestCase):
                     max_bytes=1_024,
                     schema="mclab.batch-probe-request.v1",
                 )
+
+    def test_worker_safe_point_is_inactive_outside_lifecycle_self_test(self) -> None:
+        with patch.dict(os.environ, {}, clear=True), patch(
+            "mclab.application.qt_batch_probe._read_batch_probe_request",
+            side_effect=AssertionError("inactive safe point must not inspect a request"),
+        ):
+            hold_batch_worker_at_lifecycle_safe_point(1, None)
+
+        with patch.dict(
+            os.environ,
+            {"MCLAB_SELF_TEST": "1", "MCLAB_SMOKE_ACTION": "batch_probe_complete"},
+            clear=True,
+        ):
+            hold_batch_worker_at_lifecycle_safe_point(1, None)
+
+    def test_worker_safe_point_requires_authenticated_handoff(self) -> None:
+        with patch.dict(
+            os.environ,
+            {"MCLAB_SELF_TEST": "1", "MCLAB_SMOKE_ACTION": "batch_probe_cancel"},
+            clear=True,
+        ), self.assertRaisesRegex(RuntimeError, "authenticated batch handoff"):
+            hold_batch_worker_at_lifecycle_safe_point(1, "not-a-token")
+
+    def test_worker_safe_point_is_dormant_for_later_progress_and_other_actions(self) -> None:
+        environments = (
+            {"MCLAB_SELF_TEST": "1", "MCLAB_SMOKE_ACTION": "batch_probe_cancel"},
+            {"MCLAB_SELF_TEST": "true", "MCLAB_SMOKE_ACTION": "batch_probe_cancel"},
+            {
+                "MCLAB_SELF_TEST": "1",
+                "MCLAB_SMOKE_ACTION": "batch_probe_cancel,batch_probe_close",
+            },
+        )
+        for index, environment in enumerate(environments):
+            with self.subTest(index=index), patch.dict(
+                os.environ, environment, clear=True
+            ), patch(
+                "mclab.application.qt_batch_probe._atomic_probe_write",
+                side_effect=AssertionError("dormant safe point must not write"),
+            ):
+                hold_batch_worker_at_lifecycle_safe_point(2 if index == 0 else 1, None)
+
+    def test_worker_safe_point_rejects_noncanonical_protocol_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            base = {
+                "MCLAB_SELF_TEST": "1",
+                "MCLAB_SMOKE_ACTION": "batch_probe_cancel",
+                "MCLAB_BATCH_PROBE_PATH": str(root / "probe.json"),
+                "MCLAB_BATCH_READY_PATH": str(root / "ready.json"),
+                "MCLAB_BATCH_REQUEST_PATH": str(root / "request.json"),
+            }
+            cases = {
+                "missing": {**base, "MCLAB_BATCH_REQUEST_PATH": ""},
+                "relative": {**base, "MCLAB_BATCH_REQUEST_PATH": "request.json"},
+                "duplicate": {
+                    **base,
+                    "MCLAB_BATCH_REQUEST_PATH": base["MCLAB_BATCH_READY_PATH"],
+                },
+                "non-sibling": {
+                    **base,
+                    "MCLAB_BATCH_REQUEST_PATH": str(root.parent / "request.json"),
+                },
+            }
+            for name, environment in cases.items():
+                with self.subTest(name=name), patch.dict(
+                    os.environ, environment, clear=True
+                ), self.assertRaises(RuntimeError):
+                    hold_batch_worker_at_lifecycle_safe_point(1, "a" * 64)
+
+    def test_worker_safe_point_rejects_linked_immediate_parent(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            real = root / "real"
+            real.mkdir()
+            linked = root / "linked"
+            try:
+                linked.symlink_to(real, target_is_directory=True)
+            except (NotImplementedError, OSError):
+                self.skipTest("directory symlinks are unavailable")
+            environment = {
+                "MCLAB_SELF_TEST": "1",
+                "MCLAB_SMOKE_ACTION": "batch_probe_cancel",
+                "MCLAB_BATCH_PROBE_PATH": str(linked / "probe.json"),
+                "MCLAB_BATCH_READY_PATH": str(linked / "ready.json"),
+                "MCLAB_BATCH_REQUEST_PATH": str(linked / "request.json"),
+            }
+            with patch.dict(
+                os.environ, environment, clear=True
+            ), self.assertRaisesRegex(RuntimeError, "parent must be a real directory"):
+                hold_batch_worker_at_lifecycle_safe_point(1, "a" * 64)
+
+    def test_worker_safe_point_allows_platform_alias_above_real_parent(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            real = root / "real"
+            parent = real / "case"
+            parent.mkdir(parents=True)
+            alias = root / "alias"
+            try:
+                alias.symlink_to(real, target_is_directory=True)
+            except (NotImplementedError, OSError):
+                self.skipTest("directory symlinks are unavailable")
+            visible_parent = alias / "case"
+            environment = {
+                "MCLAB_SELF_TEST": "1",
+                "MCLAB_SMOKE_ACTION": "batch_probe_cancel",
+                "MCLAB_BATCH_PROBE_PATH": str(visible_parent / "probe.json"),
+                "MCLAB_BATCH_READY_PATH": str(visible_parent / "ready.json"),
+                "MCLAB_BATCH_REQUEST_PATH": str(visible_parent / "request.json"),
+            }
+            with (
+                patch.dict(os.environ, environment, clear=True),
+                patch(
+                    "mclab.application.qt_batch_probe._atomic_probe_write",
+                    side_effect=SystemExit("accepted real immediate parent"),
+                ),
+                self.assertRaisesRegex(SystemExit, "accepted real immediate parent"),
+            ):
+                hold_batch_worker_at_lifecycle_safe_point(1, "a" * 64)
+
+    def test_worker_safe_point_waits_after_exact_request_until_termination(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            environment = {
+                "MCLAB_SELF_TEST": "1",
+                "MCLAB_SMOKE_ACTION": "batch_probe_close",
+                "MCLAB_BATCH_PROBE_PATH": str(root / "probe.json"),
+                "MCLAB_BATCH_READY_PATH": str(root / "ready.json"),
+                "MCLAB_BATCH_REQUEST_PATH": str(root / "request.json"),
+            }
+            with (
+                patch.dict(os.environ, environment, clear=True),
+                patch(
+                    "mclab.application.qt_batch_probe._read_batch_probe_request",
+                    side_effect=[False, True],
+                ) as read_request,
+                patch("mclab.application.qt_batch_probe._atomic_probe_write") as write_marker,
+                patch(
+                    "mclab.application.qt_batch_probe.time.sleep",
+                    side_effect=[None, SystemExit("simulated process termination")],
+                ) as sleep,
+                self.assertRaisesRegex(SystemExit, "simulated process termination"),
+            ):
+                hold_batch_worker_at_lifecycle_safe_point(1, "a" * 64)
+
+            write_marker.assert_called_once_with(
+                root / ".mclab-worker-safe-point.json",
+                {"action": "close", "schema": "mclab.batch-worker-safe-point.v1"},
+                1_024,
+                durable=False,
+            )
+        self.assertEqual(read_request.call_count, 2)
+        self.assertEqual(read_request.call_args.args, (root / "request.json", "close"))
+        self.assertEqual(
+            read_request.call_args.kwargs,
+            {"max_bytes": 1_024, "schema": "mclab.batch-probe-request.v1"},
+        )
+        self.assertEqual(sleep.call_count, 2)
+
+    def test_worker_safe_point_request_wait_is_bounded(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            environment = {
+                "MCLAB_SELF_TEST": "1",
+                "MCLAB_SMOKE_ACTION": "batch_probe_cancel",
+                "MCLAB_BATCH_PROBE_PATH": str(root / "probe.json"),
+                "MCLAB_BATCH_READY_PATH": str(root / "ready.json"),
+                "MCLAB_BATCH_REQUEST_PATH": str(root / "request.json"),
+            }
+            with (
+                patch.dict(os.environ, environment, clear=True),
+                patch("mclab.application.qt_batch_probe._atomic_probe_write"),
+                patch(
+                    "mclab.application.qt_batch_probe.time.monotonic",
+                    side_effect=[10.0, 41.0],
+                ),
+                self.assertRaisesRegex(RuntimeError, "request was not published"),
+            ):
+                hold_batch_worker_at_lifecycle_safe_point(1, "a" * 64)
+
+    def test_lifecycle_ready_waits_for_worker_safe_point_marker(self) -> None:
+        class Signal:
+            def connect(self, _callback: object) -> None:
+                return None
+
+        class Controller:
+            changed = completed = stopped = failed = Signal()
+            running = True
+
+            @staticmethod
+            def snapshot() -> dict[str, object]:
+                return {
+                    "output": output,
+                    "childPid": 2345,
+                    "current": 1,
+                    "total": 5,
+                    "name": "lab01_msd_compare",
+                    "state": "running",
+                    "cancelling": False,
+                }
+
+        class Backend:
+            _batch = Controller()
+
+        class Timer:
+            @staticmethod
+            def singleShot(_delay: int, _callback: object) -> None:  # noqa: N802
+                return None
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = str(root / "mclab-batch")
+            ready = root / "ready.json"
+            environment = {
+                "MCLAB_BATCH_PROBE_PATH": str(root / "probe.json"),
+                "MCLAB_BATCH_READY_PATH": str(ready),
+                "MCLAB_BATCH_REQUEST_PATH": str(root / "request.json"),
+            }
+            with patch.dict(os.environ, environment):
+                lifecycle = _BatchLifecycleProbe(
+                    Timer, Backend(), None, "batch_probe_cancel"
+                )
+                lifecycle.started_at = lifecycle.last_heartbeat = time.monotonic()
+                lifecycle._changed()  # noqa: SLF001
+                self.assertFalse(lifecycle.ready)
+                self.assertFalse(ready.exists())
+                _atomic_probe_write(
+                    root / ".mclab-worker-safe-point.json",
+                    {"action": "cancel", "schema": "mclab.batch-worker-safe-point.v1"},
+                    1_024,
+                    durable=False,
+                )
+                lifecycle._changed()  # noqa: SLF001
+            self.assertTrue(lifecycle.ready)
+            self.assertEqual(json.loads(ready.read_text(encoding="utf-8"))["phase"], "ready")
+
+    def test_lifecycle_ready_rejects_mismatched_worker_safe_point(self) -> None:
+        class Signal:
+            def connect(self, _callback: object) -> None:
+                return None
+
+        class Controller:
+            changed = completed = stopped = failed = Signal()
+            running = True
+
+            @staticmethod
+            def snapshot() -> dict[str, object]:
+                return {
+                    "output": output,
+                    "childPid": 2345,
+                    "current": 1,
+                    "total": 5,
+                    "name": "lab01_msd_compare",
+                    "state": "running",
+                    "cancelling": False,
+                }
+
+        class Backend:
+            _batch = Controller()
+            cancelled = 0
+
+            def cancelBatch(self) -> None:  # noqa: N802
+                self.cancelled += 1
+
+        class Timer:
+            @staticmethod
+            def singleShot(_delay: int, _callback: object) -> None:  # noqa: N802
+                return None
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = str(root / "mclab-batch")
+            environment = {
+                "MCLAB_BATCH_PROBE_PATH": str(root / "probe.json"),
+                "MCLAB_BATCH_READY_PATH": str(root / "ready.json"),
+                "MCLAB_BATCH_REQUEST_PATH": str(root / "request.json"),
+            }
+            _atomic_probe_write(
+                root / ".mclab-worker-safe-point.json",
+                {"action": "close", "schema": "mclab.batch-worker-safe-point.v1"},
+                1_024,
+                durable=False,
+            )
+            backend = Backend()
+            with patch.dict(os.environ, environment):
+                lifecycle = _BatchLifecycleProbe(
+                    Timer, backend, None, "batch_probe_cancel"
+                )
+                lifecycle.started_at = lifecycle.last_heartbeat = time.monotonic()
+                lifecycle._changed()  # noqa: SLF001
+            self.assertFalse(lifecycle.ready)
+            self.assertEqual(lifecycle.failure_code, "invalid_worker_safe_point")
+            self.assertEqual(backend.cancelled, 1)
 
     def test_first_heartbeat_is_armed_before_synchronous_batch_start(self) -> None:
         events: list[object] = []

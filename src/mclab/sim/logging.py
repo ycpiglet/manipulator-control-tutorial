@@ -175,26 +175,23 @@ class RunLogger:
 
         self._require_unfinalized()
         try:
-            # A prior terminal-publication attempt may have left prospective
-            # Complete documents whose bytes no longer match the last running
-            # manifest.  Withdraw both document digests before repairing them,
-            # including on a hard-stop retry whose prior running snapshot had
-            # trusted both documents.
-            self._write_manifest(
-                status="running",
-                untrusted_artifacts=_REPORT_DOCUMENT_ARTIFACTS,
-            )
-            write_run_report(
-                self.output_path,
-                update_index=False,
-                completion_status="running",
-            )
-            self._write_manifest(status="running")
-            # Preserve the coherent running snapshot above, then withdraw only
-            # the two documents immediately before their prospective-terminal
-            # replacements.  A hard stop at any later instruction boundary
-            # therefore leaves either matching trusted documents or both
-            # documents explicitly untrusted.
+            # A failed repair keeps the conservative running-document preflight
+            # on retry. Normal finalization does not render the same large
+            # report twice merely to replace it immediately afterwards.
+            if self._running_report_repair_required:
+                self._write_manifest(
+                    status="running",
+                    untrusted_artifacts=_REPORT_DOCUMENT_ARTIFACTS,
+                )
+                write_run_report(
+                    self.output_path,
+                    update_index=False,
+                    completion_status="running",
+                )
+                self._write_manifest(status="running")
+            # Publish all producer inputs while withdrawing both prospective
+            # documents. A hard stop during either document replacement leaves
+            # the manifest verifiable and neither document trusted.
             self._write_manifest(
                 status="running",
                 untrusted_artifacts=_REPORT_DOCUMENT_ARTIFACTS,

@@ -16,6 +16,14 @@ BATCH_PROBE_ACTIONS = frozenset(
         "batch_probe_close",
     }
 )
+_LIFECYCLE_PROBE_ACTIONS = {
+    "batch_probe_cancel": "cancel",
+    "batch_probe_close": "close",
+}
+_REQUEST_SCHEMA = "mclab.batch-probe-request.v1"
+_WORKER_SAFE_POINT_SCHEMA = "mclab.batch-worker-safe-point.v1"
+_MAX_REQUEST_BYTES = 1_024
+_WORKER_HOLD_SECONDS = 30.0
 
 
 def schedule_batch_lifecycle_probe(
@@ -35,10 +43,10 @@ class _BatchLifecycleProbe:
     """Bounded self-test observer for one real packaged all-batch lifecycle."""
 
     _SCHEMA = "mclab.batch-probe.v1"
-    _REQUEST_SCHEMA = "mclab.batch-probe-request.v1"
+    _REQUEST_SCHEMA = _REQUEST_SCHEMA
     _HEARTBEAT_MS = 100
     _MAX_SECONDS = 360.0
-    _MAX_REQUEST_BYTES = 1_024
+    _MAX_REQUEST_BYTES = _MAX_REQUEST_BYTES
     _MAX_PROBE_BYTES = 16_384
 
     def __init__(self, timer: Any, backend: Any, root: Any, action: str) -> None:
@@ -50,6 +58,7 @@ class _BatchLifecycleProbe:
         self.probe_path = self._required_absolute_path("MCLAB_BATCH_PROBE_PATH")
         self.ready_path = self._required_absolute_path("MCLAB_BATCH_READY_PATH")
         self.request_path = self._required_absolute_path("MCLAB_BATCH_REQUEST_PATH")
+        self.worker_safe_path = _worker_safe_point_path(self.request_path)
         self.started_at = 0.0
         self.last_heartbeat = 0.0
         self.heartbeat_count = 0
@@ -78,10 +87,12 @@ class _BatchLifecycleProbe:
         return path
 
     def start(self) -> None:
-        if self.action in {"batch_probe_cancel", "batch_probe_close"} and os.path.lexists(
-            self.request_path
+        if self.action in _LIFECYCLE_PROBE_ACTIONS and any(
+            os.path.lexists(path) for path in (self.request_path, self.worker_safe_path)
         ):
-            raise RuntimeError("The batch probe request must not exist before the worker is ready.")
+            raise RuntimeError(
+                "The batch probe request and worker safe point must not exist before startup."
+            )
         self.started_at = self.last_heartbeat = time.monotonic()
         self.controller.changed.connect(self._changed)
         self.controller.completed.connect(lambda output: self._finish("completed", output, ""))
@@ -137,6 +148,20 @@ class _BatchLifecycleProbe:
             and self.current >= 1
             and self.progress
         ):
+            expected_action = _LIFECYCLE_PROBE_ACTIONS.get(self.action)
+            if expected_action is not None:
+                try:
+                    worker_safe = _read_batch_probe_request(
+                        self.worker_safe_path,
+                        expected_action,
+                        max_bytes=self._MAX_REQUEST_BYTES,
+                        schema=_WORKER_SAFE_POINT_SCHEMA,
+                    )
+                except Exception:
+                    self._abort("invalid_worker_safe_point")
+                    return
+                if not worker_safe:
+                    return
             self.ready = True
             payload = self._payload("ready", str(snapshot.get("state", "running")), False, "")
             _atomic_probe_write(
@@ -333,6 +358,86 @@ def _read_batch_probe_request(
     ):
         raise RuntimeError("The batch probe request does not match the active action.")
     return True
+
+
+def _worker_safe_point_path(request_path: Path) -> Path:
+    return request_path.with_name(".mclab-worker-safe-point.json")
+
+
+def _probe_path_identity(path: Path) -> str:
+    return os.path.normcase(os.path.abspath(os.fspath(path)))
+
+
+def _require_real_directory(path: Path) -> None:
+    result = os.lstat(path)
+    if _stat_is_link_or_reparse(result) or not stat.S_ISDIR(result.st_mode):
+        raise RuntimeError("The lifecycle probe parent must be a real directory.")
+
+
+def hold_batch_worker_at_lifecycle_safe_point(
+    current: int,
+    handoff_token: str | None,
+) -> None:
+    """Keep lifecycle self-tests at the first authenticated progress boundary."""
+
+    if current != 1 or os.environ.get("MCLAB_SELF_TEST") != "1":
+        return
+    action = os.environ.get("MCLAB_SMOKE_ACTION", "")
+    expected_action = _LIFECYCLE_PROBE_ACTIONS.get(action)
+    if expected_action is None:
+        return
+    if (
+        not isinstance(handoff_token, str)
+        or len(handoff_token) != 64
+        or any(character not in "0123456789abcdef" for character in handoff_token)
+    ):
+        raise RuntimeError("The lifecycle probe requires an authenticated batch handoff.")
+
+    variables = (
+        "MCLAB_BATCH_PROBE_PATH",
+        "MCLAB_BATCH_READY_PATH",
+        "MCLAB_BATCH_REQUEST_PATH",
+    )
+    paths: list[Path] = []
+    for variable in variables:
+        value = os.environ.get(variable, "")
+        path = Path(value)
+        if not value or not path.is_absolute():
+            raise RuntimeError(f"{variable} must name an absolute self-test path.")
+        if os.path.normcase(os.path.normpath(value)) != os.path.normcase(value):
+            raise RuntimeError(f"{variable} must name a normalized self-test path.")
+        paths.append(path)
+    identities = {_probe_path_identity(path) for path in paths}
+    parent_identities = {_probe_path_identity(path.parent) for path in paths}
+    if len(identities) != len(paths) or len(parent_identities) != 1:
+        raise RuntimeError("The lifecycle probe paths must be distinct siblings.")
+    _require_real_directory(paths[0].parent)
+
+    request_path = paths[-1]
+    worker_safe_path = _worker_safe_point_path(request_path)
+    if worker_safe_path in paths or os.path.lexists(worker_safe_path):
+        raise RuntimeError("The lifecycle worker safe-point destination is already occupied.")
+    _atomic_probe_write(
+        worker_safe_path,
+        {"action": expected_action, "schema": _WORKER_SAFE_POINT_SCHEMA},
+        _MAX_REQUEST_BYTES,
+        durable=False,
+    )
+    deadline = time.monotonic() + _WORKER_HOLD_SECONDS
+    while time.monotonic() < deadline:
+        if _read_batch_probe_request(
+            request_path,
+            expected_action,
+            max_bytes=_MAX_REQUEST_BYTES,
+            schema=_REQUEST_SCHEMA,
+        ):
+            # The controller owns termination. Returning here would start a
+            # child batch and reintroduce a platform-dependent cleanup race.
+            while time.monotonic() < deadline:
+                time.sleep(0.025)
+            raise RuntimeError("The lifecycle probe worker was not terminated after its request.")
+        time.sleep(0.025)
+    raise RuntimeError("The lifecycle probe request was not published before its deadline.")
 
 
 def _atomic_probe_write(

@@ -771,17 +771,9 @@ def run_batch(
         if plot:
             write_comparison_plots(batch_output, batch_name, scenarios)
         # Publish all completion inputs before the report computes a
-        # prospective terminal verdict.  The strict reader rejects links,
-        # directories, digest mismatches, and unbounded artifacts.
-        write_manifest(
-            batch_output,
-            scenario_id=f"batch.{batch_name}",
-            status="running",
-            config={"batch_name": batch_name, "plot": plot},
-            seed=seed,
-            started_at=started_at,
-            run_kind="comparison_batch",
-        )
+        # prospective terminal verdict, while keeping both documents omitted.
+        # The strict reader rejects links, directories, digest mismatches, and
+        # unbounded artifacts.
         write_manifest(
             batch_output,
             scenario_id=f"batch.{batch_name}",
@@ -994,16 +986,6 @@ def run_all_batches(
             encoding="utf-8",
         )
         write_outputs_index(group_output)
-        write_manifest(
-            group_output,
-            scenario_id=ALL_COMPARE_ID,
-            status="running",
-            config={"batch_name": ALL_BATCH_NAME, "plot": plot},
-            seed=seed,
-            started_at=started_at,
-            run_kind="comparison_batch",
-            handoff_token_sha256=handoff_token_hash,
-        )
         write_manifest(
             group_output,
             scenario_id=ALL_COMPARE_ID,

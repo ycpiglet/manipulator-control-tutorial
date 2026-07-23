@@ -762,6 +762,58 @@ class BatchTests(unittest.TestCase):
                     handoff_token=token,
                 )
 
+    def test_authenticated_progress_precedes_callback_and_child_batch(self) -> None:
+        events: list[str] = []
+        original_progress = batch.write_batch_progress
+
+        def write_progress(*args: object, **kwargs: object) -> object:
+            events.append("authenticated-progress")
+            return original_progress(*args, **kwargs)
+
+        def run_child(name: str, **kwargs: object) -> Path:
+            events.append(f"run:{name}")
+            output = Path(kwargs["output_dir"])
+            output.mkdir(parents=True)
+            (output / "summary.json").write_text("{}", encoding="utf-8")
+            return output
+
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            patch.dict(os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}),
+        ):
+            output = create_all_compare_output()
+            token = read_all_compare_handoff(output)
+            with (
+                patch.dict(
+                    batch.BATCH_SETS,
+                    {name: () for name in ALL_COMPARE_BATCH_NAMES},
+                    clear=True,
+                ),
+                patch(
+                    "mclab.batch.list_batch_sets",
+                    return_value=list(ALL_COMPARE_BATCH_NAMES),
+                ),
+                patch("mclab.batch.write_batch_progress", side_effect=write_progress),
+                patch("mclab.batch.run_batch", side_effect=run_child),
+                patch("mclab.batch.write_outputs_index"),
+                patch("mclab.batch.write_all_batches_report"),
+            ):
+                batch.run_all_batches(
+                    output_dir=output,
+                    plot=False,
+                    handoff_token=token,
+                    on_progress=lambda *_args: events.append("callback"),
+                )
+
+        self.assertEqual(
+            events,
+            [
+                event
+                for name in ALL_COMPARE_BATCH_NAMES
+                for event in ("authenticated-progress", "callback", f"run:{name}")
+            ],
+        )
+
     def test_desktop_batch_handoff_rejects_directory_links(self) -> None:
         with (
             tempfile.TemporaryDirectory() as tmp,

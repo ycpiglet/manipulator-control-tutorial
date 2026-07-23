@@ -55,8 +55,10 @@ SCHEMA = "mclab.package-e2e.v1"
 ARTIFACT_CLASS = "unsigned-development-g2-readiness-evidence"
 PROBE_SCHEMA = "mclab.batch-probe.v1"
 REQUEST_SCHEMA = "mclab.batch-probe-request.v1"
+WORKER_SAFE_POINT_SCHEMA = "mclab.batch-worker-safe-point.v1"
 MAX_EVIDENCE_BYTES = 1024 * 1024
 MAX_PROBE_BYTES = 256 * 1024
+MAX_WORKER_SAFE_POINT_BYTES = 1024
 MAX_JSON_BYTES = 4 * 1024 * 1024
 MAX_TREE_ENTRIES = 200_000
 MAX_PROCESS_IDENTITIES = 128
@@ -107,6 +109,7 @@ EXPECTED_PROBE_KEYS = frozenset(
     }
 )
 EXPECTED_PROGRESS_KEYS = frozenset({"current", "elapsed_ms", "name", "total"})
+EXPECTED_WORKER_SAFE_POINT_KEYS = frozenset({"action", "schema"})
 OBSERVABLE_PROBE_TERMINAL_STATUSES = frozenset({"completed", "error", "stopped"})
 OBSERVABLE_PROBE_ERROR_CODES = frozenset(
     {
@@ -115,6 +118,7 @@ OBSERVABLE_PROBE_ERROR_CODES = frozenset(
         "close_target_missing",
         "invalid_progress",
         "invalid_request",
+        "invalid_worker_safe_point",
         "non_absolute_output",
         "probe_timeout",
         "start_failed_without_terminal",
@@ -973,6 +977,21 @@ def validate_probe_payload(
     return progress
 
 
+def validate_worker_safe_point_payload(
+    payload: Mapping[str, Any],
+    *,
+    action: str,
+) -> None:
+    """Validate the exact worker marker before a lifecycle request is sent."""
+
+    if set(payload) != EXPECTED_WORKER_SAFE_POINT_KEYS:
+        raise AuditError("worker_safe_point_keys_invalid")
+    if payload.get("schema") != WORKER_SAFE_POINT_SCHEMA:
+        raise AuditError("worker_safe_point_schema_invalid")
+    if payload.get("action") != action:
+        raise AuditError("worker_safe_point_action_invalid")
+
+
 def evaluate_course_output(
     output: Path,
     probe: Mapping[str, Any],
@@ -1592,6 +1611,24 @@ def _read_probe_contract(
     )
 
 
+def _read_worker_safe_point_contract(
+    path: Path,
+    *,
+    action: str,
+) -> tuple[dict[str, Any] | None, str]:
+    """Read one bounded worker marker while retaining only a safe error code."""
+
+    try:
+        payload = read_json_mapping(path, max_bytes=MAX_WORKER_SAFE_POINT_BYTES)
+    except Exception:
+        return None, "worker_safe_point_read_invalid"
+    try:
+        validate_worker_safe_point_payload(payload, action=action)
+    except Exception as exc:
+        return payload, _error_code(exc)
+    return payload, ""
+
+
 def _allowlisted_probe_observation(
     payload: Mapping[str, Any] | None,
     name: str,
@@ -1647,6 +1684,7 @@ def run_lifecycle_probe(
     probe_path = case_root / "probe.json"
     ready_path = case_root / "ready.json"
     request_path = case_root / "request.json"
+    worker_safe_point_path = request_path.with_name(".mclab-worker-safe-point.json")
     env, env_metadata = _probe_base_environment(
         inherited_env,
         case_root / "state",
@@ -1663,6 +1701,8 @@ def run_lifecycle_probe(
     started = time.monotonic()
     observed: dict[tuple[int, str], ProcessIdentity] = {}
     ready = False
+    worker_safe_point_before_request = False
+    worker_safe_point_validation_error_code = ""
     request_sent = False
     timed_out = False
     observation_error_code = ""
@@ -1705,6 +1745,20 @@ def run_lifecycle_probe(
                         direct_child_pid = 0
                     ready = current >= 1 and direct_child_pid > 0
                     if ready and not request_sent:
+                        (
+                            _worker_safe_point,
+                            worker_safe_point_validation_error_code,
+                        ) = _read_worker_safe_point_contract(
+                            worker_safe_point_path,
+                            action=action,
+                        )
+                        if worker_safe_point_validation_error_code:
+                            observation_error_code = (
+                                worker_safe_point_validation_error_code
+                            )
+                            timed_out = True
+                            break
+                        worker_safe_point_before_request = True
                         write_canonical_json(
                             request_path,
                             {"action": action, "schema": REQUEST_SCHEMA},
@@ -1775,16 +1829,33 @@ def run_lifecycle_probe(
         phase="terminal",
         status="stopped",
     )
+    (
+        worker_safe_point_probe,
+        final_worker_safe_point_validation_error_code,
+    ) = _read_worker_safe_point_contract(
+        worker_safe_point_path,
+        action=action,
+    )
+    worker_safe_point_validation_error_code = (
+        final_worker_safe_point_validation_error_code
+        or worker_safe_point_validation_error_code
+    )
     observed_processes = [
         _identity_payload(item)
         for item in sorted(observed.values(), key=lambda value: value.pid)
     ]
     direct_observed = any(item.pid == direct_child_pid for item in observed.values())
-    if ready_validation_error_code or terminal_validation_error_code:
+    if (
+        ready_validation_error_code
+        or terminal_validation_error_code
+        or worker_safe_point_validation_error_code
+    ):
         checks = {
             "authenticated_ready": ready
+            and worker_safe_point_before_request
             and request_sent
-            and not ready_validation_error_code,
+            and not ready_validation_error_code
+            and not worker_safe_point_validation_error_code,
             "direct_child_observed": direct_observed,
             "no_observed_process_alive": not recorded_orphans and not post_cleanup,
             "process_containment": command.process_lifecycle_passed,
@@ -1792,13 +1863,16 @@ def run_lifecycle_probe(
             "ready_probe_contract": not ready_validation_error_code,
             "root_identity_observed": root_identity_observed,
             "terminal_probe_contract": not terminal_validation_error_code,
+            "worker_safe_point": worker_safe_point_before_request
+            and not worker_safe_point_validation_error_code,
         }
         return {
             "checks": checks,
             "command": _command_aggregate_payload(command),
             "cleanup_seconds": cleanup_seconds,
             "direct_child_pid": direct_child_pid,
-            "error_code": terminal_validation_error_code
+            "error_code": worker_safe_point_validation_error_code
+            or terminal_validation_error_code
             or ready_validation_error_code,
             "forced_cleanup": forced_cleanup,
             "observed_process_count": len(observed),
@@ -1821,17 +1895,23 @@ def run_lifecycle_probe(
             "settle_error_code": settle_error_code,
             "settle_seconds": settle_seconds,
             "terminal_validation_error_code": terminal_validation_error_code,
+            "worker_safe_point_validation_error_code": (
+                worker_safe_point_validation_error_code
+            ),
         }, env_metadata
 
     assert ready_probe is not None
     assert terminal_probe is not None
+    assert worker_safe_point_probe is not None
     allowed_outputs = Path(env["MCLAB_DATA_DIR"]) / "outputs"
     output = _safe_output_from_probe(terminal_probe, allowed_outputs)
     integrity = verify_manifest_tree(output)
     terminal_errors = verify_terminal_batch_output(output, expected_status="stopped")
     transients = transient_batch_members(output)
     checks = {
-        "authenticated_ready": ready and request_sent,
+        "authenticated_ready": ready
+        and worker_safe_point_before_request
+        and request_sent,
         "comparison_cleanup": not transients,
         "direct_child_observed": direct_observed,
         "manifest_integrity": integrity["passed"],
@@ -1841,6 +1921,7 @@ def run_lifecycle_probe(
         "stopped_manifest": _manifest_status(output) == "stopped",
         "strict_terminal": not terminal_errors,
         "terminal_probe": True,
+        "worker_safe_point": worker_safe_point_before_request,
     }
     payload = {
         "checks": checks,
@@ -1862,6 +1943,7 @@ def run_lifecycle_probe(
         "settle_seconds": settle_seconds,
         "strict_terminal_error_count": len(terminal_errors),
         "transient_member_count": len(transients),
+        "worker_safe_point_validation_error_code": "",
     }
     return payload, env_metadata
 

@@ -69,9 +69,6 @@ def test_run_finalization_refreshes_parent_index_after_terminal_manifest() -> No
 
     assert events == [
         "manifest:running:deferred",
-        "report:running:index=False",
-        "manifest:running:trusted",
-        "manifest:running:deferred",
         "report:completed:index=False",
         "manifest:completed:trusted",
         "index:parent",
@@ -113,9 +110,6 @@ def test_nested_run_finalization_defers_only_parent_index() -> None:
 
     assert events == [
         "manifest:running:deferred",
-        "report:running",
-        "manifest:running:trusted",
-        "manifest:running:deferred",
         "report:completed",
         "manifest:completed:trusted",
     ]
@@ -139,20 +133,15 @@ def test_abrupt_run_report_rewrite_leaves_documents_untrusted_and_tree_verifiabl
             summary={"lab_name": "lab01_msd", "duration": 1.0, "samples": 1},
             finalize=False,
         )
-        original_render = reporting._render_report
-        render_calls = 0
-        running_report = b""
-        running_worksheet = b""
+        write_run_report(output, update_index=False, completion_status="running")
+        logger._write_manifest(status="running")
+        old_report = (output / "report.html").read_bytes()
+        old_worksheet = (output / "worksheet.md").read_bytes()
 
         def interrupt_after_terminal_worksheet(*args: object, **kwargs: object) -> str:
-            nonlocal render_calls, running_report, running_worksheet
-            render_calls += 1
-            if render_calls == 1:
-                running_worksheet = (output / "worksheet.md").read_bytes()
-            if render_calls == 2:
-                running_report = (output / "report.html").read_bytes()
-                raise SystemExit("forced stop after worksheet replacement")
-            return original_render(*args, **kwargs)
+            assert (output / "worksheet.md").read_bytes() != old_worksheet
+            assert (output / "report.html").read_bytes() == old_report
+            raise SystemExit("forced stop after worksheet replacement")
 
         with (
             patch.object(
@@ -168,8 +157,8 @@ def test_abrupt_run_report_rewrite_leaves_documents_untrusted_and_tree_verifiabl
         assert payload["status"] == "running"
         assert "report.html" not in payload["artifacts"]
         assert "worksheet.md" not in payload["artifacts"]
-        assert (output / "worksheet.md").read_bytes() != running_worksheet
-        assert (output / "report.html").read_bytes() == running_report
+        assert (output / "worksheet.md").read_bytes() != old_worksheet
+        assert (output / "report.html").read_bytes() == old_report
         assert verify_manifest(output) == []
 
         record = ArtifactRepository(root).get_direct_child(output)
@@ -593,7 +582,6 @@ def test_batch_parent_index_observes_terminal_manifest() -> None:
     assert events == [
         "manifest:running:trusted",
         "index:local",
-        "manifest:running:trusted",
         "manifest:running:deferred",
         "report",
         "manifest:completed:trusted",
@@ -733,7 +721,6 @@ def test_batch_recovery_never_rewrites_documents_when_deferral_fails(
 
     report.assert_not_called()
     assert publications == [
-        ("running", ()),
         ("running", ()),
         ("running", ("report.html", "worksheet.md")),
         ("running", ("report.html", "worksheet.md")),
