@@ -142,10 +142,16 @@ def test_fresh_environment_isolates_state_and_scrubs_injection(tmp_path: Path) -
             "PATH": os.environ.get("PATH", ""),
             "PYTHONPATH": "/untrusted",
             "MCLAB_OUTPUT_DIR": "/real-output",
+            "MCLAB_STARTUP_SETTINGS_PATH": "/ambient/settings.ini",
             "LD_PRELOAD": "/untrusted.so",
         },
         tmp_path / "state",
         metric_path=metric,
+    )
+    second_env = startup.fresh_environment(
+        {},
+        tmp_path / "second-state",
+        metric_path=tmp_path / "second-metric.json",
     )
 
     assert "PYTHONPATH" not in env
@@ -157,6 +163,16 @@ def test_fresh_environment_isolates_state_and_scrubs_injection(tmp_path: Path) -
     assert env["QT_QUICK_BACKEND"] == "software"
     assert "MCLAB_STARTUP_BEGIN_NS" not in env
     assert Path(env["XDG_CONFIG_HOME"]).is_dir()
+    settings_path = Path(env["MCLAB_STARTUP_SETTINGS_PATH"])
+    second_settings_path = Path(second_env["MCLAB_STARTUP_SETTINGS_PATH"])
+    assert settings_path.is_absolute()
+    assert second_settings_path.is_absolute()
+    assert settings_path != second_settings_path
+    assert settings_path == tmp_path / "state/settings/mclab.ini"
+    assert settings_path.parent.is_dir()
+    assert second_settings_path.parent.is_dir()
+    assert not settings_path.exists()
+    assert not second_settings_path.exists()
 
 
 def test_run_command_bounds_logs_and_stamps_process_start(tmp_path: Path) -> None:
@@ -274,6 +290,7 @@ def test_audit_runs_twenty_samples_between_package_verifications(
     evidence = _package_evidence(workflow_sha)
     verification_calls: list[tuple[Path, Path]] = []
     sample_calls: list[int] = []
+    sample_settings_paths: list[Path] = []
 
     def fake_verify(bundle_root: Path, package_root: Path) -> dict[str, object]:
         verification_calls.append((bundle_root, package_root))
@@ -287,8 +304,13 @@ def test_audit_runs_twenty_samples_between_package_verifications(
         index: int,
         inherited_env: dict[str, str],
     ) -> dict[str, object]:
-        del root, inherited_env
         assert not startup._within(cwd, checkout)
+        env = startup.fresh_environment(
+            inherited_env,
+            root / f"state-{index}",
+            metric_path=root / f"startup-{index}.json",
+        )
+        sample_settings_paths.append(Path(env["MCLAB_STARTUP_SETTINGS_PATH"]))
         sample_calls.append(index)
         return _passing_samples(1000.0)[index - 1]
 
@@ -306,7 +328,17 @@ def test_audit_runs_twenty_samples_between_package_verifications(
 
     assert result["overall_pass"] is True
     assert result["required_check_contexts"] == list(startup.REQUIRED_CHECK_CONTEXTS)
+    assert result["environment"]["fresh_settings_per_sample"] is True
+    assert result["environment"]["settings_format"] == "explicit-ini"
+    assert result["environment"]["settings_fallbacks_enabled"] is False
+    assert (
+        result["environment"]["settings_isolation_status"]
+        == "verified-by-startup-processes"
+    )
     assert sample_calls == list(range(1, 21))
+    assert len(sample_settings_paths) == startup.STARTUP_SAMPLES
+    assert len(set(sample_settings_paths)) == startup.STARTUP_SAMPLES
+    assert all(path.is_absolute() for path in sample_settings_paths)
     assert verification_calls == [(bundle, package), (bundle, package)]
     assert result["checks"]["package"]["verification_count"] == 2
 
@@ -343,6 +375,10 @@ def test_audit_does_not_launch_an_unauthenticated_package(
     assert result["overall_pass"] is False
     assert result["checks"]["package"]["error_code"] == "package_pre_verification_failed"
     assert result["checks"]["startup"]["sample_count"] == 0
+    assert result["environment"]["fresh_settings_per_sample"] is False
+    assert result["environment"]["settings_isolation_status"] == "not-verified"
+    assert result["environment"]["settings_format"] is None
+    assert result["environment"]["settings_fallbacks_enabled"] is None
     assert "raw path" not in startup.canonical_json_bytes(result).decode("utf-8")
 
 
@@ -401,6 +437,10 @@ def test_main_persists_initial_fail_closed_evidence_before_audit(
     final_bytes = (checkout / relative_output).read_bytes()
     final = json.loads(final_bytes)
     assert final["checks"]["harness"]["error_code"] == "unexpected_runtimeerror"
+    assert final["environment"]["fresh_settings_per_sample"] is False
+    assert final["environment"]["settings_isolation_status"] == "not-verified"
+    assert final["environment"]["settings_format"] is None
+    assert final["environment"]["settings_fallbacks_enabled"] is None
     assert "must not be copied" not in final_bytes.decode("utf-8")
     assert final_bytes == startup.canonical_json_bytes(final)
     assert len(final_bytes) <= startup.MAX_EVIDENCE_BYTES

@@ -2,10 +2,10 @@
 """Audit packaged desktop startup without building or modifying the package.
 
 The audit authenticates the existing unsigned development package against the
-exact workflow subject, launches twenty new processes with fresh settings from
-temporary storage outside the checkout, and verifies the package again after
-the launches. The application-owned ``startup_probe`` records the interval from
-immediately before process creation until the QML root has loaded.
+exact workflow subject, launches twenty new processes with unique explicit INI
+settings in temporary storage outside the checkout, and verifies the package
+again after the launches. The application-owned ``startup_probe`` records the
+interval from immediately before process creation until the QML root has loaded.
 
 Only the bounded canonical JSON file named by ``--output`` is durable. Settings,
 runtime state, probe files, and bounded command logs remain below
@@ -306,7 +306,7 @@ def fresh_environment(
     *,
     metric_path: Path,
 ) -> dict[str, str]:
-    """Build a fresh-settings, injection-scrubbed environment for one launch."""
+    """Build an injection-scrubbed environment with one unique explicit INI."""
 
     root = _absolute(state_root)
     root.mkdir(parents=True, exist_ok=False)
@@ -325,6 +325,8 @@ def fresh_environment(
     }
     for directory in set(directories.values()):
         directory.mkdir(parents=True, exist_ok=True)
+    settings_root = root / "settings"
+    settings_root.mkdir()
 
     result = {name: value for name, value in inherited.items() if name in _ENV_ALLOWLIST}
     for name, directory in directories.items():
@@ -339,6 +341,7 @@ def fresh_environment(
             "MCLAB_SELF_TEST": "1",
             "MCLAB_SMOKE_ACTION": "startup_probe",
             "MCLAB_SMOKE_ACTION_MS": "0",
+            "MCLAB_STARTUP_SETTINGS_PATH": os.fspath(settings_root / "mclab.ini"),
             "MCLAB_STARTUP_PATH": os.fspath(_absolute(metric_path)),
             "MPLBACKEND": "Agg",
             "QT_QPA_PLATFORM": "offscreen",
@@ -389,13 +392,16 @@ def _drain_log(
 
 
 def _terminate_process(process: subprocess.Popen[bytes]) -> bool:
-    """Bound termination to the new process group/session, then the direct child."""
+    """Terminate the POSIX process group or the direct Windows child within bounds."""
 
     forced = False
     try:
         if process.poll() is None:
             forced = True
             if os.name == "nt":
+                # CREATE_NEW_PROCESS_GROUP does not provide Windows process-tree
+                # containment. PKG-01B reaps the direct child; descendant
+                # containment remains the separate process-lifecycle gate.
                 process.terminate()
             else:
                 os.killpg(process.pid, signal.SIGTERM)
@@ -644,7 +650,9 @@ def evaluate_startup_samples(samples: Sequence[Mapping[str, object]]) -> dict[st
     )
     return {
         "actual_qml_root_probe": True,
-        "cold_definition": "new-process-and-fresh-settings; os-file-cache-not-flushed",
+        "cold_definition": (
+            "new-process-and-explicit-fresh-ini; os-file-cache-not-flushed"
+        ),
         "failure_count": failures,
         "method": "nearest-rank",
         "metric_boundary": "process-spawn-to-qml-root-load",
@@ -881,14 +889,23 @@ class PackageStartupAudit:
         overall_pass = set(self.checks) == {"package", "startup"} and all(
             check.get("passed") is True for check in self.checks.values()
         )
+        settings_verified = self.checks.get("startup", {}).get("passed") is True
         return {
             "artifact_class": ARTIFACT_CLASS,
             "checks": self.checks,
             "environment": {
-                "fresh_settings_per_sample": True,
+                "fresh_settings_per_sample": settings_verified,
                 "inherited_values_recorded": False,
                 "policy": "allowlist-v1",
                 "runtime_cwd_outside_checkout": True,
+                "settings_fallbacks_enabled": False if settings_verified else None,
+                "settings_format": "explicit-ini" if settings_verified else None,
+                "settings_isolation_status": (
+                    "verified-by-startup-processes"
+                    if settings_verified
+                    else "not-verified"
+                ),
+                "settings_path_policy": "required-unique-absolute-per-sample",
             },
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "overall_pass": overall_pass,
@@ -939,10 +956,14 @@ def _failure_evidence(
         "artifact_class": ARTIFACT_CLASS,
         "checks": {"harness": {"error_code": error_code, "passed": False}},
         "environment": {
-            "fresh_settings_per_sample": True,
+            "fresh_settings_per_sample": False,
             "inherited_values_recorded": False,
             "policy": "allowlist-v1",
             "runtime_cwd_outside_checkout": True,
+            "settings_fallbacks_enabled": None,
+            "settings_format": None,
+            "settings_isolation_status": "not-verified",
+            "settings_path_policy": "required-unique-absolute-per-sample",
         },
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "overall_pass": False,

@@ -307,22 +307,29 @@ verification and requires the recorded source commit to equal the workflow
 subject. Both the one-folder and archive size gates must be independently
 enforced and passing. It then launches the packaged executable by absolute path
 from a temporary working directory outside the checkout. Each of the 20
-processes receives fresh settings, data, output, cache, temporary, and
-single-instance state. The existing application-owned `startup_probe` measures
-from immediately before process creation until the actual QML root has loaded.
-The accepted development threshold is zero failed processes and a nearest-rank
-p95 of at most 5,000 ms (rank 19 of 20). The OS file cache is deliberately not
-flushed, so this is the documented new-process/fresh-settings definition rather
-than a claim about first boot after installation or a cold machine.
+processes receives a unique absolute INI settings file with QSettings fallbacks
+disabled, plus fresh data, output, cache, temporary, and single-instance state.
+This explicit INI selection is available only to the `startup_probe` self-test;
+normal learner launches retain Qt's native settings format. The existing
+application-owned probe measures from immediately before process creation until
+the actual QML root has loaded. The accepted development threshold is zero
+failed processes and a nearest-rank p95 of at most 5,000 ms (rank 19 of 20).
+The audit uses Qt's offscreen platform and software Qt Quick backend, and package
+verification runs before sampling. The OS file cache is deliberately not
+flushed, so this is the documented new-process/explicit-fresh-INI definition
+rather than a claim about first boot after installation, a visible first frame,
+or a cold machine.
 
-Every process has a 20-second harness timeout and starts in a new process
-group/session. Temporary stdout and stderr are drained to bounded files; only
-byte counts and SHA-256 summaries enter the canonical evidence. After all
-launches, checkout-bound package verification runs again and its complete
-canonical result must be byte-equivalent to the pre-launch result. Runtime
-state, probe files, and logs remain under runner temporary storage and are
-removed. The evidence itself is bounded to 1 MiB, contains no absolute paths,
-is retained for 90 days, and is separate from the 7-day unsigned package
+Every process has a 20-second harness timeout and starts in a new POSIX session
+or Windows process group. Timeout cleanup terminates the POSIX group but only
+the direct child on Windows; descendant containment remains the separate
+process-lifecycle gate. Temporary stdout and stderr are drained to bounded
+files; only byte counts and SHA-256 summaries enter the canonical evidence.
+After all launches, checkout-bound package verification runs again and its
+complete canonical result must be byte-equivalent to the pre-launch result.
+Runtime state, probe files, and logs remain under runner temporary storage and
+are removed. The evidence itself is bounded to 1 MiB, contains no absolute
+paths, is retained for 90 days, and is separate from the 7-day unsigned package
 artifact.
 
 This closes only the narrow PKG-01B packaged-startup development check.
@@ -341,5 +348,5 @@ The independent gates are one-folder size at most 400 MiB and compressed
 archive size at most 300 MiB. Actual per-OS measurements must come from the
 retained matrix artifacts; this source contract does not assert that a package
 was built. The packaged startup development gate above measures the bounded
-new-process/fresh-settings QML-root threshold; installed first-boot behavior
+new-process/explicit-fresh-INI QML-root threshold; installed first-boot behavior
 and the broader functional/lifecycle E2E contract remain later gates.
