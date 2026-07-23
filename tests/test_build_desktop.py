@@ -17,6 +17,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = ROOT / "scripts" / "build_desktop.py"
 WORKFLOW_PATH = ROOT / ".github" / "workflows" / "desktop.yml"
+TEST_NOTICE_BYTES = b"# Test third-party notices\n\nbounded fixture\n"
 
 
 def _load_build_module():
@@ -33,6 +34,9 @@ def build_module():
 
 
 def _make_bundle(module, repository: Path, *, payload: bytes = b"payload\n") -> Path:
+    notice_source = repository / module.THIRD_PARTY_NOTICES_NAME
+    notice_source.parent.mkdir(parents=True, exist_ok=True)
+    notice_source.write_bytes(TEST_NOTICE_BYTES)
     bundle = repository / "dist" / module.BUNDLE_NAME
     bundle.mkdir(parents=True)
     executable = bundle / "MCLab"
@@ -41,6 +45,7 @@ def _make_bundle(module, repository: Path, *, payload: bytes = b"payload\n") -> 
     (bundle / "data").mkdir()
     (bundle / "data" / "lesson.txt").write_bytes(b"lesson\n")
     (bundle / module.UNSIGNED_MARKER_NAME).write_bytes(module.UNSIGNED_MARKER_BYTES)
+    (bundle / module.THIRD_PARTY_NOTICES_NAME).write_bytes(TEST_NOTICE_BYTES)
     return bundle
 
 
@@ -252,14 +257,25 @@ def test_desktop_workflow_verifies_and_retains_exact_package_evidence() -> None:
     build = workflow.index("- name: Build unsigned one-folder app")
     diagnostics = workflow.index("- name: Verify packaged app and diagnostics")
     verify = workflow.index("- name: Verify package identity and size evidence")
+    metrics_upload = workflow.index("- name: Upload bounded package metrics")
     upload = workflow.index("- name: Upload unsigned development package")
 
-    assert isolated < build < diagnostics < verify < upload
+    assert isolated < build < diagnostics < verify < metrics_upload < upload
     assert 'package_env="$RUNNER_TEMP/mclab-package-build"' in workflow
     assert '"$package_python" scripts/install_locked.py --allow-external-env package' in workflow
     assert "run: '\"$MCLAB_BUILD_PYTHON\" scripts/build_desktop.py --clean'" in workflow
     assert "run: '\"$MCLAB_BUILD_PYTHON\" scripts/build_desktop.py --verify-only'" in workflow
     assert "Mark build as unsigned development artifact" not in workflow
+    metrics_upload_block = workflow[metrics_upload:upload]
+    assert (
+        "uses: actions/upload-artifact@"
+        "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1"
+        in metrics_upload_block
+    )
+    assert "name: mclab-package-metrics-${{ runner.os }}" in metrics_upload_block
+    assert "path: dist/MCLab-package/package-metrics.json" in metrics_upload_block
+    assert "if-no-files-found: error" in metrics_upload_block
+    assert "retention-days: 14" in metrics_upload_block
     upload_block = workflow[upload:]
     assert "dist/MCLab\n" in upload_block
     assert "dist/MCLab-package\n" in upload_block
@@ -304,6 +320,7 @@ def test_build_preflight_and_marker_run_before_package_inventory(
     build_module, tmp_path: Path
 ) -> None:
     events: list[str] = []
+    (tmp_path / build_module.THIRD_PARTY_NOTICES_NAME).write_bytes(TEST_NOTICE_BYTES)
     previous_package = tmp_path / "dist" / build_module.PACKAGE_DIRECTORY_NAME
     previous_package.mkdir(parents=True)
     (previous_package / "stale.txt").write_bytes(b"stale evidence")
@@ -327,6 +344,9 @@ def test_build_preflight_and_marker_run_before_package_inventory(
         assert enforce_size_gate is False
         assert (bundle / build_module.UNSIGNED_MARKER_NAME).read_bytes() == (
             build_module.UNSIGNED_MARKER_BYTES
+        )
+        assert (bundle / build_module.THIRD_PARTY_NOTICES_NAME).read_bytes() == (
+            TEST_NOTICE_BYTES
         )
         events.append("inventory")
         return tmp_path / "dist" / build_module.PACKAGE_DIRECTORY_NAME
@@ -428,7 +448,7 @@ def test_build_preflight_reports_non_force_guidance_for_missing_tree(
     assert "--force" not in str(raised.value)
 
 
-def test_inventory_is_sorted_deterministic_and_identity_covers_marker(
+def test_inventory_is_sorted_deterministic_and_identity_covers_root_metadata(
     build_module, tmp_path: Path
 ) -> None:
     bundle = _make_bundle(build_module, tmp_path)
@@ -449,6 +469,12 @@ def test_inventory_is_sorted_deterministic_and_identity_covers_marker(
         marker["sha256"]
         == build_module.hashlib.sha256(build_module.UNSIGNED_MARKER_BYTES).hexdigest()
     )
+    notice = next(
+        member
+        for member in members
+        if member["path"] == build_module.THIRD_PARTY_NOTICES_NAME
+    )
+    assert notice["sha256"] == build_module.hashlib.sha256(TEST_NOTICE_BYTES).hexdigest()
     assert first_inventory["one_folder_bytes"] == sum(
         path.stat().st_size for path in bundle.rglob("*") if path.is_file()
     )
@@ -462,6 +488,7 @@ def test_inventory_uses_path_lstat_instead_of_direntry_stat(build_module, tmp_pa
 
     assert {member["path"] for member in inventory["members"]} >= {
         build_module.UNSIGNED_MARKER_NAME,
+        build_module.THIRD_PARTY_NOTICES_NAME,
         "MCLab",
         "data/lesson.txt",
     }
@@ -525,12 +552,54 @@ def test_finalize_records_distinct_measured_sizes_identity_and_unsigned_status(
     assert one_folder["passed"] is True and archive["passed"] is True
     assert evidence["artifact_class"] == "unsigned-development"
     assert evidence["unsigned_marker"]["path"] == build_module.UNSIGNED_MARKER_NAME
+    assert evidence["schema"] == "mclab.package-metrics.v2"
+    assert evidence["third_party_notices"] == {
+        "path": build_module.THIRD_PARTY_NOTICES_NAME,
+        "sha256": build_module.hashlib.sha256(TEST_NOTICE_BYTES).hexdigest(),
+        "size_bytes": len(TEST_NOTICE_BYTES),
+    }
     assert len(evidence["package_identity"]["value"]) == 64
     assert {path.name for path in package.iterdir()} == {
         build_module.EVIDENCE_NAME,
         "MCLab-linux-x86_64-unsigned-development.tar.gz",
     }
     _verify(build_module, bundle, package)
+
+
+def test_notice_gate_requires_exact_bundle_root_path(
+    build_module, tmp_path: Path
+) -> None:
+    bundle = _make_bundle(build_module, tmp_path)
+    root_notice = bundle / build_module.THIRD_PARTY_NOTICES_NAME
+    internal = bundle / "_internal"
+    internal.mkdir()
+    (internal / build_module.THIRD_PARTY_NOTICES_NAME).write_bytes(
+        root_notice.read_bytes()
+    )
+    root_notice.unlink()
+    inventory, _identity = build_module._inventory_bundle(bundle)
+
+    with pytest.raises(
+        build_module.PackageValidationError,
+        match="bundle root",
+    ):
+        build_module._third_party_notices_evidence(inventory)
+
+
+def test_checkout_verification_rejects_notice_source_drift(
+    build_module, tmp_path: Path
+) -> None:
+    bundle = _make_bundle(build_module, tmp_path)
+    package = _finalize(build_module, tmp_path, bundle)
+    (tmp_path / build_module.THIRD_PARTY_NOTICES_NAME).write_bytes(
+        b"# Different repository notice\n"
+    )
+
+    with pytest.raises(
+        build_module.PackageValidationError,
+        match="does not match the repository source",
+    ):
+        _verify(build_module, bundle, package)
 
 
 def test_skipped_gate_is_explicit_in_evidence(build_module, tmp_path: Path) -> None:
@@ -1284,12 +1353,15 @@ def test_main_finalization_failure_restores_preexisting_marker(
     build_module, tmp_path: Path
 ) -> None:
     original_marker = b"previous marker\n"
+    original_notice = b"previous notice\n"
+    (tmp_path / build_module.THIRD_PARTY_NOTICES_NAME).write_bytes(TEST_NOTICE_BYTES)
 
     def fake_pyinstaller(*args, **kwargs) -> None:
         bundle = tmp_path / "dist" / build_module.BUNDLE_NAME
         bundle.mkdir(parents=True)
         (bundle / "MCLab").write_bytes(b"app")
         (bundle / build_module.UNSIGNED_MARKER_NAME).write_bytes(original_marker)
+        (bundle / build_module.THIRD_PARTY_NOTICES_NAME).write_bytes(original_notice)
 
     with (
         patch.object(build_module, "ROOT", tmp_path),
@@ -1307,9 +1379,18 @@ def test_main_finalization_failure_restores_preexisting_marker(
 
     marker = tmp_path / "dist" / build_module.BUNDLE_NAME / build_module.UNSIGNED_MARKER_NAME
     assert marker.read_bytes() == original_marker
+    notice = (
+        tmp_path
+        / "dist"
+        / build_module.BUNDLE_NAME
+        / build_module.THIRD_PARTY_NOTICES_NAME
+    )
+    assert notice.read_bytes() == original_notice
 
 
 def test_main_finalization_failure_removes_new_marker(build_module, tmp_path: Path) -> None:
+    (tmp_path / build_module.THIRD_PARTY_NOTICES_NAME).write_bytes(TEST_NOTICE_BYTES)
+
     def fake_pyinstaller(*args, **kwargs) -> None:
         bundle = tmp_path / "dist" / build_module.BUNDLE_NAME
         bundle.mkdir(parents=True)
@@ -1331,6 +1412,13 @@ def test_main_finalization_failure_removes_new_marker(build_module, tmp_path: Pa
 
     marker = tmp_path / "dist" / build_module.BUNDLE_NAME / build_module.UNSIGNED_MARKER_NAME
     assert not marker.exists()
+    notice = (
+        tmp_path
+        / "dist"
+        / build_module.BUNDLE_NAME
+        / build_module.THIRD_PARTY_NOTICES_NAME
+    )
+    assert not notice.exists()
 
 
 @pytest.mark.skipif(os.name == "nt", reason="POSIX symlink semantics")

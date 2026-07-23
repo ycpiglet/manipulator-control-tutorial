@@ -1,0 +1,64 @@
+{
+  "contract_id": "LIC-01B",
+  "package_evidence_inventory": ".agents/supply_chain/license-inventory.json",
+  "raw_evidence_retention": "open-owner-decision-required",
+  "replay_command": [
+    "python",
+    "scripts/import_license_corpus.py",
+    "--evidence-root",
+    "<directory-containing-the-three-SUP-01-artifacts>",
+    "--panda-license",
+    "<pinned-panda-license>",
+    "--pyopengl-sdist",
+    "<locked-pyopengl-sdist>",
+    "--exceptiongroup-wheel",
+    "<locked-exceptiongroup-wheel>",
+    "--setuptools-wheel",
+    "<locked-setuptools-wheel>"
+  ],
+  "schema_version": 1,
+  "supplemental_inputs": {
+    "exceptiongroup": {
+      "archive_sha256": "a7a39a3bd276781e98394987d3a5701d0c4edffb633bb7a5144577f82c773598",
+      "kind": "wheel",
+      "license_members": [
+        "exceptiongroup-1.3.1.dist-info/licenses/LICENSE"
+      ]
+    },
+    "panda-runtime": {
+      "archive_sha256": "a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9",
+      "kind": "file",
+      "license_members": [
+        "<whole-file>"
+      ]
+    },
+    "pyopengl": {
+      "archive_sha256": "c4a02d6866b54eb119c8e9b3fb04fa835a95ab802dd96607ab4cdb0012df8335",
+      "kind": "sdist-tar-gz",
+      "license_members": [
+        "pyopengl-3.1.10/license.txt"
+      ]
+    },
+    "setuptools": {
+      "archive_sha256": "29b23c360f22f414dc7336bb39178cc7bcbf6021ed2733cde173f09dba19abb3",
+      "kind": "wheel",
+      "license_members": [
+        "setuptools-83.0.0.dist-info/licenses/LICENSE",
+        "setuptools/_vendor/autocommand-2.2.2.dist-info/LICENSE",
+        "setuptools/_vendor/backports.tarfile-1.2.0.dist-info/LICENSE",
+        "setuptools/_vendor/importlib_metadata-8.7.1.dist-info/licenses/LICENSE",
+        "setuptools/_vendor/jaraco.text-4.0.0.dist-info/LICENSE",
+        "setuptools/_vendor/jaraco_context-6.1.0.dist-info/licenses/LICENSE",
+        "setuptools/_vendor/jaraco_functools-4.4.0.dist-info/licenses/LICENSE",
+        "setuptools/_vendor/more_itertools-10.8.0.dist-info/licenses/LICENSE",
+        "setuptools/_vendor/packaging-26.0.dist-info/licenses/LICENSE",
+        "setuptools/_vendor/packaging-26.0.dist-info/licenses/LICENSE.APACHE",
+        "setuptools/_vendor/packaging-26.0.dist-info/licenses/LICENSE.BSD",
+        "setuptools/_vendor/platformdirs-4.4.0.dist-info/licenses/LICENSE",
+        "setuptools/_vendor/tomli-2.4.0.dist-info/licenses/LICENSE",
+        "setuptools/_vendor/wheel-0.46.3.dist-info/licenses/LICENSE.txt",
+        "setuptools/_vendor/zipp-3.23.0.dist-info/licenses/LICENSE"
+      ]
+    }
+  }
+}

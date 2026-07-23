@@ -1,0 +1,2651 @@
+{
+  "components": [
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "Apache-2.0",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:absl-py",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/50e6751797c50dedd75ef1b8a0d9e42f5f8472e9fbce91f34718e9f97b0c780a.txt",
+          "sha256": "50e6751797c50dedd75ef1b8a0d9e42f5f8472e9fbce91f34718e9f97b0c780a",
+          "size": 11324
+        }
+      ],
+      "name": "absl-py",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/abseil/abseil-py",
+      "version": "2.5.0"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "MIT",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:altgraph",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/6c194d6db0c64d45535d10c95142b9b0cda7b7dcc7f1ddee302b3d536f3dbe46.txt",
+          "sha256": "6c194d6db0c64d45535d10c95142b9b0cda7b7dcc7f1ddee302b3d536f3dbe46",
+          "size": 1002
+        }
+      ],
+      "name": "altgraph",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://altgraph.readthedocs.io",
+      "version": "0.17.5"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "MIT",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:ast-serialize",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/0105734bec61b8396baa9c16a202379368ef243502524f5001fba0229d478b8d.txt",
+          "sha256": "0105734bec61b8396baa9c16a202379368ef243502524f5001fba0229d478b8d",
+          "size": 1190
+        }
+      ],
+      "name": "ast-serialize",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/mypyc/ast_serialize",
+      "version": "0.6.0"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "MIT",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:axe-playwright-python",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/6a06a65cf27b3f66b5fcae2743f9a958fad69749e1fb4cbd3d09aa5ac33673ba.txt",
+          "sha256": "6a06a65cf27b3f66b5fcae2743f9a958fad69749e1fb4cbd3d09aa5ac33673ba",
+          "size": 1081
+        }
+      ],
+      "name": "axe-playwright-python",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://pamelafox.github.io/axe-playwright-python",
+      "version": "0.1.7"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "BSD-3-Clause",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:colorama",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/cac35c02686e5d04a5a7140bfb3b36e73aed496656e891102e428886d7930318.txt",
+          "sha256": "cac35c02686e5d04a5a7140bfb3b36e73aed496656e891102e428886d7930318",
+          "size": 1491
+        }
+      ],
+      "name": "colorama",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/tartley/colorama",
+      "version": "0.4.6"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "BSD-3-Clause",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:contourpy",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/34170979fc64f4f5e6dfa66ef27dec314ffffc5852000c60f4836ec1dfbf156e.txt",
+          "sha256": "34170979fc64f4f5e6dfa66ef27dec314ffffc5852000c60f4836ec1dfbf156e",
+          "size": 1534
+        }
+      ],
+      "name": "contourpy",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/contourpy/contourpy",
+      "version": "1.3.2"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "Apache-2.0",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:coverage",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/bb28c48e3e078166e91cfc2b6db7ffebb8a0973b9e23b3df060561292d8d69ec.txt",
+          "sha256": "bb28c48e3e078166e91cfc2b6db7ffebb8a0973b9e23b3df060561292d8d69ec",
+          "size": 10140
+        }
+      ],
+      "name": "coverage",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/coveragepy/coveragepy",
+      "version": "7.15.2"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "BSD-3-Clause",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:cycler",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/7eec27ee66da53ba5912cb00b3521ac4428834bb37d0691080bf5d543b0cbb31.txt",
+          "sha256": "7eec27ee66da53ba5912cb00b3521ac4428834bb37d0691080bf5d543b0cbb31",
+          "size": 1498
+        }
+      ],
+      "name": "cycler",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://matplotlib.org/cycler/",
+      "version": "0.12.1"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "Apache-2.0",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:etils",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/50e6751797c50dedd75ef1b8a0d9e42f5f8472e9fbce91f34718e9f97b0c780a.txt",
+          "sha256": "50e6751797c50dedd75ef1b8a0d9e42f5f8472e9fbce91f34718e9f97b0c780a",
+          "size": 11324
+        }
+      ],
+      "name": "etils",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/google/etils",
+      "version": "1.13.0"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64"
+      ],
+      "evidence_expression": "MIT",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:exceptiongroup",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/6e5070d765031e0ad403a1cbf90ae6d19a0228f802e320b7acff460aa72ed47c.txt",
+          "sha256": "6e5070d765031e0ad403a1cbf90ae6d19a0228f802e320b7acff460aa72ed47c",
+          "size": 3704
+        }
+      ],
+      "name": "exceptiongroup",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/agronholm/exceptiongroup",
+      "version": "1.3.1"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "MIT",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:fonttools",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/6787208f83f659ccbc2223b2fde952ffa6f7e8aca62f1a8a2bf5bc51bb1b2383.txt",
+          "sha256": "6787208f83f659ccbc2223b2fde952ffa6f7e8aca62f1a8a2bf5bc51bb1b2383",
+          "size": 1072
+        }
+      ],
+      "name": "fonttools",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/fonttools/fonttools",
+      "version": "4.63.0"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "BSD-3-Clause",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:fsspec",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/2dc35496ce53a7307915c008a844aad53e772b49b34cdd00445067691407ec94.txt",
+          "sha256": "2dc35496ce53a7307915c008a844aad53e772b49b34cdd00445067691407ec94",
+          "size": 1513
+        }
+      ],
+      "name": "fsspec",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/fsspec/filesystem_spec",
+      "version": "2026.6.0"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "MIT",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:glfw",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/83e675a7714eb01db1ed75cedcf349ab9dd9630782f81c08161cb58cc67ca1ca.txt",
+          "sha256": "83e675a7714eb01db1ed75cedcf349ab9dd9630782f81c08161cb58cc67ca1ca",
+          "size": 1085
+        }
+      ],
+      "name": "glfw",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/FlorianRhiem/pyGLFW",
+      "version": "2.10.2"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "MIT AND PSF-2.0",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:greenlet",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/769831d6e5dfaf2c20802faccff1fafb4c2025dd8f6253dfa47fcad59d4d0979.txt",
+          "sha256": "769831d6e5dfaf2c20802faccff1fafb4c2025dd8f6253dfa47fcad59d4d0979",
+          "size": 1434
+        }
+      ],
+      "name": "greenlet",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://greenlet.readthedocs.io",
+      "version": "3.5.3"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "Apache-2.0",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:importlib-resources",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/e2f7bb0557e7a381499f15baa7c1d776d83d6616599179d71d3109b8e39f7b25.txt",
+          "sha256": "e2f7bb0557e7a381499f15baa7c1d776d83d6616599179d71d3109b8e39f7b25",
+          "size": 10278
+        }
+      ],
+      "name": "importlib-resources",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/python/importlib_resources",
+      "version": "7.1.0"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "MIT",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:iniconfig",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/3409fa91f7ace557894632676656e32264fe5ef7581535725dc9a23774551bd4.txt",
+          "sha256": "3409fa91f7ace557894632676656e32264fe5ef7581535725dc9a23774551bd4",
+          "size": 1098
+        }
+      ],
+      "name": "iniconfig",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/pytest-dev/iniconfig",
+      "version": "2.3.0"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "BSD-3-Clause",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:kiwisolver",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/529c40e5f67f2f88904657a9f7879ae2f8dc76bc9bfef9cb10d988b48804ed61.txt",
+          "sha256": "529c40e5f67f2f88904657a9f7879ae2f8dc76bc9bfef9cb10d988b48804ed61",
+          "size": 3289
+        }
+      ],
+      "name": "kiwisolver",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/nucleic/kiwi",
+      "version": "1.5.0"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "MIT AND PSF-2.0",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:librt",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/88f9e379c684580053c58e75e296ca2eb243b6edcc6e5357f247310e96eeef8a.txt",
+          "sha256": "88f9e379c684580053c58e75e296ca2eb243b6edcc6e5357f247310e96eeef8a",
+          "size": 12789
+        }
+      ],
+      "name": "librt",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/mypyc/librt",
+      "version": "0.13.0"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64"
+      ],
+      "evidence_expression": "MIT",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:macholib",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/47082ab2bc0184123ec9f10fdf80c70723ee68f07d44382e17615c2a6ba70b09.txt",
+          "sha256": "47082ab2bc0184123ec9f10fdf80c70723ee68f07d44382e17615c2a6ba70b09",
+          "size": 1113
+        }
+      ],
+      "name": "macholib",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/ronaldoussoren/macholib",
+      "version": "1.16.4"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "LicenseRef-Matplotlib-3.10.9",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:matplotlib",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/82e8367def275345ae843cf4c33a444e4028546c34398234053292affce0c6ec.txt",
+          "sha256": "82e8367def275345ae843cf4c33a444e4028546c34398234053292affce0c6ec",
+          "size": 40002
+        }
+      ],
+      "name": "matplotlib",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://matplotlib.org",
+      "version": "3.10.9"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "Apache-2.0",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:mujoco",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/50e6751797c50dedd75ef1b8a0d9e42f5f8472e9fbce91f34718e9f97b0c780a.txt",
+          "sha256": "50e6751797c50dedd75ef1b8a0d9e42f5f8472e9fbce91f34718e9f97b0c780a",
+          "size": 11324
+        }
+      ],
+      "name": "mujoco",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/google-deepmind/mujoco",
+      "version": "3.10.0"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "Apache-2.0",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:mujoco-manipulator-control-lab",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/50e6751797c50dedd75ef1b8a0d9e42f5f8472e9fbce91f34718e9f97b0c780a.txt",
+          "sha256": "50e6751797c50dedd75ef1b8a0d9e42f5f8472e9fbce91f34718e9f97b0c780a",
+          "size": 11324
+        }
+      ],
+      "name": "mujoco-manipulator-control-lab",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "project-package-profile-input",
+      "source_url": "https://github.com/ycpiglet/manipulator-control-tutorial",
+      "version": "0.1.0"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "MIT AND PSF-2.0",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:mypy",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/fdf1cd17f50e1305ed8cfd37467312d27a984648dba622cef70573b5512e4e1b.txt",
+          "sha256": "fdf1cd17f50e1305ed8cfd37467312d27a984648dba622cef70573b5512e4e1b",
+          "size": 12842
+        }
+      ],
+      "name": "mypy",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://www.mypy-lang.org/",
+      "version": "2.3.0"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "MIT",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:mypy-extensions",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/a50450da1d53cd777b80ced77c58ff96abe0ccd879706bd142c3ec20e245f0b4.txt",
+          "sha256": "a50450da1d53cd777b80ced77c58ff96abe0ccd879706bd142c3ec20e245f0b4",
+          "size": 1204
+        }
+      ],
+      "name": "mypy-extensions",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/python/mypy_extensions",
+      "version": "1.1.0"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "LicenseRef-NumPy-2.2.6",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:numpy",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/aa48166a64664bc15095c3a787da8b68168ff2f80bd247708565271141db413e.txt",
+          "sha256": "aa48166a64664bc15095c3a787da8b68168ff2f80bd247708565271141db413e",
+          "size": 46761
+        },
+        {
+          "path": "third_party/licenses/corpus/b4ae62887f4dd6e9430b1a8d7017a3ba84c5d7aa630b9d17ed6f25c21b0ec5b4.txt",
+          "sha256": "b4ae62887f4dd6e9430b1a8d7017a3ba84c5d7aa630b9d17ed6f25c21b0ec5b4",
+          "size": 47786
+        },
+        {
+          "path": "third_party/licenses/corpus/c002bd26de7dc7aa464250a0de063d58fe55974452e4389e5c21c350a820bf06.txt",
+          "sha256": "c002bd26de7dc7aa464250a0de063d58fe55974452e4389e5c21c350a820bf06",
+          "size": 47755
+        }
+      ],
+      "name": "numpy",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://numpy.org",
+      "version": "2.2.6"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "Apache-2.0 OR BSD-2-Clause",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:packaging",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/cad1ef5bd340d73e074ba614d26f7deaca5c7940c3d8c34852e65c4909686c48.txt",
+          "sha256": "cad1ef5bd340d73e074ba614d26f7deaca5c7940c3d8c34852e65c4909686c48",
+          "size": 197
+        }
+      ],
+      "name": "packaging",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/pypa/packaging",
+      "version": "26.2"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "MPL-2.0",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:pathspec",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5.txt",
+          "sha256": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5",
+          "size": 16725
+        }
+      ],
+      "name": "pathspec",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://python-path-specification.readthedocs.io/en/latest/index.html",
+      "version": "1.1.1"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "MIT",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:pefile",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/b44409c067c6da52bfb54bb6624fb11a7b52157c3a13ae1400232f8196e86ad3.txt",
+          "sha256": "b44409c067c6da52bfb54bb6624fb11a7b52157c3a13ae1400232f8196e86ad3",
+          "size": 1083
+        }
+      ],
+      "name": "pefile",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/erocarrera/pefile",
+      "version": "2024.8.26"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "LicenseRef-Pillow-12.3.0",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:pillow",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/ab0d05ea62c2817a068c92bf068db7a18a493da84cce4e43ad67acacc4d7b881.txt",
+          "sha256": "ab0d05ea62c2817a068c92bf068db7a18a493da84cce4e43ad67acacc4d7b881",
+          "size": 76415
+        },
+        {
+          "path": "third_party/licenses/corpus/dda12a98c1979cf3d94df1cff45d27a4cb3f04a60c76f76902ac54cac03ec0ce.txt",
+          "sha256": "dda12a98c1979cf3d94df1cff45d27a4cb3f04a60c76f76902ac54cac03ec0ce",
+          "size": 70307
+        }
+      ],
+      "name": "pillow",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://python-pillow.github.io",
+      "version": "12.3.0"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "Apache-2.0",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:playwright",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/37bdf4db7e3aad1c8775b0aaf09baddfe442a8c621afd5eca9da2d7cc6e51f42.txt",
+          "sha256": "37bdf4db7e3aad1c8775b0aaf09baddfe442a8c621afd5eca9da2d7cc6e51f42",
+          "size": 11366
+        }
+      ],
+      "name": "playwright",
+      "notice_status": "captured-obligation-review-pending",
+      "notice_texts": [
+        {
+          "path": "third_party/licenses/corpus/6d602191187b35b9b01d2cffa01c8469c2c8d9de8a96f1bf868e0f264f51c81d.txt",
+          "sha256": "6d602191187b35b9b01d2cffa01c8469c2c8d9de8a96f1bf868e0f264f51c81d",
+          "size": 254
+        }
+      ],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/Microsoft/playwright-python",
+      "version": "1.61.0"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "MIT",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:pluggy",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/d6b65e6c213a5d0b577911d34d6e5949b9f59d76c238c5071a2f3fc16cfb2606.txt",
+          "sha256": "d6b65e6c213a5d0b577911d34d6e5949b9f59d76c238c5071a2f3fc16cfb2606",
+          "size": 1110
+        }
+      ],
+      "name": "pluggy",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/pytest-dev/pluggy",
+      "version": "1.6.0"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "MIT",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:pyee",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/1ff556ca206b107f10e1c562ae454d3292e0296c3510eb90eb7f114caee32a66.txt",
+          "sha256": "1ff556ca206b107f10e1c562ae454d3292e0296c3510eb90eb7f114caee32a66",
+          "size": 1080
+        }
+      ],
+      "name": "pyee",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/jfhbrook/pyee",
+      "version": "13.0.1"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "BSD-2-Clause",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:pygments",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/a9d66f1d526df02e29dce73436d34e56e8632f46c275bbdffc70569e882f9f17.txt",
+          "sha256": "a9d66f1d526df02e29dce73436d34e56e8632f46c275bbdffc70569e882f9f17",
+          "size": 1331
+        }
+      ],
+      "name": "pygments",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://pygments.org",
+      "version": "2.20.0"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "LicenseRef-PyInstaller-6.21.0",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:pyinstaller",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/571f650c741ae1f6d8b689ef639b02c93297b84cef32db7c5211674d7b6fc094.txt",
+          "sha256": "571f650c741ae1f6d8b689ef639b02c93297b84cef32db7c5211674d7b6fc094",
+          "size": 32135
+        }
+      ],
+      "name": "pyinstaller",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://pyinstaller.org",
+      "version": "6.21.0"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "LicenseRef-PyInstaller-Hooks-Contrib-2026.6",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:pyinstaller-hooks-contrib",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/91d0baaff00773038e72c0a1fc9d5d2d38706b7a2b9c04f34296608f931b9cd0.txt",
+          "sha256": "91d0baaff00773038e72c0a1fc9d5d2d38706b7a2b9c04f34296608f931b9cd0",
+          "size": 27666
+        }
+      ],
+      "name": "pyinstaller-hooks-contrib",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/pyinstaller/pyinstaller-hooks-contrib",
+      "version": "2026.6"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "LicenseRef-PyOpenGL-3.1.10",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:pyopengl",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/b601306a5294ca8bf5c75e6bcd9d6d2aa655cbcd6f8426928d2d3342efbeb703.txt",
+          "sha256": "b601306a5294ca8bf5c75e6bcd9d6d2aa655cbcd6f8426928d2d3342efbeb703",
+          "size": 11619
+        }
+      ],
+      "name": "pyopengl",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://mcfletch.github.io/pyopengl/",
+      "version": "3.1.10"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "MIT",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:pyparsing",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/a5425f9dc14ac74d4c5f0b679e941f2442e32cca7452a4418d5b1a49893ebe4e.txt",
+          "sha256": "a5425f9dc14ac74d4c5f0b679e941f2442e32cca7452a4418d5b1a49893ebe4e",
+          "size": 1062
+        }
+      ],
+      "name": "pyparsing",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/pyparsing/pyparsing/",
+      "version": "3.3.2"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:pyside6-essentials",
+      "kind": "python",
+      "license_text_detail": "captured wheel text is commercial-terms-only; LGPL/GPL texts and relinking/source obligations remain open",
+      "license_text_status": "partial-explicit-blocker",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/9b1f50aae6267f9d5e0ceb6775ee86450262c25ec7c0573e151fe5d3f18a4700.txt",
+          "sha256": "9b1f50aae6267f9d5e0ceb6775ee86450262c25ec7c0573e151fe5d3f18a4700",
+          "size": 462
+        }
+      ],
+      "name": "pyside6-essentials",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://pyside.org",
+      "version": "6.11.1"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "MIT",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:pytest",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/ca836a5f9ecca3b2f350230faa20a48fb8b145653b5568d784862df864706b9b.txt",
+          "sha256": "ca836a5f9ecca3b2f350230faa20a48fb8b145653b5568d784862df864706b9b",
+          "size": 1091
+        }
+      ],
+      "name": "pytest",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://docs.pytest.org/en/latest/",
+      "version": "9.1.1"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "MIT",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:pytest-cov",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/835586ae156766a24e3c103fbc55d9af6b1a16df57ca932c97482a2737fd83d5.txt",
+          "sha256": "835586ae156766a24e3c103fbc55d9af6b1a16df57ca932c97482a2737fd83d5",
+          "size": 1071
+        }
+      ],
+      "name": "pytest-cov",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://pytest-cov.readthedocs.io/en/latest/changelog.html",
+      "version": "7.1.0"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "Apache-2.0 OR BSD-3-Clause",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:python-dateutil",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/9313256b27c4a1b7666c433acbf70a447383df0ea8c4b59bee0b6e412a281f92.txt",
+          "sha256": "9313256b27c4a1b7666c433acbf70a447383df0ea8c4b59bee0b6e412a281f92",
+          "size": 2890
+        }
+      ],
+      "name": "python-dateutil",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/dateutil/dateutil",
+      "version": "2.9.0.post0"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "BSD-3-Clause",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:pywin32-ctypes",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/cc03ae891a362c85d508a4e47af954314a2e4ccbd445140cb8dca7e2baee19f7.txt",
+          "sha256": "cc03ae891a362c85d508a4e47af954314a2e4ccbd445140cb8dca7e2baee19f7",
+          "size": 1616
+        }
+      ],
+      "name": "pywin32-ctypes",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/enthought/pywin32-ctypes",
+      "version": "0.2.3"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "MIT",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:pyyaml",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/8d3928f9dc4490fd635707cb88eb26bd764102a7282954307d3e5167a577e8a4.txt",
+          "sha256": "8d3928f9dc4490fd635707cb88eb26bd764102a7282954307d3e5167a577e8a4",
+          "size": 1101
+        }
+      ],
+      "name": "pyyaml",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://pyyaml.org/",
+      "version": "6.0.3"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "LicenseRef-Ruff-0.15.22",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:ruff",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/2597d854122b77ddc71971564ca2350a37608575ce324adc5650a2b2051c8f18.txt",
+          "sha256": "2597d854122b77ddc71971564ca2350a37608575ce324adc5650a2b2051c8f18",
+          "size": 20731
+        }
+      ],
+      "name": "ruff",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://docs.astral.sh/ruff",
+      "version": "0.15.22"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "LicenseRef-Setuptools-83.0.0",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:setuptools",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/09f1c8c9e941af3e584d59641ea9b87d83c0cb0fd007eb5ef391a7e2643c1a46.txt",
+          "sha256": "09f1c8c9e941af3e584d59641ea9b87d83c0cb0fd007eb5ef391a7e2643c1a46",
+          "size": 1053
+        },
+        {
+          "path": "third_party/licenses/corpus/29e0fd62e929850e86eb28c3fdccf0cefdf4fa94879011cffb3d0d4bed6d4db6.txt",
+          "sha256": "29e0fd62e929850e86eb28c3fdccf0cefdf4fa94879011cffb3d0d4bed6d4db6",
+          "size": 1089
+        },
+        {
+          "path": "third_party/licenses/corpus/30c23618679108f3e8ea1d2a658c7ca417bdfc891c98ef1a89fa4ff0c9828654.txt",
+          "sha256": "30c23618679108f3e8ea1d2a658c7ca417bdfc891c98ef1a89fa4ff0c9828654",
+          "size": 1107
+        },
+        {
+          "path": "third_party/licenses/corpus/458502e12d97bbf64438606a20044aa85eb05fb0a8a807bb35dbec253fd1fc04.txt",
+          "sha256": "458502e12d97bbf64438606a20044aa85eb05fb0a8a807bb35dbec253fd1fc04",
+          "size": 10278
+        },
+        {
+          "path": "third_party/licenses/corpus/5a57cb4db85e2a2dd88c290628908add57e3451449e0a9a71fdfb38776fd759d.txt",
+          "sha256": "5a57cb4db85e2a2dd88c290628908add57e3451449e0a9a71fdfb38776fd759d",
+          "size": 1076
+        },
+        {
+          "path": "third_party/licenses/corpus/6557adc4bc1d59232e27567a185dd70cf2ecca3154018b0be61ea29cf9e814e2.txt",
+          "sha256": "6557adc4bc1d59232e27567a185dd70cf2ecca3154018b0be61ea29cf9e814e2",
+          "size": 7633
+        },
+        {
+          "path": "third_party/licenses/corpus/86da0f01aeae46348a3c3d465195dc1ceccde79f79e87769a64b8da04b2a4741.txt",
+          "sha256": "86da0f01aeae46348a3c3d465195dc1ceccde79f79e87769a64b8da04b2a4741",
+          "size": 1023
+        },
+        {
+          "path": "third_party/licenses/corpus/9755a18519666e5f0f4cae3daad3d7012bcae48a600b31237d75e9fe134e6683.txt",
+          "sha256": "9755a18519666e5f0f4cae3daad3d7012bcae48a600b31237d75e9fe134e6683",
+          "size": 1076
+        },
+        {
+          "path": "third_party/licenses/corpus/b70e7e9b742f1cc6f948b34c16aa39ffece94196364bc88ff0d2180f0028fac5.txt",
+          "sha256": "b70e7e9b742f1cc6f948b34c16aa39ffece94196364bc88ff0d2180f0028fac5",
+          "size": 1344
+        },
+        {
+          "path": "third_party/licenses/corpus/b80816b0d530b8accb4c2211783790984a6e3b61922c2b5ee92f3372ab2742fe.txt",
+          "sha256": "b80816b0d530b8accb4c2211783790984a6e3b61922c2b5ee92f3372ab2742fe",
+          "size": 1072
+        },
+        {
+          "path": "third_party/licenses/corpus/bb28c48e3e078166e91cfc2b6db7ffebb8a0973b9e23b3df060561292d8d69ec.txt",
+          "sha256": "bb28c48e3e078166e91cfc2b6db7ffebb8a0973b9e23b3df060561292d8d69ec",
+          "size": 10140
+        },
+        {
+          "path": "third_party/licenses/corpus/cad1ef5bd340d73e074ba614d26f7deaca5c7940c3d8c34852e65c4909686c48.txt",
+          "sha256": "cad1ef5bd340d73e074ba614d26f7deaca5c7940c3d8c34852e65c4909686c48",
+          "size": 197
+        }
+      ],
+      "name": "setuptools",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/pypa/setuptools",
+      "version": "83.0.0"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:shiboken6",
+      "kind": "python",
+      "license_text_detail": "captured wheel text is commercial-terms-only; LGPL/GPL texts and relinking/source obligations remain open",
+      "license_text_status": "partial-explicit-blocker",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/9b1f50aae6267f9d5e0ceb6775ee86450262c25ec7c0573e151fe5d3f18a4700.txt",
+          "sha256": "9b1f50aae6267f9d5e0ceb6775ee86450262c25ec7c0573e151fe5d3f18a4700",
+          "size": 462
+        }
+      ],
+      "name": "shiboken6",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://pyside.org",
+      "version": "6.11.1"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "MIT",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:six",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/4375ba20e2b9c6c4e7cad2940a628fd90e95cc3d50ee92aae755715d8ba1fbd0.txt",
+          "sha256": "4375ba20e2b9c6c4e7cad2940a628fd90e95cc3d50ee92aae755715d8ba1fbd0",
+          "size": 1066
+        }
+      ],
+      "name": "six",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/benjaminp/six",
+      "version": "1.17.0"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64"
+      ],
+      "evidence_expression": "MIT",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:tomli",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/b80816b0d530b8accb4c2211783790984a6e3b61922c2b5ee92f3372ab2742fe.txt",
+          "sha256": "b80816b0d530b8accb4c2211783790984a6e3b61922c2b5ee92f3372ab2742fe",
+          "size": 1072
+        }
+      ],
+      "name": "tomli",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/hukkin/tomli",
+      "version": "2.4.1"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "PSF-2.0",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:typing-extensions",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/3b2f81fe21d181c499c59a256c8e1968455d6689d269aa85373bfb6af41da3bf.txt",
+          "sha256": "3b2f81fe21d181c499c59a256c8e1968455d6689d269aa85373bfb6af41da3bf",
+          "size": 13936
+        }
+      ],
+      "name": "typing-extensions",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/python/typing_extensions",
+      "version": "4.16.0"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "cpython-3.10-darwin-arm64",
+        "cpython-3.10-darwin-x86_64",
+        "cpython-3.10-linux-x86_64",
+        "cpython-3.10-win32-amd64",
+        "cpython-3.11-darwin-arm64",
+        "cpython-3.11-darwin-x86_64",
+        "cpython-3.11-linux-x86_64",
+        "cpython-3.11-win32-amd64",
+        "cpython-3.12-darwin-arm64",
+        "cpython-3.12-darwin-x86_64",
+        "cpython-3.12-linux-x86_64",
+        "cpython-3.12-win32-amd64"
+      ],
+      "evidence_expression": "MIT",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "python:zipp",
+      "kind": "python",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/9755a18519666e5f0f4cae3daad3d7012bcae48a600b31237d75e9fe134e6683.txt",
+          "sha256": "9755a18519666e5f0f4cae3daad3d7012bcae48a600b31237d75e9fe134e6683",
+          "size": 1076
+        }
+      ],
+      "name": "zipp",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "python-package-profile-input",
+      "source_url": "https://github.com/jaraco/zipp",
+      "version": "4.1.0"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "repository-static-bundle"
+      ],
+      "evidence_expression": "OFL-1.1",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "static:noto-sans-kr-variable",
+      "kind": "static",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/babcfe66c8a098b2fa279bc724a3a342f8124f77ce18941fbcc1bbb39823cded.txt",
+          "sha256": "babcfe66c8a098b2fa279bc724a3a342f8124f77ce18941fbcc1bbb39823cded",
+          "size": 4387
+        }
+      ],
+      "name": "noto-sans-kr-variable",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "repository-static-bundle-input",
+      "source_url": "https://github.com/google/fonts/tree/main/ofl/notosanskr",
+      "version": "194018e6b2b293a7964f037b25c0249ce1418bc9ab3c971060a03aa57861e252"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "repository-static-bundle"
+      ],
+      "evidence_expression": "OFL-1.1",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "static:noto-sans-mono-variable",
+      "kind": "static",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/babcfe66c8a098b2fa279bc724a3a342f8124f77ce18941fbcc1bbb39823cded.txt",
+          "sha256": "babcfe66c8a098b2fa279bc724a3a342f8124f77ce18941fbcc1bbb39823cded",
+          "size": 4387
+        }
+      ],
+      "name": "noto-sans-mono-variable",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "repository-static-bundle-input",
+      "source_url": "https://github.com/google/fonts/tree/main/ofl/notosansmono",
+      "version": "2cb2adb378a8f574213e23df697050b83c54c27df465a2015552740b2769a081"
+    },
+    {
+      "actual_distribution_status": "candidate-input-not-actual-package-closure",
+      "applicable_targets": [
+        "repository-static-bundle"
+      ],
+      "evidence_expression": "Apache-2.0",
+      "evidence_review_status": "repository-evidence-checked",
+      "id": "static:panda-runtime",
+      "kind": "static",
+      "license_text_detail": "all license bodies captured by the bounded repository evidence scope",
+      "license_text_status": "complete-within-declared-evidence-scope",
+      "license_texts": [
+        {
+          "path": "third_party/licenses/corpus/bb28c48e3e078166e91cfc2b6db7ffebb8a0973b9e23b3df060561292d8d69ec.txt",
+          "sha256": "bb28c48e3e078166e91cfc2b6db7ffebb8a0973b9e23b3df060561292d8d69ec",
+          "size": 10140
+        }
+      ],
+      "name": "MuJoCo Menagerie Franka Emika Panda runtime",
+      "notice_status": "no-separate-text-observed-obligation-review-pending",
+      "notice_texts": [],
+      "role": "repository-static-bundle-input",
+      "source_url": "https://github.com/google-deepmind/mujoco_menagerie/tree/71f066ad0be9cd271f7ed58c030243ef157af9f4/franka_emika_panda",
+      "version": "71f066ad0be9cd271f7ed58c030243ef157af9f4"
+    }
+  ],
+  "contract": {
+    "blockers": [
+      "actual-package-content-closure-unproven",
+      "copyright-attribution-review-pending",
+      "external-legal-review-not-authorized",
+      "native-and-base-image-transitive-closure-unproven",
+      "notice-obligation-review-pending",
+      "public-distribution-not-authorized",
+      "qt-pyside-lgpl-compliance-decision-pending",
+      "source-offer-and-relinking-obligations-pending"
+    ],
+    "declared_scope": "repository-known Python package-profile inputs and reviewed static bundle inputs only",
+    "distribution_closure": "unproven",
+    "external_legal_review": "not-authorized",
+    "g3_license_gate": "open",
+    "id": "LIC-01B",
+    "legal_approval": false,
+    "lic_aggregate": "open",
+    "native_and_base_image_closure": "unproven",
+    "notice_bundle_complete": false,
+    "public_distribution_authorized": false,
+    "purpose": "deterministic repository evidence corpus; not legal approval or distribution closure",
+    "qt_pyside_lgpl_decision": "pending",
+    "status": "bounded-candidate-evidence-only"
+  },
+  "corpus": {
+    "byte_count": 590437,
+    "directory": "third_party/licenses/corpus",
+    "file_count": 58,
+    "files": [
+      {
+        "component_ids": [
+          "python:ast-serialize"
+        ],
+        "path": "third_party/licenses/corpus/0105734bec61b8396baa9c16a202379368ef243502524f5001fba0229d478b8d.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "0105734bec61b8396baa9c16a202379368ef243502524f5001fba0229d478b8d",
+        "size": 1190
+      },
+      {
+        "component_ids": [
+          "python:setuptools"
+        ],
+        "path": "third_party/licenses/corpus/09f1c8c9e941af3e584d59641ea9b87d83c0cb0fd007eb5ef391a7e2643c1a46.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "09f1c8c9e941af3e584d59641ea9b87d83c0cb0fd007eb5ef391a7e2643c1a46",
+        "size": 1053
+      },
+      {
+        "component_ids": [
+          "python:pathspec"
+        ],
+        "path": "third_party/licenses/corpus/1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5",
+        "size": 16725
+      },
+      {
+        "component_ids": [
+          "python:pyee"
+        ],
+        "path": "third_party/licenses/corpus/1ff556ca206b107f10e1c562ae454d3292e0296c3510eb90eb7f114caee32a66.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "1ff556ca206b107f10e1c562ae454d3292e0296c3510eb90eb7f114caee32a66",
+        "size": 1080
+      },
+      {
+        "component_ids": [
+          "python:ruff"
+        ],
+        "path": "third_party/licenses/corpus/2597d854122b77ddc71971564ca2350a37608575ce324adc5650a2b2051c8f18.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "2597d854122b77ddc71971564ca2350a37608575ce324adc5650a2b2051c8f18",
+        "size": 20731
+      },
+      {
+        "component_ids": [
+          "python:setuptools"
+        ],
+        "path": "third_party/licenses/corpus/29e0fd62e929850e86eb28c3fdccf0cefdf4fa94879011cffb3d0d4bed6d4db6.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "29e0fd62e929850e86eb28c3fdccf0cefdf4fa94879011cffb3d0d4bed6d4db6",
+        "size": 1089
+      },
+      {
+        "component_ids": [
+          "python:fsspec"
+        ],
+        "path": "third_party/licenses/corpus/2dc35496ce53a7307915c008a844aad53e772b49b34cdd00445067691407ec94.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "2dc35496ce53a7307915c008a844aad53e772b49b34cdd00445067691407ec94",
+        "size": 1513
+      },
+      {
+        "component_ids": [
+          "python:setuptools"
+        ],
+        "path": "third_party/licenses/corpus/30c23618679108f3e8ea1d2a658c7ca417bdfc891c98ef1a89fa4ff0c9828654.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "30c23618679108f3e8ea1d2a658c7ca417bdfc891c98ef1a89fa4ff0c9828654",
+        "size": 1107
+      },
+      {
+        "component_ids": [
+          "python:iniconfig"
+        ],
+        "path": "third_party/licenses/corpus/3409fa91f7ace557894632676656e32264fe5ef7581535725dc9a23774551bd4.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "3409fa91f7ace557894632676656e32264fe5ef7581535725dc9a23774551bd4",
+        "size": 1098
+      },
+      {
+        "component_ids": [
+          "python:contourpy"
+        ],
+        "path": "third_party/licenses/corpus/34170979fc64f4f5e6dfa66ef27dec314ffffc5852000c60f4836ec1dfbf156e.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "34170979fc64f4f5e6dfa66ef27dec314ffffc5852000c60f4836ec1dfbf156e",
+        "size": 1534
+      },
+      {
+        "component_ids": [
+          "python:playwright"
+        ],
+        "path": "third_party/licenses/corpus/37bdf4db7e3aad1c8775b0aaf09baddfe442a8c621afd5eca9da2d7cc6e51f42.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "37bdf4db7e3aad1c8775b0aaf09baddfe442a8c621afd5eca9da2d7cc6e51f42",
+        "size": 11366
+      },
+      {
+        "component_ids": [
+          "python:typing-extensions"
+        ],
+        "path": "third_party/licenses/corpus/3b2f81fe21d181c499c59a256c8e1968455d6689d269aa85373bfb6af41da3bf.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "3b2f81fe21d181c499c59a256c8e1968455d6689d269aa85373bfb6af41da3bf",
+        "size": 13936
+      },
+      {
+        "component_ids": [
+          "python:six"
+        ],
+        "path": "third_party/licenses/corpus/4375ba20e2b9c6c4e7cad2940a628fd90e95cc3d50ee92aae755715d8ba1fbd0.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "4375ba20e2b9c6c4e7cad2940a628fd90e95cc3d50ee92aae755715d8ba1fbd0",
+        "size": 1066
+      },
+      {
+        "component_ids": [
+          "python:setuptools"
+        ],
+        "path": "third_party/licenses/corpus/458502e12d97bbf64438606a20044aa85eb05fb0a8a807bb35dbec253fd1fc04.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "458502e12d97bbf64438606a20044aa85eb05fb0a8a807bb35dbec253fd1fc04",
+        "size": 10278
+      },
+      {
+        "component_ids": [
+          "python:macholib"
+        ],
+        "path": "third_party/licenses/corpus/47082ab2bc0184123ec9f10fdf80c70723ee68f07d44382e17615c2a6ba70b09.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "47082ab2bc0184123ec9f10fdf80c70723ee68f07d44382e17615c2a6ba70b09",
+        "size": 1113
+      },
+      {
+        "component_ids": [
+          "python:absl-py",
+          "python:etils",
+          "python:mujoco",
+          "python:mujoco-manipulator-control-lab"
+        ],
+        "path": "third_party/licenses/corpus/50e6751797c50dedd75ef1b8a0d9e42f5f8472e9fbce91f34718e9f97b0c780a.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "50e6751797c50dedd75ef1b8a0d9e42f5f8472e9fbce91f34718e9f97b0c780a",
+        "size": 11324
+      },
+      {
+        "component_ids": [
+          "python:kiwisolver"
+        ],
+        "path": "third_party/licenses/corpus/529c40e5f67f2f88904657a9f7879ae2f8dc76bc9bfef9cb10d988b48804ed61.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "529c40e5f67f2f88904657a9f7879ae2f8dc76bc9bfef9cb10d988b48804ed61",
+        "size": 3289
+      },
+      {
+        "component_ids": [
+          "python:pyinstaller"
+        ],
+        "path": "third_party/licenses/corpus/571f650c741ae1f6d8b689ef639b02c93297b84cef32db7c5211674d7b6fc094.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "571f650c741ae1f6d8b689ef639b02c93297b84cef32db7c5211674d7b6fc094",
+        "size": 32135
+      },
+      {
+        "component_ids": [
+          "python:setuptools"
+        ],
+        "path": "third_party/licenses/corpus/5a57cb4db85e2a2dd88c290628908add57e3451449e0a9a71fdfb38776fd759d.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "5a57cb4db85e2a2dd88c290628908add57e3451449e0a9a71fdfb38776fd759d",
+        "size": 1076
+      },
+      {
+        "component_ids": [
+          "python:setuptools"
+        ],
+        "path": "third_party/licenses/corpus/6557adc4bc1d59232e27567a185dd70cf2ecca3154018b0be61ea29cf9e814e2.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "6557adc4bc1d59232e27567a185dd70cf2ecca3154018b0be61ea29cf9e814e2",
+        "size": 7633
+      },
+      {
+        "component_ids": [
+          "python:fonttools"
+        ],
+        "path": "third_party/licenses/corpus/6787208f83f659ccbc2223b2fde952ffa6f7e8aca62f1a8a2bf5bc51bb1b2383.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "6787208f83f659ccbc2223b2fde952ffa6f7e8aca62f1a8a2bf5bc51bb1b2383",
+        "size": 1072
+      },
+      {
+        "component_ids": [
+          "python:axe-playwright-python"
+        ],
+        "path": "third_party/licenses/corpus/6a06a65cf27b3f66b5fcae2743f9a958fad69749e1fb4cbd3d09aa5ac33673ba.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "6a06a65cf27b3f66b5fcae2743f9a958fad69749e1fb4cbd3d09aa5ac33673ba",
+        "size": 1081
+      },
+      {
+        "component_ids": [
+          "python:altgraph"
+        ],
+        "path": "third_party/licenses/corpus/6c194d6db0c64d45535d10c95142b9b0cda7b7dcc7f1ddee302b3d536f3dbe46.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "6c194d6db0c64d45535d10c95142b9b0cda7b7dcc7f1ddee302b3d536f3dbe46",
+        "size": 1002
+      },
+      {
+        "component_ids": [
+          "python:playwright"
+        ],
+        "path": "third_party/licenses/corpus/6d602191187b35b9b01d2cffa01c8469c2c8d9de8a96f1bf868e0f264f51c81d.txt",
+        "roles": [
+          "notice"
+        ],
+        "sha256": "6d602191187b35b9b01d2cffa01c8469c2c8d9de8a96f1bf868e0f264f51c81d",
+        "size": 254
+      },
+      {
+        "component_ids": [
+          "python:exceptiongroup"
+        ],
+        "path": "third_party/licenses/corpus/6e5070d765031e0ad403a1cbf90ae6d19a0228f802e320b7acff460aa72ed47c.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "6e5070d765031e0ad403a1cbf90ae6d19a0228f802e320b7acff460aa72ed47c",
+        "size": 3704
+      },
+      {
+        "component_ids": [
+          "python:greenlet"
+        ],
+        "path": "third_party/licenses/corpus/769831d6e5dfaf2c20802faccff1fafb4c2025dd8f6253dfa47fcad59d4d0979.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "769831d6e5dfaf2c20802faccff1fafb4c2025dd8f6253dfa47fcad59d4d0979",
+        "size": 1434
+      },
+      {
+        "component_ids": [
+          "python:cycler"
+        ],
+        "path": "third_party/licenses/corpus/7eec27ee66da53ba5912cb00b3521ac4428834bb37d0691080bf5d543b0cbb31.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "7eec27ee66da53ba5912cb00b3521ac4428834bb37d0691080bf5d543b0cbb31",
+        "size": 1498
+      },
+      {
+        "component_ids": [
+          "python:matplotlib"
+        ],
+        "path": "third_party/licenses/corpus/82e8367def275345ae843cf4c33a444e4028546c34398234053292affce0c6ec.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "82e8367def275345ae843cf4c33a444e4028546c34398234053292affce0c6ec",
+        "size": 40002
+      },
+      {
+        "component_ids": [
+          "python:pytest-cov"
+        ],
+        "path": "third_party/licenses/corpus/835586ae156766a24e3c103fbc55d9af6b1a16df57ca932c97482a2737fd83d5.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "835586ae156766a24e3c103fbc55d9af6b1a16df57ca932c97482a2737fd83d5",
+        "size": 1071
+      },
+      {
+        "component_ids": [
+          "python:glfw"
+        ],
+        "path": "third_party/licenses/corpus/83e675a7714eb01db1ed75cedcf349ab9dd9630782f81c08161cb58cc67ca1ca.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "83e675a7714eb01db1ed75cedcf349ab9dd9630782f81c08161cb58cc67ca1ca",
+        "size": 1085
+      },
+      {
+        "component_ids": [
+          "python:setuptools"
+        ],
+        "path": "third_party/licenses/corpus/86da0f01aeae46348a3c3d465195dc1ceccde79f79e87769a64b8da04b2a4741.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "86da0f01aeae46348a3c3d465195dc1ceccde79f79e87769a64b8da04b2a4741",
+        "size": 1023
+      },
+      {
+        "component_ids": [
+          "python:librt"
+        ],
+        "path": "third_party/licenses/corpus/88f9e379c684580053c58e75e296ca2eb243b6edcc6e5357f247310e96eeef8a.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "88f9e379c684580053c58e75e296ca2eb243b6edcc6e5357f247310e96eeef8a",
+        "size": 12789
+      },
+      {
+        "component_ids": [
+          "python:pyyaml"
+        ],
+        "path": "third_party/licenses/corpus/8d3928f9dc4490fd635707cb88eb26bd764102a7282954307d3e5167a577e8a4.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "8d3928f9dc4490fd635707cb88eb26bd764102a7282954307d3e5167a577e8a4",
+        "size": 1101
+      },
+      {
+        "component_ids": [
+          "python:pyinstaller-hooks-contrib"
+        ],
+        "path": "third_party/licenses/corpus/91d0baaff00773038e72c0a1fc9d5d2d38706b7a2b9c04f34296608f931b9cd0.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "91d0baaff00773038e72c0a1fc9d5d2d38706b7a2b9c04f34296608f931b9cd0",
+        "size": 27666
+      },
+      {
+        "component_ids": [
+          "python:python-dateutil"
+        ],
+        "path": "third_party/licenses/corpus/9313256b27c4a1b7666c433acbf70a447383df0ea8c4b59bee0b6e412a281f92.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "9313256b27c4a1b7666c433acbf70a447383df0ea8c4b59bee0b6e412a281f92",
+        "size": 2890
+      },
+      {
+        "component_ids": [
+          "python:setuptools",
+          "python:zipp"
+        ],
+        "path": "third_party/licenses/corpus/9755a18519666e5f0f4cae3daad3d7012bcae48a600b31237d75e9fe134e6683.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "9755a18519666e5f0f4cae3daad3d7012bcae48a600b31237d75e9fe134e6683",
+        "size": 1076
+      },
+      {
+        "component_ids": [
+          "python:pyside6-essentials",
+          "python:shiboken6"
+        ],
+        "path": "third_party/licenses/corpus/9b1f50aae6267f9d5e0ceb6775ee86450262c25ec7c0573e151fe5d3f18a4700.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "9b1f50aae6267f9d5e0ceb6775ee86450262c25ec7c0573e151fe5d3f18a4700",
+        "size": 462
+      },
+      {
+        "component_ids": [
+          "python:mypy-extensions"
+        ],
+        "path": "third_party/licenses/corpus/a50450da1d53cd777b80ced77c58ff96abe0ccd879706bd142c3ec20e245f0b4.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "a50450da1d53cd777b80ced77c58ff96abe0ccd879706bd142c3ec20e245f0b4",
+        "size": 1204
+      },
+      {
+        "component_ids": [
+          "python:pyparsing"
+        ],
+        "path": "third_party/licenses/corpus/a5425f9dc14ac74d4c5f0b679e941f2442e32cca7452a4418d5b1a49893ebe4e.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "a5425f9dc14ac74d4c5f0b679e941f2442e32cca7452a4418d5b1a49893ebe4e",
+        "size": 1062
+      },
+      {
+        "component_ids": [
+          "python:pygments"
+        ],
+        "path": "third_party/licenses/corpus/a9d66f1d526df02e29dce73436d34e56e8632f46c275bbdffc70569e882f9f17.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "a9d66f1d526df02e29dce73436d34e56e8632f46c275bbdffc70569e882f9f17",
+        "size": 1331
+      },
+      {
+        "component_ids": [
+          "python:numpy"
+        ],
+        "path": "third_party/licenses/corpus/aa48166a64664bc15095c3a787da8b68168ff2f80bd247708565271141db413e.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "aa48166a64664bc15095c3a787da8b68168ff2f80bd247708565271141db413e",
+        "size": 46761
+      },
+      {
+        "component_ids": [
+          "python:pillow"
+        ],
+        "path": "third_party/licenses/corpus/ab0d05ea62c2817a068c92bf068db7a18a493da84cce4e43ad67acacc4d7b881.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "ab0d05ea62c2817a068c92bf068db7a18a493da84cce4e43ad67acacc4d7b881",
+        "size": 76415
+      },
+      {
+        "component_ids": [
+          "python:pefile"
+        ],
+        "path": "third_party/licenses/corpus/b44409c067c6da52bfb54bb6624fb11a7b52157c3a13ae1400232f8196e86ad3.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "b44409c067c6da52bfb54bb6624fb11a7b52157c3a13ae1400232f8196e86ad3",
+        "size": 1083
+      },
+      {
+        "component_ids": [
+          "python:numpy"
+        ],
+        "path": "third_party/licenses/corpus/b4ae62887f4dd6e9430b1a8d7017a3ba84c5d7aa630b9d17ed6f25c21b0ec5b4.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "b4ae62887f4dd6e9430b1a8d7017a3ba84c5d7aa630b9d17ed6f25c21b0ec5b4",
+        "size": 47786
+      },
+      {
+        "component_ids": [
+          "python:pyopengl"
+        ],
+        "path": "third_party/licenses/corpus/b601306a5294ca8bf5c75e6bcd9d6d2aa655cbcd6f8426928d2d3342efbeb703.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "b601306a5294ca8bf5c75e6bcd9d6d2aa655cbcd6f8426928d2d3342efbeb703",
+        "size": 11619
+      },
+      {
+        "component_ids": [
+          "python:setuptools"
+        ],
+        "path": "third_party/licenses/corpus/b70e7e9b742f1cc6f948b34c16aa39ffece94196364bc88ff0d2180f0028fac5.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "b70e7e9b742f1cc6f948b34c16aa39ffece94196364bc88ff0d2180f0028fac5",
+        "size": 1344
+      },
+      {
+        "component_ids": [
+          "python:setuptools",
+          "python:tomli"
+        ],
+        "path": "third_party/licenses/corpus/b80816b0d530b8accb4c2211783790984a6e3b61922c2b5ee92f3372ab2742fe.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "b80816b0d530b8accb4c2211783790984a6e3b61922c2b5ee92f3372ab2742fe",
+        "size": 1072
+      },
+      {
+        "component_ids": [
+          "static:noto-sans-kr-variable",
+          "static:noto-sans-mono-variable"
+        ],
+        "path": "third_party/licenses/corpus/babcfe66c8a098b2fa279bc724a3a342f8124f77ce18941fbcc1bbb39823cded.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "babcfe66c8a098b2fa279bc724a3a342f8124f77ce18941fbcc1bbb39823cded",
+        "size": 4387
+      },
+      {
+        "component_ids": [
+          "python:coverage",
+          "python:setuptools",
+          "static:panda-runtime"
+        ],
+        "path": "third_party/licenses/corpus/bb28c48e3e078166e91cfc2b6db7ffebb8a0973b9e23b3df060561292d8d69ec.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "bb28c48e3e078166e91cfc2b6db7ffebb8a0973b9e23b3df060561292d8d69ec",
+        "size": 10140
+      },
+      {
+        "component_ids": [
+          "python:numpy"
+        ],
+        "path": "third_party/licenses/corpus/c002bd26de7dc7aa464250a0de063d58fe55974452e4389e5c21c350a820bf06.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "c002bd26de7dc7aa464250a0de063d58fe55974452e4389e5c21c350a820bf06",
+        "size": 47755
+      },
+      {
+        "component_ids": [
+          "python:pytest"
+        ],
+        "path": "third_party/licenses/corpus/ca836a5f9ecca3b2f350230faa20a48fb8b145653b5568d784862df864706b9b.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "ca836a5f9ecca3b2f350230faa20a48fb8b145653b5568d784862df864706b9b",
+        "size": 1091
+      },
+      {
+        "component_ids": [
+          "python:colorama"
+        ],
+        "path": "third_party/licenses/corpus/cac35c02686e5d04a5a7140bfb3b36e73aed496656e891102e428886d7930318.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "cac35c02686e5d04a5a7140bfb3b36e73aed496656e891102e428886d7930318",
+        "size": 1491
+      },
+      {
+        "component_ids": [
+          "python:packaging",
+          "python:setuptools"
+        ],
+        "path": "third_party/licenses/corpus/cad1ef5bd340d73e074ba614d26f7deaca5c7940c3d8c34852e65c4909686c48.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "cad1ef5bd340d73e074ba614d26f7deaca5c7940c3d8c34852e65c4909686c48",
+        "size": 197
+      },
+      {
+        "component_ids": [
+          "python:pywin32-ctypes"
+        ],
+        "path": "third_party/licenses/corpus/cc03ae891a362c85d508a4e47af954314a2e4ccbd445140cb8dca7e2baee19f7.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "cc03ae891a362c85d508a4e47af954314a2e4ccbd445140cb8dca7e2baee19f7",
+        "size": 1616
+      },
+      {
+        "component_ids": [
+          "python:pluggy"
+        ],
+        "path": "third_party/licenses/corpus/d6b65e6c213a5d0b577911d34d6e5949b9f59d76c238c5071a2f3fc16cfb2606.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "d6b65e6c213a5d0b577911d34d6e5949b9f59d76c238c5071a2f3fc16cfb2606",
+        "size": 1110
+      },
+      {
+        "component_ids": [
+          "python:pillow"
+        ],
+        "path": "third_party/licenses/corpus/dda12a98c1979cf3d94df1cff45d27a4cb3f04a60c76f76902ac54cac03ec0ce.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "dda12a98c1979cf3d94df1cff45d27a4cb3f04a60c76f76902ac54cac03ec0ce",
+        "size": 70307
+      },
+      {
+        "component_ids": [
+          "python:importlib-resources"
+        ],
+        "path": "third_party/licenses/corpus/e2f7bb0557e7a381499f15baa7c1d776d83d6616599179d71d3109b8e39f7b25.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "e2f7bb0557e7a381499f15baa7c1d776d83d6616599179d71d3109b8e39f7b25",
+        "size": 10278
+      },
+      {
+        "component_ids": [
+          "python:mypy"
+        ],
+        "path": "third_party/licenses/corpus/fdf1cd17f50e1305ed8cfd37467312d27a984648dba622cef70573b5512e4e1b.txt",
+        "roles": [
+          "license"
+        ],
+        "sha256": "fdf1cd17f50e1305ed8cfd37467312d27a984648dba622cef70573b5512e4e1b",
+        "size": 12842
+      }
+    ],
+    "license_body_count": 57,
+    "notice_body_count": 1
+  },
+  "coverage": {
+    "component_count": 53,
+    "evidence_expression_count": 53,
+    "license_text_complete_count": 51,
+    "license_text_partial_count": 2,
+    "notice_text_captured_component_count": 1,
+    "python_component_count": 50,
+    "source_url_count": 53,
+    "static_component_count": 3,
+    "unknown_value_count": 0
+  },
+  "notice_artifact": {
+    "format": "deterministic-markdown-utf8-lf",
+    "package_destination": "THIRD_PARTY_NOTICES.md",
+    "path": "THIRD_PARTY_NOTICES.md"
+  },
+  "schema_version": 1,
+  "sources": {
+    "corpus_import_manifest": {
+      "path": ".agents/supply_chain/license-corpus-import-v1.json",
+      "sha256": "04e1bddccc6e45d13faad13344a2a1fb56d392a3a5bdce953b061e287a586d2f",
+      "size": 2549
+    },
+    "corpus_importer": {
+      "path": "scripts/import_license_corpus.py",
+      "sha256": "5da9ef371e45d58ee25ab3f214041faaa8d91612a668ebea831ed5be09b14eee",
+      "size": 19299
+    },
+    "generator": {
+      "path": "scripts/generate_license_review.py",
+      "sha256": "3baf54eace299293670702145a24c881db239b4b52c03c8cd058dae4429f4ca8",
+      "size": 43735
+    },
+    "license_inventory": {
+      "path": ".agents/supply_chain/license-inventory.json",
+      "sha256": "71fa99c2cc3b39fa1359b4ceb14a96d635bdedf7ff73bdac9ce54d98b2175e1a",
+      "size": 133026
+    },
+    "package_builder": {
+      "path": "scripts/build_desktop.py",
+      "sha256": "baa818bb09a0dfa848e2b66897cd330774db53757c5ebba63ec923e150a7cfc0",
+      "size": 87981
+    },
+    "packaging_hook": {
+      "path": "packaging/hooks/hook-mclab.py",
+      "sha256": "7dfc41b48c6dd5a1ccdf52387fca46d09923582b65c635756a6fa7e99ef304a5",
+      "size": 229
+    },
+    "review_inputs": {
+      "path": ".agents/supply_chain/license-review-inputs-v1.json",
+      "sha256": "ff16f8cab582c8715d247190890b46bc9f06da6efca17d6b6f09d8c6b187ae81",
+      "size": 6047
+    },
+    "review_schema": {
+      "path": ".agents/supply_chain/license-review-v1.schema.json",
+      "sha256": "4ebb7a9ffc383f2bdd52679e1d30658b8cfaf654e04aee557367e7a950b55c99",
+      "size": 10426
+    }
+  }
+}
