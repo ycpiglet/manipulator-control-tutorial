@@ -926,6 +926,26 @@ def test_unrelated_negation_does_not_mask_later_overclaim_after_hash_rebind(
             "pilot-results",
             "Six novices completed the study and achieved a SUS mean of 80.",
         ),
+        (
+            CHECKER.PILOT_PATH,
+            "pilot-completion",
+            "The pilot has not started, but has now been completed.",
+        ),
+        (
+            CHECKER.GUIDE_PATH,
+            "human-evidence",
+            "Participant evidence does not merely suggest but now validates the teaching claims.",
+        ),
+        (
+            CHECKER.PILOT_PATH,
+            "pilot-results",
+            "The participants' mean SUS score was 80.",
+        ),
+        (
+            CHECKER.PILOT_PATH,
+            "pilot-results",
+            "The independent educator passed every adoption checklist item.",
+        ),
     ],
 )
 def test_unrelated_negation_and_direct_pilot_results_fail_after_hash_rebind(
@@ -943,6 +963,59 @@ def test_unrelated_negation_and_direct_pilot_results_fail_after_hash_rebind(
 
     assert not any(error.startswith(f"HASH_DRIFT: {relative}") for error in errors)
     assert any(f"SEMANTIC_OVERCLAIM[{category}]" in error for error in errors)
+
+
+@pytest.mark.parametrize(
+    ("relative", "category", "statement"),
+    [
+        (
+            CHECKER.PILOT_PATH,
+            "pilot-completion",
+            "The pilot has not started, but has now been completed.",
+        ),
+        (
+            CHECKER.GUIDE_PATH,
+            "human-evidence",
+            "Participant evidence does not merely suggest but now validates the teaching claims.",
+        ),
+        (
+            CHECKER.PILOT_PATH,
+            "pilot-results",
+            "The participants' mean SUS score was 80.",
+        ),
+        (
+            CHECKER.PILOT_PATH,
+            "pilot-results",
+            "The independent educator passed every adoption checklist item.",
+        ),
+    ],
+)
+def test_hash_print_refuses_elided_and_direct_measured_claims(
+    contract_root: Path,
+    relative: Path,
+    category: str,
+    statement: str,
+) -> None:
+    path = contract_root / relative
+    path.write_bytes(path.read_bytes() + f"\n{statement}\n".encode("utf-8"))
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(CHECKER_PATH),
+            "--root",
+            str(contract_root),
+            "--print-document-hashes",
+        ],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert completed.returncode == 1
+    assert f"SEMANTIC_OVERCLAIM[{category}]" in completed.stdout
 
 
 @pytest.mark.parametrize(

@@ -319,6 +319,21 @@ CLAIM_CONDITIONAL_PREFIX_RE = re.compile(
     r"^(?:if|when|before|after|once|until|unless|only if|only when|only after)\b",
     re.IGNORECASE,
 )
+CLAIM_SUBJECT_RE = re.compile(
+    r"\b(?:classroom\s+trial|novice\s+pilot|educator\s+pilot|pilot|study|trial)\b|"
+    r"\b(?:educator|human|novice|participant)\w*\s+"
+    r"(?:evidence|observation|result)\w*|"
+    r"\b(?:evidence|observation|result)\w*\s+(?:from|of)\s+"
+    r"(?:educator|human|novice|participant)\w*",
+    re.IGNORECASE,
+)
+CLAIM_ELIDED_PREDICATE_RE = re.compile(
+    r"^(?:(?:has|have|had|is|was|were)\b|(?:now\s+)?(?:"
+    r"achieved|approved|authorized|cleared|completed|concluded|confirms?|"
+    r"demonstrates?|establishes?|finished|met|passed|proves?|run|satisfied|"
+    r"substantiates?|succeeded|validates?)\b)",
+    re.IGNORECASE,
+)
 FORBIDDEN_CLAIM_PATTERNS = (
     (
         "pilot-authorization",
@@ -356,7 +371,15 @@ FORBIDDEN_CLAIM_PATTERNS = (
             r"\b(?:the\s+)?(?:pilot|study|trial)\b|"
             r"\b(?:novices?|participants?)\b.{0,100}"
             r"\b(?:achieved|attained|reported|scored)\b.{0,80}"
-            r"\b(?:mean|score|sus|system\s+usability|threshold)\w*\b",
+            r"\b(?:mean|score|sus|system\s+usability|threshold)\w*\b|"
+            r"\b(?:novices?|participants?)(?:['’]s?)?\s+"
+            r"(?:(?:average|mean)\s+)?"
+            r"(?:sus|system\s+usability\s+scale)\s+(?:mean|score)\b"
+            r".{0,40}\b(?:averaged|equaled|reached|was|were)\b"
+            r".{0,20}\b\d+(?:\.\d+)?\b|"
+            r"\b(?:independent\s+)?educator\b.{0,80}"
+            r"\b(?:completed|passed)\b.{0,80}\b(?:all|every)\b"
+            r".{0,50}\b(?:adoption\s+)?checklist(?:\s+item)?s?\b",
             re.IGNORECASE,
         ),
     ),
@@ -1877,6 +1900,7 @@ def _claim_statements(text: str) -> tuple[str, ...]:
 
     statements: dict[str, None] = {}
     for candidate in candidates:
+        carried_subject: str | None = None
         for fragment in re.split(
             r"[,.!?;:—–]+|"
             r"\b(?:although|and|but|despite|however|nevertheless|whereas|while|yet)\b",
@@ -1885,8 +1909,16 @@ def _claim_statements(text: str) -> tuple[str, ...]:
         ):
             normalized = re.sub(r"[`*_#>|\[\](){}]", " ", fragment)
             normalized = " ".join(normalized.split()).strip(" -:")
-            if normalized:
-                statements.setdefault(normalized, None)
+            if not normalized:
+                continue
+            subject = CLAIM_SUBJECT_RE.search(normalized)
+            if subject is not None:
+                carried_subject = subject.group(0)
+            elif carried_subject is not None and CLAIM_ELIDED_PREDICATE_RE.search(normalized):
+                normalized = f"{carried_subject} {normalized}"
+            else:
+                carried_subject = None
+            statements.setdefault(normalized, None)
     return tuple(statements)
 
 
