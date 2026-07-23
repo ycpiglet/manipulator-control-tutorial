@@ -43,7 +43,8 @@ exact parent. Then list receipts and restore; otherwise the source checkout sear
 Read [Local data and privacy / 로컬 데이터와 개인정보](local_data_and_privacy.md)
 before using a shared PC or sharing a run; learner predictions and observation notes also
 appear in replay, report, worksheet, and cumulative-index copies. Its CPython, Qt QML,
-and Matplotlib cache list is confirmed but bounded, not complete shared-PC clearance.
+and Matplotlib cache list is confirmed but bounded, not complete shared-PC clearance;
+resolve the runtime-selected effective path before reviewing a cache.
 
 The default learning path moves from 1D dynamics to PID, 2DOF Jacobian/DLS, Panda Cartesian control, and the virtual wall. Explore contains optional comparisons and advanced variants. Combine its search field with the directly labeled Level and Mode filters; the count updates immediately. Multiple search words all have to match but can appear in any order, so `lab04 wall` and `wall lab04` find the same set. If nothing matches, **Reset filters** clears all three conditions and returns focus to search.
 

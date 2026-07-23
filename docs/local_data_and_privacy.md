@@ -98,14 +98,17 @@ outside the configured outputs root:
 
 | Surface | Confirmed location and boundary |
 |---|---|
-| CPython bytecode | `<writable-Python-import-root>/__pycache__/*.pyc` when an import root is writable and bytecode writing is enabled; a `.pyc` can embed an absolute source or import path |
-| Matplotlib font metadata | `<MPLCONFIGDIR-or-Matplotlib-platform-user-cache>/fontlist-*.json`; `MPLCONFIGDIR` wins when non-empty, otherwise Matplotlib chooses its platform/user cache |
-| Qt compiled QML | `<Qt-CacheLocation:MCLab/MCLab>/qmlcache/*.qmlc` when Qt QML disk caching is enabled |
+| CPython bytecode | `<effective-CPython-bytecode-cache-root>/**/*.pyc`; effective `sys.pycache_prefix` selected through `-X pycache_prefix` or `PYTHONPYCACHEPREFIX` redirects the cache tree, otherwise each writable source/import root uses `__pycache__`; a `.pyc` can embed an absolute source or import path |
+| Matplotlib font metadata | `<effective-Matplotlib-cache-directory>/fontlist-*.json`; Matplotlib uses `MPLCONFIGDIR` when configured and usable, uses its platform/user cache when `MPLCONFIGDIR` is unset and that cache is usable, and otherwise uses a runtime temporary fallback |
+| Qt compiled QML | `<effective-Qt-QML-disk-cache-directory>/*.qmlc`; an active `QML_DISK_CACHE_PATH` override selects the effective directory, otherwise Qt uses `QStandardPaths` `CacheLocation` for `MCLab/MCLab` with `qmlcache` appended |
 
 These are confirmed cache surfaces, not a complete shared-PC clearance. Additional
 Qt/GPU/GL, MuJoCo, fontconfig, operating-system, graphics-driver, and other
 dependency-managed caches have not been exhaustively inventoried across supported
 platforms. Their exact locations, contents, retention, and safe clearing remain open.
+Environment values, command-line options, permissions, and runtime fallbacks affect the
+selected paths, so resolve the effective location at runtime before review. Do not treat
+the placeholders above as literal paths or assume that a documented default was selected.
 
 ### 한국어
 
@@ -167,14 +170,16 @@ runtime/dependency cache가 생길 수 있습니다.
 
 | 표면 | 확인된 위치와 경계 |
 |---|---|
-| CPython bytecode | import root에 쓸 수 있고 bytecode 쓰기가 활성화된 경우 `<writable-Python-import-root>/__pycache__/*.pyc`; `.pyc`에는 절대 source 또는 import 경로가 들어갈 수 있음 |
-| Matplotlib font metadata | `<MPLCONFIGDIR-or-Matplotlib-platform-user-cache>/fontlist-*.json`; 비어 있지 않은 `MPLCONFIGDIR`가 우선이고, 없으면 Matplotlib이 platform/user cache를 선택 |
-| Qt compiled QML | Qt QML disk cache가 활성화된 경우 `<Qt-CacheLocation:MCLab/MCLab>/qmlcache/*.qmlc` |
+| CPython bytecode | `<effective-CPython-bytecode-cache-root>/**/*.pyc`; `-X pycache_prefix` 또는 `PYTHONPYCACHEPREFIX`로 선택된 effective `sys.pycache_prefix`가 cache tree를 바꾸고, 그렇지 않으면 쓰기 가능한 각 source/import root가 `__pycache__`를 사용함; `.pyc`에는 절대 source 또는 import 경로가 들어갈 수 있음 |
+| Matplotlib font metadata | `<effective-Matplotlib-cache-directory>/fontlist-*.json`; 설정되고 사용 가능한 `MPLCONFIGDIR`를 사용하며, `MPLCONFIGDIR`가 없으면 사용 가능한 platform/user cache를 사용하고, 선택 후보를 사용할 수 없으면 runtime temporary fallback을 사용함 |
+| Qt compiled QML | `<effective-Qt-QML-disk-cache-directory>/*.qmlc`; 활성 `QML_DISK_CACHE_PATH` override가 effective directory를 선택하고, 그렇지 않으면 Qt가 `MCLab/MCLab`의 `QStandardPaths` `CacheLocation`에 `qmlcache`를 붙여 사용함 |
 
 이는 확인된 cache 표면이며 공용 PC 전체 정리 완료를 뜻하지 않습니다. 추가
 Qt/GPU/GL, MuJoCo, fontconfig, 운영체제, graphics-driver 및 다른 dependency 관리
 cache는 지원 platform 전체에서 완전하게 목록화되지 않았습니다. 정확한 위치·내용·보존과
-안전한 정리 방법은 미결 상태입니다.
+안전한 정리 방법은 미결 상태입니다. 환경 값, command-line option, 권한과 runtime
+fallback에 따라 선택 경로가 달라지므로 검토 전에 runtime에서 effective 위치를 확인하세요.
+위 placeholder를 실제 경로로 해석하거나 문서의 default가 선택됐다고 가정하지 마세요.
 
 ## Data inventory / 저장 데이터 목록
 
@@ -222,9 +227,9 @@ The desktop also persists two non-free-text preferences in
 normal app exit, and are not removed by MCLab cleanup.
 
 The confirmed CPython, Matplotlib, and Qt QML caches are runtime-generated rather than
-learner-authored, but they persist outside the outputs root and can contain source/import
-paths, font metadata and paths, or compiled QML. Treat them as potentially private
-diagnostic material before copying or sharing a user profile.
+learner-authored, but their effective locations can persist outside the outputs root and
+can contain source/import paths, font metadata and paths, or compiled QML. Treat them as
+potentially private diagnostic material before copying or sharing a user profile.
 
 The machine contract has four precise validation-only exclusions rather than silently
 mixing them into ordinary learner storage: maintainer `scripts/audit_*.py` output roots,
@@ -276,9 +281,9 @@ preference를 영속 저장합니다. `language`는 `ko` 또는 `en`이고, `tou
 cleanup으로 제거되지 않습니다.
 
 확인된 CPython, Matplotlib 및 Qt QML cache는 학습자가 작성한 자료가 아니라 runtime
-생성물입니다. 그러나 outputs root 밖에 남고 source/import 경로, font metadata와 경로
-또는 compiled QML을 포함할 수 있습니다. 사용자 profile을 복사하거나 공유하기 전에는
-개인정보 가능 진단 자료로 취급하세요.
+생성물입니다. 그러나 effective 위치가 outputs root 밖에 남고 source/import 경로, font
+metadata와 경로 또는 compiled QML을 포함할 수 있습니다. 사용자 profile을 복사하거나
+공유하기 전에는 개인정보 가능 진단 자료로 취급하세요.
 
 machine contract의 검증 전용 제외 항목은 일반 learner 저장소에 조용히 섞지 않고 네
 종류를 정확히 분리합니다. 관리자 `scripts/audit_*.py` output root,
@@ -367,11 +372,12 @@ removed through an approved local process. Cleanup also does not reset QSettings
 `language` or `tourComplete`, and it does not clear interpreter, Qt, Matplotlib, or other
 dependency caches.
 
-This contract does not authorize cache clearing. On a shared PC, first close MCLab,
-resolve the exact current-user cache target using the applicable runtime/OS tooling, and
-review it. Clear only that exact target through an administrator-approved local process;
-do not use a broad recursive command, and do not represent cache removal as secure
-erasure. Broader platform-cache inventory and clearing remain open decisions.
+This contract does not authorize cache clearing. On a shared PC, first close MCLab, use
+the applicable runtime/OS tooling to resolve each effective current-user cache location,
+and review the exact target. Clear only that exact target through an
+administrator-approved local process; do not use a broad recursive command, and do not
+represent cache removal as secure erasure. Broader platform-cache inventory and clearing
+remain open decisions.
 
 ### 한국어
 
@@ -395,10 +401,10 @@ MCLab은 영구 purge를 제공하지 않습니다. 격리된 실행, receipt와
 않으며 interpreter, Qt, Matplotlib 또는 다른 dependency cache도 정리하지 않습니다.
 
 이 계약은 cache 정리를 승인하지 않습니다. 공용 PC에서는 먼저 MCLab을 닫고 해당
-runtime/OS 도구로 현재 사용자에게 적용되는 정확한 cache 대상을 확인한 뒤 검토하세요.
-기관 관리자가 승인한 로컬 절차로 그 정확한 대상만 정리하고, 넓은 범위의 재귀 명령을
-사용하거나 cache 제거를 안전한 영구 삭제로 표현하지 마세요. 더 넓은 platform cache
-목록과 정리 방법은 미결정 사항입니다.
+runtime/OS 도구로 현재 사용자에게 적용되는 각 effective cache 위치와 정확한 대상을
+확인한 뒤 검토하세요. 기관 관리자가 승인한 로컬 절차로 그 정확한 대상만 정리하고,
+넓은 범위의 재귀 명령을 사용하거나 cache 제거를 안전한 영구 삭제로 표현하지 마세요.
+더 넓은 platform cache 목록과 정리 방법은 미결정 사항입니다.
 
 ## Shared PCs / 공용 PC
 

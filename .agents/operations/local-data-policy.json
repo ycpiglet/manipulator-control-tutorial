@@ -124,11 +124,11 @@
     },
     {
       "artifacts": [
-        "<MPLCONFIGDIR-or-Matplotlib-platform-user-cache>/fontlist-*.json",
-        "<Qt-CacheLocation:MCLab/MCLab>/qmlcache/*.qmlc",
-        "<writable-Python-import-root>/__pycache__/*.pyc"
+        "<effective-CPython-bytecode-cache-root>/**/*.pyc",
+        "<effective-Matplotlib-cache-directory>/fontlist-*.json",
+        "<effective-Qt-QML-disk-cache-directory>/*.qmlc"
       ],
-      "content": "CPython bytecode can embed absolute source or import paths; Qt compiled-QML cache entries and Matplotlib font metadata can persist outside the configured outputs root. These are confirmed surfaces only; broader dependency and platform caches remain an open boundary.",
+      "content": "CPython bytecode can embed absolute source or import paths; Qt compiled-QML cache entries and Matplotlib font metadata can persist outside the configured outputs root. Each artifact path is the runtime-selected effective cache location, including documented overrides and Matplotlib's temporary fallback. These are confirmed surfaces only; broader dependency and platform caches remain an open boundary.",
       "derived_copies": [],
       "id": "runtime-dependency-caches",
       "learner_authored": false,
@@ -248,7 +248,7 @@
     "ordinary_run_network_required": false,
     "remote_usage_analytics": false,
     "repository_only": true,
-    "runtime_dependency_cache_scope": "confirmed-cpython-qt-qml-matplotlib-only-broader-platform-caches-open"
+    "runtime_dependency_cache_scope": "confirmed-effective-cpython-qt-qml-matplotlib-path-selection-only-broader-platform-caches-open"
   },
   "sharing_rules": {
     "minimum_necessary_only": true,
@@ -271,11 +271,11 @@
   },
   "storage_locations": [
     {
-      "applies_when": "Python imports a .py module from a writable source or import root with bytecode writing enabled",
+      "applies_when": "Python imports a .py module with bytecode writing enabled and its effective bytecode cache destination is writable",
       "code_reference": "CPython:import-bytecode-cache",
       "id": "cpython-bytecode-cache",
-      "parent_source": "each writable source or import root selected by the Python runtime",
-      "path_template": "<writable-Python-import-root>/__pycache__/*.pyc",
+      "parent_source": "effective sys.pycache_prefix selected by -X pycache_prefix or PYTHONPYCACHEPREFIX; otherwise each writable source or import root __pycache__ directory",
+      "path_template": "<effective-CPython-bytecode-cache-root>/**/*.pyc",
       "relative_child": "runtime-selected-cache-files"
     },
     {
@@ -383,19 +383,19 @@
       "relative_child": "outputs"
     },
     {
-      "applies_when": "a run imports Matplotlib and its font manager initializes a writable cache",
+      "applies_when": "a run imports Matplotlib and its font manager initializes an effective usable cache or runtime temporary fallback",
       "code_reference": "Matplotlib:cache-directory-and-font-manager",
       "id": "matplotlib-font-cache",
-      "parent_source": "MPLCONFIGDIR when non-empty, otherwise Matplotlib platform or user cache selection",
-      "path_template": "<MPLCONFIGDIR-or-Matplotlib-platform-user-cache>/fontlist-*.json",
+      "parent_source": "MPLCONFIGDIR when configured and usable; when unset, the Matplotlib platform or user cache if usable; otherwise the Matplotlib-selected runtime temporary directory",
+      "path_template": "<effective-Matplotlib-cache-directory>/fontlist-*.json",
       "relative_child": "runtime-selected-cache-files"
     },
     {
-      "applies_when": "the Qt desktop loads QML with disk caching enabled",
+      "applies_when": "the Qt desktop loads cacheable QML with disk caching enabled and an effective cache directory is available",
       "code_reference": "Qt:QQml-disk-cache",
       "id": "qt-qml-disk-cache",
-      "parent_source": "Qt CacheLocation for organization MCLab and application MCLab",
-      "path_template": "<Qt-CacheLocation:MCLab/MCLab>/qmlcache/*.qmlc",
+      "parent_source": "active QML_DISK_CACHE_PATH override; otherwise QStandardPaths CacheLocation for organization MCLab and application MCLab with qmlcache appended",
+      "path_template": "<effective-Qt-QML-disk-cache-directory>/*.qmlc",
       "relative_child": "runtime-selected-cache-files"
     },
     {

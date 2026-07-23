@@ -316,19 +316,51 @@ def test_confirmed_runtime_cache_surfaces_are_bounded_machine_inventory() -> Non
 
     record = next(item for item in records if item["id"] == "runtime-dependency-caches")
     assert record["artifacts"] == [
-        "<MPLCONFIGDIR-or-Matplotlib-platform-user-cache>/fontlist-*.json",
-        "<Qt-CacheLocation:MCLab/MCLab>/qmlcache/*.qmlc",
-        "<writable-Python-import-root>/__pycache__/*.pyc",
+        "<effective-CPython-bytecode-cache-root>/**/*.pyc",
+        "<effective-Matplotlib-cache-directory>/fontlist-*.json",
+        "<effective-Qt-QML-disk-cache-directory>/*.qmlc",
     ]
     assert record["may_contain_private_data"] is True
     assert "absolute source or import paths" in record["content"]
+    assert "runtime-selected effective cache location" in record["content"]
+    assert "Matplotlib's temporary fallback" in record["content"]
     assert "broader dependency and platform caches remain an open boundary" in record["content"]
 
-    assert {item["id"] for item in locations} >= {
+    locations_by_id = {item["id"]: item for item in locations}
+    assert locations_by_id.keys() >= {
         "cpython-bytecode-cache",
         "matplotlib-font-cache",
         "qt-qml-disk-cache",
     }
+    cpython_parent = locations_by_id["cpython-bytecode-cache"]["parent_source"]
+    assert "PYTHONPYCACHEPREFIX" in cpython_parent
+    assert "-X pycache_prefix" in cpython_parent
+    assert (
+        "otherwise each writable source or import root __pycache__ directory"
+        in cpython_parent
+    )
+    assert (
+        locations_by_id["cpython-bytecode-cache"]["path_template"]
+        == "<effective-CPython-bytecode-cache-root>/**/*.pyc"
+    )
+    assert "QML_DISK_CACHE_PATH" in locations_by_id["qt-qml-disk-cache"]["parent_source"]
+    assert "QStandardPaths CacheLocation" in locations_by_id["qt-qml-disk-cache"]["parent_source"]
+    assert (
+        locations_by_id["qt-qml-disk-cache"]["path_template"]
+        == "<effective-Qt-QML-disk-cache-directory>/*.qmlc"
+    )
+    assert (
+        "MPLCONFIGDIR when configured and usable"
+        in locations_by_id["matplotlib-font-cache"]["parent_source"]
+    )
+    assert (
+        "runtime temporary directory"
+        in locations_by_id["matplotlib-font-cache"]["parent_source"]
+    )
+    assert (
+        locations_by_id["matplotlib-font-cache"]["path_template"]
+        == "<effective-Matplotlib-cache-directory>/fontlist-*.json"
+    )
     assert scope["complete_shared_pc_clearance"] is False
     assert scope["runtime_dependency_cache_scope"].endswith("broader-platform-caches-open")
     assert lifecycle["dependency_cache_clearing_authorized_by_this_contract"] is False
@@ -361,9 +393,9 @@ def test_confirmed_runtime_cache_location_omission_is_rejected(
 @pytest.mark.parametrize(
     "artifact",
     [
-        "<MPLCONFIGDIR-or-Matplotlib-platform-user-cache>/fontlist-*.json",
-        "<Qt-CacheLocation:MCLab/MCLab>/qmlcache/*.qmlc",
-        "<writable-Python-import-root>/__pycache__/*.pyc",
+        "<effective-CPython-bytecode-cache-root>/**/*.pyc",
+        "<effective-Matplotlib-cache-directory>/fontlist-*.json",
+        "<effective-Qt-QML-disk-cache-directory>/*.qmlc",
     ],
 )
 def test_confirmed_runtime_cache_artifact_omission_is_rejected(
@@ -381,6 +413,33 @@ def test_confirmed_runtime_cache_artifact_omission_is_rejected(
         "data_classes.runtime-dependency-caches.artifacts" in error
         for error in _errors(repository)
     )
+
+
+@pytest.mark.parametrize(
+    ("location_id", "marker"),
+    [
+        ("cpython-bytecode-cache", "PYTHONPYCACHEPREFIX"),
+        ("cpython-bytecode-cache", "-X pycache_prefix"),
+        ("qt-qml-disk-cache", "QML_DISK_CACHE_PATH"),
+        ("matplotlib-font-cache", "runtime temporary directory"),
+    ],
+)
+def test_effective_runtime_cache_override_or_fallback_omission_is_rejected(
+    repository: Path,
+    location_id: str,
+    marker: str,
+) -> None:
+    policy = _policy(repository)
+    locations = policy["storage_locations"]
+    assert isinstance(locations, list)
+    location = next(item for item in locations if item["id"] == location_id)
+    parent_source = location["parent_source"]
+    assert isinstance(parent_source, str)
+    assert marker in parent_source
+    location["parent_source"] = parent_source.replace(marker, "omitted", 1)
+    _write_policy(repository, policy)
+
+    assert any("storage_locations" in error for error in _errors(repository))
 
 
 def test_shared_pc_clearance_and_cache_clearing_cannot_be_silently_claimed(
