@@ -211,6 +211,7 @@ jobs:
           tests/test_batch.py
           tests/test_output_cleanup.py
           tests/test_cli_imports.py
+          tests/test_build_desktop.py
 
       - name: Saved-run cleanup confirmation audit
         if: runner.os == 'Linux'
@@ -246,8 +247,22 @@ jobs:
           path: /tmp/mclab-cleanup-ui-audit
           retention-days: 7
 
+      - name: Create isolated package-build environment
+        shell: bash
+        run: |
+          package_env="$RUNNER_TEMP/mclab-package-build"
+          python -m venv "$package_env"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            package_python="$package_env/Scripts/python.exe"
+          else
+            package_python="$package_env/bin/python"
+          fi
+          "$package_python" scripts/install_locked.py --allow-external-env package
+          echo "MCLAB_BUILD_PYTHON=$package_python" >> "$GITHUB_ENV"
+
       - name: Build unsigned one-folder app
-        run: python scripts/build_desktop.py --clean
+        shell: bash
+        run: '"$MCLAB_BUILD_PYTHON" scripts/build_desktop.py --clean'
 
       - name: Verify packaged app and diagnostics
         shell: bash
@@ -260,13 +275,16 @@ jobs:
           "$app" app --self-test --lang en
           "$app" doctor --json
 
-      - name: Mark build as unsigned development artifact
+      - name: Verify package identity and size evidence
         shell: bash
-        run: echo "UNSIGNED DEVELOPMENT BUILD - NOT FOR PRODUCTION" > dist/MCLab/UNSIGNED-DEVELOPMENT-BUILD.txt
+        run: '"$MCLAB_BUILD_PYTHON" scripts/build_desktop.py --verify-only'
 
-      - name: Upload unsigned development bundle
+      - name: Upload unsigned development package
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: MCLab-${{ runner.os }}-unsigned-development
-          path: dist/MCLab
+          path: |
+            dist/MCLab
+            dist/MCLab-package
+          if-no-files-found: error
           retention-days: 7

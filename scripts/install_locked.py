@@ -21,7 +21,7 @@ import sys
 import tempfile
 import time
 from contextlib import AbstractContextManager
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import Any, Sequence
 from urllib.parse import unquote, urlsplit
 from urllib.request import url2pathname
@@ -365,14 +365,20 @@ def _environment_error(*, allow_external: bool) -> str | None:
     return None
 
 
+def _state_input_label(path: PurePath) -> str:
+    """Return one OS-independent provenance label for a repository input."""
+
+    return path.as_posix()
+
+
 def _state_inputs(profile: str) -> dict[str, str]:
     paths = {
         "pyproject.toml": ROOT / "pyproject.toml",
-        str(BUILD_LOCK): ROOT / BUILD_LOCK,
+        _state_input_label(BUILD_LOCK): ROOT / BUILD_LOCK,
         "scripts/install_locked.py": Path(__file__).resolve(),
     }
     profile_lock = PROFILE_LOCKS[profile]
-    paths[str(profile_lock)] = ROOT / profile_lock
+    paths[_state_input_label(profile_lock)] = ROOT / profile_lock
     missing = [label for label, path in paths.items() if not path.is_file()]
     if missing:
         raise LockedInstallError("Missing dependency input(s): " + ", ".join(sorted(missing)))

@@ -1294,13 +1294,17 @@ def _validate_workflows(root: Path, errors: list[str]) -> None:
         and ci.count("python scripts/install_locked.py --allow-external-env dev") == 3
         and ci.count("python scripts/manage_dependency_locks.py --check") == 1
         and desktop.count("python scripts/install_locked.py --allow-external-env package") == 1
+        and desktop.count(
+            '"$package_python" scripts/install_locked.py --allow-external-env package'
+        )
+        == 1
         and desktop.count("& $venvPython scripts/install_locked.py dev") == 1
-        and sum(text.count("--allow-external-env") for text in texts.values()) == 4
+        and sum(text.count("--allow-external-env") for text in texts.values()) == 5
         and not any("uv pip install" in text for text in texts.values())
     )
     if not valid:
         errors.append(
-            "WORKFLOW_INSTALL_POLICY workflows must use four reviewed external-profile "
+            "WORKFLOW_INSTALL_POLICY workflows must use five reviewed external-profile "
             "installs and the one exact forced/hash-locked paper-parser exception"
         )
 
@@ -1508,10 +1512,10 @@ def validate(root: Path = ROOT) -> tuple[list[Metric], list[str]]:
     metrics.append(
         _stage_metric(
             "install surface policy",
-            "canonical installer/manager; 4 external CI calls; 1 auxiliary lock; 19/19 launchers",
+            "canonical installer/manager; 5 external CI calls; 1 auxiliary lock; 19/19 launchers",
             errors,
             start,
-            "2 installer commands; 1 disposable manager; 4 external CI calls; "
+            "2 installer commands; 1 disposable manager; 5 external CI calls; "
             "1 auxiliary lock; 19/19 launchers",
         )
     )
