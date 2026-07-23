@@ -89,12 +89,13 @@ class _BatchLifecycleProbe:
         self.controller.failed.connect(
             lambda _detail, output: self._finish("error", output, "batch_failed")
         )
+        # Arm the first sample before synchronous startup work.  Otherwise that
+        # work is charged together with an additional nominal timer interval.
+        self.timer.singleShot(self._HEARTBEAT_MS, self._heartbeat)
         self.backend.startAllCompare()
         self._changed()
         if not self.terminal and not self.controller.running:
             self._finish("error", self.output, "start_failed_without_terminal")
-            return
-        self.timer.singleShot(self._HEARTBEAT_MS, self._heartbeat)
 
     def _changed(self) -> None:
         if self.terminal:
@@ -138,7 +139,12 @@ class _BatchLifecycleProbe:
         ):
             self.ready = True
             payload = self._payload("ready", str(snapshot.get("state", "running")), False, "")
-            _atomic_probe_write(self.ready_path, payload, self._MAX_PROBE_BYTES)
+            _atomic_probe_write(
+                self.ready_path,
+                payload,
+                self._MAX_PROBE_BYTES,
+                durable=False,
+            )
 
     def _heartbeat(self) -> None:
         if self.terminal:
@@ -329,7 +335,13 @@ def _read_batch_probe_request(
     return True
 
 
-def _atomic_probe_write(path: Path, payload: dict[str, Any], max_bytes: int) -> None:
+def _atomic_probe_write(
+    path: Path,
+    payload: dict[str, Any],
+    max_bytes: int,
+    *,
+    durable: bool = True,
+) -> None:
     data = json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
     if len(data) > max_bytes:
         raise RuntimeError("The batch lifecycle probe exceeded its size bound.")
@@ -355,8 +367,9 @@ def _atomic_probe_write(path: Path, payload: dict[str, Any], max_bytes: int) -> 
         try:
             with os.fdopen(descriptor, "wb", closefd=False) as stream:
                 stream.write(data)
-                stream.flush()
-                os.fsync(stream.fileno())
+                if durable:
+                    stream.flush()
+                    os.fsync(stream.fileno())
         finally:
             os.close(descriptor)
         os.replace(temporary, path)

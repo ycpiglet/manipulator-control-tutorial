@@ -22,6 +22,7 @@ from mclab.application.batch_process import (  # noqa: E402
 )
 from mclab.application.qt_batch_probe import (  # noqa: E402
     _BatchLifecycleProbe,
+    _atomic_probe_write,
     _read_batch_probe_request,
 )
 
@@ -312,6 +313,87 @@ class BatchProbeTests(unittest.TestCase):
                     schema="mclab.batch-probe-request.v1",
                 )
 
+    def test_first_heartbeat_is_armed_before_synchronous_batch_start(self) -> None:
+        events: list[object] = []
+        clock = [10.0]
+
+        class Signal:
+            def connect(self, _callback: object) -> None:
+                return None
+
+        class Controller:
+            changed = completed = stopped = failed = Signal()
+            running = True
+
+            @staticmethod
+            def snapshot() -> dict[str, object]:
+                return {
+                    "output": output,
+                    "childPid": 2345,
+                    "current": 0,
+                    "total": 5,
+                    "name": "",
+                    "state": "running",
+                    "cancelling": False,
+                }
+
+        class Backend:
+            _batch = Controller()
+
+            @staticmethod
+            def startAllCompare() -> None:  # noqa: N802
+                events.append("start")
+                clock[0] += 0.431
+
+        class Timer:
+            callbacks: list[object] = []
+
+            @classmethod
+            def singleShot(cls, delay: int, callback: object) -> None:  # noqa: N802
+                events.append(("timer", delay))
+                cls.callbacks.append(callback)
+
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ,
+            {
+                "MCLAB_BATCH_PROBE_PATH": str(Path(tmp) / "probe.json"),
+                "MCLAB_BATCH_READY_PATH": str(Path(tmp) / "ready.json"),
+                "MCLAB_BATCH_REQUEST_PATH": str(Path(tmp) / "request.json"),
+            },
+        ), patch(
+            "mclab.application.qt_batch_probe.time.monotonic",
+            side_effect=lambda: clock[0],
+        ):
+            output = str(Path(tmp) / "mclab-batch")
+            lifecycle = _BatchLifecycleProbe(
+                Timer, Backend(), None, "batch_probe_complete"
+            )
+            lifecycle.start()
+            self.assertEqual(events[:2], [("timer", 100), "start"])
+            callback = Timer.callbacks.pop(0)
+            assert callable(callback)
+            callback()
+
+        self.assertAlmostEqual(lifecycle.max_ui_gap_ms, 431.0)
+
+    def test_nondurable_probe_write_is_atomic_without_forced_disk_sync(self) -> None:
+        payload = {"schema": "mclab.batch-probe.v1", "phase": "ready"}
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            ready = root / "ready.json"
+            with patch(
+                "mclab.application.qt_batch_probe.os.fsync",
+                side_effect=AssertionError("non-durable ready probes must not fsync"),
+            ):
+                _atomic_probe_write(ready, payload, 1_024, durable=False)
+            self.assertEqual(json.loads(ready.read_text(encoding="utf-8")), payload)
+            self.assertEqual(list(root.glob(".ready.json.*.tmp")), [])
+
+            terminal = root / "terminal.json"
+            with patch("mclab.application.qt_batch_probe.os.fsync") as fsync:
+                _atomic_probe_write(terminal, payload, 1_024)
+            fsync.assert_called_once()
+
     @unittest.skipUnless(
         importlib.util.find_spec("PySide6"),
         "PySide6 is not installed",
@@ -372,6 +454,7 @@ class BatchProbeTests(unittest.TestCase):
         self.assertTrue(lifecycle.ready)
         self.assertEqual(write.call_count, 1)
         self.assertEqual(write.call_args.args[0], ready)
+        self.assertEqual(write.call_args.kwargs, {"durable": False})
         self.assertNotEqual(write.call_args.args[0], probe_path)
         self.assertEqual(len(Timer.callbacks), 1)
 
