@@ -257,14 +257,25 @@ def test_desktop_workflow_verifies_and_retains_exact_package_evidence() -> None:
     build = workflow.index("- name: Build unsigned one-folder app")
     diagnostics = workflow.index("- name: Verify packaged app and diagnostics")
     verify = workflow.index("- name: Verify package identity and size evidence")
+    metrics_upload = workflow.index("- name: Upload bounded package metrics")
     upload = workflow.index("- name: Upload unsigned development package")
 
-    assert isolated < build < diagnostics < verify < upload
+    assert isolated < build < diagnostics < verify < metrics_upload < upload
     assert 'package_env="$RUNNER_TEMP/mclab-package-build"' in workflow
     assert '"$package_python" scripts/install_locked.py --allow-external-env package' in workflow
     assert "run: '\"$MCLAB_BUILD_PYTHON\" scripts/build_desktop.py --clean'" in workflow
     assert "run: '\"$MCLAB_BUILD_PYTHON\" scripts/build_desktop.py --verify-only'" in workflow
     assert "Mark build as unsigned development artifact" not in workflow
+    metrics_upload_block = workflow[metrics_upload:upload]
+    assert (
+        "uses: actions/upload-artifact@"
+        "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1"
+        in metrics_upload_block
+    )
+    assert "name: mclab-package-metrics-${{ runner.os }}" in metrics_upload_block
+    assert "path: dist/MCLab-package/package-metrics.json" in metrics_upload_block
+    assert "if-no-files-found: error" in metrics_upload_block
+    assert "retention-days: 14" in metrics_upload_block
     upload_block = workflow[upload:]
     assert "dist/MCLab\n" in upload_block
     assert "dist/MCLab-package\n" in upload_block
