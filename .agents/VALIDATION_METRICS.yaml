@@ -187,6 +187,11 @@ packaging:
     metric: "one-folder and compressed archive bytes"
     threshold: "one-folder <= 400 MiB; compressed archive <= 300 MiB; both enforced independently"
     evidence: "package-metrics.json gates.one_folder and gates.archive in each desktop matrix artifact"
+  packaged_startup_development_gate:
+    metric: "existing unsigned one-folder package startup through the actual QML root-load probe"
+    threshold: "exact workflow subject and clean checkout; checkout-bound package verification before and after; both independent size gates enforced and passed; package evidence byte-equivalent after launch; exactly 20 new processes with fresh settings, zero failures, and nearest-rank p95 <= 5000 ms; OS file cache is not flushed"
+    command: "python scripts/audit_package_startup.py --bundle-root dist/MCLab --package-root dist/MCLab-package --runner-os <Linux|Windows|macOS> --workflow-sha <40-hex-subject> --temp-root <outside-checkout-temp> --output build/validation/<40-hex-subject>/pkg-<OS>/package_startup.json"
+    evidence: "90-day per-OS canonical package_startup.json from the desktop matrix; internal PKG-01B development evidence only, not aggregate PKG acceptance, E2E closure, signing, or release authorization"
 
 operations:
   ci_reproducibility:

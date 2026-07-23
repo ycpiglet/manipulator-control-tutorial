@@ -528,6 +528,7 @@ def test_workflow_contract_rejects_neutralized_or_skipped_steps(
     (
         (checker.CI_WORKFLOW_PATH, "Upload universal supply-chain evidence"),
         (checker.DESKTOP_WORKFLOW_PATH, "Upload target supply-chain evidence"),
+        (checker.DESKTOP_WORKFLOW_PATH, "Upload packaged startup readiness evidence"),
     ),
 )
 def test_workflow_contract_requires_evidence_upload_step(
@@ -602,6 +603,104 @@ def test_desktop_workflow_validates_license_inventory_before_upload(
     )
 
     assert any("reviewed order" in error for error in checker.workflow_policy_errors(repository))
+
+
+def test_desktop_workflow_binds_exact_subject_before_package_work(
+    repository: Path,
+) -> None:
+    desktop = repository / checker.DESKTOP_WORKFLOW_PATH
+    verify_policy = next(
+        policy
+        for policy in checker.WORKFLOW_STEP_POLICIES
+        if policy.path == checker.DESKTOP_WORKFLOW_PATH
+        and policy.name == "Verify exact package evidence subject"
+    )
+    verify = "\n".join(f"      {line}" for line in verify_policy.expected_lines) + "\n"
+    tamper = (
+        "      - name: Mutate exact package subject\n"
+        "        run: git checkout HEAD~1\n"
+    )
+    text = desktop.read_text(encoding="utf-8")
+    assert verify in text
+    desktop.write_text(text.replace(verify, verify + tamper, 1), encoding="utf-8")
+
+    errors = checker.workflow_policy_errors(repository)
+    assert any("contiguous" in error for error in errors)
+
+
+def test_desktop_workflow_rejects_unprotected_provenance_token_use(
+    repository: Path,
+) -> None:
+    desktop = repository / checker.DESKTOP_WORKFLOW_PATH
+    text = desktop.read_text(encoding="utf-8")
+    marker = "      - name: Install pinned Linux Qt runtime libraries\n"
+    assert marker in text
+    desktop.write_text(
+        text.replace(
+            marker,
+            "      - name: Shadow package evidence subject\n"
+            '        run: echo "$MCLAB_EVIDENCE_SHA"\n\n'
+            + marker,
+            1,
+        ),
+        encoding="utf-8",
+    )
+
+    errors = checker.workflow_policy_errors(repository)
+    assert any("controlled provenance token" in error for error in errors)
+
+
+def test_desktop_workflow_keeps_package_startup_evidence_chain_contiguous(
+    repository: Path,
+) -> None:
+    desktop = repository / checker.DESKTOP_WORKFLOW_PATH
+    upload_policy = next(
+        policy
+        for policy in checker.WORKFLOW_STEP_POLICIES
+        if policy.path == checker.DESKTOP_WORKFLOW_PATH
+        and policy.name == "Upload packaged startup readiness evidence"
+    )
+    upload = "\n".join(f"      {line}" for line in upload_policy.expected_lines) + "\n"
+    tamper = (
+        "      - name: Replace packaged startup evidence\n"
+        "        run: echo '{}' > \"$MCLAB_PKG_STARTUP_EVIDENCE\"\n"
+    )
+    text = desktop.read_text(encoding="utf-8")
+    assert upload in text
+    desktop.write_text(text.replace(upload, tamper + upload, 1), encoding="utf-8")
+
+    errors = checker.workflow_policy_errors(repository)
+    assert any("contiguous" in error for error in errors)
+    assert any("controlled provenance token" in error for error in errors)
+
+
+def test_desktop_workflow_preserves_evidence_and_package_retention_classes(
+    repository: Path,
+) -> None:
+    desktop = repository / checker.DESKTOP_WORKFLOW_PATH
+    text = desktop.read_text(encoding="utf-8")
+    startup_policy = next(
+        policy
+        for policy in checker.WORKFLOW_STEP_POLICIES
+        if policy.path == checker.DESKTOP_WORKFLOW_PATH
+        and policy.name == "Upload packaged startup readiness evidence"
+    )
+    startup_upload = "\n".join(
+        f"      {line}" for line in startup_policy.expected_lines
+    ) + "\n"
+    assert "        retention-days: 90\n" in startup_upload
+    assert startup_upload in text
+    desktop.write_text(
+        text.replace(
+            startup_upload,
+            startup_upload.replace("retention-days: 90", "retention-days: 7"),
+            1,
+        ),
+        encoding="utf-8",
+    )
+
+    errors = checker.workflow_policy_errors(repository)
+    assert any("Upload packaged startup readiness evidence" in error for error in errors)
 
 
 @pytest.mark.parametrize(

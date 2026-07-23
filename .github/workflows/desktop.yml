@@ -18,12 +18,46 @@ jobs:
         os: [windows-2025, ubuntu-24.04, macos-15]
     runs-on: ${{ matrix.os }}
     env:
+      MCLAB_EVIDENCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       QT_QPA_PLATFORM: offscreen
       MPLBACKEND: Agg
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Checkout exact package evidence subject
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          ref: ${{ env.MCLAB_EVIDENCE_SHA }}
+
+      - name: Verify exact package evidence subject
+        shell: bash
+        run: |
+          if [[ ! "$MCLAB_EVIDENCE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Package evidence subject must be a lowercase 40-hex commit." >&2
+            exit 1
+          fi
+          head_sha="$(git rev-parse --verify 'HEAD^{commit}')" || exit 1
+          if [[ "$head_sha" != "$MCLAB_EVIDENCE_SHA" ]]; then
+            echo "::error::Checked-out HEAD does not match the package evidence subject." >&2
+            exit 1
+          fi
+          checkout_status="$(git status --porcelain=v1 --untracked-files=all)" || exit 1
+          if [[ -n "$checkout_status" ]]; then
+            echo "::error::Package evidence checkout is not clean." >&2
+            exit 1
+          fi
+
+      - name: Bind packaged startup evidence path
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            Linux|Windows|macOS) ;;
+            *)
+              echo "::error::Unsupported package evidence runner OS." >&2
+              exit 1
+              ;;
+          esac
+          printf 'MCLAB_PKG_STARTUP_EVIDENCE=build/validation/%s/pkg-%s/package_startup.json\n' \
+            "$MCLAB_EVIDENCE_SHA" "$RUNNER_OS" >> "$GITHUB_ENV"
 
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
@@ -212,6 +246,7 @@ jobs:
           tests/test_output_cleanup.py
           tests/test_cli_imports.py
           tests/test_build_desktop.py
+          tests/test_package_startup.py
 
       - name: Saved-run cleanup confirmation audit
         if: runner.os == 'Linux'
@@ -278,6 +313,28 @@ jobs:
       - name: Verify package identity and size evidence
         shell: bash
         run: '"$MCLAB_BUILD_PYTHON" scripts/build_desktop.py --verify-only'
+
+      - name: Run packaged startup readiness gate
+        id: package_startup
+        timeout-minutes: 10
+        shell: bash
+        run: >-
+          "$MCLAB_BUILD_PYTHON" scripts/audit_package_startup.py
+          --bundle-root dist/MCLab
+          --package-root dist/MCLab-package
+          --runner-os "$RUNNER_OS"
+          --workflow-sha "$MCLAB_EVIDENCE_SHA"
+          --temp-root "$RUNNER_TEMP"
+          --output "$MCLAB_PKG_STARTUP_EVIDENCE"
+
+      - name: Upload packaged startup readiness evidence
+        if: always() && steps.package_startup.outcome != 'skipped'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mclab-pkg-startup-${{ runner.os }}-${{ env.MCLAB_EVIDENCE_SHA }}
+          path: ${{ env.MCLAB_PKG_STARTUP_EVIDENCE }}
+          if-no-files-found: error
+          retention-days: 90
 
       - name: Upload unsigned development package
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

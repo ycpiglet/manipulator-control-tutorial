@@ -294,6 +294,44 @@ can leave a dot-prefixed stage/backup directory, and later build or verification
 fails closed until a maintainer inspects that state. Do not delete such a
 directory without identifying which prior package it contains.
 
+### Packaged startup development gate
+
+The desktop matrix runs a standalone PKG-01B startup audit against the existing
+unsigned one-folder package; the audit does not build or rewrite that package.
+The workflow checks out the exact pull-request head (or push commit), verifies
+that exact lowercase 40-hex subject and a clean checkout, and binds evidence to
+`build/validation/<commit>/pkg-<OS>/package_startup.json`.
+
+Before launching the application, the auditor runs checkout-bound package
+verification and requires the recorded source commit to equal the workflow
+subject. Both the one-folder and archive size gates must be independently
+enforced and passing. It then launches the packaged executable by absolute path
+from a temporary working directory outside the checkout. Each of the 20
+processes receives fresh settings, data, output, cache, temporary, and
+single-instance state. The existing application-owned `startup_probe` measures
+from immediately before process creation until the actual QML root has loaded.
+The accepted development threshold is zero failed processes and a nearest-rank
+p95 of at most 5,000 ms (rank 19 of 20). The OS file cache is deliberately not
+flushed, so this is the documented new-process/fresh-settings definition rather
+than a claim about first boot after installation or a cold machine.
+
+Every process has a 20-second harness timeout and starts in a new process
+group/session. Temporary stdout and stderr are drained to bounded files; only
+byte counts and SHA-256 summaries enter the canonical evidence. After all
+launches, checkout-bound package verification runs again and its complete
+canonical result must be byte-equivalent to the pre-launch result. Runtime
+state, probe files, and logs remain under runner temporary storage and are
+removed. The evidence itself is bounded to 1 MiB, contains no absolute paths,
+is retained for 90 days, and is separate from the 7-day unsigned package
+artifact.
+
+This closes only the narrow PKG-01B packaged-startup development check.
+Exact-head and post-merge CI records still have to be reviewed through the
+readiness process before any aggregate lane decision. Functional course E2E,
+process-lifecycle containment, install/uninstall behavior, signing,
+notarization, public distribution, DOI publication, and release authorization
+remain separate gates.
+
 Windows signing and macOS notarization are production gates. CI artifacts are
 explicitly unsigned development builds. Offline
 `--offline-self-asserted` verification checks internal consistency only and is
@@ -302,5 +340,6 @@ never gating provenance.
 The independent gates are one-folder size at most 400 MiB and compressed
 archive size at most 300 MiB. Actual per-OS measurements must come from the
 retained matrix artifacts; this source contract does not assert that a package
-was built. Target installed cold start p95 remains 5 seconds or less and is
-measured by the later packaged E2E gate.
+was built. The packaged startup development gate above measures the bounded
+new-process/fresh-settings QML-root threshold; installed first-boot behavior
+and the broader functional/lifecycle E2E contract remain later gates.
