@@ -29,6 +29,7 @@ _EXPECTED_BATCHES = (
     "lab04_wall_compare",
 )
 _CANCEL_GRACE_MS = 2_000
+_NATURAL_REAP_GRACE_MS = 1_000
 _TREE_POLL_MS = 50
 _START_TIMEOUT_MS = 10_000
 _PROGRESS_HANDSHAKE_MS = 30_000
@@ -58,6 +59,7 @@ class _BatchAttempt:
     settlement_status: str = ""
     settlement_detail: str = ""
     settlement_thread: threading.Thread | None = None
+    reap_deadline: float = 0.0
 
 
 def create_batch_controller(
@@ -272,6 +274,12 @@ def create_batch_controller(
                 self._kill_attempt(attempt, process)
                 return
             attempt.state = "running"
+            if attempt.cancel_requested:
+                attempt.state = "cancelling"
+                self._terminate_attempt(attempt, process)
+                self._schedule(_CANCEL_GRACE_MS, attempt, process, self._kill_attempt)
+                self.changed.emit()
+                return
             self._schedule(_TREE_POLL_MS, attempt, process, self._poll_progress)
             self._schedule(
                 _PROGRESS_HANDSHAKE_MS,
@@ -279,8 +287,6 @@ def create_batch_controller(
                 process,
                 self._progress_handshake_timeout,
             )
-            if attempt.cancel_requested:
-                self._terminate_attempt(attempt, process)
             self.changed.emit()
 
         def _start_timeout(self, attempt: _BatchAttempt, process: Any) -> None:
@@ -376,8 +382,15 @@ def create_batch_controller(
                 return
             attempt.cancel_requested = True
             attempt.requested_status = requested_status
-            attempt.state = "cancelling"
             self.cancel_requested = True
+            # QProcess can remain wedged in ``Starting`` on macOS when it is
+            # terminated before the ``started`` signal.  Keep the request
+            # latched until containment has attached the child; the existing
+            # start timeout still fails closed if that signal never arrives.
+            if attempt.state == "starting":
+                self.changed.emit()
+                return
+            attempt.state = "cancelling"
             self._terminate_attempt(attempt, process)
             if schedule_kill:
                 self._schedule(_CANCEL_GRACE_MS, attempt, process, self._kill_attempt)
@@ -428,16 +441,30 @@ def create_batch_controller(
             attempt.state = "reaping"
             if self._tree_active(attempt):
                 if not attempt.cancel_requested:
-                    attempt.detail = self._merge_detail(
-                        attempt.detail,
-                        "The batch leader exited while descendant processes remained active.",
+                    attempt.reap_deadline = (
+                        time.monotonic() + _NATURAL_REAP_GRACE_MS / 1_000
                     )
-                    attempt.requested_status = "error"
-                    self._kill_attempt(attempt, process)
+                    self._schedule(_TREE_POLL_MS, attempt, process, self._poll_natural_reap)
                 else:
                     self._schedule(_TREE_POLL_MS, attempt, process, self._poll_tree)
                 return
             self._settle_attempt(attempt, process)
+
+        def _poll_natural_reap(self, attempt: _BatchAttempt, process: Any) -> None:
+            if not self._current(attempt, process):
+                return
+            if not self._tree_active(attempt):
+                self._settle_attempt(attempt, process)
+                return
+            if attempt.requested_status == "error" or time.monotonic() >= attempt.reap_deadline:
+                attempt.detail = self._merge_detail(
+                    attempt.detail,
+                    "The batch leader exited while descendant processes remained active.",
+                )
+                attempt.requested_status = "error"
+                self._kill_attempt(attempt, process)
+                return
+            self._schedule(_TREE_POLL_MS, attempt, process, self._poll_natural_reap)
 
         def _process_error(
             self,

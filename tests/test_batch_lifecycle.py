@@ -538,6 +538,95 @@ class BatchControllerLifecycleTests(unittest.TestCase):
         self.assertEqual(controller.current, 1)
         self.assertEqual(controller.name, "lab01_msd_compare")
 
+    def test_natural_exit_waits_for_containment_accounting_to_quiesce(self) -> None:
+        from mclab.application.qt_batch import _BatchAttempt
+
+        controller_type, process_type, _application = self._controller_type()
+
+        class Process:
+            @staticmethod
+            def state() -> object:
+                return process_type.NotRunning
+
+            @staticmethod
+            def readAllStandardOutput() -> bytes:  # noqa: N802
+                return b""
+
+            @staticmethod
+            def readAllStandardError() -> bytes:  # noqa: N802
+                return b""
+
+        class Tree:
+            observations = iter((True, False))
+
+            def is_active(self) -> bool:
+                return next(self.observations)
+
+        process = Process()
+        controller = controller_type()
+        attempt = _BatchAttempt(1, "/batch", "a" * 64, process, Tree(), state="running")
+        controller._attempt = attempt  # noqa: SLF001
+        controller.process = process
+        controller._settled = False  # noqa: SLF001
+
+        with (
+            patch("mclab.application.qt_batch.time.monotonic", return_value=100.0),
+            patch.object(controller, "_schedule") as schedule,
+            patch.object(controller, "_settle_attempt") as settle,
+            patch.object(controller, "_kill_attempt") as kill,
+        ):
+            controller._finish(attempt, process, 0, None)  # noqa: SLF001
+            scheduled_callback = schedule.call_args.args[3]
+            scheduled_callback(attempt, process)
+
+        settle.assert_called_once_with(attempt, process)
+        kill.assert_not_called()
+        self.assertEqual(attempt.requested_status, "")
+        self.assertEqual(attempt.reap_deadline, 101.0)
+
+    def test_natural_exit_kills_persistent_descendants_after_grace(self) -> None:
+        from mclab.application.qt_batch import _BatchAttempt
+
+        controller_type, process_type, _application = self._controller_type()
+
+        class Process:
+            @staticmethod
+            def state() -> object:
+                return process_type.NotRunning
+
+            @staticmethod
+            def readAllStandardOutput() -> bytes:  # noqa: N802
+                return b""
+
+            @staticmethod
+            def readAllStandardError() -> bytes:  # noqa: N802
+                return b""
+
+        class Tree:
+            @staticmethod
+            def is_active() -> bool:
+                return True
+
+        process = Process()
+        controller = controller_type()
+        attempt = _BatchAttempt(1, "/batch", "a" * 64, process, Tree(), state="running")
+        controller._attempt = attempt  # noqa: SLF001
+        controller.process = process
+        controller._settled = False  # noqa: SLF001
+
+        with (
+            patch("mclab.application.qt_batch.time.monotonic", side_effect=(100.0, 102.0)),
+            patch.object(controller, "_schedule") as schedule,
+            patch.object(controller, "_kill_attempt") as kill,
+        ):
+            controller._finish(attempt, process, 0, None)  # noqa: SLF001
+            scheduled_callback = schedule.call_args.args[3]
+            scheduled_callback(attempt, process)
+
+        kill.assert_called_once_with(attempt, process)
+        self.assertEqual(attempt.requested_status, "error")
+        self.assertIn("descendant processes remained active", attempt.detail)
+
     def test_containment_close_failure_blocks_restart_until_retry_proves_close(self) -> None:
         from mclab.application.qt_batch import _BatchAttempt
 
@@ -703,6 +792,7 @@ class BatchControllerLifecycleTests(unittest.TestCase):
             "a" * 64,
             process,
             tree,
+            state="running",
         )
         controller._attempt = attempt  # noqa: SLF001
         controller.process = process
@@ -884,11 +974,14 @@ class BatchControllerLifecycleTests(unittest.TestCase):
             ),
             patch("mclab.application.qt_batch.read_batch_progress", return_value=()),
             patch("mclab.application.qt_batch.settle_all_compare_output", return_value="stopped"),
-        ):
+            ):
             controller.start()
             first_process = Process.instances[-1]
-            first_process.started.emit()
             controller.cancel()
+            self.assertEqual(first_process.terminate_calls, 0)
+            self.assertEqual(trees[0].kill_calls, 0)
+            first_process.started.emit()
+            self.assertEqual(first_process.terminate_calls, 1)
             stale_kill = next(callback for delay, callback in Timer.callbacks if delay == 2_000)
             first_process.current_state = Process.NotRunning
             trees[0].active = False

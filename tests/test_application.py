@@ -309,6 +309,50 @@ class ApplicationFoundationTests(unittest.TestCase):
         self.assertEqual(Timer.callbacks, [])
         self.assertEqual(Backend.calls, [])
 
+    @unittest.skipUnless(importlib.util.find_spec("PySide6"), "PySide6 is not installed")
+    def test_qt_smoke_batch_fixture_uses_real_process_state_enum(self) -> None:
+        from PySide6.QtCore import QProcess
+
+        class Signal:
+            @staticmethod
+            def emit() -> None:
+                return None
+
+        class Batch:
+            process: object | None = None
+
+            def _smoke_inject_active(self, process: object, _output: str) -> None:
+                self.process = process
+
+        class Backend:
+            _batch = Batch()
+            batch_changed = Signal()
+            results_changed = Signal()
+
+        class Timer:
+            callbacks: list[tuple[int, object]] = []
+
+            @classmethod
+            def singleShot(cls, delay: int, callback: object) -> None:  # noqa: N802
+                cls.callbacks.append((delay, callback))
+
+        with (
+            patch.dict(
+                os.environ,
+                {"MCLAB_SELF_TEST": "1", "MCLAB_SMOKE_ACTION": "inject_batch_running"},
+            ),
+            patch("mclab.application.repositories.ArtifactRepository") as repository,
+        ):
+            repository.return_value.list_runs.return_value = []
+            schedule_smoke_action(Timer, Backend(), [])
+            Timer.callbacks[-1][1]()  # type: ignore[operator]
+
+        process = Backend._batch.process
+        self.assertIsNotNone(process)
+        self.assertEqual(process.state(), QProcess.Running)  # type: ignore[union-attr]
+        process.terminate()  # type: ignore[union-attr]
+        self.assertEqual(process.state(), QProcess.NotRunning)  # type: ignore[union-attr]
+
     def test_desktop_shutdown_allows_artifact_finalization_to_finish(self) -> None:
         self.assertGreaterEqual(SHUTDOWN_WAIT_MS, 30_000)
 

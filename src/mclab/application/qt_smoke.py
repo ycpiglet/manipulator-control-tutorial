@@ -753,13 +753,14 @@ def _inject_missing_next_asset(backend: Any) -> None:
 def _inject_batch_running(backend: Any) -> None:
     if os.environ.get("MCLAB_SELF_TEST") != "1":
         raise RuntimeError("Batch-state injection is available only during MCLAB_SELF_TEST.")
+    from PySide6.QtCore import QProcess
 
     class SmokeProcess:
         def __init__(self) -> None:
             self.active = True
 
-        def state(self) -> int:
-            return 1 if self.active else 0
+        def state(self) -> Any:
+            return QProcess.Running if self.active else QProcess.NotRunning
 
         def terminate(self) -> None:
             self.active = False
@@ -795,6 +796,5 @@ def _write_startup_probe() -> None:
     if not destination or started <= 0:
         raise RuntimeError("Startup probe path and monotonic start time are required.")
     elapsed_ms = (time.monotonic_ns() - started) / 1_000_000.0
-    path = Path(destination)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({"startup_ms": elapsed_ms}, indent=2), encoding="utf-8")
+    Path(destination).parent.mkdir(parents=True, exist_ok=True)
+    Path(destination).write_text(json.dumps({"startup_ms": elapsed_ms}, indent=2), encoding="utf-8")

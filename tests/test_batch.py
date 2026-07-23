@@ -970,7 +970,7 @@ class BatchTests(unittest.TestCase):
 
     def test_batch_error_manifest_always_has_nonempty_error_detail(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            output = Path(tmp) / "batch-error"
+            output = Path(tmp).resolve() / "batch-error"
             output.mkdir()
             write_manifest(
                 output,
@@ -990,7 +990,7 @@ class BatchTests(unittest.TestCase):
 
     def test_non_error_batch_terminal_rejects_error_detail_before_publication(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            output = Path(tmp) / "batch-stopped"
+            output = Path(tmp).resolve() / "batch-stopped"
             output.mkdir()
             with self.assertRaisesRegex(RuntimeError, "only valid for terminal error"):
                 write_manifest(
@@ -1210,7 +1210,8 @@ class BatchTests(unittest.TestCase):
 
     def test_strict_terminal_batch_verifier_rejects_unlisted_and_transient_nodes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            output = Path(tmp) / "batch"
+            temporary_root = Path(tmp).resolve()
+            output = temporary_root / "batch"
             output.mkdir()
             (output / "summary.json").write_text("{}", encoding="utf-8")
             write_manifest(
@@ -1234,7 +1235,7 @@ class BatchTests(unittest.TestCase):
                 )
             )
 
-            transient = Path(tmp) / "transient"
+            transient = temporary_root / "transient"
             transient.mkdir()
             (transient / BATCH_ACTIVE_DIR_NAME).mkdir()
             with self.assertRaisesRegex(RuntimeError, "live transient marker"):
