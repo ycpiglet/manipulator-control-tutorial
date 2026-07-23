@@ -1263,14 +1263,7 @@ def _all_batch_completion_decision(
 
 
 def _batch_artifact_record(output: Path) -> ArtifactRecord | None:
-    return next(
-        (
-            item
-            for item in ArtifactRepository(output.parent).list_runs()
-            if item.path.name == output.name
-        ),
-        None,
-    )
+    return ArtifactRepository(output.parent).get_direct_child(output)
 
 
 def _assert_batch_report_write_allowed(record: ArtifactRecord | None) -> None:
