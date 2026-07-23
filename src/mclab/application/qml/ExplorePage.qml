@@ -4,7 +4,7 @@ import QtQuick.Layouts
 
 Item {
     id: page
-    property var scenarioItems: backend.scenarios
+    property var scenarioItems: visible ? backend.scenarios : []
     property var activeTerms: search.text.trim().length === 0
                               ? [] : search.text.trim().toLowerCase().split(/\s+/)
     ScrollFocusHelper { id: scenarioFocusScroll }

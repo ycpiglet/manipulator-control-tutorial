@@ -9,7 +9,17 @@ from unittest.mock import patch
 import pytest
 
 from mclab import batch
-from mclab.application.artifacts import write_manifest
+from mclab.application.artifacts import (
+    verify_manifest,
+    verify_terminal_batch_output,
+    write_manifest,
+)
+from mclab.application.batch_runs import (
+    claim_all_compare_handoff,
+    create_all_compare_output,
+    read_all_compare_handoff,
+    settle_all_compare_output,
+)
 from mclab.application.catalog import CONCRETE_BATCH_NAMES, ScenarioCatalog
 from mclab.application.repositories import ArtifactRecord, ArtifactRepository
 from mclab.completion import CompletionReason, evaluate_completion
@@ -31,8 +41,14 @@ def test_run_finalization_refreshes_parent_index_after_terminal_manifest() -> No
         output = Path(tmp) / "run"
         logger = RunLogger("lab01_msd", {}, output_dir=output)
 
-        def write_manifest(*, status: str) -> Path:
-            events.append(f"manifest:{status}")
+        def write_manifest(
+            *,
+            status: str,
+            untrusted_artifacts: tuple[str, ...] = (),
+        ) -> Path:
+            assert untrusted_artifacts in ((), ("report.html", "worksheet.md"))
+            trust = "deferred" if untrusted_artifacts else "trusted"
+            events.append(f"manifest:{status}:{trust}")
             return output / "manifest.json"
 
         with (
@@ -52,12 +68,486 @@ def test_run_finalization_refreshes_parent_index_after_terminal_manifest() -> No
             logger.finalize_artifacts()
 
     assert events == [
-        "report:running:index=False",
-        "manifest:running",
+        "manifest:running:deferred",
         "report:completed:index=False",
-        "manifest:completed",
+        "manifest:completed:trusted",
         "index:parent",
     ]
+
+
+def test_nested_run_finalization_defers_only_parent_index() -> None:
+    events: list[str] = []
+    with tempfile.TemporaryDirectory() as tmp:
+        output = Path(tmp) / "run"
+        logger = RunLogger(
+            "lab01_msd",
+            {},
+            output_dir=output,
+            publish_parent_index=False,
+        )
+
+        def write_manifest(
+            *,
+            status: str,
+            untrusted_artifacts: tuple[str, ...] = (),
+        ) -> Path:
+            assert untrusted_artifacts in ((), ("report.html", "worksheet.md"))
+            trust = "deferred" if untrusted_artifacts else "trusted"
+            events.append(f"manifest:{status}:{trust}")
+            return output / "manifest.json"
+
+        with (
+            patch.object(logger, "_write_manifest", side_effect=write_manifest),
+            patch(
+                "mclab.sim.logging.write_run_report",
+                side_effect=lambda *_args, **kwargs: events.append(
+                    f"report:{kwargs.get('completion_status')}"
+                ),
+            ),
+            patch("mclab.sim.logging.write_outputs_index") as write_index,
+        ):
+            logger.finalize_artifacts()
+
+    assert events == [
+        "manifest:running:deferred",
+        "report:completed",
+        "manifest:completed:trusted",
+    ]
+    write_index.assert_not_called()
+
+
+def test_abrupt_run_report_rewrite_leaves_documents_untrusted_and_tree_verifiable() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp) / "course"
+        root.mkdir()
+        output = root / "scenario"
+        logger = RunLogger(
+            "lab01_msd",
+            {"sim_time": 1.0},
+            config_path="configs/lab01_msd/default.yaml",
+            output_dir=output,
+            publish_parent_index=False,
+        )
+        (output / "plots" / "position.png").write_bytes(b"plot evidence")
+        logger.save_with_artifacts(
+            summary={"lab_name": "lab01_msd", "duration": 1.0, "samples": 1},
+            finalize=False,
+        )
+        write_run_report(output, update_index=False, completion_status="running")
+        logger._write_manifest(status="running")
+        old_report = (output / "report.html").read_bytes()
+        old_worksheet = (output / "worksheet.md").read_bytes()
+
+        def interrupt_after_terminal_worksheet(*args: object, **kwargs: object) -> str:
+            assert (output / "worksheet.md").read_bytes() != old_worksheet
+            assert (output / "report.html").read_bytes() == old_report
+            raise SystemExit("forced stop after worksheet replacement")
+
+        with (
+            patch.object(
+                reporting,
+                "_render_report",
+                side_effect=interrupt_after_terminal_worksheet,
+            ),
+            pytest.raises(SystemExit, match="forced stop after worksheet replacement"),
+        ):
+            logger.finalize_artifacts()
+
+        payload = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+        assert payload["status"] == "running"
+        assert "report.html" not in payload["artifacts"]
+        assert "worksheet.md" not in payload["artifacts"]
+        assert (output / "worksheet.md").read_bytes() != old_worksheet
+        assert (output / "report.html").read_bytes() == old_report
+        assert verify_manifest(output) == []
+
+        record = ArtifactRepository(root).get_direct_child(output)
+        assert record is not None
+        assert not record.report_available
+        assert not record.worksheet_available
+
+        write_manifest(
+            root,
+            scenario_id="batch.all",
+            status="stopped",
+            config={"batch_name": "all", "plot": True},
+            run_kind="comparison_batch",
+        )
+        assert verify_terminal_batch_output(root, expected_status="stopped") == []
+        assert verify_manifest(output) == []
+
+
+def test_abrupt_running_report_retry_with_previously_trusted_documents_is_verifiable() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        output = Path(tmp) / "run"
+        logger = RunLogger(
+            "lab01_msd",
+            {"sim_time": 1.0},
+            config_path="configs/lab01_msd/default.yaml",
+            output_dir=output,
+            publish_parent_index=False,
+        )
+        logger.save_with_artifacts(
+            summary={"lab_name": "lab01_msd", "duration": 1.0, "samples": 1},
+            finalize=False,
+        )
+        write_run_report(
+            output,
+            update_index=False,
+            completion_status="running",
+        )
+        logger._write_manifest(status="running")
+        trusted = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+        assert {"report.html", "worksheet.md"} <= set(trusted["artifacts"])
+        old_worksheet = (output / "worksheet.md").read_bytes()
+
+        (output / "notes.md").write_text("changed retry evidence\n", encoding="utf-8")
+        logger._write_manifest(status="running")
+        assert verify_manifest(output) == []
+
+        with (
+            patch.object(
+                reporting,
+                "_render_report",
+                side_effect=SystemExit("forced stop during running report repair"),
+            ),
+            pytest.raises(SystemExit, match="forced stop during running report repair"),
+        ):
+            logger.finalize_artifacts()
+
+        interrupted = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+        assert interrupted["status"] == "running"
+        assert "report.html" not in interrupted["artifacts"]
+        assert "worksheet.md" not in interrupted["artifacts"]
+        assert (output / "worksheet.md").read_bytes() != old_worksheet
+        assert verify_manifest(output) == []
+
+
+def test_failed_report_deferral_never_enters_fallback_document_rewrite() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        output = Path(tmp) / "run"
+        logger = RunLogger(
+            "lab01_msd",
+            {"sim_time": 1.0},
+            config_path="configs/lab01_msd/default.yaml",
+            output_dir=output,
+            publish_parent_index=False,
+        )
+        logger.save_with_artifacts(
+            summary={"lab_name": "lab01_msd", "duration": 1.0, "samples": 1},
+            finalize=False,
+        )
+        write_run_report(output, update_index=False, completion_status="running")
+        logger._write_manifest(status="running")
+        original_manifest = logger._write_manifest
+        before_report = (output / "report.html").read_bytes()
+        before_worksheet = (output / "worksheet.md").read_bytes()
+
+        def reject_deferral(
+            *,
+            status: str,
+            untrusted_artifacts: tuple[str, ...] = (),
+        ) -> Path:
+            if untrusted_artifacts:
+                raise OSError("injected deferral failure")
+            return original_manifest(
+                status=status,
+                untrusted_artifacts=untrusted_artifacts,
+            )
+
+        with (
+            patch.object(logger, "_write_manifest", side_effect=reject_deferral),
+            patch("mclab.sim.logging.write_run_report") as rewrite,
+            pytest.raises(OSError, match="injected deferral failure"),
+        ):
+            logger.finalize_artifacts()
+
+        rewrite.assert_not_called()
+        assert (output / "report.html").read_bytes() == before_report
+        assert (output / "worksheet.md").read_bytes() == before_worksheet
+        assert verify_manifest(output) == []
+
+
+def test_abrupt_concrete_batch_report_rewrite_remains_untrusted() -> None:
+    batch_name = "lab01_msd_compare"
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp) / "course"
+        root.mkdir()
+        output = root / "concrete"
+
+        with (
+            patch.dict(batch.BATCH_SETS, {batch_name: ()}, clear=False),
+            patch("mclab.batch.write_outputs_index"),
+            patch.object(
+                batch,
+                "_render_batch_report",
+                side_effect=SystemExit("forced stop after batch worksheet replacement"),
+            ),
+            pytest.raises(SystemExit, match="forced stop after batch worksheet replacement"),
+        ):
+            batch.run_batch(
+                batch_name,
+                output_dir=output,
+                plot=False,
+                publish_parent_index=False,
+            )
+
+        payload = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+        assert payload["status"] == "running"
+        assert "report.html" not in payload["artifacts"]
+        assert "worksheet.md" not in payload["artifacts"]
+        assert (output / "worksheet.md").is_file()
+        assert not (output / "report.html").exists()
+        assert verify_manifest(output) == []
+        record = ArtifactRepository(root).get_direct_child(output)
+        assert record is not None
+        assert not record.report_available
+        assert not record.worksheet_available
+
+        write_manifest(
+            root,
+            scenario_id="batch.all",
+            status="stopped",
+            config={"batch_name": "all", "plot": False},
+            run_kind="comparison_batch",
+        )
+        assert verify_terminal_batch_output(root, expected_status="stopped") == []
+        assert verify_manifest(output) == []
+
+
+def test_authenticated_settlement_removes_interrupted_root_report_documents() -> None:
+    with tempfile.TemporaryDirectory() as tmp, patch.dict(
+        os.environ,
+        {"MCLAB_DATA_DIR": str(Path(tmp) / "data")},
+    ):
+        output = create_all_compare_output()
+        token = read_all_compare_handoff(output)
+
+        with (
+            patch("mclab.batch.list_batch_sets", return_value=[]),
+            patch("mclab.batch.write_outputs_index"),
+            patch.object(
+                batch,
+                "_render_all_batches_report",
+                side_effect=SystemExit("forced stop after course worksheet replacement"),
+            ),
+            pytest.raises(SystemExit, match="forced stop after course worksheet replacement"),
+        ):
+            batch.run_all_batches(
+                output_dir=output,
+                plot=False,
+                handoff_token=token,
+            )
+
+        running = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+        assert running["status"] == "running"
+        assert "report.html" not in running["artifacts"]
+        assert "worksheet.md" not in running["artifacts"]
+        assert (output / "worksheet.md").is_file()
+        assert not (output / "report.html").exists()
+        assert verify_manifest(output) == []
+        running_record = ArtifactRepository(output.parent).get_direct_child(output)
+        assert running_record is not None
+        assert not running_record.report_available
+        assert not running_record.worksheet_available
+
+        assert settle_all_compare_output(output, token, "stopped") == "stopped"
+        assert not (output / "report.html").exists()
+        assert not (output / "worksheet.md").exists()
+        assert verify_terminal_batch_output(output, expected_status="stopped") == []
+
+
+def test_authenticated_settlement_removes_manifest_listed_digest_mismatch_pair() -> None:
+    with tempfile.TemporaryDirectory() as tmp, patch.dict(
+        os.environ,
+        {"MCLAB_DATA_DIR": str(Path(tmp) / "data")},
+    ):
+        output = create_all_compare_output()
+        token = read_all_compare_handoff(output)
+        assert claim_all_compare_handoff(output, token)
+        report = output / "report.html"
+        worksheet = output / "worksheet.md"
+        report.write_text("trusted running report", encoding="utf-8")
+        worksheet.write_text("trusted running worksheet", encoding="utf-8")
+        write_manifest(
+            output,
+            scenario_id="batch.all",
+            status="running",
+            config={"batch_name": "all", "plot": False},
+            run_kind="comparison_batch",
+        )
+        published = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+        assert {"report.html", "worksheet.md"} <= set(published["artifacts"])
+        worksheet.write_text("partial prospective terminal worksheet", encoding="utf-8")
+
+        assert settle_all_compare_output(output, token, "stopped") == "stopped"
+        assert not report.exists()
+        assert not worksheet.exists()
+        assert verify_terminal_batch_output(output, expected_status="stopped") == []
+
+
+def test_authenticated_settlement_terminal_publication_failure_remains_retryable() -> None:
+    with tempfile.TemporaryDirectory() as tmp, patch.dict(
+        os.environ,
+        {"MCLAB_DATA_DIR": str(Path(tmp) / "data")},
+    ):
+        output = create_all_compare_output()
+        token = read_all_compare_handoff(output)
+        assert claim_all_compare_handoff(output, token)
+        report = output / "report.html"
+        worksheet = output / "worksheet.md"
+        report.write_text("partial prospective terminal report", encoding="utf-8")
+        worksheet.write_text("partial prospective terminal worksheet", encoding="utf-8")
+
+        with (
+            patch(
+                "mclab.application.artifacts.write_manifest",
+                side_effect=OSError("injected terminal publication failure"),
+            ),
+            pytest.raises(RuntimeError, match="injected terminal publication failure"),
+        ):
+            settle_all_compare_output(output, token, "stopped")
+
+        running = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+        assert running["status"] == "running"
+        assert not report.exists()
+        assert not worksheet.exists()
+        assert not (output / ".mclab-batch-handoff").exists()
+        assert verify_manifest(output) == []
+
+        assert settle_all_compare_output(output, token, "stopped") == "stopped"
+        assert verify_terminal_batch_output(output, expected_status="stopped") == []
+
+
+def test_authenticated_settlement_rejects_root_swap_before_terminal_publication() -> None:
+    with tempfile.TemporaryDirectory() as tmp, patch.dict(
+        os.environ,
+        {"MCLAB_DATA_DIR": str(Path(tmp) / "data")},
+    ):
+        output = create_all_compare_output()
+        token = read_all_compare_handoff(output)
+        detached = output.with_name(f"{output.name}-detached")
+        impostor = output.with_name(f"{output.name}-impostor")
+        relocated_impostor = output.with_name(f"{output.name}-relocated-impostor")
+        impostor.mkdir()
+        sentinel = impostor / "sentinel.txt"
+        sentinel.write_text("must remain untouched", encoding="utf-8")
+        original_manifest_writer = write_manifest
+        swapped = False
+
+        def swap_before_terminal_publication(
+            *args: object,
+            **kwargs: object,
+        ) -> Path:
+            nonlocal swapped
+            assert kwargs.get("expected_root_identity")
+            output.rename(detached)
+            impostor.rename(output)
+            swapped = True
+            return original_manifest_writer(*args, **kwargs)
+
+        with (
+            patch(
+                "mclab.application.artifacts.write_manifest",
+                side_effect=swap_before_terminal_publication,
+            ),
+            pytest.raises(RuntimeError),
+        ):
+            settle_all_compare_output(output, token, "stopped")
+
+        if swapped:
+            assert (output / "sentinel.txt").read_text(encoding="utf-8") == (
+                "must remain untouched"
+            )
+            assert not (output / "manifest.json").exists()
+            detached_manifest = json.loads(
+                (detached / "manifest.json").read_text(encoding="utf-8")
+            )
+            assert detached_manifest["status"] == "running"
+            assert verify_manifest(detached) == []
+            output.rename(relocated_impostor)
+            detached.rename(output)
+            preserved_impostor = relocated_impostor
+        else:
+            running_manifest = json.loads(
+                (output / "manifest.json").read_text(encoding="utf-8")
+            )
+            assert running_manifest["status"] == "running"
+            assert verify_manifest(output) == []
+            preserved_impostor = impostor
+
+        assert settle_all_compare_output(output, token, "stopped") == "stopped"
+        assert verify_terminal_batch_output(output, expected_status="stopped") == []
+        assert (preserved_impostor / "sentinel.txt").read_text(encoding="utf-8") == (
+            "must remain untouched"
+        )
+
+
+def test_authenticated_settlement_rejects_root_swap_before_terminal_verification() -> None:
+    with tempfile.TemporaryDirectory() as tmp, patch.dict(
+        os.environ,
+        {"MCLAB_DATA_DIR": str(Path(tmp) / "data")},
+    ):
+        output = create_all_compare_output()
+        token = read_all_compare_handoff(output)
+        detached = output.with_name(f"{output.name}-detached")
+        impostor = output.with_name(f"{output.name}-impostor")
+        relocated_impostor = output.with_name(f"{output.name}-relocated-impostor")
+        impostor.mkdir()
+        write_manifest(
+            impostor,
+            scenario_id="batch.all",
+            status="running",
+            config={"batch_name": "all", "plot": True},
+            run_kind="comparison_batch",
+        )
+        write_manifest(
+            impostor,
+            scenario_id="batch.all",
+            status="stopped",
+            config={"batch_name": "all", "plot": True},
+            run_kind="comparison_batch",
+        )
+        assert verify_terminal_batch_output(impostor, expected_status="stopped") == []
+        original_manifest_writer = write_manifest
+        swapped = False
+
+        def swap_after_terminal_publication(
+            *args: object,
+            **kwargs: object,
+        ) -> Path:
+            nonlocal swapped
+            result = original_manifest_writer(*args, **kwargs)
+            output.rename(detached)
+            impostor.rename(output)
+            swapped = True
+            return result
+
+        with (
+            patch(
+                "mclab.application.artifacts.write_manifest",
+                side_effect=swap_after_terminal_publication,
+            ),
+            pytest.raises(RuntimeError),
+        ):
+            settle_all_compare_output(output, token, "stopped")
+
+        if swapped:
+            assert verify_terminal_batch_output(detached, expected_status="stopped") == []
+            assert verify_terminal_batch_output(output, expected_status="stopped") == []
+            output.rename(relocated_impostor)
+            detached.rename(output)
+            preserved_impostor = relocated_impostor
+        else:
+            assert verify_terminal_batch_output(output, expected_status="stopped") == []
+            preserved_impostor = impostor
+
+        assert settle_all_compare_output(output, token, "stopped") == "stopped"
+        assert verify_terminal_batch_output(output, expected_status="stopped") == []
+        assert verify_terminal_batch_output(
+            preserved_impostor,
+            expected_status="stopped",
+        ) == []
 
 
 def test_batch_parent_index_observes_terminal_manifest() -> None:
@@ -71,7 +561,10 @@ def test_batch_parent_index_observes_terminal_manifest() -> None:
             return target / "index.html"
 
         def write_manifest(*_args: object, **kwargs: object) -> Path:
-            events.append(f"manifest:{kwargs['status']}")
+            deferred = kwargs.get("untrusted_artifacts", ())
+            assert deferred in ((), ("report.html", "worksheet.md"))
+            trust = "deferred" if deferred else "trusted"
+            events.append(f"manifest:{kwargs['status']}:{trust}")
             return output / "manifest.json"
 
         with (
@@ -87,13 +580,278 @@ def test_batch_parent_index_observes_terminal_manifest() -> None:
 
     assert result == output
     assert events == [
-        "manifest:running",
+        "manifest:running:trusted",
         "index:local",
-        "manifest:running",
+        "manifest:running:deferred",
         "report",
-        "manifest:completed",
+        "manifest:completed:trusted",
         "index:parent",
     ]
+
+
+def test_nested_full_course_publishes_exactly_seven_indexes() -> None:
+    names = tuple(f"unit_{index}" for index in range(5))
+    index_paths: list[Path] = []
+
+    def write_index(path: str | Path) -> Path:
+        target = Path(path)
+        index_paths.append(target)
+        return target / "index.html"
+
+    with tempfile.TemporaryDirectory() as tmp:
+        output = Path(tmp).resolve() / "all"
+        with (
+            patch.dict(batch.BATCH_SETS, {name: () for name in names}, clear=True),
+            patch("mclab.batch.list_batch_sets", return_value=list(names)),
+            patch("mclab.batch.write_outputs_index", side_effect=write_index),
+            patch("mclab.batch.write_batch_report"),
+            patch("mclab.batch.write_all_batches_report"),
+        ):
+            result = batch.run_all_batches(output_dir=output, plot=False)
+
+    assert result == output
+    assert index_paths == [
+        *(output / name for name in names),
+        output,
+        output.parent,
+    ]
+
+
+def test_nested_batch_flushes_local_index_before_terminal_error() -> None:
+    scenarios = (
+        batch.BatchScenario("first", "lab01", "first.yaml"),
+        batch.BatchScenario("second", "lab01", "second.yaml"),
+    )
+    events: list[str] = []
+
+    def runner(_config: dict[str, object], **kwargs: object) -> Path:
+        if Path(kwargs["config_path"]).name == "second.yaml":
+            raise RuntimeError("scenario failed")
+        return Path(kwargs["output_dir"])
+
+    def write_manifest(*_args: object, **kwargs: object) -> Path:
+        deferred = tuple(kwargs.get("untrusted_artifacts", ()))
+        assert deferred in ((), ("report.html", "worksheet.md"))
+        trust = "deferred" if deferred else "trusted"
+        events.append(f"manifest:{kwargs['status']}:{trust}")
+        return Path("manifest.json")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        output = Path(tmp).resolve() / "batch"
+        with (
+            patch.dict(batch.BATCH_SETS, {"unit": scenarios}, clear=False),
+            patch.dict(batch.LAB_RUNNERS, {"lab01": runner}, clear=False),
+            patch("mclab.batch.load_config", return_value={}),
+            patch(
+                "mclab.batch.write_outputs_index",
+                side_effect=lambda path: events.append(f"index:{Path(path).name}"),
+            ),
+            patch(
+                "mclab.batch.write_batch_report",
+                side_effect=lambda *_args, **kwargs: events.append(
+                    f"report:{kwargs.get('completion_status')}"
+                ),
+            ),
+            patch("mclab.application.artifacts.write_manifest", side_effect=write_manifest),
+            pytest.raises(RuntimeError, match="scenario failed"),
+        ):
+            batch.run_batch(
+                "unit",
+                output_dir=output,
+                plot=False,
+                publish_parent_index=False,
+            )
+
+    assert events == [
+        "manifest:running:trusted",
+        "index:batch",
+        "manifest:running:deferred",
+        "report:error",
+        "manifest:running:trusted",
+        "manifest:error:trusted",
+    ]
+
+
+@pytest.mark.parametrize("course", [False, True], ids=["concrete", "all"])
+def test_batch_recovery_never_rewrites_documents_when_deferral_fails(
+    course: bool,
+) -> None:
+    publications: list[tuple[str, tuple[str, ...]]] = []
+
+    def reject_deferral(*_args: object, **kwargs: object) -> Path:
+        status = str(kwargs["status"])
+        deferred = tuple(kwargs.get("untrusted_artifacts", ()))
+        publications.append((status, deferred))
+        if deferred:
+            raise OSError("injected batch document deferral failure")
+        return Path("manifest.json")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        output = Path(tmp).resolve() / ("all" if course else "batch")
+        if course:
+            with (
+                patch("mclab.batch.list_batch_sets", return_value=[]),
+                patch("mclab.batch.write_outputs_index"),
+                patch("mclab.batch.write_all_batches_report") as report,
+                patch(
+                    "mclab.application.artifacts.write_manifest",
+                    side_effect=reject_deferral,
+                ),
+                pytest.raises(
+                    OSError,
+                    match="injected batch document deferral failure",
+                ),
+            ):
+                batch.run_all_batches(output_dir=output, plot=False)
+        else:
+            with (
+                patch.dict(batch.BATCH_SETS, {"unit": ()}),
+                patch("mclab.batch.write_outputs_index"),
+                patch("mclab.batch.write_batch_report") as report,
+                patch(
+                    "mclab.application.artifacts.write_manifest",
+                    side_effect=reject_deferral,
+                ),
+                pytest.raises(
+                    OSError,
+                    match="injected batch document deferral failure",
+                ),
+            ):
+                batch.run_batch("unit", output_dir=output, plot=False)
+
+    report.assert_not_called()
+    assert publications == [
+        ("running", ()),
+        ("running", ("report.html", "worksheet.md")),
+        ("running", ("report.html", "worksheet.md")),
+    ]
+
+
+def test_partial_batch_index_links_the_completed_scenario() -> None:
+    scenarios = (
+        batch.BatchScenario("first scenario", "lab01", "first.yaml"),
+        batch.BatchScenario("second scenario", "lab01", "second.yaml"),
+    )
+
+    def runner(config: dict[str, object], **kwargs: object) -> Path:
+        config_path = Path(kwargs["config_path"])
+        if config_path.name == "second.yaml":
+            raise RuntimeError("scenario failed")
+        output = Path(kwargs["output_dir"])
+        output.mkdir(parents=True)
+        (output / "summary.json").write_text(
+            '{"lab_name":"lab01_msd","config_name":"first"}',
+            encoding="utf-8",
+        )
+        (output / "report.html").write_text("<html></html>", encoding="utf-8")
+        write_manifest(
+            output,
+            scenario_id="lab01.default",
+            status="completed",
+            config=config,
+            config_path=config_path,
+        )
+        return output
+
+    def error_report(output: Path, *_args: object, **_kwargs: object) -> Path:
+        (output / "report.html").write_text("<html>error</html>", encoding="utf-8")
+        (output / "worksheet.md").write_text("# Error\n", encoding="utf-8")
+        return output / "report.html"
+
+    with tempfile.TemporaryDirectory() as tmp:
+        output = Path(tmp).resolve() / "batch"
+        with (
+            patch.dict(batch.BATCH_SETS, {"unit": scenarios}, clear=False),
+            patch.dict(batch.LAB_RUNNERS, {"lab01": runner}, clear=False),
+            patch("mclab.batch.load_config", return_value={}),
+            patch("mclab.batch.write_batch_report", side_effect=error_report),
+            pytest.raises(RuntimeError, match="scenario failed"),
+        ):
+            batch.run_batch(
+                "unit",
+                output_dir=output,
+                plot=False,
+                publish_parent_index=False,
+            )
+
+        index = (output / "index.html").read_text(encoding="utf-8")
+        manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+
+    assert "first_scenario/report.html" in index
+    assert "second_scenario" not in index
+    assert manifest["status"] == "error"
+
+
+def test_partial_index_failure_does_not_mask_the_scenario_error() -> None:
+    scenario = batch.BatchScenario("broken", "lab01", "broken.yaml")
+
+    def runner(_config: dict[str, object], **_kwargs: object) -> Path:
+        raise RuntimeError("scenario failed")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        with (
+            patch.dict(batch.BATCH_SETS, {"unit": (scenario,)}, clear=True),
+            patch.dict(batch.LAB_RUNNERS, {"lab01": runner}, clear=True),
+            patch("mclab.batch.load_config", return_value={}),
+            patch("mclab.batch.write_outputs_index", side_effect=OSError("index failed")),
+            patch("mclab.batch.write_batch_report"),
+            patch("mclab.batch.LOGGER.warning") as warning,
+            pytest.raises(RuntimeError, match="scenario failed"),
+        ):
+            batch.run_batch(
+                "unit",
+                output_dir=Path(tmp).resolve() / "batch",
+                plot=False,
+                publish_parent_index=False,
+            )
+
+    warning.assert_called_once()
+
+
+def test_partial_course_index_links_the_completed_batch() -> None:
+    names = ("lab01_msd_compare", "lab02_pid_compare")
+
+    def run_batch(batch_name: str, **kwargs: object) -> Path:
+        if batch_name == names[1]:
+            raise RuntimeError("batch failed")
+        output = Path(kwargs["output_dir"])
+        output.mkdir(parents=True)
+        (output / "summary.json").write_text(
+            json.dumps({"lab_name": "batch", "config_name": batch_name}),
+            encoding="utf-8",
+        )
+        (output / "report.html").write_text("<html></html>", encoding="utf-8")
+        (output / "worksheet.md").write_text("# Batch\n", encoding="utf-8")
+        write_manifest(
+            output,
+            scenario_id=f"batch.{batch_name}",
+            status="completed",
+            config={"batch_name": batch_name, "plot": False},
+            run_kind="comparison_batch",
+        )
+        return output
+
+    def error_report(output: Path, *_args: object, **_kwargs: object) -> Path:
+        (output / "report.html").write_text("<html>error</html>", encoding="utf-8")
+        (output / "worksheet.md").write_text("# Error\n", encoding="utf-8")
+        return output / "report.html"
+
+    with tempfile.TemporaryDirectory() as tmp:
+        output = Path(tmp).resolve() / "course"
+        with (
+            patch("mclab.batch.list_batch_sets", return_value=list(names)),
+            patch("mclab.batch.run_batch", side_effect=run_batch),
+            patch("mclab.batch.write_all_batches_report", side_effect=error_report),
+            pytest.raises(RuntimeError, match="batch failed"),
+        ):
+            batch.run_all_batches(output_dir=output, plot=False)
+
+        index = (output / "index.html").read_text(encoding="utf-8")
+        manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+
+    assert f"{names[0]}/report.html" in index
+    assert names[1] not in index
+    assert manifest["status"] == "error"
 
 
 def test_run_parent_index_failure_cannot_reopen_terminal_publication() -> None:
@@ -198,6 +956,56 @@ def test_terminal_run_refuses_report_and_plot_rewrites_without_byte_changes() ->
             )
 
         assert _tree_bytes(output) == before
+
+
+@pytest.mark.parametrize(
+    ("write_report", "expected_calls"),
+    [(True, 1), (False, 0)],
+    ids=["standalone-default", "managed-finalization"],
+)
+def test_plot_report_refresh_is_default_preserving_and_can_be_deferred(
+    write_report: bool,
+    expected_calls: int,
+) -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        output = Path(tmp) / "run"
+        logger = RunLogger(
+            "lab01_msd",
+            {},
+            output_dir=output,
+            publish_parent_index=False,
+        )
+        logger.save_with_artifacts(
+            summary={"lab_name": "lab01_msd", "duration": 1.0, "samples": 1},
+            finalize=False,
+        )
+
+        with patch("mclab.sim.plotting.write_run_report") as write_report_mock:
+            args = (
+                output,
+                [{"time": 0.0, "position": 0.0}],
+                [("position.png", "Position", "x", ("position",))],
+            )
+            if write_report:
+                save_time_series_plots(*args)
+            else:
+                save_time_series_plots(*args, write_report=False)
+
+        assert (output / "plots" / "position.png").read_bytes().startswith(b"\x89PNG")
+        assert write_report_mock.call_count == expected_calls
+        if expected_calls:
+            write_report_mock.assert_called_once_with(output, update_index=False)
+        else:
+            logger.finalize_artifacts()
+            assert verify_manifest(output) == []
+            manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+            assert manifest["status"] == "completed"
+            assert {"report.html", "worksheet.md", "plots/position.png"} <= set(
+                manifest["artifacts"]
+            )
+            assert "plots/position.png" in (output / "report.html").read_text(
+                encoding="utf-8"
+            )
 
 
 @pytest.mark.skipif(os.name == "nt", reason="symlink fixture is POSIX-only")
@@ -496,13 +1304,15 @@ def test_publication_does_not_misclassify_inventory_io_as_busy() -> None:
 
 
 def test_concrete_completed_publication_failure_recovers_running_not_error() -> None:
-    statuses: list[str] = []
+    publications: list[tuple[str, tuple[str, ...]]] = []
     with tempfile.TemporaryDirectory() as tmp:
         output = Path(tmp) / "batch"
 
         def manifest(*_args: object, **kwargs: object) -> Path:
             status = str(kwargs["status"])
-            statuses.append(status)
+            publications.append(
+                (status, tuple(kwargs.get("untrusted_artifacts", ())))
+            )
             if status == "completed":
                 raise OSError("completed publication failed")
             return output / "manifest.json"
@@ -516,18 +1326,24 @@ def test_concrete_completed_publication_failure_recovers_running_not_error() -> 
         ):
             batch.run_batch("unit", output_dir=output, plot=False)
 
-    assert "error" not in statuses
-    assert statuses[-2:] == ["completed", "running"]
+    assert all(status != "error" for status, _untrusted in publications)
+    assert publications[-3:] == [
+        ("completed", ()),
+        ("running", ("report.html", "worksheet.md")),
+        ("running", ()),
+    ]
 
 
 def test_all_completed_publication_failure_recovers_running_not_error() -> None:
-    statuses: list[str] = []
+    publications: list[tuple[str, tuple[str, ...]]] = []
     with tempfile.TemporaryDirectory() as tmp:
         output = Path(tmp) / "all"
 
         def manifest(*_args: object, **kwargs: object) -> Path:
             status = str(kwargs["status"])
-            statuses.append(status)
+            publications.append(
+                (status, tuple(kwargs.get("untrusted_artifacts", ())))
+            )
             if status == "completed":
                 raise OSError("completed publication failed")
             return output / "manifest.json"
@@ -541,8 +1357,12 @@ def test_all_completed_publication_failure_recovers_running_not_error() -> None:
         ):
             batch.run_all_batches(output_dir=output, plot=False)
 
-    assert "error" not in statuses
-    assert statuses[-2:] == ["completed", "running"]
+    assert all(status != "error" for status, _untrusted in publications)
+    assert publications[-3:] == [
+        ("completed", ()),
+        ("running", ("report.html", "worksheet.md")),
+        ("running", ()),
+    ]
 
 
 @pytest.mark.parametrize("repair_fails", [False, True], ids=["repair-succeeds", "repair-fails"])
@@ -567,12 +1387,19 @@ def test_run_completed_publication_failure_never_trusts_stale_complete_documents
         prospective_complete_written = False
         terminal_failed = False
 
-        def fail_completed_manifest(*, status: str) -> Path:
+        def fail_completed_manifest(
+            *,
+            status: str,
+            untrusted_artifacts: tuple[str, ...] = (),
+        ) -> Path:
             nonlocal terminal_failed
             if status == "completed":
                 terminal_failed = True
                 raise OSError("completed publication failed")
-            return original_manifest(status=status)
+            return original_manifest(
+                status=status,
+                untrusted_artifacts=untrusted_artifacts,
+            )
 
         def report_with_repair_fault(
             output_path: str | Path,
@@ -609,6 +1436,84 @@ def test_run_completed_publication_failure_never_trusts_stale_complete_documents
         _assert_running_recovery_snapshot(output, repaired=not repair_fails)
 
 
+def test_run_successful_fallback_refreshes_documents_after_producer_retry() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        output = Path(tmp) / "run"
+        logger = RunLogger(
+            "lab01_msd",
+            {"sim_time": 1.0},
+            config_path="configs/lab01_msd/default.yaml",
+            output_dir=output,
+            publish_parent_index=False,
+        )
+        original_manifest = logger._write_manifest
+        terminal_failed = False
+
+        def fail_first_completed_manifest(
+            *,
+            status: str,
+            untrusted_artifacts: tuple[str, ...] = (),
+        ) -> Path:
+            nonlocal terminal_failed
+            if status == "completed" and not terminal_failed:
+                terminal_failed = True
+                raise OSError("completed publication failed")
+            return original_manifest(
+                status=status,
+                untrusted_artifacts=untrusted_artifacts,
+            )
+
+        with (
+            patch.object(
+                logger,
+                "_write_manifest",
+                side_effect=fail_first_completed_manifest,
+            ),
+            pytest.raises(OSError, match="completed publication failed"),
+        ):
+            logger.save_with_artifacts(
+                summary={"lab_name": "lab01_msd", "duration": 1.0, "samples": 1},
+                notes="OLD_NOTE",
+            )
+
+        _assert_running_recovery_snapshot(output, repaired=True)
+        for name in ("report.html", "worksheet.md"):
+            assert "OLD_NOTE" in (output / name).read_text(encoding="utf-8")
+
+        logger.save_with_artifacts(
+            summary={"lab_name": "lab01_msd", "duration": 2.0, "samples": 2},
+            notes="NEW_NOTE",
+            finalize=False,
+        )
+
+        assert verify_manifest(output) == []
+        manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+        assert manifest["status"] == "running"
+        assert {"report.html", "worksheet.md"} <= set(manifest["artifacts"])
+        for name in ("report.html", "worksheet.md"):
+            text = (output / name).read_text(encoding="utf-8")
+            assert "NEW_NOTE" in text
+            assert "OLD_NOTE" not in text
+
+        logger.save_with_artifacts(
+            summary={"lab_name": "lab01_msd", "duration": 3.0, "samples": 3},
+            notes="SECOND_RETRY",
+            finalize=False,
+        )
+
+        assert verify_manifest(output) == []
+        second_manifest = json.loads(
+            (output / "manifest.json").read_text(encoding="utf-8")
+        )
+        assert second_manifest["status"] == "running"
+        assert {"report.html", "worksheet.md"} <= set(second_manifest["artifacts"])
+        for name in ("report.html", "worksheet.md"):
+            text = (output / name).read_text(encoding="utf-8")
+            assert "SECOND_RETRY" in text
+            assert "NEW_NOTE" not in text
+            assert "OLD_NOTE" not in text
+
+
 @pytest.mark.parametrize(
     "retry_preflight_fails",
     [False, True],
@@ -637,14 +1542,21 @@ def test_run_retry_never_seals_stale_complete_documents_under_running_manifest(
         running_reports_after_failure = 0
         boundaries: list[dict[str, object]] = []
 
-        def manifest_with_first_terminal_failure(*, status: str) -> Path:
+        def manifest_with_first_terminal_failure(
+            *,
+            status: str,
+            untrusted_artifacts: tuple[str, ...] = (),
+        ) -> Path:
             nonlocal completed_attempts, first_terminal_failed
             if status == "completed":
                 completed_attempts += 1
                 if completed_attempts == 1:
                     first_terminal_failed = True
                     raise OSError("first completed publication failed")
-            manifest = original_manifest(status=status)
+            manifest = original_manifest(
+                status=status,
+                untrusted_artifacts=untrusted_artifacts,
+            )
             boundaries.append(
                 _strict_manifest_boundary(
                     output,
@@ -751,12 +1663,19 @@ def test_save_with_artifacts_retry_does_not_publish_stale_docs_before_first_prod
         prospective_complete_written = False
         boundaries: list[dict[str, object]] = []
 
-        def manifest_with_terminal_failure(*, status: str) -> Path:
+        def manifest_with_terminal_failure(
+            *,
+            status: str,
+            untrusted_artifacts: tuple[str, ...] = (),
+        ) -> Path:
             nonlocal first_terminal_failed
             if status == "completed":
                 first_terminal_failed = True
                 raise OSError("completed publication failed")
-            manifest = original_manifest(status=status)
+            manifest = original_manifest(
+                status=status,
+                untrusted_artifacts=untrusted_artifacts,
+            )
             boundaries.append(
                 _strict_manifest_boundary(
                     output,
@@ -811,7 +1730,14 @@ def test_save_with_artifacts_retry_does_not_publish_stale_docs_before_first_prod
                 )
 
         _assert_running_recovery_snapshot(output, repaired=False)
-        assert not any(boundary["after_failure"] for boundary in boundaries)
+        after_failure = [
+            boundary for boundary in boundaries if boundary["after_failure"]
+        ]
+        assert [boundary["status"] for boundary in after_failure] == ["running"]
+        deferred = after_failure[0]
+        assert deferred["reason"] == CompletionReason.RUN_NOT_COMPLETED
+        assert not deferred["report_available"]
+        assert not deferred["worksheet_available"]
 
 
 @pytest.mark.parametrize(
@@ -838,12 +1764,19 @@ def test_save_with_artifacts_finalize_false_retry_repairs_before_running_manifes
         prospective_complete_written = False
         boundaries: list[dict[str, object]] = []
 
-        def manifest_with_terminal_failure(*, status: str) -> Path:
+        def manifest_with_terminal_failure(
+            *,
+            status: str,
+            untrusted_artifacts: tuple[str, ...] = (),
+        ) -> Path:
             nonlocal first_terminal_failed
             if status == "completed":
                 first_terminal_failed = True
                 raise OSError("completed publication failed")
-            manifest = original_manifest(status=status)
+            manifest = original_manifest(
+                status=status,
+                untrusted_artifacts=untrusted_artifacts,
+            )
             boundaries.append(
                 _strict_manifest_boundary(
                     output,
@@ -920,11 +1853,37 @@ def test_save_with_artifacts_finalize_false_retry_repairs_before_running_manifes
             boundary for boundary in boundaries if boundary["after_failure"]
         ]
         if retry_repair_fails:
-            assert after_failure == []
+            assert [boundary["status"] for boundary in after_failure] == [
+                "running",
+                "running",
+            ]
+            assert all(
+                not boundary["report_available"]
+                and not boundary["worksheet_available"]
+                for boundary in after_failure
+            )
+            assert all(
+                boundary["reason"] == CompletionReason.RUN_NOT_COMPLETED
+                for boundary in after_failure
+            )
             _assert_running_recovery_snapshot(output, repaired=False)
         else:
-            assert [boundary["status"] for boundary in after_failure] == ["running"]
-            boundary = after_failure[0]
+            assert [boundary["status"] for boundary in after_failure] == [
+                "running",
+                "running",
+                "running",
+            ]
+            deferred = after_failure[:2]
+            assert all(
+                not boundary["report_available"]
+                and not boundary["worksheet_available"]
+                for boundary in deferred
+            )
+            assert all(
+                boundary["reason"] == CompletionReason.RUN_NOT_COMPLETED
+                for boundary in deferred
+            )
+            boundary = after_failure[-1]
             assert boundary["reason"] == CompletionReason.RUN_NOT_COMPLETED
             assert boundary["report_available"]
             assert boundary["worksheet_available"]
@@ -1403,8 +2362,16 @@ def _assert_post_write_error_recovery(
 ) -> None:
     after_failure = [boundary for boundary in boundaries if boundary["after_failure"]]
     if repaired:
-        assert [boundary["status"] for boundary in after_failure] == ["running", "error"]
-        for boundary in after_failure:
+        assert [boundary["status"] for boundary in after_failure] == [
+            "running",
+            "running",
+            "error",
+        ]
+        deferred = after_failure[0]
+        assert deferred["reason"] == CompletionReason.RUN_NOT_COMPLETED
+        assert not deferred["report_available"]
+        assert not deferred["worksheet_available"]
+        for boundary in after_failure[1:]:
             assert boundary["reason"] == CompletionReason.RUN_NOT_COMPLETED
             assert boundary["report_available"]
             assert boundary["worksheet_available"]
@@ -1417,7 +2384,11 @@ def _assert_post_write_error_recovery(
                 boundary["worksheet_text"]
             )
     else:
-        assert after_failure == []
+        assert [boundary["status"] for boundary in after_failure] == ["running"]
+        deferred = after_failure[0]
+        assert deferred["reason"] == CompletionReason.RUN_NOT_COMPLETED
+        assert not deferred["report_available"]
+        assert not deferred["worksheet_available"]
         assert not any(boundary["status"] == "error" for boundary in boundaries)
 
     record = _strict_output_record(output)

@@ -1071,14 +1071,7 @@ def _run_report_completion(
 
 
 def _report_artifact_record(output: Path) -> ArtifactRecord | None:
-    return next(
-        (
-            item
-            for item in ArtifactRepository(output.parent).list_runs()
-            if item.path.name == output.name
-        ),
-        None,
-    )
+    return ArtifactRepository(output.parent).get_direct_child(output)
 
 
 def assert_run_artifacts_mutable(output_path: str | Path) -> ArtifactRecord | None:

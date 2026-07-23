@@ -136,6 +136,58 @@ WORKFLOW_STEP_POLICIES = (
     ),
     WorkflowStepPolicy(
         DESKTOP_WORKFLOW_PATH,
+        "Checkout exact package evidence subject",
+        (
+            "- name: Checkout exact package evidence subject",
+            "  uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+            "  with:",
+            "    persist-credentials: false",
+            "    ref: ${{ env.MCLAB_EVIDENCE_SHA }}",
+        ),
+    ),
+    WorkflowStepPolicy(
+        DESKTOP_WORKFLOW_PATH,
+        "Verify exact package evidence subject",
+        (
+            "- name: Verify exact package evidence subject",
+            "  shell: bash",
+            "  run: |",
+            '    if [[ ! "$MCLAB_EVIDENCE_SHA" =~ ^[0-9a-f]{40}$ ]]; then',
+            '      echo "::error::Package evidence subject must be a lowercase 40-hex commit." >&2',
+            "      exit 1",
+            "    fi",
+            '    head_sha="$(git rev-parse --verify \'HEAD^{commit}\')" || exit 1',
+            '    if [[ "$head_sha" != "$MCLAB_EVIDENCE_SHA" ]]; then',
+            '      echo "::error::Checked-out HEAD does not match the package evidence subject." >&2',
+            "      exit 1",
+            "    fi",
+            '    checkout_status="$(git status --porcelain=v1 --untracked-files=all)" || exit 1',
+            '    if [[ -n "$checkout_status" ]]; then',
+            '      echo "::error::Package evidence checkout is not clean." >&2',
+            "      exit 1",
+            "    fi",
+        ),
+    ),
+    WorkflowStepPolicy(
+        DESKTOP_WORKFLOW_PATH,
+        "Bind packaged E2E evidence path",
+        (
+            "- name: Bind packaged E2E evidence path",
+            "  shell: bash",
+            "  run: |",
+            '    case "$RUNNER_OS" in',
+            "      Linux|Windows|macOS) ;;",
+            "      *)",
+            '        echo "::error::Unsupported package evidence runner OS." >&2',
+            "        exit 1",
+            "        ;;",
+            "    esac",
+            "    printf 'MCLAB_E2E_EVIDENCE=build/validation/%s/g2-%s/package_e2e.json\\n' \\",
+            '      "$MCLAB_EVIDENCE_SHA" "$RUNNER_OS" >> "$GITHUB_ENV"',
+        ),
+    ),
+    WorkflowStepPolicy(
+        DESKTOP_WORKFLOW_PATH,
         "Install pinned Linux Qt runtime libraries",
         (
             "- name: Install pinned Linux Qt runtime libraries",
@@ -199,23 +251,90 @@ WORKFLOW_STEP_POLICIES = (
             "    retention-days: 14",
         ),
     ),
+    WorkflowStepPolicy(
+        DESKTOP_WORKFLOW_PATH,
+        "Run packaged E2E readiness gate",
+        (
+            "- name: Run packaged E2E readiness gate",
+            "  id: package_e2e",
+            "  timeout-minutes: 20",
+            "  shell: bash",
+            "  run: >-",
+            '    "$MCLAB_BUILD_PYTHON" scripts/audit_package_e2e.py',
+            "    --bundle-root dist/MCLab",
+            "    --package-root dist/MCLab-package",
+            '    --runner-os "$RUNNER_OS"',
+            '    --workflow-sha "$MCLAB_EVIDENCE_SHA"',
+            '    --temp-root "$RUNNER_TEMP"',
+            '    --output "$MCLAB_E2E_EVIDENCE"',
+        ),
+    ),
+    WorkflowStepPolicy(
+        DESKTOP_WORKFLOW_PATH,
+        "Upload packaged E2E readiness evidence",
+        (
+            "- name: Upload packaged E2E readiness evidence",
+            "  if: always() && steps.package_e2e.outcome != 'skipped'",
+            "  uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+            "  with:",
+            "    name: mclab-g2-${{ runner.os }}-${{ env.MCLAB_EVIDENCE_SHA }}",
+            "    path: ${{ env.MCLAB_E2E_EVIDENCE }}",
+            "    if-no-files-found: error",
+            "    retention-days: 90",
+        ),
+    ),
 )
 
 WORKFLOW_STEP_ORDER = {
     CI_WORKFLOW_PATH: (
-        "Supply-chain static policy",
-        "License inventory contract",
-        "Generate deterministic universal SBOM inputs",
-        "Audit reviewed Python vulnerabilities",
-        "Upload universal supply-chain evidence",
+        (
+            (
+                "Supply-chain static policy",
+                "License inventory contract",
+                "Generate deterministic universal SBOM inputs",
+                "Audit reviewed Python vulnerabilities",
+                "Upload universal supply-chain evidence",
+            ),
+            True,
+        ),
     ),
     DESKTOP_WORKFLOW_PATH: (
-        "Install pinned Linux Qt runtime libraries",
-        "Install desktop, test, and packaging dependencies",
-        "Select package-profile Python",
-        "Audit package-profile licenses",
-        "Validate package-profile license inventory",
-        "Upload target supply-chain evidence",
+        (
+            (
+                "Checkout exact package evidence subject",
+                "Verify exact package evidence subject",
+                "Bind packaged E2E evidence path",
+            ),
+            True,
+        ),
+        (
+            (
+                "Install pinned Linux Qt runtime libraries",
+                "Install desktop, test, and packaging dependencies",
+                "Select package-profile Python",
+                "Audit package-profile licenses",
+                "Validate package-profile license inventory",
+                "Upload target supply-chain evidence",
+            ),
+            True,
+        ),
+        (
+            (
+                "Run packaged E2E readiness gate",
+                "Upload packaged E2E readiness evidence",
+            ),
+            True,
+        ),
+        (
+            (
+                "Checkout exact package evidence subject",
+                "Verify exact package evidence subject",
+                "Bind packaged E2E evidence path",
+                "Run packaged E2E readiness gate",
+                "Upload packaged E2E readiness evidence",
+            ),
+            False,
+        ),
     ),
 }
 WORKFLOW_REQUIRED_JOBS = {
@@ -240,9 +359,17 @@ WORKFLOW_JOB_HEADER_LINES = {
         "      os: [windows-2025, ubuntu-24.04, macos-15]",
         "  runs-on: ${{ matrix.os }}",
         "  env:",
+        "    MCLAB_EVIDENCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}",
         "    QT_QPA_PLATFORM: offscreen",
         "    MPLBACKEND: Agg",
         "  steps:",
+    ),
+}
+WORKFLOW_CONTROLLED_TOKENS = {
+    DESKTOP_WORKFLOW_PATH: (
+        "github.event.pull_request.head.sha || github.sha",
+        "MCLAB_EVIDENCE_SHA",
+        "MCLAB_E2E_EVIDENCE",
     ),
 }
 
@@ -914,6 +1041,22 @@ def workflow_policy_errors(root: Path) -> list[str]:
                 f"{path}:{job_name}: job matrix, runner, name, environment, and steps header "
                 "must exactly match the reviewed contract"
             )
+        expected_contract_lines = [
+            *WORKFLOW_JOB_HEADER_LINES[path],
+            *(
+                line
+                for policy in WORKFLOW_STEP_POLICIES
+                if policy.path == path
+                for line in policy.expected_lines
+            ),
+        ]
+        for token in WORKFLOW_CONTROLLED_TOKENS.get(path, ()):
+            expected_count = sum(line.count(token) for line in expected_contract_lines)
+            if job.count(token) != expected_count:
+                errors.append(
+                    f"{path}:{job_name}: controlled provenance token {token!r} must occur "
+                    f"exactly {expected_count} times inside protected contract fields"
+                )
         weakening = workflow_job_weakening(job, workflow)
         if weakening:
             errors.append(
@@ -932,7 +1075,7 @@ def workflow_policy_errors(root: Path) -> list[str]:
             errors.append(
                 f"{policy.path}:{policy.name}: step must exactly match reviewed fail-closed YAML"
             )
-    for path, expected_order in WORKFLOW_STEP_ORDER.items():
+    for path, order_policies in WORKFLOW_STEP_ORDER.items():
         actual_names = [
             workflow_step_name(block) for block in physical_by_path.get(path, [])
         ]
@@ -945,16 +1088,24 @@ def workflow_policy_errors(root: Path) -> list[str]:
         )
         if duplicate_names:
             errors.append(f"{path}: duplicate named steps are forbidden: {duplicate_names}")
-        try:
-            positions = [actual_names.index(name) for name in expected_order]
-        except ValueError:
-            continue
-        expected_positions = list(range(positions[0], positions[0] + len(positions)))
-        if positions != expected_positions:
-            errors.append(
-                f"{path}: supply-chain steps must remain contiguous and in reviewed order "
-                f"{list(expected_order)}"
-            )
+        for expected_order, contiguous in order_policies:
+            try:
+                positions = [actual_names.index(name) for name in expected_order]
+            except ValueError:
+                continue
+            in_reviewed_order = positions == sorted(positions)
+            expected_positions = list(range(positions[0], positions[0] + len(positions)))
+            is_contiguous = positions == expected_positions
+            if not in_reviewed_order or (contiguous and not is_contiguous):
+                requirement = (
+                    "contiguous and in reviewed order"
+                    if contiguous
+                    else "in reviewed order"
+                )
+                errors.append(
+                    f"{path}: protected steps must remain {requirement} "
+                    f"{list(expected_order)}"
+                )
     return errors
 
 

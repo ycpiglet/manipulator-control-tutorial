@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import os
 import sys
 import tempfile
 import unittest
+from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import patch
 
@@ -12,14 +15,36 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from mclab import batch  # noqa: E402
-from mclab.application.artifacts import verify_manifest, write_manifest  # noqa: E402
+from mclab.application.artifacts import (  # noqa: E402
+    verify_manifest,
+    verify_terminal_batch_output,
+    write_manifest,
+)
 from mclab.application.catalog import stable_scenario_id  # noqa: E402
 from mclab.application.batch_runs import (  # noqa: E402
+    ALL_COMPARE_BATCH_NAMES,
+    BATCH_ACTIVE_DIR_NAME,
+    BATCH_PROGRESS_FILE_NAME,
+    BatchProgressBusy,
     all_compare_command,
+    claim_all_compare_handoff,
+    clear_all_compare_progress,
     create_all_compare_output,
+    read_all_compare_handoff,
+    read_batch_progress,
+    release_all_compare_handoff,
+    settle_all_compare_output,
+    update_batch_manifest,
+    write_batch_progress,
+)
+from mclab.application.batch_settlement import (  # noqa: E402
+    RECOVERABLE_BATCH_SCENARIOS,
 )
 from mclab.config import load_config  # noqa: E402
 from mclab.output_cleanup import build_cleanup_plan  # noqa: E402
+from mclab.output_root import PinnedOutputRoot  # noqa: E402
+from mclab.output_safety import CleanupBusyError  # noqa: E402
+from mclab.sim.logging import RunLogger  # noqa: E402
 
 
 class BatchTests(unittest.TestCase):
@@ -90,6 +115,13 @@ class BatchTests(unittest.TestCase):
                 "xdot_ee_0",
             ),
             lab04_guide.comparison_specs,
+        )
+        self.assertEqual(
+            RECOVERABLE_BATCH_SCENARIOS,
+            {
+                name: frozenset(scenario.label for scenario in scenarios)
+                for name, scenarios in batch.BATCH_SETS.items()
+            },
         )
         self.assertIn(
             (
@@ -339,6 +371,7 @@ class BatchTests(unittest.TestCase):
             self.assertEqual(calls[0]["headless"], True)
             self.assertEqual(calls[0]["plot_selection"], "essential")
             self.assertEqual(calls[0]["seed"], 11)
+            self.assertFalse(calls[0]["publish_parent_index"])
             self.assertTrue((output / "demo_scenario" / "summary.json").exists())
             self.assertTrue((output / "batch_summary.json").exists())
             self.assertTrue((output / "summary.json").exists())
@@ -635,6 +668,7 @@ class BatchTests(unittest.TestCase):
             for call in runner.call_args_list:
                 self.assertFalse(call.kwargs["plot"])
                 self.assertEqual(call.kwargs["seed"], 23)
+                self.assertFalse(call.kwargs["publish_parent_index"])
             self.assertTrue((output / "report.html").exists())
             self.assertTrue((output / "worksheet.md").exists())
             self.assertTrue((output / "index.html").exists())
@@ -646,6 +680,7 @@ class BatchTests(unittest.TestCase):
             manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["scenario_id"], "batch.all")
             self.assertEqual(manifest["status"], "completed")
+            self.assertNotIn("handoff_token_sha256", manifest)
             self.assertEqual(verify_manifest(output), [])
             self.assertEqual(
                 progress,
@@ -727,6 +762,58 @@ class BatchTests(unittest.TestCase):
                     handoff_token=token,
                 )
 
+    def test_authenticated_progress_precedes_callback_and_child_batch(self) -> None:
+        events: list[str] = []
+        original_progress = batch.write_batch_progress
+
+        def write_progress(*args: object, **kwargs: object) -> object:
+            events.append("authenticated-progress")
+            return original_progress(*args, **kwargs)
+
+        def run_child(name: str, **kwargs: object) -> Path:
+            events.append(f"run:{name}")
+            output = Path(kwargs["output_dir"])
+            output.mkdir(parents=True)
+            (output / "summary.json").write_text("{}", encoding="utf-8")
+            return output
+
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            patch.dict(os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}),
+        ):
+            output = create_all_compare_output()
+            token = read_all_compare_handoff(output)
+            with (
+                patch.dict(
+                    batch.BATCH_SETS,
+                    {name: () for name in ALL_COMPARE_BATCH_NAMES},
+                    clear=True,
+                ),
+                patch(
+                    "mclab.batch.list_batch_sets",
+                    return_value=list(ALL_COMPARE_BATCH_NAMES),
+                ),
+                patch("mclab.batch.write_batch_progress", side_effect=write_progress),
+                patch("mclab.batch.run_batch", side_effect=run_child),
+                patch("mclab.batch.write_outputs_index"),
+                patch("mclab.batch.write_all_batches_report"),
+            ):
+                batch.run_all_batches(
+                    output_dir=output,
+                    plot=False,
+                    handoff_token=token,
+                    on_progress=lambda *_args: events.append("callback"),
+                )
+
+        self.assertEqual(
+            events,
+            [
+                event
+                for name in ALL_COMPARE_BATCH_NAMES
+                for event in ("authenticated-progress", "callback", f"run:{name}")
+            ],
+        )
+
     def test_desktop_batch_handoff_rejects_directory_links(self) -> None:
         with (
             tempfile.TemporaryDirectory() as tmp,
@@ -744,6 +831,867 @@ class BatchTests(unittest.TestCase):
                     "all_batches",
                     alias,
                     handoff_token=linked_arguments[-1],
+                )
+
+    def test_authenticated_batch_progress_is_ordered_and_token_bound(self) -> None:
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            patch.dict(os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}),
+        ):
+            output = create_all_compare_output()
+            token = read_all_compare_handoff(output)
+            self.assertEqual(read_batch_progress(output, token), ())
+            self.assertTrue(claim_all_compare_handoff(output, token))
+            write_manifest(
+                output,
+                scenario_id="batch.all",
+                status="running",
+                config={"batch_name": "all", "plot": True},
+                run_kind="comparison_batch",
+            )
+            refreshed = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(
+                refreshed["handoff_token_sha256"],
+                hashlib.sha256(token.encode("ascii")).hexdigest(),
+            )
+            first = write_batch_progress(
+                output,
+                token,
+                sequence=1,
+                current=1,
+                total=5,
+                name=ALL_COMPARE_BATCH_NAMES[0],
+            )
+
+            self.assertEqual(read_batch_progress(output, token), (first,))
+            sidecar = output / BATCH_ACTIVE_DIR_NAME / BATCH_PROGRESS_FILE_NAME
+            self.assertNotIn(token.encode("ascii"), sidecar.read_bytes())
+            self.assertLessEqual(len(sidecar.read_bytes()), 4096)
+            self.assertEqual(
+                set(json.loads(sidecar.read_text(encoding="ascii"))),
+                {"schema", "events", "hmac_sha256"},
+            )
+            with self.assertRaisesRegex(RuntimeError, "replayed or out of order"):
+                write_batch_progress(
+                    output,
+                    token,
+                    sequence=1,
+                    current=1,
+                    total=5,
+                    name=ALL_COMPARE_BATCH_NAMES[0],
+                )
+            for index, name in enumerate(ALL_COMPARE_BATCH_NAMES[1:], start=2):
+                write_batch_progress(
+                    output,
+                    token,
+                    sequence=index,
+                    current=index,
+                    total=5,
+                    name=name,
+                )
+            self.assertEqual(
+                tuple(event.name for event in read_batch_progress(output, token)),
+                ALL_COMPARE_BATCH_NAMES,
+            )
+            with self.assertRaisesRegex(RuntimeError, "handoff digest does not match"):
+                read_batch_progress(output, "f" * 64)
+
+    def test_batch_progress_writer_retries_one_transient_lock_owner(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}
+        ):
+            output = create_all_compare_output()
+            token = read_all_compare_handoff(output)
+            self.assertTrue(claim_all_compare_handoff(output, token))
+            original_lock = PinnedOutputRoot.operation_lock
+            attempts = 0
+
+            @contextmanager
+            def contend_once(root_pin: PinnedOutputRoot):
+                nonlocal attempts
+                attempts += 1
+                if attempts == 1:
+                    raise CleanupBusyError("injected peer reader")
+                with original_lock(root_pin):
+                    yield
+
+            with (
+                patch.object(PinnedOutputRoot, "operation_lock", contend_once),
+                patch("mclab.application.batch_integrity.time.sleep"),
+            ):
+                event = write_batch_progress(
+                    output,
+                    token,
+                    sequence=1,
+                    current=1,
+                    total=5,
+                    name=ALL_COMPARE_BATCH_NAMES[0],
+                )
+
+            self.assertEqual(attempts, 2)
+            self.assertEqual(read_batch_progress(output, token), (event,))
+
+    def test_batch_progress_reader_reports_transient_lock_owner(self) -> None:
+        class BusyLock:
+            @staticmethod
+            def __enter__() -> None:
+                raise CleanupBusyError("injected peer writer")
+
+            @staticmethod
+            def __exit__(*args: object) -> bool:
+                return False
+
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}
+        ):
+            output = create_all_compare_output()
+            token = read_all_compare_handoff(output)
+            with (
+                patch.object(PinnedOutputRoot, "operation_lock", return_value=BusyLock()),
+                self.assertRaisesRegex(BatchProgressBusy, "being updated"),
+            ):
+                read_batch_progress(output, token)
+
+    def test_batch_terminal_manifest_writer_retries_one_transient_lock_owner(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}
+        ):
+            output = create_all_compare_output()
+            token = read_all_compare_handoff(output)
+            self.assertTrue(claim_all_compare_handoff(output, token))
+            release_all_compare_handoff(output)
+            original_lock = PinnedOutputRoot.operation_lock
+            attempts = 0
+
+            @contextmanager
+            def contend_once(root_pin: PinnedOutputRoot):
+                nonlocal attempts
+                attempts += 1
+                if attempts == 1:
+                    raise CleanupBusyError("injected peer reader")
+                with original_lock(root_pin):
+                    yield
+
+            with (
+                patch.object(PinnedOutputRoot, "operation_lock", contend_once),
+                patch("mclab.application.batch_integrity.time.sleep"),
+            ):
+                write_manifest(
+                    output,
+                    scenario_id="batch.all",
+                    status="stopped",
+                    config={"batch_name": "all", "plot": True},
+                    run_kind="comparison_batch",
+                )
+
+            self.assertEqual(attempts, 2)
+            self.assertEqual(
+                verify_terminal_batch_output(output, expected_status="stopped"),
+                [],
+            )
+
+    def test_progress_read_holds_one_lock_across_terminal_decision(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}
+        ):
+            output = create_all_compare_output()
+            token = read_all_compare_handoff(output)
+            self.assertTrue(claim_all_compare_handoff(output, token))
+            event = write_batch_progress(
+                output,
+                token,
+                sequence=1,
+                current=1,
+                total=5,
+                name=ALL_COMPARE_BATCH_NAMES[0],
+            )
+            original_lock = PinnedOutputRoot.operation_lock
+            lock_entries = 0
+
+            @contextmanager
+            def counted_lock(root_pin: PinnedOutputRoot):
+                nonlocal lock_entries
+                lock_entries += 1
+                with original_lock(root_pin):
+                    yield
+
+            with patch.object(PinnedOutputRoot, "operation_lock", counted_lock):
+                self.assertEqual(read_batch_progress(output, token), (event,))
+            self.assertEqual(lock_entries, 1)
+
+            clear_all_compare_progress(output, token)
+            release_all_compare_handoff(output)
+            write_manifest(
+                output,
+                scenario_id="batch.all",
+                status="completed",
+                config={"batch_name": "all", "plot": True},
+                run_kind="comparison_batch",
+            )
+            lock_entries = 0
+            with patch.object(PinnedOutputRoot, "operation_lock", counted_lock):
+                self.assertEqual(read_batch_progress(output, token), ())
+            self.assertEqual(lock_entries, 1)
+
+    def test_batch_error_manifest_always_has_nonempty_error_detail(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp).resolve() / "batch-error"
+            output.mkdir()
+            write_manifest(
+                output,
+                scenario_id="batch.unit",
+                status="error",
+                config={"batch_name": "unit", "plot": False},
+                run_kind="comparison_batch",
+                error="",
+            )
+
+            manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+            self.assertTrue(manifest["error"])
+            self.assertEqual(
+                verify_terminal_batch_output(output, expected_status="error"),
+                [],
+            )
+
+    def test_non_error_batch_terminal_rejects_error_detail_before_publication(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp).resolve() / "batch-stopped"
+            output.mkdir()
+            with self.assertRaisesRegex(RuntimeError, "only valid for terminal error"):
+                write_manifest(
+                    output,
+                    scenario_id="batch.unit",
+                    status="stopped",
+                    config={"batch_name": "unit", "plot": False},
+                    run_kind="comparison_batch",
+                    error="must not be published",
+                )
+            self.assertFalse((output / "manifest.json").exists())
+
+    def test_terminal_batch_update_rejects_live_transient_before_publication(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}
+        ):
+            output = create_all_compare_output()
+            before = (output / "manifest.json").read_bytes()
+
+            with self.assertRaisesRegex(RuntimeError, "live transient marker"):
+                update_batch_manifest(output, status="stopped")
+
+            self.assertEqual((output / "manifest.json").read_bytes(), before)
+            self.assertEqual(
+                json.loads(before.decode("utf-8"))["status"],
+                "running",
+            )
+
+    def test_authenticated_batch_progress_rejects_tamper_and_noncanonical_data(self) -> None:
+        def signed(payload: dict[str, object], token: str) -> bytes:
+            unsigned = {
+                "schema": payload["schema"],
+                "events": payload["events"],
+            }
+            canonical_unsigned = json.dumps(
+                unsigned, sort_keys=True, separators=(",", ":")
+            ).encode("ascii")
+            payload["hmac_sha256"] = hmac.new(
+                bytes.fromhex(token), canonical_unsigned, hashlib.sha256
+            ).hexdigest()
+            return json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("ascii")
+
+        mutations = ("tamper", "extra", "bool", "noncanonical", "oversized", "malformed")
+        for mutation in mutations:
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as tmp, patch.dict(
+                os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}
+            ):
+                output = create_all_compare_output()
+                token = read_all_compare_handoff(output)
+                self.assertTrue(claim_all_compare_handoff(output, token))
+                write_batch_progress(
+                    output,
+                    token,
+                    sequence=1,
+                    current=1,
+                    total=5,
+                    name=ALL_COMPARE_BATCH_NAMES[0],
+                )
+                sidecar = output / BATCH_ACTIVE_DIR_NAME / BATCH_PROGRESS_FILE_NAME
+                payload = json.loads(sidecar.read_text(encoding="utf-8"))
+                if mutation == "tamper":
+                    payload["events"][0]["name"] = ALL_COMPARE_BATCH_NAMES[1]
+                    sidecar.write_text(
+                        json.dumps(payload, sort_keys=True, separators=(",", ":")),
+                        encoding="ascii",
+                    )
+                elif mutation == "extra":
+                    payload["extra"] = 1
+                    sidecar.write_bytes(signed(payload, token))
+                elif mutation == "bool":
+                    payload["events"][0]["sequence"] = True
+                    sidecar.write_bytes(signed(payload, token))
+                elif mutation == "noncanonical":
+                    sidecar.write_text(json.dumps(payload, indent=2), encoding="ascii")
+                elif mutation == "oversized":
+                    sidecar.write_bytes(b"x" * 4097)
+                else:
+                    sidecar.write_bytes(b"{")
+
+                with self.assertRaises(RuntimeError):
+                    read_batch_progress(output, token)
+
+    @unittest.skipIf(os.name == "nt", "symlink creation is not reliable on Windows CI")
+    def test_authenticated_batch_progress_rejects_linked_or_unknown_active_nodes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}
+        ):
+            output = create_all_compare_output()
+            token = read_all_compare_handoff(output)
+            self.assertTrue(claim_all_compare_handoff(output, token))
+            outside = Path(tmp) / "outside.json"
+            outside.write_text("outside", encoding="utf-8")
+            sidecar = output / BATCH_ACTIVE_DIR_NAME / BATCH_PROGRESS_FILE_NAME
+            sidecar.symlink_to(outside)
+
+            with self.assertRaises(RuntimeError):
+                read_batch_progress(output, token)
+            with self.assertRaises(RuntimeError):
+                settle_all_compare_output(output, token, "stopped")
+            self.assertEqual(outside.read_text(encoding="utf-8"), "outside")
+            self.assertEqual(
+                json.loads((output / "manifest.json").read_text(encoding="utf-8"))["status"],
+                "running",
+            )
+
+    def test_batch_parent_settlement_recovers_each_authenticated_marker_boundary(self) -> None:
+        states = ("preclaim", "postclaim", "empty-active", "markerless")
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}
+        ):
+            for state in states:
+                with self.subTest(state=state):
+                    output = create_all_compare_output()
+                    token = read_all_compare_handoff(output)
+                    if state != "preclaim":
+                        self.assertTrue(claim_all_compare_handoff(output, token))
+                    if state in {"postclaim", "empty-active", "markerless"}:
+                        write_batch_progress(
+                            output,
+                            token,
+                            sequence=1,
+                            current=1,
+                            total=5,
+                            name=ALL_COMPARE_BATCH_NAMES[0],
+                        )
+                    if state in {"empty-active", "markerless"}:
+                        clear_all_compare_progress(output, token)
+                    if state == "markerless":
+                        release_all_compare_handoff(output)
+
+                    self.assertEqual(
+                        settle_all_compare_output(output, token, "stopped"),
+                        "stopped",
+                    )
+                    self.assertFalse((output / BATCH_ACTIVE_DIR_NAME).exists())
+                    self.assertFalse((output / ".mclab-batch-handoff").exists())
+                    self.assertEqual(
+                        verify_terminal_batch_output(output, expected_status="stopped"),
+                        [],
+                    )
+
+    @unittest.skipIf(os.name == "nt", "Windows settlement never deletes partial paths")
+    def test_batch_parent_settlement_prunes_only_empty_interrupted_directories(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}
+        ):
+            output = create_all_compare_output()
+            token = read_all_compare_handoff(output)
+            self.assertTrue(claim_all_compare_handoff(output, token))
+            write_batch_progress(
+                output,
+                token,
+                sequence=1,
+                current=1,
+                total=5,
+                name=ALL_COMPARE_BATCH_NAMES[0],
+            )
+            baseline = output / "lab01_msd_compare" / "baseline"
+            plots = baseline / "plots"
+            plots.mkdir(parents=True)
+            evidence = baseline / "partial.bin"
+            evidence.write_bytes(b"preserve-partial-evidence")
+
+            self.assertEqual(
+                settle_all_compare_output(output, token, "stopped"),
+                "stopped",
+            )
+
+            self.assertFalse(plots.exists())
+            self.assertEqual(evidence.read_bytes(), b"preserve-partial-evidence")
+            self.assertFalse((output / BATCH_ACTIVE_DIR_NAME).exists())
+            self.assertEqual(
+                verify_terminal_batch_output(output, expected_status="stopped"),
+                [],
+            )
+
+    @unittest.skipIf(os.name == "nt", "Windows settlement never deletes partial paths")
+    def test_batch_parent_settlement_prunes_producer_empty_ancestors(self) -> None:
+        for boundary in ("batch", "scenario", "comparison_plots"):
+            with self.subTest(boundary=boundary), tempfile.TemporaryDirectory() as tmp, (
+                patch.dict(os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")})
+            ):
+                output = create_all_compare_output()
+                token = read_all_compare_handoff(output)
+                self.assertTrue(claim_all_compare_handoff(output, token))
+                write_batch_progress(
+                    output,
+                    token,
+                    sequence=1,
+                    current=1,
+                    total=5,
+                    name=ALL_COMPARE_BATCH_NAMES[0],
+                )
+                batch_output = output / "lab01_msd_compare"
+                if boundary == "batch":
+                    batch_output.mkdir()
+                elif boundary == "scenario":
+                    logger = RunLogger(
+                        "lab01_msd",
+                        {},
+                        output_dir=batch_output / "baseline",
+                    )
+                    self.assertTrue((logger.output_path / "plots").is_dir())
+                else:
+                    (batch_output / "comparison_plots").mkdir(parents=True)
+
+                self.assertEqual(
+                    settle_all_compare_output(output, token, "stopped"),
+                    "stopped",
+                )
+
+                self.assertFalse(batch_output.exists())
+                self.assertEqual(
+                    verify_terminal_batch_output(output, expected_status="stopped"),
+                    [],
+                )
+
+    @unittest.skipIf(os.name == "nt", "Windows settlement never deletes partial paths")
+    def test_batch_parent_settlement_preserves_nonempty_plot_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}
+        ):
+            output = create_all_compare_output()
+            token = read_all_compare_handoff(output)
+            self.assertTrue(claim_all_compare_handoff(output, token))
+            write_batch_progress(
+                output,
+                token,
+                sequence=1,
+                current=1,
+                total=5,
+                name=ALL_COMPARE_BATCH_NAMES[0],
+            )
+            plots = output / "lab01_msd_compare" / "baseline" / "plots"
+            plots.mkdir(parents=True)
+            first = plots / "first.png"
+            second = plots / "second.png"
+            first.write_bytes(b"first")
+            second.write_bytes(b"second")
+
+            self.assertEqual(
+                settle_all_compare_output(output, token, "stopped"),
+                "stopped",
+            )
+
+            self.assertEqual(first.read_bytes(), b"first")
+            self.assertEqual(second.read_bytes(), b"second")
+            self.assertEqual(
+                verify_terminal_batch_output(output, expected_status="stopped"),
+                [],
+            )
+
+    @unittest.skipIf(os.name == "nt", "Windows settlement never deletes partial paths")
+    def test_batch_parent_empty_directory_prune_fault_stays_retryable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}
+        ):
+            output = create_all_compare_output()
+            token = read_all_compare_handoff(output)
+            self.assertTrue(claim_all_compare_handoff(output, token))
+            write_batch_progress(
+                output,
+                token,
+                sequence=1,
+                current=1,
+                total=5,
+                name=ALL_COMPARE_BATCH_NAMES[0],
+            )
+            plots = output / "lab01_msd_compare" / "baseline" / "plots"
+            plots.mkdir(parents=True)
+            original_rmdir = PinnedOutputRoot.rmdir
+
+            def fail_plots(root: PinnedOutputRoot, relative: tuple[str, ...]) -> None:
+                if relative[-1:] == ("plots",):
+                    raise OSError("injected empty-directory prune fault")
+                original_rmdir(root, relative)
+
+            with (
+                patch.object(PinnedOutputRoot, "rmdir", fail_plots),
+                self.assertRaisesRegex(RuntimeError, "prune fault"),
+            ):
+                settle_all_compare_output(output, token, "stopped")
+
+            self.assertEqual(
+                json.loads((output / "manifest.json").read_text(encoding="utf-8"))["status"],
+                "running",
+            )
+            self.assertTrue(plots.is_dir())
+            self.assertFalse((output / BATCH_ACTIVE_DIR_NAME).exists())
+            self.assertEqual(
+                settle_all_compare_output(output, token, "stopped"),
+                "stopped",
+            )
+
+    @unittest.skipIf(os.name == "nt", "POSIX link and special-node fixture")
+    def test_batch_parent_empty_directory_prune_rejects_unsafe_nodes(self) -> None:
+        for unsafe_kind in ("link", "special"):
+            with self.subTest(unsafe_kind=unsafe_kind), tempfile.TemporaryDirectory() as tmp, (
+                patch.dict(os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")})
+            ):
+                output = create_all_compare_output()
+                token = read_all_compare_handoff(output)
+                self.assertTrue(claim_all_compare_handoff(output, token))
+                write_batch_progress(
+                    output,
+                    token,
+                    sequence=1,
+                    current=1,
+                    total=5,
+                    name=ALL_COMPARE_BATCH_NAMES[0],
+                )
+                partial = output / "lab01_msd_compare" / "baseline"
+                partial.mkdir(parents=True)
+                unsafe = partial / unsafe_kind
+                outside = Path(tmp) / "outside"
+                outside.write_bytes(b"outside-must-survive")
+                if unsafe_kind == "link":
+                    unsafe.symlink_to(outside)
+                    expected = "link or reparse point"
+                else:
+                    os.mkfifo(unsafe)
+                    expected = "special filesystem entry"
+
+                with self.assertRaisesRegex(RuntimeError, expected):
+                    settle_all_compare_output(output, token, "stopped")
+
+                self.assertEqual(outside.read_bytes(), b"outside-must-survive")
+                self.assertEqual(
+                    json.loads((output / "manifest.json").read_text(encoding="utf-8"))[
+                        "status"
+                    ],
+                    "running",
+                )
+
+    @unittest.skipIf(os.name == "nt", "Windows settlement never deletes partial paths")
+    def test_batch_parent_empty_directory_prune_rejects_mount_boundary(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}
+        ):
+            output = create_all_compare_output()
+            token = read_all_compare_handoff(output)
+            self.assertTrue(claim_all_compare_handoff(output, token))
+            write_batch_progress(
+                output,
+                token,
+                sequence=1,
+                current=1,
+                total=5,
+                name=ALL_COMPARE_BATCH_NAMES[0],
+            )
+            plots = output / "lab01_msd_compare" / "baseline" / "plots"
+            plots.mkdir(parents=True)
+            original_mount_check = PinnedOutputRoot.is_mount_point
+
+            def report_mount(root: PinnedOutputRoot, relative: tuple[str, ...]) -> bool:
+                if relative[-1:] == ("plots",):
+                    return True
+                return original_mount_check(root, relative)
+
+            with (
+                patch.object(PinnedOutputRoot, "is_mount_point", report_mount),
+                self.assertRaisesRegex(RuntimeError, "mount point"),
+            ):
+                settle_all_compare_output(output, token, "stopped")
+
+            self.assertEqual(
+                json.loads((output / "manifest.json").read_text(encoding="utf-8"))["status"],
+                "running",
+            )
+
+    @unittest.skipIf(os.name == "nt", "Windows settlement never deletes partial paths")
+    def test_batch_parent_empty_directory_prune_does_not_normalize_unknown_empty_dir(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}
+        ):
+            output = create_all_compare_output()
+            token = read_all_compare_handoff(output)
+            self.assertTrue(claim_all_compare_handoff(output, token))
+            write_batch_progress(
+                output,
+                token,
+                sequence=1,
+                current=1,
+                total=5,
+                name=ALL_COMPARE_BATCH_NAMES[0],
+            )
+            baseline = output / "lab01_msd_compare" / "baseline"
+            plots = baseline / "plots"
+            canary = baseline / "canary"
+            plots.mkdir(parents=True)
+            canary.mkdir()
+
+            with self.assertRaisesRegex(RuntimeError, "unlisted empty directory"):
+                settle_all_compare_output(output, token, "stopped")
+
+            self.assertFalse(plots.exists())
+            self.assertTrue(canary.is_dir())
+            self.assertEqual(
+                json.loads((output / "manifest.json").read_text(encoding="utf-8"))["status"],
+                "running",
+            )
+
+    @unittest.skipIf(os.name == "nt", "Windows settlement never deletes partial paths")
+    def test_batch_parent_settlement_preserves_unknown_scenario_tree(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}
+        ):
+            output = create_all_compare_output()
+            token = read_all_compare_handoff(output)
+            self.assertTrue(claim_all_compare_handoff(output, token))
+            write_batch_progress(
+                output,
+                token,
+                sequence=1,
+                current=1,
+                total=5,
+                name=ALL_COMPARE_BATCH_NAMES[0],
+            )
+            unknown_plots = (
+                output / "lab01_msd_compare" / "unknown-canary" / "plots"
+            )
+            unknown_plots.mkdir(parents=True)
+
+            with self.assertRaisesRegex(RuntimeError, "unlisted empty directory"):
+                settle_all_compare_output(output, token, "stopped")
+
+            self.assertTrue(unknown_plots.is_dir())
+            self.assertEqual(
+                json.loads((output / "manifest.json").read_text(encoding="utf-8"))["status"],
+                "running",
+            )
+
+    @unittest.skipIf(os.name == "nt", "POSIX symlink identity-swap fixture")
+    def test_batch_parent_empty_directory_prune_rejects_identity_swap(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}
+        ):
+            output = create_all_compare_output()
+            token = read_all_compare_handoff(output)
+            self.assertTrue(claim_all_compare_handoff(output, token))
+            write_batch_progress(
+                output,
+                token,
+                sequence=1,
+                current=1,
+                total=5,
+                name=ALL_COMPARE_BATCH_NAMES[0],
+            )
+            plots = output / "lab01_msd_compare" / "baseline" / "plots"
+            plots.mkdir(parents=True)
+            outside = Path(tmp) / "outside"
+            outside.mkdir()
+            original_validate = PinnedOutputRoot.validate_directory
+            swapped = False
+
+            def swap_after_validation(
+                root: PinnedOutputRoot,
+                relative: tuple[str, ...],
+                *,
+                description: str,
+            ) -> None:
+                nonlocal swapped
+                original_validate(root, relative, description=description)
+                if relative[-1:] == ("plots",) and not swapped:
+                    plots.rmdir()
+                    plots.symlink_to(outside, target_is_directory=True)
+                    swapped = True
+
+            with (
+                patch.object(PinnedOutputRoot, "validate_directory", swap_after_validation),
+                self.assertRaises(RuntimeError),
+            ):
+                settle_all_compare_output(output, token, "stopped")
+
+            self.assertTrue(swapped)
+            self.assertTrue(plots.is_symlink())
+            self.assertTrue(outside.is_dir())
+            self.assertEqual(
+                json.loads((output / "manifest.json").read_text(encoding="utf-8"))["status"],
+                "running",
+            )
+
+    def test_batch_parent_settlement_preserves_terminal_and_never_synthesizes_success(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}
+        ):
+            running = create_all_compare_output()
+            running_token = read_all_compare_handoff(running)
+            running_bytes = (running / "manifest.json").read_bytes()
+            with self.assertRaisesRegex(RuntimeError, "cannot be recovered"):
+                settle_all_compare_output(running, running_token, "completed")
+            self.assertEqual((running / "manifest.json").read_bytes(), running_bytes)
+
+            settled = create_all_compare_output()
+            settled_token = read_all_compare_handoff(settled)
+            settle_all_compare_output(settled, settled_token, "error", "worker failed")
+            terminal_bytes = (settled / "manifest.json").read_bytes()
+            self.assertEqual(
+                settle_all_compare_output(settled, "0" * 64, "completed"),
+                "error",
+            )
+            self.assertEqual((settled / "manifest.json").read_bytes(), terminal_bytes)
+
+    def test_batch_parent_cleanup_fault_never_terminalizes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}
+        ):
+            output = create_all_compare_output()
+            token = read_all_compare_handoff(output)
+            self.assertTrue(claim_all_compare_handoff(output, token))
+            write_batch_progress(
+                output,
+                token,
+                sequence=1,
+                current=1,
+                total=5,
+                name=ALL_COMPARE_BATCH_NAMES[0],
+            )
+            with (
+                patch(
+                    "mclab.application.batch_runs._unlink_regular_file_rooted",
+                    side_effect=OSError("injected cleanup fault"),
+                ),
+                self.assertRaisesRegex(RuntimeError, "injected cleanup fault"),
+            ):
+                settle_all_compare_output(output, token, "error", "worker failed")
+
+            manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["status"], "running")
+            self.assertTrue((output / BATCH_ACTIVE_DIR_NAME / BATCH_PROGRESS_FILE_NAME).exists())
+
+    def test_run_all_error_cleanup_failure_never_terminalizes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}
+        ):
+            output = create_all_compare_output()
+            token = read_all_compare_handoff(output)
+            with (
+                patch("mclab.batch.run_batch", side_effect=RuntimeError("child failed")),
+                patch("mclab.batch.write_all_batches_report"),
+                patch("mclab.batch.write_outputs_index"),
+                patch(
+                    "mclab.batch.clear_all_compare_progress",
+                    side_effect=RuntimeError("cleanup failed"),
+                ),
+                self.assertRaisesRegex(RuntimeError, "child failed"),
+            ):
+                batch.run_all_batches(
+                    output_dir=output,
+                    plot=False,
+                    handoff_token=token,
+                )
+
+            manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["status"], "running")
+            self.assertIn("handoff_token_sha256", manifest)
+            self.assertTrue((output / BATCH_ACTIVE_DIR_NAME / BATCH_PROGRESS_FILE_NAME).exists())
+
+    def test_strict_terminal_batch_verifier_rejects_unlisted_and_transient_nodes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            temporary_root = Path(tmp).resolve()
+            output = temporary_root / "batch"
+            output.mkdir()
+            (output / "summary.json").write_text("{}", encoding="utf-8")
+            write_manifest(
+                output,
+                scenario_id="batch.unit",
+                status="completed",
+                config={"batch_name": "unit", "plot": False},
+                run_kind="comparison_batch",
+            )
+            self.assertEqual(
+                verify_terminal_batch_output(output, expected_status="completed"),
+                [],
+            )
+            (output / "unlisted.txt").write_text("late", encoding="utf-8")
+            self.assertTrue(
+                any(
+                    "Unlisted artifact: unlisted.txt" in error
+                    for error in verify_terminal_batch_output(
+                        output, expected_status="completed"
+                    )
+                )
+            )
+
+            transient = temporary_root / "transient"
+            transient.mkdir()
+            (transient / BATCH_ACTIVE_DIR_NAME).mkdir()
+            with self.assertRaisesRegex(RuntimeError, "live transient marker"):
+                write_manifest(
+                    transient,
+                    scenario_id="batch.unit",
+                    status="completed",
+                    config={"batch_name": "unit", "plot": False},
+                    run_kind="comparison_batch",
+                )
+
+            published = temporary_root / "published-with-transient"
+            published.mkdir()
+            write_manifest(
+                published,
+                scenario_id="batch.unit",
+                status="completed",
+                config={"batch_name": "unit", "plot": False},
+                run_kind="comparison_batch",
+            )
+            (published / BATCH_ACTIVE_DIR_NAME).mkdir()
+            self.assertTrue(
+                any(
+                    "live transient marker" in error
+                    for error in verify_terminal_batch_output(
+                        published, expected_status="completed"
+                    )
+                )
+            )
+
+            if os.name != "nt":
+                linked = temporary_root / "published-with-link"
+                linked.mkdir()
+                write_manifest(
+                    linked,
+                    scenario_id="batch.unit",
+                    status="completed",
+                    config={"batch_name": "unit", "plot": False},
+                    run_kind="comparison_batch",
+                )
+                (linked / "unsafe-link").symlink_to(output / "summary.json")
+                self.assertTrue(
+                    any(
+                        "link or reparse point" in error
+                        for error in verify_terminal_batch_output(
+                            linked, expected_status="completed"
+                        )
+                    )
                 )
 
     def test_run_batch_rejects_unknown_batch_name(self) -> None:

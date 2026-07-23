@@ -16,17 +16,20 @@ from mclab.application.i18n import TRANSLATIONS, Translator, normalize_language
 from mclab.application.launcher import create_scenario_adapter
 from mclab.application.platform import PlatformServices
 from mclab.application.qt_batch import create_batch_backend_mixin, create_batch_controller
+from mclab.application.qt_course_records import course_records_or_strict, result_records_or_strict
 from mclab.application.qt_evidence import create_evidence_backend_mixin
 from mclab.application.qt_fonts import configure_font_environment
 from mclab.application.qt_frame import create_frame_provider
 from mclab.application.qt_lifecycle import (
     consume_pending_next_scenario,
+    create_shutdown_event_filter,
     defer_start_for_parked_session,
     has_active_experiment,
     pause_before_navigation,
     reject_running_batch,
     reject_running_experiment,
     replace_session,
+    shutdown_application,
     stop_active_experiment,
 )
 from mclab.application.qt_worker import create_session_worker
@@ -41,7 +44,6 @@ from mclab.application.readiness import (
     refresh_app_readiness, refresh_scenario_readiness,
     scenario_readiness_payload,
 )
-from mclab.application.repositories import ArtifactRepository
 from mclab.application.rendering import can_reuse_adapter_render_resources
 from mclab.application.saved_runs import resolve_saved_run_launch
 from mclab.application.session import SessionState, SimulationSession
@@ -62,14 +64,14 @@ def run_app(
 ) -> int:
     """Run the integrated app, importing Qt only after the CLI chooses it."""
 
-    # The bundle intentionally ships one predictable, accessible Controls
-    # style instead of every platform style from the Qt distribution.
+    # The bundle ships one predictable, accessible Controls style.
     os.environ.setdefault("QT_QUICK_CONTROLS_STYLE", "Basic")
 
     try:
         from PySide6.QtCore import (
             Property,
             QObject,
+            QEvent,
             QProcess,
             QSettings,
             QThread,
@@ -90,6 +92,7 @@ def run_app(
 
     FrameProvider = create_frame_provider(QQuickImageProvider, QImage)
     SessionWorker = create_session_worker(QThread, Signal)
+    ShutdownEventFilter = create_shutdown_event_filter(QObject, QEvent)
 
     BatchController = create_batch_controller(QObject, QProcess, QTimer, Signal)
     BatchBackend = create_batch_backend_mixin(QObject, Property, Signal, Slot)
@@ -134,6 +137,7 @@ def run_app(
             self._pending_restart: tuple[str | None, Any, bool] | None = None
             self._pending_next_scenario: str | None = None
             self._replay_mode = self._shutting_down = False
+            self._shutdown_complete = False
             self._init_batch(BatchController(self))
             self._init_evidence()
 
@@ -149,8 +153,10 @@ def run_app(
 
         @Property("QVariantMap", notify=results_changed)
         def courseProgress(self) -> dict[str, Any]:  # noqa: N802
+            records = getattr(self, "_course_records_snapshot", None)
             return course_progress_payload(
-                self.catalog.learning_path(), self.translator, ArtifactRepository().list_runs(),
+                self.catalog.learning_path(), self.translator,
+                course_records_or_strict(records),
                 batch_readiness=readiness_payload(self._setup_issues, self.translator),
                 catalog=self.catalog,
             )
@@ -217,7 +223,8 @@ def run_app(
 
         @Property("QVariantList", notify=results_changed)
         def results(self) -> list[dict[str, Any]]:
-            records = ArtifactRepository().list_runs(validate_replays=True)
+            records = getattr(self, "_course_records_snapshot", None)
+            records = result_records_or_strict(records)
             active = self._batch.output if self._batch.running else None
             return result_payloads(records, self.translator, self.catalog, active)
 
@@ -546,18 +553,9 @@ def run_app(
             self._error = self._error_detail = self._error_action = ""
             self.error_changed.emit()
 
-        def shutdown(self) -> None:
-            self._shutting_down = True
-            self._shutdown_batch()
-            self._pending_restart = None
-            self._pending_next_scenario = None
-            if self.session is not None:
-                self.session.stop()
-            if self.worker is not None and self.worker.isRunning():
-                self.worker.request_shutdown()
-                self.worker.wait(SHUTDOWN_WAIT_MS)
-            if self.session is not None and (self.worker is None or not self.worker.isRunning()):
-                self.session.close()
+        @Slot(result=bool)
+        def shutdown(self) -> bool:
+            return shutdown_application(self, SHUTDOWN_WAIT_MS)
 
         def _launch_worker(self, worker: SessionWorker) -> None:
             if self.worker is not None and self.worker.isRunning():
@@ -748,6 +746,8 @@ def run_app(
     qInstallMessageHandler(qt_message_handler)
     provider = FrameProvider()
     backend = AppBackend(provider)
+    shutdown_filter = ShutdownEventFilter(backend, app)
+    app.installEventFilter(shutdown_filter)
     engine = QQmlApplicationEngine()
     engine.addImageProvider("mclab", provider)
     engine.rootContext().setContextProperty("backend", backend)

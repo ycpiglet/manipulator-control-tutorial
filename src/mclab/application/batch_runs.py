@@ -2,27 +2,83 @@
 
 from __future__ import annotations
 
-import json
 import hashlib
 import hmac
+import json
 import os
 import secrets
-import stat
 import sys
+from collections.abc import Sequence
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from mclab.application.batch_integrity import (
+    read_authenticated_running_state_rooted as _read_authenticated_running_state_rooted,
+    read_running_manifest_rooted as _read_running_manifest_rooted,
+    retrying_batch_operation_lock as _retrying_batch_operation_lock,
+    unlink_regular_file_rooted as _unlink_regular_file_rooted,
+    validate_manifest_token_hash as _validate_manifest_token_hash,
+    verify_terminal_batch_output_rooted as _verify_terminal_batch_output_rooted,
+)
+from mclab.application.batch_progress import (
+    ALL_COMPARE_BATCH_NAMES,
+    ALL_COMPARE_ID,
+    BATCH_ACTIVE_DIR_NAME,
+    BATCH_HANDOFF_FILE_NAME,
+    BATCH_PROGRESS_FILE_NAME,
+    BATCH_PROGRESS_SCHEMA,
+    MAX_BATCH_PROGRESS_BYTES,
+    BatchProgressEvent,
+    decode_handoff_bytes as _decode_handoff_bytes,
+    decode_progress_payload as _decode_progress_payload,
+    decode_token as _decode_token,
+    encode_progress_payload as _encode_progress_payload,
+    validated_progress_event as _validated_progress_event,
+)
+from mclab.application.batch_settlement import prune_interrupted_batch_directories
 from mclab.config import default_outputs_root, is_frozen_bundle
 from mclab.output_inventory import terminal_manifest_entry_rooted
 from mclab.output_root import pinned_output_root
-from mclab.output_safety import MAX_METADATA_BYTES, CleanupSafetyError, _stat_is_link_or_reparse
+from mclab.output_safety import (
+    MAX_METADATA_BYTES,
+    CleanupBusyError,
+    CleanupOperationError,
+    CleanupSafetyError,
+)
 
-ALL_COMPARE_ID = "batch.all"
 BATCH_PROGRESS_PREFIX = "MCLAB_BATCH_PROGRESS "
 TERMINAL_BATCH_STATUSES = frozenset({"completed", "stopped", "error"})
-BATCH_HANDOFF_FILE_NAME = ".mclab-batch-handoff"
-BATCH_ACTIVE_DIR_NAME = ".mclab-batch-active"
+_DERIVED_REPORT_DOCUMENTS = ("report.html", "worksheet.md")
+
+
+class BatchProgressBusy(RuntimeError):
+    """A normal peer mutation briefly owns the authenticated progress lock."""
+
+
+__all__ = [
+    "ALL_COMPARE_BATCH_NAMES",
+    "ALL_COMPARE_ID",
+    "BATCH_ACTIVE_DIR_NAME",
+    "BATCH_HANDOFF_FILE_NAME",
+    "BATCH_PROGRESS_FILE_NAME",
+    "BATCH_PROGRESS_PREFIX",
+    "BATCH_PROGRESS_SCHEMA",
+    "BatchProgressBusy",
+    "BatchProgressEvent",
+    "all_compare_command",
+    "batch_manifest_status",
+    "claim_all_compare_handoff",
+    "clear_all_compare_progress",
+    "create_all_compare_output",
+    "parse_batch_progress",
+    "read_all_compare_handoff",
+    "read_batch_progress",
+    "release_all_compare_handoff",
+    "settle_all_compare_output",
+    "update_batch_manifest",
+    "write_batch_progress",
+]
 
 
 def create_all_compare_output() -> Path:
@@ -54,12 +110,63 @@ def create_all_compare_output() -> Path:
     return output
 
 
-def all_compare_command(output: str | Path) -> tuple[str, list[str]]:
-    target = Path(output).resolve()
-    token = (target / BATCH_HANDOFF_FILE_NAME).read_text(encoding="utf-8").strip()
-    if not token:
-        raise RuntimeError("The course-comparison handoff token is missing.")
-    args = [
+def read_all_compare_handoff(output: str | Path) -> str:
+    """Read a pristine one-shot handoff through a pinned physical root."""
+
+    target = _absolute_output_path(output)
+    try:
+        with pinned_output_root(target, allowed_root=target) as (
+            _display_root,
+            root_exists,
+            root_pin,
+        ):
+            if not root_exists or root_pin is None:
+                raise CleanupSafetyError("Course-comparison output is missing")
+            root_pin.validate_directory((), description="course-comparison output")
+            with _retrying_batch_operation_lock(root_pin):
+                manifest_bytes, _payload = _read_running_manifest_rooted(root_pin)
+                names = set(root_pin.list_names((), max_entries=3))
+                if names != {"manifest.json", BATCH_HANDOFF_FILE_NAME}:
+                    raise CleanupSafetyError(
+                        "Course-comparison handoff is not in its pristine preclaim state"
+                    )
+                token_bytes = root_pin.read_regular_file(
+                    (BATCH_HANDOFF_FILE_NAME,),
+                    description="course-comparison handoff token",
+                    max_bytes=64,
+                    allow_empty=False,
+                )
+                token = _decode_handoff_bytes(token_bytes)
+                _validate_manifest_token_hash(_payload, token)
+                if root_pin.read_regular_file(
+                    ("manifest.json",),
+                    description="course-comparison manifest",
+                    max_bytes=MAX_METADATA_BYTES,
+                    allow_empty=False,
+                ) != manifest_bytes:
+                    raise CleanupSafetyError(
+                        "Course-comparison manifest changed while the handoff was read"
+                    )
+                root_pin.assert_read_boundary()
+                return token
+    except (
+        CleanupOperationError,
+        CleanupSafetyError,
+        OSError,
+        UnicodeError,
+        ValueError,
+        TypeError,
+    ) as exc:
+        raise RuntimeError(f"Could not read the course-comparison handoff: {exc}") from exc
+
+
+def all_compare_command(
+    output: str | Path,
+    worker_arguments: Sequence[str] = (),
+) -> tuple[str, list[str]]:
+    target = _absolute_output_path(output)
+    token = read_all_compare_handoff(target)
+    forwarded = [
         "batch",
         "all",
         "--output-dir",
@@ -67,8 +174,15 @@ def all_compare_command(output: str | Path) -> tuple[str, list[str]]:
         "--handoff-token",
         token,
     ]
-    if not is_frozen_bundle():
-        args = ["-u", "-m", "mclab", *args]
+    if isinstance(worker_arguments, (str, bytes)):
+        raise RuntimeError("Batch worker arguments must be a sequence of individual values.")
+    worker = [str(item) for item in worker_arguments]
+    if any(not item for item in worker):
+        raise RuntimeError("The batch worker arguments contain an empty value.")
+    if is_frozen_bundle():
+        args = ["__batch-worker", *worker, *forwarded]
+    else:
+        args = ["-u", "-m", "mclab.application.batch_worker", *worker, *forwarded]
     return sys.executable, args
 
 
@@ -131,72 +245,518 @@ def batch_manifest_status(output: str | Path) -> str:
 
 
 def claim_all_compare_handoff(output: str | Path, token: str) -> bool:
-    target = Path(os.path.abspath(os.path.expanduser(os.fspath(output))))
-    manifest = target / "manifest.json"
-    handoff = target / BATCH_HANDOFF_FILE_NAME
-    active = target / BATCH_ACTIVE_DIR_NAME
-    if not token or len(token) > 256:
-        return False
+    target = _absolute_output_path(output)
     try:
-        target_stat = os.lstat(target)
-        if _stat_is_link_or_reparse(target_stat) or not stat.S_ISDIR(target_stat.st_mode):
-            return False
-        if {item.name for item in target.iterdir()} != {
-            "manifest.json",
-            BATCH_HANDOFF_FILE_NAME,
-        }:
-            return False
-        manifest_stat = os.lstat(manifest)
-        handoff_stat = os.lstat(handoff)
-        if any(
-            _stat_is_link_or_reparse(item) or not stat.S_ISREG(item.st_mode)
-            for item in (manifest_stat, handoff_stat)
+        _decode_token(token)
+        with pinned_output_root(target, allowed_root=target) as (
+            _display_root,
+            root_exists,
+            root_pin,
         ):
-            return False
-        if manifest_stat.st_size > MAX_METADATA_BYTES or handoff_stat.st_size > 256:
-            return False
-        manifest_bytes = manifest.read_bytes()
-        handoff_bytes = handoff.read_bytes()
-        payload = json.loads(manifest_bytes.decode("utf-8"))
-        supplied_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
-        if not (
-            isinstance(payload, dict)
-            and type(payload.get("schema_version")) is int
-            and payload.get("schema_version") == 1
-            and payload.get("scenario_id") == ALL_COMPARE_ID
-            and payload.get("status") == "running"
-            and hmac.compare_digest(
-                str(payload.get("handoff_token_sha256", "")),
-                supplied_hash,
-            )
-            and hmac.compare_digest(handoff_bytes.decode("utf-8").strip(), token)
-        ):
-            return False
-        active.mkdir(mode=0o700, exist_ok=False)
-        try:
-            if manifest.read_bytes() != manifest_bytes or handoff.read_bytes() != handoff_bytes:
-                raise RuntimeError("Course-comparison handoff changed during claim.")
-            handoff.unlink()
-        except Exception:
-            active.rmdir()
-            raise
-    except (FileExistsError, OSError, RuntimeError, UnicodeError, ValueError):
+            if not root_exists or root_pin is None:
+                return False
+            root_pin.validate_directory((), description="course-comparison output")
+            with _retrying_batch_operation_lock(root_pin):
+                manifest_bytes, payload = _read_running_manifest_rooted(root_pin)
+                _validate_manifest_token_hash(payload, token)
+                if set(root_pin.list_names((), max_entries=3)) != {
+                    "manifest.json",
+                    BATCH_HANDOFF_FILE_NAME,
+                }:
+                    return False
+                handoff_bytes = root_pin.read_regular_file(
+                    (BATCH_HANDOFF_FILE_NAME,),
+                    description="course-comparison handoff token",
+                    max_bytes=64,
+                    allow_empty=False,
+                )
+                if not hmac.compare_digest(_decode_handoff_bytes(handoff_bytes), token):
+                    return False
+                root_pin.mkdir((BATCH_ACTIVE_DIR_NAME,), mode=0o700)
+                try:
+                    if root_pin.read_regular_file(
+                        ("manifest.json",),
+                        description="course-comparison manifest",
+                        max_bytes=MAX_METADATA_BYTES,
+                        allow_empty=False,
+                    ) != manifest_bytes:
+                        raise CleanupSafetyError(
+                            "Course-comparison manifest changed during claim"
+                        )
+                    _unlink_regular_file_rooted(
+                        root_pin,
+                        (BATCH_HANDOFF_FILE_NAME,),
+                        expected=handoff_bytes,
+                        description="course-comparison handoff token",
+                    )
+                    root_pin.assert_transaction_boundaries()
+                except Exception:
+                    root_pin.rmdir((BATCH_ACTIVE_DIR_NAME,))
+                    raise
+    except (
+        CleanupOperationError,
+        CleanupSafetyError,
+        FileExistsError,
+        OSError,
+        RuntimeError,
+        UnicodeError,
+        ValueError,
+        TypeError,
+    ):
         return False
     return True
 
 
 def release_all_compare_handoff(output: str | Path) -> None:
-    active = Path(output) / BATCH_ACTIVE_DIR_NAME
+    target = _absolute_output_path(output)
     try:
-        active_stat = os.lstat(active)
-    except FileNotFoundError:
-        raise RuntimeError("The course-comparison writer claim is missing.") from None
-    if _stat_is_link_or_reparse(active_stat) or not stat.S_ISDIR(active_stat.st_mode):
-        raise RuntimeError("The course-comparison writer claim is unsafe.")
+        with pinned_output_root(target, allowed_root=target) as (
+            _display_root,
+            root_exists,
+            root_pin,
+        ):
+            if not root_exists or root_pin is None:
+                raise CleanupSafetyError("Course-comparison output is missing")
+            root_pin.validate_directory((), description="course-comparison output")
+            with _retrying_batch_operation_lock(root_pin):
+                root_pin.validate_directory(
+                    (BATCH_ACTIVE_DIR_NAME,),
+                    description="course-comparison writer claim",
+                )
+                if root_pin.list_names((BATCH_ACTIVE_DIR_NAME,), max_entries=1):
+                    raise CleanupSafetyError(
+                        "Course-comparison writer claim is not empty"
+                    )
+                root_pin.rmdir((BATCH_ACTIVE_DIR_NAME,))
+                root_pin.assert_transaction_boundaries()
+    except (
+        CleanupOperationError,
+        CleanupSafetyError,
+        OSError,
+        ValueError,
+        TypeError,
+    ) as exc:
+        raise RuntimeError(f"Could not release the course-comparison writer claim: {exc}") from exc
+
+
+def write_batch_progress(
+    output: str | Path,
+    token: str,
+    *,
+    sequence: int,
+    current: int,
+    total: int,
+    name: str,
+) -> BatchProgressEvent:
+    """Append one authenticated, ordered progress event to the active claim."""
+
+    key = _decode_token_runtime(token)
+    event = _validated_progress_event(
+        sequence=sequence,
+        current=current,
+        total=total,
+        name=name,
+        expected_index=sequence,
+    )
+    target = _absolute_output_path(output)
     try:
-        active.rmdir()
-    except OSError as exc:
-        raise RuntimeError("The course-comparison writer claim is not empty.") from exc
+        with pinned_output_root(target, allowed_root=target) as (
+            _display_root,
+            root_exists,
+            root_pin,
+        ):
+            if not root_exists or root_pin is None:
+                raise CleanupSafetyError("Course-comparison output is missing")
+            root_pin.validate_directory((), description="course-comparison output")
+            with _retrying_batch_operation_lock(root_pin):
+                _manifest_bytes, manifest = _read_running_manifest_rooted(root_pin)
+                _validate_manifest_token_hash(manifest, token)
+                if root_pin.lexists((BATCH_HANDOFF_FILE_NAME,)):
+                    raise CleanupSafetyError(
+                        "Course-comparison progress cannot precede the writer claim"
+                    )
+                root_pin.validate_directory(
+                    (BATCH_ACTIVE_DIR_NAME,),
+                    description="course-comparison writer claim",
+                )
+                with root_pin.scoped_directory_pin(
+                    (BATCH_ACTIVE_DIR_NAME,),
+                    description="course-comparison writer claim",
+                ):
+                    names = set(
+                        root_pin.list_names((BATCH_ACTIVE_DIR_NAME,), max_entries=2)
+                    )
+                    if not names.issubset({BATCH_PROGRESS_FILE_NAME}):
+                        raise CleanupSafetyError(
+                            "Course-comparison writer claim contains an unknown marker"
+                        )
+                    events: tuple[BatchProgressEvent, ...] = ()
+                    progress_path = (BATCH_ACTIVE_DIR_NAME, BATCH_PROGRESS_FILE_NAME)
+                    if BATCH_PROGRESS_FILE_NAME in names:
+                        progress_bytes = root_pin.read_regular_file(
+                            progress_path,
+                            description="course-comparison progress sidecar",
+                            max_bytes=MAX_BATCH_PROGRESS_BYTES,
+                            allow_empty=False,
+                        )
+                        events = _decode_progress_payload(progress_bytes, key)
+                    if sequence != len(events) + 1:
+                        raise CleanupSafetyError(
+                            "Course-comparison progress sequence is replayed or out of order"
+                        )
+                    encoded = _encode_progress_payload((*events, event), key)
+                    root_pin.replace_regular_file(progress_path, encoded, mode=0o600)
+                    root_pin.assert_transaction_boundaries()
+                    return event
+    except (
+        CleanupOperationError,
+        CleanupSafetyError,
+        OSError,
+        UnicodeError,
+        ValueError,
+        TypeError,
+    ) as exc:
+        raise RuntimeError(f"Could not publish authenticated batch progress: {exc}") from exc
+
+
+def read_batch_progress(
+    output: str | Path,
+    token: str,
+) -> tuple[BatchProgressEvent, ...]:
+    """Return the authenticated history for a valid handoff lifecycle state."""
+
+    key = _decode_token_runtime(token)
+    target = _absolute_output_path(output)
+    try:
+        with pinned_output_root(target, allowed_root=target) as (
+            _display_root,
+            root_exists,
+            root_pin,
+        ):
+            if not root_exists or root_pin is None:
+                raise CleanupSafetyError("Course-comparison output is missing")
+            root_pin.validate_directory((), description="course-comparison output")
+            with root_pin.operation_lock():
+                manifest_bytes = root_pin.read_regular_file(
+                    ("manifest.json",),
+                    description="course-comparison manifest",
+                    max_bytes=MAX_METADATA_BYTES,
+                    allow_empty=False,
+                )
+                payload = json.loads(manifest_bytes.decode("utf-8"))
+                status = payload.get("status") if isinstance(payload, dict) else None
+                if status in TERMINAL_BATCH_STATUSES:
+                    if payload.get("scenario_id") != ALL_COMPARE_ID:
+                        raise CleanupSafetyError(
+                            "Terminal batch manifest identity is invalid"
+                        )
+                    errors = _verify_terminal_batch_output_rooted(
+                        root_pin,
+                        expected_status=str(status),
+                    )
+                    if errors:
+                        raise CleanupSafetyError(
+                            "Terminal course-comparison output is invalid: "
+                            + "; ".join(errors)
+                        )
+                    events: tuple[BatchProgressEvent, ...] = ()
+                else:
+                    _state, events, _manifest_bytes, _payload = (
+                        _read_authenticated_running_state_rooted(root_pin, token, key)
+                    )
+                root_pin.assert_read_boundary()
+                return events
+    except CleanupBusyError as exc:
+        raise BatchProgressBusy("Authenticated batch progress is being updated") from exc
+    except (
+        CleanupOperationError,
+        CleanupSafetyError,
+        OSError,
+        UnicodeError,
+        ValueError,
+        TypeError,
+    ) as exc:
+        raise RuntimeError(f"Could not read authenticated batch progress: {exc}") from exc
+
+
+def clear_all_compare_progress(output: str | Path, token: str) -> None:
+    """Remove a valid progress sidecar while leaving the active claim in place."""
+
+    key = _decode_token_runtime(token)
+    target = _absolute_output_path(output)
+    try:
+        with pinned_output_root(target, allowed_root=target) as (
+            _display_root,
+            root_exists,
+            root_pin,
+        ):
+            if not root_exists or root_pin is None:
+                raise CleanupSafetyError("Course-comparison output is missing")
+            root_pin.validate_directory((), description="course-comparison output")
+            with _retrying_batch_operation_lock(root_pin):
+                state, _events, _manifest_bytes, _payload = (
+                    _read_authenticated_running_state_rooted(root_pin, token, key)
+                )
+                if state != "postclaim":
+                    raise CleanupSafetyError(
+                        "Course-comparison progress cleanup requires an active writer claim"
+                    )
+                progress_path = (BATCH_ACTIVE_DIR_NAME, BATCH_PROGRESS_FILE_NAME)
+                if root_pin.lexists(progress_path):
+                    progress_bytes = root_pin.read_regular_file(
+                        progress_path,
+                        description="course-comparison progress sidecar",
+                        max_bytes=MAX_BATCH_PROGRESS_BYTES,
+                        allow_empty=False,
+                    )
+                    _decode_progress_payload(progress_bytes, key)
+                    _unlink_regular_file_rooted(
+                        root_pin,
+                        progress_path,
+                        expected=progress_bytes,
+                        description="course-comparison progress sidecar",
+                    )
+                    root_pin.assert_transaction_boundaries()
+    except (
+        CleanupOperationError,
+        CleanupSafetyError,
+        OSError,
+        UnicodeError,
+        ValueError,
+        TypeError,
+    ) as exc:
+        raise RuntimeError(f"Could not clear authenticated batch progress: {exc}") from exc
+
+
+def settle_all_compare_output(
+    output: str | Path,
+    token: str,
+    requested_status: str,
+    error: str = "",
+) -> str:
+    """Recover a quiescent desktop batch without ever synthesizing success.
+
+    The caller owns the process-tree quiescence proof.  This function owns the
+    authenticated filesystem transition once no child can write again.
+    """
+
+    if requested_status not in TERMINAL_BATCH_STATUSES:
+        raise RuntimeError(f"Unsupported course-comparison settlement: {requested_status!r}")
+    target = _absolute_output_path(output)
+    terminal = _strict_terminal_status(target)
+    if terminal:
+        return terminal
+    if requested_status == "completed":
+        raise RuntimeError(
+            "A completed course comparison must be published by the child and cannot be recovered."
+        )
+    key = _decode_token_runtime(token)
+    started_at = ""
+    plot = True
+    expected_root_identity: dict[str, int | str] | None = None
+    terminal_error = error or "The course comparison ended before authenticated completion."
+    from mclab.application.artifacts import write_manifest
+
+    try:
+        with pinned_output_root(target, allowed_root=target) as (
+            _display_root,
+            root_exists,
+            root_pin,
+        ):
+            if not root_exists or root_pin is None:
+                raise CleanupSafetyError("Course-comparison output is missing")
+            root_pin.validate_directory((), description="course-comparison output")
+            with _retrying_batch_operation_lock(root_pin):
+                state, _events, manifest_bytes, payload = (
+                    _read_authenticated_running_state_rooted(root_pin, token, key)
+                )
+                started_at = str(payload["started_at"])
+                resolved = payload["config"]["resolved"]
+                plot = bool(resolved["plot"])
+                if state == "preclaim":
+                    handoff_bytes = root_pin.read_regular_file(
+                        (BATCH_HANDOFF_FILE_NAME,),
+                        description="course-comparison handoff token",
+                        max_bytes=64,
+                        allow_empty=False,
+                    )
+                    _unlink_regular_file_rooted(
+                        root_pin,
+                        (BATCH_HANDOFF_FILE_NAME,),
+                        expected=handoff_bytes,
+                        description="course-comparison handoff token",
+                    )
+                elif state == "postclaim":
+                    progress_path = (BATCH_ACTIVE_DIR_NAME, BATCH_PROGRESS_FILE_NAME)
+                    if root_pin.lexists(progress_path):
+                        progress_bytes = root_pin.read_regular_file(
+                            progress_path,
+                            description="course-comparison progress sidecar",
+                            max_bytes=MAX_BATCH_PROGRESS_BYTES,
+                            allow_empty=False,
+                        )
+                        _decode_progress_payload(progress_bytes, key)
+                        _unlink_regular_file_rooted(
+                            root_pin,
+                            progress_path,
+                            expected=progress_bytes,
+                            description="course-comparison progress sidecar",
+                        )
+                    if root_pin.list_names((BATCH_ACTIVE_DIR_NAME,), max_entries=1):
+                        raise CleanupSafetyError(
+                            "Course-comparison writer claim did not become empty"
+                        )
+                    root_pin.rmdir((BATCH_ACTIVE_DIR_NAME,))
+                prune_interrupted_batch_directories(root_pin)
+                current_manifest = root_pin.read_regular_file(
+                    ("manifest.json",),
+                    description="course-comparison manifest",
+                    max_bytes=MAX_METADATA_BYTES,
+                    allow_empty=False,
+                )
+                if current_manifest != manifest_bytes:
+                    raise CleanupSafetyError(
+                        "Course-comparison manifest changed during settlement"
+                    )
+                _remove_untrusted_report_documents_rooted(root_pin, payload)
+                root_pin.assert_transaction_boundaries()
+                expected_root_identity = root_pin.identity_payload(include_mtime=False)
+            if expected_root_identity is None:
+                raise RuntimeError(
+                    "Authenticated course-comparison root identity is unavailable"
+                )
+            write_manifest(
+                target,
+                scenario_id=ALL_COMPARE_ID,
+                status=requested_status,
+                config={"batch_name": "all", "plot": plot},
+                started_at=started_at,
+                run_kind="comparison_batch",
+                error=terminal_error if requested_status == "error" else "",
+                expected_root_identity=expected_root_identity,
+            )
+            with _retrying_batch_operation_lock(root_pin):
+                errors = _verify_terminal_batch_output_rooted(
+                    root_pin,
+                    expected_status=requested_status,
+                )
+                root_pin.assert_transaction_boundaries()
+            if errors:
+                raise RuntimeError(
+                    "Terminal course-comparison verification failed: "
+                    + "; ".join(errors)
+                )
+    except (
+        CleanupOperationError,
+        CleanupSafetyError,
+        OSError,
+        UnicodeError,
+        ValueError,
+        TypeError,
+    ) as exc:
+        raise RuntimeError(f"Could not settle the course-comparison output: {exc}") from exc
+    return requested_status
+
+
+def _remove_untrusted_report_documents_rooted(
+    root_pin: Any,
+    running_manifest: dict[str, Any],
+) -> None:
+    """Remove only derived root documents withdrawn before an interrupted rewrite."""
+
+    artifacts = running_manifest.get("artifacts", {})
+    if not isinstance(artifacts, dict):
+        raise CleanupSafetyError("Course-comparison manifest artifacts are invalid")
+    trusted = True
+    for name in _DERIVED_REPORT_DOCUMENTS:
+        expected = artifacts.get(name)
+        if not isinstance(expected, str) or not root_pin.lexists((name,)):
+            trusted = False
+            break
+        document = root_pin.read_regular_file(
+            (name,),
+            description=f"trusted course-comparison {name}",
+            max_bytes=MAX_METADATA_BYTES,
+            allow_empty=True,
+        )
+        if not hmac.compare_digest(hashlib.sha256(document).hexdigest(), expected):
+            trusted = False
+            break
+    if trusted:
+        return
+    for name in _DERIVED_REPORT_DOCUMENTS:
+        if not root_pin.lexists((name,)):
+            continue
+        document = root_pin.read_regular_file(
+            (name,),
+            description=f"untrusted course-comparison {name}",
+            max_bytes=MAX_METADATA_BYTES,
+            allow_empty=True,
+        )
+        _unlink_regular_file_rooted(
+            root_pin,
+            (name,),
+            expected=document,
+            description=f"untrusted course-comparison {name}",
+        )
+
+
+def _decode_token_runtime(token: object) -> bytes:
+    try:
+        return _decode_token(token)
+    except CleanupSafetyError as exc:
+        raise RuntimeError(f"Invalid course-comparison handoff token: {exc}") from exc
+
+
+def _strict_terminal_status(target: Path) -> str:
+    try:
+        with pinned_output_root(target, allowed_root=target) as (
+            _display_root,
+            root_exists,
+            root_pin,
+        ):
+            if not root_exists or root_pin is None or not root_pin.lexists(("manifest.json",)):
+                return ""
+            with _retrying_batch_operation_lock(root_pin):
+                manifest_bytes = root_pin.read_regular_file(
+                    ("manifest.json",),
+                    description="course-comparison manifest",
+                    max_bytes=MAX_METADATA_BYTES,
+                    allow_empty=False,
+                )
+                payload = json.loads(manifest_bytes.decode("utf-8"))
+                if not isinstance(payload, dict):
+                    root_pin.assert_read_boundary()
+                    return ""
+                status = payload.get("status")
+                if status not in TERMINAL_BATCH_STATUSES:
+                    root_pin.assert_read_boundary()
+                    return ""
+                if payload.get("scenario_id") != ALL_COMPARE_ID:
+                    raise CleanupSafetyError("Terminal batch manifest identity is invalid")
+                errors = _verify_terminal_batch_output_rooted(
+                    root_pin,
+                    expected_status=str(status),
+                )
+                if errors:
+                    raise CleanupSafetyError(
+                        "Terminal course-comparison output is invalid: " + "; ".join(errors)
+                    )
+                root_pin.assert_read_boundary()
+    except (
+        CleanupOperationError,
+        CleanupSafetyError,
+        OSError,
+        UnicodeError,
+        ValueError,
+        TypeError,
+    ) as exc:
+        raise RuntimeError(f"Could not inspect terminal batch state: {exc}") from exc
+    return str(status)
+
+
+def _absolute_output_path(output: str | Path) -> Path:
+    return Path(os.path.abspath(os.path.expanduser(os.fspath(output))))
 
 
 def parse_batch_progress(line: str) -> tuple[int, int, str] | None:

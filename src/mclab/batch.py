@@ -21,8 +21,11 @@ from typing import Any
 
 from mclab.application.batch_runs import (
     ALL_COMPARE_ID,
+    ALL_COMPARE_BATCH_NAMES,
+    clear_all_compare_progress,
     claim_all_compare_handoff,
     release_all_compare_handoff,
+    write_batch_progress,
 )
 from mclab.application.repositories import ArtifactRecord, ArtifactRepository
 from mclab.config import (
@@ -62,6 +65,7 @@ LabRunner = Callable[..., Path]
 ALL_BATCH_NAME = "all"
 VIEWER_HANDOFF_ANCHOR = "viewer-handoff"
 LOGGER = logging.getLogger(__name__)
+_REPORT_DOCUMENT_ARTIFACTS = ("report.html", "worksheet.md")
 
 
 def _refresh_parent_index_after_publication(output_path: Path) -> None:
@@ -73,6 +77,19 @@ def _refresh_parent_index_after_publication(output_path: Path) -> None:
         LOGGER.warning(
             "Comparison output is complete, but the cumulative outputs index could "
             "not be refreshed: %s",
+            exc,
+        )
+
+
+def _refresh_partial_index_before_error(output_path: Path) -> None:
+    """Best-effort navigation for completed children before error publication."""
+
+    try:
+        write_outputs_index(output_path)
+    except Exception as exc:
+        LOGGER.warning(
+            "Partial comparison navigation could not be refreshed before error "
+            "publication: %s",
             exc,
         )
 
@@ -693,6 +710,7 @@ def run_batch(
     output_dir: str | Path | None = None,
     plot: bool = True,
     seed: int | None = None,
+    publish_parent_index: bool = True,
 ) -> Path:
     scenarios = BATCH_SETS.get(batch_name)
     if scenarios is None:
@@ -728,6 +746,7 @@ def run_batch(
                 pause_at_end=False,
                 plot_selection=scenario.plots,
                 seed=seed,
+                publish_parent_index=False,
             )
             completed.append({**asdict(scenario), "output_path": str(result_path)})
 
@@ -752,8 +771,9 @@ def run_batch(
         if plot:
             write_comparison_plots(batch_output, batch_name, scenarios)
         # Publish all completion inputs before the report computes a
-        # prospective terminal verdict.  The strict reader rejects links,
-        # directories, digest mismatches, and unbounded artifacts.
+        # prospective terminal verdict, while keeping both documents omitted.
+        # The strict reader rejects links, directories, digest mismatches, and
+        # unbounded artifacts.
         write_manifest(
             batch_output,
             scenario_id=f"batch.{batch_name}",
@@ -762,13 +782,25 @@ def run_batch(
             seed=seed,
             started_at=started_at,
             run_kind="comparison_batch",
+            untrusted_artifacts=_REPORT_DOCUMENT_ARTIFACTS,
         )
         write_batch_report(batch_output, batch_name, scenarios)
     except Exception as exc:
         # Work/report failures become terminal errors only after surviving
         # learner artifacts are repaired to the same verdict.
+        _refresh_partial_index_before_error(batch_output)
         error_report_ready = False
         try:
+            write_manifest(
+                batch_output,
+                scenario_id=f"batch.{batch_name}",
+                status="running",
+                config={"batch_name": batch_name, "plot": plot},
+                seed=seed,
+                started_at=started_at,
+                run_kind="comparison_batch",
+                untrusted_artifacts=_REPORT_DOCUMENT_ARTIFACTS,
+            )
             write_batch_report(
                 batch_output,
                 batch_name,
@@ -801,7 +833,8 @@ def run_batch(
                     run_kind="comparison_batch",
                     error=str(exc),
                 )
-                write_outputs_index(batch_output.parent)
+                if publish_parent_index:
+                    write_outputs_index(batch_output.parent)
             except Exception:
                 pass
         raise
@@ -820,6 +853,16 @@ def run_batch(
         # terminal state.  Restore a coherent running snapshot so retry and
         # recovery remain fail-closed.
         try:
+            write_manifest(
+                batch_output,
+                scenario_id=f"batch.{batch_name}",
+                status="running",
+                config={"batch_name": batch_name, "plot": plot},
+                seed=seed,
+                started_at=started_at,
+                run_kind="comparison_batch",
+                untrusted_artifacts=_REPORT_DOCUMENT_ARTIFACTS,
+            )
             write_batch_report(
                 batch_output,
                 batch_name,
@@ -838,7 +881,8 @@ def run_batch(
         except Exception:
             pass
         raise
-    _refresh_parent_index_after_publication(batch_output)
+    if publish_parent_index:
+        _refresh_parent_index_after_publication(batch_output)
     return batch_output
 
 
@@ -860,6 +904,16 @@ def run_all_batches(
     from mclab.application.artifacts import write_manifest
 
     completed: list[dict[str, Any]] = []
+    progress_recorded = False
+    authenticated_handoff = bool(
+        handoff_token is not None
+        and re.fullmatch(r"[0-9a-f]{64}", handoff_token)
+    )
+    handoff_token_hash = (
+        hashlib.sha256(handoff_token.encode("ascii")).hexdigest()
+        if handoff_token is not None
+        else ""
+    )
     try:
         write_manifest(
             group_output,
@@ -869,9 +923,20 @@ def run_all_batches(
             seed=seed,
             started_at=started_at,
             run_kind="comparison_batch",
+            handoff_token_sha256=handoff_token_hash,
         )
         batch_names = list_batch_sets()
         for index, batch_name in enumerate(batch_names, start=1):
+            if handoff_token is not None:
+                write_batch_progress(
+                    group_output,
+                    handoff_token,
+                    sequence=index,
+                    current=index,
+                    total=len(batch_names),
+                    name=batch_name,
+                )
+                progress_recorded = True
             if on_progress is not None:
                 on_progress(index, len(batch_names), batch_name)
             batch_output = run_batch(
@@ -879,6 +944,7 @@ def run_all_batches(
                 output_dir=group_output / batch_name,
                 plot=plot,
                 seed=seed,
+                publish_parent_index=False,
             )
             guide = BATCH_GUIDES.get(batch_name)
             scenario_count = len(BATCH_SETS[batch_name])
@@ -928,11 +994,25 @@ def run_all_batches(
             seed=seed,
             started_at=started_at,
             run_kind="comparison_batch",
+            handoff_token_sha256=handoff_token_hash,
+            untrusted_artifacts=_REPORT_DOCUMENT_ARTIFACTS,
         )
         write_all_batches_report(group_output, completed)
     except Exception as exc:
+        _refresh_partial_index_before_error(group_output)
         error_report_ready = False
         try:
+            write_manifest(
+                group_output,
+                scenario_id=ALL_COMPARE_ID,
+                status="running",
+                config={"batch_name": ALL_BATCH_NAME, "plot": plot},
+                seed=seed,
+                started_at=started_at,
+                run_kind="comparison_batch",
+                handoff_token_sha256=handoff_token_hash,
+                untrusted_artifacts=_REPORT_DOCUMENT_ARTIFACTS,
+            )
             write_all_batches_report(
                 group_output,
                 completed,
@@ -946,6 +1026,7 @@ def run_all_batches(
                 seed=seed,
                 started_at=started_at,
                 run_kind="comparison_batch",
+                handoff_token_sha256=handoff_token_hash,
             )
             error_report_ready = True
         except Exception:
@@ -956,6 +1037,8 @@ def run_all_batches(
             # The claim lives inside the output tree and must be removed before
             # the terminal error manifest is written.
             try:
+                if progress_recorded:
+                    clear_all_compare_progress(group_output, handoff_token)
                 release_all_compare_handoff(group_output)
             except Exception:
                 error_report_ready = False
@@ -976,7 +1059,13 @@ def run_all_batches(
                 pass
         raise
     if handoff_token is not None:
+        if authenticated_handoff and tuple(batch_names) != ALL_COMPARE_BATCH_NAMES:
+            raise RuntimeError(
+                "The authenticated course comparison did not run the exact ordered batch set."
+            )
         # Nothing inside the output tree may change after terminal publication.
+        if progress_recorded:
+            clear_all_compare_progress(group_output, handoff_token)
         release_all_compare_handoff(group_output)
     try:
         write_manifest(
@@ -990,6 +1079,17 @@ def run_all_batches(
         )
     except Exception:
         try:
+            write_manifest(
+                group_output,
+                scenario_id=ALL_COMPARE_ID,
+                status="running",
+                config={"batch_name": ALL_BATCH_NAME, "plot": plot},
+                seed=seed,
+                started_at=started_at,
+                run_kind="comparison_batch",
+                handoff_token_sha256=handoff_token_hash,
+                untrusted_artifacts=_REPORT_DOCUMENT_ARTIFACTS,
+            )
             write_all_batches_report(
                 group_output,
                 completed,
@@ -1003,6 +1103,7 @@ def run_all_batches(
                 seed=seed,
                 started_at=started_at,
                 run_kind="comparison_batch",
+                handoff_token_sha256=handoff_token_hash,
             )
         except Exception:
             pass
@@ -1208,14 +1309,7 @@ def _all_batch_completion_decision(
 
 
 def _batch_artifact_record(output: Path) -> ArtifactRecord | None:
-    return next(
-        (
-            item
-            for item in ArtifactRepository(output.parent).list_runs()
-            if item.path.name == output.name
-        ),
-        None,
-    )
+    return ArtifactRepository(output.parent).get_direct_child(output)
 
 
 def _assert_batch_report_write_allowed(record: ArtifactRecord | None) -> None:
