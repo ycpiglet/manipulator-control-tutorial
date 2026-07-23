@@ -23,6 +23,17 @@ from mclab.output_cleanup import build_cleanup_plan  # noqa: E402
 
 
 class BatchTests(unittest.TestCase):
+    def test_parent_index_refresh_is_best_effort_after_batch_publication(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp).resolve() / "collection" / "batch"
+
+            with patch.object(
+                batch,
+                "write_outputs_index",
+                side_effect=RuntimeError("injected parent-index failure"),
+            ):
+                batch._refresh_parent_index_after_publication(output)
+
     def test_batch_sets_reference_valid_configs(self) -> None:
         self.assertNotIn(batch.ALL_BATCH_NAME, batch.list_batch_sets())
         self.assertIn(batch.ALL_BATCH_NAME, batch.list_batch_sets(include_all=True))
@@ -333,6 +344,11 @@ class BatchTests(unittest.TestCase):
                     seed=11,
                 )
 
+            self.assertEqual(
+                {path.name for path in Path(tmp).resolve().iterdir()},
+                {"batch_output", "index.html"},
+            )
+            self.assertTrue((Path(tmp).resolve() / "index.html").is_file())
             self.assertEqual(len(calls), 1)
             self.assertEqual(calls[0]["plot"], False)
             self.assertEqual(calls[0]["viewer"], False)

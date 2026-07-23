@@ -27,6 +27,8 @@ Before posting, remove usernames, home-directory paths, credentials, tokens,
 learner predictions or notes, and private output content. MCLab keeps runs and
 notes locally and does not upload them automatically; sharing them in an issue
 is the reporter's explicit action.
+Review [Local data and privacy](../docs/local_data_and_privacy.md) before using a
+shared PC, copying a run, or attaching any saved artifact.
 
 ## 한국어 안내
 
@@ -38,3 +40,5 @@ is the reporter's explicit action.
 config, 재현 절차, 기대 결과와 실제 결과를 알려 주세요. 설치 문제라면
 `python -m mclab doctor --json` 결과에서 사용자명, 홈 경로, 비밀정보, 학습자 예측·메모를
 제거한 뒤 필요한 부분만 공유해 주세요.
+[로컬 데이터와 개인정보 안내](../docs/local_data_and_privacy.md)에서 공용 PC, 실행 복사와
+저장 artifact 공유 전 확인할 항목을 볼 수 있습니다.

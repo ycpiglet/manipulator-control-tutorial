@@ -27,11 +27,13 @@ def default_outputs_root() -> Path:
     if not is_frozen_bundle():
         return PROJECT_ROOT / "outputs"
     if sys.platform == "win32":
-        base = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData/Local"))
+        local_app_data = os.environ.get("LOCALAPPDATA")
+        base = Path(local_app_data) if local_app_data else Path.home() / "AppData/Local"
         return base / "MCLab" / "outputs"
     if sys.platform == "darwin":
         return Path.home() / "Library" / "Application Support" / "MCLab" / "outputs"
-    base = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share"))
+    xdg_data_home = os.environ.get("XDG_DATA_HOME")
+    base = Path(xdg_data_home) if xdg_data_home else Path.home() / ".local/share"
     return base / "mclab" / "outputs"
 
 
