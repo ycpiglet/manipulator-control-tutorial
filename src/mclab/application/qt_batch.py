@@ -238,6 +238,9 @@ def create_batch_controller(
                 process=process,
                 tree=BatchProcessTree(QProcess, process),
                 state="running",
+                settlement_started=True,
+                settlement_done=True,
+                settlement_status="stopped",
             )
             self._attempt = attempt
             self.process = process

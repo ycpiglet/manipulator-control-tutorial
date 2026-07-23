@@ -498,6 +498,38 @@ class BatchControllerLifecycleTests(unittest.TestCase):
         self.assertEqual(process.deleted, 1)
         self.assertFalse(controller.running)
 
+    def test_smoke_fixture_shutdown_never_writes_batch_artifacts(self) -> None:
+        controller_type, process_type, _application = self._controller_type()
+
+        class Process:
+            def __init__(self) -> None:
+                self.active = True
+
+            def state(self) -> object:
+                return process_type.Running if self.active else process_type.NotRunning
+
+            def terminate(self) -> None:
+                self.active = False
+
+            @staticmethod
+            def waitForFinished(_timeout: int) -> bool:  # noqa: N802
+                return True
+
+            def kill(self) -> None:
+                self.active = False
+
+        controller = controller_type()
+        stopped: list[str] = []
+        controller.stopped.connect(stopped.append)
+        controller._smoke_inject_active(Process(), "")  # noqa: SLF001
+
+        with patch("mclab.application.qt_batch.settle_all_compare_output") as settle:
+            self.assertTrue(controller.shutdown())
+
+        settle.assert_not_called()
+        self.assertEqual(stopped, [""])
+        self.assertFalse(controller.running)
+
     def test_progress_lock_contention_reschedules_without_cancelling(self) -> None:
         from mclab.application.batch_runs import BatchProgressBusy, BatchProgressEvent
         from mclab.application.qt_batch import _BatchAttempt
