@@ -48,8 +48,10 @@ PACKAGE_DIRECTORY_NAME = "MCLab-package"
 EVIDENCE_NAME = "package-metrics.json"
 UNSIGNED_MARKER_NAME = "UNSIGNED-DEVELOPMENT-BUILD.txt"
 UNSIGNED_MARKER_BYTES = b"UNSIGNED DEVELOPMENT BUILD - NOT FOR PRODUCTION\n"
+THIRD_PARTY_NOTICES_NAME = "THIRD_PARTY_NOTICES.md"
+MAX_THIRD_PARTY_NOTICES_BYTES = 8 * MIB
 
-EVIDENCE_SCHEMA = "mclab.package-metrics.v1"
+EVIDENCE_SCHEMA = "mclab.package-metrics.v2"
 INVENTORY_SCHEMA = "mclab.bundle-inventory.v1"
 IDENTITY_SCHEMA = "mclab.package-identity.v1"
 ARCHIVE_FORMAT = "deterministic-tar-gzip"
@@ -960,6 +962,68 @@ def _marker_evidence(inventory: Mapping[str, object]) -> dict[str, object]:
     }
 
 
+def _third_party_notices_source(repository_root: Path) -> tuple[bytes, dict[str, object]]:
+    path = repository_root / THIRD_PARTY_NOTICES_NAME
+    try:
+        metadata = path.lstat()
+    except FileNotFoundError as exc:
+        raise PackageValidationError(
+            f"Repository notice source is missing: {THIRD_PARTY_NOTICES_NAME}"
+        ) from exc
+    _assert_regular_metadata(path, metadata)
+    if metadata.st_size <= 0 or metadata.st_size > MAX_THIRD_PARTY_NOTICES_BYTES:
+        raise PackageValidationError(
+            "Repository notice source is empty or exceeds the bounded notice size"
+        )
+    with _open_regular_file(path, expected_size=metadata.st_size) as handle:
+        payload = handle.read(MAX_THIRD_PARTY_NOTICES_BYTES + 1)
+    if len(payload) != metadata.st_size:
+        raise PackageValidationError("Repository notice source changed while it was read")
+    return payload, {
+        "path": THIRD_PARTY_NOTICES_NAME,
+        "sha256": hashlib.sha256(payload).hexdigest(),
+        "size_bytes": len(payload),
+    }
+
+
+def _third_party_notices_evidence(
+    inventory: Mapping[str, object],
+    *,
+    expected: Mapping[str, object] | None = None,
+) -> dict[str, object]:
+    members = inventory["members"]
+    if not isinstance(members, list):
+        raise PackageValidationError("Inventory members must be a list")
+    matches = [
+        member for member in members if member.get("path") == THIRD_PARTY_NOTICES_NAME
+    ]
+    if len(matches) != 1 or matches[0].get("type") != "file":
+        raise PackageValidationError(
+            "THIRD_PARTY_NOTICES.md is missing from the package bundle root"
+        )
+    member = matches[0]
+    digest = member.get("sha256")
+    size = member.get("size_bytes")
+    if (
+        not isinstance(digest, str)
+        or _SHA256_RE.fullmatch(digest) is None
+        or type(size) is not int
+        or size <= 0
+        or size > MAX_THIRD_PARTY_NOTICES_BYTES
+    ):
+        raise PackageValidationError("Packaged THIRD_PARTY_NOTICES.md evidence is invalid")
+    result = {
+        "path": THIRD_PARTY_NOTICES_NAME,
+        "sha256": digest,
+        "size_bytes": size,
+    }
+    if expected is not None and not _canonical_values_equal(result, expected):
+        raise PackageValidationError(
+            "Package-root THIRD_PARTY_NOTICES.md does not match the repository source"
+        )
+    return result
+
+
 def _evidence_payload(
     *,
     inventory: dict[str, object],
@@ -969,6 +1033,7 @@ def _evidence_payload(
     archive_sha256: str,
     provenance: dict[str, object],
     size_gate_enforced: bool,
+    third_party_notices: dict[str, object],
 ) -> dict[str, object]:
     one_folder_bytes = int(inventory["one_folder_bytes"])
     return {
@@ -991,6 +1056,7 @@ def _evidence_payload(
         "package_identity": {"algorithm": "sha256", "value": package_identity},
         "schema": EVIDENCE_SCHEMA,
         "source": provenance,
+        "third_party_notices": third_party_notices,
         "unsigned_marker": _marker_evidence(inventory),
     }
 
@@ -1312,6 +1378,7 @@ def _verify_package_unlocked(
         "package_identity",
         "schema",
         "source",
+        "third_party_notices",
         "unsigned_marker",
     }:
         raise PackageValidationError("Package evidence has unknown or missing top-level fields")
@@ -1339,6 +1406,19 @@ def _verify_package_unlocked(
     expected_marker = _marker_evidence(actual_inventory)
     if not _canonical_values_equal(payload["unsigned_marker"], expected_marker):
         raise PackageValidationError("Unsigned marker evidence does not match the bundle")
+    expected_notice_source = None
+    if provenance_mode == PROVENANCE_MODE_CHECKOUT:
+        _notice_bytes, expected_notice_source = _third_party_notices_source(
+            repository_root
+        )
+    expected_notice = _third_party_notices_evidence(
+        actual_inventory,
+        expected=expected_notice_source,
+    )
+    if not _canonical_values_equal(payload["third_party_notices"], expected_notice):
+        raise PackageValidationError(
+            "THIRD_PARTY_NOTICES.md evidence does not match the package bundle root"
+        )
 
     archive_path = package / archive_name
     archive_metadata = archive_path.lstat()
@@ -1729,9 +1809,14 @@ def _finalize_package(bundle_root: Path, *, enforce_size_gate: bool) -> Path:
     if bundle_root != expected_bundle:
         raise PackageValidationError(
             f"Desktop bundle must use the fixed build path {expected_bundle}: {bundle_root}"
-        )
+    )
     _require_real_directory_chain(ROOT, bundle_root, label="Desktop one-folder bundle")
     inventory_before, package_identity = _inventory_bundle(bundle_root)
+    _notice_payload, notice_source = _third_party_notices_source(ROOT)
+    notice_evidence = _third_party_notices_evidence(
+        inventory_before,
+        expected=notice_source,
+    )
     one_folder_bytes = int(inventory_before["one_folder_bytes"])
     _check_size_gate(
         "one-folder",
@@ -1773,6 +1858,7 @@ def _finalize_package(bundle_root: Path, *, enforce_size_gate: bool) -> Path:
             archive_sha256=archive_sha256,
             provenance=provenance,
             size_gate_enforced=enforce_size_gate,
+            third_party_notices=notice_evidence,
         )
         _write_bytes(stage / EVIDENCE_NAME, _canonical_json_bytes(evidence))
         _verify_package_unlocked(
@@ -1794,23 +1880,34 @@ def _finalize_package(bundle_root: Path, *, enforce_size_gate: bool) -> Path:
             )
 
 
-def _capture_marker(bundle_root: Path) -> tuple[bytes, int] | None:
-    marker = bundle_root / UNSIGNED_MARKER_NAME
+def _capture_bundle_root_file(
+    bundle_root: Path,
+    name: str,
+    *,
+    max_bytes: int,
+) -> tuple[bytes, int] | None:
+    target = bundle_root / name
     try:
-        metadata = marker.lstat()
+        metadata = target.lstat()
     except FileNotFoundError:
         return None
-    _assert_regular_metadata(marker, metadata)
-    if metadata.st_size > 4096:
-        raise PackageValidationError("Existing unsigned marker is unexpectedly large")
-    with _open_regular_file(marker, expected_size=metadata.st_size) as handle:
+    _assert_regular_metadata(target, metadata)
+    if metadata.st_size > max_bytes:
+        raise PackageValidationError(f"Existing bundle-root file is unexpectedly large: {name}")
+    with _open_regular_file(target, expected_size=metadata.st_size) as handle:
         return handle.read(), stat.S_IMODE(metadata.st_mode)
 
 
-def _atomic_replace_marker(bundle_root: Path, payload: bytes, *, mode: int = 0o644) -> None:
+def _atomic_replace_bundle_root_file(
+    bundle_root: Path,
+    name: str,
+    payload: bytes,
+    *,
+    mode: int = 0o644,
+) -> None:
     _require_real_directory(bundle_root, label="Desktop one-folder bundle")
     descriptor, temporary_name = tempfile.mkstemp(
-        prefix=f".{UNSIGNED_MARKER_NAME}.", dir=bundle_root
+        prefix=f".{name}.", dir=bundle_root
     )
     temporary = Path(temporary_name)
     try:
@@ -1819,7 +1916,7 @@ def _atomic_replace_marker(bundle_root: Path, payload: bytes, *, mode: int = 0o6
             handle.flush()
             os.fsync(handle.fileno())
         temporary.chmod(mode)
-        destination = bundle_root / UNSIGNED_MARKER_NAME
+        destination = bundle_root / name
         if destination.exists() or destination.is_symlink():
             _assert_regular_metadata(destination, destination.lstat())
         os.replace(temporary, destination)
@@ -1830,18 +1927,66 @@ def _atomic_replace_marker(bundle_root: Path, payload: bytes, *, mode: int = 0o6
             pass
 
 
-def _restore_marker(bundle_root: Path, previous: tuple[bytes, int] | None) -> None:
-    marker = bundle_root / UNSIGNED_MARKER_NAME
+def _restore_bundle_root_file(
+    bundle_root: Path,
+    name: str,
+    previous: tuple[bytes, int] | None,
+) -> None:
+    target = bundle_root / name
     if previous is None:
         try:
-            metadata = marker.lstat()
+            metadata = target.lstat()
         except FileNotFoundError:
             return
-        _assert_regular_metadata(marker, metadata)
-        marker.unlink()
+        _assert_regular_metadata(target, metadata)
+        target.unlink()
         return
     payload, mode = previous
-    _atomic_replace_marker(bundle_root, payload, mode=mode)
+    _atomic_replace_bundle_root_file(bundle_root, name, payload, mode=mode)
+
+
+def _capture_marker(bundle_root: Path) -> tuple[bytes, int] | None:
+    return _capture_bundle_root_file(
+        bundle_root,
+        UNSIGNED_MARKER_NAME,
+        max_bytes=4096,
+    )
+
+
+def _atomic_replace_marker(bundle_root: Path, payload: bytes, *, mode: int = 0o644) -> None:
+    _atomic_replace_bundle_root_file(
+        bundle_root,
+        UNSIGNED_MARKER_NAME,
+        payload,
+        mode=mode,
+    )
+
+
+def _restore_marker(bundle_root: Path, previous: tuple[bytes, int] | None) -> None:
+    _restore_bundle_root_file(bundle_root, UNSIGNED_MARKER_NAME, previous)
+
+
+def _capture_third_party_notices(bundle_root: Path) -> tuple[bytes, int] | None:
+    return _capture_bundle_root_file(
+        bundle_root,
+        THIRD_PARTY_NOTICES_NAME,
+        max_bytes=MAX_THIRD_PARTY_NOTICES_BYTES,
+    )
+
+
+def _atomic_replace_third_party_notices(bundle_root: Path, payload: bytes) -> None:
+    _atomic_replace_bundle_root_file(
+        bundle_root,
+        THIRD_PARTY_NOTICES_NAME,
+        payload,
+    )
+
+
+def _restore_third_party_notices(
+    bundle_root: Path,
+    previous: tuple[bytes, int] | None,
+) -> None:
+    _restore_bundle_root_file(bundle_root, THIRD_PARTY_NOTICES_NAME, previous)
 
 
 def _verify_panda_assets() -> object:
@@ -1979,16 +2124,26 @@ def main() -> int:
         bundle = _bundle_root()
         _require_real_directory(bundle, label="PyInstaller one-folder output")
         _retire_pyinstaller_work_tree()
+        notice_payload, _notice_source = _third_party_notices_source(ROOT)
         previous_marker = _capture_marker(bundle)
+        previous_notice = _capture_third_party_notices(bundle)
         try:
             _atomic_replace_marker(bundle, UNSIGNED_MARKER_BYTES)
+            _atomic_replace_third_party_notices(bundle, notice_payload)
             package = _finalize_package(bundle, enforce_size_gate=not args.skip_size_gate)
         except BaseException:
+            restore_error: BaseException | None = None
+            try:
+                _restore_third_party_notices(bundle, previous_notice)
+            except BaseException as error:
+                restore_error = error
             try:
                 _restore_marker(bundle, previous_marker)
-            except BaseException as restore_error:
+            except BaseException as error:
+                restore_error = restore_error or error
+            if restore_error is not None:
                 raise PackageValidationError(
-                    "Package finalization failed and the unsigned marker could not be restored"
+                    "Package finalization failed and bundle-root metadata could not be restored"
                 ) from restore_error
             raise
     print(f"Package archive and canonical evidence: {package}")

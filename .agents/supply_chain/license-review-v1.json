@@ -2607,20 +2607,30 @@
   },
   "schema_version": 1,
   "sources": {
+    "corpus_import_manifest": {
+      "path": ".agents/supply_chain/license-corpus-import-v1.json",
+      "sha256": "04e1bddccc6e45d13faad13344a2a1fb56d392a3a5bdce953b061e287a586d2f",
+      "size": 2549
+    },
     "corpus_importer": {
       "path": "scripts/import_license_corpus.py",
-      "sha256": "a78f854172a5d96e0e390492bbc3138f040c678241c0c7477b6c383fcfe18985",
-      "size": 16579
+      "sha256": "5da9ef371e45d58ee25ab3f214041faaa8d91612a668ebea831ed5be09b14eee",
+      "size": 19299
     },
     "generator": {
       "path": "scripts/generate_license_review.py",
-      "sha256": "6173688d9d9701ede06e87166f31862850da772754614f1fa0c7ce7dc243f714",
-      "size": 37226
+      "sha256": "3baf54eace299293670702145a24c881db239b4b52c03c8cd058dae4429f4ca8",
+      "size": 43735
     },
     "license_inventory": {
       "path": ".agents/supply_chain/license-inventory.json",
       "sha256": "71fa99c2cc3b39fa1359b4ceb14a96d635bdedf7ff73bdac9ce54d98b2175e1a",
       "size": 133026
+    },
+    "package_builder": {
+      "path": "scripts/build_desktop.py",
+      "sha256": "baa818bb09a0dfa848e2b66897cd330774db53757c5ebba63ec923e150a7cfc0",
+      "size": 87981
     },
     "packaging_hook": {
       "path": "packaging/hooks/hook-mclab.py",
@@ -2629,13 +2639,13 @@
     },
     "review_inputs": {
       "path": ".agents/supply_chain/license-review-inputs-v1.json",
-      "sha256": "d56a9c2b7fae5958d1ce1147da0bb64a0e1b64ef039f5516415eeb07ff11a4bd",
-      "size": 5559
+      "sha256": "ff16f8cab582c8715d247190890b46bc9f06da6efca17d6b6f09d8c6b187ae81",
+      "size": 6047
     },
     "review_schema": {
       "path": ".agents/supply_chain/license-review-v1.schema.json",
-      "sha256": "126cb6eaa29612380b5d42d89abbfc1c030155ef97ba023d4e62eb95fef51f78",
-      "size": 10196
+      "sha256": "4ebb7a9ffc383f2bdd52679e1d30658b8cfaf654e04aee557367e7a950b55c99",
+      "size": 10426
     }
   }
 }

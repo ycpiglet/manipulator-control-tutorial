@@ -70,6 +70,16 @@
     "public_distribution_authorized": false,
     "qt_pyside_lgpl_decision": "pending"
   },
+  "license_ref_components": {
+    "LicenseRef-Matplotlib-3.10.9": "python:matplotlib",
+    "LicenseRef-NumPy-2.2.6": "python:numpy",
+    "LicenseRef-Pillow-12.3.0": "python:pillow",
+    "LicenseRef-PyInstaller-6.21.0": "python:pyinstaller",
+    "LicenseRef-PyInstaller-Hooks-Contrib-2026.6": "python:pyinstaller-hooks-contrib",
+    "LicenseRef-PyOpenGL-3.1.10": "python:pyopengl",
+    "LicenseRef-Ruff-0.15.22": "python:ruff",
+    "LicenseRef-Setuptools-83.0.0": "python:setuptools"
+  },
   "notice_default_status": "obligation-review-pending",
   "partial_license_text_components": {
     "python:pyside6-essentials": "captured wheel text is commercial-terms-only; LGPL/GPL texts and relinking/source obligations remain open",

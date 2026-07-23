@@ -22,39 +22,29 @@ from typing import Mapping, Sequence
 
 ROOT = Path(__file__).resolve().parents[1]
 INVENTORY_PATH = ROOT / ".agents/supply_chain/license-inventory.json"
+IMPORT_MANIFEST_PATH = ROOT / ".agents/supply_chain/license-corpus-import-v1.json"
 CORPUS_DIRECTORY = ROOT / "third_party/licenses/corpus"
-PANDA_RAW_SHA256 = "a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9"
-PYOPENGL_SDIST_SHA256 = "c4a02d6866b54eb119c8e9b3fb04fa835a95ab802dd96607ab4cdb0012df8335"
-PYOPENGL_LICENSE_MEMBER = "pyopengl-3.1.10/license.txt"
-EXCEPTIONGROUP_WHEEL_SHA256 = (
-    "a7a39a3bd276781e98394987d3a5701d0c4edffb633bb7a5144577f82c773598"
-)
-EXCEPTIONGROUP_LICENSE_MEMBERS = frozenset(
-    {"exceptiongroup-1.3.1.dist-info/licenses/LICENSE"}
-)
-SETUPTOOLS_WHEEL_SHA256 = (
-    "29b23c360f22f414dc7336bb39178cc7bcbf6021ed2733cde173f09dba19abb3"
-)
-SETUPTOOLS_LICENSE_MEMBERS = frozenset(
-    {
-        "setuptools-83.0.0.dist-info/licenses/LICENSE",
-        "setuptools/_vendor/autocommand-2.2.2.dist-info/LICENSE",
-        "setuptools/_vendor/backports.tarfile-1.2.0.dist-info/LICENSE",
-        "setuptools/_vendor/importlib_metadata-8.7.1.dist-info/licenses/LICENSE",
-        "setuptools/_vendor/jaraco.text-4.0.0.dist-info/LICENSE",
-        "setuptools/_vendor/jaraco_context-6.1.0.dist-info/licenses/LICENSE",
-        "setuptools/_vendor/jaraco_functools-4.4.0.dist-info/licenses/LICENSE",
-        "setuptools/_vendor/more_itertools-10.8.0.dist-info/licenses/LICENSE",
-        "setuptools/_vendor/packaging-26.0.dist-info/licenses/LICENSE",
-        "setuptools/_vendor/packaging-26.0.dist-info/licenses/LICENSE.APACHE",
-        "setuptools/_vendor/packaging-26.0.dist-info/licenses/LICENSE.BSD",
-        "setuptools/_vendor/platformdirs-4.4.0.dist-info/licenses/LICENSE",
-        "setuptools/_vendor/tomli-2.4.0.dist-info/licenses/LICENSE",
-        "setuptools/_vendor/wheel-0.46.3.dist-info/licenses/LICENSE.txt",
-        "setuptools/_vendor/zipp-3.23.0.dist-info/licenses/LICENSE",
-    }
-)
 MAX_INPUT_BYTES = 2 * 1024 * 1024
+EXPECTED_REPLAY_COMMAND = [
+    "python",
+    "scripts/import_license_corpus.py",
+    "--evidence-root",
+    "<directory-containing-the-three-SUP-01-artifacts>",
+    "--panda-license",
+    "<pinned-panda-license>",
+    "--pyopengl-sdist",
+    "<locked-pyopengl-sdist>",
+    "--exceptiongroup-wheel",
+    "<locked-exceptiongroup-wheel>",
+    "--setuptools-wheel",
+    "<locked-setuptools-wheel>",
+]
+EXPECTED_SUPPLEMENTAL_KINDS = {
+    "exceptiongroup": "wheel",
+    "panda-runtime": "file",
+    "pyopengl": "sdist-tar-gz",
+    "setuptools": "wheel",
+}
 
 
 class CorpusImportError(RuntimeError):
@@ -91,6 +81,66 @@ def _strict_json(path: Path) -> dict[str, object]:
     if not isinstance(value, dict):
         raise CorpusImportError(f"JSON evidence root must be an object: {path}")
     return value
+
+
+def _import_manifest() -> dict[str, dict[str, object]]:
+    document = _strict_json(IMPORT_MANIFEST_PATH)
+    if set(document) != {
+        "contract_id",
+        "package_evidence_inventory",
+        "raw_evidence_retention",
+        "replay_command",
+        "schema_version",
+        "supplemental_inputs",
+    }:
+        raise CorpusImportError("license corpus import manifest keys drift")
+    if document.get("schema_version") != 1 or document.get("contract_id") != "LIC-01B":
+        raise CorpusImportError("license corpus import manifest identity drift")
+    if document.get("package_evidence_inventory") != (
+        ".agents/supply_chain/license-inventory.json"
+    ):
+        raise CorpusImportError("license corpus package-evidence provenance drift")
+    if document.get("raw_evidence_retention") != "open-owner-decision-required":
+        raise CorpusImportError("raw evidence retention must remain an explicit open decision")
+    if document.get("replay_command") != EXPECTED_REPLAY_COMMAND:
+        raise CorpusImportError("license corpus replay command drift")
+    supplements = document.get("supplemental_inputs")
+    if not isinstance(supplements, dict) or set(supplements) != set(
+        EXPECTED_SUPPLEMENTAL_KINDS
+    ):
+        raise CorpusImportError("license corpus supplemental input coverage drift")
+    normalized: dict[str, dict[str, object]] = {}
+    for label, expected_kind in EXPECTED_SUPPLEMENTAL_KINDS.items():
+        record = supplements.get(label)
+        if not isinstance(record, dict) or set(record) != {
+            "archive_sha256",
+            "kind",
+            "license_members",
+        }:
+            raise CorpusImportError(f"{label} import manifest record is malformed")
+        digest = record.get("archive_sha256")
+        members = record.get("license_members")
+        if (
+            not isinstance(digest, str)
+            or len(digest) != 64
+            or any(character not in "0123456789abcdef" for character in digest)
+        ):
+            raise CorpusImportError(f"{label} import manifest SHA-256 is invalid")
+        if record.get("kind") != expected_kind:
+            raise CorpusImportError(f"{label} import manifest kind drift")
+        if (
+            not isinstance(members, list)
+            or not members
+            or any(not isinstance(member, str) or not member for member in members)
+            or len(members) != len(set(members))
+        ):
+            raise CorpusImportError(f"{label} import manifest members are invalid")
+        normalized[label] = {
+            "archive_sha256": digest,
+            "kind": expected_kind,
+            "license_members": frozenset(members),
+        }
+    return normalized
 
 
 def _normalized_text(value: str) -> str:
@@ -199,9 +249,9 @@ def _evidence_texts(
     return texts
 
 
-def _panda_text(path: Path) -> bytes:
+def _panda_text(path: Path, *, expected_sha256: str) -> bytes:
     raw = path.read_bytes()
-    if _sha256(raw) != PANDA_RAW_SHA256:
+    if _sha256(raw) != expected_sha256:
         raise CorpusImportError("Panda license does not match the pinned runtime manifest")
     return _storage_payload(raw.decode("utf-8"))
 
@@ -214,13 +264,18 @@ def _local_text(path: str, expected: Mapping[str, object]) -> bytes:
     return _storage_payload(raw.decode("utf-8"))
 
 
-def _pyopengl_text(path: Path) -> bytes:
+def _pyopengl_text(
+    path: Path,
+    *,
+    expected_sha256: str,
+    expected_member: str,
+) -> bytes:
     raw = path.read_bytes()
-    if _sha256(raw) != PYOPENGL_SDIST_SHA256:
+    if _sha256(raw) != expected_sha256:
         raise CorpusImportError("PyOpenGL sdist does not match the package lock")
     try:
         with tarfile.open(path, mode="r:gz") as archive:
-            members = [member for member in archive if member.name == PYOPENGL_LICENSE_MEMBER]
+            members = [member for member in archive if member.name == expected_member]
             if len(members) != 1 or not members[0].isfile():
                 raise CorpusImportError("PyOpenGL sdist must contain one regular license.txt")
             if members[0].size > MAX_INPUT_BYTES:
@@ -304,6 +359,7 @@ def import_corpus(
     setuptools_wheel: Path,
 ) -> tuple[int, int]:
     inventory = _strict_json(INVENTORY_PATH)
+    manifest = _import_manifest()
     texts = _evidence_texts(evidence_root, inventory)
     surfaces = inventory.get("distribution_surfaces")
     if not isinstance(surfaces, dict):
@@ -321,21 +377,42 @@ def import_corpus(
         or not isinstance(root_licenses[0], dict)
     ):
         raise CorpusImportError("LIC-01A reviewed repository license records are invalid")
+    panda = manifest["panda-runtime"]
+    pyopengl = manifest["pyopengl"]
+    exceptiongroup = manifest["exceptiongroup"]
+    setuptools = manifest["setuptools"]
+    panda_members = panda["license_members"]
+    pyopengl_members = pyopengl["license_members"]
+    exceptiongroup_members = exceptiongroup["license_members"]
+    setuptools_members = setuptools["license_members"]
+    assert isinstance(panda_members, frozenset)
+    assert isinstance(pyopengl_members, frozenset)
+    assert isinstance(exceptiongroup_members, frozenset)
+    assert isinstance(setuptools_members, frozenset)
+    if panda_members != {"<whole-file>"} or len(pyopengl_members) != 1:
+        raise CorpusImportError("file/sdist import manifest member coverage drift")
     supplemental = [
         _local_text("LICENSE", root_licenses[0]),
         _local_text("third_party/fonts/noto/OFL.txt", font_license),
-        _panda_text(panda_license),
-        _pyopengl_text(pyopengl_sdist),
+        _panda_text(
+            panda_license,
+            expected_sha256=str(panda["archive_sha256"]),
+        ),
+        _pyopengl_text(
+            pyopengl_sdist,
+            expected_sha256=str(pyopengl["archive_sha256"]),
+            expected_member=next(iter(pyopengl_members)),
+        ),
         *_wheel_texts(
             exceptiongroup_wheel,
-            expected_sha256=EXCEPTIONGROUP_WHEEL_SHA256,
-            expected_members=EXCEPTIONGROUP_LICENSE_MEMBERS,
+            expected_sha256=str(exceptiongroup["archive_sha256"]),
+            expected_members=exceptiongroup_members,
             label="exceptiongroup",
         ),
         *_wheel_texts(
             setuptools_wheel,
-            expected_sha256=SETUPTOOLS_WHEEL_SHA256,
-            expected_members=SETUPTOOLS_LICENSE_MEMBERS,
+            expected_sha256=str(setuptools["archive_sha256"]),
+            expected_members=setuptools_members,
             label="setuptools",
         ),
     ]

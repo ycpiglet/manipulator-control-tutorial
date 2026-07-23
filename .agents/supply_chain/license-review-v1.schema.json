@@ -384,6 +384,9 @@
     "sources": {
       "additionalProperties": false,
       "properties": {
+        "corpus_import_manifest": {
+          "$ref": "#/$defs/sourceRecord"
+        },
         "corpus_importer": {
           "$ref": "#/$defs/sourceRecord"
         },
@@ -391,6 +394,9 @@
           "$ref": "#/$defs/sourceRecord"
         },
         "license_inventory": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "package_builder": {
           "$ref": "#/$defs/sourceRecord"
         },
         "packaging_hook": {
@@ -404,9 +410,11 @@
         }
       },
       "required": [
+        "corpus_import_manifest",
         "corpus_importer",
         "generator",
         "license_inventory",
+        "package_builder",
         "packaging_hook",
         "review_inputs",
         "review_schema"

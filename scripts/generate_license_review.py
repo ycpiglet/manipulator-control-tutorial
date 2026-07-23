@@ -13,6 +13,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import tempfile
 from collections import defaultdict
 from pathlib import Path
@@ -26,8 +27,10 @@ SCHEMA_PATH = ".agents/supply_chain/license-review-v1.schema.json"
 CONTRACT_PATH = ".agents/supply_chain/license-review-v1.json"
 NOTICE_PATH = "THIRD_PARTY_NOTICES.md"
 IMPORTER_PATH = "scripts/import_license_corpus.py"
+IMPORT_MANIFEST_PATH = ".agents/supply_chain/license-corpus-import-v1.json"
 GENERATOR_PATH = "scripts/generate_license_review.py"
 PACKAGING_HOOK_PATH = "packaging/hooks/hook-mclab.py"
+PACKAGE_BUILDER_PATH = "scripts/build_desktop.py"
 CORPUS_DIRECTORY = "third_party/licenses/corpus"
 MAX_JSON_BYTES = 4 * 1024 * 1024
 EXPECTED_PYTHON_COMPONENT_COUNT = 50
@@ -63,12 +66,29 @@ INPUT_KEYS = {
     "contract_id",
     "declared_scope",
     "governance",
+    "license_ref_components",
     "notice_default_status",
     "partial_license_text_components",
     "schema_version",
     "source_url_overrides",
     "supplemental_license_text_sha256",
 }
+APPROVED_SPDX_LICENSE_IDS = frozenset(
+    {
+        "Apache-2.0",
+        "BSD-2-Clause",
+        "BSD-3-Clause",
+        "GPL-2.0-only",
+        "GPL-3.0-only",
+        "LGPL-3.0-only",
+        "MIT",
+        "MPL-2.0",
+        "OFL-1.1",
+        "PSF-2.0",
+    }
+)
+_SPDX_IDENTIFIER_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9.-]*\Z")
+_LICENSE_REF_RE = re.compile(r"LicenseRef-[A-Za-z0-9][A-Za-z0-9.-]*\Z")
 
 
 class LicenseReviewError(RuntimeError):
@@ -91,8 +111,8 @@ def _pairs(path: Path):
     return reject_duplicates
 
 
-def _strict_json(relative: str) -> dict[str, object]:
-    path = ROOT / relative
+def _strict_json(relative: str, *, root: Path = ROOT) -> dict[str, object]:
+    path = root / relative
     if path.is_symlink() or not path.is_file():
         raise LicenseReviewError(f"required regular JSON input is missing: {relative}")
     payload = path.read_bytes()
@@ -113,8 +133,8 @@ def _strict_json(relative: str) -> dict[str, object]:
     return value
 
 
-def _source_record(relative: str) -> dict[str, object]:
-    path = ROOT / relative
+def _source_record(relative: str, *, root: Path = ROOT) -> dict[str, object]:
+    path = root / relative
     if path.is_symlink() or not path.is_file():
         raise LicenseReviewError(f"required source is not a regular file: {relative}")
     payload = path.read_bytes()
@@ -145,8 +165,139 @@ def _string_list(value: object, *, label: str, allow_empty: bool = False) -> lis
     return result
 
 
-def _corpus() -> tuple[dict[str, dict[str, object]], dict[str, str]]:
-    directory = ROOT / CORPUS_DIRECTORY
+def _expression_tokens(expression: str) -> list[str]:
+    """Tokenize the strict SPDX-expression subset used by this contract."""
+
+    if not expression or expression != expression.strip():
+        raise LicenseReviewError("SPDX evidence expression must be non-empty and trimmed")
+    tokens: list[str] = []
+    position = 0
+    while position < len(expression):
+        if expression[position] == " ":
+            position += 1
+            continue
+        if expression[position] in "()":
+            tokens.append(expression[position])
+            position += 1
+            continue
+        match = re.match(r"[A-Za-z0-9][A-Za-z0-9.-]*", expression[position:])
+        if match is None:
+            raise LicenseReviewError(
+                "SPDX evidence expression contains an invalid token at "
+                f"offset {position}: {expression!r}"
+            )
+        token = match.group(0)
+        tokens.append(token)
+        position += len(token)
+    return tokens
+
+
+def _render_expression_node(node: tuple[object, ...], parent_precedence: int = 0) -> str:
+    kind = str(node[0])
+    if kind == "ID":
+        return str(node[1])
+    precedence = 2 if kind == "AND" else 1
+    rendered = f" {kind} ".join(
+        _render_expression_node(child, precedence)
+        for child in node[1]
+        if isinstance(child, tuple)
+    )
+    if precedence < parent_precedence:
+        return f"({rendered})"
+    return rendered
+
+
+def validate_evidence_expression(
+    expression: str,
+    *,
+    defined_license_refs: frozenset[str],
+) -> frozenset[str]:
+    """Validate and canonicalize the bounded SPDX expression grammar.
+
+    The LIC-01B contract intentionally accepts only the SPDX identifiers used by
+    its reviewed component set plus explicitly declared ``LicenseRef-*`` values.
+    This keeps the gate standard-library-only while rejecting placeholders,
+    misspelled identifiers, malformed operators, and undeclared custom refs.
+    """
+
+    tokens = _expression_tokens(expression)
+    if not tokens:
+        raise LicenseReviewError("SPDX evidence expression is empty")
+    position = 0
+    used_refs: set[str] = set()
+
+    def primary() -> tuple[object, ...]:
+        nonlocal position
+        if position >= len(tokens):
+            raise LicenseReviewError(
+                f"SPDX evidence expression is missing an operand: {expression!r}"
+            )
+        token = tokens[position]
+        if token == "(":
+            position += 1
+            node = disjunction()
+            if position >= len(tokens) or tokens[position] != ")":
+                raise LicenseReviewError(
+                    f"SPDX evidence expression has unbalanced parentheses: {expression!r}"
+                )
+            position += 1
+            return node
+        if token in {")", "AND", "OR"}:
+            raise LicenseReviewError(
+                f"SPDX evidence expression has an unexpected {token!r}: {expression!r}"
+            )
+        if _LICENSE_REF_RE.fullmatch(token):
+            if token not in defined_license_refs:
+                raise LicenseReviewError(
+                    f"SPDX evidence expression uses undefined LicenseRef: {token}"
+                )
+            used_refs.add(token)
+        elif _SPDX_IDENTIFIER_RE.fullmatch(token) is None:
+            raise LicenseReviewError(
+                f"SPDX evidence expression has an invalid identifier: {token!r}"
+            )
+        elif token not in APPROVED_SPDX_LICENSE_IDS:
+            raise LicenseReviewError(
+                f"SPDX evidence expression uses an unreviewed or unknown license id: {token}"
+            )
+        position += 1
+        return ("ID", token)
+
+    def conjunction() -> tuple[object, ...]:
+        nonlocal position
+        children = [primary()]
+        while position < len(tokens) and tokens[position] == "AND":
+            position += 1
+            children.append(primary())
+        return children[0] if len(children) == 1 else ("AND", tuple(children))
+
+    def disjunction() -> tuple[object, ...]:
+        nonlocal position
+        children = [conjunction()]
+        while position < len(tokens) and tokens[position] == "OR":
+            position += 1
+            children.append(conjunction())
+        return children[0] if len(children) == 1 else ("OR", tuple(children))
+
+    parsed = disjunction()
+    if position != len(tokens):
+        raise LicenseReviewError(
+            f"SPDX evidence expression has an invalid operator or trailing token "
+            f"{tokens[position]!r}: {expression!r}"
+        )
+    canonical = _render_expression_node(parsed)
+    if expression != canonical:
+        raise LicenseReviewError(
+            f"SPDX evidence expression is not canonical: {expression!r}; "
+            f"expected {canonical!r}"
+        )
+    return frozenset(used_refs)
+
+
+def _corpus(
+    *, root: Path = ROOT
+) -> tuple[dict[str, dict[str, object]], dict[str, str]]:
+    directory = root / CORPUS_DIRECTORY
     if directory.is_symlink() or not directory.is_dir():
         raise LicenseReviewError("content-addressed license corpus directory is missing")
     files: dict[str, dict[str, object]] = {}
@@ -363,11 +514,39 @@ def _review_inputs(
     )
     if set(expressions) != expected_ids:
         raise LicenseReviewError("LIC-01B expression coverage does not match component scope")
+    license_ref_components = _string_map(
+        document.get("license_ref_components"),
+        label="license_ref_components",
+    )
+    if any(
+        _LICENSE_REF_RE.fullmatch(license_ref) is None
+        for license_ref in license_ref_components
+    ):
+        raise LicenseReviewError("LIC-01B LicenseRef definition id is invalid")
+    if any(
+        component_id not in expected_ids
+        for component_id in license_ref_components.values()
+    ):
+        raise LicenseReviewError("LIC-01B LicenseRef definition component is out of scope")
+    defined_refs = frozenset(license_ref_components)
+    ref_users: dict[str, set[str]] = defaultdict(set)
     for component_id, expression in expressions.items():
-        lowered = expression.casefold()
-        if "unknown" in lowered or "noassertion" in lowered:
+        for license_ref in validate_evidence_expression(
+            expression,
+            defined_license_refs=defined_refs,
+        ):
+            ref_users[license_ref].add(component_id)
+    if set(ref_users) != set(license_ref_components):
+        missing = sorted(set(license_ref_components) - set(ref_users))
+        undefined = sorted(set(ref_users) - set(license_ref_components))
+        raise LicenseReviewError(
+            "LIC-01B LicenseRef definition coverage drift; "
+            f"unused={missing}, undefined={undefined}"
+        )
+    for license_ref, component_id in license_ref_components.items():
+        if ref_users[license_ref] != {component_id}:
             raise LicenseReviewError(
-                f"LIC-01B expression is unresolved for {component_id}: {expression}"
+                f"LIC-01B LicenseRef {license_ref} must map only to {component_id}"
             )
 
     partial = _string_map(
@@ -429,6 +608,7 @@ def _review_inputs(
         "captured_notice": set(captured_notice),
         "declared_scope": declared_scope,
         "expressions": expressions,
+        "license_ref_components": license_ref_components,
         "overrides": overrides,
         "partial": partial,
         "supplements": supplements,
@@ -476,212 +656,216 @@ def _resolved_observation_refs(
 def build_contract(root: Path = ROOT) -> dict[str, object]:
     """Build the canonical bounded LIC-01B evidence contract."""
 
-    global ROOT
-    original_root = ROOT
-    ROOT = root
-    try:
-        inventory = _strict_json(INVENTORY_PATH)
-        inputs_document = _strict_json(INPUT_PATH)
-        corpus, observation_to_storage = _corpus()
-        observations = _observations(inventory)
-        component_inputs = _component_inputs(inventory, observations)
-        expected_ids = set(component_inputs)
-        reviewed = _review_inputs(inputs_document, expected_ids, observations)
-        expressions = reviewed["expressions"]
-        overrides = reviewed["overrides"]
-        partial = reviewed["partial"]
-        supplements = reviewed["supplements"]
-        captured_notice = reviewed["captured_notice"]
-        assert isinstance(expressions, dict)
-        assert isinstance(overrides, dict)
-        assert isinstance(partial, dict)
-        assert isinstance(supplements, dict)
-        assert isinstance(captured_notice, set)
+    inventory = _strict_json(INVENTORY_PATH, root=root)
+    inputs_document = _strict_json(INPUT_PATH, root=root)
+    corpus, observation_to_storage = _corpus(root=root)
+    observations = _observations(inventory)
+    component_inputs = _component_inputs(inventory, observations)
+    expected_ids = set(component_inputs)
+    reviewed = _review_inputs(inputs_document, expected_ids, observations)
+    expressions = reviewed["expressions"]
+    overrides = reviewed["overrides"]
+    partial = reviewed["partial"]
+    supplements = reviewed["supplements"]
+    captured_notice = reviewed["captured_notice"]
+    license_ref_components = reviewed["license_ref_components"]
+    assert isinstance(expressions, dict)
+    assert isinstance(overrides, dict)
+    assert isinstance(partial, dict)
+    assert isinstance(supplements, dict)
+    assert isinstance(captured_notice, set)
+    assert isinstance(license_ref_components, dict)
 
-        roles_by_digest: dict[str, set[str]] = defaultdict(set)
-        components_by_digest: dict[str, set[str]] = defaultdict(set)
-        components: list[dict[str, object]] = []
-        for component_id in sorted(expected_ids):
-            base = component_inputs[component_id]
-            kind, _separator, name = component_id.partition(":")
-            observation = observations.get(name)
-            license_texts: list[dict[str, object]] = []
-            notice_texts: list[dict[str, object]] = []
-            if observation is not None:
-                if observation.get("version") != base["version"]:
-                    raise LicenseReviewError(f"observed component version drift: {component_id}")
-                license_texts.extend(
-                    _resolved_observation_refs(
-                        observation["license_text_observations"],
-                        observation_to_storage,
-                        corpus,
-                        label=f"{component_id} license",
-                    )
+    roles_by_digest: dict[str, set[str]] = defaultdict(set)
+    components_by_digest: dict[str, set[str]] = defaultdict(set)
+    components: list[dict[str, object]] = []
+    for component_id in sorted(expected_ids):
+        base = component_inputs[component_id]
+        kind, _separator, name = component_id.partition(":")
+        observation = observations.get(name)
+        license_texts: list[dict[str, object]] = []
+        notice_texts: list[dict[str, object]] = []
+        if observation is not None:
+            if observation.get("version") != base["version"]:
+                raise LicenseReviewError(f"observed component version drift: {component_id}")
+            license_texts.extend(
+                _resolved_observation_refs(
+                    observation["license_text_observations"],
+                    observation_to_storage,
+                    corpus,
+                    label=f"{component_id} license",
                 )
-                notice_texts.extend(
-                    _resolved_observation_refs(
-                        observation["notice_text_observations"],
-                        observation_to_storage,
-                        corpus,
-                        label=f"{component_id} notice",
-                    )
-                )
-            for digest in supplements.get(component_id, []):
-                license_texts.append(_ref(digest, corpus))
-            license_texts = [
-                value
-                for _digest, value in sorted(
-                    {str(value["sha256"]): value for value in license_texts}.items()
-                )
-            ]
-            notice_texts = [
-                value
-                for _digest, value in sorted(
-                    {str(value["sha256"]): value for value in notice_texts}.items()
-                )
-            ]
-            if not license_texts:
-                raise LicenseReviewError(f"component has no captured license text: {component_id}")
-            if (component_id in captured_notice) != bool(notice_texts):
-                raise LicenseReviewError(f"captured notice status drift: {component_id}")
-            source_url = overrides.get(component_id) or _observed_https_url(
-                component_id, observations
             )
-            if not isinstance(source_url, str) or not source_url.startswith("https://"):
-                raise LicenseReviewError(f"component source URL is unresolved: {component_id}")
-            if component_id in partial:
-                license_text_status = "partial-explicit-blocker"
-                license_text_detail = partial[component_id]
-            else:
-                license_text_status = "complete-within-declared-evidence-scope"
-                license_text_detail = (
-                    "all license bodies captured by the bounded repository evidence scope"
+            notice_texts.extend(
+                _resolved_observation_refs(
+                    observation["notice_text_observations"],
+                    observation_to_storage,
+                    corpus,
+                    label=f"{component_id} notice",
                 )
-            for text in license_texts:
-                digest = str(text["sha256"])
-                roles_by_digest[digest].add("license")
-                components_by_digest[digest].add(component_id)
-            for text in notice_texts:
-                digest = str(text["sha256"])
-                roles_by_digest[digest].add("notice")
-                components_by_digest[digest].add(component_id)
-            components.append(
-                {
-                    "actual_distribution_status": (
-                        "candidate-input-not-actual-package-closure"
-                    ),
-                    "applicable_targets": list(base["applicable_targets"]),
-                    "evidence_expression": expressions[component_id],
-                    "evidence_review_status": "repository-evidence-checked",
-                    "id": component_id,
-                    "kind": kind,
-                    "license_text_detail": license_text_detail,
-                    "license_text_status": license_text_status,
-                    "license_texts": license_texts,
-                    "name": str(base["name"]),
-                    "notice_status": (
-                        "captured-obligation-review-pending"
-                        if notice_texts
-                        else "no-separate-text-observed-obligation-review-pending"
-                    ),
-                    "notice_texts": notice_texts,
-                    "role": (
-                        "repository-static-bundle-input"
-                        if kind == "static"
-                        else (
-                            "project-package-profile-input"
-                            if name == "mujoco-manipulator-control-lab"
-                            else "python-package-profile-input"
-                        )
-                    ),
-                    "source_url": source_url,
-                    "version": str(base["version"]),
-                }
             )
-        if set(roles_by_digest) != set(corpus):
-            missing = sorted(set(corpus) - set(roles_by_digest))
-            extra = sorted(set(roles_by_digest) - set(corpus))
-            raise LicenseReviewError(
-                f"corpus reference closure drift; unreferenced={missing}, missing={extra}"
+        for digest in supplements.get(component_id, []):
+            license_texts.append(_ref(digest, corpus))
+        license_texts = [
+            value
+            for _digest, value in sorted(
+                {str(value["sha256"]): value for value in license_texts}.items()
             )
-
-        corpus_files = [
-            {
-                "component_ids": sorted(components_by_digest[digest]),
-                **corpus[digest],
-                "roles": sorted(roles_by_digest[digest]),
-            }
-            for digest in sorted(corpus)
         ]
-        complete_count = sum(
-            component["license_text_status"]
-            == "complete-within-declared-evidence-scope"
-            for component in components
+        notice_texts = [
+            value
+            for _digest, value in sorted(
+                {str(value["sha256"]): value for value in notice_texts}.items()
+            )
+        ]
+        if not license_texts:
+            raise LicenseReviewError(f"component has no captured license text: {component_id}")
+        if (component_id in captured_notice) != bool(notice_texts):
+            raise LicenseReviewError(f"captured notice status drift: {component_id}")
+        source_url = overrides.get(component_id) or _observed_https_url(
+            component_id, observations
         )
-        partial_count = len(components) - complete_count
-        return {
-            "components": components,
-            "contract": {
-                "blockers": list(BLOCKERS),
-                "declared_scope": reviewed["declared_scope"],
-                **EXPECTED_GOVERNANCE,
-                "id": "LIC-01B",
-                "purpose": (
-                    "deterministic repository evidence corpus; not legal approval "
-                    "or distribution closure"
+        if not isinstance(source_url, str) or not source_url.startswith("https://"):
+            raise LicenseReviewError(f"component source URL is unresolved: {component_id}")
+        if component_id in partial:
+            license_text_status = "partial-explicit-blocker"
+            license_text_detail = partial[component_id]
+        else:
+            license_text_status = "complete-within-declared-evidence-scope"
+            license_text_detail = (
+                "all license bodies captured by the bounded repository evidence scope"
+            )
+        for text in license_texts:
+            digest = str(text["sha256"])
+            roles_by_digest[digest].add("license")
+            components_by_digest[digest].add(component_id)
+        for text in notice_texts:
+            digest = str(text["sha256"])
+            roles_by_digest[digest].add("notice")
+            components_by_digest[digest].add(component_id)
+        components.append(
+            {
+                "actual_distribution_status": (
+                    "candidate-input-not-actual-package-closure"
                 ),
-                "status": "bounded-candidate-evidence-only",
-            },
-            "corpus": {
-                "byte_count": sum(int(item["size"]) for item in corpus_files),
-                "directory": CORPUS_DIRECTORY,
-                "file_count": len(corpus_files),
-                "files": corpus_files,
-                "license_body_count": sum(
-                    "license" in item["roles"] for item in corpus_files
+                "applicable_targets": list(base["applicable_targets"]),
+                "evidence_expression": expressions[component_id],
+                "evidence_review_status": "repository-evidence-checked",
+                "id": component_id,
+                "kind": kind,
+                "license_text_detail": license_text_detail,
+                "license_text_status": license_text_status,
+                "license_texts": license_texts,
+                "name": str(base["name"]),
+                "notice_status": (
+                    "captured-obligation-review-pending"
+                    if notice_texts
+                    else "no-separate-text-observed-obligation-review-pending"
                 ),
-                "notice_body_count": sum(
-                    "notice" in item["roles"] for item in corpus_files
+                "notice_texts": notice_texts,
+                "role": (
+                    "repository-static-bundle-input"
+                    if kind == "static"
+                    else (
+                        "project-package-profile-input"
+                        if name == "mujoco-manipulator-control-lab"
+                        else "python-package-profile-input"
+                    )
                 ),
-            },
-            "coverage": {
-                "component_count": len(components),
-                "evidence_expression_count": sum(
-                    bool(component["evidence_expression"]) for component in components
-                ),
-                "license_text_complete_count": complete_count,
-                "license_text_partial_count": partial_count,
-                "notice_text_captured_component_count": sum(
-                    bool(component["notice_texts"]) for component in components
-                ),
-                "python_component_count": sum(
-                    component["kind"] == "python" for component in components
-                ),
-                "source_url_count": sum(
-                    bool(component["source_url"]) for component in components
-                ),
-                "static_component_count": sum(
-                    component["kind"] == "static" for component in components
-                ),
-                "unknown_value_count": 0,
-            },
-            "notice_artifact": {
-                "format": "deterministic-markdown-utf8-lf",
-                "package_destination": NOTICE_PATH,
-                "path": NOTICE_PATH,
-            },
-            "schema_version": 1,
-            "sources": {
-                "corpus_importer": _source_record(IMPORTER_PATH),
-                "generator": _source_record(GENERATOR_PATH),
-                "license_inventory": _source_record(INVENTORY_PATH),
-                "packaging_hook": _source_record(PACKAGING_HOOK_PATH),
-                "review_inputs": _source_record(INPUT_PATH),
-                "review_schema": _source_record(SCHEMA_PATH),
-            },
+                "source_url": source_url,
+                "version": str(base["version"]),
+            }
+        )
+    if set(roles_by_digest) != set(corpus):
+        missing = sorted(set(corpus) - set(roles_by_digest))
+        extra = sorted(set(roles_by_digest) - set(corpus))
+        raise LicenseReviewError(
+            f"corpus reference closure drift; unreferenced={missing}, missing={extra}"
+        )
+
+    corpus_files = [
+        {
+            "component_ids": sorted(components_by_digest[digest]),
+            **corpus[digest],
+            "roles": sorted(roles_by_digest[digest]),
         }
-    finally:
-        ROOT = original_root
+        for digest in sorted(corpus)
+    ]
+    complete_count = sum(
+        component["license_text_status"]
+        == "complete-within-declared-evidence-scope"
+        for component in components
+    )
+    partial_count = len(components) - complete_count
+    validated_expression_count = 0
+    for component in components:
+        validate_evidence_expression(
+            str(component["evidence_expression"]),
+            defined_license_refs=frozenset(license_ref_components),
+        )
+        validated_expression_count += 1
+    unresolved_expression_count = len(components) - validated_expression_count
+    return {
+        "components": components,
+        "contract": {
+            "blockers": list(BLOCKERS),
+            "declared_scope": reviewed["declared_scope"],
+            **EXPECTED_GOVERNANCE,
+            "id": "LIC-01B",
+            "purpose": (
+                "deterministic repository evidence corpus; not legal approval "
+                "or distribution closure"
+            ),
+            "status": "bounded-candidate-evidence-only",
+        },
+        "corpus": {
+            "byte_count": sum(int(item["size"]) for item in corpus_files),
+            "directory": CORPUS_DIRECTORY,
+            "file_count": len(corpus_files),
+            "files": corpus_files,
+            "license_body_count": sum(
+                "license" in item["roles"] for item in corpus_files
+            ),
+            "notice_body_count": sum(
+                "notice" in item["roles"] for item in corpus_files
+            ),
+        },
+        "coverage": {
+            "component_count": len(components),
+            "evidence_expression_count": validated_expression_count,
+            "license_text_complete_count": complete_count,
+            "license_text_partial_count": partial_count,
+            "notice_text_captured_component_count": sum(
+                bool(component["notice_texts"]) for component in components
+            ),
+            "python_component_count": sum(
+                component["kind"] == "python" for component in components
+            ),
+            "source_url_count": sum(
+                bool(component["source_url"]) for component in components
+            ),
+            "static_component_count": sum(
+                component["kind"] == "static" for component in components
+            ),
+            "unknown_value_count": unresolved_expression_count,
+        },
+        "notice_artifact": {
+            "format": "deterministic-markdown-utf8-lf",
+            "package_destination": NOTICE_PATH,
+            "path": NOTICE_PATH,
+        },
+        "schema_version": 1,
+        "sources": {
+            "corpus_import_manifest": _source_record(IMPORT_MANIFEST_PATH, root=root),
+            "corpus_importer": _source_record(IMPORTER_PATH, root=root),
+            "generator": _source_record(GENERATOR_PATH, root=root),
+            "license_inventory": _source_record(INVENTORY_PATH, root=root),
+            "package_builder": _source_record(PACKAGE_BUILDER_PATH, root=root),
+            "packaging_hook": _source_record(PACKAGING_HOOK_PATH, root=root),
+            "review_inputs": _source_record(INPUT_PATH, root=root),
+            "review_schema": _source_record(SCHEMA_PATH, root=root),
+        },
+    }
 
 
 def canonical_json_bytes(document: Mapping[str, object]) -> bytes:
