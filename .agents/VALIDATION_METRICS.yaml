@@ -194,8 +194,8 @@ operations:
     threshold: "all CI commands have local equivalent"
     evidence: "workflow files and final report"
   local_data_contract:
-    metric: "local-data/privacy schema, canonical contract, source behavior, bilingual policy, and documentation links"
-    threshold: "all checker metrics pass; validation errors 0; real learner outputs accessed 0"
+    metric: "bounded local-data/privacy schema, canonical declared surfaces, source behavior, bilingual policy, and documentation links"
+    threshold: "all checker metrics pass; validation errors 0; confirmed CPython, Qt QML, and Matplotlib caches explicit; broader platform cache boundary open; real learner outputs accessed 0"
     command: "python .agents/validation/check_local_data_policy.py"
     evidence: "tests/test_local_data_policy.py, tests/test_batch.py, tests/test_logging.py, and tests/test_output_cleanup.py with explicit temporary roots"
   cleanup_safety:

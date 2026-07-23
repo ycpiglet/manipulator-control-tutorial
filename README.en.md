@@ -145,7 +145,9 @@ output-directory setting takes precedence:
 **Run again with same settings** performs a new calculation with the same
 config and seed. The app does not delete saved runs automatically. See
 [local data and privacy](docs/local_data_and_privacy.md) for the locations of
-learner predictions, observation notes, derived copies, and shared-PC guidance.
+learner predictions, observation notes, derived copies, confirmed runtime caches,
+and shared-PC guidance. The cache inventory is bounded and is not complete
+shared-PC clearance.
 
 ## Repository map
 
