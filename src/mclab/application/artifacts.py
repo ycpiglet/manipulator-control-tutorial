@@ -1,5 +1,4 @@
 """Replay and provenance artifacts shared by CLI and desktop runs."""
-
 from __future__ import annotations
 
 import hashlib
@@ -18,6 +17,7 @@ import numpy as np
 
 from mclab import __version__
 from mclab.application.batch_integrity import retrying_batch_operation_lock
+from mclab.application import manifest_trust
 from mclab.config import PROJECT_ROOT, resolve_project_path
 from mclab.output_root import PinnedOutputRoot, pinned_output_root
 from mclab.output_safety import (
@@ -231,6 +231,8 @@ def write_manifest(
     run_kind: str = "",
     error: str = "",
     handoff_token_sha256: str = "",
+    untrusted_artifacts: tuple[str, ...] = (),
+    expected_root_identity: dict[str, int | str] | None = None,
 ) -> Path:
     output = Path(output_path)
     try:
@@ -242,6 +244,7 @@ def write_manifest(
             if not root_exists or root_pin is None:
                 raise CleanupSafetyError("Manifest output directory is missing")
             root_pin.validate_directory((), description="manifest output")
+            manifest_trust.validate_expected_root_identity(root_pin, expected_root_identity)
             operation_lock = (
                 retrying_batch_operation_lock(root_pin)
                 if scenario_id == "batch.all"
@@ -249,8 +252,10 @@ def write_manifest(
             )
             with operation_lock:
                 expected_manifest = _assert_manifest_transition_allowed(
-                    root_pin,
-                    requested_status=status,
+                    root_pin, requested_status=status
+                )
+                omitted_artifacts = manifest_trust.validate_running_document_deferral(
+                    untrusted_artifacts, status=status
                 )
                 strict_batch_terminal = (
                     status in _TERMINAL_MANIFEST_STATUSES
@@ -265,6 +270,8 @@ def write_manifest(
                     if strict_batch_terminal
                     else _inventory_artifacts_rooted(root_pin)
                 )
+                for relative in omitted_artifacts:
+                    artifacts.pop(relative, None)
                 model_path_value = config.get("model_path")
                 model_path = resolve_project_path(model_path_value) if model_path_value else None
                 license_path = _find_model_license(model_path)

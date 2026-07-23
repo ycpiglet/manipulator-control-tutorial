@@ -65,6 +65,7 @@ LabRunner = Callable[..., Path]
 ALL_BATCH_NAME = "all"
 VIEWER_HANDOFF_ANCHOR = "viewer-handoff"
 LOGGER = logging.getLogger(__name__)
+_REPORT_DOCUMENT_ARTIFACTS = ("report.html", "worksheet.md")
 
 
 def _refresh_parent_index_after_publication(output_path: Path) -> None:
@@ -781,6 +782,16 @@ def run_batch(
             started_at=started_at,
             run_kind="comparison_batch",
         )
+        write_manifest(
+            batch_output,
+            scenario_id=f"batch.{batch_name}",
+            status="running",
+            config={"batch_name": batch_name, "plot": plot},
+            seed=seed,
+            started_at=started_at,
+            run_kind="comparison_batch",
+            untrusted_artifacts=_REPORT_DOCUMENT_ARTIFACTS,
+        )
         write_batch_report(batch_output, batch_name, scenarios)
     except Exception as exc:
         # Work/report failures become terminal errors only after surviving
@@ -788,6 +799,16 @@ def run_batch(
         _refresh_partial_index_before_error(batch_output)
         error_report_ready = False
         try:
+            write_manifest(
+                batch_output,
+                scenario_id=f"batch.{batch_name}",
+                status="running",
+                config={"batch_name": batch_name, "plot": plot},
+                seed=seed,
+                started_at=started_at,
+                run_kind="comparison_batch",
+                untrusted_artifacts=_REPORT_DOCUMENT_ARTIFACTS,
+            )
             write_batch_report(
                 batch_output,
                 batch_name,
@@ -840,6 +861,16 @@ def run_batch(
         # terminal state.  Restore a coherent running snapshot so retry and
         # recovery remain fail-closed.
         try:
+            write_manifest(
+                batch_output,
+                scenario_id=f"batch.{batch_name}",
+                status="running",
+                config={"batch_name": batch_name, "plot": plot},
+                seed=seed,
+                started_at=started_at,
+                run_kind="comparison_batch",
+                untrusted_artifacts=_REPORT_DOCUMENT_ARTIFACTS,
+            )
             write_batch_report(
                 batch_output,
                 batch_name,
@@ -973,11 +1004,33 @@ def run_all_batches(
             run_kind="comparison_batch",
             handoff_token_sha256=handoff_token_hash,
         )
+        write_manifest(
+            group_output,
+            scenario_id=ALL_COMPARE_ID,
+            status="running",
+            config={"batch_name": ALL_BATCH_NAME, "plot": plot},
+            seed=seed,
+            started_at=started_at,
+            run_kind="comparison_batch",
+            handoff_token_sha256=handoff_token_hash,
+            untrusted_artifacts=_REPORT_DOCUMENT_ARTIFACTS,
+        )
         write_all_batches_report(group_output, completed)
     except Exception as exc:
         _refresh_partial_index_before_error(group_output)
         error_report_ready = False
         try:
+            write_manifest(
+                group_output,
+                scenario_id=ALL_COMPARE_ID,
+                status="running",
+                config={"batch_name": ALL_BATCH_NAME, "plot": plot},
+                seed=seed,
+                started_at=started_at,
+                run_kind="comparison_batch",
+                handoff_token_sha256=handoff_token_hash,
+                untrusted_artifacts=_REPORT_DOCUMENT_ARTIFACTS,
+            )
             write_all_batches_report(
                 group_output,
                 completed,
@@ -1044,6 +1097,17 @@ def run_all_batches(
         )
     except Exception:
         try:
+            write_manifest(
+                group_output,
+                scenario_id=ALL_COMPARE_ID,
+                status="running",
+                config={"batch_name": ALL_BATCH_NAME, "plot": plot},
+                seed=seed,
+                started_at=started_at,
+                run_kind="comparison_batch",
+                handoff_token_sha256=handoff_token_hash,
+                untrusted_artifacts=_REPORT_DOCUMENT_ARTIFACTS,
+            )
             write_all_batches_report(
                 group_output,
                 completed,

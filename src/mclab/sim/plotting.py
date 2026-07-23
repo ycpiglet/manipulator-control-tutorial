@@ -58,6 +58,7 @@ def save_time_series_plots(
     specs: Sequence[PlotSpec],
     *,
     event_markers: PlotEventMarkers | None = None,
+    write_report: bool = True,
 ) -> None:
     """Save simple time-series plots from logger rows."""
 
@@ -126,7 +127,8 @@ def save_time_series_plots(
     # The terminal manifest is published by RunLogger only after every
     # run-local artifact exists.  Updating the parent index here would expose a
     # stale running verdict, so finalization performs that refresh instead.
-    write_run_report(output, update_index=False)
+    if write_report:
+        write_run_report(output, update_index=False)
 
 
 def configure_matplotlib_font(matplotlib: Any) -> None:

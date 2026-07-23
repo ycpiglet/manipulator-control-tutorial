@@ -1281,7 +1281,12 @@ def _save_two_link_plots(output_path: Path, rows: list[dict[str, Any]], selectio
         "dls_disturbance": ["end_effector", "torque", "disturbance", "singularity", "dls", "error"],
         "control": ["position", "end_effector", "torque", "current_proxy", "singularity", "error"],
     }
-    save_time_series_plots(output_path, rows, select_plot_specs(specs, selection, presets=presets))
+    save_time_series_plots(
+        output_path,
+        rows,
+        select_plot_specs(specs, selection, presets=presets),
+        write_report=False,
+    )
 
 
 def _two_link_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
@@ -1537,7 +1542,12 @@ def _save_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSe
         "profile": ["position", "velocity", "acceleration", "jerk"],
         "control": ["position", "torque", "current_proxy", "error"],
     }
-    save_time_series_plots(output_path, rows, select_plot_specs(specs, selection, presets=presets))
+    save_time_series_plots(
+        output_path,
+        rows,
+        select_plot_specs(specs, selection, presets=presets),
+        write_report=False,
+    )
 
 
 def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:

@@ -286,7 +286,7 @@ def create_batch_controller(
                 self._schedule(_CANCEL_GRACE_MS, attempt, process, self._kill_attempt)
                 self.changed.emit()
                 return
-            self._schedule(_PROGRESS_POLL_MS, attempt, process, self._poll_progress)
+            self._schedule(0, attempt, process, self._poll_progress)
             self._schedule(
                 _PROGRESS_HANDSHAKE_MS,
                 attempt,

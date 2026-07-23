@@ -49,6 +49,7 @@ from mclab.output_safety import (
 
 BATCH_PROGRESS_PREFIX = "MCLAB_BATCH_PROGRESS "
 TERMINAL_BATCH_STATUSES = frozenset({"completed", "stopped", "error"})
+_DERIVED_REPORT_DOCUMENTS = ("report.html", "worksheet.md")
 
 
 class BatchProgressBusy(RuntimeError):
@@ -552,6 +553,10 @@ def settle_all_compare_output(
     key = _decode_token_runtime(token)
     started_at = ""
     plot = True
+    expected_root_identity: dict[str, int | str] | None = None
+    terminal_error = error or "The course comparison ended before authenticated completion."
+    from mclab.application.artifacts import write_manifest
+
     try:
         with pinned_output_root(target, allowed_root=target) as (
             _display_root,
@@ -613,7 +618,34 @@ def settle_all_compare_output(
                     raise CleanupSafetyError(
                         "Course-comparison manifest changed during settlement"
                     )
+                _remove_untrusted_report_documents_rooted(root_pin, payload)
                 root_pin.assert_transaction_boundaries()
+                expected_root_identity = root_pin.identity_payload(include_mtime=False)
+            if expected_root_identity is None:
+                raise RuntimeError(
+                    "Authenticated course-comparison root identity is unavailable"
+                )
+            write_manifest(
+                target,
+                scenario_id=ALL_COMPARE_ID,
+                status=requested_status,
+                config={"batch_name": "all", "plot": plot},
+                started_at=started_at,
+                run_kind="comparison_batch",
+                error=terminal_error if requested_status == "error" else "",
+                expected_root_identity=expected_root_identity,
+            )
+            with _retrying_batch_operation_lock(root_pin):
+                errors = _verify_terminal_batch_output_rooted(
+                    root_pin,
+                    expected_status=requested_status,
+                )
+                root_pin.assert_transaction_boundaries()
+            if errors:
+                raise RuntimeError(
+                    "Terminal course-comparison verification failed: "
+                    + "; ".join(errors)
+                )
     except (
         CleanupOperationError,
         CleanupSafetyError,
@@ -623,23 +655,50 @@ def settle_all_compare_output(
         TypeError,
     ) as exc:
         raise RuntimeError(f"Could not settle the course-comparison output: {exc}") from exc
-
-    from mclab.application.artifacts import write_manifest
-
-    terminal_error = error or "The course comparison ended before authenticated completion."
-    write_manifest(
-        target,
-        scenario_id=ALL_COMPARE_ID,
-        status=requested_status,
-        config={"batch_name": "all", "plot": plot},
-        started_at=started_at,
-        run_kind="comparison_batch",
-        error=terminal_error if requested_status == "error" else "",
-    )
-    errors = _terminal_batch_errors(target, requested_status)
-    if errors:
-        raise RuntimeError("Terminal course-comparison verification failed: " + "; ".join(errors))
     return requested_status
+
+
+def _remove_untrusted_report_documents_rooted(
+    root_pin: Any,
+    running_manifest: dict[str, Any],
+) -> None:
+    """Remove only derived root documents withdrawn before an interrupted rewrite."""
+
+    artifacts = running_manifest.get("artifacts", {})
+    if not isinstance(artifacts, dict):
+        raise CleanupSafetyError("Course-comparison manifest artifacts are invalid")
+    trusted = True
+    for name in _DERIVED_REPORT_DOCUMENTS:
+        expected = artifacts.get(name)
+        if not isinstance(expected, str) or not root_pin.lexists((name,)):
+            trusted = False
+            break
+        document = root_pin.read_regular_file(
+            (name,),
+            description=f"trusted course-comparison {name}",
+            max_bytes=MAX_METADATA_BYTES,
+            allow_empty=True,
+        )
+        if not hmac.compare_digest(hashlib.sha256(document).hexdigest(), expected):
+            trusted = False
+            break
+    if trusted:
+        return
+    for name in _DERIVED_REPORT_DOCUMENTS:
+        if not root_pin.lexists((name,)):
+            continue
+        document = root_pin.read_regular_file(
+            (name,),
+            description=f"untrusted course-comparison {name}",
+            max_bytes=MAX_METADATA_BYTES,
+            allow_empty=True,
+        )
+        _unlink_regular_file_rooted(
+            root_pin,
+            (name,),
+            expected=document,
+            description=f"untrusted course-comparison {name}",
+        )
 
 
 def _decode_token_runtime(token: object) -> bytes:
@@ -694,12 +753,6 @@ def _strict_terminal_status(target: Path) -> str:
     ) as exc:
         raise RuntimeError(f"Could not inspect terminal batch state: {exc}") from exc
     return str(status)
-
-
-def _terminal_batch_errors(target: Path, status: str) -> list[str]:
-    from mclab.application.artifacts import verify_terminal_batch_output
-
-    return verify_terminal_batch_output(target, expected_status=status)
 
 
 def _absolute_output_path(output: str | Path) -> Path:

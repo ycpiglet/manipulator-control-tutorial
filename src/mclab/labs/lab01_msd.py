@@ -289,7 +289,12 @@ def _save_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSe
         "essential": ["position", "velocity", "force"],
         "energy": ["position", "energy"],
     }
-    save_time_series_plots(output_path, rows, select_plot_specs(specs, selection, presets=presets))
+    save_time_series_plots(
+        output_path,
+        rows,
+        select_plot_specs(specs, selection, presets=presets),
+        write_report=False,
+    )
 
 
 def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:

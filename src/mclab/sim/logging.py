@@ -16,6 +16,7 @@ from mclab.config import default_outputs_root, resolve_output_path
 from mclab.sim.reporting import write_outputs_index, write_run_report
 
 LOGGER = logging.getLogger(__name__)
+_REPORT_DOCUMENT_ARTIFACTS = ("report.html", "worksheet.md")
 
 
 def create_output_path(lab_name: str, output_dir: str | Path | None = None) -> Path:
@@ -135,6 +136,7 @@ class RunLogger:
     ) -> Path:
         self._require_unfinalized()
         self.run_status = run_status
+        retrying_existing_run = self._running_marker_established
         if not self._running_marker_established:
             # Establish the empty/initial running boundary once.  On a retry,
             # the prior marker must continue to make changed producer bytes or
@@ -154,7 +156,11 @@ class RunLogger:
         if finalize:
             self.finalize_artifacts()
         else:
-            if self._running_report_repair_required:
+            if retrying_existing_run or self._running_report_repair_required:
+                self._write_manifest(
+                    status="running",
+                    untrusted_artifacts=_REPORT_DOCUMENT_ARTIFACTS,
+                )
                 write_run_report(
                     self.output_path,
                     update_index=False,
@@ -171,14 +177,28 @@ class RunLogger:
         try:
             # A prior terminal-publication attempt may have left prospective
             # Complete documents whose bytes no longer match the last running
-            # manifest.  Repair those documents before refreshing that
-            # manifest so a retry can never digest-publish a stale verdict.
+            # manifest.  Withdraw both document digests before repairing them,
+            # including on a hard-stop retry whose prior running snapshot had
+            # trusted both documents.
+            self._write_manifest(
+                status="running",
+                untrusted_artifacts=_REPORT_DOCUMENT_ARTIFACTS,
+            )
             write_run_report(
                 self.output_path,
                 update_index=False,
                 completion_status="running",
             )
             self._write_manifest(status="running")
+            # Preserve the coherent running snapshot above, then withdraw only
+            # the two documents immediately before their prospective-terminal
+            # replacements.  A hard stop at any later instruction boundary
+            # therefore leaves either matching trusted documents or both
+            # documents explicitly untrusted.
+            self._write_manifest(
+                status="running",
+                untrusted_artifacts=_REPORT_DOCUMENT_ARTIFACTS,
+            )
             self._running_report_repair_required = False
             write_run_report(
                 self.output_path,
@@ -209,6 +229,17 @@ class RunLogger:
 
         self._running_report_repair_required = True
         try:
+            self._write_manifest(
+                status="running",
+                untrusted_artifacts=_REPORT_DOCUMENT_ARTIFACTS,
+            )
+        except Exception as exc:
+            LOGGER.warning(
+                "Could not withdraw learner report trust before repair: %s",
+                exc,
+            )
+            return
+        try:
             write_run_report(
                 self.output_path,
                 update_index=False,
@@ -230,7 +261,12 @@ class RunLogger:
         if self._finalized:
             raise RuntimeError("This saved run is already finalized and cannot be rewritten.")
 
-    def _write_manifest(self, *, status: str) -> Path:
+    def _write_manifest(
+        self,
+        *,
+        status: str,
+        untrusted_artifacts: tuple[str, ...] = (),
+    ) -> Path:
         return write_manifest(
             self.output_path,
             scenario_id=_scenario_id(self.lab_name, self.config_path),
@@ -240,6 +276,7 @@ class RunLogger:
             seed=self.seed,
             started_at=self.started_at,
             finished_at=datetime.now(timezone.utc).isoformat(),
+            untrusted_artifacts=untrusted_artifacts,
         )
 
     def _save_config_snapshot(self) -> None:

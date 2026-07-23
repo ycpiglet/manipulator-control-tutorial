@@ -339,7 +339,12 @@ def _save_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSe
         "essential": ["position", "control_force", "error"],
         "pid": ["position", "control_force", "pid_terms", "error"],
     }
-    save_time_series_plots(output_path, rows, select_plot_specs(specs, selection, presets=presets))
+    save_time_series_plots(
+        output_path,
+        rows,
+        select_plot_specs(specs, selection, presets=presets),
+        write_report=False,
+    )
 
 
 def _limits(value: Any) -> tuple[float | None, float | None]:

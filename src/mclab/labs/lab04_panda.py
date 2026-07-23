@@ -1121,6 +1121,7 @@ def _save_plots(output_path: Path, rows: list[dict[str, Any]], selection: PlotSe
         rows,
         select_plot_specs(specs, selection, presets=presets),
         event_markers=_plot_event_markers(rows),
+        write_report=False,
     )
 
 
