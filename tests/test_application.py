@@ -88,6 +88,7 @@ from mclab.application.qt_lifecycle import (  # noqa: E402
     stop_active_experiment,
 )
 from mclab.application.qt_smoke import schedule_smoke_action  # noqa: E402
+from mclab.application.qt_settings import create_application_settings  # noqa: E402
 from mclab.application.worker_commands import CommandQueue  # noqa: E402
 from mclab.application.visual_semantics import (  # noqa: E402
     SEMANTIC_SHAPES,
@@ -304,6 +305,108 @@ class ApplicationFoundationTests(unittest.TestCase):
             schedule_smoke_action(Timer, Backend(), [])
         self.assertEqual(Timer.callbacks, [])
         self.assertEqual(Backend.calls, [])
+
+    def test_normal_app_settings_keep_native_organization_application_constructor(self) -> None:
+        class FakeSettings:
+            class Format:
+                IniFormat = "ini-format"
+
+            def __init__(self, *arguments: object) -> None:
+                self.arguments = arguments
+                self.fallbacks_enabled: bool | None = None
+
+            def setFallbacksEnabled(self, enabled: bool) -> None:  # noqa: N802
+                self.fallbacks_enabled = enabled
+
+        normal_environments = (
+            {"MCLAB_STARTUP_SETTINGS_PATH": "/ignored/startup-settings.ini"},
+            {
+                "MCLAB_SELF_TEST": "1",
+                "MCLAB_STARTUP_SETTINGS_PATH": "/ignored/startup-settings.ini",
+            },
+            {
+                "MCLAB_SELF_TEST": "1",
+                "MCLAB_SMOKE_ACTION": "close",
+                "MCLAB_STARTUP_SETTINGS_PATH": "/ignored/startup-settings.ini",
+            },
+        )
+        for environment in normal_environments:
+            with self.subTest(environment=environment):
+                with patch.dict(os.environ, environment, clear=True):
+                    settings = create_application_settings(FakeSettings)
+
+                self.assertEqual(settings.arguments, ("MCLab", "MCLab"))
+                self.assertIsNone(settings.fallbacks_enabled)
+
+    def test_packaged_startup_self_test_uses_explicit_ini_without_fallbacks(self) -> None:
+        class FakeSettings:
+            class Format:
+                IniFormat = "ini-format"
+
+            def __init__(self, *arguments: object) -> None:
+                self.arguments = arguments
+                self.fallbacks_enabled: bool | None = None
+
+            def setFallbacksEnabled(self, enabled: bool) -> None:  # noqa: N802
+                self.fallbacks_enabled = enabled
+
+        with tempfile.TemporaryDirectory() as tmp:
+            settings_path = Path(tmp).resolve() / "settings" / "mclab.ini"
+            with patch.dict(
+                os.environ,
+                {
+                    "MCLAB_SELF_TEST": "1",
+                    "MCLAB_SMOKE_ACTION": "startup_probe",
+                    "MCLAB_STARTUP_SETTINGS_PATH": str(settings_path),
+                },
+                clear=True,
+            ):
+                settings = create_application_settings(FakeSettings)
+
+        self.assertEqual(
+            settings.arguments,
+            (str(settings_path), FakeSettings.Format.IniFormat),
+        )
+        self.assertFalse(settings.fallbacks_enabled)
+
+        with patch.dict(
+            os.environ,
+            {
+                "MCLAB_SELF_TEST": "1",
+                "MCLAB_SMOKE_ACTION": "startup_probe",
+                "MCLAB_STARTUP_SETTINGS_PATH": "relative/settings.ini",
+            },
+            clear=True,
+        ):
+            with self.assertRaisesRegex(RuntimeError, "absolute MCLAB_STARTUP_SETTINGS_PATH"):
+                create_application_settings(FakeSettings)
+
+    @unittest.skipIf(
+        importlib.util.find_spec("PySide6") is None, "PySide6 app extra is not installed"
+    )
+    def test_packaged_startup_settings_select_real_qt_ini_backend(self) -> None:
+        from PySide6.QtCore import QSettings
+
+        with patch.dict(os.environ, {}, clear=True):
+            normal_settings = create_application_settings(QSettings)
+        self.assertEqual(normal_settings.format(), QSettings.Format.NativeFormat)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            settings_path = Path(tmp).resolve() / "settings" / "mclab.ini"
+            settings_path.parent.mkdir()
+            with patch.dict(
+                os.environ,
+                {
+                    "MCLAB_SELF_TEST": "1",
+                    "MCLAB_SMOKE_ACTION": "startup_probe",
+                    "MCLAB_STARTUP_SETTINGS_PATH": str(settings_path),
+                },
+                clear=True,
+            ):
+                settings = create_application_settings(QSettings)
+            self.assertEqual(settings.format(), QSettings.Format.IniFormat)
+            self.assertEqual(Path(settings.fileName()), settings_path)
+            self.assertFalse(settings.fallbacksEnabled())
 
     def test_desktop_shutdown_allows_artifact_finalization_to_finish(self) -> None:
         self.assertGreaterEqual(SHUTDOWN_WAIT_MS, 30_000)
