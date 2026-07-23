@@ -143,7 +143,9 @@ output-directory setting takes precedence:
 
 **Replay recording** displays the saved state without recomputing physics.
 **Run again with same settings** performs a new calculation with the same
-config and seed. The app does not delete saved runs automatically.
+config and seed. The app does not delete saved runs automatically. See
+[local data and privacy](docs/local_data_and_privacy.md) for the locations of
+learner predictions, observation notes, derived copies, and shared-PC guidance.
 
 ## Repository map
 
@@ -177,7 +179,8 @@ the no-move rationale and the rules that apply to any future consolidation.
   [repository structure and compatibility](docs/repository_structure.md),
   [contribution guide](CONTRIBUTING.md)
 - Installation and support: [installation](docs/installation.md),
-  [troubleshooting](docs/troubleshooting.md)
+  [troubleshooting](docs/troubleshooting.md),
+  [local data and privacy](docs/local_data_and_privacy.md)
 - Research and citation: [tutorial paper (Korean)](paper/README.md),
   [JOSE software paper](jose/paper.md)
 - Full index: [documentation map](docs/README.md)

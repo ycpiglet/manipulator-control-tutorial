@@ -138,7 +138,8 @@ python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --p
 
 **기록 재생**은 저장 상태를 그대로 보여주고, **같은 설정으로 다시 실행**은
 동일한 config와 seed로 물리를 새로 계산합니다. 앱은 저장 결과를 자동으로
-삭제하지 않습니다.
+삭제하지 않습니다. 학습자 예측·관찰 메모가 저장되고 파생되는 위치와 공용 PC
+주의사항은 [로컬 데이터와 개인정보 안내](docs/local_data_and_privacy.md)를 확인하세요.
 
 ## 저장소 구조
 
@@ -172,7 +173,8 @@ python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --p
   [저장소 구조와 호환성 (영문 중심)](docs/repository_structure.md),
   [기여 방법 (영문)](CONTRIBUTING.md)
 - 설치·운영: [설치와 배포 (영문)](docs/installation.md),
-  [문제 해결 (영문)](docs/troubleshooting.md)
+  [문제 해결 (영문)](docs/troubleshooting.md),
+  [로컬 데이터와 개인정보 (한·영 병기)](docs/local_data_and_privacy.md)
 - 연구·인용: [튜토리얼 논문 (한국어)](paper/README.md),
   [JOSE 소프트웨어 논문 (영문)](jose/paper.md)
 - 전체 색인: [Documentation map (영문 중심)](docs/README.md)

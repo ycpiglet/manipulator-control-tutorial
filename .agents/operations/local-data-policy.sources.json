@@ -1,0 +1,443 @@
+{
+  "algorithm": "sha256",
+  "digest_format": "sha256-file-bytes",
+  "inventory_version": 1,
+  "roots": [
+    {
+      "extensions": [
+        ".py"
+      ],
+      "path": "packaging"
+    },
+    {
+      "extensions": [
+        ".py"
+      ],
+      "path": "scripts"
+    },
+    {
+      "extensions": [
+        ".py"
+      ],
+      "path": "src/mclab"
+    }
+  ],
+  "sources": [
+    {
+      "path": "packaging/entrypoint.py",
+      "sha256": "35a80eb13278ace00d1a2cbdf6bc26187c7ebbbff185dcc2cce7c6cc8fd54597"
+    },
+    {
+      "path": "packaging/hooks/hook-PySide6.QtQml.py",
+      "sha256": "f1cc0f16324bf41148fef2d0ba9d864280c0262dd6457b9486b1d49c612e1f3a"
+    },
+    {
+      "path": "scripts/audit_app_startup.py",
+      "sha256": "a5dea1d93839b8de83d927e1377b9f76bf4b03bdbeb645946f6a00841c5e48a1"
+    },
+    {
+      "path": "scripts/audit_course_comparison.py",
+      "sha256": "7fcbf05fa456234621f02e295a63c1aedd19cb709cc276630808435e6fc70266"
+    },
+    {
+      "path": "scripts/audit_desktop_ui.py",
+      "sha256": "91d6029a50f6f2b4cbebcace4e4ac8e82ccc1ff97456ca7710531a8b0c947cb9"
+    },
+    {
+      "path": "scripts/audit_report_ui.py",
+      "sha256": "53986e9a6d542a1425a15906647d3bf9ab2e7cfb057db53a0e824605b5afdaea"
+    },
+    {
+      "path": "scripts/audit_scene_semantics.py",
+      "sha256": "dae0e114b75e8d9dab2fcc1a7feb67eeccd2f43b9c0b988152c8241b174bd2ad"
+    },
+    {
+      "path": "scripts/audit_supply_chain.py",
+      "sha256": "2f65e0b62dab793b72d8cd40b02a8cd06d532b901f638de78e40853fe90a3b5b"
+    },
+    {
+      "path": "scripts/bootstrap_and_run.py",
+      "sha256": "e331d7e6ae9e4d6b9567a5ae552a05a82e5f7067a8ef8b7110d778180cb0bcae"
+    },
+    {
+      "path": "scripts/build_desktop.py",
+      "sha256": "c27776d8216bf930e31b7ff379ba5e4e128d8f7e2c7734c100385590f5e79f67"
+    },
+    {
+      "path": "scripts/generate_license_inventory.py",
+      "sha256": "a2de47aaf79d5e99637dade63afb019c5d86972697a7e9bb9d683f1367e36ec0"
+    },
+    {
+      "path": "scripts/generate_sbom_inputs.py",
+      "sha256": "5ba1307ea4379d0a432e385e06e21069fcf6d3d61fefb78135e4dadca8327e42"
+    },
+    {
+      "path": "scripts/install_locked.py",
+      "sha256": "85bbfb01cfe3d38c28f26cba37f9e53cd79927581ab621a92b3b4bf0aa1deda2"
+    },
+    {
+      "path": "scripts/install_ubuntu_system_packages.py",
+      "sha256": "5e2f372ff5f0dff37930d05ed1ade5bd8a6d3387ca8fd03e2e8ee75b0bb8a7e5"
+    },
+    {
+      "path": "scripts/lock_requirements.py",
+      "sha256": "55e373dea03af02a2579aaef8d8534c980e39d1bcf8128822d36ea0de105f48e"
+    },
+    {
+      "path": "scripts/manage_dependency_locks.py",
+      "sha256": "5400c2d2619326512fde0cb355908eb42462f0a9e42a555b4f8c6023778ac87d"
+    },
+    {
+      "path": "scripts/start_mclab.py",
+      "sha256": "aa8944ddab230652c3e2d82494aca027321109da4d6c6657ff7e572d74d0e9b4"
+    },
+    {
+      "path": "src/mclab/__init__.py",
+      "sha256": "c795267b2b37bff789a043ca6bfc8f764a3d9b683ed3c484e345c1884c4d9555"
+    },
+    {
+      "path": "src/mclab/__main__.py",
+      "sha256": "101b7b0c98eea43b2fe249d51a10610b4c29325098cd323098467008a6fd1bbb"
+    },
+    {
+      "path": "src/mclab/analysis/__init__.py",
+      "sha256": "0af3f6a9f3a31ae34dfee51767f2eaba5f6146dbfedcdec8ebbc7167c1ba1257"
+    },
+    {
+      "path": "src/mclab/analysis/metrics.py",
+      "sha256": "dc4b5c74aaa8d6b71da1d3cbb6e70b00eeacce27ab1f0f4534ce7975dd1ec8f1"
+    },
+    {
+      "path": "src/mclab/analysis/report.py",
+      "sha256": "ba317c65c225148a56942cecc70a9da5ee79513461e48918db1d578e31a214f0"
+    },
+    {
+      "path": "src/mclab/application/__init__.py",
+      "sha256": "82ba255a6dd53cade8a41f57e576ba252c43bdc164a32008b5388063133be47b"
+    },
+    {
+      "path": "src/mclab/application/_asset_verification.py",
+      "sha256": "ed68b01117c3f55a3f7005d1f54929a624718061d51ca7560c287a6f86123e62"
+    },
+    {
+      "path": "src/mclab/application/_atomic_publish.py",
+      "sha256": "397ba61ce096457dacf30cd7efe6c579c8430f1433972f5ef6d743ce2384325b"
+    },
+    {
+      "path": "src/mclab/application/adapters.py",
+      "sha256": "1ac9d64bab92220fbe6c24c06b1413f7a62958de26150803f35866d479adda6d"
+    },
+    {
+      "path": "src/mclab/application/artifacts.py",
+      "sha256": "610009c1874a936550d39e05a9e92e78296ac794684a36fd94365910616d7516"
+    },
+    {
+      "path": "src/mclab/application/asset_readiness.py",
+      "sha256": "bffdc2f4b99e0a769c1b909bce70911d81b82478ea21cf0799c0056b1ad46bda"
+    },
+    {
+      "path": "src/mclab/application/assets.py",
+      "sha256": "691d2266f91f470a98cb2fce19bf7bdbff8262cfff0c381afad63d16b6df97e1"
+    },
+    {
+      "path": "src/mclab/application/batch_runs.py",
+      "sha256": "6e79b94715dad880f94b2131f64eedd782f9520c648fd2f588dfe7c610e953b1"
+    },
+    {
+      "path": "src/mclab/application/catalog.py",
+      "sha256": "69cfe5c22f63be5009090b8c0cd351fcb0f4c8c617631c83f5bb23582e38a320"
+    },
+    {
+      "path": "src/mclab/application/completion_progress.py",
+      "sha256": "6bd3a8e8ad4b6400675d5fd2262266218d77c438b0cedc2d05aa08fe62625dae"
+    },
+    {
+      "path": "src/mclab/application/error_messages.py",
+      "sha256": "dd089134f0a46c35f803ae37eddd4d22c9c8c6fc1a42a4021118133dc3d74a80"
+    },
+    {
+      "path": "src/mclab/application/i18n.py",
+      "sha256": "cc13988a70e6aedf31f9338bbbfff9bcd4798712fb81eb8b55fa47383db79399"
+    },
+    {
+      "path": "src/mclab/application/lab03_adapter.py",
+      "sha256": "0d68580f8938d881eed15b99b634cb272c06b8ea8e340546aba7f1fa82f2e1b1"
+    },
+    {
+      "path": "src/mclab/application/lab04_adapter.py",
+      "sha256": "f98fbb835f09736e7c4781bb78ecf2edf04cabe5977468158e38b627c5f89d20"
+    },
+    {
+      "path": "src/mclab/application/launcher.py",
+      "sha256": "f647150dd6099f8b2b3ff491fc1fa28ee32331fd7a9b326cd2165b988c568d7f"
+    },
+    {
+      "path": "src/mclab/application/panda_runtime_manifest.py",
+      "sha256": "41d476063ef9c5aab6d86ee915b2b907ede5743b7c067b3a0aea34c9c978eb36"
+    },
+    {
+      "path": "src/mclab/application/platform.py",
+      "sha256": "f980b91e640d4285ba52f4fb6a938bba832dd59fbea540eee062a758c5a344dc"
+    },
+    {
+      "path": "src/mclab/application/presentation.py",
+      "sha256": "5589dc74895e878133a2e571ebcff631e9883a8df83cf10847ba1be73dd9eca0"
+    },
+    {
+      "path": "src/mclab/application/qt_app.py",
+      "sha256": "2cc1a9ec9fb468b224af318e2158773745a3c188967aeb901e00e34e7ea5bd1a"
+    },
+    {
+      "path": "src/mclab/application/qt_batch.py",
+      "sha256": "d7e8d5ca8d820f9045d086acfadee2b974a7fca4c2a6ff80624d46d11b83d292"
+    },
+    {
+      "path": "src/mclab/application/qt_evidence.py",
+      "sha256": "7880b1c18d9fdaba1bb988f6a4413c35261113836d5390ee9086505803cca8bb"
+    },
+    {
+      "path": "src/mclab/application/qt_fonts.py",
+      "sha256": "60833e72207917b2567e483f19ec793005ab2580b939b817108f2d24ca22ec3d"
+    },
+    {
+      "path": "src/mclab/application/qt_frame.py",
+      "sha256": "e33fab82c1d1a5c982f485c712ebb2495fe86296a4c82ee25d190ee3c77be701"
+    },
+    {
+      "path": "src/mclab/application/qt_lifecycle.py",
+      "sha256": "985741425ac549667ad0f3b982033301614cc09516cb0cdb242c0d934711b638"
+    },
+    {
+      "path": "src/mclab/application/qt_smoke.py",
+      "sha256": "bebad9d2d216b6eed3394f4c3dd4d7637a90b0970908c05a10c64262863dfff4"
+    },
+    {
+      "path": "src/mclab/application/qt_smoke_input.py",
+      "sha256": "16ce74453e16ad9490c34f578578747cf4d378e5a4603daebb948ce33040b94f"
+    },
+    {
+      "path": "src/mclab/application/qt_smoke_metrics.py",
+      "sha256": "5b8cb6b072ec1606402e91655f07bf5a99c077cd691fb85a6c118a5685fc862a"
+    },
+    {
+      "path": "src/mclab/application/qt_worker.py",
+      "sha256": "dafa65411eab6e29831ad002c072cc613d6e8905a68553ba4c0e6db16150dc7b"
+    },
+    {
+      "path": "src/mclab/application/readiness.py",
+      "sha256": "0e4c02112416bf09432f7fd5204acb9b254577fac0bb79b523fa5b2ea3b6915a"
+    },
+    {
+      "path": "src/mclab/application/rendering.py",
+      "sha256": "f7da1d25e47f1c030a7cd4340113abb83b9f33018c70179a96f9064db743b8f4"
+    },
+    {
+      "path": "src/mclab/application/repositories.py",
+      "sha256": "909403ae06ea7cc787f60d355b514ed094f22fde4bbc0415a2a6aa2c8c8306a4"
+    },
+    {
+      "path": "src/mclab/application/run_manager.py",
+      "sha256": "6e8c1feef4a821c5094848f741643bd73788955d3e27acbad11d2dd7dfe18b6f"
+    },
+    {
+      "path": "src/mclab/application/saved_runs.py",
+      "sha256": "499c54183350b55f660c6ac980161bb452b1e07e4bc8a485ebb02fca577a8807"
+    },
+    {
+      "path": "src/mclab/application/scenario_titles.py",
+      "sha256": "2018e197a9a92e361c7f76ae971813c588ff5cadd4cbcee9e8c3b1cdb514a45f"
+    },
+    {
+      "path": "src/mclab/application/session.py",
+      "sha256": "4d1a380f791cbe0c7c8eb4c47bca6d3300d88570f07bac087cd99da2866c7a09"
+    },
+    {
+      "path": "src/mclab/application/single_instance.py",
+      "sha256": "ef6b8b549301a8baab7430fa7df7caba5574b22fba81abf9a0222c49ce495b59"
+    },
+    {
+      "path": "src/mclab/application/visual_semantics.py",
+      "sha256": "e8f5a2286483550c2db9d1b085d2ae19414eb9597b0fbcfc10c03191ecde8473"
+    },
+    {
+      "path": "src/mclab/application/worker_commands.py",
+      "sha256": "16918ac5d1a49c6115139ff20b64dc198fbbcb18461c6387242ce710b403dcfd"
+    },
+    {
+      "path": "src/mclab/batch.py",
+      "sha256": "5d4bd1c773f0ab4cfdad29c9e0d1ce58194099ca2eba23d40093978b35d72b59"
+    },
+    {
+      "path": "src/mclab/cli.py",
+      "sha256": "dfd85c71b9659113edf720f86aaf8e5614d6192245b4a1196c6b63c1e06e3f1f"
+    },
+    {
+      "path": "src/mclab/completion.py",
+      "sha256": "8781ea476f63d62b92199423dbbe2d0e57e0157ba08ffbde7423335dae5957ca"
+    },
+    {
+      "path": "src/mclab/config.py",
+      "sha256": "6b85cd96c439279f2f374b859f4aedcfb93c999ef91c6966d431832c4fe437d1"
+    },
+    {
+      "path": "src/mclab/controllers/__init__.py",
+      "sha256": "33bc38edbfd3f84c4210b72233d720740bbc8681ee754d97d15ce4cfaacba559"
+    },
+    {
+      "path": "src/mclab/controllers/base.py",
+      "sha256": "66bee2c40e564fc5a8ab31cc84b9dbb85b393a00fa619b2701ee1c17051078e3"
+    },
+    {
+      "path": "src/mclab/controllers/impedance.py",
+      "sha256": "330999f628bf133899e3eb54eb86e74eab127d5cde57d3b9fbc6065d9d066918"
+    },
+    {
+      "path": "src/mclab/controllers/joint_pd.py",
+      "sha256": "f127e05f21d2dbd2fc6101e7ff4e292d75d5df26cd3547c050cb6e6642535115"
+    },
+    {
+      "path": "src/mclab/controllers/pid.py",
+      "sha256": "b6e81bcda9471429cb5921da03700e832060807e143e06eaa2cdec8bd82bc03d"
+    },
+    {
+      "path": "src/mclab/controllers/task_space_pd.py",
+      "sha256": "ac7bdbe8e9878c17c3cfa38a629ee393f92632438a0d3452df7fc5c4e444e2d2"
+    },
+    {
+      "path": "src/mclab/course_progress.py",
+      "sha256": "de7560e694dc80844e68081516ae23994ffd7ccd7910b9d1bd624023fef7eb45"
+    },
+    {
+      "path": "src/mclab/doctor.py",
+      "sha256": "89139c2c2e6c4afc0df808cbd8d9d954b810938c2b70466d5490246787ebf3f7"
+    },
+    {
+      "path": "src/mclab/experience_coverage.py",
+      "sha256": "39836c7c1ef51f906ef6cda7f63d63c559f424c06c1d08f527bb4b5c09138b90"
+    },
+    {
+      "path": "src/mclab/labs/__init__.py",
+      "sha256": "c00c87aec7f8eaf96c495cda170c4a4fe022499233dc0c551ac02beca4d0b17e"
+    },
+    {
+      "path": "src/mclab/labs/lab01_msd.py",
+      "sha256": "db420c6248945ba1811983be299e5d3ac667e0e590e6756f95f277f64112b9b8"
+    },
+    {
+      "path": "src/mclab/labs/lab02_pid.py",
+      "sha256": "f4e0a78aaeea436898ba0f62d1c7bd3a66283056f8ee325fbcea9374bc12a304"
+    },
+    {
+      "path": "src/mclab/labs/lab03_2dof.py",
+      "sha256": "a9cfc409f53c82dd75a577a8cc04438c599078c54f06026ecff64110827b614e"
+    },
+    {
+      "path": "src/mclab/labs/lab04_panda.py",
+      "sha256": "7a0ac238987cd883ef993d2cb35f6ece79f1096a13e577f983512dc5dd4389dd"
+    },
+    {
+      "path": "src/mclab/learner_menu.py",
+      "sha256": "6e9be099d2b7e8909fab35b65a03ebd4cc2618c99257ccbea40f0ab5e47c8449"
+    },
+    {
+      "path": "src/mclab/learning_guides.py",
+      "sha256": "73051c728dcd40830898e3310fb0d9b7275ecd47a244cb1cb44977dc6d481a94"
+    },
+    {
+      "path": "src/mclab/output_cleanup.py",
+      "sha256": "9630702c8d67c3abc4b2e7432a3023e6491d3ec24af7340e63cd446e3cd89159"
+    },
+    {
+      "path": "src/mclab/output_filters.py",
+      "sha256": "076955657b339f7e98e41874ac19d4586ee0b513cfd6a62021062b7a27455195"
+    },
+    {
+      "path": "src/mclab/output_inventory.py",
+      "sha256": "830aafe257a9ee12113424ae55681a32a1a99392655208badbe5b3c203c18e51"
+    },
+    {
+      "path": "src/mclab/output_publication.py",
+      "sha256": "9dcf8fbb6b05aa7ede54d13c3580acdfa68a3ac9c66a3f6cb7638c34513ab86a"
+    },
+    {
+      "path": "src/mclab/output_receipts.py",
+      "sha256": "321bf78e4d0170c9dfa0c24d511fd96403a696cfca37fbf073f2e3bf1fce9203"
+    },
+    {
+      "path": "src/mclab/output_root.py",
+      "sha256": "aa3b098b92cfcdf39673176326f022a8a23d8b0ae5293ec25c99dd70c65d855d"
+    },
+    {
+      "path": "src/mclab/output_safety.py",
+      "sha256": "285e83bc898c9ca5eb742630cadd6a09d009649cb69a75be2f7ce73e6e32e4c1"
+    },
+    {
+      "path": "src/mclab/output_windows.py",
+      "sha256": "b70ed6302aaf26c1f004227baacf3a6368ef44f6f479b2472ecedfd761190a00"
+    },
+    {
+      "path": "src/mclab/sim/__init__.py",
+      "sha256": "a45534d28c57b1de3ad3bc916a18c6e3fd35ba2df64e5f4e6064465032287931"
+    },
+    {
+      "path": "src/mclab/sim/interaction.py",
+      "sha256": "76db28408e1aeac743db09a4400c1a2fb6c3b8d9442a3ad61d00d59c1d5a1d9c"
+    },
+    {
+      "path": "src/mclab/sim/logging.py",
+      "sha256": "70f8b50c0d35ea71be5236591263ac054ac5ed2f73aa6935393c9c588f14b0cc"
+    },
+    {
+      "path": "src/mclab/sim/mujoco_utils.py",
+      "sha256": "5a0d392277f425a78c379768c3e933cd367c3d918194114ccf887cfccf89bf6a"
+    },
+    {
+      "path": "src/mclab/sim/one_dof.py",
+      "sha256": "8340963015beb6320c59e17f86fcb8638ea582c76ae0eed0c7ac1121463e7275"
+    },
+    {
+      "path": "src/mclab/sim/plotting.py",
+      "sha256": "114f98feb2d83049c94456f675025209be7a77b0125951c5e69c7679ba5bd165"
+    },
+    {
+      "path": "src/mclab/sim/reporting.py",
+      "sha256": "9af562d58fcb6ba4ccbb9d657cf283ef4527bb7356e4ee3ec50f984f752d6ae6"
+    },
+    {
+      "path": "src/mclab/sim/runner.py",
+      "sha256": "de1f588a45285855fb863f0185794048263d66d30dbbd4b217e3909cf010457e"
+    },
+    {
+      "path": "src/mclab/sim/two_link.py",
+      "sha256": "f06931c56534173069cb2082ce110deee161fcc4d58f78c440677f3eb3da988f"
+    },
+    {
+      "path": "src/mclab/trajectories/__init__.py",
+      "sha256": "28a0587b306b16e5924a0247bcc6361ab9b299c8afc3e0f68def6faa60c3a712"
+    },
+    {
+      "path": "src/mclab/trajectories/base.py",
+      "sha256": "a17dcbcdf925c01ae76ea70a2c1c55eef62474f09b44a8f70e2d344d655cf776"
+    },
+    {
+      "path": "src/mclab/trajectories/minimum_jerk.py",
+      "sha256": "d422cc7abd6f6427d1f73a37dce3236a5d11ef60eaeef3e11b15723b28c7e8f1"
+    },
+    {
+      "path": "src/mclab/trajectories/quintic.py",
+      "sha256": "95df5136ce703f2fdb406af9ca4ba40fdd40e26f91657f8cb51f4ffc7241dc39"
+    },
+    {
+      "path": "src/mclab/trajectories/s_curve.py",
+      "sha256": "23446a65e61f6f5fcdd217dfae1023d63b8af47957d2b82f74fb08123fe0eece"
+    },
+    {
+      "path": "src/mclab/trajectories/step.py",
+      "sha256": "1d8b23b0fb6495dee53a7f3bdc0ff6b4f30345ce1ad7250c24b84c4d7c015287"
+    },
+    {
+      "path": "src/mclab/trajectories/trapezoidal.py",
+      "sha256": "2b298da721572dc748bdc2a611937983b9863cbb763cdb332a8afe8eeca4d15a"
+    }
+  ]
+}

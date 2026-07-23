@@ -1,0 +1,466 @@
+{
+  "contract_id": "mclab.local-data.v1",
+  "data_classes": [
+    {
+      "artifacts": [
+        "outputs/.mclab-trash/<receipt>/entries/<run>",
+        "outputs/.mclab-trash/<receipt>/receipt.json"
+      ],
+      "content": "Recoverable copies of complete saved runs plus cleanup root, run-name, plan, status, and identity metadata.",
+      "derived_copies": [],
+      "id": "cleanup-quarantine-and-receipts",
+      "learner_authored": true,
+      "may_contain_private_data": true,
+      "sharing": "do-not-share-raw",
+      "status": "quarantined-recoverable"
+    },
+    {
+      "artifacts": [
+        "outputs/<batch>/<child-run-or-batch>/",
+        "outputs/<batch>/batch_summary.json",
+        "outputs/<batch>/comparison_plots/*.png",
+        "outputs/<batch>/index.html",
+        "outputs/<batch>/manifest.json",
+        "outputs/<batch>/report.html",
+        "outputs/<batch>/summary.json",
+        "outputs/<batch>/worksheet.md"
+      ],
+      "content": "Comparison metadata and child output paths, complete child run or batch trees, generated comparison plots, report, worksheet, manifest, summary, and nested browser index.",
+      "derived_copies": [
+        "<parent-of-explicit---output-dir>/index.html",
+        "<standalone-index---output-dir>/index.html",
+        "outputs/index.html"
+      ],
+      "id": "comparison-batch",
+      "learner_authored": true,
+      "may_contain_private_data": true,
+      "sharing": "sanitize-before-sharing",
+      "status": "persistent"
+    },
+    {
+      "artifacts": [
+        "<parent-of-MCLAB_OUTPUT_DIR-selected-first-run-directory>/index.html",
+        "<parent-of-explicit---output-dir>/index.html",
+        "<standalone-index---output-dir>/index.html",
+        "outputs/index.html"
+      ],
+      "content": "A regenerated cross-run browser index written at the configured outputs root, after a successful best-effort refresh in the parent of an explicit CLI or MCLAB_OUTPUT_DIR run, or directly under a safety-validated standalone-index root; it can summarize learner evidence and link saved artifacts.",
+      "derived_copies": [],
+      "id": "cumulative-index",
+      "learner_authored": true,
+      "may_contain_private_data": true,
+      "sharing": "sanitize-before-sharing",
+      "status": "derived"
+    },
+    {
+      "artifacts": [
+        "<Qt-QSettings-UserScope:MCLab/MCLab>:language",
+        "<Qt-QSettings-UserScope:MCLab/MCLab>:tourComplete"
+      ],
+      "content": "The selected ko/en interface language and whether the introductory tour was dismissed, stored by Qt in the current user's native settings backend.",
+      "derived_copies": [],
+      "id": "desktop-persistent-preferences",
+      "learner_authored": false,
+      "may_contain_private_data": false,
+      "sharing": "sanitize-before-sharing",
+      "status": "persistent"
+    },
+    {
+      "artifacts": [
+        "<MCLAB_OUTPUT_DIR-selected-first-run-directory>/manifest.json",
+        "outputs/.mclab-trash/<receipt>/receipt.json",
+        "outputs/<run>/manifest.json"
+      ],
+      "content": "Runtime, operating-system, config/model path, hash, bounded error, output-root, run-name, and cleanup identity metadata.",
+      "derived_copies": [],
+      "id": "diagnostic-provenance",
+      "learner_authored": false,
+      "may_contain_private_data": true,
+      "sharing": "sanitize-before-sharing",
+      "status": "persistent"
+    },
+    {
+      "artifacts": [
+        "<MCLAB_OUTPUT_DIR-selected-first-run-directory>/<learner-evidence-artifact>",
+        "<parent-of-MCLAB_OUTPUT_DIR-selected-first-run-directory>/index.html",
+        "<parent-of-explicit---output-dir>/index.html",
+        "<standalone-index---output-dir>/index.html",
+        "outputs/<run>/interaction_events.json",
+        "outputs/<run>/replay.npz",
+        "outputs/<run>/report.html",
+        "outputs/<run>/worksheet.md",
+        "outputs/index.html"
+      ],
+      "content": "Learner prediction, selected outcome, observation note, learner-control events, and captured live-status evidence.",
+      "derived_copies": [
+        "<MCLAB_OUTPUT_DIR-selected-first-run-directory>/replay.npz:events_json",
+        "<MCLAB_OUTPUT_DIR-selected-first-run-directory>/report.html",
+        "<MCLAB_OUTPUT_DIR-selected-first-run-directory>/worksheet.md",
+        "<parent-of-MCLAB_OUTPUT_DIR-selected-first-run-directory>/index.html",
+        "<parent-of-explicit---output-dir>/index.html",
+        "<standalone-index---output-dir>/index.html",
+        "outputs/<run>/replay.npz:events_json",
+        "outputs/<run>/report.html",
+        "outputs/<run>/worksheet.md",
+        "outputs/index.html"
+      ],
+      "id": "learner-evidence",
+      "learner_authored": true,
+      "may_contain_private_data": true,
+      "sharing": "do-not-share-raw",
+      "status": "persistent"
+    },
+    {
+      "artifacts": [
+        "outputs/.mclab_progress.json"
+      ],
+      "content": "A defined lightweight app-preference storage surface; no current production writer is connected to it.",
+      "derived_copies": [],
+      "id": "optional-progress-preferences",
+      "learner_authored": false,
+      "may_contain_private_data": false,
+      "sharing": "sanitize-before-sharing",
+      "status": "defined-storage-surface-no-current-writer"
+    },
+    {
+      "artifacts": [
+        "<MCLAB_OUTPUT_DIR-selected-first-run-directory>/",
+        "outputs/<run>/config.yaml",
+        "outputs/<run>/interaction_events.json",
+        "outputs/<run>/learner_snapshot.json",
+        "outputs/<run>/learner_tuned_config.yaml",
+        "outputs/<run>/log.csv",
+        "outputs/<run>/manifest.json",
+        "outputs/<run>/notes.md",
+        "outputs/<run>/plots/*.png",
+        "outputs/<run>/replay.npz",
+        "outputs/<run>/report.html",
+        "outputs/<run>/states.json",
+        "outputs/<run>/states.npz",
+        "outputs/<run>/summary.json",
+        "outputs/<run>/worksheet.md"
+      ],
+      "content": "Resolved configuration, simulation signals and states, generated lesson notes, plots, replay, provenance, learner interaction evidence, report, and worksheet.",
+      "derived_copies": [
+        "<parent-of-MCLAB_OUTPUT_DIR-selected-first-run-directory>/index.html",
+        "<parent-of-explicit---output-dir>/index.html",
+        "<standalone-index---output-dir>/index.html",
+        "outputs/index.html"
+      ],
+      "id": "saved-run",
+      "learner_authored": true,
+      "may_contain_private_data": true,
+      "sharing": "sanitize-before-sharing",
+      "status": "persistent"
+    },
+    {
+      "artifacts": [
+        "<MCLAB_INSTANCE_LOCK>",
+        "<Qt-AppLocalDataLocation>/mclab-desktop.lock",
+        "<Qt-local-server-runtime-directory>/mclab-<lock-path-sha256-prefix>",
+        "\\\\.\\pipe\\mclab-<lock-path-sha256-prefix>",
+        "outputs/<batch>/.mclab-batch-active",
+        "outputs/<batch>/.mclab-batch-handoff"
+      ],
+      "content": "Desktop QLockFile metadata can include PID, hostname, application name, machine ID, and boot ID; the path-derived Unix socket or Windows named-pipe endpoint and course-comparison controls are normally short-lived, but lock or Unix socket entries can remain after abnormal termination, and the batch handoff contains a one-time token.",
+      "derived_copies": [],
+      "id": "transient-application-controls",
+      "learner_authored": false,
+      "may_contain_private_data": true,
+      "sharing": "never-share-live-control-token",
+      "status": "transient"
+    }
+  ],
+  "documentation": {
+    "bilingual_policy": "docs/local_data_and_privacy.md",
+    "documentation_map": "docs/README.md",
+    "english_readme": "README.en.md",
+    "korean_readme": "README.md",
+    "learner_guide": "docs/learner_guide.md",
+    "security_policy": ".github/SECURITY.md",
+    "support_policy": ".github/SUPPORT.md"
+  },
+  "lifecycle_controls": {
+    "automatic_deletion": false,
+    "backup_policy_status": "not-defined",
+    "cleanup_apply_authorized_by_this_contract": false,
+    "cleanup_default": "read-only-plan",
+    "cleanup_effect": "recoverable-quarantine-not-erasure",
+    "derived_index_may_persist_until_regenerated": true,
+    "hold_marker": ".mclab-preserve",
+    "network_filesystem_support": "unsupported",
+    "permanent_purge_available": false,
+    "real_output_validation": "not-run-not-authorized",
+    "restore_scope": "source-or-venv-cli-on-local-filesystem",
+    "retention_policy_status": "not-defined",
+    "rpo_rto_status": "not-defined",
+    "secure_erasure_status": "not-provided-by-mclab"
+  },
+  "network_behavior": {
+    "automatic_learner_data_transfer": false,
+    "explicit_network_actions": [
+      {
+        "command": "python -m mclab assets install",
+        "id": "asset-install",
+        "purpose": "Download the pinned and hash-verified MuJoCo Menagerie Panda asset.",
+        "source_reference": "src/mclab/application/assets.py"
+      },
+      {
+        "command": "python scripts/install_locked.py <profile>",
+        "id": "locked-dependency-install",
+        "purpose": "Install the selected hash-locked Python dependency profile.",
+        "source_reference": "scripts/install_locked.py"
+      },
+      {
+        "command": "python scripts/install_ubuntu_system_packages.py --install --output <temporary-json-path>",
+        "id": "ubuntu-ci-system-install",
+        "purpose": "Install and verify the controlled Ubuntu package set in the maintainer CI job.",
+        "source_reference": "scripts/install_ubuntu_system_packages.py"
+      }
+    ],
+    "local_socket_is_remote_network": false,
+    "ordinary_run_network_required": false,
+    "support_sharing": "user-initiated-sanitized-only",
+    "telemetry_is_remote_analytics": false
+  },
+  "schema_version": 1,
+  "scope": {
+    "account_required": false,
+    "automatic_learner_data_upload": false,
+    "distribution_scope": "supervised-source-development-only",
+    "local_first": true,
+    "ordinary_run_network_required": false,
+    "remote_usage_analytics": false,
+    "repository_only": true
+  },
+  "sharing_rules": {
+    "minimum_necessary_only": true,
+    "private_security_channel": ".github/SECURITY.md",
+    "public_support_channel": ".github/SUPPORT.md",
+    "remove_before_sharing": [
+      "credentials-and-tokens",
+      "learner-predictions-and-notes",
+      "live-batch-handoff-secrets",
+      "private-output-content",
+      "unsanitized-absolute-paths"
+    ],
+    "support_submission_is_user_initiated": true
+  },
+  "source_inventory": {
+    "inventory_version": 1,
+    "manifest_path": ".agents/operations/local-data-policy.sources.json",
+    "manifest_sha256": "92f6d220f7905904fc60fc4afba5f0c03bcda5d998904bbd2faaf97933bc0b02",
+    "scope": "all-python-sources-under-packaging-scripts-and-src-mclab"
+  },
+  "storage_locations": [
+    {
+      "applies_when": "the desktop starts without MCLAB_INSTANCE_LOCK",
+      "code_reference": "src/mclab/application/single_instance.py:acquire_instance_lock",
+      "id": "desktop-instance-lock-default",
+      "parent_source": "Qt AppLocalDataLocation",
+      "path_template": "<Qt-AppLocalDataLocation>/mclab-desktop.lock",
+      "relative_child": "mclab-desktop.lock"
+    },
+    {
+      "applies_when": "the desktop starts with MCLAB_INSTANCE_LOCK",
+      "code_reference": "src/mclab/application/single_instance.py:acquire_instance_lock",
+      "id": "desktop-instance-lock-override",
+      "parent_source": "the exact override path, with a relative value interpreted from the process current working directory",
+      "path_template": "<MCLAB_INSTANCE_LOCK>",
+      "relative_child": "not-appended"
+    },
+    {
+      "applies_when": "the desktop activation server listens on Windows",
+      "code_reference": "src/mclab/application/single_instance.py:start_activation_server",
+      "id": "desktop-local-named-pipe-windows",
+      "parent_source": "the local Windows named-pipe namespace",
+      "path_template": "\\\\.\\pipe\\mclab-<lock-path-sha256-prefix>",
+      "relative_child": "derived-local-named-pipe-endpoint"
+    },
+    {
+      "applies_when": "Qt maps the derived QLocalServer name to a filesystem socket entry on a Unix-like platform",
+      "code_reference": "src/mclab/application/single_instance.py:start_activation_server",
+      "id": "desktop-local-socket-filesystem",
+      "parent_source": "the Qt local-server runtime or temporary directory",
+      "path_template": "<Qt-local-server-runtime-directory>/mclab-<lock-path-sha256-prefix>",
+      "relative_child": "derived-local-socket-entry"
+    },
+    {
+      "applies_when": "the desktop starts its first live scenario with a non-empty MCLAB_OUTPUT_DIR",
+      "code_reference": "src/mclab/application/qt_app.py:AppBackend._start_scenario",
+      "id": "desktop-output-directory-override",
+      "parent_source": "an absolute override selects that exact directory; a relative override resolves through src/mclab/config.py:resolve_output_path",
+      "path_template": "<MCLAB_OUTPUT_DIR-selected-first-run-directory>",
+      "relative_child": "not-appended"
+    },
+    {
+      "applies_when": "that first desktop run reaches terminal publication and its best-effort parent index refresh succeeds",
+      "code_reference": "src/mclab/sim/reporting.py:write_outputs_index",
+      "id": "desktop-output-parent-index",
+      "parent_source": "parent directory of the MCLAB_OUTPUT_DIR-selected first run",
+      "path_template": "<parent-of-MCLAB_OUTPUT_DIR-selected-first-run-directory>/index.html",
+      "relative_child": "index.html-in-parent"
+    },
+    {
+      "applies_when": "the desktop reads language and tourComplete or writes a changed language or dismissed-tour value",
+      "code_reference": "src/mclab/application/qt_app.py:AppBackend",
+      "id": "desktop-qsettings-user-preferences",
+      "parent_source": "Qt native UserScope settings for organization MCLab and application MCLab",
+      "path_template": "<Qt-QSettings-UserScope:MCLab/MCLab>",
+      "relative_child": "native-settings-store"
+    },
+    {
+      "applies_when": "MCLAB_DATA_DIR is set for source or frozen execution",
+      "code_reference": "src/mclab/config.py:default_outputs_root",
+      "id": "environment-override",
+      "parent_source": "MCLAB_DATA_DIR",
+      "path_template": "<MCLAB_DATA_DIR>/outputs",
+      "relative_child": "outputs"
+    },
+    {
+      "applies_when": "a CLI run or batch with --output-dir reaches terminal publication and its best-effort parent index refresh succeeds",
+      "code_reference": "src/mclab/sim/reporting.py:write_outputs_index",
+      "id": "explicit-output-parent-index",
+      "parent_source": "parent directory of the user-selected exact output directory",
+      "path_template": "<parent-of-explicit---output-dir>/index.html",
+      "relative_child": "index.html-in-parent"
+    },
+    {
+      "applies_when": "CLI run or batch receives --output-dir",
+      "code_reference": "src/mclab/config.py:resolve_output_path",
+      "id": "explicit-run-output-directory",
+      "parent_source": "absolute user path, PROJECT_ROOT for a relative source path, or frozen application-data parent for a relative frozen path",
+      "path_template": "<user-selected-exact-output-directory>",
+      "relative_child": "not-appended"
+    },
+    {
+      "applies_when": "running a frozen bundle on Linux without MCLAB_DATA_DIR",
+      "code_reference": "src/mclab/config.py:default_outputs_root",
+      "id": "frozen-linux",
+      "parent_source": "XDG_DATA_HOME or user-home fallback",
+      "path_template": "${XDG_DATA_HOME:-$HOME/.local/share}/mclab/outputs",
+      "relative_child": "outputs"
+    },
+    {
+      "applies_when": "running a frozen bundle on macOS without MCLAB_DATA_DIR",
+      "code_reference": "src/mclab/config.py:default_outputs_root",
+      "id": "frozen-macos",
+      "parent_source": "user home",
+      "path_template": "$HOME/Library/Application Support/MCLab/outputs",
+      "relative_child": "outputs"
+    },
+    {
+      "applies_when": "running a frozen bundle on Windows without MCLAB_DATA_DIR",
+      "code_reference": "src/mclab/config.py:default_outputs_root",
+      "id": "frozen-windows",
+      "parent_source": "LOCALAPPDATA or user-home fallback",
+      "path_template": "%LOCALAPPDATA%/MCLab/outputs",
+      "relative_child": "outputs"
+    },
+    {
+      "applies_when": "running from source without MCLAB_DATA_DIR",
+      "code_reference": "src/mclab/config.py:default_outputs_root",
+      "id": "source-default",
+      "parent_source": "PROJECT_ROOT",
+      "path_template": "<repository>/outputs",
+      "relative_child": "outputs"
+    },
+    {
+      "applies_when": "python -m mclab index receives --output-dir",
+      "code_reference": "src/mclab/cli.py:index",
+      "id": "standalone-index-output-root",
+      "parent_source": "an absolute or process-current-working-directory-relative caller root that passes physical-directory, protected-root, mount, and publication safety checks",
+      "path_template": "<standalone-index---output-dir>/index.html",
+      "relative_child": "index.html-in-selected-root"
+    }
+  ],
+  "unresolved_decisions": [
+    {
+      "id": "backup-owner-location-cadence",
+      "status": "unresolved-external-policy"
+    },
+    {
+      "id": "institution-retention-period",
+      "status": "unresolved-external-policy"
+    },
+    {
+      "id": "release-evidence-retention",
+      "status": "unresolved-external-policy"
+    },
+    {
+      "id": "rpo-rto",
+      "status": "unresolved-external-policy"
+    },
+    {
+      "id": "secure-erasure-method",
+      "status": "unresolved-external-policy"
+    },
+    {
+      "id": "shared-pc-account-admin-policy",
+      "status": "unresolved-external-policy"
+    }
+  ],
+  "validation_only_exclusions": [
+    {
+      "activation": "explicit maintainer invocation of one of the listed audit scripts",
+      "artifacts": [
+        "<audit-app-startup---output>/**",
+        "<audit-course-comparison---output>/**",
+        "<audit-desktop-ui---output>/**",
+        "<audit-report-ui---output>/**",
+        "<audit-scene-semantics---output>/**",
+        "<audit-supply-chain---output>"
+      ],
+      "exclusion_scope": "not-created-by-an-ordinary-learner-run",
+      "id": "maintainer-audit-output-roots",
+      "may_contain_private_data": true,
+      "source_references": [
+        "scripts/audit_app_startup.py",
+        "scripts/audit_course_comparison.py",
+        "scripts/audit_desktop_ui.py",
+        "scripts/audit_report_ui.py",
+        "scripts/audit_scene_semantics.py",
+        "scripts/audit_supply_chain.py"
+      ]
+    },
+    {
+      "activation": "an explicit MCLAB_ACTIVATION_PATH plus a successful local duplicate-instance activation",
+      "artifacts": [
+        "<MCLAB_ACTIVATION_PATH>"
+      ],
+      "exclusion_scope": "validation-probe-not-ordinary-learner-storage",
+      "id": "qt-activation-probe",
+      "may_contain_private_data": true,
+      "source_references": [
+        "src/mclab/application/single_instance.py:_record_activation"
+      ]
+    },
+    {
+      "activation": "an explicit MCLAB_SCREENSHOT_PATH diagnostic override",
+      "artifacts": [
+        "<MCLAB_SCREENSHOT_PATH>"
+      ],
+      "exclusion_scope": "validation-capture-not-ordinary-learner-storage",
+      "id": "qt-screenshot-capture",
+      "may_contain_private_data": true,
+      "source_references": [
+        "src/mclab/application/qt_app.py:run_app"
+      ]
+    },
+    {
+      "activation": "MCLAB_SELF_TEST=1, a matching scheduled smoke action, and the corresponding explicit destination variable",
+      "artifacts": [
+        "<MCLAB_ACCESSIBILITY_PATH>",
+        "<MCLAB_BACKEND_TRACE_PATH>",
+        "<MCLAB_FOCUS_TRACE_PATH>",
+        "<MCLAB_STARTUP_PATH>"
+      ],
+      "exclusion_scope": "self-test-evidence-not-ordinary-learner-storage",
+      "id": "qt-self-test-traces",
+      "may_contain_private_data": true,
+      "source_references": [
+        "src/mclab/application/qt_smoke.py"
+      ]
+    }
+  ]
+}

@@ -27,6 +27,10 @@ Include only the information needed to reproduce and assess the issue:
 Do not attach credentials, tokens, learner predictions or notes, private
 outputs, or unsanitized absolute paths. The maintainer handles reports on a
 best-effort basis and does not promise a fixed response SLA.
+See [Local data and privacy](../docs/local_data_and_privacy.md) for the
+repository-scoped current inventory of local artifacts, derived copies,
+quarantine, and shared-PC considerations. That inventory is not a public-release
+completeness or institutional-policy claim.
 
 ## Security-sensitive scope
 
@@ -51,6 +55,9 @@ in the public issue tracker unless they create a security or data-loss risk.
 신고 경로를 사용해 주세요. 영향을 받는 commit/운영체제, 최소 재현 절차, 영향 범위,
 학습자 산출물 또는 로컬 파일 손상 가능성을 알려 주세요. 비밀키, token, 학습자의 예측·
 메모, 개인 경로가 포함된 원본 진단 결과는 첨부하지 마세요.
+[로컬 데이터와 개인정보 안내](../docs/local_data_and_privacy.md)에서 저장 artifact,
+파생 복사본, quarantine과 공용 PC 고려 사항에 관한 저장소 범위의 현재 목록을 확인할 수
+있습니다. 이 목록은 공개 배포 완전성이나 기관 정책을 입증하지 않습니다.
 
 검증되지 않은 폴더 삭제, 경로 탈출, archive 압축 해제, asset 무결성, 임의 코드 실행,
 패키지 로딩·서명·provenance, 개인정보 노출은 보안 범위에 포함됩니다. 일반적인 사용법
