@@ -147,7 +147,8 @@ config and seed. The app does not delete saved runs automatically. See
 [local data and privacy](docs/local_data_and_privacy.md) for the locations of
 learner predictions, observation notes, derived copies, confirmed runtime caches,
 and shared-PC guidance. The cache inventory is bounded and is not complete
-shared-PC clearance.
+shared-PC clearance; resolve each runtime-selected effective cache location
+before review instead of assuming the documented default path.
 
 ## Repository map
 

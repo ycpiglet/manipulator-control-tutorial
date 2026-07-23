@@ -36,7 +36,7 @@ OPEN_SUPPORTS_DIR_FD = os.open in os.supports_dir_fd
 STAT_SUPPORTS_DIR_FD = os.stat in os.supports_dir_fd
 STAT_SUPPORTS_NOFOLLOW = os.stat in os.supports_follow_symlinks
 LISTDIR_SUPPORTS_FD = os.listdir in os.supports_fd
-SCHEMA_SHA256 = "d2ccf980863ffcc67406f3a829f5717ea9e6acee6898ec13313a9f73be35fd7a"
+SCHEMA_SHA256 = "8539a4fb6150461f1d6d704665c728bac7a17ff7392791062d43fdca1f224814"
 
 POLICY_HEADINGS = (
     "Scope / 범위",
@@ -61,20 +61,25 @@ EXPECTED_SCOPE = {
     "remote_usage_analytics": False,
     "repository_only": True,
     "runtime_dependency_cache_scope": (
-        "confirmed-cpython-qt-qml-matplotlib-only-broader-platform-caches-open"
+        "confirmed-effective-cpython-qt-qml-matplotlib-path-selection-only-"
+        "broader-platform-caches-open"
     ),
 }
 
 EXPECTED_STORAGE_LOCATIONS = (
     {
         "applies_when": (
-            "Python imports a .py module from a writable source or import root with "
-            "bytecode writing enabled"
+            "Python imports a .py module with bytecode writing enabled and its effective "
+            "bytecode cache destination is writable"
         ),
         "code_reference": "CPython:import-bytecode-cache",
         "id": "cpython-bytecode-cache",
-        "parent_source": "each writable source or import root selected by the Python runtime",
-        "path_template": "<writable-Python-import-root>/__pycache__/*.pyc",
+        "parent_source": (
+            "effective sys.pycache_prefix selected by -X pycache_prefix or "
+            "PYTHONPYCACHEPREFIX; otherwise each writable source or import root "
+            "__pycache__ directory"
+        ),
+        "path_template": "<effective-CPython-bytecode-cache-root>/**/*.pyc",
         "relative_child": "runtime-selected-cache-files",
     },
     {
@@ -208,24 +213,31 @@ EXPECTED_STORAGE_LOCATIONS = (
     },
     {
         "applies_when": (
-            "a run imports Matplotlib and its font manager initializes a writable cache"
+            "a run imports Matplotlib and its font manager initializes an effective usable "
+            "cache or runtime temporary fallback"
         ),
         "code_reference": "Matplotlib:cache-directory-and-font-manager",
         "id": "matplotlib-font-cache",
         "parent_source": (
-            "MPLCONFIGDIR when non-empty, otherwise Matplotlib platform or user cache selection"
+            "MPLCONFIGDIR when configured and usable; when unset, the Matplotlib platform "
+            "or user cache if usable; otherwise the Matplotlib-selected runtime temporary "
+            "directory"
         ),
-        "path_template": (
-            "<MPLCONFIGDIR-or-Matplotlib-platform-user-cache>/fontlist-*.json"
-        ),
+        "path_template": "<effective-Matplotlib-cache-directory>/fontlist-*.json",
         "relative_child": "runtime-selected-cache-files",
     },
     {
-        "applies_when": "the Qt desktop loads QML with disk caching enabled",
+        "applies_when": (
+            "the Qt desktop loads cacheable QML with disk caching enabled and an effective "
+            "cache directory is available"
+        ),
         "code_reference": "Qt:QQml-disk-cache",
         "id": "qt-qml-disk-cache",
-        "parent_source": "Qt CacheLocation for organization MCLab and application MCLab",
-        "path_template": "<Qt-CacheLocation:MCLab/MCLab>/qmlcache/*.qmlc",
+        "parent_source": (
+            "active QML_DISK_CACHE_PATH override; otherwise QStandardPaths CacheLocation "
+            "for organization MCLab and application MCLab with qmlcache appended"
+        ),
+        "path_template": "<effective-Qt-QML-disk-cache-directory>/*.qmlc",
         "relative_child": "runtime-selected-cache-files",
     },
     {
@@ -389,15 +401,17 @@ EXPECTED_DATA_CLASSES = {
     },
     "runtime-dependency-caches": {
         "artifacts": (
-            "<MPLCONFIGDIR-or-Matplotlib-platform-user-cache>/fontlist-*.json",
-            "<Qt-CacheLocation:MCLab/MCLab>/qmlcache/*.qmlc",
-            "<writable-Python-import-root>/__pycache__/*.pyc",
+            "<effective-CPython-bytecode-cache-root>/**/*.pyc",
+            "<effective-Matplotlib-cache-directory>/fontlist-*.json",
+            "<effective-Qt-QML-disk-cache-directory>/*.qmlc",
         ),
         "content": (
             "CPython bytecode can embed absolute source or import paths; Qt compiled-QML "
             "cache entries and Matplotlib font metadata can persist outside the configured "
-            "outputs root. These are confirmed surfaces only; broader dependency and "
-            "platform caches remain an open boundary."
+            "outputs root. Each artifact path is the runtime-selected effective cache "
+            "location, including documented overrides and Matplotlib's temporary fallback. "
+            "These are confirmed surfaces only; broader dependency and platform caches "
+            "remain an open boundary."
         ),
         "derived_copies": (),
         "learner_authored": False,
@@ -642,9 +656,15 @@ REQUIRED_POLICY_MARKERS = (
     "통제된 저장소 읽기는 no-follow file descriptor를 사용하고",
     "confirmed cache surfaces, not a complete shared-PC clearance",
     "확인된 cache 표면이며 공용 PC 전체 정리 완료를 뜻하지 않습니다",
-    "<writable-Python-import-root>/__pycache__/*.pyc",
-    "<MPLCONFIGDIR-or-Matplotlib-platform-user-cache>/fontlist-*.json",
-    "<Qt-CacheLocation:MCLab/MCLab>/qmlcache/*.qmlc",
+    "<effective-CPython-bytecode-cache-root>/**/*.pyc",
+    "PYTHONPYCACHEPREFIX",
+    "-X pycache_prefix",
+    "<effective-Matplotlib-cache-directory>/fontlist-*.json",
+    "runtime temporary fallback",
+    "<effective-Qt-QML-disk-cache-directory>/*.qmlc",
+    "QML_DISK_CACHE_PATH",
+    "resolve the effective location at runtime before review",
+    "검토 전에 runtime에서 effective 위치를 확인",
     "mclab.local-data.v1",
 )
 
@@ -668,6 +688,7 @@ REQUIRED_DOCUMENT_MARKERS = {
         "not a public-release completeness or institutional-policy claim",
         "three confirmed runtime/cache surfaces",
         "not complete shared-PC clearance",
+        "effective location must be resolved at runtime",
     ),
     Path(".github/SUPPORT.md"): (
         "Support is best effort; no response-time or platform-service SLA is promised.",
@@ -675,8 +696,10 @@ REQUIRED_DOCUMENT_MARKERS = {
         "them in an issue is the reporter's explicit action.",
         "confirmed CPython, Qt QML, and Matplotlib cache list is bounded",
         "Cache removal is not secure erasure.",
+        "resolve each effective cache location at runtime",
         "사용자명, 홈 경로, 비밀정보, 학습자 예측·메모를 제거한 뒤 필요한 부분만 공유해 주세요.",
         "확인된 cache 목록은 제한된 범위이며",
+        "runtime에서 각 effective cache 위치를 확인",
     ),
 }
 
@@ -1826,7 +1849,8 @@ def validate_repository(
             (
                 "all declared storage, data, network, lifecycle, sharing, "
                 "validation-exclusion, and open-decision records exact; confirmed "
-                "runtime caches explicit; broader platform cache boundary open"
+                "runtime cache effective paths including overrides/fallback explicit; "
+                "broader platform cache boundary open"
             ),
             f"{len(semantic_errors)} errors",
             not semantic_errors,

@@ -141,7 +141,8 @@ python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --p
 삭제하지 않습니다. 학습자 예측·관찰 메모가 저장되고 파생되는 위치와 공용 PC
 주의사항, 확인된 runtime cache 위치는
 [로컬 데이터와 개인정보 안내](docs/local_data_and_privacy.md)를 확인하세요. Cache
-목록은 제한된 범위이며 공용 PC 전체 정리 완료를 뜻하지 않습니다.
+목록은 제한된 범위이며 공용 PC 전체 정리 완료를 뜻하지 않습니다. 문서의 default
+경로를 가정하지 말고 검토 전에 runtime이 선택한 effective cache 위치를 확인하세요.
 
 ## 저장소 구조
 

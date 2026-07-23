@@ -32,7 +32,9 @@ repository-scoped current inventory of app-owned artifacts, derived copies,
 quarantine, and three confirmed runtime/cache surfaces. Broader Qt/GPU/GL,
 MuJoCo, font, OS, driver, and dependency-managed caches remain open. That
 inventory is not a public-release completeness or institutional-policy claim
-and is not complete shared-PC clearance.
+and is not complete shared-PC clearance. The effective location must be resolved at runtime
+before review. Command-line and environment overrides or a runtime fallback can change
+the path.
 
 ## Security-sensitive scope
 
@@ -61,7 +63,8 @@ in the public issue tracker unless they create a security or data-loss risk.
 파생 복사본, quarantine과 확인된 세 runtime/cache 표면에 관한 저장소 범위의 현재
 목록을 확인할 수 있습니다. 더 넓은 Qt/GPU/GL, MuJoCo, font, OS, driver 및 dependency
 관리 cache는 미결 범위입니다. 이 목록은 공개 배포 완전성, 기관 정책 또는 공용 PC 전체
-정리 완료를 입증하지 않습니다.
+정리 완료를 입증하지 않습니다. Command-line·환경 override 또는 runtime fallback에
+따라 경로가 달라질 수 있으므로 검토 전에 runtime에서 effective 위치를 확인해야 합니다.
 
 검증되지 않은 폴더 삭제, 경로 탈출, archive 압축 해제, asset 무결성, 임의 코드 실행,
 패키지 로딩·서명·provenance, 개인정보 노출은 보안 범위에 포함됩니다. 일반적인 사용법

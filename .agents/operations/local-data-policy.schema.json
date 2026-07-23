@@ -205,7 +205,7 @@
           "type": "boolean"
         },
         "runtime_dependency_cache_scope": {
-          "const": "confirmed-cpython-qt-qml-matplotlib-only-broader-platform-caches-open"
+          "const": "confirmed-effective-cpython-qt-qml-matplotlib-path-selection-only-broader-platform-caches-open"
         }
       },
       "required": [
