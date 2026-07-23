@@ -1247,7 +1247,7 @@ class BatchTests(unittest.TestCase):
                     run_kind="comparison_batch",
                 )
 
-            published = Path(tmp) / "published-with-transient"
+            published = temporary_root / "published-with-transient"
             published.mkdir()
             write_manifest(
                 published,
@@ -1267,7 +1267,7 @@ class BatchTests(unittest.TestCase):
             )
 
             if os.name != "nt":
-                linked = Path(tmp) / "published-with-link"
+                linked = temporary_root / "published-with-link"
                 linked.mkdir()
                 write_manifest(
                     linked,
