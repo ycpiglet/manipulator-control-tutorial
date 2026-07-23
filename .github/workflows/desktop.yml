@@ -18,12 +18,46 @@ jobs:
         os: [windows-2025, ubuntu-24.04, macos-15]
     runs-on: ${{ matrix.os }}
     env:
+      MCLAB_EVIDENCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       QT_QPA_PLATFORM: offscreen
       MPLBACKEND: Agg
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Checkout exact package evidence subject
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          ref: ${{ env.MCLAB_EVIDENCE_SHA }}
+
+      - name: Verify exact package evidence subject
+        shell: bash
+        run: |
+          if [[ ! "$MCLAB_EVIDENCE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Package evidence subject must be a lowercase 40-hex commit." >&2
+            exit 1
+          fi
+          head_sha="$(git rev-parse --verify 'HEAD^{commit}')" || exit 1
+          if [[ "$head_sha" != "$MCLAB_EVIDENCE_SHA" ]]; then
+            echo "::error::Checked-out HEAD does not match the package evidence subject." >&2
+            exit 1
+          fi
+          checkout_status="$(git status --porcelain=v1 --untracked-files=all)" || exit 1
+          if [[ -n "$checkout_status" ]]; then
+            echo "::error::Package evidence checkout is not clean." >&2
+            exit 1
+          fi
+
+      - name: Bind packaged E2E evidence path
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            Linux|Windows|macOS) ;;
+            *)
+              echo "::error::Unsupported package evidence runner OS." >&2
+              exit 1
+              ;;
+          esac
+          printf 'MCLAB_E2E_EVIDENCE=build/validation/%s/g2-%s/package_e2e.json\n' \
+            "$MCLAB_EVIDENCE_SHA" "$RUNNER_OS" >> "$GITHUB_ENV"
 
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
@@ -290,16 +324,16 @@ jobs:
           --bundle-root dist/MCLab
           --package-root dist/MCLab-package
           --runner-os "$RUNNER_OS"
-          --workflow-sha "$GITHUB_SHA"
+          --workflow-sha "$MCLAB_EVIDENCE_SHA"
           --temp-root "$RUNNER_TEMP"
-          --output "build/validation/$GITHUB_SHA/g2-$RUNNER_OS/package_e2e.json"
+          --output "$MCLAB_E2E_EVIDENCE"
 
       - name: Upload packaged E2E readiness evidence
         if: always() && steps.package_e2e.outcome != 'skipped'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: mclab-g2-${{ runner.os }}-${{ github.sha }}
-          path: build/validation/${{ github.sha }}/g2-${{ runner.os }}/package_e2e.json
+          name: mclab-g2-${{ runner.os }}-${{ env.MCLAB_EVIDENCE_SHA }}
+          path: ${{ env.MCLAB_E2E_EVIDENCE }}
           if-no-files-found: error
           retention-days: 90
 

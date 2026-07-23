@@ -6,6 +6,7 @@ RowLayout {
     id: header
     property int runCount: 0
     property bool batchRunning: false
+    property string nextScenarioId: ""
     spacing: 10
     Label {
         text: backend.localizedText(backend.language, "nav.results")
@@ -20,9 +21,9 @@ RowLayout {
         accessibleDescription: header.batchRunning
                                ? backend.localizedText(backend.language, "batch.launch_blocked")
                                : backend.localizedText(backend.language, "results.start_help")
-        enabled: backend.nextScenarioId !== "" && !header.batchRunning
+        enabled: header.nextScenarioId !== "" && !header.batchRunning
                  && (!backend.hasActiveExperiment
                      || backend.sessionState !== "completed")
-        onClicked: backend.startScenario(backend.nextScenarioId)
+        onClicked: backend.startScenario(header.nextScenarioId)
     }
 }

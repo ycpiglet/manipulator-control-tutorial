@@ -4,6 +4,7 @@ import QtQuick.Layouts
 
 Item {
     id: page
+    property string nextScenarioId: visible ? backend.nextScenarioId : ""
     objectName: "experimentPage"
     property bool compact: width < 900 || height < 500
     property bool needsEvidenceRetry: backend.sessionState === "completed"
@@ -195,14 +196,14 @@ Item {
                 id: startNextButton
                 objectName: "startNextButton"
                 visible: backend.sessionState === "completed" && !backend.hasReplay
-                         && !page.needsEvidenceRetry && backend.nextScenarioId !== ""
+                         && !page.needsEvidenceRetry && page.nextScenarioId !== ""
                 enabled: !backend.hasActiveExperiment
                 minimumButtonWidth: compact ? 82 : 124
                 text: backend.localizedText(backend.language, "path.start_next")
                 accessibleDescription: enabled
                                        ? backend.localizedText(backend.language, "results.start_help")
                                        : backend.localizedText(backend.language, "active.saving_title")
-                onClicked: backend.startScenario(backend.nextScenarioId)
+                onClicked: backend.startScenario(page.nextScenarioId)
             }
             MButton {
                 id: savedResultsButton
@@ -210,7 +211,7 @@ Item {
                 minimumButtonWidth: compact ? 82 : 124
                 secondary: !(backend.sessionState === "completed"
                              && !backend.hasReplay && !page.needsEvidenceRetry
-                             && backend.nextScenarioId === "")
+                             && page.nextScenarioId === "")
                 text: backend.sessionState === "completed" && !backend.hasReplay
                       ? backend.localizedText(backend.language, "experiment.saved_results")
                       : "← " + backend.localizedText(backend.language, "nav.home")

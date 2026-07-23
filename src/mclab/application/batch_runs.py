@@ -36,6 +36,7 @@ from mclab.application.batch_progress import (
     encode_progress_payload as _encode_progress_payload,
     validated_progress_event as _validated_progress_event,
 )
+from mclab.application.batch_settlement import prune_interrupted_batch_directories
 from mclab.config import default_outputs_root, is_frozen_bundle
 from mclab.output_inventory import terminal_manifest_entry_rooted
 from mclab.output_root import pinned_output_root
@@ -601,6 +602,7 @@ def settle_all_compare_output(
                             "Course-comparison writer claim did not become empty"
                         )
                     root_pin.rmdir((BATCH_ACTIVE_DIR_NAME,))
+                prune_interrupted_batch_directories(root_pin)
                 current_manifest = root_pin.read_regular_file(
                     ("manifest.json",),
                     description="course-comparison manifest",

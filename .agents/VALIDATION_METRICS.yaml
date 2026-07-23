@@ -189,9 +189,9 @@ packaging:
     evidence: "package-metrics.json gates.one_folder and gates.archive in each desktop matrix artifact"
   packaged_e2e_independence:
     metric: "accepted package copied outside checkout and invoked from an independent runtime cwd"
-    threshold: "checkout-bound verification equals copied offline-consistency verification; copied self-test, doctor, Lab01/report/plot, replay, and next preview pass on Windows, Ubuntu, and macOS"
-    command: "python scripts/audit_package_e2e.py --bundle-root dist/MCLab --package-root dist/MCLab-package --runner-os <OS> --workflow-sha <40-hex-sha> --temp-root <runner-temp> --output build/validation/<sha>/g2-<OS>/package_e2e.json"
-    evidence: "retained 90-day build/validation/<commit>/g2-<OS>/package_e2e.json; unsigned package remains a separate 7-day artifact"
+    threshold: "PR uses its exact head SHA; push/manual dispatch uses github.sha; selected SHA is lowercase 40-hex and equals a clean checkout HEAD; checkout-bound verification equals copied offline-consistency verification; copied self-test, doctor, Lab01/report/plot, replay, and next preview pass on Windows, Ubuntu, and macOS"
+    command: "workflow bind step writes MCLAB_E2E_EVIDENCE=build/validation/<selected-sha>/g2-<OS>/package_e2e.json to GITHUB_ENV; next step runs python scripts/audit_package_e2e.py --bundle-root dist/MCLab --package-root dist/MCLab-package --runner-os <OS> --workflow-sha <selected-sha> --temp-root <runner-temp> --output \"$MCLAB_E2E_EVIDENCE\""
+    evidence: "audit and upload consume the same bound MCLAB_E2E_EVIDENCE path retained for 90 days; unsigned package remains a separate 7-day artifact; candidate evidence does not declare G2 complete or establish B3"
   packaged_process_lifecycle:
     metric: "authenticated cancel and window-close settlement for packaged full-course workers"
     threshold: "request only after authenticated progress >=1 and child PID >0; stopped manifest; transaction residue 0; observed GUI/descendant process identities alive after 10 s = 0; forced cleanup = false"

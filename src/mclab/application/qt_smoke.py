@@ -744,7 +744,7 @@ def _inject_missing_next_asset(backend: Any) -> None:
                 },
             )
         scenarios.append(scenario)
-    backend.catalog = ScenarioCatalog(tuple(scenarios))
+    backend.catalog = ScenarioCatalog(tuple(scenarios), backend.catalog.batches())
     backend._setup_issues = app_readiness(backend.catalog)  # noqa: SLF001
     backend.results_changed.emit()
     backend.language_changed.emit()

@@ -316,6 +316,69 @@ class BatchProbeTests(unittest.TestCase):
         importlib.util.find_spec("PySide6"),
         "PySide6 is not installed",
     )
+    def test_ready_probe_is_written_once_without_heartbeat_fsync(self) -> None:
+        class Signal:
+            def connect(self, _callback: object) -> None:
+                return None
+
+        class Controller:
+            changed = completed = stopped = failed = Signal()
+            running = True
+
+            @staticmethod
+            def snapshot() -> dict[str, object]:
+                return {
+                    "output": output,
+                    "childPid": 2345,
+                    "current": 1,
+                    "total": 5,
+                    "name": "lab01_msd_compare",
+                    "state": "running",
+                    "cancelling": False,
+                }
+
+        class Backend:
+            _batch = Controller()
+
+        class Timer:
+            callbacks: list[object] = []
+
+            @classmethod
+            def singleShot(cls, _delay: int, callback: object) -> None:  # noqa: N802
+                cls.callbacks.append(callback)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output = str(Path(tmp) / "mclab-batch")
+            ready = Path(tmp) / "ready.json"
+            probe_path = Path(tmp) / "probe.json"
+            with (
+                patch.dict(
+                    os.environ,
+                    {
+                        "MCLAB_BATCH_PROBE_PATH": str(probe_path),
+                        "MCLAB_BATCH_READY_PATH": str(ready),
+                        "MCLAB_BATCH_REQUEST_PATH": str(Path(tmp) / "request.json"),
+                    },
+                ),
+                patch("mclab.application.qt_batch_probe._atomic_probe_write") as write,
+            ):
+                lifecycle = _BatchLifecycleProbe(
+                    Timer, Backend(), None, "batch_probe_complete"
+                )
+                lifecycle.started_at = lifecycle.last_heartbeat = time.monotonic()
+                lifecycle._changed()  # noqa: SLF001
+                lifecycle._heartbeat()  # noqa: SLF001
+
+        self.assertTrue(lifecycle.ready)
+        self.assertEqual(write.call_count, 1)
+        self.assertEqual(write.call_args.args[0], ready)
+        self.assertNotEqual(write.call_args.args[0], probe_path)
+        self.assertEqual(len(Timer.callbacks), 1)
+
+    @unittest.skipUnless(
+        importlib.util.find_spec("PySide6"),
+        "PySide6 is not installed",
+    )
     def test_terminal_probe_includes_gap_since_last_heartbeat(self) -> None:
         class Signal:
             def connect(self, _callback: object) -> None:

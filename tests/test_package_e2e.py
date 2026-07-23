@@ -657,6 +657,288 @@ def test_lifecycle_probe_settles_tree_after_repeated_popen_wait_timeouts(
     assert payload["passed"] is False
 
 
+class _ExitedPopen:
+    def __init__(self, pid: int) -> None:
+        self.pid = pid
+
+    @staticmethod
+    def poll() -> int:
+        return 0
+
+
+def _lifecycle_probe_payload(
+    e2e_module,
+    output: Path,
+    *,
+    action: str,
+    phase: str,
+    status: str,
+    error_code: str = "",
+) -> dict[str, object]:
+    return {
+        "schema": e2e_module.PROBE_SCHEMA,
+        "action": f"batch_probe_{action}",
+        "phase": phase,
+        "status": status,
+        "output": str(output),
+        "child_pid": 987,
+        "current": 1,
+        "total": 5,
+        "name": e2e_module.EXPECTED_PROGRESS_NAMES[0],
+        "progress": [
+            {
+                "current": 1,
+                "total": 5,
+                "name": e2e_module.EXPECTED_PROGRESS_NAMES[0],
+                "elapsed_ms": 1.0,
+            }
+        ],
+        "heartbeat_count": 1,
+        "max_ui_gap_ms": 100.0,
+        "elapsed_seconds": 0.1,
+        "cancel_requested": phase == "terminal",
+        "settled": phase == "terminal",
+        "error_code": error_code,
+    }
+
+
+def _run_lifecycle_failure_fixture(
+    e2e_module,
+    tmp_path: Path,
+    *,
+    action: str,
+    ready: dict[str, object],
+    terminal: dict[str, object],
+    ready_during_run: bool = True,
+    settlement: tuple[list[object], list[object], float, float, str] = (
+        [],
+        [],
+        0.1,
+        0.0,
+        "",
+    ),
+):
+    executable = tmp_path / "MCLab"
+    executable.write_bytes(b"executable")
+    executable.chmod(0o755)
+    root = e2e_module.ProcessIdentity(654, 1, "root-start")
+
+    def read_probe(path, **_kwargs):
+        return ready if path.name == "ready.json" else terminal
+
+    with (
+        patch.object(e2e_module.subprocess, "Popen", return_value=_ExitedPopen(654)),
+        patch.object(e2e_module, "process_snapshot", return_value={654: root}),
+        patch.object(
+            e2e_module,
+            "_read_probe_if_ready",
+            return_value=ready if ready_during_run else None,
+        ),
+        patch.object(
+            e2e_module,
+            "_bounded_reap_process_handle",
+            return_value=(0, False, ""),
+        ),
+        patch.object(
+            e2e_module,
+            "_settle_observed_processes",
+            return_value=settlement,
+        ),
+        patch.object(e2e_module, "read_json_mapping", side_effect=read_probe),
+        patch.object(e2e_module, "_safe_output_from_probe") as safe_output,
+        patch.object(e2e_module, "verify_manifest_tree") as verify_integrity,
+        patch.object(e2e_module, "verify_terminal_batch_output") as verify_terminal,
+    ):
+        payload, _metadata = e2e_module.run_lifecycle_probe(
+            executable,
+            cwd=tmp_path,
+            inherited_env={},
+            case_root=tmp_path / f"lifecycle-invalid-{action}",
+            action=action,
+        )
+    return payload, safe_output, verify_integrity, verify_terminal
+
+
+def test_lifecycle_terminal_contract_failure_preserves_only_bounded_diagnostics(
+    e2e_module, tmp_path: Path
+) -> None:
+    output = tmp_path / "private-state" / "outputs" / "course"
+    ready = _lifecycle_probe_payload(
+        e2e_module,
+        output,
+        action="cancel",
+        phase="ready",
+        status="running",
+    )
+    terminal = _lifecycle_probe_payload(
+        e2e_module,
+        output,
+        action="cancel",
+        phase="terminal",
+        status="error",
+        error_code="batch_failed",
+    )
+    orphan = e2e_module.ProcessIdentity(987, 654, "child-start")
+    payload, safe_output, verify_integrity, verify_terminal = (
+        _run_lifecycle_failure_fixture(
+            e2e_module,
+            tmp_path,
+            action="cancel",
+            ready=ready,
+            terminal=terminal,
+            settlement=([orphan], [orphan], 0.1, 0.2, "process_survivor"),
+        )
+    )
+
+    assert payload["passed"] is False
+    assert payload["error_code"] == "probe_status_invalid"
+    assert payload["ready_validation_error_code"] == ""
+    assert payload["terminal_validation_error_code"] == "probe_status_invalid"
+    assert payload["observed_terminal_status"] == "error"
+    assert payload["observed_probe_error_code"] == "batch_failed"
+    assert payload["checks"]["terminal_probe_contract"] is False
+    assert payload["checks"]["process_containment"] is False
+    assert payload["command"]["process_lifecycle_passed"] is False
+    assert payload["command"]["process_orphan_count"] == 1
+    assert payload["command"]["process_post_cleanup_survivor_count"] == 1
+    assert "stdout_sha256" not in payload["command"]
+    assert "stderr_sha256" not in payload["command"]
+    assert payload["orphan_count"] == 1
+    assert payload["post_cleanup_survivor_count"] == 1
+    assert payload["observed_process_count"] == 1
+    safe_output.assert_not_called()
+    verify_integrity.assert_not_called()
+    verify_terminal.assert_not_called()
+    assert str(output) not in json.dumps(payload, sort_keys=True)
+    e2e_module._assert_no_absolute_strings(payload)
+
+
+def test_lifecycle_ready_contract_failure_is_distinguished_and_skips_outputs(
+    e2e_module, tmp_path: Path
+) -> None:
+    output = tmp_path / "private-state" / "outputs" / "course"
+    ready = _lifecycle_probe_payload(
+        e2e_module,
+        output,
+        action="close",
+        phase="terminal",
+        status="running",
+    )
+    terminal = _lifecycle_probe_payload(
+        e2e_module,
+        output,
+        action="close",
+        phase="terminal",
+        status="stopped",
+    )
+    payload, safe_output, verify_integrity, _verify_terminal = (
+        _run_lifecycle_failure_fixture(
+            e2e_module,
+            tmp_path,
+            action="close",
+            ready=ready,
+            terminal=terminal,
+            ready_during_run=False,
+        )
+    )
+
+    assert payload["passed"] is False
+    assert payload["error_code"] == "probe_phase_invalid"
+    assert payload["ready_validation_error_code"] == "probe_phase_invalid"
+    assert payload["terminal_validation_error_code"] == ""
+    assert payload["observed_terminal_status"] == "stopped"
+    assert payload["observed_probe_error_code"] == ""
+    assert payload["checks"]["ready_probe_contract"] is False
+    assert payload["checks"]["terminal_probe_contract"] is True
+    assert payload["checks"]["process_containment"] is True
+    assert payload["orphan_count"] == 0
+    assert payload["post_cleanup_survivor_count"] == 0
+    safe_output.assert_not_called()
+    verify_integrity.assert_not_called()
+    e2e_module._assert_no_absolute_strings(payload)
+
+
+def test_lifecycle_failure_does_not_echo_unrecognized_probe_enums(
+    e2e_module, tmp_path: Path
+) -> None:
+    output = tmp_path / "private-state" / "outputs" / "course"
+    ready = _lifecycle_probe_payload(
+        e2e_module,
+        output,
+        action="cancel",
+        phase="ready",
+        status="running",
+    )
+    terminal = _lifecycle_probe_payload(
+        e2e_module,
+        output,
+        action="cancel",
+        phase="terminal",
+        status="/private/status",
+        error_code=r"C:\private\detail",
+    )
+    payload, *_mocks = _run_lifecycle_failure_fixture(
+        e2e_module,
+        tmp_path,
+        action="cancel",
+        ready=ready,
+        terminal=terminal,
+    )
+
+    assert payload["observed_terminal_status"] is None
+    assert payload["observed_probe_error_code"] is None
+    durable = json.dumps(payload, sort_keys=True)
+    assert "/private/status" not in durable
+    assert r"C:\private\detail" not in durable
+    e2e_module._assert_no_absolute_strings(payload)
+
+
+def test_package_audit_retains_bounded_lifecycle_failure_payload(
+    e2e_module, tmp_path: Path
+) -> None:
+    payload = {
+        "command": {"process_lifecycle_passed": True},
+        "error_code": "probe_status_invalid",
+        "observed_probe_error_code": "batch_failed",
+        "observed_terminal_status": "error",
+        "orphan_count": 0,
+        "passed": False,
+        "post_cleanup_survivor_count": 0,
+        "ready_validation_error_code": "",
+        "terminal_validation_error_code": "probe_status_invalid",
+    }
+    metadata = {
+        "passed_inherited_names": [],
+        "policy": "allowlist-v1",
+        "scrubbed_injection_names": [],
+        "values_recorded": False,
+    }
+    audit = e2e_module.PackageE2EAudit(
+        bundle_root=tmp_path / "bundle",
+        package_root=tmp_path / "package",
+        runner_os="Linux",
+        workflow_sha="a" * 40,
+        temp_root=tmp_path,
+        inherited_env={},
+    )
+
+    with patch.object(
+        e2e_module,
+        "run_lifecycle_probe",
+        return_value=(payload, metadata),
+    ):
+        audit._lifecycle_check(
+            tmp_path / "MCLab",
+            tmp_path,
+            tmp_path / "case",
+            "cancel",
+        )
+
+    assert audit.checks["batch_cancel"] == payload
+    assert audit.environment_records == [metadata]
+    e2e_module._assert_no_absolute_strings(audit.checks["batch_cancel"])
+
+
 def _course_fixture(e2e_module, tmp_path: Path) -> tuple[Path, dict[str, object]]:
     allowed = tmp_path / "state" / "data" / "outputs"
     output = allowed / "course"
@@ -1007,6 +1289,19 @@ def test_probe_environment_and_contract_require_separate_authenticated_ready_fil
             phase="ready",
             status="running",
         )
+    for field, code in (
+        ("schema", "probe_schema_invalid"),
+        ("action", "probe_action_invalid"),
+        ("phase", "probe_phase_invalid"),
+        ("status", "probe_status_invalid"),
+    ):
+        with pytest.raises(e2e_module.AuditError, match=code):
+            e2e_module.validate_probe_payload(
+                {**payload, field: "mismatch"},
+                action="batch_probe_cancel",
+                phase="ready",
+                status="running",
+            )
 
 
 def test_windows_process_api_declares_pointer_safe_signatures(e2e_module) -> None:
@@ -1092,17 +1387,37 @@ def test_windows_partial_process_enumeration_fails_closed(e2e_module) -> None:
 
 def test_desktop_workflow_keeps_six_job_names_and_uploads_g2_evidence_for_90_days() -> None:
     workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+    exact = workflow.index("- name: Verify exact package evidence subject")
     verify = workflow.index("- name: Verify package identity and size evidence")
     e2e = workflow.index("- name: Run packaged E2E readiness gate")
     evidence = workflow.index("- name: Upload packaged E2E readiness evidence")
     package = workflow.index("- name: Upload unsigned development package")
 
-    assert verify < e2e < evidence < package
+    assert exact < verify < e2e < evidence < package
     assert "name: Unsigned development build (${{ matrix.os }})" in workflow
     assert "os: [windows-2025, ubuntu-24.04, macos-15]" in workflow
     assert "tests/test_batch_lifecycle.py" in workflow
     assert "tests/test_package_e2e.py" in workflow
     assert '"$MCLAB_BUILD_PYTHON" scripts/audit_package_e2e.py' in workflow
+    assert (
+        "MCLAB_EVIDENCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}"
+        in workflow
+    )
+    assert "ref: ${{ env.MCLAB_EVIDENCE_SHA }}" in workflow
+    assert 'head_sha="$(git rev-parse --verify \'HEAD^{commit}\')"' in workflow
+    assert '[[ "$head_sha" != "$MCLAB_EVIDENCE_SHA" ]]' in workflow
+    assert '--workflow-sha "$MCLAB_EVIDENCE_SHA"' in workflow[e2e:evidence]
+    assert '--output "$MCLAB_E2E_EVIDENCE"' in workflow[e2e:evidence]
+    assert (
+        "name: mclab-g2-${{ runner.os }}-${{ env.MCLAB_EVIDENCE_SHA }}"
+        in workflow[evidence:package]
+    )
+    assert (
+        "path: ${{ env.MCLAB_E2E_EVIDENCE }}"
+        in workflow[evidence:package]
+    )
+    assert '--workflow-sha "$GITHUB_SHA"' not in workflow[e2e:evidence]
+    assert "${{ github.sha }}" not in workflow[evidence:package]
     assert "timeout-minutes: 20" in workflow[e2e:evidence]
     assert "retention-days: 90" in workflow[evidence:package]
     assert "retention-days: 7" in workflow[package:]

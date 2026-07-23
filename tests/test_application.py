@@ -1184,8 +1184,19 @@ class ApplicationFoundationTests(unittest.TestCase):
         backend_source = (ROOT / "src/mclab/application/qt_app.py").read_text(
             encoding="utf-8"
         )
-        self.assertIn("property var scenarioItems: backend.scenarios", explore)
+        self.assertIn("property var scenarioItems: visible ? backend.scenarios : []", explore)
         self.assertEqual(explore.count("backend.scenarios"), 1)
+        self.assertIn("property var course: visible ? backend.courseProgress", home_source)
+        learning_path = (qml_root / "LearningPathPage.qml").read_text(encoding="utf-8")
+        self.assertIn(
+            "property var course: visible ? backend.courseProgress",
+            learning_path,
+        )
+        self.assertIn("property var runs: visible ? backend.results : []", results)
+        self.assertIn(
+            'property string nextScenarioId: visible ? backend.nextScenarioId : ""',
+            results,
+        )
         self.assertIn('text: backend.localizedText(backend.language, "setup.review")', explore)
         self.assertIn('onClicked: backend.navigate("explore")', explore)
         self.assertIn('onClicked: backend.navigate("explore")', environment_source)
@@ -1206,6 +1217,10 @@ class ApplicationFoundationTests(unittest.TestCase):
         self.assertIn("card.primaryControl.forceActiveFocus()", results)
         self.assertTrue((qml_root / "ScrollFocusHelper.qml").is_file())
         experiment = (qml_root / "ExperimentPage.qml").read_text(encoding="utf-8")
+        self.assertIn(
+            'property string nextScenarioId: visible ? backend.nextScenarioId : ""',
+            experiment,
+        )
         scene_guide = (qml_root / "OneDSceneGuide.qml").read_text(encoding="utf-8")
         self.assertIn("OneDSceneGuide", experiment)
         active_session = (qml_root / "ActiveSessionBar.qml").read_text(encoding="utf-8")
@@ -2828,8 +2843,9 @@ class SessionTests(unittest.TestCase):
         )
         self.assertIn('objectName: "startNextButton"', experiment_page)
         self.assertIn(
-            "onClicked: backend.startScenario(backend.nextScenarioId)", experiment_page
+            "onClicked: backend.startScenario(page.nextScenarioId)", experiment_page
         )
+        self.assertEqual(experiment_page.count("backend.nextScenarioId"), 1)
         detail, action = localized_error(
             "ko",
             "An experiment is already running.",
@@ -3350,6 +3366,42 @@ class PlatformAndCliTests(unittest.TestCase):
                 self.assertEqual(os.environ["MCLAB_INSTANCE_LOCK"], occupied_path)
             occupied.unlock()
         self.assertIn('"qt": true', output.getvalue())
+
+    def test_missing_asset_self_test_injection_preserves_batch_catalog(self) -> None:
+        from mclab.application.qt_smoke import _inject_missing_next_asset
+
+        class Signal:
+            def emit(self) -> None:
+                return None
+
+        class Backend:
+            def __init__(self) -> None:
+                self.catalog = ScenarioCatalog.default()
+                self.nextScenarioId = self.catalog.learning_path()[0].id
+                self.results_changed = Signal()
+                self.language_changed = Signal()
+                self._setup_issues: tuple[object, ...] = ()
+
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ,
+            {
+                "MCLAB_DATA_DIR": str(Path(tmp) / "data"),
+                "MCLAB_SELF_TEST": "1",
+            },
+        ):
+            backend = Backend()
+            expected_batch_ids = tuple(item.id for item in backend.catalog.batches())
+            _inject_missing_next_asset(backend)
+
+        self.assertEqual(
+            tuple(item.id for item in backend.catalog.batches()),
+            expected_batch_ids,
+        )
+        injected = backend.catalog.get(backend.nextScenarioId)
+        self.assertEqual(
+            injected.config.get("model_path"),
+            "third_party/mujoco_menagerie/injected-model.xml",
+        )
 
 
 @unittest.skipIf(importlib.util.find_spec("mujoco") is None, "MuJoCo is not installed")

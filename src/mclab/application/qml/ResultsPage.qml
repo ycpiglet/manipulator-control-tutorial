@@ -1,20 +1,18 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-
 Item {
     id: page
     objectName: "resultsPage"
     property bool compact: width < 900
-    property var runs: backend.results
+    property var runs: visible ? backend.results : []
     property var batch: backend.batchProgress
+    property string nextScenarioId: visible ? backend.nextScenarioId : ""
     property int visibleLimit: 20
     property var firstPrimaryButton: null
     property var firstManageButton: null
     ScrollFocusHelper { id: resultFocusScroll }
-    function openManager(run, trigger) {
-        manageDialog.openFor(run, trigger)
-    }
+    function openManager(run, trigger) { manageDialog.openFor(run, trigger) }
     function openFirstManager() {
         if (runs.length > 0)
             openManager(runs[0], firstManageButton)
@@ -62,6 +60,7 @@ Item {
             Layout.fillWidth: true
             runCount: page.runs.length
             batchRunning: page.batch.running
+            nextScenarioId: page.nextScenarioId
         }
         ActiveSessionBar {}
         BatchSessionBar {}
@@ -110,9 +109,9 @@ Item {
                                            : backend.hasActiveExperiment
                                              ? backend.localizedText(backend.language, "active.launch_blocked")
                                            : backend.localizedText(backend.language, "results.start_help")
-                    enabled: backend.nextScenarioId !== ""
+                    enabled: page.nextScenarioId !== ""
                              && !backend.hasActiveExperiment && !page.batch.running
-                    onClicked: backend.startScenario(backend.nextScenarioId)
+                    onClicked: backend.startScenario(page.nextScenarioId)
                 }
             }
         }

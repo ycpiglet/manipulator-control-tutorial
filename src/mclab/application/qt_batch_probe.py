@@ -139,7 +139,6 @@ class _BatchLifecycleProbe:
             self.ready = True
             payload = self._payload("ready", str(snapshot.get("state", "running")), False, "")
             _atomic_probe_write(self.ready_path, payload, self._MAX_PROBE_BYTES)
-            _atomic_probe_write(self.probe_path, payload, self._MAX_PROBE_BYTES)
 
     def _heartbeat(self) -> None:
         if self.terminal:
@@ -153,12 +152,6 @@ class _BatchLifecycleProbe:
         if self.terminal:
             return
         if self.ready:
-            snapshot = self.controller.snapshot()
-            _atomic_probe_write(
-                self.probe_path,
-                self._payload("ready", str(snapshot.get("state", "running")), False, ""),
-                self._MAX_PROBE_BYTES,
-            )
             if self.action in {"batch_probe_cancel", "batch_probe_close"}:
                 try:
                     requested = _read_batch_probe_request(

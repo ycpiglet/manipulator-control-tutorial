@@ -53,6 +53,15 @@ def _workflow_text(path: str) -> str:
     )
 
 
+def _workflow_policy_block(path: str, name: str) -> str:
+    policy = next(
+        candidate
+        for candidate in checker.WORKFLOW_STEP_POLICIES
+        if candidate.path == path and candidate.name == name
+    )
+    return "\n".join(f"      {line}" for line in policy.expected_lines) + "\n"
+
+
 def _build_document(root: Path, source_commit: str = SOURCE_COMMIT) -> dict[str, object]:
     return generator.build_document(root, source_commit, bind_to_checkout=False)
 
@@ -485,6 +494,152 @@ def test_workflow_contract_binds_exact_github_sha_and_is_fail_closed(
     desktop = repository / checker.DESKTOP_WORKFLOW_PATH
     desktop.write_text(desktop.read_text(encoding="utf-8") + "        continue-on-error: true\n")
     assert checker.workflow_policy_errors(repository)
+
+
+@pytest.mark.parametrize(
+    ("reviewed", "mutation"),
+    (
+        (
+            "    MCLAB_EVIDENCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}",
+            "    MCLAB_EVIDENCE_SHA: ${{ github.sha }}",
+        ),
+        (
+            "    ref: ${{ env.MCLAB_EVIDENCE_SHA }}",
+            "    ref: ${{ github.event.pull_request.head.sha || github.sha }}",
+        ),
+        (
+            '    if [[ ! "$MCLAB_EVIDENCE_SHA" =~ ^[0-9a-f]{40}$ ]]; then',
+            '    if [[ -z "$MCLAB_EVIDENCE_SHA" ]]; then',
+        ),
+        (
+            '    head_sha="$(git rev-parse --verify \'HEAD^{commit}\')" || exit 1',
+            '    head_sha="$(git rev-parse HEAD)"',
+        ),
+        (
+            '    checkout_status="$(git status --porcelain=v1 --untracked-files=all)" || exit 1',
+            '    checkout_status="$(git status --porcelain=v1 --untracked-files=no)"',
+        ),
+        (
+            "    printf 'MCLAB_E2E_EVIDENCE=build/validation/%s/g2-%s/package_e2e.json\\n' \\",
+            "    printf 'MCLAB_E2E_EVIDENCE=build/validation/g2-%s/package_e2e.json\\n' \\",
+        ),
+        (
+            '    --output "$MCLAB_E2E_EVIDENCE"',
+            '    --output "build/validation/$MCLAB_EVIDENCE_SHA/package_e2e.json"',
+        ),
+        (
+            "    name: mclab-g2-${{ runner.os }}-${{ env.MCLAB_EVIDENCE_SHA }}",
+            "    name: mclab-g2-${{ runner.os }}-${{ github.sha }}",
+        ),
+        (
+            "    path: ${{ env.MCLAB_E2E_EVIDENCE }}",
+            "    path: build/validation/${{ github.sha }}/package_e2e.json",
+        ),
+    ),
+)
+def test_desktop_package_evidence_contract_rejects_provenance_mutation(
+    repository: Path,
+    reviewed: str,
+    mutation: str,
+) -> None:
+    desktop = repository / checker.DESKTOP_WORKFLOW_PATH
+    text = desktop.read_text(encoding="utf-8")
+    assert text.count(reviewed) == 1
+    desktop.write_text(text.replace(reviewed, mutation, 1), encoding="utf-8")
+
+    assert checker.workflow_policy_errors(repository)
+
+
+@pytest.mark.parametrize(
+    "extra",
+    (
+        (
+            "      - name: Re-evaluate package evidence subject\n"
+            "        run: echo '${{ github.event.pull_request.head.sha || github.sha }}'\n"
+        ),
+        (
+            "      - name: Rebind package evidence path\n"
+            "        run: echo 'MCLAB_E2E_EVIDENCE=alternate.json' >> \"$GITHUB_ENV\"\n"
+        ),
+    ),
+)
+def test_desktop_package_evidence_contract_rejects_extra_binding(
+    repository: Path,
+    extra: str,
+) -> None:
+    desktop = repository / checker.DESKTOP_WORKFLOW_PATH
+    run = _workflow_policy_block(
+        checker.DESKTOP_WORKFLOW_PATH,
+        "Run packaged E2E readiness gate",
+    )
+    text = desktop.read_text(encoding="utf-8")
+    assert run in text
+    desktop.write_text(text.replace(run, extra + run, 1), encoding="utf-8")
+
+    errors = checker.workflow_policy_errors(repository)
+    assert any("controlled provenance token" in error for error in errors)
+
+
+@pytest.mark.parametrize(
+    "names",
+    (
+        (
+            "Checkout exact package evidence subject",
+            "Verify exact package evidence subject",
+            "Bind packaged E2E evidence path",
+        ),
+        (
+            "Run packaged E2E readiness gate",
+            "Upload packaged E2E readiness evidence",
+        ),
+    ),
+)
+def test_desktop_package_evidence_contract_requires_reviewed_order(
+    repository: Path,
+    names: tuple[str, ...],
+) -> None:
+    desktop = repository / checker.DESKTOP_WORKFLOW_PATH
+    blocks = [
+        _workflow_policy_block(checker.DESKTOP_WORKFLOW_PATH, name)
+        for name in names
+    ]
+    sequence = "".join(blocks)
+    text = desktop.read_text(encoding="utf-8")
+    assert sequence in text
+    desktop.write_text(
+        text.replace(sequence, blocks[1] + blocks[0] + "".join(blocks[2:]), 1),
+        encoding="utf-8",
+    )
+
+    errors = checker.workflow_policy_errors(repository)
+    assert any("reviewed order" in error for error in errors)
+
+
+def test_desktop_package_evidence_contract_binds_path_before_audit(
+    repository: Path,
+) -> None:
+    desktop = repository / checker.DESKTOP_WORKFLOW_PATH
+    checkout = _workflow_policy_block(
+        checker.DESKTOP_WORKFLOW_PATH,
+        "Checkout exact package evidence subject",
+    )
+    run_and_upload = "".join(
+        _workflow_policy_block(checker.DESKTOP_WORKFLOW_PATH, name)
+        for name in (
+            "Run packaged E2E readiness gate",
+            "Upload packaged E2E readiness evidence",
+        )
+    )
+    text = desktop.read_text(encoding="utf-8")
+    assert checkout in text and run_and_upload in text
+    text = text.replace(run_and_upload, "", 1)
+    desktop.write_text(
+        text.replace(checkout, run_and_upload + checkout, 1),
+        encoding="utf-8",
+    )
+
+    errors = checker.workflow_policy_errors(repository)
+    assert any("reviewed order" in error for error in errors)
 
 
 @pytest.mark.parametrize(

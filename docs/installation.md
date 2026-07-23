@@ -305,7 +305,7 @@ retained matrix artifacts; this source contract does not assert that a package
 was built. Target installed cold start p95 remains 5 seconds or less and is
 measured by the later packaged E2E gate.
 
-### Packaged G2 development gate
+### Packaged E2E development gate
 
 The desktop matrix runs `scripts/audit_package_e2e.py` only after the package
 identity and size verifier accepts the same job output. The harness first uses
@@ -316,6 +316,16 @@ verification records, inventory, archive digest, and package identity must be
 identical. Runtime probes then invoke the copied executable by absolute path
 from a third working directory; no source launcher or checkout-relative package
 data is used by the target process.
+
+The workflow selects one exact package-evidence subject before checkout:
+`github.event.pull_request.head.sha` for a pull request, and `github.sha` for a
+push or manual dispatch. Checkout consumes that job-level selection rather than
+re-evaluating the event expression. A preflight requires a lowercase 40-hex
+value, an identical checked-out `HEAD`, and a clean checkout. It then exports
+the single evidence path
+`build/validation/<selected-sha>/g2-<OS>/package_e2e.json` as
+`MCLAB_E2E_EVIDENCE`; both the audit and upload steps consume that same bound
+path.
 
 On each Windows, Ubuntu, and macOS matrix runner, the copied application must
 pass self-test, JSON doctor, three seeded Lab01 headless runs with reports and
@@ -343,11 +353,13 @@ observed process identities alive within 10 seconds; PID plus creation time is
 used so PID reuse cannot produce a false pass.
 
 The job writes one bounded canonical summary to
-`build/validation/<commit>/g2-<OS>/package_e2e.json` and retains that evidence
+`build/validation/<selected-sha>/g2-<OS>/package_e2e.json` and retains that evidence
 for 90 days. Temporary package copies, simulated outputs, probe files, and logs
 are removed with the runner temporary directory. The separately uploaded
-unsigned development package remains a 7-day artifact. A green summary is G2
-readiness evidence for that exact unsigned development commit and OS only. It
-is not a signature, notarization, public-beta approval, final SBOM or provenance,
-release/DOI authority, human usability result, or permission to inspect or
-clean real learner outputs.
+unsigned development package remains a 7-day artifact. A green summary is
+per-OS candidate evidence for the later E2E-01/G2 decision at that exact
+unsigned development commit. Neither this contract nor one workflow result
+declares G2 complete or establishes a B3 baseline. It is not a signature,
+notarization, public-beta approval, final SBOM or provenance, release/DOI
+authority, human usability result, or permission to inspect or clean real
+learner outputs.

@@ -37,10 +37,14 @@ from mclab.application.batch_runs import (  # noqa: E402
     update_batch_manifest,
     write_batch_progress,
 )
+from mclab.application.batch_settlement import (  # noqa: E402
+    RECOVERABLE_BATCH_SCENARIOS,
+)
 from mclab.config import load_config  # noqa: E402
 from mclab.output_cleanup import build_cleanup_plan  # noqa: E402
 from mclab.output_root import PinnedOutputRoot  # noqa: E402
 from mclab.output_safety import CleanupBusyError  # noqa: E402
+from mclab.sim.logging import RunLogger  # noqa: E402
 
 
 class BatchTests(unittest.TestCase):
@@ -111,6 +115,13 @@ class BatchTests(unittest.TestCase):
                 "xdot_ee_0",
             ),
             lab04_guide.comparison_specs,
+        )
+        self.assertEqual(
+            RECOVERABLE_BATCH_SCENARIOS,
+            {
+                name: frozenset(scenario.label for scenario in scenarios)
+                for name, scenarios in batch.BATCH_SETS.items()
+            },
         )
         self.assertIn(
             (
@@ -1131,6 +1142,349 @@ class BatchTests(unittest.TestCase):
                         verify_terminal_batch_output(output, expected_status="stopped"),
                         [],
                     )
+
+    @unittest.skipIf(os.name == "nt", "Windows settlement never deletes partial paths")
+    def test_batch_parent_settlement_prunes_only_empty_interrupted_directories(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}
+        ):
+            output = create_all_compare_output()
+            token = read_all_compare_handoff(output)
+            self.assertTrue(claim_all_compare_handoff(output, token))
+            write_batch_progress(
+                output,
+                token,
+                sequence=1,
+                current=1,
+                total=5,
+                name=ALL_COMPARE_BATCH_NAMES[0],
+            )
+            baseline = output / "lab01_msd_compare" / "baseline"
+            plots = baseline / "plots"
+            plots.mkdir(parents=True)
+            evidence = baseline / "partial.bin"
+            evidence.write_bytes(b"preserve-partial-evidence")
+
+            self.assertEqual(
+                settle_all_compare_output(output, token, "stopped"),
+                "stopped",
+            )
+
+            self.assertFalse(plots.exists())
+            self.assertEqual(evidence.read_bytes(), b"preserve-partial-evidence")
+            self.assertFalse((output / BATCH_ACTIVE_DIR_NAME).exists())
+            self.assertEqual(
+                verify_terminal_batch_output(output, expected_status="stopped"),
+                [],
+            )
+
+    @unittest.skipIf(os.name == "nt", "Windows settlement never deletes partial paths")
+    def test_batch_parent_settlement_prunes_producer_empty_ancestors(self) -> None:
+        for boundary in ("batch", "scenario", "comparison_plots"):
+            with self.subTest(boundary=boundary), tempfile.TemporaryDirectory() as tmp, (
+                patch.dict(os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")})
+            ):
+                output = create_all_compare_output()
+                token = read_all_compare_handoff(output)
+                self.assertTrue(claim_all_compare_handoff(output, token))
+                write_batch_progress(
+                    output,
+                    token,
+                    sequence=1,
+                    current=1,
+                    total=5,
+                    name=ALL_COMPARE_BATCH_NAMES[0],
+                )
+                batch_output = output / "lab01_msd_compare"
+                if boundary == "batch":
+                    batch_output.mkdir()
+                elif boundary == "scenario":
+                    logger = RunLogger(
+                        "lab01_msd",
+                        {},
+                        output_dir=batch_output / "baseline",
+                    )
+                    self.assertTrue((logger.output_path / "plots").is_dir())
+                else:
+                    (batch_output / "comparison_plots").mkdir(parents=True)
+
+                self.assertEqual(
+                    settle_all_compare_output(output, token, "stopped"),
+                    "stopped",
+                )
+
+                self.assertFalse(batch_output.exists())
+                self.assertEqual(
+                    verify_terminal_batch_output(output, expected_status="stopped"),
+                    [],
+                )
+
+    @unittest.skipIf(os.name == "nt", "Windows settlement never deletes partial paths")
+    def test_batch_parent_settlement_preserves_nonempty_plot_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}
+        ):
+            output = create_all_compare_output()
+            token = read_all_compare_handoff(output)
+            self.assertTrue(claim_all_compare_handoff(output, token))
+            write_batch_progress(
+                output,
+                token,
+                sequence=1,
+                current=1,
+                total=5,
+                name=ALL_COMPARE_BATCH_NAMES[0],
+            )
+            plots = output / "lab01_msd_compare" / "baseline" / "plots"
+            plots.mkdir(parents=True)
+            first = plots / "first.png"
+            second = plots / "second.png"
+            first.write_bytes(b"first")
+            second.write_bytes(b"second")
+
+            self.assertEqual(
+                settle_all_compare_output(output, token, "stopped"),
+                "stopped",
+            )
+
+            self.assertEqual(first.read_bytes(), b"first")
+            self.assertEqual(second.read_bytes(), b"second")
+            self.assertEqual(
+                verify_terminal_batch_output(output, expected_status="stopped"),
+                [],
+            )
+
+    @unittest.skipIf(os.name == "nt", "Windows settlement never deletes partial paths")
+    def test_batch_parent_empty_directory_prune_fault_stays_retryable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}
+        ):
+            output = create_all_compare_output()
+            token = read_all_compare_handoff(output)
+            self.assertTrue(claim_all_compare_handoff(output, token))
+            write_batch_progress(
+                output,
+                token,
+                sequence=1,
+                current=1,
+                total=5,
+                name=ALL_COMPARE_BATCH_NAMES[0],
+            )
+            plots = output / "lab01_msd_compare" / "baseline" / "plots"
+            plots.mkdir(parents=True)
+            original_rmdir = PinnedOutputRoot.rmdir
+
+            def fail_plots(root: PinnedOutputRoot, relative: tuple[str, ...]) -> None:
+                if relative[-1:] == ("plots",):
+                    raise OSError("injected empty-directory prune fault")
+                original_rmdir(root, relative)
+
+            with (
+                patch.object(PinnedOutputRoot, "rmdir", fail_plots),
+                self.assertRaisesRegex(RuntimeError, "prune fault"),
+            ):
+                settle_all_compare_output(output, token, "stopped")
+
+            self.assertEqual(
+                json.loads((output / "manifest.json").read_text(encoding="utf-8"))["status"],
+                "running",
+            )
+            self.assertTrue(plots.is_dir())
+            self.assertFalse((output / BATCH_ACTIVE_DIR_NAME).exists())
+            self.assertEqual(
+                settle_all_compare_output(output, token, "stopped"),
+                "stopped",
+            )
+
+    @unittest.skipIf(os.name == "nt", "POSIX link and special-node fixture")
+    def test_batch_parent_empty_directory_prune_rejects_unsafe_nodes(self) -> None:
+        for unsafe_kind in ("link", "special"):
+            with self.subTest(unsafe_kind=unsafe_kind), tempfile.TemporaryDirectory() as tmp, (
+                patch.dict(os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")})
+            ):
+                output = create_all_compare_output()
+                token = read_all_compare_handoff(output)
+                self.assertTrue(claim_all_compare_handoff(output, token))
+                write_batch_progress(
+                    output,
+                    token,
+                    sequence=1,
+                    current=1,
+                    total=5,
+                    name=ALL_COMPARE_BATCH_NAMES[0],
+                )
+                partial = output / "lab01_msd_compare" / "baseline"
+                partial.mkdir(parents=True)
+                unsafe = partial / unsafe_kind
+                outside = Path(tmp) / "outside"
+                outside.write_bytes(b"outside-must-survive")
+                if unsafe_kind == "link":
+                    unsafe.symlink_to(outside)
+                    expected = "link or reparse point"
+                else:
+                    os.mkfifo(unsafe)
+                    expected = "special filesystem entry"
+
+                with self.assertRaisesRegex(RuntimeError, expected):
+                    settle_all_compare_output(output, token, "stopped")
+
+                self.assertEqual(outside.read_bytes(), b"outside-must-survive")
+                self.assertEqual(
+                    json.loads((output / "manifest.json").read_text(encoding="utf-8"))[
+                        "status"
+                    ],
+                    "running",
+                )
+
+    @unittest.skipIf(os.name == "nt", "Windows settlement never deletes partial paths")
+    def test_batch_parent_empty_directory_prune_rejects_mount_boundary(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}
+        ):
+            output = create_all_compare_output()
+            token = read_all_compare_handoff(output)
+            self.assertTrue(claim_all_compare_handoff(output, token))
+            write_batch_progress(
+                output,
+                token,
+                sequence=1,
+                current=1,
+                total=5,
+                name=ALL_COMPARE_BATCH_NAMES[0],
+            )
+            plots = output / "lab01_msd_compare" / "baseline" / "plots"
+            plots.mkdir(parents=True)
+            original_mount_check = PinnedOutputRoot.is_mount_point
+
+            def report_mount(root: PinnedOutputRoot, relative: tuple[str, ...]) -> bool:
+                if relative[-1:] == ("plots",):
+                    return True
+                return original_mount_check(root, relative)
+
+            with (
+                patch.object(PinnedOutputRoot, "is_mount_point", report_mount),
+                self.assertRaisesRegex(RuntimeError, "mount point"),
+            ):
+                settle_all_compare_output(output, token, "stopped")
+
+            self.assertEqual(
+                json.loads((output / "manifest.json").read_text(encoding="utf-8"))["status"],
+                "running",
+            )
+
+    @unittest.skipIf(os.name == "nt", "Windows settlement never deletes partial paths")
+    def test_batch_parent_empty_directory_prune_does_not_normalize_unknown_empty_dir(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}
+        ):
+            output = create_all_compare_output()
+            token = read_all_compare_handoff(output)
+            self.assertTrue(claim_all_compare_handoff(output, token))
+            write_batch_progress(
+                output,
+                token,
+                sequence=1,
+                current=1,
+                total=5,
+                name=ALL_COMPARE_BATCH_NAMES[0],
+            )
+            baseline = output / "lab01_msd_compare" / "baseline"
+            plots = baseline / "plots"
+            canary = baseline / "canary"
+            plots.mkdir(parents=True)
+            canary.mkdir()
+
+            with self.assertRaisesRegex(RuntimeError, "unlisted empty directory"):
+                settle_all_compare_output(output, token, "stopped")
+
+            self.assertFalse(plots.exists())
+            self.assertTrue(canary.is_dir())
+            self.assertEqual(
+                json.loads((output / "manifest.json").read_text(encoding="utf-8"))["status"],
+                "running",
+            )
+
+    @unittest.skipIf(os.name == "nt", "Windows settlement never deletes partial paths")
+    def test_batch_parent_settlement_preserves_unknown_scenario_tree(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}
+        ):
+            output = create_all_compare_output()
+            token = read_all_compare_handoff(output)
+            self.assertTrue(claim_all_compare_handoff(output, token))
+            write_batch_progress(
+                output,
+                token,
+                sequence=1,
+                current=1,
+                total=5,
+                name=ALL_COMPARE_BATCH_NAMES[0],
+            )
+            unknown_plots = (
+                output / "lab01_msd_compare" / "unknown-canary" / "plots"
+            )
+            unknown_plots.mkdir(parents=True)
+
+            with self.assertRaisesRegex(RuntimeError, "unlisted empty directory"):
+                settle_all_compare_output(output, token, "stopped")
+
+            self.assertTrue(unknown_plots.is_dir())
+            self.assertEqual(
+                json.loads((output / "manifest.json").read_text(encoding="utf-8"))["status"],
+                "running",
+            )
+
+    @unittest.skipIf(os.name == "nt", "POSIX symlink identity-swap fixture")
+    def test_batch_parent_empty_directory_prune_rejects_identity_swap(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"MCLAB_DATA_DIR": str(Path(tmp) / "data")}
+        ):
+            output = create_all_compare_output()
+            token = read_all_compare_handoff(output)
+            self.assertTrue(claim_all_compare_handoff(output, token))
+            write_batch_progress(
+                output,
+                token,
+                sequence=1,
+                current=1,
+                total=5,
+                name=ALL_COMPARE_BATCH_NAMES[0],
+            )
+            plots = output / "lab01_msd_compare" / "baseline" / "plots"
+            plots.mkdir(parents=True)
+            outside = Path(tmp) / "outside"
+            outside.mkdir()
+            original_validate = PinnedOutputRoot.validate_directory
+            swapped = False
+
+            def swap_after_validation(
+                root: PinnedOutputRoot,
+                relative: tuple[str, ...],
+                *,
+                description: str,
+            ) -> None:
+                nonlocal swapped
+                original_validate(root, relative, description=description)
+                if relative[-1:] == ("plots",) and not swapped:
+                    plots.rmdir()
+                    plots.symlink_to(outside, target_is_directory=True)
+                    swapped = True
+
+            with (
+                patch.object(PinnedOutputRoot, "validate_directory", swap_after_validation),
+                self.assertRaises(RuntimeError),
+            ):
+                settle_all_compare_output(output, token, "stopped")
+
+            self.assertTrue(swapped)
+            self.assertTrue(plots.is_symlink())
+            self.assertTrue(outside.is_dir())
+            self.assertEqual(
+                json.loads((output / "manifest.json").read_text(encoding="utf-8"))["status"],
+                "running",
+            )
 
     def test_batch_parent_settlement_preserves_terminal_and_never_synthesizes_success(self) -> None:
         with tempfile.TemporaryDirectory() as tmp, patch.dict(

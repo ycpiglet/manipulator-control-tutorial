@@ -107,6 +107,20 @@ EXPECTED_PROBE_KEYS = frozenset(
     }
 )
 EXPECTED_PROGRESS_KEYS = frozenset({"current", "elapsed_ms", "name", "total"})
+OBSERVABLE_PROBE_TERMINAL_STATUSES = frozenset({"completed", "error", "stopped"})
+OBSERVABLE_PROBE_ERROR_CODES = frozenset(
+    {
+        "",
+        "batch_failed",
+        "close_target_missing",
+        "invalid_progress",
+        "invalid_request",
+        "non_absolute_output",
+        "probe_timeout",
+        "start_failed_without_terminal",
+        "unexpected_terminal_status",
+    }
+)
 EXPECTED_CLEANUP_PLAN_KEYS = frozenset(
     {
         "eligible",
@@ -881,13 +895,15 @@ def validate_probe_payload(
 
     if set(payload) != EXPECTED_PROBE_KEYS:
         raise AuditError("probe_keys_invalid")
-    if (
-        payload.get("schema") != PROBE_SCHEMA
-        or payload.get("action") != action
-        or payload.get("phase") != phase
-        or payload.get("status") != status
-    ):
-        raise AuditError("probe_identity_invalid")
+    identity = {
+        "schema": PROBE_SCHEMA,
+        "action": action,
+        "phase": phase,
+        "status": status,
+    }
+    for name, expected in identity.items():
+        if payload.get(name) != expected:
+            raise AuditError(f"probe_{name}_invalid")
     if type(payload.get("cancel_requested")) is not bool or type(
         payload.get("settled")
     ) is not bool:
@@ -1534,6 +1550,61 @@ def _read_probe_if_ready(path: Path) -> dict[str, Any] | None:
         return None
 
 
+def _probe_contract_error(
+    payload: Mapping[str, Any],
+    *,
+    action: str,
+    phase: str,
+    status: str,
+) -> str:
+    """Return one bounded validation code without retaining probe detail."""
+
+    try:
+        validate_probe_payload(
+            payload,
+            action=action,
+            phase=phase,
+            status=status,
+        )
+    except Exception as exc:
+        return _error_code(exc)
+    return ""
+
+
+def _read_probe_contract(
+    path: Path,
+    *,
+    action: str,
+    phase: str,
+    status: str,
+) -> tuple[dict[str, Any] | None, str]:
+    """Read and validate one probe while retaining only its safe error code."""
+
+    try:
+        payload = read_json_mapping(path, max_bytes=MAX_PROBE_BYTES)
+    except Exception as exc:
+        return None, _error_code(exc)
+    return payload, _probe_contract_error(
+        payload,
+        action=action,
+        phase=phase,
+        status=status,
+    )
+
+
+def _allowlisted_probe_observation(
+    payload: Mapping[str, Any] | None,
+    name: str,
+    allowed: frozenset[str],
+) -> str | None:
+    """Return an explicitly allowlisted probe enum, never an arbitrary value."""
+
+    if payload is None:
+        return None
+    value = payload.get(name)
+    return value if isinstance(value, str) and value in allowed else None
+
+
 def _probe_base_environment(
     inherited: Mapping[str, str],
     state_root: Path,
@@ -1691,26 +1762,74 @@ def run_lifecycle_probe(
         },
     )
 
-    terminal_probe = read_json_mapping(probe_path, max_bytes=MAX_PROBE_BYTES)
-    ready_probe = read_json_mapping(ready_path, max_bytes=MAX_PROBE_BYTES)
-    validate_probe_payload(
-        ready_probe,
-        action=f"batch_probe_{action}",
+    probe_action = f"batch_probe_{action}"
+    ready_probe, ready_validation_error_code = _read_probe_contract(
+        ready_path,
+        action=probe_action,
         phase="ready",
         status="running",
     )
-    validate_probe_payload(
-        terminal_probe,
-        action=f"batch_probe_{action}",
+    terminal_probe, terminal_validation_error_code = _read_probe_contract(
+        probe_path,
+        action=probe_action,
         phase="terminal",
         status="stopped",
     )
+    observed_processes = [
+        _identity_payload(item)
+        for item in sorted(observed.values(), key=lambda value: value.pid)
+    ]
+    direct_observed = any(item.pid == direct_child_pid for item in observed.values())
+    if ready_validation_error_code or terminal_validation_error_code:
+        checks = {
+            "authenticated_ready": ready
+            and request_sent
+            and not ready_validation_error_code,
+            "direct_child_observed": direct_observed,
+            "no_observed_process_alive": not recorded_orphans and not post_cleanup,
+            "process_containment": command.process_lifecycle_passed,
+            "process_exit": command.return_code == 0 and not command.timed_out,
+            "ready_probe_contract": not ready_validation_error_code,
+            "root_identity_observed": root_identity_observed,
+            "terminal_probe_contract": not terminal_validation_error_code,
+        }
+        return {
+            "checks": checks,
+            "command": _command_aggregate_payload(command),
+            "cleanup_seconds": cleanup_seconds,
+            "direct_child_pid": direct_child_pid,
+            "error_code": terminal_validation_error_code
+            or ready_validation_error_code,
+            "forced_cleanup": forced_cleanup,
+            "observed_process_count": len(observed),
+            "observed_processes": observed_processes,
+            "observed_probe_error_code": _allowlisted_probe_observation(
+                terminal_probe,
+                "error_code",
+                OBSERVABLE_PROBE_ERROR_CODES,
+            ),
+            "observed_terminal_status": _allowlisted_probe_observation(
+                terminal_probe,
+                "status",
+                OBSERVABLE_PROBE_TERMINAL_STATUSES,
+            ),
+            "observation_error_code": observation_error_code,
+            "orphan_count": len(recorded_orphans),
+            "passed": False,
+            "post_cleanup_survivor_count": len(post_cleanup),
+            "ready_validation_error_code": ready_validation_error_code,
+            "settle_error_code": settle_error_code,
+            "settle_seconds": settle_seconds,
+            "terminal_validation_error_code": terminal_validation_error_code,
+        }, env_metadata
+
+    assert ready_probe is not None
+    assert terminal_probe is not None
     allowed_outputs = Path(env["MCLAB_DATA_DIR"]) / "outputs"
     output = _safe_output_from_probe(terminal_probe, allowed_outputs)
     integrity = verify_manifest_tree(output)
     terminal_errors = verify_terminal_batch_output(output, expected_status="stopped")
     transients = transient_batch_members(output)
-    direct_observed = any(item.pid == direct_child_pid for item in observed.values())
     checks = {
         "authenticated_ready": ready and request_sent,
         "comparison_cleanup": not transients,
@@ -1731,10 +1850,7 @@ def run_lifecycle_probe(
         "forced_cleanup": forced_cleanup,
         "hash_error_count": integrity["hash_error_count"],
         "observed_process_count": len(observed),
-        "observed_processes": [
-            _identity_payload(item)
-            for item in sorted(observed.values(), key=lambda value: value.pid)
-        ],
+        "observed_processes": observed_processes,
         "orphan_count": len(recorded_orphans),
         "observation_error_code": observation_error_code,
         "passed": all(checks.values())
@@ -1816,23 +1932,39 @@ class PackageE2EAudit:
             self._startup_checks(executable, runtime_cwd, workspace / "startup")
             self._course_check(executable, runtime_cwd, workspace / "course")
             for action in ("cancel", "close"):
-                try:
-                    payload, metadata = run_lifecycle_probe(
-                        executable,
-                        cwd=runtime_cwd,
-                        inherited_env=self.inherited_env,
-                        case_root=workspace / f"lifecycle-{action}",
-                        action=action,
-                    )
-                except Exception as exc:  # evidence must survive every probe failure
-                    payload = {"error_code": _error_code(exc), "passed": False}
-                else:
-                    self.environment_records.append(metadata)
-                self.checks[f"batch_{action}"] = payload
+                self._lifecycle_check(
+                    executable,
+                    runtime_cwd,
+                    workspace / f"lifecycle-{action}",
+                    action,
+                )
 
             del run_paths
 
         return self._evidence()
+
+    def _lifecycle_check(
+        self,
+        executable: Path,
+        cwd: Path,
+        case_root: Path,
+        action: str,
+    ) -> None:
+        """Retain a bounded lifecycle result, including fail-closed diagnostics."""
+
+        try:
+            payload, metadata = run_lifecycle_probe(
+                executable,
+                cwd=cwd,
+                inherited_env=self.inherited_env,
+                case_root=case_root,
+                action=action,
+            )
+        except Exception as exc:  # evidence must survive every probe failure
+            payload = {"error_code": _error_code(exc), "passed": False}
+        else:
+            self.environment_records.append(metadata)
+        self.checks[f"batch_{action}"] = payload
 
     def _verify_and_copy(self, workspace: Path) -> tuple[Path, Path]:
         checkout = build_desktop.verify_package(self.bundle_root, self.package_root)
