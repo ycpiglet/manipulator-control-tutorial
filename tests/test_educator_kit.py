@@ -904,6 +904,48 @@ def test_unrelated_negation_does_not_mask_later_overclaim_after_hash_rebind(
 
 
 @pytest.mark.parametrize(
+    ("relative", "category", "statement"),
+    [
+        (
+            CHECKER.GUIDE_PATH,
+            "human-evidence",
+            "Although no pilot has run, participant evidence now validates the teaching claims.",
+        ),
+        (
+            CHECKER.PILOT_PATH,
+            "pilot-completion",
+            "Although the study has not started, the pilot has now been completed.",
+        ),
+        (
+            CHECKER.PILOT_PATH,
+            "pilot-results",
+            "The novice pilot passed all thresholds.",
+        ),
+        (
+            CHECKER.PILOT_PATH,
+            "pilot-results",
+            "Six novices completed the study and achieved a SUS mean of 80.",
+        ),
+    ],
+)
+def test_unrelated_negation_and_direct_pilot_results_fail_after_hash_rebind(
+    contract_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    relative: Path,
+    category: str,
+    statement: str,
+) -> None:
+    path = contract_root / relative
+    path.write_bytes(path.read_bytes() + f"\n{statement}\n".encode("utf-8"))
+    _rebind_document_hash(contract_root, relative, monkeypatch)
+
+    errors = _errors(contract_root)
+
+    assert not any(error.startswith(f"HASH_DRIFT: {relative}") for error in errors)
+    assert any(f"SEMANTIC_OVERCLAIM[{category}]" in error for error in errors)
+
+
+@pytest.mark.parametrize(
     ("relative", "statement"),
     [
         (

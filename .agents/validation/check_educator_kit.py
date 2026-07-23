@@ -345,6 +345,22 @@ FORBIDDEN_CLAIM_PATTERNS = (
         ),
     ),
     (
+        "pilot-results",
+        re.compile(
+            r"\b(?:classroom\s+trial|novice\s+pilot|educator\s+pilot|"
+            r"pilot|study|trial)\b.{0,120}"
+            r"\b(?:achieved|cleared|met|passed|satisfied|succeeded)\b"
+            r".{0,80}\b(?:all|every|gate|threshold)\w*\b|"
+            r"\b(?:novices?|participants?|educators?)\b.{0,100}"
+            r"\b(?:completed|finished|ran)\b.{0,50}"
+            r"\b(?:the\s+)?(?:pilot|study|trial)\b|"
+            r"\b(?:novices?|participants?)\b.{0,100}"
+            r"\b(?:achieved|attained|reported|scored)\b.{0,80}"
+            r"\b(?:mean|score|sus|system\s+usability|threshold)\w*\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
         "human-evidence",
         re.compile(
             r"(?:\b(?:educator|human|novice|participant)\w*\s+"
@@ -1862,7 +1878,8 @@ def _claim_statements(text: str) -> tuple[str, ...]:
     statements: dict[str, None] = {}
     for candidate in candidates:
         for fragment in re.split(
-            r"[.!?;:]+|\b(?:and|but|however|yet)\b",
+            r"[,.!?;:—–]+|"
+            r"\b(?:although|and|but|despite|however|nevertheless|whereas|while|yet)\b",
             candidate,
             flags=re.IGNORECASE,
         ):
@@ -1882,7 +1899,11 @@ def _forbidden_claim_errors(relative: Path, text: str) -> list[str]:
             match = pattern.search(statement)
             if match is None:
                 continue
-            local_context = statement[max(0, match.start() - 96) : match.end()]
+            # A negation may exempt only the current claim clause. Claim
+            # statements are split at clause punctuation and contrast
+            # conjunctions above, so a preceding "no" can still qualify the
+            # matched subject while an unrelated earlier clause cannot mask it.
+            local_context = statement[: match.end()]
             if CLAIM_NEGATION_RE.search(local_context):
                 continue
             excerpt = statement if len(statement) <= 180 else f"{statement[:177]}..."
