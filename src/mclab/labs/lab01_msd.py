@@ -58,13 +58,19 @@ def run(
     pause_at_end: bool = False,
     plot_selection: PlotSelection = None,
     seed: int | None = None,
+    publish_parent_index: bool = True,
 ) -> Path:
     lab_name = "lab01_msd"
     model_path = config.get("model_path", "models/lab01_msd/scene.xml")
     mujoco, model, data = load_model_and_data(model_path)
     handles = configure_slider_plant(mujoco, model, data, config)
     logger = RunLogger(
-        lab_name, config, config_path=config_path, output_dir=output_dir, seed=seed
+        lab_name,
+        config,
+        config_path=config_path,
+        output_dir=output_dir,
+        seed=seed,
+        publish_parent_index=publish_parent_index,
     )
 
     sim_time = float(config.get("sim_time", 5.0))

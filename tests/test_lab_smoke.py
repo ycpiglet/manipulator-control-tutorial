@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -15,6 +16,36 @@ from mclab.labs import lab01_msd, lab02_pid, lab03_2dof, lab04_panda  # noqa: E4
 
 @unittest.skipIf(importlib.util.find_spec("mujoco") is None, "MuJoCo is not installed")
 class LabSmokeTests(unittest.TestCase):
+    def test_nested_runs_defer_parent_index_in_every_lab_branch(self) -> None:
+        cases = [
+            (lab01_msd.run, "configs/lab01_msd/default.yaml", "lab01"),
+            (lab02_pid.run, "configs/lab02_pid/default.yaml", "lab02"),
+            (lab03_2dof.run, "configs/lab03_2dof/default.yaml", "lab03_slider"),
+            (lab03_2dof.run, "configs/lab03_2dof/joint_space_2dof.yaml", "lab03_arm"),
+        ]
+        panda = ROOT / "third_party/mujoco_menagerie/franka_emika_panda/scene.xml"
+        if panda.exists():
+            cases.append(
+                (lab04_panda.run, "configs/lab04_panda/neutral_hold.yaml", "lab04")
+            )
+
+        with tempfile.TemporaryDirectory() as tmp, patch(
+            "mclab.sim.logging.write_outputs_index"
+        ) as write_index:
+            for runner, config_path, name in cases:
+                with self.subTest(config_path=config_path):
+                    config = load_config(config_path)
+                    config["sim_time"] = 0.02
+                    runner(
+                        config,
+                        config_path=Path(config_path),
+                        output_dir=Path(tmp) / name,
+                        headless=True,
+                        publish_parent_index=False,
+                    )
+
+        write_index.assert_not_called()
+
     def test_lab01_runs_headless_when_mujoco_is_available(self) -> None:
         config = load_config("configs/lab01_msd/default.yaml")
         config["sim_time"] = 0.02

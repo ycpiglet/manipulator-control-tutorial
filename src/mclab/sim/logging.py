@@ -63,11 +63,13 @@ class RunLogger:
         config_path: str | Path | None = None,
         output_dir: str | Path | None = None,
         seed: int | None = None,
+        publish_parent_index: bool = True,
     ) -> None:
         self.lab_name = lab_name
         self.config = dict(config)
         self.config_path = Path(config_path) if config_path else None
         self.seed = seed
+        self.publish_parent_index = publish_parent_index
         self.output_path = create_output_path(lab_name, output_dir)
         self.rows: list[dict[str, Any]] = []
         self.log_sample_hz = float(self.config.get("log_sample_hz", 100.0))
@@ -191,14 +193,15 @@ class RunLogger:
         # Keep the terminal manifest last inside the run directory.  The
         # cumulative parent index is outside that immutable artifact boundary
         # and must observe the published terminal state.
-        try:
-            write_outputs_index(self.output_path.parent)
-        except Exception as exc:
-            LOGGER.warning(
-                "Saved run is complete, but the cumulative outputs index could not "
-                "be refreshed: %s",
-                exc,
-            )
+        if self.publish_parent_index:
+            try:
+                write_outputs_index(self.output_path.parent)
+            except Exception as exc:
+                LOGGER.warning(
+                    "Saved run is complete, but the cumulative outputs index could not "
+                    "be refreshed: %s",
+                    exc,
+                )
         return manifest
 
     def _repair_failed_finalization(self) -> None:

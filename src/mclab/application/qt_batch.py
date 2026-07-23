@@ -19,6 +19,7 @@ from mclab.application.batch_runs import (
 )
 from mclab.application.batch_process import BatchProcessTree, create_batch_process_tree
 from mclab.application.repositories import ArtifactRepository
+from mclab.application.qt_course_records import emit_with_course_records, strict_course_records
 from mclab.application.qt_lifecycle import has_active_experiment, reject_running_experiment
 
 _EXPECTED_BATCHES = (
@@ -31,6 +32,7 @@ _EXPECTED_BATCHES = (
 _CANCEL_GRACE_MS = 2_000
 _NATURAL_REAP_GRACE_MS = 1_000
 _TREE_POLL_MS = 50
+_PROGRESS_POLL_MS = 200
 _START_TIMEOUT_MS = 10_000
 _PROGRESS_HANDSHAKE_MS = 30_000
 _SHUTDOWN_TERM_MS = 3_000
@@ -60,6 +62,7 @@ class _BatchAttempt:
     settlement_detail: str = ""
     settlement_thread: threading.Thread | None = None
     reap_deadline: float = 0.0
+    course_records: tuple[Any, ...] | None = None
 
 
 def create_batch_controller(
@@ -86,6 +89,7 @@ def create_batch_controller(
             self._tail = ""
             self._generation = 0
             self._attempt: _BatchAttempt | None = None
+            self.course_records: tuple[Any, ...] | None = None
 
         @property
         def running(self) -> bool:
@@ -104,6 +108,7 @@ def create_batch_controller(
             self.cancel_requested = False
             self._settled = False
             self._tail = ""
+            self.course_records = None
             self._generation += 1
             process = QProcess(self)
             try:
@@ -228,8 +233,6 @@ def create_batch_controller(
             }
 
         def _smoke_inject_active(self, process: Any, output: str) -> None:
-            """Install a non-launching UI fixture after the self-test gate."""
-
             self._generation += 1
             attempt = _BatchAttempt(
                 generation=self._generation,
@@ -283,7 +286,7 @@ def create_batch_controller(
                 self._schedule(_CANCEL_GRACE_MS, attempt, process, self._kill_attempt)
                 self.changed.emit()
                 return
-            self._schedule(_TREE_POLL_MS, attempt, process, self._poll_progress)
+            self._schedule(_PROGRESS_POLL_MS, attempt, process, self._poll_progress)
             self._schedule(
                 _PROGRESS_HANDSHAKE_MS,
                 attempt,
@@ -359,7 +362,7 @@ def create_batch_controller(
                     self.current, self.total, self.name = current, total, name
                     self.changed.emit()
             except BatchProgressBusy:
-                self._schedule(_TREE_POLL_MS, attempt, process, self._poll_progress)
+                self._schedule(_PROGRESS_POLL_MS, attempt, process, self._poll_progress)
                 return
             except Exception as exc:
                 attempt.detail = self._merge_detail(attempt.detail, str(exc))
@@ -367,7 +370,7 @@ def create_batch_controller(
                 return
             if attempt.progress_sequence >= len(_EXPECTED_BATCHES):
                 return
-            self._schedule(_TREE_POLL_MS, attempt, process, self._poll_progress)
+            self._schedule(_PROGRESS_POLL_MS, attempt, process, self._poll_progress)
 
         def _request_stop(
             self,
@@ -386,10 +389,6 @@ def create_batch_controller(
             attempt.cancel_requested = True
             attempt.requested_status = requested_status
             self.cancel_requested = True
-            # QProcess can remain wedged in ``Starting`` on macOS when it is
-            # terminated before the ``started`` signal.  Keep the request
-            # latched until containment has attached the child; the existing
-            # start timeout still fails closed if that signal never arrives.
             if attempt.state == "starting":
                 self.changed.emit()
                 return
@@ -524,9 +523,7 @@ def create_batch_controller(
                 desired_status = requested_status
                 try:
                     if not desired_status:
-                        # ``completed`` is preservation-only: exit code zero
-                        # cannot manufacture success.  The worker must already
-                        # have published a strict completed terminal manifest.
+                        # Exit code zero cannot manufacture completion.
                         completed_manifest = (
                             batch_manifest_status(attempt.output) == "completed"
                         )
@@ -554,6 +551,8 @@ def create_batch_controller(
                         settlement_detail,
                         "Batch process exited without a valid terminal manifest.",
                     )
+                if status == "completed":
+                    attempt.course_records = strict_course_records(attempt.output)
                 attempt.settlement_status = status
                 attempt.settlement_detail = settlement_detail
                 attempt.settlement_done = True
@@ -578,6 +577,7 @@ def create_batch_controller(
                 return
             if attempt.state == "containment_error":
                 return
+            self.course_records = attempt.course_records
             self._publish_result(
                 attempt,
                 process,
@@ -783,7 +783,7 @@ def create_batch_backend_mixin(QObject: Any, Property: Any, Signal: Any, Slot: A
 
         def _batch_completed(self, output: str) -> None:
             self._last_output = output
-            self.results_changed.emit()
+            emit_with_course_records(self, self._batch.course_records)
 
         def _batch_stopped(self, output: str) -> None:
             self._last_output = output

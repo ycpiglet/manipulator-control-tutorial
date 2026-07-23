@@ -535,14 +535,24 @@ class BatchControllerLifecycleTests(unittest.TestCase):
         completed: list[str] = []
         controller.completed.connect(completed.append)
         release = threading.Event()
+        main_thread = threading.get_ident()
+        snapshot_threads: list[int] = []
 
         def settle(*_args: object, **_kwargs: object) -> str:
             release.wait(5)
             return "completed"
 
+        def strict_records(_output: str) -> tuple[()]:
+            snapshot_threads.append(threading.get_ident())
+            return ()
+
         with (
             patch("mclab.application.qt_batch.batch_manifest_status", return_value="completed"),
             patch("mclab.application.qt_batch.settle_all_compare_output", side_effect=settle),
+            patch(
+                "mclab.application.qt_batch.strict_course_records",
+                side_effect=strict_records,
+            ),
         ):
             started = time.monotonic()
             controller._settle_attempt(attempt, process)  # noqa: SLF001
@@ -560,6 +570,9 @@ class BatchControllerLifecycleTests(unittest.TestCase):
         self.assertEqual(tree.closed, 1)
         self.assertEqual(process.deleted, 1)
         self.assertFalse(controller.running)
+        self.assertEqual(len(snapshot_threads), 1)
+        self.assertNotEqual(snapshot_threads[0], main_thread)
+        self.assertEqual(controller.course_records, ())
 
     def test_smoke_fixture_shutdown_never_writes_batch_artifacts(self) -> None:
         controller_type, process_type, _application = self._controller_type()
@@ -629,6 +642,7 @@ class BatchControllerLifecycleTests(unittest.TestCase):
 
         request_stop.assert_not_called()
         self.assertEqual(schedule.call_count, 2)
+        self.assertEqual([call.args[0] for call in schedule.call_args_list], [200, 200])
         self.assertEqual(attempt.progress_sequence, 1)
         self.assertEqual(controller.current, 1)
         self.assertEqual(controller.name, "lab01_msd_compare")

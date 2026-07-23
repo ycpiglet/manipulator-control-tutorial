@@ -80,6 +80,19 @@ def _refresh_parent_index_after_publication(output_path: Path) -> None:
         )
 
 
+def _refresh_partial_index_before_error(output_path: Path) -> None:
+    """Best-effort navigation for completed children before error publication."""
+
+    try:
+        write_outputs_index(output_path)
+    except Exception as exc:
+        LOGGER.warning(
+            "Partial comparison navigation could not be refreshed before error "
+            "publication: %s",
+            exc,
+        )
+
+
 def _lazy_lab_runner(module_name: str) -> LabRunner:
     def run(*args: Any, **kwargs: Any) -> Path:
         module = import_module(f"mclab.labs.{module_name}")
@@ -696,6 +709,7 @@ def run_batch(
     output_dir: str | Path | None = None,
     plot: bool = True,
     seed: int | None = None,
+    publish_parent_index: bool = True,
 ) -> Path:
     scenarios = BATCH_SETS.get(batch_name)
     if scenarios is None:
@@ -731,6 +745,7 @@ def run_batch(
                 pause_at_end=False,
                 plot_selection=scenario.plots,
                 seed=seed,
+                publish_parent_index=False,
             )
             completed.append({**asdict(scenario), "output_path": str(result_path)})
 
@@ -770,6 +785,7 @@ def run_batch(
     except Exception as exc:
         # Work/report failures become terminal errors only after surviving
         # learner artifacts are repaired to the same verdict.
+        _refresh_partial_index_before_error(batch_output)
         error_report_ready = False
         try:
             write_batch_report(
@@ -804,7 +820,8 @@ def run_batch(
                     run_kind="comparison_batch",
                     error=str(exc),
                 )
-                write_outputs_index(batch_output.parent)
+                if publish_parent_index:
+                    write_outputs_index(batch_output.parent)
             except Exception:
                 pass
         raise
@@ -841,7 +858,8 @@ def run_batch(
         except Exception:
             pass
         raise
-    _refresh_parent_index_after_publication(batch_output)
+    if publish_parent_index:
+        _refresh_parent_index_after_publication(batch_output)
     return batch_output
 
 
@@ -903,6 +921,7 @@ def run_all_batches(
                 output_dir=group_output / batch_name,
                 plot=plot,
                 seed=seed,
+                publish_parent_index=False,
             )
             guide = BATCH_GUIDES.get(batch_name)
             scenario_count = len(BATCH_SETS[batch_name])
@@ -956,6 +975,7 @@ def run_all_batches(
         )
         write_all_batches_report(group_output, completed)
     except Exception as exc:
+        _refresh_partial_index_before_error(group_output)
         error_report_ready = False
         try:
             write_all_batches_report(

@@ -73,6 +73,7 @@ def run(
     pause_at_end: bool = False,
     plot_selection: PlotSelection = None,
     seed: int | None = None,
+    publish_parent_index: bool = True,
 ) -> Path:
     if _is_two_link_config(config):
         return _run_two_link_arm(
@@ -86,6 +87,7 @@ def run(
             pause_at_end=pause_at_end,
             plot_selection=plot_selection,
             seed=seed,
+            publish_parent_index=publish_parent_index,
         )
     return _run_slider_trajectory(
         config,
@@ -98,6 +100,7 @@ def run(
         pause_at_end=pause_at_end,
         plot_selection=plot_selection,
         seed=seed,
+        publish_parent_index=publish_parent_index,
     )
 
 
@@ -113,13 +116,19 @@ def _run_slider_trajectory(
     pause_at_end: bool = False,
     plot_selection: PlotSelection = None,
     seed: int | None = None,
+    publish_parent_index: bool = True,
 ) -> Path:
     lab_name = "lab03_trajectory"
     model_path = config.get("model_path", "models/lab03_2dof/scene.xml")
     mujoco, model, data = load_model_and_data(model_path)
     handles = configure_slider_plant(mujoco, model, data, config)
     logger = RunLogger(
-        lab_name, config, config_path=config_path, output_dir=output_dir, seed=seed
+        lab_name,
+        config,
+        config_path=config_path,
+        output_dir=output_dir,
+        seed=seed,
+        publish_parent_index=publish_parent_index,
     )
 
     sim_time = float(config.get("sim_time", 5.0))
@@ -294,6 +303,7 @@ def _run_two_link_arm(
     pause_at_end: bool = False,
     plot_selection: PlotSelection = None,
     seed: int | None = None,
+    publish_parent_index: bool = True,
 ) -> Path:
     lab_name = "lab03_2dof"
     model_path = config.get("model_path", "models/lab03_2dof/two_link.xml")
@@ -303,7 +313,12 @@ def _run_two_link_arm(
 
     handles = _two_link_handles(mujoco, model, config)
     logger = RunLogger(
-        lab_name, config, config_path=config_path, output_dir=output_dir, seed=seed
+        lab_name,
+        config,
+        config_path=config_path,
+        output_dir=output_dir,
+        seed=seed,
+        publish_parent_index=publish_parent_index,
     )
 
     sim_time = float(config.get("sim_time", 5.0))

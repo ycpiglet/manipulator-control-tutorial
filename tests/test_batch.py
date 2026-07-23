@@ -371,6 +371,7 @@ class BatchTests(unittest.TestCase):
             self.assertEqual(calls[0]["headless"], True)
             self.assertEqual(calls[0]["plot_selection"], "essential")
             self.assertEqual(calls[0]["seed"], 11)
+            self.assertFalse(calls[0]["publish_parent_index"])
             self.assertTrue((output / "demo_scenario" / "summary.json").exists())
             self.assertTrue((output / "batch_summary.json").exists())
             self.assertTrue((output / "summary.json").exists())
@@ -667,6 +668,7 @@ class BatchTests(unittest.TestCase):
             for call in runner.call_args_list:
                 self.assertFalse(call.kwargs["plot"])
                 self.assertEqual(call.kwargs["seed"], 23)
+                self.assertFalse(call.kwargs["publish_parent_index"])
             self.assertTrue((output / "report.html").exists())
             self.assertTrue((output / "worksheet.md").exists())
             self.assertTrue((output / "index.html").exists())

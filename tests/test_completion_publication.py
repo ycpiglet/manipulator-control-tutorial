@@ -60,6 +60,42 @@ def test_run_finalization_refreshes_parent_index_after_terminal_manifest() -> No
     ]
 
 
+def test_nested_run_finalization_defers_only_parent_index() -> None:
+    events: list[str] = []
+    with tempfile.TemporaryDirectory() as tmp:
+        output = Path(tmp) / "run"
+        logger = RunLogger(
+            "lab01_msd",
+            {},
+            output_dir=output,
+            publish_parent_index=False,
+        )
+
+        def write_manifest(*, status: str) -> Path:
+            events.append(f"manifest:{status}")
+            return output / "manifest.json"
+
+        with (
+            patch.object(logger, "_write_manifest", side_effect=write_manifest),
+            patch(
+                "mclab.sim.logging.write_run_report",
+                side_effect=lambda *_args, **kwargs: events.append(
+                    f"report:{kwargs.get('completion_status')}"
+                ),
+            ),
+            patch("mclab.sim.logging.write_outputs_index") as write_index,
+        ):
+            logger.finalize_artifacts()
+
+    assert events == [
+        "report:running",
+        "manifest:running",
+        "report:completed",
+        "manifest:completed",
+    ]
+    write_index.assert_not_called()
+
+
 def test_batch_parent_index_observes_terminal_manifest() -> None:
     events: list[str] = []
     with tempfile.TemporaryDirectory() as tmp:
@@ -94,6 +130,212 @@ def test_batch_parent_index_observes_terminal_manifest() -> None:
         "manifest:completed",
         "index:parent",
     ]
+
+
+def test_nested_full_course_publishes_exactly_seven_indexes() -> None:
+    names = tuple(f"unit_{index}" for index in range(5))
+    index_paths: list[Path] = []
+
+    def write_index(path: str | Path) -> Path:
+        target = Path(path)
+        index_paths.append(target)
+        return target / "index.html"
+
+    with tempfile.TemporaryDirectory() as tmp:
+        output = Path(tmp).resolve() / "all"
+        with (
+            patch.dict(batch.BATCH_SETS, {name: () for name in names}, clear=True),
+            patch("mclab.batch.list_batch_sets", return_value=list(names)),
+            patch("mclab.batch.write_outputs_index", side_effect=write_index),
+            patch("mclab.batch.write_batch_report"),
+            patch("mclab.batch.write_all_batches_report"),
+        ):
+            result = batch.run_all_batches(output_dir=output, plot=False)
+
+    assert result == output
+    assert index_paths == [
+        *(output / name for name in names),
+        output,
+        output.parent,
+    ]
+
+
+def test_nested_batch_flushes_local_index_before_terminal_error() -> None:
+    scenarios = (
+        batch.BatchScenario("first", "lab01", "first.yaml"),
+        batch.BatchScenario("second", "lab01", "second.yaml"),
+    )
+    events: list[str] = []
+
+    def runner(_config: dict[str, object], **kwargs: object) -> Path:
+        if Path(kwargs["config_path"]).name == "second.yaml":
+            raise RuntimeError("scenario failed")
+        return Path(kwargs["output_dir"])
+
+    def write_manifest(*_args: object, **kwargs: object) -> Path:
+        events.append(f"manifest:{kwargs['status']}")
+        return Path("manifest.json")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        output = Path(tmp).resolve() / "batch"
+        with (
+            patch.dict(batch.BATCH_SETS, {"unit": scenarios}, clear=False),
+            patch.dict(batch.LAB_RUNNERS, {"lab01": runner}, clear=False),
+            patch("mclab.batch.load_config", return_value={}),
+            patch(
+                "mclab.batch.write_outputs_index",
+                side_effect=lambda path: events.append(f"index:{Path(path).name}"),
+            ),
+            patch(
+                "mclab.batch.write_batch_report",
+                side_effect=lambda *_args, **kwargs: events.append(
+                    f"report:{kwargs.get('completion_status')}"
+                ),
+            ),
+            patch("mclab.application.artifacts.write_manifest", side_effect=write_manifest),
+            pytest.raises(RuntimeError, match="scenario failed"),
+        ):
+            batch.run_batch(
+                "unit",
+                output_dir=output,
+                plot=False,
+                publish_parent_index=False,
+            )
+
+    assert events == [
+        "manifest:running",
+        "index:batch",
+        "report:error",
+        "manifest:running",
+        "manifest:error",
+    ]
+
+
+def test_partial_batch_index_links_the_completed_scenario() -> None:
+    scenarios = (
+        batch.BatchScenario("first scenario", "lab01", "first.yaml"),
+        batch.BatchScenario("second scenario", "lab01", "second.yaml"),
+    )
+
+    def runner(config: dict[str, object], **kwargs: object) -> Path:
+        config_path = Path(kwargs["config_path"])
+        if config_path.name == "second.yaml":
+            raise RuntimeError("scenario failed")
+        output = Path(kwargs["output_dir"])
+        output.mkdir(parents=True)
+        (output / "summary.json").write_text(
+            '{"lab_name":"lab01_msd","config_name":"first"}',
+            encoding="utf-8",
+        )
+        (output / "report.html").write_text("<html></html>", encoding="utf-8")
+        write_manifest(
+            output,
+            scenario_id="lab01.default",
+            status="completed",
+            config=config,
+            config_path=config_path,
+        )
+        return output
+
+    def error_report(output: Path, *_args: object, **_kwargs: object) -> Path:
+        (output / "report.html").write_text("<html>error</html>", encoding="utf-8")
+        (output / "worksheet.md").write_text("# Error\n", encoding="utf-8")
+        return output / "report.html"
+
+    with tempfile.TemporaryDirectory() as tmp:
+        output = Path(tmp).resolve() / "batch"
+        with (
+            patch.dict(batch.BATCH_SETS, {"unit": scenarios}, clear=False),
+            patch.dict(batch.LAB_RUNNERS, {"lab01": runner}, clear=False),
+            patch("mclab.batch.load_config", return_value={}),
+            patch("mclab.batch.write_batch_report", side_effect=error_report),
+            pytest.raises(RuntimeError, match="scenario failed"),
+        ):
+            batch.run_batch(
+                "unit",
+                output_dir=output,
+                plot=False,
+                publish_parent_index=False,
+            )
+
+        index = (output / "index.html").read_text(encoding="utf-8")
+        manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+
+    assert "first_scenario/report.html" in index
+    assert "second_scenario" not in index
+    assert manifest["status"] == "error"
+
+
+def test_partial_index_failure_does_not_mask_the_scenario_error() -> None:
+    scenario = batch.BatchScenario("broken", "lab01", "broken.yaml")
+
+    def runner(_config: dict[str, object], **_kwargs: object) -> Path:
+        raise RuntimeError("scenario failed")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        with (
+            patch.dict(batch.BATCH_SETS, {"unit": (scenario,)}, clear=True),
+            patch.dict(batch.LAB_RUNNERS, {"lab01": runner}, clear=True),
+            patch("mclab.batch.load_config", return_value={}),
+            patch("mclab.batch.write_outputs_index", side_effect=OSError("index failed")),
+            patch("mclab.batch.write_batch_report"),
+            patch("mclab.batch.LOGGER.warning") as warning,
+            pytest.raises(RuntimeError, match="scenario failed"),
+        ):
+            batch.run_batch(
+                "unit",
+                output_dir=Path(tmp).resolve() / "batch",
+                plot=False,
+                publish_parent_index=False,
+            )
+
+    warning.assert_called_once()
+
+
+def test_partial_course_index_links_the_completed_batch() -> None:
+    names = ("lab01_msd_compare", "lab02_pid_compare")
+
+    def run_batch(batch_name: str, **kwargs: object) -> Path:
+        if batch_name == names[1]:
+            raise RuntimeError("batch failed")
+        output = Path(kwargs["output_dir"])
+        output.mkdir(parents=True)
+        (output / "summary.json").write_text(
+            json.dumps({"lab_name": "batch", "config_name": batch_name}),
+            encoding="utf-8",
+        )
+        (output / "report.html").write_text("<html></html>", encoding="utf-8")
+        (output / "worksheet.md").write_text("# Batch\n", encoding="utf-8")
+        write_manifest(
+            output,
+            scenario_id=f"batch.{batch_name}",
+            status="completed",
+            config={"batch_name": batch_name, "plot": False},
+            run_kind="comparison_batch",
+        )
+        return output
+
+    def error_report(output: Path, *_args: object, **_kwargs: object) -> Path:
+        (output / "report.html").write_text("<html>error</html>", encoding="utf-8")
+        (output / "worksheet.md").write_text("# Error\n", encoding="utf-8")
+        return output / "report.html"
+
+    with tempfile.TemporaryDirectory() as tmp:
+        output = Path(tmp).resolve() / "course"
+        with (
+            patch("mclab.batch.list_batch_sets", return_value=list(names)),
+            patch("mclab.batch.run_batch", side_effect=run_batch),
+            patch("mclab.batch.write_all_batches_report", side_effect=error_report),
+            pytest.raises(RuntimeError, match="batch failed"),
+        ):
+            batch.run_all_batches(output_dir=output, plot=False)
+
+        index = (output / "index.html").read_text(encoding="utf-8")
+        manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+
+    assert f"{names[0]}/report.html" in index
+    assert names[1] not in index
+    assert manifest["status"] == "error"
 
 
 def test_run_parent_index_failure_cannot_reopen_terminal_publication() -> None:
