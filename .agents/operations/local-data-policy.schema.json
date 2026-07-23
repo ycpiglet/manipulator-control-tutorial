@@ -10,8 +10,8 @@
       "items": {
         "$ref": "#/$defs/dataClass"
       },
-      "maxItems": 9,
-      "minItems": 9,
+      "maxItems": 10,
+      "minItems": 10,
       "type": "array",
       "uniqueItems": true
     },
@@ -71,6 +71,10 @@
         "cleanup_effect": {
           "const": "recoverable-quarantine-not-erasure"
         },
+        "dependency_cache_clearing_authorized_by_this_contract": {
+          "const": false,
+          "type": "boolean"
+        },
         "derived_index_may_persist_until_regenerated": {
           "const": true,
           "type": "boolean"
@@ -107,6 +111,7 @@
         "cleanup_apply_authorized_by_this_contract",
         "cleanup_default",
         "cleanup_effect",
+        "dependency_cache_clearing_authorized_by_this_contract",
         "derived_index_may_persist_until_regenerated",
         "hold_marker",
         "network_filesystem_support",
@@ -176,6 +181,10 @@
           "const": false,
           "type": "boolean"
         },
+        "complete_shared_pc_clearance": {
+          "const": false,
+          "type": "boolean"
+        },
         "distribution_scope": {
           "const": "supervised-source-development-only"
         },
@@ -194,16 +203,21 @@
         "repository_only": {
           "const": true,
           "type": "boolean"
+        },
+        "runtime_dependency_cache_scope": {
+          "const": "confirmed-cpython-qt-qml-matplotlib-only-broader-platform-caches-open"
         }
       },
       "required": [
         "account_required",
         "automatic_learner_data_upload",
+        "complete_shared_pc_clearance",
         "distribution_scope",
         "local_first",
         "ordinary_run_network_required",
         "remote_usage_analytics",
-        "repository_only"
+        "repository_only",
+        "runtime_dependency_cache_scope"
       ],
       "type": "object"
     },
@@ -254,8 +268,8 @@
       "items": {
         "$ref": "#/$defs/storageLocation"
       },
-      "maxItems": 15,
-      "minItems": 15,
+      "maxItems": 18,
+      "minItems": 18,
       "type": "array",
       "uniqueItems": true
     },
@@ -292,8 +306,8 @@
       "items": {
         "$ref": "#/$defs/unresolvedDecision"
       },
-      "maxItems": 6,
-      "minItems": 6,
+      "maxItems": 7,
+      "minItems": 7,
       "type": "array",
       "uniqueItems": true
     },
@@ -356,6 +370,7 @@
             "diagnostic-provenance",
             "learner-evidence",
             "optional-progress-preferences",
+            "runtime-dependency-caches",
             "saved-run",
             "transient-application-controls"
           ],
@@ -529,6 +544,9 @@
         },
         "code_reference": {
           "enum": [
+            "CPython:import-bytecode-cache",
+            "Matplotlib:cache-directory-and-font-manager",
+            "Qt:QQml-disk-cache",
             "src/mclab/application/single_instance.py:acquire_instance_lock",
             "src/mclab/application/single_instance.py:start_activation_server",
             "src/mclab/application/qt_app.py:AppBackend",
@@ -542,6 +560,7 @@
         },
         "id": {
           "enum": [
+            "cpython-bytecode-cache",
             "desktop-instance-lock-default",
             "desktop-instance-lock-override",
             "desktop-local-named-pipe-windows",
@@ -555,6 +574,8 @@
             "frozen-linux",
             "frozen-macos",
             "frozen-windows",
+            "matplotlib-font-cache",
+            "qt-qml-disk-cache",
             "source-default",
             "standalone-index-output-root"
           ],
@@ -577,7 +598,8 @@
             "mclab-desktop.lock",
             "native-settings-store",
             "not-appended",
-            "outputs"
+            "outputs",
+            "runtime-selected-cache-files"
           ],
           "type": "string"
         }
@@ -601,6 +623,7 @@
             "institution-retention-period",
             "release-evidence-retention",
             "rpo-rto",
+            "runtime-dependency-cache-inventory-and-clearing",
             "secure-erasure-method",
             "shared-pc-account-admin-policy"
           ],

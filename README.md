@@ -139,7 +139,9 @@ python -m mclab run lab01 --config configs/lab01_msd/default.yaml --headless --p
 **기록 재생**은 저장 상태를 그대로 보여주고, **같은 설정으로 다시 실행**은
 동일한 config와 seed로 물리를 새로 계산합니다. 앱은 저장 결과를 자동으로
 삭제하지 않습니다. 학습자 예측·관찰 메모가 저장되고 파생되는 위치와 공용 PC
-주의사항은 [로컬 데이터와 개인정보 안내](docs/local_data_and_privacy.md)를 확인하세요.
+주의사항, 확인된 runtime cache 위치는
+[로컬 데이터와 개인정보 안내](docs/local_data_and_privacy.md)를 확인하세요. Cache
+목록은 제한된 범위이며 공용 PC 전체 정리 완료를 뜻하지 않습니다.
 
 ## 저장소 구조
 

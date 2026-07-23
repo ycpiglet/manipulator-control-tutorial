@@ -3,12 +3,14 @@
 This paired English/Korean policy describes the repository behavior controlled by
 [`mclab.local-data.v1`](../.agents/operations/local-data-policy.json). It is a
 repository-only development contract, not a public-release privacy notice or an
-institutional retention policy.
+institutional retention policy. Its cache inventory names three confirmed surfaces and
+keeps broader runtime, dependency, operating-system, and driver caches explicitly open.
 
 이 영문/국문 병기 정책은
 [`mclab.local-data.v1`](../.agents/operations/local-data-policy.json)이 통제하는 저장소
 동작을 설명합니다. 저장소 범위의 개발 계약이며, 공개 배포용 개인정보 처리방침이나
-기관 보존 정책이 아닙니다.
+기관 보존 정책이 아닙니다. cache 목록은 확인된 세 표면만 다루며 더 넓은 runtime,
+dependency, 운영체제와 driver cache는 명시적인 미결 범위로 남깁니다.
 
 ## Scope / 범위
 
@@ -18,14 +20,15 @@ MCLab is local-first. An ordinary simulation run needs no account, cloud service
 network connection, and MCLab has no automatic learner-data upload or remote usage
 analytics. This statement covers the current supervised, source-development scope. It
 does not authorize public beta, signed distribution, release publication, or an external
-service commitment.
+service commitment. It is not complete shared-PC clearance.
 
 ### 한국어
 
 MCLab은 로컬 우선으로 동작합니다. 일반 시뮬레이션 실행에는 계정, 클라우드 서비스,
 네트워크 연결이 필요하지 않으며, 학습자 데이터를 자동 업로드하거나 원격 사용량 분석을
 수행하지 않습니다. 이 설명은 현재의 감독된 소스 개발 범위에만 적용됩니다. 공개 베타,
-서명 배포, release 발행 또는 외부 서비스 약속을 승인하지 않습니다.
+서명 배포, release 발행 또는 외부 서비스 약속을 승인하지 않으며 공용 PC 전체 정리
+완료를 뜻하지 않습니다.
 
 ## Storage locations / 저장 위치
 
@@ -90,6 +93,20 @@ The desktop also creates local coordination artifacts:
 The named pipe and Unix socket exchange only the local `activate` request and `activated`
 acknowledgement.
 
+Ordinary source or desktop use can also create these confirmed runtime/dependency caches
+outside the configured outputs root:
+
+| Surface | Confirmed location and boundary |
+|---|---|
+| CPython bytecode | `<writable-Python-import-root>/__pycache__/*.pyc` when an import root is writable and bytecode writing is enabled; a `.pyc` can embed an absolute source or import path |
+| Matplotlib font metadata | `<MPLCONFIGDIR-or-Matplotlib-platform-user-cache>/fontlist-*.json`; `MPLCONFIGDIR` wins when non-empty, otherwise Matplotlib chooses its platform/user cache |
+| Qt compiled QML | `<Qt-CacheLocation:MCLab/MCLab>/qmlcache/*.qmlc` when Qt QML disk caching is enabled |
+
+These are confirmed cache surfaces, not a complete shared-PC clearance. Additional
+Qt/GPU/GL, MuJoCo, fontconfig, operating-system, graphics-driver, and other
+dependency-managed caches have not been exhaustively inventoried across supported
+platforms. Their exact locations, contents, retention, and safe clearing remain open.
+
 ### 한국어
 
 기본적으로 저장된 실행은 설정된 하나의 `outputs/` root 아래에 있습니다.
@@ -145,6 +162,20 @@ Desktop은 다음 로컬 조정 artifact도 만듭니다.
 
 named pipe와 Unix socket은 로컬 `activate` 요청과 `activated` 응답만 교환합니다.
 
+일반 source 또는 desktop 사용에서도 설정된 outputs root 밖에 다음과 같은 확인된
+runtime/dependency cache가 생길 수 있습니다.
+
+| 표면 | 확인된 위치와 경계 |
+|---|---|
+| CPython bytecode | import root에 쓸 수 있고 bytecode 쓰기가 활성화된 경우 `<writable-Python-import-root>/__pycache__/*.pyc`; `.pyc`에는 절대 source 또는 import 경로가 들어갈 수 있음 |
+| Matplotlib font metadata | `<MPLCONFIGDIR-or-Matplotlib-platform-user-cache>/fontlist-*.json`; 비어 있지 않은 `MPLCONFIGDIR`가 우선이고, 없으면 Matplotlib이 platform/user cache를 선택 |
+| Qt compiled QML | Qt QML disk cache가 활성화된 경우 `<Qt-CacheLocation:MCLab/MCLab>/qmlcache/*.qmlc` |
+
+이는 확인된 cache 표면이며 공용 PC 전체 정리 완료를 뜻하지 않습니다. 추가
+Qt/GPU/GL, MuJoCo, fontconfig, 운영체제, graphics-driver 및 다른 dependency 관리
+cache는 지원 platform 전체에서 완전하게 목록화되지 않았습니다. 정확한 위치·내용·보존과
+안전한 정리 방법은 미결 상태입니다.
+
 ## Data inventory / 저장 데이터 목록
 
 ### English
@@ -189,6 +220,11 @@ The desktop also persists two non-free-text preferences in
 `<Qt-QSettings-UserScope:MCLab/MCLab>`: `language` (`ko` or `en`) and `tourComplete`
 (whether the introductory tour was dismissed). They are outside the outputs root, survive
 normal app exit, and are not removed by MCLab cleanup.
+
+The confirmed CPython, Matplotlib, and Qt QML caches are runtime-generated rather than
+learner-authored, but they persist outside the outputs root and can contain source/import
+paths, font metadata and paths, or compiled QML. Treat them as potentially private
+diagnostic material before copying or sharing a user profile.
 
 The machine contract has four precise validation-only exclusions rather than silently
 mixing them into ordinary learner storage: maintainer `scripts/audit_*.py` output roots,
@@ -238,6 +274,11 @@ Desktop은 `<Qt-QSettings-UserScope:MCLab/MCLab>`에도 두 가지 자유 서술
 preference를 영속 저장합니다. `language`는 `ko` 또는 `en`이고, `tourComplete`는 시작
 안내를 닫았는지를 나타냅니다. outputs root 밖에 있고 정상 앱 종료 뒤에도 남으며 MCLab
 cleanup으로 제거되지 않습니다.
+
+확인된 CPython, Matplotlib 및 Qt QML cache는 학습자가 작성한 자료가 아니라 runtime
+생성물입니다. 그러나 outputs root 밖에 남고 source/import 경로, font metadata와 경로
+또는 compiled QML을 포함할 수 있습니다. 사용자 profile을 복사하거나 공유하기 전에는
+개인정보 가능 진단 자료로 취급하세요.
 
 machine contract의 검증 전용 제외 항목은 일반 learner 저장소에 조용히 섞지 않고 네
 종류를 정확히 분리합니다. 관리자 `scripts/audit_*.py` output root,
@@ -323,7 +364,14 @@ through the same approved local process. This also applies to an external
 written directly under a caller-selected, safety-validated root is a derived file, not a
 cleanup run candidate, and can likewise persist until it is regenerated, sanitized, or
 removed through an approved local process. Cleanup also does not reset QSettings
-`language` or `tourComplete`.
+`language` or `tourComplete`, and it does not clear interpreter, Qt, Matplotlib, or other
+dependency caches.
+
+This contract does not authorize cache clearing. On a shared PC, first close MCLab,
+resolve the exact current-user cache target using the applicable runtime/OS tooling, and
+review it. Clear only that exact target through an administrator-approved local process;
+do not use a broad recursive command, and do not represent cache removal as secure
+erasure. Broader platform-cache inventory and clearing remain open decisions.
 
 ### 한국어
 
@@ -343,7 +391,14 @@ MCLab은 영구 purge를 제공하지 않습니다. 격리된 실행, receipt와
 외부 `MCLAB_OUTPUT_DIR` tree와 실제 갱신된 parent index에도 같은 원칙이 적용됩니다.
 호출자가 선택하고 안전 검사를 통과한 root 바로 아래에 쓴 독립 실행형 index도 파생
 파일이지 cleanup run 후보가 아니므로, 승인된 로컬 절차로 재생성·익명화·제거할 때까지
-남을 수 있습니다. Cleanup은 QSettings `language` 또는 `tourComplete`도 초기화하지 않습니다.
+남을 수 있습니다. Cleanup은 QSettings `language` 또는 `tourComplete`도 초기화하지
+않으며 interpreter, Qt, Matplotlib 또는 다른 dependency cache도 정리하지 않습니다.
+
+이 계약은 cache 정리를 승인하지 않습니다. 공용 PC에서는 먼저 MCLab을 닫고 해당
+runtime/OS 도구로 현재 사용자에게 적용되는 정확한 cache 대상을 확인한 뒤 검토하세요.
+기관 관리자가 승인한 로컬 절차로 그 정확한 대상만 정리하고, 넓은 범위의 재귀 명령을
+사용하거나 cache 제거를 안전한 영구 삭제로 표현하지 마세요. 더 넓은 platform cache
+목록과 정리 방법은 미결정 사항입니다.
 
 ## Shared PCs / 공용 PC
 
@@ -358,14 +413,17 @@ handing the device to another user. If `--output-dir` was used, include its pare
 removed; do the same for `MCLAB_OUTPUT_DIR` when its parent index was successfully
 refreshed. Also review a standalone-index root, QSettings preferences, validation-only
 destinations used by an administrator, and the potentially private QLockFile and local
-filesystem-socket or named-pipe endpoint. Closing the app normally is not proof that a
-prior crash left no stale filesystem coordination artifact.
+filesystem-socket or named-pipe endpoint. Include the confirmed CPython, Matplotlib, and
+Qt QML caches in that review. Closing the app normally is not proof that a prior crash
+left no stale filesystem coordination artifact or that dependency-managed caches were
+cleared.
 
 The device or institution administrator must separately decide account isolation,
 retention, backup, and secure-erasure procedures. MCLab's quarantine is not a substitute
 for those controls. If local policy requires clearing the device before handoff, use the
 administrator-approved process for the complete per-user data root; do not treat moving a
-run to quarantine as completion of that process.
+run to quarantine or clearing one confirmed cache as completion of that process. OPS-01A
+does not provide complete shared-PC clearance.
 
 ### 한국어
 
@@ -377,14 +435,16 @@ run to quarantine as completion of that process.
 `index.html`을 검토 대상에 포함하세요. `MCLAB_OUTPUT_DIR` parent index가 실제 갱신된
 경우에도 같습니다. 독립 실행형 index root, QSettings preference, 관리자가 사용한 검증
 전용 대상과 개인정보 가능 QLockFile 및 local filesystem-socket 또는 named-pipe
-endpoint도 검토하세요. 앱을 정상 종료했다는 사실만으로 이전 crash의 stale filesystem
-조정 artifact가 없다고 단정하면 안 됩니다.
+endpoint, 확인된 CPython·Matplotlib·Qt QML cache도 검토하세요. 앱을 정상 종료했다는
+사실만으로 이전 crash의 stale filesystem 조정 artifact가 없거나 dependency 관리
+cache가 정리되었다고 단정하면 안 됩니다.
 
 기기 또는 기관 관리자는 계정 분리, 보존, backup과 안전한 영구 삭제 절차를 별도로
 결정해야 합니다. MCLab의 quarantine은 이런 통제를 대신하지 않습니다.
 기기를 다음 사용자에게 넘기기 전에 로컬 정책상 초기화가 필요하다면 사용자별 데이터
 root 전체에 기관 관리자가 승인한 절차를 적용해야 하며, 실행을 quarantine으로 옮긴 것을
-그 절차의 완료로 간주하면 안 됩니다.
+그 절차의 완료로 간주하면 안 됩니다. 확인된 cache 하나를 정리한 것도 전체 절차의
+완료가 아니며 OPS-01A는 공용 PC 전체 정리 완료 근거를 제공하지 않습니다.
 
 ## Sharing, support, and security / 공유·지원·보안
 
@@ -413,17 +473,21 @@ it automatically.
 
 OPS-01A sets no retention period, backup owner/location/cadence, release-evidence
 retention, shared-PC administration policy, secure-erasure method, support SLA, RPO, or
-RTO. Those remain unresolved owner or institutional decisions. Do not infer a backup from
-a saved run or quarantine; restoration is not proven until the responsible policy owner
-performs and records an authorized restore test on the intended storage.
+RTO. The cross-platform inventory and approved clearing procedure for broader runtime,
+dependency, OS, and driver caches are also unresolved. Those remain owner, technical, or
+institutional decisions. Do not infer a backup from a saved run or quarantine;
+restoration is not proven until the responsible policy owner performs and records an
+authorized restore test on the intended storage.
 
 ### 한국어
 
 OPS-01A는 보존 기간, backup 담당자·위치·주기, release evidence 보존, 공용 PC 관리 정책,
 안전한 영구 삭제 방법, 지원 SLA, RPO 또는 RTO를 정하지 않습니다. 모두 owner 또는 기관이
-결정해야 할 미결정 사항입니다. 저장 실행이나 quarantine이 있다는 이유로 backup이 있다고
-간주하지 마세요. 책임 있는 정책 owner가 대상 저장소에서 승인된 복원 시험을 수행하고
-기록하기 전에는 복원 가능성이 입증된 것이 아닙니다.
+결정해야 할 미결정 사항입니다. 더 넓은 runtime, dependency, OS, driver cache의
+cross-platform 목록과 승인된 정리 절차도 technical·owner·기관 검토가 필요한 미결
+사항입니다. 저장 실행이나 quarantine이 있다는 이유로 backup이 있다고 간주하지 마세요.
+책임 있는 정책 owner가 대상 저장소에서 승인된 복원 시험을 수행하고 기록하기 전에는
+복원 가능성이 입증된 것이 아닙니다.
 
 ## Validation status and limits / 검증 상태와 한계
 
@@ -434,14 +498,17 @@ cleanup/restore tests are automated. A canonical version-1 source manifest pins 
 path set and SHA-256 bytes of every Python file under `packaging/`, `scripts/`, and
 `src/mclab/`; additions, removals, links, and byte drift fail validation. This is source
 integrity for those declared repository roots, not a general proof about unlisted file
-types or external services. Controlled repository reads use no-follow file descriptors,
-reject POSIX links, Windows reparse points, and special files, compare directory and file
-identity across check/open/read, and enforce byte bounds. On Windows, retained
+types or external services. Contract validation checks the declared storage records,
+including the three confirmed caches; it does not discover or prove the absence of other
+runtime, dependency, OS, or driver caches. Controlled repository reads use no-follow file
+descriptors, reject POSIX links, Windows reparse points, and special files, compare directory
+and file identity across check/open/read, and enforce byte bounds. On Windows, retained
 FILE_LIST_DIRECTORY handles without FILE_SHARE_DELETE pin every lexical ancestor against
 rename-and-swap-back races while the path-based metadata APIs run. A platform missing the
 required safe primitives fails closed. No real learner output was read, dry-run, moved,
 restored, or erased for this policy. Repository checks do not prove a particular
-institution's shared-PC configuration, backup system, retention rule, or erasure process.
+institution's shared-PC configuration, complete cache clearance, backup system, retention
+rule, or erasure process.
 
 ### 한국어
 
@@ -450,11 +517,13 @@ machine contract와 schema, 문서 링크, 임시 fixture 기반 동작 및 clea
 `src/mclab/` 아래 모든 Python 파일의 정확한 경로 집합과 SHA-256 byte를 고정하며, 파일
 추가·제거·link·byte 변경은 검증에 실패합니다. 이는 선언된 저장소 root의 source integrity
 근거이지 목록 밖 파일 형식이나 외부 서비스를 포괄적으로 입증하는 것은 아닙니다. 이 정책을
-위한 통제된 저장소 읽기는 no-follow file descriptor를 사용하고 POSIX link, Windows
+위한 검증은 세 가지 확인된 cache를 포함한 선언 storage record를 검사하지만, 다른
+runtime, dependency, OS 또는 driver cache가 없다는 사실을 찾아내거나 입증하지 않습니다.
+통제된 저장소 읽기는 no-follow file descriptor를 사용하고 POSIX link, Windows
 reparse point와 특수 파일을 거부하며 check/open/read 전후의 폴더·파일 identity와 byte
 상한을 확인합니다. Windows에서는 lexical ancestor마다 FILE_SHARE_DELETE 없이 연
 FILE_LIST_DIRECTORY handle을 유지하여 path 기반 metadata API가 실행되는 동안
 rename-and-swap-back 경합을 막습니다. 필요한 안전 primitive가 없는 platform에서는 fail
 closed합니다. 이 정책을 위해 실제 학습자 output을 읽거나, dry-run하거나,
 이동·복원·삭제하지 않았습니다. 저장소 검사는 특정 기관의 공용 PC 설정, backup system,
-보존 규칙 또는 영구 삭제 절차를 입증하지 않습니다.
+cache 전체 정리, 보존 규칙 또는 영구 삭제 절차를 입증하지 않습니다.

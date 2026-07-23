@@ -301,6 +301,108 @@ def test_qsettings_preference_class_omission_is_rejected(repository: Path) -> No
     assert any("data_classes" in error for error in _errors(repository))
 
 
+def test_confirmed_runtime_cache_surfaces_are_bounded_machine_inventory() -> None:
+    policy = _policy(ROOT)
+    records = policy["data_classes"]
+    locations = policy["storage_locations"]
+    scope = policy["scope"]
+    lifecycle = policy["lifecycle_controls"]
+    decisions = policy["unresolved_decisions"]
+    assert isinstance(records, list)
+    assert isinstance(locations, list)
+    assert isinstance(scope, dict)
+    assert isinstance(lifecycle, dict)
+    assert isinstance(decisions, list)
+
+    record = next(item for item in records if item["id"] == "runtime-dependency-caches")
+    assert record["artifacts"] == [
+        "<MPLCONFIGDIR-or-Matplotlib-platform-user-cache>/fontlist-*.json",
+        "<Qt-CacheLocation:MCLab/MCLab>/qmlcache/*.qmlc",
+        "<writable-Python-import-root>/__pycache__/*.pyc",
+    ]
+    assert record["may_contain_private_data"] is True
+    assert "absolute source or import paths" in record["content"]
+    assert "broader dependency and platform caches remain an open boundary" in record["content"]
+
+    assert {item["id"] for item in locations} >= {
+        "cpython-bytecode-cache",
+        "matplotlib-font-cache",
+        "qt-qml-disk-cache",
+    }
+    assert scope["complete_shared_pc_clearance"] is False
+    assert scope["runtime_dependency_cache_scope"].endswith("broader-platform-caches-open")
+    assert lifecycle["dependency_cache_clearing_authorized_by_this_contract"] is False
+    assert {
+        item["id"] for item in decisions
+    } >= {"runtime-dependency-cache-inventory-and-clearing"}
+
+
+@pytest.mark.parametrize(
+    "location_id",
+    [
+        "cpython-bytecode-cache",
+        "matplotlib-font-cache",
+        "qt-qml-disk-cache",
+    ],
+)
+def test_confirmed_runtime_cache_location_omission_is_rejected(
+    repository: Path,
+    location_id: str,
+) -> None:
+    policy = _policy(repository)
+    locations = policy["storage_locations"]
+    assert isinstance(locations, list)
+    locations[:] = [item for item in locations if item["id"] != location_id]
+    _write_policy(repository, policy)
+
+    assert any("storage_locations" in error for error in _errors(repository))
+
+
+@pytest.mark.parametrize(
+    "artifact",
+    [
+        "<MPLCONFIGDIR-or-Matplotlib-platform-user-cache>/fontlist-*.json",
+        "<Qt-CacheLocation:MCLab/MCLab>/qmlcache/*.qmlc",
+        "<writable-Python-import-root>/__pycache__/*.pyc",
+    ],
+)
+def test_confirmed_runtime_cache_artifact_omission_is_rejected(
+    repository: Path,
+    artifact: str,
+) -> None:
+    policy = _policy(repository)
+    records = policy["data_classes"]
+    assert isinstance(records, list)
+    record = next(item for item in records if item["id"] == "runtime-dependency-caches")
+    record["artifacts"].remove(artifact)
+    _write_policy(repository, policy)
+
+    assert any(
+        "data_classes.runtime-dependency-caches.artifacts" in error
+        for error in _errors(repository)
+    )
+
+
+def test_shared_pc_clearance_and_cache_clearing_cannot_be_silently_claimed(
+    repository: Path,
+) -> None:
+    policy = _policy(repository)
+    scope = policy["scope"]
+    lifecycle = policy["lifecycle_controls"]
+    assert isinstance(scope, dict)
+    assert isinstance(lifecycle, dict)
+    scope["complete_shared_pc_clearance"] = True
+    lifecycle["dependency_cache_clearing_authorized_by_this_contract"] = True
+    _write_policy(repository, policy)
+
+    errors = _errors(repository)
+    assert any("scope.complete_shared_pc_clearance" in error for error in errors)
+    assert any(
+        "lifecycle_controls.dependency_cache_clearing_authorized_by_this_contract" in error
+        for error in errors
+    )
+
+
 def test_windows_named_pipe_is_a_machine_readable_transient_artifact() -> None:
     policy = _policy(ROOT)
     records = policy["data_classes"]
@@ -595,6 +697,7 @@ def test_qt_instance_control_private_classification_drift_is_rejected(repository
     ("field", "value"),
     [
         ("automatic_deletion", True),
+        ("dependency_cache_clearing_authorized_by_this_contract", True),
         ("permanent_purge_available", True),
         ("real_output_validation", "passed"),
         ("retention_policy_status", "30-days"),

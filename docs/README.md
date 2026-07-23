@@ -14,7 +14,7 @@ in both languages. 상세 가이드는 현재 영문 중심이며, 아래 표에
 | Audience / 대상 | Document | Use it for |
 |---|---|---|
 | New learner / 신규 학습자 | [Learner guide](learner_guide.md) | Complete the predict–change–observe–replay loop / 예측–변경–관찰–재생 흐름 완주 |
-| Learner or shared-PC administrator / 학습자·공용 PC 관리자 | [Local data and privacy / 로컬 데이터와 개인정보](local_data_and_privacy.md) | Locate, copy, sanitize, quarantine, and restore local evidence / 로컬 증거의 위치·복사·익명화·격리·복원 확인 |
+| Learner or shared-PC administrator / 학습자·공용 PC 관리자 | [Local data and privacy / 로컬 데이터와 개인정보](local_data_and_privacy.md) | Review bounded local evidence/cache locations and open shared-PC limits / 제한된 로컬 증거·cache 위치와 공용 PC 미결 경계 검토 |
 | Instructor / 교육자 | [Educator guide](educator_guide.md) | Plan classroom evidence and review / 수업 증거와 복습 설계 |
 | Developer / 개발자 | [Desktop architecture](developer_guide.md) | Understand application boundaries and UI invariants / 앱 경계와 UI 불변 조건 파악 |
 | Repository maintainer / 저장소 관리자 | [Structure and compatibility](repository_structure.md) | Preserve public paths and plan future consolidation / 공개 경로 보존과 향후 정리 결정 |

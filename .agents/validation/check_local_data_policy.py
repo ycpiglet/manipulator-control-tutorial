@@ -36,7 +36,7 @@ OPEN_SUPPORTS_DIR_FD = os.open in os.supports_dir_fd
 STAT_SUPPORTS_DIR_FD = os.stat in os.supports_dir_fd
 STAT_SUPPORTS_NOFOLLOW = os.stat in os.supports_follow_symlinks
 LISTDIR_SUPPORTS_FD = os.listdir in os.supports_fd
-SCHEMA_SHA256 = "3e880cd7d80ae1168c8ae205a0deddd6f30e2702a9283e34f91aa727e08aa3bb"
+SCHEMA_SHA256 = "d2ccf980863ffcc67406f3a829f5717ea9e6acee6898ec13313a9f73be35fd7a"
 
 POLICY_HEADINGS = (
     "Scope / 범위",
@@ -54,14 +54,29 @@ POLICY_HEADINGS = (
 EXPECTED_SCOPE = {
     "account_required": False,
     "automatic_learner_data_upload": False,
+    "complete_shared_pc_clearance": False,
     "distribution_scope": "supervised-source-development-only",
     "local_first": True,
     "ordinary_run_network_required": False,
     "remote_usage_analytics": False,
     "repository_only": True,
+    "runtime_dependency_cache_scope": (
+        "confirmed-cpython-qt-qml-matplotlib-only-broader-platform-caches-open"
+    ),
 }
 
 EXPECTED_STORAGE_LOCATIONS = (
+    {
+        "applies_when": (
+            "Python imports a .py module from a writable source or import root with "
+            "bytecode writing enabled"
+        ),
+        "code_reference": "CPython:import-bytecode-cache",
+        "id": "cpython-bytecode-cache",
+        "parent_source": "each writable source or import root selected by the Python runtime",
+        "path_template": "<writable-Python-import-root>/__pycache__/*.pyc",
+        "relative_child": "runtime-selected-cache-files",
+    },
     {
         "applies_when": "the desktop starts without MCLAB_INSTANCE_LOCK",
         "code_reference": "src/mclab/application/single_instance.py:acquire_instance_lock",
@@ -190,6 +205,28 @@ EXPECTED_STORAGE_LOCATIONS = (
         "parent_source": "LOCALAPPDATA or user-home fallback",
         "path_template": "%LOCALAPPDATA%/MCLab/outputs",
         "relative_child": "outputs",
+    },
+    {
+        "applies_when": (
+            "a run imports Matplotlib and its font manager initializes a writable cache"
+        ),
+        "code_reference": "Matplotlib:cache-directory-and-font-manager",
+        "id": "matplotlib-font-cache",
+        "parent_source": (
+            "MPLCONFIGDIR when non-empty, otherwise Matplotlib platform or user cache selection"
+        ),
+        "path_template": (
+            "<MPLCONFIGDIR-or-Matplotlib-platform-user-cache>/fontlist-*.json"
+        ),
+        "relative_child": "runtime-selected-cache-files",
+    },
+    {
+        "applies_when": "the Qt desktop loads QML with disk caching enabled",
+        "code_reference": "Qt:QQml-disk-cache",
+        "id": "qt-qml-disk-cache",
+        "parent_source": "Qt CacheLocation for organization MCLab and application MCLab",
+        "path_template": "<Qt-CacheLocation:MCLab/MCLab>/qmlcache/*.qmlc",
+        "relative_child": "runtime-selected-cache-files",
     },
     {
         "applies_when": "running from source without MCLAB_DATA_DIR",
@@ -350,6 +387,24 @@ EXPECTED_DATA_CLASSES = {
         "sharing": "sanitize-before-sharing",
         "status": "defined-storage-surface-no-current-writer",
     },
+    "runtime-dependency-caches": {
+        "artifacts": (
+            "<MPLCONFIGDIR-or-Matplotlib-platform-user-cache>/fontlist-*.json",
+            "<Qt-CacheLocation:MCLab/MCLab>/qmlcache/*.qmlc",
+            "<writable-Python-import-root>/__pycache__/*.pyc",
+        ),
+        "content": (
+            "CPython bytecode can embed absolute source or import paths; Qt compiled-QML "
+            "cache entries and Matplotlib font metadata can persist outside the configured "
+            "outputs root. These are confirmed surfaces only; broader dependency and "
+            "platform caches remain an open boundary."
+        ),
+        "derived_copies": (),
+        "learner_authored": False,
+        "may_contain_private_data": True,
+        "sharing": "sanitize-before-sharing",
+        "status": "persistent",
+    },
     "saved-run": {
         "artifacts": (
             "<MCLAB_OUTPUT_DIR-selected-first-run-directory>/",
@@ -440,6 +495,7 @@ EXPECTED_LIFECYCLE_CONTROLS = {
     "cleanup_apply_authorized_by_this_contract": False,
     "cleanup_default": "read-only-plan",
     "cleanup_effect": "recoverable-quarantine-not-erasure",
+    "dependency_cache_clearing_authorized_by_this_contract": False,
     "derived_index_may_persist_until_regenerated": True,
     "hold_marker": ".mclab-preserve",
     "network_filesystem_support": "unsupported",
@@ -553,6 +609,7 @@ EXPECTED_UNRESOLVED_IDS = (
     "institution-retention-period",
     "release-evidence-retention",
     "rpo-rto",
+    "runtime-dependency-cache-inventory-and-clearing",
     "secure-erasure-method",
     "shared-pc-account-admin-policy",
 )
@@ -583,6 +640,11 @@ REQUIRED_POLICY_MARKERS = (
     "Windows reparse points",
     "FILE_LIST_DIRECTORY handles without FILE_SHARE_DELETE",
     "통제된 저장소 읽기는 no-follow file descriptor를 사용하고",
+    "confirmed cache surfaces, not a complete shared-PC clearance",
+    "확인된 cache 표면이며 공용 PC 전체 정리 완료를 뜻하지 않습니다",
+    "<writable-Python-import-root>/__pycache__/*.pyc",
+    "<MPLCONFIGDIR-or-Matplotlib-platform-user-cache>/fontlist-*.json",
+    "<Qt-CacheLocation:MCLab/MCLab>/qmlcache/*.qmlc",
     "mclab.local-data.v1",
 )
 
@@ -604,12 +666,17 @@ REQUIRED_DOCUMENT_MARKERS = {
         "fixed response SLA.",
         "repository-scoped current inventory",
         "not a public-release completeness or institutional-policy claim",
+        "three confirmed runtime/cache surfaces",
+        "not complete shared-PC clearance",
     ),
     Path(".github/SUPPORT.md"): (
         "Support is best effort; no response-time or platform-service SLA is promised.",
         "MCLab keeps runs and notes locally and does not upload them automatically; sharing "
         "them in an issue is the reporter's explicit action.",
+        "confirmed CPython, Qt QML, and Matplotlib cache list is bounded",
+        "Cache removal is not secure erasure.",
         "사용자명, 홈 경로, 비밀정보, 학습자 예측·메모를 제거한 뒤 필요한 부분만 공유해 주세요.",
+        "확인된 cache 목록은 제한된 범위이며",
     ),
 }
 
@@ -1757,8 +1824,9 @@ def validate_repository(
         Metric(
             "local-data contract semantics",
             (
-                "all storage, data, network, lifecycle, sharing, validation-exclusion, "
-                "and open-decision records exact"
+                "all declared storage, data, network, lifecycle, sharing, "
+                "validation-exclusion, and open-decision records exact; confirmed "
+                "runtime caches explicit; broader platform cache boundary open"
             ),
             f"{len(semantic_errors)} errors",
             not semantic_errors,
