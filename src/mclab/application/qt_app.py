@@ -21,12 +21,14 @@ from mclab.application.qt_fonts import configure_font_environment
 from mclab.application.qt_frame import create_frame_provider
 from mclab.application.qt_lifecycle import (
     consume_pending_next_scenario,
+    create_shutdown_event_filter,
     defer_start_for_parked_session,
     has_active_experiment,
     pause_before_navigation,
     reject_running_batch,
     reject_running_experiment,
     replace_session,
+    shutdown_application,
     stop_active_experiment,
 )
 from mclab.application.qt_worker import create_session_worker
@@ -70,6 +72,7 @@ def run_app(
         from PySide6.QtCore import (
             Property,
             QObject,
+            QEvent,
             QProcess,
             QSettings,
             QThread,
@@ -90,6 +93,7 @@ def run_app(
 
     FrameProvider = create_frame_provider(QQuickImageProvider, QImage)
     SessionWorker = create_session_worker(QThread, Signal)
+    ShutdownEventFilter = create_shutdown_event_filter(QObject, QEvent)
 
     BatchController = create_batch_controller(QObject, QProcess, QTimer, Signal)
     BatchBackend = create_batch_backend_mixin(QObject, Property, Signal, Slot)
@@ -134,6 +138,7 @@ def run_app(
             self._pending_restart: tuple[str | None, Any, bool] | None = None
             self._pending_next_scenario: str | None = None
             self._replay_mode = self._shutting_down = False
+            self._shutdown_complete = False
             self._init_batch(BatchController(self))
             self._init_evidence()
 
@@ -546,18 +551,9 @@ def run_app(
             self._error = self._error_detail = self._error_action = ""
             self.error_changed.emit()
 
-        def shutdown(self) -> None:
-            self._shutting_down = True
-            self._shutdown_batch()
-            self._pending_restart = None
-            self._pending_next_scenario = None
-            if self.session is not None:
-                self.session.stop()
-            if self.worker is not None and self.worker.isRunning():
-                self.worker.request_shutdown()
-                self.worker.wait(SHUTDOWN_WAIT_MS)
-            if self.session is not None and (self.worker is None or not self.worker.isRunning()):
-                self.session.close()
+        @Slot(result=bool)
+        def shutdown(self) -> bool:
+            return shutdown_application(self, SHUTDOWN_WAIT_MS)
 
         def _launch_worker(self, worker: SessionWorker) -> None:
             if self.worker is not None and self.worker.isRunning():
@@ -748,6 +744,8 @@ def run_app(
     qInstallMessageHandler(qt_message_handler)
     provider = FrameProvider()
     backend = AppBackend(provider)
+    shutdown_filter = ShutdownEventFilter(backend, app)
+    app.installEventFilter(shutdown_filter)
     engine = QQmlApplicationEngine()
     engine.addImageProvider("mclab", provider)
     engine.rootContext().setContextProperty("backend", backend)

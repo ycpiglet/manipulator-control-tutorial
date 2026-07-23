@@ -6,6 +6,7 @@ import hashlib
 import json
 import logging
 import platform
+import re
 import stat
 from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass, field
@@ -16,6 +17,7 @@ from typing import Any, BinaryIO, Iterator
 import numpy as np
 
 from mclab import __version__
+from mclab.application.batch_integrity import retrying_batch_operation_lock
 from mclab.config import PROJECT_ROOT, resolve_project_path
 from mclab.output_root import PinnedOutputRoot, pinned_output_root
 from mclab.output_safety import (
@@ -30,6 +32,8 @@ MANIFEST_SCHEMA_VERSION = 1
 REPLAY_SCHEMA_VERSION = 1
 _TERMINAL_MANIFEST_STATUSES = frozenset({"completed", "stopped", "error"})
 _MANIFEST_STATUSES = frozenset({"running", *_TERMINAL_MANIFEST_STATUSES})
+_SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+_BATCH_TRANSIENT_PREFIX = ".mclab-batch-"
 LOGGER = logging.getLogger(__name__)
 
 
@@ -226,6 +230,7 @@ def write_manifest(
     finished_at: str | None = None,
     run_kind: str = "",
     error: str = "",
+    handoff_token_sha256: str = "",
 ) -> Path:
     output = Path(output_path)
     try:
@@ -237,12 +242,29 @@ def write_manifest(
             if not root_exists or root_pin is None:
                 raise CleanupSafetyError("Manifest output directory is missing")
             root_pin.validate_directory((), description="manifest output")
-            with root_pin.operation_lock():
+            operation_lock = (
+                retrying_batch_operation_lock(root_pin)
+                if scenario_id == "batch.all"
+                else root_pin.operation_lock()
+            )
+            with operation_lock:
                 expected_manifest = _assert_manifest_transition_allowed(
                     root_pin,
                     requested_status=status,
                 )
-                artifacts = _inventory_artifacts_rooted(root_pin)
+                strict_batch_terminal = (
+                    status in _TERMINAL_MANIFEST_STATUSES
+                    and scenario_id.startswith("batch.")
+                )
+                if strict_batch_terminal and status != "error" and error:
+                    raise CleanupSafetyError(
+                        "Batch error detail is only valid for terminal error status"
+                    )
+                artifacts = (
+                    _inventory_artifacts_rooted(root_pin, strict=True)
+                    if strict_batch_terminal
+                    else _inventory_artifacts_rooted(root_pin)
+                )
                 model_path_value = config.get("model_path")
                 model_path = resolve_project_path(model_path_value) if model_path_value else None
                 license_path = _find_model_license(model_path)
@@ -279,8 +301,18 @@ def write_manifest(
                 }
                 if run_kind:
                     payload["run_kind"] = run_kind
-                if error:
-                    payload["error"] = error[-2000:]
+                if error or (status == "error" and scenario_id.startswith("batch.")):
+                    payload["error"] = (
+                        error or "The comparison batch failed without an error detail."
+                    )[-2000:]
+                preserved_handoff_hash = _preserved_running_handoff_hash(
+                    expected_manifest,
+                    scenario_id=scenario_id,
+                    status=status,
+                    supplied=handoff_token_sha256,
+                )
+                if preserved_handoff_hash:
+                    payload["handoff_token_sha256"] = preserved_handoff_hash
                 encoded = json.dumps(payload, indent=2, ensure_ascii=False).encode("utf-8")
                 if len(encoded) > MAX_METADATA_BYTES:
                     raise CleanupSafetyError(
@@ -342,6 +374,18 @@ def verify_manifest(output_path: str | Path) -> list[str]:
         TypeError,
     ) as exc:
         return [f"Could not read manifest: {exc}"]
+
+
+def verify_terminal_batch_output(
+    output_path: str | Path,
+    *,
+    expected_status: str,
+) -> list[str]:
+    """Strictly verify one immutable batch tree and its exact artifact set."""
+
+    from mclab.application.batch_integrity import verify_terminal_batch_output as verify
+
+    return verify(output_path, expected_status=expected_status)
 
 
 def _verify_manifest_payload_rooted(
@@ -463,9 +507,47 @@ def _desired_manifest_is_visible(
     return current == expected
 
 
-def _inventory_artifacts_rooted(root_pin: PinnedOutputRoot) -> dict[str, str]:
+def _preserved_running_handoff_hash(
+    existing_manifest: bytes | None,
+    *,
+    scenario_id: str,
+    status: str,
+    supplied: str,
+) -> str:
+    """Carry authenticated desktop ownership through every running refresh."""
+
+    if supplied and _SHA256_PATTERN.fullmatch(supplied) is None:
+        raise CleanupSafetyError("The batch handoff digest is invalid")
+    if status != "running" or scenario_id != "batch.all":
+        if supplied:
+            raise CleanupSafetyError(
+                "Batch handoff metadata is valid only on a running batch.all manifest"
+            )
+        return ""
+    existing = ""
+    if existing_manifest is not None:
+        try:
+            payload = json.loads(existing_manifest.decode("utf-8"))
+        except (UnicodeError, ValueError, TypeError) as exc:
+            raise CleanupSafetyError("Existing batch handoff metadata is invalid") from exc
+        if isinstance(payload, dict) and "handoff_token_sha256" in payload:
+            value = payload["handoff_token_sha256"]
+            if not isinstance(value, str) or _SHA256_PATTERN.fullmatch(value) is None:
+                raise CleanupSafetyError("Existing batch handoff digest is invalid")
+            existing = value
+    if supplied and existing and supplied != existing:
+        raise CleanupSafetyError("The batch handoff digest cannot be changed")
+    return supplied or existing
+
+
+def _inventory_artifacts_rooted(
+    root_pin: PinnedOutputRoot,
+    *,
+    strict: bool = False,
+) -> dict[str, str]:
     regular_files: list[tuple[str, tuple[str, ...], int]] = []
     directories: list[tuple[str, ...]] = [()]
+    discovered_directories: list[str] = []
     entries_seen = 0
     while directories:
         directory = directories.pop()
@@ -484,13 +566,43 @@ def _inventory_artifacts_rooted(root_pin: PinnedOutputRoot) -> dict[str, str]:
                     continue
                 child_stat = root_pin.lstat(child)
                 if _stat_is_link_or_reparse(child_stat):
+                    if strict:
+                        raise CleanupSafetyError(
+                            f"Terminal batch contains a link or reparse point: {relative}"
+                        )
                     continue
+                if strict and any(
+                    part.startswith(_BATCH_TRANSIENT_PREFIX) for part in child
+                ):
+                    raise CleanupSafetyError(
+                        f"Terminal batch contains a live transient marker: {relative}"
+                    )
                 if stat.S_ISREG(child_stat.st_mode):
                     if _safe_artifact_relative(relative):
                         regular_files.append((relative, child, int(child_stat.st_size)))
+                    elif strict:
+                        raise CleanupSafetyError(
+                            f"Terminal batch contains an unsafe artifact path: {relative}"
+                        )
                     continue
-                if stat.S_ISDIR(child_stat.st_mode) and not root_pin.is_mount_point(child):
+                if stat.S_ISDIR(child_stat.st_mode):
+                    if strict and not _safe_artifact_relative(relative):
+                        raise CleanupSafetyError(
+                            f"Terminal batch contains an unsafe directory path: {relative}"
+                        )
+                    if root_pin.is_mount_point(child):
+                        if strict:
+                            raise CleanupSafetyError(
+                                f"Terminal batch contains a mount point: {relative}"
+                            )
+                        continue
+                    discovered_directories.append(relative)
                     directories.append(child)
+                    continue
+                if strict:
+                    raise CleanupSafetyError(
+                        f"Terminal batch contains a special filesystem entry: {relative}"
+                    )
 
     artifacts: dict[str, str] = {}
     for relative, parts, expected_size in sorted(regular_files):
@@ -500,6 +612,13 @@ def _inventory_artifacts_rooted(root_pin: PinnedOutputRoot) -> dict[str, str]:
             description=f"artifact {relative}",
             expected_size=expected_size,
         )
+    if strict:
+        for relative in discovered_directories:
+            prefix = f"{relative}/"
+            if not any(artifact.startswith(prefix) for artifact in artifacts):
+                raise CleanupSafetyError(
+                    f"Terminal batch contains an unlisted empty directory: {relative}"
+                )
     return artifacts
 
 

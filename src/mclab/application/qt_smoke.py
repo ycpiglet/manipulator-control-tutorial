@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from mclab.application.qt_batch_probe import BATCH_PROBE_ACTIONS, schedule_batch_lifecycle_probe
 from mclab.application.qt_smoke_input import (
     activate_object as _activate_object,
     type_into as _type_into,
@@ -60,6 +61,18 @@ def schedule_smoke_action(timer: Any, backend: Any, roots: list[Any] | None = No
     delay_ms = max(0, int(os.environ.get("MCLAB_SMOKE_ACTION_MS", "1000")))
     interval_ms = max(50, int(os.environ.get("MCLAB_SMOKE_ACTION_INTERVAL_MS", "250")))
     root = roots[0] if roots else None
+    selected_batch_probes = [item for item in actions if item in BATCH_PROBE_ACTIONS]
+    if selected_batch_probes:
+        if len(actions) != 1 or len(selected_batch_probes) != 1:
+            raise RuntimeError("A batch lifecycle probe must be the only smoke action.")
+        schedule_batch_lifecycle_probe(
+            timer,
+            backend,
+            root,
+            selected_batch_probes[0],
+            delay_ms,
+        )
+        return
     if actions:
         def run_sequence(index: int) -> None:
             _run_action(backend, actions[index], root)
@@ -768,12 +781,10 @@ def _inject_batch_running(backend: Any) -> None:
         ),
         None,
     )
-    backend._batch.process = SmokeProcess()  # noqa: SLF001
-    backend._batch.output = str(active.path) if active is not None else ""  # noqa: SLF001
-    backend._batch.current = 2  # noqa: SLF001
-    backend._batch.total = 5  # noqa: SLF001
-    backend._batch.name = "lab02_pid_compare"  # noqa: SLF001
-    backend._batch.cancel_requested = False  # noqa: SLF001
+    backend._batch._smoke_inject_active(  # noqa: SLF001
+        SmokeProcess(),
+        str(active.path) if active is not None else "",
+    )
     backend.batch_changed.emit()
     backend.results_changed.emit()
 

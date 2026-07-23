@@ -304,3 +304,50 @@ archive size at most 300 MiB. Actual per-OS measurements must come from the
 retained matrix artifacts; this source contract does not assert that a package
 was built. Target installed cold start p95 remains 5 seconds or less and is
 measured by the later packaged E2E gate.
+
+### Packaged G2 development gate
+
+The desktop matrix runs `scripts/audit_package_e2e.py` only after the package
+identity and size verifier accepts the same job output. The harness first uses
+checkout-bound verification, copies both `dist/MCLab/` and
+`dist/MCLab-package/` into the runner's temporary storage outside the checkout,
+and repeats verification there in explicitly non-gating offline mode. The two
+verification records, inventory, archive digest, and package identity must be
+identical. Runtime probes then invoke the copied executable by absolute path
+from a third working directory; no source launcher or checkout-relative package
+data is used by the target process.
+
+On each Windows, Ubuntu, and macOS matrix runner, the copied application must
+pass self-test, JSON doctor, three seeded Lab01 headless runs with reports and
+plots, replay, `next --preview`, and a cleanup dry-run over a synthetic temporary
+output. The three runs use seed `104729`; their config digests must match, the
+four registered summary metrics must match with absolute tolerance `1e-12` and
+relative tolerance `1e-10`, and manifest hash errors must be zero. Cleanup is
+never applied or pointed at a learner output root. Its exact schema-1 dry-run
+plan must use `keep=0` and select only the one synthetic Lab01 run; an empty or
+no-op plan fails even with exit code zero. The synthetic tree must remain
+unchanged and `.mclab-trash` must not be created.
+
+The same packaged executable also performs 20 fresh-process QML launches, one
+complete five-batch course comparison, and authenticated cancel and window-close
+lifecycle probes. A cold-launch sample means a new process with fresh settings
+and application-state directories; the operating-system file cache is not
+flushed. The p95 is the nearest-rank value (rank 19 for 20 samples), must be at
+most 5 seconds, and permits no failed sample. Course output must contain exactly
+5 child batches, 54 scenario runs, 6 reports, at least 5 comparison plots, 60
+valid manifests, no batch transaction residue, no manifest hash error, no more
+than 150 MiB, at most 300 seconds of probe time, and a measured UI heartbeat gap
+of at most 500 ms. Cancel and close must start only after authenticated progress,
+settle a strict `stopped` manifest, remove transaction residue, and leave zero
+observed process identities alive within 10 seconds; PID plus creation time is
+used so PID reuse cannot produce a false pass.
+
+The job writes one bounded canonical summary to
+`build/validation/<commit>/g2-<OS>/package_e2e.json` and retains that evidence
+for 90 days. Temporary package copies, simulated outputs, probe files, and logs
+are removed with the runner temporary directory. The separately uploaded
+unsigned development package remains a 7-day artifact. A green summary is G2
+readiness evidence for that exact unsigned development commit and OS only. It
+is not a signature, notarization, public-beta approval, final SBOM or provenance,
+release/DOI authority, human usability result, or permission to inspect or
+clean real learner outputs.
