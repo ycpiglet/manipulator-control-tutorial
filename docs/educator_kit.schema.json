@@ -1,0 +1,576 @@
+{
+  "$defs": {
+    "canonicalCompletionEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "minimum_plot_count": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "record_kind": {
+          "const": "manifest_v1"
+        },
+        "required_artifacts": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "required_presets": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "requires_learner_control": {
+          "type": "boolean"
+        },
+        "requires_note": {
+          "type": "boolean"
+        },
+        "requires_observation": {
+          "type": "boolean"
+        },
+        "requires_plot": {
+          "type": "boolean"
+        },
+        "requires_prediction": {
+          "type": "boolean"
+        },
+        "requires_run": {
+          "const": true,
+          "type": "boolean"
+        },
+        "status": {
+          "const": "completed"
+        }
+      },
+      "required": [
+        "minimum_plot_count",
+        "record_kind",
+        "required_artifacts",
+        "required_presets",
+        "requires_learner_control",
+        "requires_note",
+        "requires_observation",
+        "requires_plot",
+        "requires_prediction",
+        "requires_run",
+        "status"
+      ],
+      "type": "object"
+    },
+    "canonicalSources": {
+      "additionalProperties": false,
+      "properties": {
+        "catalog_target_ids": {
+          "const": "src/mclab/application/catalog.py:LEARNING_PATH_TARGET_IDS"
+        },
+        "completion_evaluator": {
+          "const": "src/mclab/completion.py:evaluate_completion"
+        },
+        "completion_rules": {
+          "const": "src/mclab/application/catalog.py:ScenarioCatalog.default"
+        },
+        "educator_guide": {
+          "const": "docs/educator_guide.md"
+        },
+        "learning_path": {
+          "const": "src/mclab/learner_menu.py:LEARNING_PATH"
+        },
+        "pilot_protocol": {
+          "const": "docs/educator_pilot_protocol.md"
+        }
+      },
+      "required": [
+        "catalog_target_ids",
+        "completion_evaluator",
+        "completion_rules",
+        "educator_guide",
+        "learning_path",
+        "pilot_protocol"
+      ],
+      "type": "object"
+    },
+    "gate": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "threshold": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "threshold"
+      ],
+      "type": "object"
+    },
+    "learningOutcome": {
+      "additionalProperties": false,
+      "properties": {
+        "assessment_evidence": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "id": {
+          "pattern": "^LO-0[1-5]$",
+          "type": "string"
+        },
+        "statement": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "steps": {
+          "items": {
+            "maximum": 12,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "summative_steps": {
+          "items": {
+            "maximum": 12,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "assessment_evidence",
+        "id",
+        "statement",
+        "steps",
+        "summative_steps"
+      ],
+      "type": "object"
+    },
+    "levels": {
+      "additionalProperties": false,
+      "properties": {
+        "0": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "1": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "2": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "3": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "0",
+        "1",
+        "2",
+        "3"
+      ],
+      "type": "object"
+    },
+    "pathStep": {
+      "additionalProperties": false,
+      "properties": {
+        "action_kind": {
+          "enum": [
+            "batch",
+            "run"
+          ],
+          "type": "string"
+        },
+        "canonical_completion_evidence": {
+          "$ref": "#/$defs/canonicalCompletionEvidence"
+        },
+        "command": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "description": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "educator_review_evidence": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "group": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "label": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "mode": {
+          "enum": [
+            "automatic",
+            "comparison",
+            "hands-on"
+          ],
+          "type": "string"
+        },
+        "order": {
+          "maximum": 12,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "outcome_ids": {
+          "items": {
+            "pattern": "^LO-0[1-5]$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "planned_minutes": {
+          "maximum": 60,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "target_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "title": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "action_kind",
+        "canonical_completion_evidence",
+        "command",
+        "description",
+        "educator_review_evidence",
+        "group",
+        "label",
+        "mode",
+        "order",
+        "outcome_ids",
+        "planned_minutes",
+        "target_id",
+        "title"
+      ],
+      "type": "object"
+    },
+    "pilot": {
+      "additionalProperties": false,
+      "properties": {
+        "authorization": {
+          "const": "not-authorized"
+        },
+        "educator_completed": {
+          "const": 0,
+          "type": "integer"
+        },
+        "educator_recruited": {
+          "const": 0,
+          "type": "integer"
+        },
+        "educator_target": {
+          "const": 1,
+          "type": "integer"
+        },
+        "gates": {
+          "items": {
+            "$ref": "#/$defs/gate"
+          },
+          "maxItems": 7,
+          "minItems": 7,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "novice_completed": {
+          "const": 0,
+          "type": "integer"
+        },
+        "novice_recruited": {
+          "const": 0,
+          "type": "integer"
+        },
+        "novice_target": {
+          "const": 6,
+          "type": "integer"
+        },
+        "results": {
+          "$ref": "#/$defs/results"
+        },
+        "status": {
+          "const": "not-run"
+        }
+      },
+      "required": [
+        "authorization",
+        "educator_completed",
+        "educator_recruited",
+        "educator_target",
+        "gates",
+        "novice_completed",
+        "novice_recruited",
+        "novice_target",
+        "results",
+        "status"
+      ],
+      "type": "object"
+    },
+    "results": {
+      "additionalProperties": false,
+      "properties": {
+        "educator_adoption_success_count": {
+          "type": "null"
+        },
+        "first_report_median_minutes": {
+          "type": "null"
+        },
+        "learning_comprehension_count": {
+          "type": "null"
+        },
+        "novice_core_flow_success_count": {
+          "type": "null"
+        },
+        "sev1_count": {
+          "type": "null"
+        },
+        "sev2_count": {
+          "type": "null"
+        },
+        "sus_mean": {
+          "type": "null"
+        }
+      },
+      "required": [
+        "educator_adoption_success_count",
+        "first_report_median_minutes",
+        "learning_comprehension_count",
+        "novice_core_flow_success_count",
+        "sev1_count",
+        "sev2_count",
+        "sus_mean"
+      ],
+      "type": "object"
+    },
+    "rubric": {
+      "additionalProperties": false,
+      "properties": {
+        "aggregation": {
+          "const": "no-total-score"
+        },
+        "dimensions": {
+          "items": {
+            "$ref": "#/$defs/rubricDimension"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "type": "array"
+        },
+        "not_assessed": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "score_values": {
+          "const": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "type": "array"
+        },
+        "use": {
+          "const": "formative-not-canonical-completion-or-g4"
+        }
+      },
+      "required": [
+        "aggregation",
+        "dimensions",
+        "not_assessed",
+        "score_values",
+        "use"
+      ],
+      "type": "object"
+    },
+    "rubricDimension": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^R-0[1-4]$",
+          "type": "string"
+        },
+        "levels": {
+          "$ref": "#/$defs/levels"
+        },
+        "name": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "outcome_ids": {
+          "items": {
+            "pattern": "^LO-0[1-5]$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "id",
+        "levels",
+        "name",
+        "outcome_ids"
+      ],
+      "type": "object"
+    },
+    "scope": {
+      "additionalProperties": false,
+      "properties": {
+        "actual_accessibility_validation": {
+          "const": "not-run"
+        },
+        "external_contact_authorized": {
+          "const": false
+        },
+        "g4_satisfied": {
+          "const": false
+        },
+        "human_evidence": {
+          "const": false
+        },
+        "participant_recruitment_authorized": {
+          "const": false
+        },
+        "pilot_execution": {
+          "const": "not-run"
+        },
+        "repository_only": {
+          "const": true
+        },
+        "timing_basis": {
+          "const": "planned-not-measured"
+        }
+      },
+      "required": [
+        "actual_accessibility_validation",
+        "external_contact_authorized",
+        "g4_satisfied",
+        "human_evidence",
+        "participant_recruitment_authorized",
+        "pilot_execution",
+        "repository_only",
+        "timing_basis"
+      ],
+      "type": "object"
+    },
+    "unresolvedDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "owner-decision",
+            "owner-or-institution-decision"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "status"
+      ],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "canonical_sources": {
+      "$ref": "#/$defs/canonicalSources"
+    },
+    "kit_id": {
+      "const": "EDU-01A-repository-pilot-kit"
+    },
+    "learning_outcomes": {
+      "items": {
+        "$ref": "#/$defs/learningOutcome"
+      },
+      "maxItems": 5,
+      "minItems": 5,
+      "type": "array"
+    },
+    "learning_path": {
+      "items": {
+        "$ref": "#/$defs/pathStep"
+      },
+      "maxItems": 12,
+      "minItems": 12,
+      "type": "array"
+    },
+    "pilot": {
+      "$ref": "#/$defs/pilot"
+    },
+    "rubric": {
+      "$ref": "#/$defs/rubric"
+    },
+    "schema_version": {
+      "const": 1,
+      "type": "integer"
+    },
+    "scope": {
+      "$ref": "#/$defs/scope"
+    },
+    "unresolved_decisions": {
+      "items": {
+        "$ref": "#/$defs/unresolvedDecision"
+      },
+      "maxItems": 4,
+      "minItems": 4,
+      "type": "array"
+    }
+  },
+  "required": [
+    "canonical_sources",
+    "kit_id",
+    "learning_outcomes",
+    "learning_path",
+    "pilot",
+    "rubric",
+    "schema_version",
+    "scope",
+    "unresolved_decisions"
+  ],
+  "type": "object"
+}
