@@ -245,10 +245,38 @@ python -m mclab clean --restore RECEIPT_ID_FROM_LIST
 
 ```bash
 python scripts/install_locked.py app-dev
-python -m pytest -q
+python -m pytest -q --ignore=tests/test_mypy_baseline.py
 python -m ruff check src tests scripts .agents/validation
 python -m mclab app --self-test
 ```
+
+`app-dev`에는 Qt 타입 정보가 포함되므로 dev-only MAINT-01A live attestation
+test를 의도적으로 제외합니다. authoritative exact-debt gate는 별도의 clean Linux
+x86-64 source checkout에서 다음과 같이 실행합니다.
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python scripts/install_locked.py dev
+python -m pytest -q tests/test_mypy_baseline.py
+python .agents/validation/check_mypy_baseline.py --python-version 3.11
+```
+
+checker는 definition-level strictness를 활성화하고 native Python minor version과
+target version이 같아야 하며 둘 다 결과에 출력합니다. `.venv` 사용을 권장하지만,
+측정 범위는 `sys.base_prefix`도 함께 보고하는 선택된 interpreter prefix이므로 native
+CI prefix도 지원합니다. 모든 expected distribution의 resolved root와 metadata origin은
+해당 prefix 아래에 있어야 합니다. 일반 실행은 active 264-diagnostic baseline과 정확히
+일치해야 하며, 개선도 별도 review를 거친 monotonic baseline migration이 필요합니다.
+모든 `src/**/*.py`와 `src/**/*.pyi`, structural context에 결합된 `type: ignore`/mypy
+directive, direct·alias·local re-export 형태의 `@no_type_check`를 inventory합니다.
+`disallow_any_explicit`로 드러나는 781개 diagnostic은 named residual로 유지하며 264개
+baseline에 흡수하지 않습니다. migration command와 immutable-history 규칙은
+[CONTRIBUTING.md](CONTRIBUTING.md)를 참고하세요.
+
+이는 safe-main development evidence일 뿐입니다. public beta, signed distribution,
+release/DOI publication, real-output cleanup dry-run 또는 cleanup apply를 승인하지
+않습니다.
 
 새 config에는 학습 가이드와 다음 실험 연결이 필요합니다. 자세한 규칙과 PR
 체크리스트는 [CONTRIBUTING.md](CONTRIBUTING.md)를 참고하세요.

@@ -152,9 +152,12 @@ REQUIRED_COMMAND_LINES = (
     "python -m mclab clean --list-trash",
     "python -m mclab clean --restore RECEIPT_ID_FROM_LIST",
     "python scripts/install_locked.py app-dev",
-    "python -m pytest -q",
+    "python -m pytest -q --ignore=tests/test_mypy_baseline.py",
     "python -m ruff check src tests scripts .agents/validation",
     "python -m mclab app --self-test",
+    "python scripts/install_locked.py dev",
+    "python -m pytest -q tests/test_mypy_baseline.py",
+    "python .agents/validation/check_mypy_baseline.py --python-version 3.11",
 )
 DOC_MAP_REQUIRED_COMMAND_LINES = ("python -m mclab app",)
 
