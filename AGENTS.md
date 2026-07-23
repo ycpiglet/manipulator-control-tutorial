@@ -20,16 +20,19 @@ PR #60은 Draft #37의 package exclusion만 제한적으로 채택했고 #38은 
 없이 종료됐으며, 어느 Draft도 wholesale merge하지 않았습니다. PR #61은 FREEZE
 아래의 `run_mclab.cmd` bootstrap 결함을 제자리에서 보수했습니다.
 
-현재 accepted implementation subject는 SUP-01 aggregate merge
-`6f0995bd8fe52f8fa6832a03f83254eb13ff9cc1`입니다. SUP-01 acceptance는
-repository lock, fail-closed vulnerability/license inventory, pinned Ubuntu
-direct-package evidence와 deterministic SBOM-input gate에 한정됩니다. License
-evidence는 `pending-lic-01`이고 final per-OS SBOM/provenance나 hosted base/native
-transitive inventory가 아니므로 다음 ordered compliance 작업은 LIC-01입니다.
-PKG-01→E2E-01은 B3 technical-preview critical path이며 PKG-01은 IA/INT 결정이 끝나
-병렬 착수할 수 있고 E2E-01은 accepted PKG-01이 추가된 exact main에서 수행합니다.
-기존 B2 candidate/declaration Markdown/JSON, 과거 archive,
-감사 원문과 이전 finding-ledger event는 수정하지 않습니다.
+현재 accepted implementation subject는 PKG-01A merge
+`96702b09d7e2b0e3b381b86c5e6e51f95682d346`입니다. LIC-01A는 49개
+package-lock candidate와 12개 target cell의 deterministic pending inventory 범위,
+PKG-01A는 unsigned-development package identity와 independent size gate 범위에서만
+accepted입니다. License evidence는 계속 `pending-lic-01`이고 legal approval,
+notices, Qt/PySide disposition, final per-OS SBOM/provenance와 hosted base/native
+transitive inventory가 아닙니다. 다음 ordered compliance 작업은 LIC-01B이며,
+aggregate PKG-01은 accepted packaged-QML 20-sample cold-start evidence가 더
+필요합니다. E2E-01은 accepted aggregate PKG-01이 추가된 exact main에서만
+판정합니다. Draft PR #70의 green exact-head candidate evidence는 이 선행 순서를
+소급 충족하거나 G2/B3를 선언하지 않습니다. 기존 B2 candidate/declaration
+Markdown/JSON, 과거 archive, 감사 원문과 이전 finding-ledger event는 수정하지
+않습니다.
 
 SAFE-01 PASS와 B2 선언 뒤에도 실제 learner outputs의 dry-run은 승인되지 않았습니다.
 향후에도 owner가 참여하는 별도 작업으로만 수행하고, owner가 같은 plan을 검토한 뒤
