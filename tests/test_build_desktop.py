@@ -7,7 +7,7 @@ import json
 import os
 import sys
 import tarfile
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -790,6 +790,19 @@ def test_package_environment_record_invokes_locked_profile_and_record_validation
     record.assert_called_once_with("package")
     editable.assert_called_once_with()
     state_inputs.assert_called_once_with("package")
+
+
+def test_windows_locked_input_labels_match_package_contract(build_module) -> None:
+    from scripts import install_locked
+
+    windows_labels = {
+        "pyproject.toml",
+        install_locked._state_input_label(PureWindowsPath("requirements/locks/build.txt")),
+        install_locked._state_input_label(PureWindowsPath("requirements/locks/package.txt")),
+        "scripts/install_locked.py",
+    }
+
+    assert windows_labels == build_module._PACKAGE_INPUT_PATHS
 
 
 def test_offline_self_asserted_verification_is_unmistakably_non_gating(
