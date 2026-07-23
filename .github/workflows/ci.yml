@@ -75,6 +75,9 @@ jobs:
       - name: Install package with dev tools
         run: python scripts/install_locked.py --allow-external-env dev
 
+      - name: Python 3.11 mypy exact-debt checker
+        run: python .agents/validation/check_mypy_baseline.py --python-version 3.11
+
       - name: README runtime CLI contract
         run: python .agents/validation/check_readme_contract.py --runtime-cli
 
@@ -98,9 +101,14 @@ jobs:
             requirements/locks/build.txt
             requirements/locks/dev.txt
 
+      - name: Install package with dev tools on Python 3.10
+        run: python scripts/install_locked.py --allow-external-env dev
+
+      - name: Python 3.10 mypy exact-debt checker
+        run: python .agents/validation/check_mypy_baseline.py --python-version 3.10
+
       - name: Python 3.10 minimum-version cleanup and CLI tests
         run: |
-          python scripts/install_locked.py --allow-external-env dev
           python .agents/validation/check_readme_contract.py --runtime-cli
           python -m pytest -q -rs tests/test_output_cleanup.py tests/test_cli_imports.py
 
@@ -113,9 +121,14 @@ jobs:
             requirements/locks/build.txt
             requirements/locks/dev.txt
 
+      - name: Install package with dev tools on Python 3.12
+        run: python scripts/install_locked.py --allow-external-env dev
+
+      - name: Python 3.12 mypy exact-debt checker
+        run: python .agents/validation/check_mypy_baseline.py --python-version 3.12
+
       - name: Python 3.12 upper-version CLI tests
         run: |
-          python scripts/install_locked.py --allow-external-env dev
           python .agents/validation/check_readme_contract.py --runtime-cli
           python -m pytest -q -rs tests/test_cli_imports.py tests/test_doctor.py
 

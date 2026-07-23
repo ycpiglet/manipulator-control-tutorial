@@ -256,10 +256,40 @@ authoritative work order.
 
 ```bash
 python scripts/install_locked.py app-dev
-python -m pytest -q
+python -m pytest -q --ignore=tests/test_mypy_baseline.py
 python -m ruff check src tests scripts .agents/validation
 python -m mclab app --self-test
 ```
+
+Because `app-dev` includes Qt type information, the dev-only MAINT-01A live
+attestation test is intentionally excluded. Run the authoritative exact-debt
+gate in a separate clean Linux x86-64 source checkout:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python scripts/install_locked.py dev
+python -m pytest -q tests/test_mypy_baseline.py
+python .agents/validation/check_mypy_baseline.py --python-version 3.11
+```
+
+The checker enables definition-level strictness, requires the native and target
+Python minor versions to match, and reports both. A `.venv` is recommended, but
+the measured scope is the selected interpreter prefix (with `sys.base_prefix`
+reported), so native CI prefixes are supported too. Every expected
+distribution's resolved root and metadata origin must be under that prefix.
+Normal runs must match the active 264-diagnostic baseline exactly; even
+improvements require a separately reviewed monotonic baseline migration. All
+`src/**/*.py` and `src/**/*.pyi`, structurally contextual `type: ignore`/mypy
+directives, and direct, aliased, or locally re-exported `@no_type_check` uses are
+inventoried. The 781 diagnostics exposed by `disallow_any_explicit` remain a
+named residual and are not absorbed into the 264. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for the migration command and immutable-
+history rules.
+
+This is safe-main development evidence only. It does not authorize public beta,
+signed distribution, release/DOI publication, or any real-output cleanup
+dry-run/apply action.
 
 Every new config needs a learning guide and a suggested next experiment. See
 [CONTRIBUTING.md](CONTRIBUTING.md) for the complete rules and pull-request
