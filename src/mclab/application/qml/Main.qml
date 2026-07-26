@@ -5,6 +5,10 @@ import QtQuick.Layouts
 ApplicationWindow {
     id: window
     property bool compactWindow: width < 900 || height < 500
+    onClosing: function(close) {
+        if (!backend.shutdown())
+            close.accepted = false
+    }
     function focusPageEntry() {
         var indices = {"home": 0, "path": 1, "explore": 2, "results": 3}
         var index = indices[backend.page]

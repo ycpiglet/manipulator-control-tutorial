@@ -215,6 +215,87 @@ def test_manifest_valid_running_to_terminal_lifecycle(tmp_path: Path) -> None:
     assert verify_manifest(output) == []
 
 
+def test_running_manifest_can_defer_only_report_documents_until_terminal(
+    tmp_path: Path,
+) -> None:
+    output = tmp_path / "run"
+    output.mkdir()
+    (output / "log.csv").write_text("time\n0\n", encoding="utf-8")
+    report = output / "report.html"
+    worksheet = output / "worksheet.md"
+    report.write_text("running report", encoding="utf-8")
+    worksheet.write_text("running worksheet", encoding="utf-8")
+
+    manifest = write_manifest(
+        output,
+        scenario_id="lab01.default",
+        status="running",
+        config={},
+        untrusted_artifacts=("report.html", "worksheet.md"),
+    )
+    running = json.loads(manifest.read_text(encoding="utf-8"))
+
+    assert "log.csv" in running["artifacts"]
+    assert "report.html" not in running["artifacts"]
+    assert "worksheet.md" not in running["artifacts"]
+    report.write_text("prospective terminal report", encoding="utf-8")
+    worksheet.write_text("prospective terminal worksheet", encoding="utf-8")
+    assert verify_manifest(output) == []
+
+    terminal = write_manifest(
+        output,
+        scenario_id="lab01.default",
+        status="completed",
+        config={},
+    )
+    completed = json.loads(terminal.read_text(encoding="utf-8"))
+
+    assert {"report.html", "worksheet.md"} <= set(completed["artifacts"])
+    assert verify_manifest(output) == []
+
+
+@pytest.mark.parametrize(
+    ("status", "untrusted_artifacts", "message"),
+    [
+        (
+            "completed",
+            ("report.html",),
+            "Artifact trust may be deferred only by a running manifest",
+        ),
+        (
+            "running",
+            ("log.csv",),
+            "must defer report.html and worksheet.md together",
+        ),
+        (
+            "running",
+            ("report.html",),
+            "must defer report.html and worksheet.md together",
+        ),
+    ],
+)
+def test_manifest_rejects_unsafe_artifact_trust_deferral(
+    tmp_path: Path,
+    status: str,
+    untrusted_artifacts: tuple[str, ...],
+    message: str,
+) -> None:
+    output = tmp_path / status
+    output.mkdir()
+    (output / "log.csv").write_text("time\n0\n", encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match=message):
+        write_manifest(
+            output,
+            scenario_id="lab01.default",
+            status=status,
+            config={},
+            untrusted_artifacts=untrusted_artifacts,
+        )
+
+    assert not (output / "manifest.json").exists()
+
+
 def test_manifest_refuses_terminal_marker_published_during_inventory(
     tmp_path: Path,
 ) -> None:

@@ -4,7 +4,9 @@ import QtQuick.Layouts
 
 Item {
     id: page
-    property var course: backend.courseProgress
+    property var course: visible ? backend.courseProgress
+                                 : ({complete: false, done: 0, next: {}, nextKind: "",
+                                     path: [], total: 0})
     property var batch: backend.batchProgress
     function batchStatusText() {
         if (batch.cancelling)

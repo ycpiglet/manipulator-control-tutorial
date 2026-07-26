@@ -16,6 +16,7 @@ from mclab.config import default_outputs_root, resolve_output_path
 from mclab.sim.reporting import write_outputs_index, write_run_report
 
 LOGGER = logging.getLogger(__name__)
+_REPORT_DOCUMENT_ARTIFACTS = ("report.html", "worksheet.md")
 
 
 def create_output_path(lab_name: str, output_dir: str | Path | None = None) -> Path:
@@ -63,11 +64,13 @@ class RunLogger:
         config_path: str | Path | None = None,
         output_dir: str | Path | None = None,
         seed: int | None = None,
+        publish_parent_index: bool = True,
     ) -> None:
         self.lab_name = lab_name
         self.config = dict(config)
         self.config_path = Path(config_path) if config_path else None
         self.seed = seed
+        self.publish_parent_index = publish_parent_index
         self.output_path = create_output_path(lab_name, output_dir)
         self.rows: list[dict[str, Any]] = []
         self.log_sample_hz = float(self.config.get("log_sample_hz", 100.0))
@@ -133,6 +136,7 @@ class RunLogger:
     ) -> Path:
         self._require_unfinalized()
         self.run_status = run_status
+        retrying_existing_run = self._running_marker_established
         if not self._running_marker_established:
             # Establish the empty/initial running boundary once.  On a retry,
             # the prior marker must continue to make changed producer bytes or
@@ -152,7 +156,11 @@ class RunLogger:
         if finalize:
             self.finalize_artifacts()
         else:
-            if self._running_report_repair_required:
+            if retrying_existing_run or self._running_report_repair_required:
+                self._write_manifest(
+                    status="running",
+                    untrusted_artifacts=_REPORT_DOCUMENT_ARTIFACTS,
+                )
                 write_run_report(
                     self.output_path,
                     update_index=False,
@@ -167,16 +175,27 @@ class RunLogger:
 
         self._require_unfinalized()
         try:
-            # A prior terminal-publication attempt may have left prospective
-            # Complete documents whose bytes no longer match the last running
-            # manifest.  Repair those documents before refreshing that
-            # manifest so a retry can never digest-publish a stale verdict.
-            write_run_report(
-                self.output_path,
-                update_index=False,
-                completion_status="running",
+            # A failed repair keeps the conservative running-document preflight
+            # on retry. Normal finalization does not render the same large
+            # report twice merely to replace it immediately afterwards.
+            if self._running_report_repair_required:
+                self._write_manifest(
+                    status="running",
+                    untrusted_artifacts=_REPORT_DOCUMENT_ARTIFACTS,
+                )
+                write_run_report(
+                    self.output_path,
+                    update_index=False,
+                    completion_status="running",
+                )
+                self._write_manifest(status="running")
+            # Publish all producer inputs while withdrawing both prospective
+            # documents. A hard stop during either document replacement leaves
+            # the manifest verifiable and neither document trusted.
+            self._write_manifest(
+                status="running",
+                untrusted_artifacts=_REPORT_DOCUMENT_ARTIFACTS,
             )
-            self._write_manifest(status="running")
             self._running_report_repair_required = False
             write_run_report(
                 self.output_path,
@@ -191,20 +210,32 @@ class RunLogger:
         # Keep the terminal manifest last inside the run directory.  The
         # cumulative parent index is outside that immutable artifact boundary
         # and must observe the published terminal state.
-        try:
-            write_outputs_index(self.output_path.parent)
-        except Exception as exc:
-            LOGGER.warning(
-                "Saved run is complete, but the cumulative outputs index could not "
-                "be refreshed: %s",
-                exc,
-            )
+        if self.publish_parent_index:
+            try:
+                write_outputs_index(self.output_path.parent)
+            except Exception as exc:
+                LOGGER.warning(
+                    "Saved run is complete, but the cumulative outputs index could not "
+                    "be refreshed: %s",
+                    exc,
+                )
         return manifest
 
     def _repair_failed_finalization(self) -> None:
         """Best-effort repair of a prospective verdict while keeping retry open."""
 
         self._running_report_repair_required = True
+        try:
+            self._write_manifest(
+                status="running",
+                untrusted_artifacts=_REPORT_DOCUMENT_ARTIFACTS,
+            )
+        except Exception as exc:
+            LOGGER.warning(
+                "Could not withdraw learner report trust before repair: %s",
+                exc,
+            )
+            return
         try:
             write_run_report(
                 self.output_path,
@@ -227,7 +258,12 @@ class RunLogger:
         if self._finalized:
             raise RuntimeError("This saved run is already finalized and cannot be rewritten.")
 
-    def _write_manifest(self, *, status: str) -> Path:
+    def _write_manifest(
+        self,
+        *,
+        status: str,
+        untrusted_artifacts: tuple[str, ...] = (),
+    ) -> Path:
         return write_manifest(
             self.output_path,
             scenario_id=_scenario_id(self.lab_name, self.config_path),
@@ -237,6 +273,7 @@ class RunLogger:
             seed=self.seed,
             started_at=self.started_at,
             finished_at=datetime.now(timezone.utc).isoformat(),
+            untrusted_artifacts=untrusted_artifacts,
         )
 
     def _save_config_snapshot(self) -> None:

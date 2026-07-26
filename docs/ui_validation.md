@@ -45,6 +45,52 @@ Linux 감사 단계는 창 활성화와 Dialog 접근성 역할을 검사할 수
 검증한다. batch 종료 audit은 저장된 strict terminal 상태가 late cancel 또는 transport
 error callback보다 우선하는지도 회귀 테스트로 고정한다.
 
+## 2026-07-23 패키지 독립 E2E 계약
+
+기존 source-tree UI 감사와 startup/course 감사는 개발 회귀를 빠르게 찾지만, 실제
+패키지가 checkout 밖에서 작동한다는 G2 증거로 대신 쓰지 않는다. Desktop matrix의
+package verifier 다음 단계가 수락된 one-folder와 evidence/archive 폴더를 runner temp의
+정확한 `dist/MCLab`, `dist/MCLab-package` 구조로 복사하고, 별도 runtime cwd에서 복사된
+실행 파일을 절대 경로로 호출한다. checkout-bound 검증과 복사본의 offline consistency
+검증은 완전히 같아야 하며, offline 표시는 새 provenance가 아니다.
+
+Workflow가 사용하는 package-evidence subject는 PR에서
+`github.event.pull_request.head.sha`, push와 수동 dispatch에서 `github.sha`다. 이
+선택은 job env에서 한 번만 하고 checkout도 같은 값을 사용한다. 이후 lowercase 40-hex,
+checkout `HEAD` 일치, clean tree를 확인한 뒤
+`build/validation/<selected-sha>/g2-<OS>/package_e2e.json`을
+`MCLAB_E2E_EVIDENCE`로 한 번 바인딩한다. Audit의 output과 artifact upload는 이 동일한
+경로만 사용한다.
+
+실제 packaged QML startup은 OS별로 새 process와 새 settings/state root를 20번 사용한다.
+OS file cache는 비우지 않으며, 이 정의를 evidence의 `cold_definition`에 그대로 남긴다.
+실패 0개와 nearest-rank p95(20개 중 정렬 rank 19) 5초 이하를 모두 만족해야 한다.
+기준을 넘긴 표본을 버리거나 percentile 방식을 바꾸지 않는다.
+
+전체 course 비교는 UI가 실제 child worker를 시작한 뒤 인증된 progress `1..5`를
+수신하는 경로로 실행한다. exact 기준은 batch set 5, scenario run 54, report 6,
+comparison plot 5개 이상, manifest 60개와 hash error 0, transient transaction 0,
+300초 이하, output 150 MiB 이하, UI heartbeat 최대 gap 500 ms 이하다. terminal
+settlement 구간도 heartbeat gap에 포함한다. 별도의 cancel/close probe는 인증된 첫
+progress 뒤 worker가 첫 child batch 시작 전 safe-point marker에 진입했고 child PID도
+확인된 ready 파일을 받은 뒤, 감사 도구가 1,024-byte 이하 marker의 정확한 schema/action을
+독립 검증한 경우에만 요청을 보낸다. 각 probe는
+strict `stopped` manifest와 batch residue 0을 확인하고, PID와 creation marker로 관찰한
+GUI/worker descendant가 10초 안에 모두 사라져야 한다. 강제 종료가 필요하면 해당 case는
+실패이며 강제 종료는 실패 기록 뒤 runner 정리 용도로만 수행한다.
+
+패키지 실행 중 만들어지는 run, course output, cleanup fixture, process log와 probe는 모두
+runner temp에만 존재한다. cleanup 검증은 Lab01 임시 복사본에 대한 dry-run이고, 정확한
+schema-1 plan이 `keep=0`으로 그 synthetic run 하나만 선택해야 한다. exit 0이어도 빈 plan이나
+no-op plan이면 실패한다. apply를 호출하지 않으며 실제 `outputs/`를 읽거나 쓰지 않는다. durable 결과는 경로·환경 변수
+값을 담지 않는 1 MiB 이하 canonical
+`build/validation/<selected-sha>/g2-<OS>/package_e2e.json` 하나뿐이고 90일 보존한다. 이 계약은
+workflow와 oracle의 정의이며, 이 문서 변경 자체는 3-OS package 실행 PASS를 주장하지
+않는다. 실제 matrix evidence가 없거나 하나라도 실패한 OS는 technical preview 지원
+목록에 포함할 수 없다. PASS도 public beta, 서명 배포, release/DOI, 실제 learner-output
+cleanup, 또는 사람 대상 UI 검증을 승인하지 않는다. 개별 OS의 PASS나 이 계약만으로
+G2 완료 또는 B3 baseline을 선언할 수도 없다.
+
 ## 반복 실행
 
 ```bash

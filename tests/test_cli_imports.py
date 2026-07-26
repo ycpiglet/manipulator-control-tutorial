@@ -1341,6 +1341,9 @@ class CliImportTests(unittest.TestCase):
                 patch("mclab.cli.run_all_batches", return_value=output) as runner,
                 patch("mclab.cli.run_batch") as single_runner,
                 patch("mclab.cli._open_path") as opener,
+                patch(
+                    "mclab.cli.hold_batch_worker_at_lifecycle_safe_point"
+                ) as hold_safe_point,
             ):
                 self.assertEqual(
                     main(
@@ -1355,10 +1358,16 @@ class CliImportTests(unittest.TestCase):
                     ),
                     0,
                 )
+                runner.call_args.kwargs["on_progress"](
+                    1,
+                    5,
+                    "lab01_msd_compare",
+                )
 
             runner.assert_called_once()
             self.assertFalse(runner.call_args.kwargs["plot"])
             self.assertEqual(runner.call_args.kwargs["handoff_token"], "a" * 64)
+            hold_safe_point.assert_called_once_with(1, "a" * 64)
             single_runner.assert_not_called()
             opener.assert_called_once_with(report)
 

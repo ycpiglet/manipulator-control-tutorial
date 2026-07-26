@@ -755,7 +755,7 @@ class LoggingTests(unittest.TestCase):
                 output = Path(output_path)
                 self.assertIs(kwargs.get("update_index"), False)
                 completion_status = str(kwargs.get("completion_status"))
-                self.assertIn(completion_status, {"running", "completed"})
+                self.assertEqual(completion_status, "completed")
                 observed_during_report.append(f"{output.name}:{completion_status}")
                 manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
                 self.assertEqual(manifest["status"], "running")
@@ -792,9 +792,7 @@ class LoggingTests(unittest.TestCase):
             self.assertEqual(
                 observed_during_report,
                 [
-                    "bulk-run:running",
                     "bulk-run:completed",
-                    "single-run:running",
                     "single-run:completed",
                 ],
             )

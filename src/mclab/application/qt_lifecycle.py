@@ -7,6 +7,25 @@ from typing import Any
 from mclab.application.session import SessionState
 
 
+def create_shutdown_event_filter(QObject: Any, QEvent: Any) -> type:
+    """Create an application-level veto for quit paths that bypass window close."""
+
+    class ShutdownEventFilter(QObject):
+        def __init__(self, backend: Any, parent: Any = None) -> None:
+            super().__init__(parent)
+            self.backend = backend
+
+        def eventFilter(self, _watched: Any, event: Any) -> bool:  # noqa: N802
+            if event.type() != QEvent.Type.Quit:
+                return False
+            try:
+                return not bool(self.backend.shutdown())
+            except BaseException:
+                return True
+
+    return ShutdownEventFilter
+
+
 def has_active_experiment(owner: Any) -> bool:
     """Return whether the persistent worker still owns unfinished session work."""
 
@@ -110,6 +129,71 @@ def reject_running_batch(owner: Any) -> bool:
         "Use Cancel comparison or wait for the five sets to finish.",
     )
     return True
+
+
+def shutdown_application(owner: Any, wait_ms: int) -> bool:
+    """Stop owned process trees and workers before allowing the window to close."""
+
+    if getattr(owner, "_shutdown_complete", False):
+        return True
+    if owner._shutting_down:  # noqa: SLF001
+        return False
+    owner._shutting_down = True  # noqa: SLF001
+    try:
+        batch_stopped = owner._shutdown_batch()  # noqa: SLF001
+    except BaseException as exc:
+        return _shutdown_rejected(
+            owner,
+            str(exc) or "The course comparison shutdown failed.",
+            _batch_recovery_action(owner),
+        )
+    if not batch_stopped:
+        return _shutdown_rejected(
+            owner,
+            "The course comparison process tree could not be stopped safely.",
+            _batch_recovery_action(owner),
+        )
+    try:
+        owner._pending_restart = None  # noqa: SLF001
+        owner._pending_next_scenario = None  # noqa: SLF001
+        if owner.session is not None:
+            owner.session.stop()
+        if owner.worker is not None and owner.worker.isRunning():
+            owner.worker.request_shutdown()
+            if not owner.worker.wait(wait_ms):
+                return _shutdown_rejected(
+                    owner,
+                    "The renderer worker could not be stopped safely.",
+                    "Wait for it to stop, then close the application again.",
+                )
+        if owner.session is not None:
+            owner.session.close()
+    except BaseException as exc:
+        return _shutdown_rejected(
+            owner,
+            str(exc) or "Application-owned resources could not be stopped safely.",
+            "Wait for them to stop, then close the application again.",
+        )
+    owner._shutdown_complete = True  # noqa: SLF001
+    return True
+
+
+def _shutdown_rejected(owner: Any, detail: str, action: str) -> bool:
+    """Return a retryable veto even when user-facing error reporting fails."""
+
+    owner._shutting_down = False  # noqa: SLF001
+    try:
+        owner._set_error(detail, action)  # noqa: SLF001
+    except BaseException:
+        pass
+    return False
+
+
+def _batch_recovery_action(owner: Any) -> str:
+    try:
+        return str(owner.translator.text("path.batch_recovery"))
+    except BaseException:
+        return "Wait for the comparison to stop, then close the application again."
 
 
 def replace_session(owner: Any, replacement: Any, adapter: Any) -> None:

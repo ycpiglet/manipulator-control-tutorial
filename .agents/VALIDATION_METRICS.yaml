@@ -187,6 +187,31 @@ packaging:
     metric: "one-folder and compressed archive bytes"
     threshold: "one-folder <= 400 MiB; compressed archive <= 300 MiB; both enforced independently"
     evidence: "package-metrics.json gates.one_folder and gates.archive in each desktop matrix artifact"
+  packaged_e2e_independence:
+    metric: "accepted package copied outside checkout and invoked from an independent runtime cwd"
+    threshold: "PR uses its exact head SHA; push/manual dispatch uses github.sha; selected SHA is lowercase 40-hex and equals a clean checkout HEAD; checkout-bound verification equals copied offline-consistency verification; copied self-test, doctor, Lab01/report/plot, replay, and next preview pass on Windows, Ubuntu, and macOS"
+    command: "workflow bind step writes MCLAB_E2E_EVIDENCE=build/validation/<selected-sha>/g2-<OS>/package_e2e.json to GITHUB_ENV; next step runs python scripts/audit_package_e2e.py --bundle-root dist/MCLab --package-root dist/MCLab-package --runner-os <OS> --workflow-sha <selected-sha> --temp-root <runner-temp> --output \"$MCLAB_E2E_EVIDENCE\""
+    evidence: "audit and upload consume the same bound MCLAB_E2E_EVIDENCE path retained for 90 days; unsigned package remains a separate 7-day artifact; candidate evidence does not declare G2 complete or establish B3"
+  packaged_process_lifecycle:
+    metric: "authenticated cancel and window-close settlement for packaged full-course workers"
+    threshold: "request only after authenticated progress >=1 and child PID >0; stopped manifest; transaction residue 0; observed GUI/descendant process identities alive after 10 s = 0; forced cleanup = false"
+    evidence: "package_e2e.json checks.batch_cancel and checks.batch_close"
+  packaged_full_course:
+    metric: "one real packaged UI-to-worker complete all-comparison run"
+    threshold: "5 child batches; 54 scenario runs; 6 reports; comparison plots >=5; 60 valid manifests; hash errors 0; transient entries 0; elapsed <=300 s; max UI heartbeat gap <=500 ms; output <=150 MiB"
+    evidence: "package_e2e.json checks.full_course"
+  packaged_reproducibility:
+    metric: "three copied-package Lab01 runs with the same config and seed 104729"
+    threshold: "config digest count 1; max_abs_position, final_position, final_velocity, and final_total_energy match at abs_tol=1e-12 and rel_tol=1e-10; manifest hash errors 0"
+    evidence: "package_e2e.json checks.reproducibility"
+  packaged_safe_cleanup:
+    metric: "copied-package cleanup dry-run over an isolated synthetic Lab01 output"
+    threshold: "exit 0 plus an exact schema-1 plan with keep=0 that selects only the one synthetic Lab01 run; temporary tree fingerprint unchanged; .mclab-trash absent; cleanup apply never invoked; real learner outputs never accessed"
+    evidence: "package_e2e.json checks.cleanup_dry_run"
+  packaged_startup:
+    metric: "actual packaged QML fresh-process startup"
+    threshold: "20/20 successful samples per supported OS; nearest-rank p95 (rank 19) <=5000 ms; fresh settings/state roots; OS file cache not flushed"
+    evidence: "package_e2e.json checks.startup"
 
 operations:
   ci_reproducibility:

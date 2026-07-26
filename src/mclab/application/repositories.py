@@ -76,79 +76,56 @@ class ArtifactRepository:
                     return ()
                 records: list[tuple[float, str, ArtifactRecord]] = []
                 for name in root_pin.list_names(max_entries=MAX_OUTPUT_ROOT_ENTRIES):
-                    path = root / name
-                    if is_internal_output_dir(path):
-                        continue
                     try:
-                        with root_pin.scoped_directory_pin(
-                            (name,),
-                            description="saved run",
-                        ):
-                            snapshot = read_completion_run_snapshot_rooted(
-                                root_pin,
-                                name,
-                                allow_legacy=True,
-                            )
-                            size_bytes = root_pin.tree_size(
-                                (name,),
-                                max_entries=MAX_RUN_TREE_ENTRIES,
-                            )
-                            manifest = snapshot.manifest
-                            summary = snapshot.summary
-                            if not manifest and not summary:
-                                continue
-                            replay_reason = _safe_replay_reason_rooted(
-                                root_pin,
-                                name,
-                                validate=validate_replays,
-                            )
-                            rerun_available = _safe_regular_file_exists_rooted(
-                                root_pin,
-                                (name, "config.yaml"),
-                            ) or _has_resolved_config(manifest)
-                            tuned_available = _safe_regular_file_exists_rooted(
-                                root_pin,
-                                (name, "learner_tuned_config.yaml"),
-                            )
-                            modified = float(root_pin.lstat((name,)).st_mtime)
-                            sort_timestamp = _completion_sort_timestamp(snapshot, modified)
-                            record = ArtifactRecord(
-                                path=path,
-                                scenario_id=snapshot.scenario_id,
-                                status=snapshot.status,
-                                size_bytes=size_bytes,
-                                replay_available=not replay_reason,
-                                rerun_available=rerun_available,
-                                tuned_available=tuned_available,
-                                legacy=not bool(manifest),
-                                replay_reason=replay_reason,
-                                summary=summary,
-                                cleanup_token=snapshot.token,
-                                manifest=manifest,
-                                marker_name=snapshot.marker_name,
-                                completion_evidence=snapshot.completion_evidence,
-                                interaction_events=snapshot.interaction_events,
-                                plot_paths=tuple(
-                                    path.joinpath(*PurePosixPath(relative).parts)
-                                    for relative in snapshot.plot_paths
-                                ),
-                                worksheet_available=snapshot.worksheet_available,
-                                report_available=snapshot.report_available,
-                                artifact_validation_errors=(
-                                    snapshot.artifact_validation_errors
-                                ),
-                                finished_at=snapshot.finished_at,
-                                sort_timestamp=sort_timestamp,
-                                worksheet_text=snapshot.worksheet_text,
-                            )
+                        record = _artifact_record_rooted(
+                            root,
+                            root_pin,
+                            name,
+                            validate_replays=validate_replays,
+                        )
                     except (CleanupSafetyError, OSError):
                         continue
-                    records.append((sort_timestamp, name, record))
+                    if record is not None:
+                        records.append((record.sort_timestamp, name, record))
                 root_pin.assert_read_boundary()
                 records.sort(key=lambda item: (-item[0], item[1]))
                 return tuple(record for _timestamp, _name, record in records)
         except (CleanupSafetyError, OSError):
             return ()
+
+    def get_direct_child(
+        self,
+        path: str | Path,
+        *,
+        validate_replays: bool = False,
+    ) -> ArtifactRecord | None:
+        """Read one direct child with the same strict checks as ``list_runs``."""
+
+        target = Path(os.path.abspath(os.path.expanduser(os.fspath(path))))
+        if not target.name:
+            return None
+        try:
+            with pinned_output_root(
+                self.outputs_root,
+                allowed_root=self.outputs_root,
+            ) as (root, root_exists, root_pin):
+                if not root_exists or root_pin is None:
+                    return None
+                if not _same_existing_path(target.parent, root):
+                    return None
+                names = root_pin.list_names(max_entries=MAX_OUTPUT_ROOT_ENTRIES)
+                if target.name not in names:
+                    return None
+                record = _artifact_record_rooted(
+                    root,
+                    root_pin,
+                    target.name,
+                    validate_replays=validate_replays,
+                )
+                root_pin.assert_read_boundary()
+                return record
+        except (CleanupSafetyError, OSError):
+            return None
 
     def latest(self, scenario_id: str | None = None) -> ArtifactRecord | None:
         return next(
@@ -219,6 +196,74 @@ def _same_direct_child_path(left: Path, right: Path) -> bool:
     """Match one listed child name without accepting a junction alias."""
 
     return left.name == right.name and _same_existing_path(left.parent, right.parent)
+
+
+def _artifact_record_rooted(
+    root: Path,
+    root_pin: PinnedOutputRoot,
+    name: str,
+    *,
+    validate_replays: bool,
+) -> ArtifactRecord | None:
+    path = root / name
+    if is_internal_output_dir(path):
+        return None
+    with root_pin.scoped_directory_pin((name,), description="saved run"):
+        snapshot = read_completion_run_snapshot_rooted(
+            root_pin,
+            name,
+            allow_legacy=True,
+        )
+        size_bytes = root_pin.tree_size(
+            (name,),
+            max_entries=MAX_RUN_TREE_ENTRIES,
+        )
+        manifest = snapshot.manifest
+        summary = snapshot.summary
+        if not manifest and not summary:
+            return None
+        replay_reason = _safe_replay_reason_rooted(
+            root_pin,
+            name,
+            validate=validate_replays,
+        )
+        rerun_available = _safe_regular_file_exists_rooted(
+            root_pin,
+            (name, "config.yaml"),
+        ) or _has_resolved_config(manifest)
+        tuned_available = _safe_regular_file_exists_rooted(
+            root_pin,
+            (name, "learner_tuned_config.yaml"),
+        )
+        modified = float(root_pin.lstat((name,)).st_mtime)
+        sort_timestamp = _completion_sort_timestamp(snapshot, modified)
+        return ArtifactRecord(
+            path=path,
+            scenario_id=snapshot.scenario_id,
+            status=snapshot.status,
+            size_bytes=size_bytes,
+            replay_available=not replay_reason,
+            rerun_available=rerun_available,
+            tuned_available=tuned_available,
+            legacy=not bool(manifest),
+            replay_reason=replay_reason,
+            summary=summary,
+            cleanup_token=snapshot.token,
+            manifest=manifest,
+            marker_name=snapshot.marker_name,
+            completion_evidence=snapshot.completion_evidence,
+            interaction_events=snapshot.interaction_events,
+            plot_paths=tuple(
+                path.joinpath(*PurePosixPath(relative).parts)
+                for relative in snapshot.plot_paths
+            ),
+            worksheet_available=snapshot.worksheet_available,
+            report_available=snapshot.report_available,
+            artifact_validation_errors=snapshot.artifact_validation_errors,
+            finished_at=snapshot.finished_at,
+            sort_timestamp=sort_timestamp,
+            worksheet_text=snapshot.worksheet_text,
+        )
 
 
 def _completion_sort_timestamp(snapshot: CompletionRunSnapshot, fallback: float) -> float:

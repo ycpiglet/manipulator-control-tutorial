@@ -33,8 +33,11 @@ from mclab.application.artifacts import (  # noqa: E402
 from mclab.application.batch_runs import (  # noqa: E402
     ALL_COMPARE_ID,
     all_compare_command,
+    claim_all_compare_handoff,
     create_all_compare_output,
     parse_batch_progress,
+    read_all_compare_handoff,
+    settle_all_compare_output,
     update_batch_manifest,
 )
 from mclab.application.catalog import (  # noqa: E402
@@ -85,6 +88,7 @@ from mclab.application.qt_lifecycle import (  # noqa: E402
     pause_before_navigation,
     reject_running_batch,
     replace_session,
+    shutdown_application,
     stop_active_experiment,
 )
 from mclab.application.qt_smoke import schedule_smoke_action  # noqa: E402
@@ -304,6 +308,50 @@ class ApplicationFoundationTests(unittest.TestCase):
             schedule_smoke_action(Timer, Backend(), [])
         self.assertEqual(Timer.callbacks, [])
         self.assertEqual(Backend.calls, [])
+
+    @unittest.skipUnless(importlib.util.find_spec("PySide6"), "PySide6 is not installed")
+    def test_qt_smoke_batch_fixture_uses_real_process_state_enum(self) -> None:
+        from PySide6.QtCore import QProcess
+
+        class Signal:
+            @staticmethod
+            def emit() -> None:
+                return None
+
+        class Batch:
+            process: object | None = None
+
+            def _smoke_inject_active(self, process: object, _output: str) -> None:
+                self.process = process
+
+        class Backend:
+            _batch = Batch()
+            batch_changed = Signal()
+            results_changed = Signal()
+
+        class Timer:
+            callbacks: list[tuple[int, object]] = []
+
+            @classmethod
+            def singleShot(cls, delay: int, callback: object) -> None:  # noqa: N802
+                cls.callbacks.append((delay, callback))
+
+        with (
+            patch.dict(
+                os.environ,
+                {"MCLAB_SELF_TEST": "1", "MCLAB_SMOKE_ACTION": "inject_batch_running"},
+            ),
+            patch("mclab.application.repositories.ArtifactRepository") as repository,
+        ):
+            repository.return_value.list_runs.return_value = []
+            schedule_smoke_action(Timer, Backend(), [])
+            Timer.callbacks[-1][1]()  # type: ignore[operator]
+
+        process = Backend._batch.process
+        self.assertIsNotNone(process)
+        self.assertEqual(process.state(), QProcess.Running)  # type: ignore[union-attr]
+        process.terminate()  # type: ignore[union-attr]
+        self.assertEqual(process.state(), QProcess.NotRunning)  # type: ignore[union-attr]
 
     def test_desktop_shutdown_allows_artifact_finalization_to_finish(self) -> None:
         self.assertGreaterEqual(SHUTDOWN_WAIT_MS, 30_000)
@@ -853,7 +901,7 @@ class ApplicationFoundationTests(unittest.TestCase):
             output = create_all_compare_output()
             manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
             program, arguments = all_compare_command(output)
-            update_batch_manifest(output, status="stopped")
+            settle_all_compare_output(output, arguments[-1], "stopped")
             stopped = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
 
         self.assertEqual(manifest["scenario_id"], ALL_COMPARE_ID)
@@ -901,11 +949,14 @@ class ApplicationFoundationTests(unittest.TestCase):
             for status in ("stopped", "error"):
                 with self.subTest(status=status):
                     output = create_all_compare_output()
+                    token = read_all_compare_handoff(output)
+                    self.assertTrue(claim_all_compare_handoff(output, token))
                     (output / "partial.log").write_text("partial evidence", encoding="utf-8")
-                    update_batch_manifest(
+                    settle_all_compare_output(
                         output,
-                        status=status,
-                        error="injected failure" if status == "error" else "",
+                        token,
+                        status,
+                        "injected failure" if status == "error" else "",
                     )
                     manifest = json.loads(
                         (output / "manifest.json").read_text(encoding="utf-8")
@@ -931,6 +982,8 @@ class ApplicationFoundationTests(unittest.TestCase):
         from PySide6.QtCore import QEventLoop, QObject, QProcess, QTimer, Signal
         from PySide6.QtGui import QGuiApplication
 
+        from mclab.application.batch_runs import BatchProgressEvent
+
         application = QGuiApplication.instance() or QGuiApplication([])
         controller_type = create_batch_controller(QObject, QProcess, QTimer, Signal)
 
@@ -938,24 +991,28 @@ class ApplicationFoundationTests(unittest.TestCase):
             code: str,
             expected_signal: str,
             *,
-            terminal_before_cancel: bool = False,
-        ) -> tuple[object, Path]:
+            terminal_status: str = "",
+            cancel_immediately: bool = False,
+            program_override: str = "",
+        ) -> tuple[object, Path, list[tuple[object, ...]]]:
             temporary = tempfile.TemporaryDirectory()
             self.addCleanup(temporary.cleanup)
             output = Path(temporary.name).resolve() / "batch"
             output.mkdir()
-            update_batch_manifest(output, status="running")
-            if expected_signal == "completed" and not terminal_before_cancel:
-                code += (
-                    "; from pathlib import Path; "
-                    "from mclab.application.artifacts import write_manifest; "
-                    "write_manifest(Path("
-                    + repr(str(output))
-                    + "), scenario_id='batch.all', status='completed', "
-                    "config={'batch_name': 'all', 'plot': True})"
-                )
+            names = (
+                "lab01_msd_compare",
+                "lab02_pid_compare",
+                "lab03_2dof_compare",
+                "lab04_cartesian_compare",
+                "lab04_wall_compare",
+            )
+            events = tuple(
+                BatchProgressEvent(index, index, len(names), name)
+                for index, name in enumerate(names, start=1)
+            )
             loop = QEventLoop()
             received: list[tuple[str, tuple[object, ...]]] = []
+            settlements: list[tuple[object, ...]] = []
             controller = controller_type()
             controller.completed.connect(
                 lambda *args: (received.append(("completed", args)), loop.quit())
@@ -972,114 +1029,101 @@ class ApplicationFoundationTests(unittest.TestCase):
                     return_value=output,
                 ),
                 patch(
+                    "mclab.application.qt_batch.read_all_compare_handoff",
+                    return_value="a" * 64,
+                ),
+                patch(
                     "mclab.application.qt_batch.all_compare_command",
-                    return_value=(sys.executable, ["-u", "-c", code]),
+                    return_value=(program_override or sys.executable, ["-u", "-c", code]),
+                ),
+                patch(
+                    "mclab.application.qt_batch.read_batch_progress",
+                    return_value=events,
+                ),
+                patch(
+                    "mclab.application.qt_batch.batch_manifest_status",
+                    return_value=terminal_status,
+                ),
+                patch(
+                    "mclab.application.qt_batch.settle_all_compare_output",
+                    side_effect=lambda *args, **kwargs: (
+                        settlements.append((*args, kwargs))
+                        or (
+                            "completed"
+                            if terminal_status == "completed"
+                            else "error"
+                            if expected_signal == "failed"
+                            else "stopped"
+                        )
+                    ),
                 ),
             ):
                 controller.start()
-                if terminal_before_cancel:
-                    terminal_manifest = write_manifest(
-                        output,
-                        scenario_id=ALL_COMPARE_ID,
-                        status="completed",
-                        config={"batch_name": "all", "plot": True},
-                    )
-                    terminal_bytes = terminal_manifest.read_bytes()
-                    with patch(
-                        "mclab.application.qt_batch.update_batch_manifest"
-                    ) as updater:
-                        controller.cancel()
-                        QTimer.singleShot(4000, loop.quit)
-                        loop.exec()
-                    updater.assert_not_called()
-                    self.assertEqual(terminal_manifest.read_bytes(), terminal_bytes)
-                else:
-                    if expected_signal == "stopped":
-                        QTimer.singleShot(100, controller.cancel)
-                    QTimer.singleShot(4000, loop.quit)
-                    loop.exec()
+                if cancel_immediately:
+                    controller.cancel()
+                elif expected_signal == "stopped" or (
+                    expected_signal == "completed" and code.endswith("sleep(10)")
+                ):
+                    QTimer.singleShot(100, controller.cancel)
+                QTimer.singleShot(5000, loop.quit)
+                loop.exec()
             application.processEvents()
             self.assertTrue(received, "batch controller timed out without a terminal signal")
             self.assertEqual(received[0][0], expected_signal)
-            return controller, output
+            self.assertEqual(len(received), 1)
+            self.assertEqual(len(settlements), 1)
+            return controller, output, settlements
 
-        completed, completed_output = exercise(
-            "print('MCLAB_BATCH_PROGRESS 2/5 lab02'); "
-            "print('MCLAB_BATCH_PROGRESS 5/5 lab04')",
+        completed, _completed_output, completed_settlements = exercise(
+            "import time; time.sleep(0.2)",
             "completed",
+            terminal_status="completed",
         )
-        self.assertEqual((completed.current, completed.total, completed.name), (5, 5, "lab04"))
         self.assertEqual(
-            json.loads((completed_output / "manifest.json").read_text(encoding="utf-8"))["status"],
-            "completed",
+            (completed.current, completed.total, completed.name),
+            (5, 5, "lab04_wall_compare"),
         )
+        self.assertEqual(completed_settlements[0][2], "completed")
 
-        _late_cancel, late_cancel_output = exercise(
+        _late_cancel, _late_cancel_output, late_settlements = exercise(
             "import time; time.sleep(10)",
             "completed",
-            terminal_before_cancel=True,
+            terminal_status="completed",
         )
-        self.assertEqual(
-            json.loads(
-                (late_cancel_output / "manifest.json").read_text(encoding="utf-8")
-            )["status"],
-            "completed",
-        )
+        self.assertEqual(late_settlements[0][2], "stopped")
 
-        failed, failed_output = exercise("print('injected batch failure'); raise SystemExit(7)", "failed")
+        failed, _failed_output, failed_settlements = exercise(
+            "import time; time.sleep(0.2); print('injected batch failure'); raise SystemExit(7)",
+            "failed",
+        )
         self.assertIn("injected batch failure", failed._tail)  # noqa: SLF001
-        self.assertEqual(
-            json.loads((failed_output / "manifest.json").read_text(encoding="utf-8"))["status"],
-            "error",
-        )
+        self.assertEqual(failed_settlements[0][2], "error")
 
-        _stopped, stopped_output = exercise("import time; time.sleep(10)", "stopped")
-        self.assertEqual(
-            json.loads((stopped_output / "manifest.json").read_text(encoding="utf-8"))["status"],
+        _zero_exit, _zero_output, zero_settlements = exercise(
+            "import time; time.sleep(0.2)",
+            "failed",
+        )
+        self.assertEqual(zero_settlements[0][2], "error")
+
+        _start_failure, _start_output, start_failure_settlements = exercise(
+            "",
+            "failed",
+            program_override=str(ROOT / ".missing-batch-worker"),
+        )
+        self.assertEqual(start_failure_settlements[0][2], "error")
+
+        _stopped, _stopped_output, stopped_settlements = exercise(
+            "import time; time.sleep(10)",
             "stopped",
         )
+        self.assertEqual(stopped_settlements[0][2], "stopped")
 
-        with tempfile.TemporaryDirectory() as tmp:
-            late_error_output = Path(tmp).resolve() / "batch"
-            late_error_output.mkdir()
-            late_error_manifest = write_manifest(
-                late_error_output,
-                scenario_id=ALL_COMPARE_ID,
-                status="completed",
-                config={"batch_name": "all", "plot": True},
-            )
-            terminal_bytes = late_error_manifest.read_bytes()
-
-            class FinishedProcess:
-                @staticmethod
-                def state() -> object:
-                    return QProcess.NotRunning
-
-                @staticmethod
-                def errorString() -> str:  # noqa: N802
-                    return "late transport error"
-
-            late_error_controller = controller_type()
-            late_error_controller.output = str(late_error_output)
-            late_error_controller.process = FinishedProcess()
-            late_error_controller._settled = False  # noqa: SLF001
-            late_error_signals: list[str] = []
-            late_error_controller.completed.connect(
-                lambda *_args: late_error_signals.append("completed")
-            )
-            late_error_controller.stopped.connect(
-                lambda *_args: late_error_signals.append("stopped")
-            )
-            late_error_controller.failed.connect(
-                lambda *_args: late_error_signals.append("failed")
-            )
-            with patch(
-                "mclab.application.qt_batch.update_batch_manifest"
-            ) as updater:
-                late_error_controller._process_error(None)  # noqa: SLF001
-            updater.assert_not_called()
-            self.assertEqual(late_error_signals, ["completed"])
-            self.assertEqual(late_error_manifest.read_bytes(), terminal_bytes)
+        _preclaim_stop, _preclaim_output, preclaim_settlements = exercise(
+            "import time; time.sleep(10)",
+            "stopped",
+            cancel_immediately=True,
+        )
+        self.assertEqual(preclaim_settlements[0][2], "stopped")
 
     def test_qml_components_respect_component_size_gate_and_visual_tokens(self) -> None:
         qml_root = ROOT / "src/mclab/application/qml"
@@ -1140,8 +1184,19 @@ class ApplicationFoundationTests(unittest.TestCase):
         backend_source = (ROOT / "src/mclab/application/qt_app.py").read_text(
             encoding="utf-8"
         )
-        self.assertIn("property var scenarioItems: backend.scenarios", explore)
+        self.assertIn("property var scenarioItems: visible ? backend.scenarios : []", explore)
         self.assertEqual(explore.count("backend.scenarios"), 1)
+        self.assertIn("property var course: visible ? backend.courseProgress", home_source)
+        learning_path = (qml_root / "LearningPathPage.qml").read_text(encoding="utf-8")
+        self.assertIn(
+            "property var course: visible ? backend.courseProgress",
+            learning_path,
+        )
+        self.assertIn("property var runs: visible ? backend.results : []", results)
+        self.assertIn(
+            'property string nextScenarioId: visible ? backend.nextScenarioId : ""',
+            results,
+        )
         self.assertIn('text: backend.localizedText(backend.language, "setup.review")', explore)
         self.assertIn('onClicked: backend.navigate("explore")', explore)
         self.assertIn('onClicked: backend.navigate("explore")', environment_source)
@@ -1162,6 +1217,10 @@ class ApplicationFoundationTests(unittest.TestCase):
         self.assertIn("card.primaryControl.forceActiveFocus()", results)
         self.assertTrue((qml_root / "ScrollFocusHelper.qml").is_file())
         experiment = (qml_root / "ExperimentPage.qml").read_text(encoding="utf-8")
+        self.assertIn(
+            'property string nextScenarioId: visible ? backend.nextScenarioId : ""',
+            experiment,
+        )
         scene_guide = (qml_root / "OneDSceneGuide.qml").read_text(encoding="utf-8")
         self.assertIn("OneDSceneGuide", experiment)
         active_session = (qml_root / "ActiveSessionBar.qml").read_text(encoding="utf-8")
@@ -2784,8 +2843,9 @@ class SessionTests(unittest.TestCase):
         )
         self.assertIn('objectName: "startNextButton"', experiment_page)
         self.assertIn(
-            "onClicked: backend.startScenario(backend.nextScenarioId)", experiment_page
+            "onClicked: backend.startScenario(page.nextScenarioId)", experiment_page
         )
+        self.assertEqual(experiment_page.count("backend.nextScenarioId"), 1)
         detail, action = localized_error(
             "ko",
             "An experiment is already running.",
@@ -2809,6 +2869,79 @@ class SessionTests(unittest.TestCase):
         qt_batch = (ROOT / "src/mclab/application/qt_batch.py").read_text(encoding="utf-8")
         self.assertIn("if reject_running_experiment(self):", qt_batch)
         self.assertNotIn("self.worker is not None and self.worker.isRunning()", qt_batch)
+
+    def test_application_shutdown_vetoes_failed_batch_containment(self) -> None:
+        class Translator:
+            @staticmethod
+            def text(key: str) -> str:
+                return key
+
+        class Session:
+            stopped = False
+
+            def stop(self) -> None:
+                self.stopped = True
+
+        class Owner:
+            _shutting_down = False
+            _pending_restart = object()
+            _pending_next_scenario = "lab01"
+            worker = None
+            session = Session()
+            translator = Translator()
+            error: tuple[str, str] | None = None
+
+            @staticmethod
+            def _shutdown_batch() -> bool:
+                return False
+
+            def _set_error(self, detail: str, action: str) -> None:
+                self.error = (detail, action)
+
+        owner = Owner()
+        self.assertFalse(shutdown_application(owner, 1))
+        self.assertFalse(owner._shutting_down)  # noqa: SLF001
+        self.assertFalse(owner.session.stopped)
+        self.assertIn("process tree", owner.error[0])
+
+        class ReentrantOwner(Owner):
+            session = Session()
+            reentrant_result: bool | None = None
+
+            def _shutdown_batch(self) -> bool:
+                self.reentrant_result = shutdown_application(self, 1)
+                return False
+
+        reentrant = ReentrantOwner()
+        self.assertFalse(shutdown_application(reentrant, 1))
+        self.assertFalse(reentrant.reentrant_result)
+        self.assertFalse(reentrant._shutting_down)  # noqa: SLF001
+
+        class RetrySession:
+            fail = True
+            closed = False
+
+            def stop(self) -> None:
+                if self.fail:
+                    raise RuntimeError("injected session stop failure")
+
+            def close(self) -> None:
+                self.closed = True
+
+        class RetryOwner(Owner):
+            session = RetrySession()
+
+            @staticmethod
+            def _shutdown_batch() -> bool:
+                return True
+
+        retry = RetryOwner()
+        self.assertFalse(shutdown_application(retry, 1))
+        self.assertFalse(retry._shutting_down)  # noqa: SLF001
+        retry.session.fail = False
+        self.assertTrue(shutdown_application(retry, 1))
+        self.assertTrue(retry._shutdown_complete)  # noqa: SLF001
+        self.assertTrue(retry.session.closed)
 
     def test_running_batch_guard_has_one_cause_and_recovery_action(self) -> None:
         class Batch:
@@ -3233,6 +3366,42 @@ class PlatformAndCliTests(unittest.TestCase):
                 self.assertEqual(os.environ["MCLAB_INSTANCE_LOCK"], occupied_path)
             occupied.unlock()
         self.assertIn('"qt": true', output.getvalue())
+
+    def test_missing_asset_self_test_injection_preserves_batch_catalog(self) -> None:
+        from mclab.application.qt_smoke import _inject_missing_next_asset
+
+        class Signal:
+            def emit(self) -> None:
+                return None
+
+        class Backend:
+            def __init__(self) -> None:
+                self.catalog = ScenarioCatalog.default()
+                self.nextScenarioId = self.catalog.learning_path()[0].id
+                self.results_changed = Signal()
+                self.language_changed = Signal()
+                self._setup_issues: tuple[object, ...] = ()
+
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ,
+            {
+                "MCLAB_DATA_DIR": str(Path(tmp) / "data"),
+                "MCLAB_SELF_TEST": "1",
+            },
+        ):
+            backend = Backend()
+            expected_batch_ids = tuple(item.id for item in backend.catalog.batches())
+            _inject_missing_next_asset(backend)
+
+        self.assertEqual(
+            tuple(item.id for item in backend.catalog.batches()),
+            expected_batch_ids,
+        )
+        injected = backend.catalog.get(backend.nextScenarioId)
+        self.assertEqual(
+            injected.config.get("model_path"),
+            "third_party/mujoco_menagerie/injected-model.xml",
+        )
 
 
 @unittest.skipIf(importlib.util.find_spec("mujoco") is None, "MuJoCo is not installed")
