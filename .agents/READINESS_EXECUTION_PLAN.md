@@ -1,7 +1,7 @@
 # MCLab 안정화·출시 준비 실행 계획
 
-- 상태: **Execution baseline v16 — LIC-01A and PKG-01A accepted for bounded scopes; LIC-01B and PKG aggregate next**
-- 작성일: 2026-07-23 KST
+- 상태: **Execution baseline v17 — LIC-01B accepted for bounded safe-main scope; protected-integration harness and fixed queue next**
+- 작성일: 2026-07-26 KST
 - SAFE-01 구현 기준선: `0fb77a026206f4b25360ace36d70d265a93a9366`
 - DOC-01 구현 기준선: `66eca7f666409336a6b9a6052828b3ae1c8b68d7`
 - COMP-01 구현 기준선: `c742501de82a8e2500d02d501ecb492e3cf9edb4`
@@ -108,6 +108,18 @@
 - PKG-01A status: **accepted only for unsigned-development deterministic
   package identity and size**. Aggregate PKG-01 still needs accepted actual
   packaged-QML cold-start evidence with 20 samples per supported OS.
+- LIC-01B exact head/merge:
+  `6cd191f0b87bb582bfde4764234a570a7f601da4` /
+  `9ba5e8e7bfae9ea46e0f9217c07861a4f188ce88`
+- LIC-01B source/merge tree:
+  `e5625718c0bcd1030bba9ea938a438d927d4033e` — equivalence **PASS**
+- LIC-01B exact-head runs: CI `30203394749`, desktop `30203394746`;
+  post-merge runs: CI `30204142834`, desktop `30204142848` — required
+  checks **6/6 PASS** at both SHAs
+- LIC-01B status: **accepted only for the bounded reviewed notice corpus and
+  B2 safe-main development scope**. Aggregate LIC-01, G3, legal approval,
+  Qt/PySide distribution disposition, package/public distribution, and release
+  authority remain open.
 - E2E-01 Draft #70 exact head:
   `a5ed0e8b4fbeda9249cd77efb07a1db7ee68a193`; exact-head CI
   `30005298268` and desktop `30005298100` passed required checks **6/6**.
@@ -132,6 +144,36 @@
 통합한 **권위 있는 작업 계획**이다. 감사에서 발견한 코드 문제를 이 계획 PR에서
 수정하지 않는다. 이후 세션은 오래된 대화나 로컬 작업 트리가 아니라 이 문서와
 [`CURRENT_STATE.md`](CURRENT_STATE.md)를 먼저 읽고 작업한다.
+
+### 2026-07-26 protected-integration standing-delegation overlay
+
+Owner는 2026-07-26에 아래의 **고정된 protected-main 통합 queue**만 agent가 반복
+승인 질문 없이 처리하도록 명시적으로 위임했다. 이 위임은 policy, script, tests가
+ordinary protected PR로 `main`에 accepted된 뒤에만 활성화되며 harness는 자신이나
+그 authority 문서를 수정·수용·병합할 수 없다.
+
+1. 남은 순서는 PR #75 OPS-01A -> PR #72 EDU-01A -> PR #73 PKG-01B ->
+   PR #70 E2E-01 -> PR #76 MAINT-01A로 고정하며, 건너뛰거나 병렬 병합하지 않는다.
+2. 각 transaction은 고정된 reviewed patch/path digest, 독립 read-only agent
+   attestation, clean worktree, exact base/head, live ruleset `19209773`, GitHub
+   Actions app `15368`, 정확한 required context 6개, unresolved thread 0,
+   active changes-requested review 0, synthetic parent/tree equivalence,
+   exact-head guarded merge, post-merge parent/tree와 required checks 6/6을 모두
+   재검증한다. 어느 하나라도 drift, missing, red이면 fail closed한다.
+3. 현재 direct collaborator는 1명이고 required approvals는 0이며 formal
+   independent human approval은 false다. Owner는 이 residual을 이 고정 queue의
+   bounded safe-main 통합에 한해서만 수용했다; 독립 agent 검토를 human approval로
+   표현하지 않는다.
+4. 위임에서 제외되는 범위는 promotion/public beta, package 또는 signed
+   distribution, tag/release, signing/notarization 또는 signing/release credential
+   acquisition/use, DOI/preprint/publication, external contact/recruitment, actual
+   output enumeration 또는 cleanup dry-run/apply/quarantine/restore,
+   artifact/package download 또는 content access, ruleset/security-setting
+   변경·bypass, repository/layout move다. 이 항목은 기존 owner gate를 그대로
+   유지한다.
+
+이 overlay는 현재 실행 순서에 대해 아래의 과거 queue 설명보다 우선한다. 감사 원문,
+과거 archive, append-only finding/declaration snapshot은 수정하지 않는다.
 
 ## 1. 결론
 
@@ -464,7 +506,7 @@ S는 약 1개 PR, M은 1~3개 PR, L은 여러 PR과 별도 검증 기간을 뜻�
 | 8a | Draft PR #38 / INT-01 font | 종료; superseded | native Windows glyph evidence 없이 forward-port하지 않음 |
 | 8b | Draft PR #37 / INT-01 package | 완료; PR #60 bounded adoption | structural exclusion과 same-workflow measurement만 재적용 |
 | 9 | `agent/dependency-reproducibility` / SUP-01 | 완료; PR #62–#64와 #66 | lock, pinned asset/action, fail-closed scans, Ubuntu direct-package evidence, deterministic SBOM inputs |
-| 10 | `agent/third-party-notices` / LIC-01 | accepted SUP-01 inventory | LIC-01A inventory accepted; LIC-01B notices/source/text와 Qt/PySide disposition은 다음 |
+| 10 | `agent/third-party-notices` / LIC-01 | accepted SUP-01 inventory | PR #74 LIC-01B bounded reviewed notice corpus accepted; aggregate LIC/G3/legal/distribution open |
 | 11 | `agent/package-release-metrics` / PKG-01 | IA-00 결정, IA-01 (GO 시), INT-01 결정 | PKG-01A identity/size accepted; aggregate startup/actual-QML gate 남음 |
 | 12 | `agent/packaged-e2e` / E2E-01 | accepted SUP-01 + PKG-01 | supported OS E2E evidence |
 | 13 | `agent/support-privacy-retention` / OPS-01 | STATE-01 | 운영·데이터 보호 문서/검증 |
@@ -477,12 +519,12 @@ S는 약 1개 PR, M은 1~3개 PR, L은 여러 PR과 별도 검증 기간을 뜻�
 
 7b의 read-only draft를 7a와 병렬로 준비하고 accepted STATE-01 뒤 병합한 순서는
 historical evidence로 보존됐다. 현재 STATE/IA/INT와 SUP-01 disposition은 끝났고,
-LIC-01A와 PKG-01A는 각각 bounded inventory 및 package identity/size 범위에서
-accepted다. LIC-01B가 다음 ordered compliance lane이고 PKG aggregate, OPS-01,
-EDU-01, MAINT-01은 파일 ownership과 registry prerequisite가 겹치지 않을 때 병렬로
-진행할 수 있다. PKG-01→E2E-01은 B3 technical-preview critical path이고 E2E-01은
-accepted aggregate PKG-01이 추가된 exact main에서 수행한다. 표의 순서는 위험과 최종
-merge 의존성을 뜻하며 모든 작업을 직렬화하라는 의미는 아니다.
+LIC-01B는 bounded reviewed notice-corpus 범위에서, PKG-01A는 package
+identity/size 범위에서 accepted다. 2026-07-26 standing-delegation overlay가
+활성화되면 남은 queue는 #75 -> #72 -> #73 -> #70 -> #76으로 직렬 처리한다.
+PKG-01→E2E-01은 B3 technical-preview critical path이고 E2E-01은 accepted aggregate
+PKG-01이 추가된 exact main에서 수행한다. 이 고정 queue 밖의 병렬 작업이나 merge는
+위임 범위가 아니다.
 
 ## 7. 단계별 실행 순서
 
@@ -586,15 +628,20 @@ SBOM/provenance는 후속 gate에 남아 있으므로 B2나 accepted SUP-01이 p
 권장 dependency order:
 
 1. `agent/dependency-reproducibility` — SUP-01 **accepted**
-2. accepted LIC-01A inventory 뒤 `agent/third-party-notices` — LIC-01B **다음**
-3. accepted PKG-01A identity/size 뒤
-   `agent/package-release-metrics` — PKG aggregate cold-start/actual-QML **다음**
-4. accepted aggregate PKG-01이 추가된 exact main에서
-   `agent/packaged-e2e` — E2E-01
-5. STATE-01 뒤 독립 lane `agent/support-privacy-retention` — OPS-01
-6. STATE-01 뒤 독립 lane `agent/educator-pilot-kit` — EDU-01
+2. `agent/third-party-notices` — PR #74 LIC-01B bounded corpus **accepted**;
+   aggregate LIC/G3/legal/distribution은 open
+3. harness activation 뒤 PR #75 `agent/ops01a-local-data-policy-current` —
+   OPS-01A
+4. PR #72 `agent/edu01a-educator-kit-current` — EDU-01A
+5. PR #73 `agent/pkg01b-packaged-startup` — PKG-01B packaged-startup
+   candidate. Aggregate cold-start/actual-QML closure는 exact candidate의 독립
+   검토와 bounded 판정 전에는 가정하지 않는다.
+6. PR #70 `agent/packaged-e2e` — E2E-01 safe-main implementation candidate.
+   #73이 aggregate PKG-01 선행 조건을 닫지 못하면 이 code integration도 E2E/G2/B3
+   acceptance로 계산하지 않는다.
+7. PR #76 `agent/maint01a-mypy-baseline-current` — MAINT-01A
 
-각 registry prerequisite를 충족한 서로 독립적인 작업만 병렬화한다. Package E2E는
+Standing delegation 아래에서는 위 queue를 병렬 병합하지 않는다. Package E2E는
 accepted SUP-01과 PKG-01을 모두 포함한 exact commit에서 다시 수행한다. SUP-01D의
 14일 scanner/APT artifact는 development evidence이며 release provenance가 아니다.
 Unsigned build artifact는 trusted invited preview로만 사용한다.
@@ -762,15 +809,13 @@ apply는 SAFE-01이나 B2의 완료 조건이 아니며 owner dry-run 검토와�
 
 ## 10. 병렬화와 변경 충돌 규칙
 
-- STATE-01, IA-00 FREEZE, INT-01 disposition, launcher in-place hardening과
-  SUP-01은 accepted evidence를 갖췄다. LIC-01A pending inventory와 PKG-01A
-  identity/size도 bounded scope에서 accepted다. 다음 ordered compliance lane은
-  inventory에서 notices, source/text coverage와 Qt/PySide 의무를 닫는 LIC-01B다.
-  PKG-01→E2E-01은 B3 technical-preview critical path이며 aggregate PKG-01은
-  cold-start/actual-QML을 독립 clean branch에서 먼저 닫아야 한다. E2E-01은 accepted
-  aggregate PKG-01이 추가된 exact main에서만 시작한다. OPS/EDU/MAINT는 파일 ownership이
-  겹치지 않는 repo-only 범위에서 병렬화할 수 있다. 완료된 GOV-01, SAFE-01,
-  DOC-01, COMP-01/02, BASE-01과 SUP-01은 설정·안전·계약 회귀를 감시한다.
+- STATE-01, IA-00 FREEZE, INT-01 disposition, launcher in-place hardening,
+  SUP-01, and bounded LIC-01B have accepted evidence. PKG-01A identity/size도
+  bounded scope에서 accepted다. Harness acceptance 뒤 protected integration은
+  #75 OPS-01A -> #72 EDU-01A -> #73 PKG-01B -> #70 E2E-01 -> #76
+  MAINT-01A로만 직렬화한다. E2E-01 aggregate gate acceptance는 accepted
+  aggregate PKG-01이 추가된 exact main에서만 판정한다. 완료된 GOV-01, SAFE-01,
+  DOC-01, COMP-01/02, BASE-01, SUP-01, LIC-01B는 설정·안전·계약 회귀를 감시한다.
 - 같은 파일을 만질 가능성이 높은 것: completion evaluator와 app/report UI,
   package-size와 font bundling, lock과 release build. 순차 merge 후 rebase한다.
 - `src/mclab/application/qt_app.py`, packaging spec, workflow는 한 시점에 한 PR owner만
@@ -817,35 +862,28 @@ Single next action:
 
 ## 13. 지금 수행할 정확한 다음 작업
 
-1. Accepted LIC-01A merge `0ed0efbf75ea2f66a7d3f761734c485a5265b632`와
-   PKG-01A merge `96702b09d7e2b0e3b381b86c5e6e51f95682d346`의 bounded
-   scope, tree-equivalent protected merge, exact-head/post-merge 6/6을 live state와
-   append-only finding event로 reconcile한다. B2 records, 과거 archive/event와 감사
-   원문은 수정하지 않는다.
-2. Clean worktree에서 LIC-01B를 수행한다. 현재 `pending-lic-01`인 license
-   identifier/text/source/NOTICE gaps와 Qt/PySide LGPL 의무를 증거 범위 안에서
-   좁혀가되, 외부 license 검토자 연락이나 legal approval 주장은 owner 승인 전까지
-   하지 않는다.
-3. PKG-01A는 archive <=300 MiB와 one-folder <=400 MiB를 닫았다. 별도 clean
-   branch에서 packaged cold-start 20회와 actual-QML gate를 aggregate PKG-01으로
-   먼저 accept한 뒤, E2E-01을 accepted SUP-01과 aggregate PKG-01이 모두 포함된 exact
-   main에서 수행한다. Draft #70의 한 commit이 이 선행 순서를 소급 충족한다고 보지
-   않는다.
+1. Protected-integration policy, script, tests, and authority overlay가 아직
+   protected `main`에 없다면 ordinary protected PR로 수용한다. Harness는 이
+   acceptance를 직접 수행할 수 없으며 independent read-only attestation,
+   exact-head 6/6, exact-head guarded merge, source/merge tree equivalence,
+   post-merge 6/6을 모두 기록한다.
+2. Activation 뒤 PR #75 OPS-01A -> #72 EDU-01A -> #73 PKG-01B -> #70
+   E2E-01 -> #76 MAINT-01A 순서로만 처리한다. 각 PR은 reviewed patch/path
+   digest를 then-current exact `main`에 rebind하고 모든 live gate를 다시 통과해야 한다.
+3. PR #74/LIC-01B는 bounded safe-main corpus acceptance일 뿐이다. Aggregate LIC,
+   G3, legal, Qt/PySide distribution, public/package distribution은 open으로 유지한다.
 4. Final per-OS SBOM/provenance, hosted base-image/native-transitive inventory,
    immutable tag/release와 long-lived evidence는 REL-01/G3까지 열린 gate로 유지한다.
-   SUP-01D의 deterministic SBOM inputs나 14일 artifact를 release evidence로
-   재분류하지 않는다.
-5. OPS-01, EDU-01, MAINT-01은 서로 겹치지 않는 clean branch에서 진행할 수 있지만,
-   external contact, participant 모집, 실제 장비·보조기술 실행은 owner 승인까지 멈춘다.
-6. 실제 outputs root dry-run은 B2/STATE와 분리해 owner가 참여하는 별도 작업에서만
-   검토할 수 있다. 현재 owner statement는 dry-run 자체를 승인하지 않는다. 향후
-   승인되더라도 raw run name이나 사용자 경로는 원격에 올리지 않고 inventory hash,
-   plan ID, 집계, 제외 사유와 owner 판단만 기록한다.
-7. B2나 내부 SUP/LIC/PKG/OPS/EDU 준비를 public-beta, signed distribution,
-   release/DOI, 실제 cleanup, external contact, 구조 변경 승인으로 해석하지 않는다.
-   G2부터 G5까지의 외부 결정과 실기기 gate를 유지한다.
+5. Promotion/public beta, package/signed distribution, tag/release,
+   signing/notarization or signing/release credential acquisition/use,
+   DOI/preprint/publication, external contact/recruitment, actual-output
+   enumeration/cleanup/quarantine/restore, artifact/package content,
+   ruleset/security settings, and repository/layout moves는 별도 owner gate
+   없이 수행하지 않는다.
 
 **SAFE-01은 PASS지만 실제 outputs root dry-run은 현재 승인되지 않았다. 향후
 owner가 참여해 만든 exact plan도 owner가 검토하고 다시 명시적으로 승인하기 전에는
 quarantine apply가 금지된다. B2, STATE-01이나 SUP-01을 실제 cleanup, 공개 배포,
-signing, release/DOI 승인으로 해석하지 않는다.**
+signing, release/DOI 승인으로 해석하지 않는다. 2026-07-26 standing delegation도
+이 금지 범위를 바꾸지 않으며, accepted harness는 자기 policy나 authority를 수정할 수
+없다.**

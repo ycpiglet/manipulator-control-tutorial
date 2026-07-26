@@ -1,28 +1,51 @@
 # Current State
 
-Updated: 2026-07-23 KST
+Updated: 2026-07-26 KST
 
 ## Current Objective
 
-Continue LIC-01 from the accepted LIC-01A inventory, and complete the missing
-PKG-01 cold-start/packaged-QML aggregate before accepting integrated E2E-01.
-Repository-only OPS-01, EDU-01, and MAINT-01 increments may proceed in disjoint
-clean branches.
+Accept the fail-closed protected-main integration harness, then use it to
+integrate the fixed remaining queue in strict order: PR #75 OPS-01A, PR #72
+EDU-01A, PR #73 PKG-01B, PR #70 E2E-01, and PR #76 MAINT-01A. The owner's
+2026-07-26 standing delegation activates only after the policy, script, and
+tests are accepted on protected `main`; the harness cannot accept or amend
+itself.
 
-This live handoff records the latest accepted implementation subject
-`96702b09d7e2b0e3b381b86c5e6e51f95682d346` (PR #69). This documentation
-change does not self-certify its own acceptance: exact-head checks, protected
-merge, and post-merge checks remain authoritative.
+Each delegated transaction remains bound to the reviewed patch/path digests,
+an independent read-only agent attestation, exact base/head SHAs, live
+ruleset/application/six-check verification, zero unresolved threads, synthetic
+merge parent/tree equivalence, an exact-head guarded merge, and post-merge
+required checks 6/6. SHA, scope, policy, review, or evidence drift stops the
+transaction.
 
-This objective does **not** authorize public beta, signed distribution,
-tag/release creation, DOI or preprint publication, real-output cleanup dry-run,
-cleanup apply, external contact, participant recruitment, credential use, or
-repository moves.
+This objective does **not** authorize promotion or public beta; package or
+signed distribution; tag/release creation; signing, notarization, or
+signing/release credential acquisition or use; DOI, preprint, or publication;
+external contact or recruitment; actual output enumeration, cleanup
+dry-run/apply, quarantine, or restore;
+artifact/package download or content access; ruleset/security-setting changes
+or bypass; or repository/layout moves.
 
 ## Current State
 
-- Accepted protected `main` subject: PKG-01A merge
-  `96702b09d7e2b0e3b381b86c5e6e51f95682d346` (PR #69).
+- Accepted protected `main` subject: LIC-01B merge
+  `9ba5e8e7bfae9ea46e0f9217c07861a4f188ce88` (PR #74).
+- PR #74 source head/tree:
+  `6cd191f0b87bb582bfde4764234a570a7f601da4` /
+  `e5625718c0bcd1030bba9ea938a438d927d4033e`; the accepted merge has the
+  same tree, so source/merge tree equivalence is **PASS**.
+- PR #74 exact-head CI/desktop runs `30203394749` / `30203394746`, and
+  post-merge CI/desktop runs `30204142834` / `30204142848`, passed required
+  checks **6/6** at both SHAs.
+- LIC-01B is accepted only for its bounded reviewed notice-corpus and
+  safe-main development scope. Aggregate LIC-01, G3, legal approval, and
+  public or package distribution remain open.
+- Activation rule for the 2026-07-26 standing delegation: it is inactive while
+  the protected-integration policy/script/tests are absent from protected
+  `main`, and activates automatically once this exact harness candidate is
+  accepted there. The candidate cannot accept itself. Its only remaining queue
+  is #75 -> #72 -> #73 -> #70 -> #76, serialized without skips; it has no
+  self-amendment authority.
 - PR #69 source head/tree:
   `aeabf3a852774fc198d56426f4cb507ada498f1d` /
   `2d897fa81506887df863106f118ddeb660880cfd`; the accepted merge has the
@@ -55,7 +78,9 @@ repository moves.
   E2E/G2/B3 evidence because the accepted-PKG prerequisite and merge decision
   are unresolved.
 - Required approvals remain 0 because the repository has one direct
-  collaborator. Formal independent human approval remains false.
+  collaborator. Formal independent human approval remains false; the owner
+  explicitly accepted that residual for the bounded standing delegation, while
+  independent read-only agent attestation remains mandatory.
 - Supervised/source development remains the only accepted distribution scope.
   B3 technical preview, public beta, and signed production remain NO-GO.
 - Real learner outputs accessed or modified by accepted LIC/PKG work: **no**.
@@ -65,6 +90,15 @@ repository moves.
 
 ## Completed Since Last Snapshot
 
+- PR #74 accepted LIC-01B exact head
+  `6cd191f0b87bb582bfde4764234a570a7f601da4`, merge
+  `9ba5e8e7bfae9ea46e0f9217c07861a4f188ce88`, and common tree
+  `e5625718c0bcd1030bba9ea938a438d927d4033e`.
+- PR #74 exact-head CI `30203394749` and desktop `30203394746`, plus
+  post-merge CI `30204142834` and desktop `30204142848`, passed required
+  checks **6/6** at both SHAs. This closes only the bounded reviewed notice
+  corpus; it does not close aggregate LIC-01, G3, legal, or distribution
+  gates.
 - PR #67 reconciled the accepted SUP-01 state. PR #68 accepted LIC-01A exact
   head `c707999a6f0299a9cc8bbf97f1f2ab22217b2011`, merge
   `0ed0efbf75ea2f66a7d3f761734c485a5265b632`, and common tree
@@ -102,9 +136,9 @@ repository moves.
 
 ## Blockers and Risks
 
-- LIC-01 is next. Current inventory deliberately reports missing license,
-  source, text, and NOTICE metadata; Qt/PySide LGPL obligations and
-  distribution notices are not approved.
+- LIC-01B's bounded reviewed notice corpus is accepted. Aggregate LIC-01 still
+  lacks legal approval and distribution closure; Qt/PySide LGPL and G3
+  obligations remain open and cannot be inferred from the safe-main result.
 - PKG-01A closed deterministic identity and both size thresholds, but aggregate
   PKG-01 still needs accepted 20-sample cold-start and actual packaged QML
   evidence on each supported OS.
@@ -146,6 +180,9 @@ repository moves.
 - Ubuntu direct-package manifest:
   [ubuntu-24.04-amd64.json](../requirements/system/ubuntu-24.04-amd64.json)
 - IA decision: [IA-00 launcher freeze](decisions/IA-00-launcher-paths.md)
+- Conditional standing-delegation authority and transaction implementation:
+  [protected-main policy](integration/protected-main-v1.json) and
+  [integration harness](../scripts/protected_integration.py)
 - B2 authority: [declaration](baselines/B2-safe-main-declaration.md) and
   [machine record](baselines/B2-safe-main-declaration.json)
 - Historical handoff: [2026-07-22 archive](archive/CURRENT_STATE_ARCHIVE_20260722_9eb8eb19.md)
@@ -153,15 +190,16 @@ repository moves.
 
 ## Next Actions
 
-1. Continue LIC-01 with a versioned reviewed-component notice/source/text
-   corpus while retaining external/legal and Qt/PySide decisions as explicit
-   blockers until supported by evidence.
-2. Split or supersede Draft #70 so a focused PKG-01 cold-start/packaged-QML
-   candidate can be accepted before integrated E2E-01 is judged.
-3. After the focused state/ledger reconciliation passes exact-head review,
-   merge only with owner authorization and verify all six post-merge checks.
-4. Run repository-only OPS-01, EDU-01, and small MAINT-01 work in disjoint
-   branches. Do not perform external tests, contact, recruitment, or signing.
-5. Preserve REL-01/02, HUM-01, PUB-01, and real-output cleanup authorization
-   gates. Do not reinterpret B2, LIC-01A, PKG-01A, or Draft #70 as promotion
-   authority.
+1. If the protected-integration policy, script, tests, and authority overlay
+   are not yet on protected `main`, accept them through an ordinary protected
+   PR with independent read-only review, exact-head checks 6/6, exact-head
+   guarded merge, and post-merge checks 6/6. The harness may not perform this
+   step itself.
+2. Once that activation condition is true, process only #75 OPS-01A -> #72
+   EDU-01A -> #73 PKG-01B -> #70 E2E-01 -> #76 MAINT-01A. Rebind each reviewed
+   patch to the then-current `main`; stop on any digest, path, SHA, ruleset,
+   check, thread, review, or synthetic-tree mismatch.
+3. Preserve aggregate LIC-01/G3/legal/distribution, REL-01/02, HUM-01, PUB-01,
+   actual-output/cleanup, artifact/package content, external-contact,
+   signing/release credential, ruleset-setting, and repository-layout gates.
+   The standing delegation does not authorize them.
