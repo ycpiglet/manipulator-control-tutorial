@@ -56,6 +56,36 @@ Next recommended action:
 - Do not call a task complete until evidence exists.
 - Record both successful checks and checks that could not be run.
 - If the same blocker appears in three consecutive iterations, stop and mark the blocker explicitly.
+- The owner standing delegation dated 2026-07-26 applies only to the fixed
+  queue in `.agents/integration/protected-main-v1.json`, from a POSIX host, and
+  only after that
+  policy and `scripts/protected_integration.py` are accepted on protected
+  `main`. For those transactions use the harness instead of interpreting prose
+  as merge authority. It requires a clean linked/disposable worktree, explicit
+  40-hex base/head SHAs, canonical expected-base script/policy blobs, the fixed
+  reviewed base/head, branch/path envelope and queue order, stable-patch,
+  whitespace-preserving semantic-patch, current exact-diff, name-status, and
+  sorted-NUL path digests, live collaborator/ruleset/check/app validation,
+  exact owner-authored independent-agent PASS/risk attestation, resolved
+  reviews, synthetic merge provenance, a separate mark-ready settlement,
+  exact-head guarded merge, and post-merge parent/tree/check validation. An
+  already-integrated prefix is allowed only after its exact
+  source/merge/ancestry/content/post-check/review evidence is revalidated.
+- The protected integration harness is self-excluded: it cannot amend or merge
+  its policy, script, tests, `AGENTS.md`, this operating-system authority,
+  `CURRENT_STATE.md`, or `READINESS_EXECUTION_PLAN.md`. It exposes no public
+  beta/promotion, participant recruitment, release/tag, signed/package
+  distribution, signing/release credential acquisition or use,
+  artifact/package download or inspection, learner-output access, cleanup
+  dry-run/apply, external contact, repository move/layout change,
+  ruleset/security-setting modification or bypass, signing/notarization, or
+  DOI/publication operation. The already-authenticated owner GitHub session is
+  limited to the allowlisted ready/comment/merge API calls; the harness does
+  not read, print, create, or rotate credential material.
+- GitHub's PR merge API has a head guard but no atomic base-SHA guard. If the
+  post-merge parent/tree gate detects a concurrent base advance, do not claim
+  completion and do not rewrite history; stop and report the documented
+  platform race.
 - PR merges require confirmed-green CI. Do not chain `gh pr checks --watch`
   immediately after `gh pr create` in one command: checks may not be
   registered yet, the watch returns "no checks reported", and the chain

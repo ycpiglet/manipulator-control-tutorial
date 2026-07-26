@@ -20,25 +20,53 @@ PR #60은 Draft #37의 package exclusion만 제한적으로 채택했고 #38은 
 없이 종료됐으며, 어느 Draft도 wholesale merge하지 않았습니다. PR #61은 FREEZE
 아래의 `run_mclab.cmd` bootstrap 결함을 제자리에서 보수했습니다.
 
-현재 accepted implementation subject는 PKG-01A merge
-`96702b09d7e2b0e3b381b86c5e6e51f95682d346`입니다. LIC-01A는 49개
+현재 accepted implementation subject는 LIC-01B merge
+`9ba5e8e7bfae9ea46e0f9217c07861a4f188ce88`입니다. LIC-01A는 49개
 package-lock candidate와 12개 target cell의 deterministic pending inventory 범위,
-PKG-01A는 unsigned-development package identity와 independent size gate 범위에서만
-accepted입니다. License evidence는 계속 `pending-lic-01`이고 legal approval,
-notices, Qt/PySide disposition, final per-OS SBOM/provenance와 hosted base/native
-transitive inventory가 아닙니다. 다음 ordered compliance 작업은 LIC-01B이며,
-aggregate PKG-01은 accepted packaged-QML 20-sample cold-start evidence가 더
-필요합니다. E2E-01은 accepted aggregate PKG-01이 추가된 exact main에서만
-판정합니다. Draft PR #70의 green exact-head candidate evidence는 이 선행 순서를
-소급 충족하거나 G2/B3를 선언하지 않습니다. 기존 B2 candidate/declaration
-Markdown/JSON, 과거 archive, 감사 원문과 이전 finding-ledger event는 수정하지
-않습니다.
+PKG-01A는 unsigned-development package identity와 independent size gate 범위,
+LIC-01B는 reviewed notice corpus 범위에서만 accepted입니다. License evidence는
+aggregate LIC-01/G3 또는 legal approval이 아니며, final per-OS SBOM/provenance와
+hosted base/native transitive inventory도 아닙니다. Protected-integration harness가
+protected `main`에 수용된 뒤의 고정 순서는 PR #75 OPS-01A -> #72 EDU-01A ->
+#73 PKG-01B -> #70 E2E-01 -> #76 MAINT-01A입니다. 이 safe-main 통합 순서는 각
+aggregate release gate를 자동으로 닫지 않습니다. 특히 #73과 #70의 candidate
+evidence는 선행 조건을 소급 충족하거나 G2/B3를 선언하지 않으며, 각 exact candidate의
+독립 검토와 bounded 판정이 우선합니다. 기존 B2 candidate/declaration Markdown/JSON,
+과거 archive, 감사 원문과 이전 finding-ledger event는 수정하지 않습니다.
 
 SAFE-01 PASS와 B2 선언 뒤에도 실제 learner outputs의 dry-run은 승인되지 않았습니다.
 향후에도 owner가 참여하는 별도 작업으로만 수행하고, owner가 같은 plan을 검토한 뒤
 다시 명시적으로 승인하기 전에는 `--apply`를 실행하지 않습니다. Public beta, signed
 distribution, release/DOI, 외부 연락·모집, signing credential 사용도 각각의 gate와
 별도 owner 승인 전에는 수행하지 않습니다.
+
+Owner는 2026-07-26에
+`.agents/integration/protected-main-v1.json`의 고정 queue와 범위에 한해서만
+protected-main 통합을 agent가 반복 승인 질문 없이 수행하도록 standing delegation을
+명시했습니다. 이 위임은 해당 policy와 `scripts/protected_integration.py`가 protected
+`main`에 수용된 뒤부터 유효합니다. 이후 각 transaction은 POSIX host의 clean linked worktree,
+canonical script/policy의 expected-base blob, 명시적인 40-hex base/head, 고정
+branch/path envelope, reviewed base/head와 stable/semantic patch, current exact
+diff/name-status/sorted-NUL path digest, live ruleset `19209773`, GitHub Actions app
+`15368`의 정확한 required context 6개, resolved thread와 active changes-requested
+review 부재, 정확히 한 명의 direct admin collaborator, owner가 직접 남긴 exact-head
+independent-agent PASS/risk attestation, synthetic parent/tree, 별도 mark-ready와
+재검증, exact-head merge, post-merge parent/tree와 6/6을 모두 fail-closed로
+확인해야 합니다. 이미 병합된 queue prefix는 source/base/merge/tree, main ancestry,
+content digest, post-merge 6/6과 review 상태를 다시 증명해야 하며 남은 항목의 순서를
+건너뛰지 않습니다. 이 harness는 자기
+policy·script·test, `AGENTS.md`, `.agents/OPERATING_SYSTEM.md`,
+`.agents/CURRENT_STATE.md`, `.agents/READINESS_EXECUTION_PLAN.md`를 수정/병합할
+권한이 없습니다. Public beta/promotion, participant recruitment, release/tag,
+signed/package distribution, signing/release credential acquisition or use,
+artifact/package content, learner output, cleanup dry-run/apply, 외부 연락,
+repository move/layout 변경, ruleset/security setting 변경·bypass,
+signing/notarization, DOI/publication은 계속 별도 owner gate입니다. 기존
+owner-authenticated GitHub session은 harness가 allowlist한 PR ready/comment/merge
+요청에만 사용할 수 있으며 credential material을 읽거나 출력·생성·교체하지 않습니다.
+GitHub PR merge API에는 atomic base-SHA guard가 없으므로 post-merge parent/tree
+검증에서 concurrent base advance가 드러나면 완료를 주장하거나 history를 되돌리지
+말고 documented platform race로 중단·보고합니다.
 
 ## Project Intent
 
