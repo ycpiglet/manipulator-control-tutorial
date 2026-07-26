@@ -204,3 +204,28 @@ promotion summaries.
 - B5/B6 and real-output cleanup retain every prior authorization and external
   evidence gate. No public-beta, signing, release/DOI, external-contact, or
   destructive-work authority is added here.
+
+## LIC-01A and PKG-01A Reconciliation Events — 2026-07-23
+
+These events append accepted PR #68 and #69 evidence at protected
+`main@96702b09d7e2b0e3b381b86c5e6e51f95682d346`, plus the exact but
+unaccepted Draft PR #70 candidate state. They do not rewrite the audit,
+registry, B2 records, prior events, or earlier promotion summaries.
+
+| Event | Recorded at UTC | Evaluated commit | Finding/component | Status | Evidence state | Evidence and scope | Remaining gate | Supersedes |
+|---|---|---|---|---|---|---|---|---|
+| FS-20260723-029 | 2026-07-23T12:32:14Z | `96702b09d7e2b0e3b381b86c5e6e51f95682d346` | P0-04 | partial | confirmed | [PR #68](https://github.com/ycpiglet/manipulator-control-tutorial/pull/68) accepted a deterministic 49-candidate/12-cell LIC-01A inventory at exact head `c707999a6f0299a9cc8bbf97f1f2ab22217b2011`; [PR #69](https://github.com/ycpiglet/manipulator-control-tutorial/pull/69) accepted bounded unsigned-development package identity/size at exact head `aeabf3a852774fc198d56426f4cb507ada498f1d`; each source and merge tree is equivalent and exact-head/post-merge required checks passed 6/6 | LIC-01A remains `pending-lic-01`: complete reviewed notices/text/source/copyright and Qt/PySide disposition are absent; final SBOM/provenance, signing, immutable release, and rollback remain | FS-20260722-004 |
+| FS-20260723-030 | 2026-07-23T12:32:14Z | `96702b09d7e2b0e3b381b86c5e6e51f95682d346` | P1-07 | partial | confirmed | PR #69 exact-head package evidence measured one-folder/archive bytes as Windows `259148501/93923818`, Ubuntu `342402649/123143362`, and macOS `192875997/65943576`; all pass the unchanged independent 400 MiB/300 MiB gates; exact-head [CI](https://github.com/ycpiglet/manipulator-control-tutorial/actions/runs/29968981476), [desktop](https://github.com/ycpiglet/manipulator-control-tutorial/actions/runs/29968981517), post-merge [CI](https://github.com/ycpiglet/manipulator-control-tutorial/actions/runs/29969976213), and [desktop](https://github.com/ycpiglet/manipulator-control-tutorial/actions/runs/29969976169) passed 6/6 | Aggregate PKG-01 still requires accepted actual packaged-QML cold-start evidence: 20 samples per supported OS, p95 <=5 s, failures 0 | FS-20260723-026 |
+| FS-20260723-031 | 2026-07-23T12:32:14Z | `a5ed0e8b4fbeda9249cd77efb07a1db7ee68a193` | P1-01 | partial | pending | Draft [PR #70](https://github.com/ycpiglet/manipulator-control-tutorial/pull/70) exact-head [CI](https://github.com/ycpiglet/manipulator-control-tutorial/actions/runs/30005298268) and [desktop](https://github.com/ycpiglet/manipulator-control-tutorial/actions/runs/30005298100) passed 6/6 and produced bounded three-OS G2 candidate JSON for package independence, startup, full course, reproducibility, cancel/close, and synthetic cleanup; this is change-local exact-head evidence, not accepted main evidence | Accept aggregate PKG-01 first, then evaluate E2E-01 on an exact integrated main candidate with protected merge and post-merge checks; Draft #70 does not establish G2/B3 or merge/promotion authority | FS-20260722-006 |
+
+### Current promotion summary at this reconciliation
+
+- LIC-01A is accepted only as a deterministic pending inventory. It is not
+  legal approval, notice completion, Qt/PySide LGPL disposition, or public
+  distribution authority.
+- PKG-01A is accepted only for unsigned-development package identity and size.
+  Aggregate PKG-01 cold-start/actual-QML acceptance remains open.
+- Draft PR #70 has exact-head candidate evidence but remains draft and
+  prerequisite-blocked. B3/G2 is not declared.
+- No tag or release exists. B4–B6, signing, external contact/testing, and
+  real-output cleanup retain all prior gates; cleanup apply remains prohibited.

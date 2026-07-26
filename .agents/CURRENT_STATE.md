@@ -4,12 +4,13 @@ Updated: 2026-07-23 KST
 
 ## Current Objective
 
-Reconcile the accepted SUP-01 aggregate evidence, then start LIC-01 from that
-accepted inventory. PKG-01 may proceed in a disjoint clean branch; E2E-01 waits
-for accepted PKG-01 and must run on the exact main containing both aggregates.
+Continue LIC-01 from the accepted LIC-01A inventory, and complete the missing
+PKG-01 cold-start/packaged-QML aggregate before accepting integrated E2E-01.
+Repository-only OPS-01, EDU-01, and MAINT-01 increments may proceed in disjoint
+clean branches.
 
 This live handoff records the latest accepted implementation subject
-`6f0995bd8fe52f8fa6832a03f83254eb13ff9cc1` (PR #66). This documentation
+`96702b09d7e2b0e3b381b86c5e6e51f95682d346` (PR #69). This documentation
 change does not self-certify its own acceptance: exact-head checks, protected
 merge, and post-merge checks remain authoritative.
 
@@ -20,11 +21,11 @@ repository moves.
 
 ## Current State
 
-- Accepted protected `main` subject: SUP-01 aggregate merge
-  `6f0995bd8fe52f8fa6832a03f83254eb13ff9cc1` (PR #66).
-- PR #66 source head/tree:
-  `387dd331a408d46beffb80483916401bf2e08c73` /
-  `ac5d9ba1720911357a02c665787ec50ed50eaf5f`; the accepted merge has the
+- Accepted protected `main` subject: PKG-01A merge
+  `96702b09d7e2b0e3b381b86c5e6e51f95682d346` (PR #69).
+- PR #69 source head/tree:
+  `aeabf3a852774fc198d56426f4cb507ada498f1d` /
+  `2d897fa81506887df863106f118ddeb660880cfd`; the accepted merge has the
   same tree, so source/merge tree equivalence is **PASS**.
 - Controlled B2 subject: `ae4d40371b9a3fe4d7078822e1fc541a72defe2d`;
   accepted BASE-01 head: `370b10186864e6b9e2bc73978da13671a54628de`.
@@ -40,39 +41,53 @@ repository moves.
   `inventory-complete` / `pending-lic-01`; generated SBOM records are inputs,
   not final per-OS SBOM or release provenance; the Ubuntu manifest freezes 22
   direct packages, not the hosted base image or all native transitive inputs.
+- LIC-01A is **accepted only as a deterministic pending inventory contract**:
+  49 package-lock candidates, 12 target cells, and three hosted observations.
+  Legal approval, notice completion, Qt/PySide LGPL disposition, native/base
+  closure, and public distribution remain false or pending.
+- PKG-01A is **accepted only for unsigned-development package identity and
+  size**. All three native jobs verified package self-test, `doctor`, inventory,
+  one-folder size, and archive size. Aggregate PKG-01 still lacks an accepted
+  20-sample packaged QML startup/cold-launch gate.
+- Draft PR #70 exact head
+  `a5ed0e8b4fbeda9249cd77efb07a1db7ee68a193` has six green checks and bounded
+  Windows/Linux/macOS G2 candidate JSON. It remains draft and is not accepted
+  E2E/G2/B3 evidence because the accepted-PKG prerequisite and merge decision
+  are unresolved.
 - Required approvals remain 0 because the repository has one direct
   collaborator. Formal independent human approval remains false.
 - Supervised/source development remains the only accepted distribution scope.
   B3 technical preview, public beta, and signed production remain NO-GO.
-- Real learner outputs accessed or modified by STATE/IA/INT/SUP work: **no**.
+- Real learner outputs accessed or modified by accepted LIC/PKG work: **no**.
   Real-root cleanup dry-run/apply: **not run / not run**.
 - Local host APT state changed by SUP work: **no**. Package installation and
   verification ran only in the authorized GitHub Ubuntu job.
 
 ## Completed Since Last Snapshot
 
-- STATE-01 PR #58, IA-00 PR #59, INT/launcher PRs #60/#61, and SUP-01A/B/C
-  PRs #62–#64 each passed exact-head and post-merge required checks **6/6**.
-- SUP-01D PR #66 exact head
-  `387dd331a408d46beffb80483916401bf2e08c73`, merge
-  `6f0995bd8fe52f8fa6832a03f83254eb13ff9cc1`; source/merge trees are
-  equivalent.
-- PR #66 exact-head CI `29949569945` and desktop `29949569735`, plus
-  post-merge CI `29950993214` and desktop `29950992873`, passed the six
-  required checks at both SHAs. Both simulator runs reported 1,186 passed,
-  12 skipped, 2,648 subtests, and 82.39% coverage.
-- Exact SUP evidence covers 8 lock profiles, 213 requirements, 4,465 hashes,
-  12 target environments, and 78 scanned dependencies with 0 vulnerability
-  findings and 0 waivers. Hosted package-profile license inventories contain
-  44 Linux, 47 Windows, and 45 macOS packages and remain `pending-lic-01`.
-- The post-merge Ubuntu job verified the official `20260723T000000Z` snapshot,
-  22 direct packages, and the pinned Noble keyring. Artifact
-  `mclab-supply-chain-Linux` has ID `8542125543` and expires
-  `2026-08-05T19:27:49Z`.
-- Deterministic exact-head `387dd331a408d46beffb80483916401bf2e08c73`
-  SBOM inputs were byte-identical with SHA-256
-  `5035ffc306cdad50e89829076288fdfc2b62097b0071a3bce2788e59a24bcc5c`.
-- Open PRs, tags, and releases at the accepted SUP snapshot: **0 / 0 / 0**.
+- PR #67 reconciled the accepted SUP-01 state. PR #68 accepted LIC-01A exact
+  head `c707999a6f0299a9cc8bbf97f1f2ab22217b2011`, merge
+  `0ed0efbf75ea2f66a7d3f761734c485a5265b632`, and common tree
+  `aee1ee7ddb0840fd6517c0fefa40d5085788d7d2`.
+- PR #68 exact-head CI `29961923132` and desktop `29961923217`, plus
+  post-merge CI `29963046292` and desktop `29963046307`, passed required
+  checks **6/6** at both SHAs. The contract remains `pending-lic-01`; only
+  3/12 target cells have accepted short-lived observations.
+- PR #69 accepted PKG-01A exact head
+  `aeabf3a852774fc198d56426f4cb507ada498f1d`, merge
+  `96702b09d7e2b0e3b381b86c5e6e51f95682d346`, and common tree
+  `2d897fa81506887df863106f118ddeb660880cfd`.
+- PR #69 exact-head CI `29968981476` and desktop `29968981517`, plus
+  post-merge CI `29969976213` and desktop `29969976169`, passed required
+  checks **6/6** at both SHAs.
+- Exact-head package size measurements were below both unchanged limits:
+  Windows `259,148,501 / 93,923,818` bytes, Ubuntu
+  `342,402,649 / 123,143,362` bytes, and macOS
+  `192,875,997 / 65,943,576` bytes for one-folder/archive respectively.
+- Pre-existing remote state before opening this reconciliation candidate: one
+  open Draft PR (#70), zero tags, and zero releases. The reconciliation
+  candidate itself must remain visible as an additional Draft PR until it is
+  separately reviewed and accepted.
 
 ## Open Decisions
 
@@ -90,9 +105,15 @@ repository moves.
 - LIC-01 is next. Current inventory deliberately reports missing license,
   source, text, and NOTICE metadata; Qt/PySide LGPL obligations and
   distribution notices are not approved.
-- PKG-01 still needs aligned one-folder/archive metrics, cold-start samples,
-  and actual packaged QML evidence.
-- E2E-01 must run after accepted PKG-01 on the integrated exact main.
+- PKG-01A closed deterministic identity and both size thresholds, but aggregate
+  PKG-01 still needs accepted 20-sample cold-start and actual packaged QML
+  evidence on each supported OS.
+- E2E-01 must be accepted only after aggregate PKG-01, on an exact integrated
+  commit. Draft #70 cannot satisfy its own prerequisite retroactively.
+- Draft #70 generated exact-head candidate evidence without touching real
+  learner data in CI. During earlier local diagnosis, an empty temporary-path
+  fallback caused one disclosed read-only enumeration of repository `outputs/`;
+  it returned zero records and made no write, cleanup plan, deletion, or apply.
 - Final per-OS SBOM/provenance, hosted base-image/native-transitive inventory,
   immutable release evidence, and long-lived retention remain absent.
 - OPS-01, EDU-01, and MAINT-01 remain open. REL-01/02, HUM-01, and PUB-01
@@ -118,9 +139,12 @@ repository moves.
 - Supply-chain schema and waiver policy:
   [SBOM-input schema](supply_chain/sbom-inputs.schema.json) and
   [waiver registry](supply_chain/vulnerability-waivers.json)
+- LIC-01A pending inventory:
+  [license-inventory.json](supply_chain/license-inventory.json)
+- Unsigned package contract and evidence boundary:
+  [installation guide](../docs/installation.md)
 - Ubuntu direct-package manifest:
   [ubuntu-24.04-amd64.json](../requirements/system/ubuntu-24.04-amd64.json)
-- Evidence boundaries: [installation guide](../docs/installation.md)
 - IA decision: [IA-00 launcher freeze](decisions/IA-00-launcher-paths.md)
 - B2 authority: [declaration](baselines/B2-safe-main-declaration.md) and
   [machine record](baselines/B2-safe-main-declaration.json)
@@ -129,13 +153,15 @@ repository moves.
 
 ## Next Actions
 
-1. Merge this focused state/ledger reconciliation after exact-head review and
-   verify all six post-merge checks.
-2. From that accepted clean main, perform LIC-01 without claiming legal approval
-   before component text/source/notice and Qt/PySide obligations are closed.
-3. Complete PKG-01 in its own clean branch; then run E2E-01 on the exact main
-   containing accepted SUP-01 and PKG-01.
+1. Continue LIC-01 with a versioned reviewed-component notice/source/text
+   corpus while retaining external/legal and Qt/PySide decisions as explicit
+   blockers until supported by evidence.
+2. Split or supersede Draft #70 so a focused PKG-01 cold-start/packaged-QML
+   candidate can be accepted before integrated E2E-01 is judged.
+3. After the focused state/ledger reconciliation passes exact-head review,
+   merge only with owner authorization and verify all six post-merge checks.
 4. Run repository-only OPS-01, EDU-01, and small MAINT-01 work in disjoint
    branches. Do not perform external tests, contact, recruitment, or signing.
 5. Preserve REL-01/02, HUM-01, PUB-01, and real-output cleanup authorization
-   gates. Do not reinterpret SUP input evidence as promotion authority.
+   gates. Do not reinterpret B2, LIC-01A, PKG-01A, or Draft #70 as promotion
+   authority.
