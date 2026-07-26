@@ -47,8 +47,8 @@ from mclab.application.saved_runs import resolve_saved_run_launch
 from mclab.application.session import SessionState, SimulationSession
 from mclab.application.single_instance import acquire_instance_lock, start_activation_server
 from mclab.application.qt_smoke import schedule_smoke_action
+from mclab.application.qt_settings import create_application_settings
 from mclab.config import PROJECT_ROOT
-
 
 SHUTDOWN_WAIT_MS = 30_000
 
@@ -112,7 +112,7 @@ def run_app(
             self.catalog = ScenarioCatalog.default()
             self._setup_issues = app_readiness(self.catalog)
             self.platform = PlatformServices()
-            self.settings = QSettings("MCLab", "MCLab")
+            self.settings = create_application_settings(QSettings)
             stored = str(self.settings.value("language", "")) or None
             self._language = normalize_language(language or stored)
             self.translator = Translator(self._language)
