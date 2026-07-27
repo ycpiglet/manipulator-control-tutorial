@@ -195,7 +195,7 @@ class InstallLockedTests(unittest.TestCase):
 
     def test_nested_venv_directory_link_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
+            root = Path(tmp).resolve()
             venv = root / ".venv"
             external = root / "external"
             venv.mkdir()
@@ -210,7 +210,7 @@ class InstallLockedTests(unittest.TestCase):
         if os.name == "nt":
             self.skipTest("lib64 aliases are POSIX-only")
         with tempfile.TemporaryDirectory() as tmp:
-            venv = Path(tmp) / ".venv"
+            venv = Path(tmp).resolve() / ".venv"
             (venv / "lib").mkdir(parents=True)
             (venv / "lib64").symlink_to("lib", target_is_directory=True)
 
@@ -581,6 +581,7 @@ class InstallLockedTests(unittest.TestCase):
                         system=system,
                         machine=machine,
                         pointer_bits=64,
+                        libc=("glibc", "2.28") if system == "Linux" else None,
                         macos_version="13.0" if system == "Darwin" else None,
                     )
                 )
