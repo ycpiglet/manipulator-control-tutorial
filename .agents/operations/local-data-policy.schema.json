@@ -10,8 +10,8 @@
       "items": {
         "$ref": "#/$defs/dataClass"
       },
-      "maxItems": 10,
-      "minItems": 10,
+      "maxItems": 11,
+      "minItems": 11,
       "type": "array",
       "uniqueItems": true
     },
@@ -58,6 +58,9 @@
           "const": false,
           "type": "boolean"
         },
+        "automatic_deletion_scope": {
+          "const": "saved-learner-artifacts-only-setup-writer-lifecycle-excluded"
+        },
         "backup_policy_status": {
           "const": "not-defined"
         },
@@ -103,10 +106,21 @@
         },
         "secure_erasure_status": {
           "const": "not-provided-by-mclab"
+        },
+        "setup_installation_lock_path_stability_assumption": {
+          "const": "cooperating-processes-do-not-unlink-or-replace-held-lock-path"
+        },
+        "setup_installation_metadata_manual_cleanup_authorized_by_this_contract": {
+          "const": false,
+          "type": "boolean"
+        },
+        "setup_installation_metadata_writer_lifecycle": {
+          "const": "locks-persist-explicit-install-removes-prior-state-before-mutation-failure-may-leave-state-absent-staging-cleaned-best-effort"
         }
       },
       "required": [
         "automatic_deletion",
+        "automatic_deletion_scope",
         "backup_policy_status",
         "cleanup_apply_authorized_by_this_contract",
         "cleanup_default",
@@ -120,7 +134,10 @@
         "restore_scope",
         "retention_policy_status",
         "rpo_rto_status",
-        "secure_erasure_status"
+        "secure_erasure_status",
+        "setup_installation_lock_path_stability_assumption",
+        "setup_installation_metadata_manual_cleanup_authorized_by_this_contract",
+        "setup_installation_metadata_writer_lifecycle"
       ],
       "type": "object"
     },
@@ -268,8 +285,8 @@
       "items": {
         "$ref": "#/$defs/storageLocation"
       },
-      "maxItems": 18,
-      "minItems": 18,
+      "maxItems": 22,
+      "minItems": 22,
       "type": "array",
       "uniqueItems": true
     },
@@ -373,6 +390,7 @@
         },
         "id": {
           "enum": [
+            "asset-and-dependency-installation-metadata",
             "cleanup-quarantine-and-receipts",
             "comparison-batch",
             "cumulative-index",
@@ -585,6 +603,9 @@
             "CPython:import-bytecode-cache",
             "Matplotlib:cache-directory-and-font-manager",
             "Qt:QQml-disk-cache",
+            "scripts/install_locked.py:_EnvironmentLock",
+            "scripts/install_locked.py:_write_state",
+            "src/mclab/application/assets.py:_exclusive_asset_install_lock",
             "src/mclab/application/single_instance.py:acquire_instance_lock",
             "src/mclab/application/single_instance.py:start_activation_server",
             "src/mclab/application/qt_app.py:AppBackend",
@@ -598,7 +619,11 @@
         },
         "id": {
           "enum": [
+            "asset-install-coordination-lock",
             "cpython-bytecode-cache",
+            "dependency-install-coordination-lock",
+            "dependency-install-state-file",
+            "dependency-install-state-staging-file",
             "desktop-instance-lock-default",
             "desktop-instance-lock-override",
             "desktop-local-named-pipe-windows",
@@ -629,14 +654,18 @@
         },
         "relative_child": {
           "enum": [
+            "atomic-project-venv-lock-state-staging-file",
+            "derived-environment-identity-lock-file",
             "derived-local-named-pipe-endpoint",
             "derived-local-socket-entry",
+            "derived-project-identity-lock-file",
             "index.html-in-parent",
             "index.html-in-selected-root",
             "mclab-desktop.lock",
             "native-settings-store",
             "not-appended",
             "outputs",
+            "project-venv-lock-state",
             "runtime-selected-cache-files"
           ],
           "type": "string"

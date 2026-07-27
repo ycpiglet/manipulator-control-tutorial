@@ -3176,6 +3176,8 @@ class PlatformAndCliTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp).resolve()
+            lock_temp = root / "lock-temp"
+            lock_temp.mkdir()
             archive = root / "assets.tar.gz"
             prefix = asset_module.PANDA_PREFIX
             with tarfile.open(archive, "w:gz") as bundle:
@@ -3207,6 +3209,11 @@ class PlatformAndCliTests(unittest.TestCase):
                     asset_module,
                     "PANDA_RUNTIME_TOTAL_BYTES",
                     sum(len(content) for content in files.values()),
+                ),
+                patch.object(
+                    asset_module.tempfile,
+                    "gettempdir",
+                    return_value=os.fspath(lock_temp),
                 ),
             ):
                 target = asset_module.install_assets(root, archive_path=archive)

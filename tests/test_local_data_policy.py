@@ -33,9 +33,7 @@ checker = _load_checker()
 def _copy_repository_fixture(destination: Path) -> Path:
     source_manifest = json.loads((ROOT / checker.SOURCE_MANIFEST_PATH).read_text(encoding="utf-8"))
     source_paths = {Path(item["path"]) for item in source_manifest["sources"]}
-    excluded_source_paths = {
-        Path(item["path"]) for item in source_manifest["excluded_sources"]
-    }
+    excluded_source_paths = {Path(item["path"]) for item in source_manifest["excluded_sources"]}
     controlled = {
         checker.SCHEMA_PATH,
         checker.POLICY_PATH,
@@ -283,6 +281,154 @@ def test_desktop_coordination_storage_location_is_required(
     assert any("storage_locations" in error for error in _errors(repository))
 
 
+def test_setup_installation_metadata_is_persistent_machine_inventory() -> None:
+    policy = _policy(ROOT)
+    locations = policy["storage_locations"]
+    assert isinstance(locations, list)
+    by_id = {item["id"]: item for item in locations}
+    assert by_id["asset-install-coordination-lock"] == {
+        "applies_when": (
+            "python -m mclab assets install reaches lock acquisition for a physical "
+            "project root, including already-valid assets or a later failed install"
+        ),
+        "code_reference": ("src/mclab/application/assets.py:_exclusive_asset_install_lock"),
+        "id": "asset-install-coordination-lock",
+        "parent_source": (
+            "the effective platform temporary directory selected by tempfile.gettempdir()"
+        ),
+        "path_template": (
+            "<effective-temporary-directory>/mclab-assets-<project-device-inode-sha256>.lock"
+        ),
+        "relative_child": "derived-project-identity-lock-file",
+    }
+    assert by_id["dependency-install-coordination-lock"] == {
+        "applies_when": (
+            "python scripts/install_locked.py <profile> enters the environment lock, "
+            "including an already-valid environment or a later failed install"
+        ),
+        "code_reference": "scripts/install_locked.py:_EnvironmentLock",
+        "id": "dependency-install-coordination-lock",
+        "parent_source": (
+            "the effective platform temporary directory selected by tempfile.gettempdir()"
+        ),
+        "path_template": (
+            "<effective-temporary-directory>/mclab-install-<environment-prefix-sha256-prefix>.lock"
+        ),
+        "relative_child": "derived-environment-identity-lock-file",
+    }
+    assert by_id["dependency-install-state-file"] == {
+        "applies_when": (
+            "a successful locked dependency install records a verified project-local .venv"
+        ),
+        "code_reference": "scripts/install_locked.py:_write_state",
+        "id": "dependency-install-state-file",
+        "parent_source": (
+            "the repository-local project virtual environment selected by scripts/install_locked.py"
+        ),
+        "path_template": "<repository>/.venv/.mclab-lock-state.json",
+        "relative_child": "project-venv-lock-state",
+    }
+    assert by_id["dependency-install-state-staging-file"] == {
+        "applies_when": (
+            "a project-local locked dependency install atomically stages its verified "
+            "state; normal replacement or error cleanup removes it, but process "
+            "interruption can leave it"
+        ),
+        "code_reference": "scripts/install_locked.py:_write_state",
+        "id": "dependency-install-state-staging-file",
+        "parent_source": (
+            "the repository-local project virtual environment selected by scripts/install_locked.py"
+        ),
+        "path_template": ("<repository>/.venv/..mclab-lock-state.json.<random>.tmp"),
+        "relative_child": "atomic-project-venv-lock-state-staging-file",
+    }
+
+    records = policy["data_classes"]
+    assert isinstance(records, list)
+    record = next(
+        item for item in records if item["id"] == "asset-and-dependency-installation-metadata"
+    )
+    assert record["artifacts"] == [
+        "<effective-temporary-directory>/mclab-assets-<project-device-inode-sha256>.lock",
+        "<effective-temporary-directory>/mclab-install-<environment-prefix-sha256-prefix>.lock",
+        "<repository>/.venv/..mclab-lock-state.json.<random>.tmp",
+        "<repository>/.venv/.mclab-lock-state.json",
+    ]
+    assert record["status"] == "persistent"
+    assert record["learner_authored"] is False
+    assert record["may_contain_private_data"] is True
+    assert "one NUL marker" in record["content"]
+    assert "whether new or pre-existing" in record["content"]
+    assert "existing non-empty lock is not truncated" in record["content"]
+    assert "multi-link entries" in record["content"]
+    assert "narrows POSIX group and other permissions" in record["content"]
+    assert "Both remain after normal unlock" in record["content"]
+    assert "cooperating actors do not unlink or replace" in record["content"]
+    assert "cannot prevent the temporary overlap" in record["content"]
+    assert "schema" in record["content"]
+    assert "capabilities" in record["content"]
+    assert "absolute project root" in record["content"]
+    assert "inventory SHA-256" in record["content"]
+    assert "failure can leave it absent" in record["content"]
+    assert "process interruption can leave it" in record["content"]
+    lifecycle = policy["lifecycle_controls"]
+    assert isinstance(lifecycle, dict)
+    assert lifecycle["automatic_deletion"] is False
+    assert lifecycle["automatic_deletion_scope"] == (
+        "saved-learner-artifacts-only-setup-writer-lifecycle-excluded"
+    )
+    assert lifecycle["setup_installation_lock_path_stability_assumption"] == (
+        "cooperating-processes-do-not-unlink-or-replace-held-lock-path"
+    )
+    assert (
+        lifecycle["setup_installation_metadata_manual_cleanup_authorized_by_this_contract"] is False
+    )
+    assert lifecycle["setup_installation_metadata_writer_lifecycle"] == (
+        "locks-persist-explicit-install-removes-prior-state-before-mutation-"
+        "failure-may-leave-state-absent-staging-cleaned-best-effort"
+    )
+
+
+@pytest.mark.parametrize(
+    ("section", "record_id"),
+    [
+        ("storage_locations", "asset-install-coordination-lock"),
+        ("storage_locations", "dependency-install-coordination-lock"),
+        ("storage_locations", "dependency-install-state-file"),
+        ("storage_locations", "dependency-install-state-staging-file"),
+        ("data_classes", "asset-and-dependency-installation-metadata"),
+    ],
+)
+def test_setup_installation_metadata_inventory_omission_is_rejected(
+    repository: Path,
+    section: str,
+    record_id: str,
+) -> None:
+    policy = _policy(repository)
+    records = policy[section]
+    assert isinstance(records, list)
+    records[:] = [item for item in records if item["id"] != record_id]
+    _write_policy(repository, policy)
+
+    assert any(section in error for error in _errors(repository))
+
+
+def test_setup_installation_metadata_manual_cleanup_authority_drift_is_rejected(
+    repository: Path,
+) -> None:
+    policy = _policy(repository)
+    lifecycle = policy["lifecycle_controls"]
+    assert isinstance(lifecycle, dict)
+    lifecycle["setup_installation_metadata_manual_cleanup_authorized_by_this_contract"] = True
+    _write_policy(repository, policy)
+
+    assert any(
+        "lifecycle_controls."
+        "setup_installation_metadata_manual_cleanup_authorized_by_this_contract" in error
+        for error in _errors(repository)
+    )
+
+
 def test_qsettings_language_and_tour_preferences_are_machine_inventory() -> None:
     policy = _policy(ROOT)
     records = policy["data_classes"]
@@ -340,10 +486,7 @@ def test_confirmed_runtime_cache_surfaces_are_bounded_machine_inventory() -> Non
     cpython_parent = locations_by_id["cpython-bytecode-cache"]["parent_source"]
     assert "PYTHONPYCACHEPREFIX" in cpython_parent
     assert "-X pycache_prefix" in cpython_parent
-    assert (
-        "otherwise each writable source or import root __pycache__ directory"
-        in cpython_parent
-    )
+    assert "otherwise each writable source or import root __pycache__ directory" in cpython_parent
     assert (
         locations_by_id["cpython-bytecode-cache"]["path_template"]
         == "<effective-CPython-bytecode-cache-root>/**/*.pyc"
@@ -359,8 +502,7 @@ def test_confirmed_runtime_cache_surfaces_are_bounded_machine_inventory() -> Non
         in locations_by_id["matplotlib-font-cache"]["parent_source"]
     )
     assert (
-        "runtime temporary directory"
-        in locations_by_id["matplotlib-font-cache"]["parent_source"]
+        "runtime temporary directory" in locations_by_id["matplotlib-font-cache"]["parent_source"]
     )
     assert (
         locations_by_id["matplotlib-font-cache"]["path_template"]
@@ -369,9 +511,7 @@ def test_confirmed_runtime_cache_surfaces_are_bounded_machine_inventory() -> Non
     assert scope["complete_shared_pc_clearance"] is False
     assert scope["runtime_dependency_cache_scope"].endswith("broader-platform-caches-open")
     assert lifecycle["dependency_cache_clearing_authorized_by_this_contract"] is False
-    assert {
-        item["id"] for item in decisions
-    } >= {"runtime-dependency-cache-inventory-and-clearing"}
+    assert {item["id"] for item in decisions} >= {"runtime-dependency-cache-inventory-and-clearing"}
 
 
 @pytest.mark.parametrize(
@@ -415,8 +555,7 @@ def test_confirmed_runtime_cache_artifact_omission_is_rejected(
     _write_policy(repository, policy)
 
     assert any(
-        "data_classes.runtime-dependency-caches.artifacts" in error
-        for error in _errors(repository)
+        "data_classes.runtime-dependency-caches.artifacts" in error for error in _errors(repository)
     )
 
 
@@ -761,11 +900,17 @@ def test_qt_instance_control_private_classification_drift_is_rejected(repository
     ("field", "value"),
     [
         ("automatic_deletion", True),
+        ("automatic_deletion_scope", "all-local-data"),
         ("dependency_cache_clearing_authorized_by_this_contract", True),
         ("permanent_purge_available", True),
         ("real_output_validation", "passed"),
         ("retention_policy_status", "30-days"),
         ("rpo_rto_status", "24-hours"),
+        (
+            "setup_installation_lock_path_stability_assumption",
+            "lock-path-may-be-replaced",
+        ),
+        ("setup_installation_metadata_writer_lifecycle", "locks-and-state-deleted"),
     ],
 )
 def test_unearned_lifecycle_claim_is_rejected(repository: Path, field: str, value: object) -> None:
@@ -887,15 +1032,12 @@ def test_missing_exact_governance_exclusion_is_rejected(repository: Path) -> Non
     excluded = repository / "scripts" / "protected_integration.py"
     excluded.unlink()
 
-    assert (
-        "SOURCE_INVENTORY_EXCLUSION_MISSING scripts/protected_integration.py"
-        in _errors(repository)
+    assert "SOURCE_INVENTORY_EXCLUSION_MISSING scripts/protected_integration.py" in _errors(
+        repository
     )
 
 
-def test_exact_governance_exclusion_symlink_is_rejected(
-    repository: Path, tmp_path: Path
-) -> None:
+def test_exact_governance_exclusion_symlink_is_rejected(repository: Path, tmp_path: Path) -> None:
     excluded = repository / "scripts" / "protected_integration.py"
     target = tmp_path / "outside-protected-integration.py"
     shutil.copy2(excluded, target)
@@ -907,10 +1049,7 @@ def test_exact_governance_exclusion_symlink_is_rejected(
 
     errors = _errors(repository)
     assert "SYMLINK_SOURCE_ENTRY scripts/protected_integration.py" in errors
-    assert (
-        "SOURCE_INVENTORY_EXCLUSION_MISSING scripts/protected_integration.py"
-        in errors
-    )
+    assert "SOURCE_INVENTORY_EXCLUSION_MISSING scripts/protected_integration.py" in errors
 
 
 def test_exact_governance_exclusion_reparse_point_is_rejected(
@@ -937,10 +1076,7 @@ def test_exact_governance_exclusion_reparse_point_is_rejected(
 
     errors = _errors(repository)
     assert "REPARSE_SOURCE_ENTRY scripts/protected_integration.py" in errors
-    assert (
-        "SOURCE_INVENTORY_EXCLUSION_MISSING scripts/protected_integration.py"
-        in errors
-    )
+    assert "SOURCE_INVENTORY_EXCLUSION_MISSING scripts/protected_integration.py" in errors
 
 
 def test_missing_declared_source_is_rejected(repository: Path) -> None:
@@ -957,14 +1093,162 @@ def test_source_manifest_change_requires_policy_hash_update(repository: Path) ->
     assert any("SOURCE_INVENTORY_MANIFEST_SHA256" in error for error in _errors(repository))
 
 
-def test_unreviewed_remote_client_is_rejected(repository: Path) -> None:
+@pytest.mark.parametrize(
+    ("statement", "remote_name"),
+    [
+        ("import requests", "requests"),
+        ("from requests import get", "requests"),
+        ("import socket", "socket"),
+        ("import socket as network_socket", "socket"),
+        ("from socket import create_connection as connect", "socket"),
+        ("import http.client", "http.client"),
+        ("import http.client as http_client", "http.client"),
+        ("from http import client as http_client", "http.client"),
+        ("from http.client import HTTPSConnection", "http.client"),
+    ],
+)
+def test_unreviewed_remote_client_is_rejected(
+    repository: Path,
+    statement: str,
+    remote_name: str,
+) -> None:
     path = repository / "src" / "mclab" / "__init__.py"
     path.write_text(
-        path.read_text(encoding="utf-8") + "\nfrom requests import get\n",
+        path.read_text(encoding="utf-8") + f"\n{statement}\n",
         encoding="utf-8",
     )
 
-    assert any("UNREVIEWED_REMOTE_IMPORT" in error for error in _errors(repository))
+    assert any(
+        f"UNREVIEWED_REMOTE_IMPORT {path.relative_to(repository)}: {remote_name}" in error
+        for error in checker._network_boundary_errors(repository)
+    )
+
+
+@pytest.mark.parametrize(
+    ("statement", "remote_name"),
+    [
+        ("import importlib as loader\nloader.import_module('socket')", "socket"),
+        (
+            "import importlib as loader\nloader.import_module('socket')\nimport builtins as loader",
+            "socket",
+        ),
+        (
+            "from importlib import import_module\n"
+            "import_module('socket')\n"
+            "from importlib import reload as import_module",
+            "socket",
+        ),
+        (
+            "import importlib\n"
+            "importlib.import_module('http.client')\n"
+            "import importlib.util as importlib",
+            "http.client",
+        ),
+        ("from importlib import import_module as load\nload('http.client')", "http.client"),
+        ("import importlib\nimportlib.import_module(name='socket')", "socket"),
+        (
+            "from importlib import import_module as load\nload(name='http.client')",
+            "http.client",
+        ),
+        ("import importlib.util\nimportlib.import_module('socket')", "socket"),
+        (
+            "import importlib\nimportlib.import_module('.client', package='http')",
+            "http.client",
+        ),
+        ("__import__('socket')", "socket"),
+        ("__import__(name='socket')", "socket"),
+        ("__import__('http', fromlist=['client'])", "http.client"),
+        ("__import__('http', fromlist={'client': None})", "http.client"),
+        ("__import__('http', fromlist=['client', 0])", "http.client"),
+        (
+            "__import__('urllib', globals=None, locals=None, fromlist=['request'])",
+            "urllib.request",
+        ),
+        ("__import__('xmlrpc', fromlist=('*',))", "xmlrpc.client"),
+        ("import importlib\nimportlib.__import__('socket')", "socket"),
+        (
+            "from importlib import __import__ as load\nload('http', fromlist=['client'])",
+            "http.client",
+        ),
+        ("from builtins import __import__ as load\nload('http.client')", "http.client"),
+    ],
+)
+def test_literal_dynamic_remote_client_is_rejected(
+    repository: Path,
+    statement: str,
+    remote_name: str,
+) -> None:
+    path = repository / "src" / "mclab" / "__init__.py"
+    path.write_text(
+        path.read_text(encoding="utf-8") + f"\n{statement}\n",
+        encoding="utf-8",
+    )
+
+    assert any(
+        f"UNREVIEWED_DYNAMIC_REMOTE_IMPORT {path.relative_to(repository)}:" in error
+        and error.endswith(f": {remote_name}")
+        for error in checker._network_boundary_errors(repository)
+    )
+
+
+def test_relative_http_import_is_not_misclassified_as_stdlib_client(
+    repository: Path,
+) -> None:
+    path = repository / "src" / "mclab" / "__init__.py"
+    path.write_text(
+        path.read_text(encoding="utf-8") + "\nfrom .http import client as local_client\n",
+        encoding="utf-8",
+    )
+
+    assert not any(
+        error.endswith(": http.client") for error in checker._network_boundary_errors(repository)
+    )
+
+
+def test_remote_import_exception_is_exact_asset_installer_urllib() -> None:
+    assert checker.ALLOWED_REMOTE_IMPORTS == frozenset(
+        {(Path("src/mclab/application/assets.py"), "urllib.request")}
+    )
+
+
+def test_asset_installer_socket_import_is_not_exempt(repository: Path) -> None:
+    path = repository / "src" / "mclab" / "application" / "assets.py"
+    path.write_text(
+        path.read_text(encoding="utf-8") + "\nimport socket\n",
+        encoding="utf-8",
+    )
+
+    assert (
+        f"UNREVIEWED_REMOTE_IMPORT {path.relative_to(repository)}: socket"
+        in checker._network_boundary_errors(repository)
+    )
+
+
+def test_urllib_request_outside_asset_installer_is_rejected(repository: Path) -> None:
+    path = repository / "src" / "mclab" / "__init__.py"
+    path.write_text(
+        path.read_text(encoding="utf-8") + "\nimport urllib.request\n",
+        encoding="utf-8",
+    )
+
+    assert (
+        f"UNREVIEWED_REMOTE_IMPORT {path.relative_to(repository)}: urllib.request"
+        in checker._network_boundary_errors(repository)
+    )
+
+
+@pytest.mark.parametrize("statement", ["import ssl", "import urllib.parse", "import http.cookies"])
+def test_nonconnecting_stdlib_import_is_not_rejected(
+    repository: Path,
+    statement: str,
+) -> None:
+    path = repository / "src" / "mclab" / "__init__.py"
+    path.write_text(
+        path.read_text(encoding="utf-8") + f"\n{statement}\n",
+        encoding="utf-8",
+    )
+
+    assert not checker._network_boundary_errors(repository)
 
 
 def test_source_file_symlink_is_rejected(repository: Path, tmp_path: Path) -> None:

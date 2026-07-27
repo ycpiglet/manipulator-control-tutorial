@@ -24,6 +24,27 @@ RUNTIME_RELATIVE = Path("third_party/mujoco_menagerie/franka_emika_panda")
 
 
 class AssetContractTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self._asset_lock_temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._asset_lock_temp.cleanup)
+        self._asset_lock_temp_patch = patch.object(
+            assets.tempfile,
+            "gettempdir",
+            return_value=self._asset_lock_temp.name,
+        )
+        self._asset_lock_temp_patch.start()
+        self.addCleanup(self._asset_lock_temp_patch.stop)
+        self._asset_lock_environment_patch = patch.dict(
+            os.environ,
+            {
+                "TEMP": self._asset_lock_temp.name,
+                "TMP": self._asset_lock_temp.name,
+                "TMPDIR": self._asset_lock_temp.name,
+            },
+        )
+        self._asset_lock_environment_patch.start()
+        self.addCleanup(self._asset_lock_environment_patch.stop)
+
     def test_valid_existing_tree_is_verified_without_network_access(self) -> None:
         files = {"LICENSE": b"license", "scene.xml": b"<mujoco/>"}
         with tempfile.TemporaryDirectory() as tmp, _runtime_contract(files):
@@ -98,6 +119,77 @@ class AssetContractTests(unittest.TestCase):
 
             download.assert_not_called()
             self.assertEqual((target / "owner.txt").read_bytes(), b"foreign")
+
+    def test_install_lock_path_uses_effective_temp_and_physical_project_digest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            root = base / "project"
+            root.mkdir()
+            effective_temp = base / "effective-temp"
+            effective_temp.mkdir()
+            identity = root.stat()
+            digest = hashlib.sha256(
+                f"{identity.st_dev}:{identity.st_ino}".encode("ascii")
+            ).hexdigest()
+
+            with patch.object(
+                assets.tempfile,
+                "gettempdir",
+                return_value=os.fspath(effective_temp),
+            ):
+                lock_path = assets._asset_install_lock_path(root)
+
+            self.assertEqual(lock_path, effective_temp / f"mclab-assets-{digest}.lock")
+
+    def test_install_lock_persists_with_nul_marker_after_normal_release(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            root = base / "project"
+            root.mkdir()
+            lock_path = base / "fixture-locks" / "asset-install.lock"
+            lock_path.parent.mkdir()
+
+            with patch.object(
+                assets,
+                "_asset_install_lock_path",
+                return_value=lock_path,
+            ):
+                with assets._exclusive_asset_install_lock(root):
+                    pass
+
+            self.assertTrue(lock_path.is_file())
+            self.assertEqual(lock_path.read_bytes(), b"\0")
+
+    def test_install_lock_marks_existing_empty_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            lock_path = assets._asset_install_lock_path(root)
+            lock_path.write_bytes(b"")
+
+            with assets._exclusive_asset_install_lock(root):
+                pass
+
+            self.assertEqual(lock_path.read_bytes(), b"\0")
+
+    def test_install_lock_preserves_existing_nonempty_content(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            root = base / "project"
+            root.mkdir()
+            lock_path = base / "fixture-locks" / "asset-install.lock"
+            lock_path.parent.mkdir()
+            original = b"pre-existing-marker\n"
+            lock_path.write_bytes(original)
+
+            with patch.object(
+                assets,
+                "_asset_install_lock_path",
+                return_value=lock_path,
+            ):
+                with assets._exclusive_asset_install_lock(root):
+                    pass
+
+            self.assertEqual(lock_path.read_bytes(), original)
 
     def test_install_lock_blocks_another_process_until_release(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
