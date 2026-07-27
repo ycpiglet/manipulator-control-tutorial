@@ -1128,6 +1128,12 @@ def test_unreviewed_remote_client_is_rejected(
     ("statement", "remote_name"),
     [
         ("import importlib as loader\nloader.import_module('socket')", "socket"),
+        (
+            "import importlib as loader\n"
+            "loader.import_module('socket')\n"
+            "import builtins as loader",
+            "socket",
+        ),
         ("from importlib import import_module as load\nload('http.client')", "http.client"),
         ("import importlib\nimportlib.import_module(name='socket')", "socket"),
         (
