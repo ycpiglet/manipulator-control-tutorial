@@ -3277,7 +3277,6 @@ class IntegrationHarness:
         content_binding = self._validate_content_binding(
             item, source_base, source_head
         )
-        current_exact_diff_sha256 = content_binding.exact_diff_sha256
         head_tree = self.git.tree(source_head)
         if tuple(self.git.parents(merge_sha)) != (source_base, source_head):
             raise HarnessError(
