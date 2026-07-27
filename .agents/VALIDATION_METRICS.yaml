@@ -47,6 +47,11 @@ documentation:
     metric: "recommended source launcher setup, doctor, and Lab01 artifacts on each desktop workflow OS"
     threshold: "launcher setup/app self-test and doctor exit 0; every README core artifact present; plots/*.png count >= 1"
     evidence: ".github/workflows/desktop.yml on Windows, Ubuntu, and macOS"
+  educator_kit_contract:
+    metric: "repository-only 12-step educator plan, planned timing, learning outcomes, formative rubric, canonical-evidence mapping, and guarded pilot protocol"
+    threshold: "checker exit 0; 12 steps; 5 outcomes; 210 planned-not-measured minutes; pilot status not-run; human evidence 0"
+    command: "python .agents/validation/check_educator_kit.py"
+    evidence: "docs/educator_kit.json, docs/educator_kit.schema.json, docs/educator_guide.md, docs/educator_pilot_protocol.md, and tests/test_educator_kit.py"
 
 simulation_runs:
   required_artifacts:
