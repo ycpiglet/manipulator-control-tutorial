@@ -1949,7 +1949,7 @@ def _resolve_relative_module_name(name: str, package: str) -> str | None:
 
 
 def _dynamic_literal_imports(tree: ast.AST) -> tuple[tuple[str, int], ...]:
-    bindings: dict[str, str] = {"__import__": "builtins.__import__"}
+    bindings: dict[str, set[str]] = {"__import__": {"builtins.__import__"}}
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
@@ -1957,59 +1957,65 @@ def _dynamic_literal_imports(tree: ast.AST) -> tuple[tuple[str, int], ...]:
                 if root_name not in {"builtins", "importlib"}:
                     continue
                 if alias.asname is None:
-                    bindings[root_name] = root_name
+                    bindings.setdefault(root_name, set()).add(root_name)
                 else:
-                    bindings[alias.asname] = alias.name
+                    bindings.setdefault(alias.asname, set()).add(alias.name)
         elif (
             isinstance(node, ast.ImportFrom)
             and node.level == 0
             and node.module in {"builtins", "importlib"}
         ):
             for alias in node.names:
-                bindings[alias.asname or alias.name] = f"{node.module}.{alias.name}"
+                bindings.setdefault(alias.asname or alias.name, set()).add(
+                    f"{node.module}.{alias.name}"
+                )
 
     imports: list[tuple[str, int]] = []
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue
-        function_name: str | None = None
+        function_names: set[str] = set()
         if isinstance(node.func, ast.Name):
-            function_name = bindings.get(node.func.id)
+            function_names.update(bindings.get(node.func.id, ()))
         elif isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name):
-            owner = bindings.get(node.func.value.id)
-            if owner is not None:
-                function_name = f"{owner}.{node.func.attr}"
-        if function_name not in {
-            "builtins.__import__",
-            "importlib.__import__",
-            "importlib.import_module",
-        }:
-            continue
-        module_name = _literal_string(_call_argument(node, 0, "name"))
-        if module_name is None:
-            continue
-        candidates = [module_name]
-        if function_name == "importlib.import_module" and module_name.startswith("."):
-            package = _literal_string(_call_argument(node, 1, "package"))
-            resolved = (
-                _resolve_relative_module_name(module_name, package) if package is not None else None
+            function_names.update(
+                f"{owner}.{node.func.attr}" for owner in bindings.get(node.func.value.id, ())
             )
-            candidates = [resolved] if resolved is not None else []
-        elif function_name in {
-            "builtins.__import__",
-            "importlib.__import__",
-        }:
-            for child in _literal_string_items(_call_argument(node, 3, "fromlist")):
-                if child == "*":
-                    candidates.extend(
-                        remote_name
-                        for remote_name in sorted(REMOTE_IMPORTS)
-                        if remote_name.startswith(f"{module_name}.")
-                    )
-                else:
-                    candidates.append(f"{module_name}.{child}")
-        imports.extend((candidate, node.lineno) for candidate in dict.fromkeys(candidates))
-    return tuple(imports)
+        for function_name in sorted(
+            function_names
+            & {
+                "builtins.__import__",
+                "importlib.__import__",
+                "importlib.import_module",
+            }
+        ):
+            module_name = _literal_string(_call_argument(node, 0, "name"))
+            if module_name is None:
+                continue
+            candidates = [module_name]
+            if function_name == "importlib.import_module" and module_name.startswith("."):
+                package = _literal_string(_call_argument(node, 1, "package"))
+                resolved = (
+                    _resolve_relative_module_name(module_name, package)
+                    if package is not None
+                    else None
+                )
+                candidates = [resolved] if resolved is not None else []
+            elif function_name in {
+                "builtins.__import__",
+                "importlib.__import__",
+            }:
+                for child in _literal_string_items(_call_argument(node, 3, "fromlist")):
+                    if child == "*":
+                        candidates.extend(
+                            remote_name
+                            for remote_name in sorted(REMOTE_IMPORTS)
+                            if remote_name.startswith(f"{module_name}.")
+                        )
+                    else:
+                        candidates.append(f"{module_name}.{child}")
+            imports.extend((candidate, node.lineno) for candidate in dict.fromkeys(candidates))
+    return tuple(dict.fromkeys(imports))
 
 
 def _remote_import_root(import_name: str) -> str | None:
