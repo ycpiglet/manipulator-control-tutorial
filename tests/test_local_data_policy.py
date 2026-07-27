@@ -283,6 +283,61 @@ def test_desktop_coordination_storage_location_is_required(
     assert any("storage_locations" in error for error in _errors(repository))
 
 
+def test_asset_install_lock_is_persistent_machine_inventory() -> None:
+    policy = _policy(ROOT)
+    locations = policy["storage_locations"]
+    assert isinstance(locations, list)
+    location = next(
+        item for item in locations if item["id"] == "asset-install-coordination-lock"
+    )
+    assert location == {
+        "applies_when": "python -m mclab assets install begins for a physical project root",
+        "code_reference": "src/mclab/application/assets.py:_asset_install_lock_path",
+        "id": "asset-install-coordination-lock",
+        "parent_source": (
+            "the effective platform temporary directory selected by tempfile.gettempdir()"
+        ),
+        "path_template": (
+            "<effective-temporary-directory>/"
+            "mclab-assets-<project-device-inode-sha256>.lock"
+        ),
+        "relative_child": "derived-project-identity-lock-file",
+    }
+
+    records = policy["data_classes"]
+    assert isinstance(records, list)
+    record = next(item for item in records if item["id"] == "asset-install-coordination")
+    assert record["artifacts"] == [
+        "<effective-temporary-directory>/"
+        "mclab-assets-<project-device-inode-sha256>.lock"
+    ]
+    assert record["status"] == "persistent"
+    assert record["learner_authored"] is False
+    assert "one NUL byte" in record["content"]
+    assert "remains after normal unlock" in record["content"]
+
+
+@pytest.mark.parametrize(
+    ("section", "record_id"),
+    [
+        ("storage_locations", "asset-install-coordination-lock"),
+        ("data_classes", "asset-install-coordination"),
+    ],
+)
+def test_asset_install_lock_inventory_omission_is_rejected(
+    repository: Path,
+    section: str,
+    record_id: str,
+) -> None:
+    policy = _policy(repository)
+    records = policy[section]
+    assert isinstance(records, list)
+    records[:] = [item for item in records if item["id"] != record_id]
+    _write_policy(repository, policy)
+
+    assert any(section in error for error in _errors(repository))
+
+
 def test_qsettings_language_and_tour_preferences_are_machine_inventory() -> None:
     policy = _policy(ROOT)
     records = policy["data_classes"]
@@ -957,14 +1012,32 @@ def test_source_manifest_change_requires_policy_hash_update(repository: Path) ->
     assert any("SOURCE_INVENTORY_MANIFEST_SHA256" in error for error in _errors(repository))
 
 
-def test_unreviewed_remote_client_is_rejected(repository: Path) -> None:
+@pytest.mark.parametrize(
+    ("statement", "remote_name"),
+    [
+        ("from requests import get", "requests"),
+        ("import socket as network_socket", "socket"),
+        ("from socket import create_connection as connect", "socket"),
+        ("import http.client as http_client", "http.client"),
+        ("from http import client as http_client", "http.client"),
+        ("from http.client import HTTPSConnection", "http.client"),
+    ],
+)
+def test_unreviewed_remote_client_is_rejected(
+    repository: Path,
+    statement: str,
+    remote_name: str,
+) -> None:
     path = repository / "src" / "mclab" / "__init__.py"
     path.write_text(
-        path.read_text(encoding="utf-8") + "\nfrom requests import get\n",
+        path.read_text(encoding="utf-8") + f"\n{statement}\n",
         encoding="utf-8",
     )
 
-    assert any("UNREVIEWED_REMOTE_IMPORT" in error for error in _errors(repository))
+    assert any(
+        f"UNREVIEWED_REMOTE_IMPORT {path.relative_to(repository)}: {remote_name}" in error
+        for error in _errors(repository)
+    )
 
 
 def test_source_file_symlink_is_rejected(repository: Path, tmp_path: Path) -> None:
