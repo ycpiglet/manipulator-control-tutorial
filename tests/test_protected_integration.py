@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 import os
 import subprocess
@@ -30,6 +31,10 @@ BOOT_BASE = "03499fb3ad974aec3ea28bb8bcce2595b68a0661"
 BOOT_HEAD = "6cd191f0b87bb582bfde4764234a570a7f601da4"
 BOOT_MERGE = "9ba5e8e7bfae9ea46e0f9217c07861a4f188ce88"
 BOOT_TREE = "e5625718c0bcd1030bba9ea938a438d927d4033e"
+P75_BASE = "1" * 40
+P75_HEAD = "2" * 40
+P75_MERGE = "3" * 40
+P75_TREE = "4" * 40
 OWNER_ID = 68498184
 BOOT_COMPLETION_BODY = """<!-- protected-integration:manual-v1:pr-74:9ba5e8e7bfae9ea46e0f9217c07861a4f188ce88 -->
 Bounded protected-main integration completion record for LIC-01B.
@@ -189,6 +194,30 @@ class FakeGit:
             pair: item.semantic_patch_sha256
             for pair, item in self.bindings.items()
         }
+        self.stable_values = {
+            pair: item.stable_patch_id for pair, item in self.bindings.items()
+        }
+        self.changed_path_values = {
+            pair: tuple(item.reviewed_changed_paths)
+            for pair, item in self.bindings.items()
+        }
+        self.changed_path_digest_values = {
+            pair: item.changed_paths_sha256
+            for pair, item in self.bindings.items()
+        }
+        self.name_status_values = {
+            pair: item.name_status_sha256
+            for pair, item in self.bindings.items()
+        }
+        self.locked_semantic_values = {
+            pair: item.locked_semantic_patch_sha256
+            for pair, item in self.bindings.items()
+        }
+        self.locked_name_status_values = {
+            pair: item.locked_name_status_sha256
+            for pair, item in self.bindings.items()
+        }
+        self.path_identity_values: dict[tuple[str, str], str | None] = {}
         self.integration_heads = {74: BOOT_HEAD, number: HEAD}
         self.environment_checks = 0
         self.fetches = 0
@@ -243,7 +272,7 @@ class FakeGit:
         return (base, head) in self.first_parent_pairs
 
     def changed_paths(self, base: str, head: str) -> Sequence[str]:
-        return tuple(self.bindings[(base, head)].allowed_paths[:2])
+        return self.changed_path_values[(base, head)]
 
     def changed_file_modes(
         self, base: str, head: str
@@ -254,19 +283,36 @@ class FakeGit:
         )
 
     def stable_patch_id(self, base: str, head: str) -> str:
-        return self.bindings[(base, head)].stable_patch_id
+        return self.stable_values[(base, head)]
 
     def semantic_patch_digest(self, base: str, head: str) -> str:
         return self.semantic_values[(base, head)]
 
+    def semantic_patch_digest_for_paths(
+        self, base: str, head: str, paths: Sequence[str]
+    ) -> str:
+        item = self.bindings[(base, head)]
+        assert tuple(paths) == item.locked_paths
+        return self.locked_semantic_values[(base, head)]
+
     def changed_paths_digest(self, base: str, head: str) -> str:
-        return self.bindings[(base, head)].changed_paths_sha256
+        return self.changed_path_digest_values[(base, head)]
 
     def exact_diff_digest(self, base: str, head: str) -> str:
         return self.exact_values[(base, head)]
 
     def name_status_digest(self, base: str, head: str) -> str:
-        return self.bindings[(base, head)].name_status_sha256
+        return self.name_status_values[(base, head)]
+
+    def name_status_digest_for_paths(
+        self, base: str, head: str, paths: Sequence[str]
+    ) -> str:
+        item = self.bindings[(base, head)]
+        assert tuple(paths) == item.locked_paths
+        return self.locked_name_status_values[(base, head)]
+
+    def path_identity(self, commit: str, path: str) -> str | None:
+        return self.path_identity_values.get((commit, path))
 
     def tree(self, commit: str) -> str:
         return self.trees[commit]
@@ -438,8 +484,77 @@ class FakeGitHub:
         self.git.origin_main = MERGE
         return {"merged": True, "sha": MERGE, "message": "merged"}
 
-    def ensure_comment(self, number: int, marker: str, body: str) -> bool:
-        assert marker in body
+    def ensure_premerge_evidence(
+        self, current_policy: Any, evidence: Any
+    ) -> bool:
+        payload = evidence.as_dict()
+        marker = integration.governed_evidence_marker(
+            evidence.number,
+            evidence.head_sha,
+            "premerge",
+            payload,
+        )
+        body = integration.premerge_evidence_body(
+            current_policy,
+            marker,
+            evidence,
+        )
+        return self._ensure_exact_comment(evidence.number, marker, body)
+
+    def ensure_postmerge_evidence(
+        self,
+        number: int,
+        head: str,
+        evidence: Mapping[str, Any],
+    ) -> bool:
+        marker = integration.governed_evidence_marker(
+            number,
+            head,
+            "postmerge",
+            evidence,
+        )
+        body = integration.postmerge_evidence_body(marker, evidence)
+        return self._ensure_exact_comment(number, marker, body)
+
+    def ensure_subject_refresh_comment(
+        self,
+        current_policy: Any,
+        item: Any,
+        binding: Any,
+        head_tree: str,
+        receipt: Any,
+    ) -> bool:
+        marker = integration.subject_refresh_marker(item.number, binding.head_sha)
+        body = integration.subject_refresh_body(
+            current_policy,
+            item,
+            binding,
+            head_tree,
+            receipt,
+        )
+        return self._ensure_exact_comment(item.number, marker, body)
+
+    def ensure_refreshed_owner_attestation(
+        self,
+        current_policy: Any,
+        item: Any,
+        binding: Any,
+        head_tree: str,
+        refresh: Any,
+    ) -> bool:
+        marker = integration.owner_attestation_marker(
+            item.number, binding.head_sha
+        )
+        body = integration.refreshed_owner_attestation_body(
+            current_policy,
+            item,
+            binding,
+            head_tree,
+            refresh,
+        )
+        return self._ensure_exact_comment(item.number, marker, body)
+
+    def _ensure_exact_comment(self, number: int, marker: str, body: str) -> bool:
         if marker in self.comment_markers:
             return False
         self.comment_markers.add(marker)
@@ -449,6 +564,8 @@ class FakeGitHub:
                 "body": body,
                 "user": {"id": OWNER_ID, "login": "ycpiglet", "type": "User"},
                 "author_association": "OWNER",
+                "created_at": "2026-07-27T00:00:00Z",
+                "updated_at": "2026-07-27T00:00:00Z",
             }
         )
         return True
@@ -470,6 +587,186 @@ def harness(
         monotonic=lambda: 0.0,
     )
     return subject, git, github, state
+
+
+def independent_review_receipt_json(
+    subject: Any,
+    item: Any,
+    binding: Any,
+    *,
+    head_tree: str = HEAD_TREE,
+    reviewer_task: str = "/root/pr75_subject_review",
+    reviewed_at: str = "2026-07-27T00:00:00Z",
+) -> str:
+    return integration.canonical_json(
+        {
+            "accessed": {
+                "artifact_or_package_content": False,
+                "credentials": False,
+                "learner_outputs": False,
+            },
+            "binding_mode": binding.binding_mode,
+            "blocking_findings": [],
+            "changed_paths": list(binding.changed_paths),
+            "changed_paths_sha256": binding.changed_paths_sha256,
+            "completion_claim": item.completion_claim,
+            "exact_base": binding.base_sha,
+            "exact_diff_sha256": binding.exact_diff_sha256,
+            "exact_head": binding.head_sha,
+            "exact_head_tree": head_tree,
+            "external_contact_performed": False,
+            "formal_independent_human_approval": "absent",
+            "name_status_sha256": binding.name_status_sha256,
+            "policy_id": subject.policy.policy_id,
+            "pull_request": item.number,
+            "refreshed_paths": list(binding.refreshed_paths),
+            "removed_reviewed_paths": list(binding.removed_reviewed_paths),
+            "repository": subject.policy.repository,
+            "result": "PASS",
+            "review_scope": "exact-candidate-source-only",
+            "reviewed_at": reviewed_at,
+            "reviewer_task": reviewer_task,
+            "role": "independent-read-only",
+            "schema_version": 1,
+            "semantic_patch_sha256": binding.semantic_patch_sha256,
+            "stable_patch_id": binding.stable_patch_id,
+            "subject_refresh_generation": 1,
+            "work_id": item.work_id,
+        }
+    )
+
+
+def configure_refreshed_pr75_predecessor(
+    subject: Any,
+    git: FakeGit,
+    github: FakeGitHub,
+) -> None:
+    item = subject.policy.item(75)
+    pair = (P75_BASE, P75_HEAD)
+    git.bindings[pair] = item
+    git.exact_values[pair] = "a" * 64
+    git.semantic_values[pair] = "b" * 64
+    git.stable_values[pair] = "c" * 40
+    git.changed_path_values[pair] = item.reviewed_changed_paths
+    git.changed_path_digest_values[pair] = item.changed_paths_sha256
+    git.name_status_values[pair] = item.name_status_sha256
+    git.locked_semantic_values[pair] = item.locked_semantic_patch_sha256
+    git.locked_name_status_values[pair] = item.locked_name_status_sha256
+    git.integration_heads[75] = P75_HEAD
+    git.trees[P75_HEAD] = P75_TREE
+    git.trees[P75_MERGE] = P75_TREE
+    git.parent_map[P75_MERGE] = (P75_BASE, P75_HEAD)
+    git.first_parent_pairs.update(
+        {
+            (P75_BASE, P75_HEAD),
+            (P75_MERGE, BASE),
+        }
+    )
+    github.pulls[75] = pull_document(
+        item,
+        base=P75_BASE,
+        head=P75_HEAD,
+        merged=True,
+        merge_sha=P75_MERGE,
+    )
+    github.checks[P75_HEAD] = check_document(subject.policy, P75_HEAD)
+    github.checks[P75_MERGE] = check_document(subject.policy, P75_MERGE)
+    github.comment_values[75] = []
+
+    binding = subject._validate_content_binding(item, *pair)
+    receipt_document = integration.parse_canonical_review_receipt(
+        independent_review_receipt_json(
+            subject,
+            item,
+            binding,
+            head_tree=P75_TREE,
+        )
+    )
+    receipt = subject._validate_independent_review_receipt(
+        receipt_document,
+        item,
+        binding,
+        P75_TREE,
+    )
+    refresh_body = integration.subject_refresh_body(
+        subject.policy,
+        item,
+        binding,
+        P75_TREE,
+        receipt,
+    )
+    github.comment_values[75].append(
+        {
+            "id": 75,
+            "body": refresh_body,
+            "user": {
+                "id": OWNER_ID,
+                "login": "ycpiglet",
+                "type": "User",
+            },
+            "author_association": "OWNER",
+            "created_at": "2026-07-27T00:00:00Z",
+            "updated_at": "2026-07-27T00:00:00Z",
+        }
+    )
+    refresh = subject._validate_subject_refresh_certificate(
+        item,
+        binding,
+        P75_TREE,
+    )
+    assert refresh is not None
+    github.comment_values[75].append(
+        {
+            "id": 76,
+            "body": integration.refreshed_owner_attestation_body(
+                subject.policy,
+                item,
+                binding,
+                P75_TREE,
+                refresh,
+            ),
+            "user": {
+                "id": OWNER_ID,
+                "login": "ycpiglet",
+                "type": "User",
+            },
+            "author_association": "OWNER",
+        }
+    )
+    checks = integration.validate_check_runs(
+        github.checks[P75_MERGE],
+        P75_MERGE,
+        subject.policy,
+    )
+    post_evidence = subject._post_evidence_values(
+        item,
+        P75_BASE,
+        P75_HEAD,
+        P75_TREE,
+        P75_MERGE,
+        checks,
+    )
+    marker = integration.governed_evidence_marker(
+        75,
+        P75_HEAD,
+        "postmerge",
+        post_evidence,
+    )
+    github.comment_values[75].append(
+        {
+            "id": 77,
+            "body": integration.postmerge_evidence_body(
+                marker,
+                post_evidence,
+            ),
+            "user": {
+                "id": OWNER_ID,
+                "login": "ycpiglet",
+                "type": "User",
+            },
+            "author_association": "OWNER",
+        }
+    )
 
 
 def mark_fake_merged(git: FakeGit, github: FakeGitHub, number: int = 75) -> None:
@@ -548,6 +845,12 @@ def test_committed_policy_is_exact_and_self_excluding() -> None:
     assert current_policy.required_checks == integration.EXPECTED_REQUIRED_CHECKS
     assert current_policy.delegation["accepted_date"] == "2026-07-26"
     assert current_policy.delegation["self_amendment_authority"] is False
+    assert current_policy.delegation["subject_refresh_accepted_date"] == "2026-07-27"
+    assert current_policy.delegation["subject_refresh_generation"] == 1
+    assert (
+        current_policy.delegation["subject_refresh_human_reprompt_required"]
+        is False
+    )
     assert current_policy.review_topology["owner_id"] == OWNER_ID
     assert all(item.semantic_patch_sha256 for item in current_policy.queue)
     assert all(item.reviewed_exact_diff_sha256 for item in current_policy.queue)
@@ -560,6 +863,64 @@ def test_committed_policy_is_exact_and_self_excluding() -> None:
         == 5083778171
     )
     assert integration.SELF_DENIED_PATHS.issubset(current_policy.denied_paths)
+    assert current_policy.item(74).refreshable_paths == ()
+    assert all(item.refreshable_paths for item in current_policy.queue[1:])
+    assert (
+        current_policy.item(73).completion_claim
+        == "PKG-01 aggregate bounded safe-main development baseline"
+    )
+
+
+def test_policy_locked_bindings_match_every_original_reviewed_subject() -> None:
+    current_policy = policy()
+    historical_commits = {
+        commit
+        for item in current_policy.queue
+        for commit in (item.reviewed_subject_base, item.reviewed_subject_head)
+    }
+    missing = [
+        commit
+        for commit in sorted(historical_commits)
+        if subprocess.run(
+            [
+                "git",
+                "--no-replace-objects",
+                "cat-file",
+                "-e",
+                f"{commit}^{{commit}}",
+            ],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+        ).returncode
+        != 0
+    ]
+    if missing:
+        pytest.skip(
+            "historical subject objects are intentionally unavailable in "
+            "a shallow CI checkout"
+        )
+    repository = integration.GitRepository(ROOT, integration.SubprocessRunner())
+
+    for item in current_policy.queue:
+        pair = (item.reviewed_subject_base, item.reviewed_subject_head)
+        assert tuple(sorted(repository.changed_paths(*pair))) == (
+            item.reviewed_changed_paths
+        )
+        assert repository.semantic_patch_digest_for_paths(
+            *pair, item.locked_paths
+        ) == item.locked_semantic_patch_sha256
+        assert repository.name_status_digest_for_paths(
+            *pair, item.locked_paths
+        ) == item.locked_name_status_sha256
+        assert {
+            path: repository.path_identity(item.reviewed_subject_head, path)
+            for path in item.reviewed_result_entries
+        } == item.reviewed_result_entries
+        assert set(item.reviewed_changed_paths) == (
+            set(item.locked_paths)
+            | (set(item.reviewed_changed_paths) & set(item.refreshable_paths))
+        )
 
 
 def test_policy_only_amendment_deactivates_pinned_harness(tmp_path: Path) -> None:
@@ -620,6 +981,18 @@ def test_policy_rejects_queue_or_delegation_drift(tmp_path: Path) -> None:
     document["standing_owner_delegation"]["activation"] = "immediately"
     path.write_text(json.dumps(document), encoding="utf-8")
     with pytest.raises(integration.HarnessError, match="activation drift"):
+        integration.Policy.load(path, enforce_canonical_fingerprint=False)
+
+    document = json.loads(POLICY_PATH.read_text(encoding="utf-8"))
+    document["standing_owner_delegation"]["subject_refresh_generation"] = 2
+    path.write_text(json.dumps(document), encoding="utf-8")
+    with pytest.raises(integration.HarnessError, match="generation 1"):
+        integration.Policy.load(path, enforce_canonical_fingerprint=False)
+
+    document = json.loads(POLICY_PATH.read_text(encoding="utf-8"))
+    document["queue"][1]["refreshable_paths"][0] = "docs/**"
+    path.write_text(json.dumps(document), encoding="utf-8")
+    with pytest.raises(integration.HarnessError, match="exact path"):
         integration.Policy.load(path, enforce_canonical_fingerprint=False)
 
 
@@ -1155,6 +1528,12 @@ def test_original_reviewed_head_still_requires_exact_diff_provenance(
     pair = (BASE, item.reviewed_subject_head)
     git.bindings[pair] = item
     git.semantic_values[pair] = item.semantic_patch_sha256
+    git.stable_values[pair] = item.stable_patch_id
+    git.changed_path_values[pair] = item.reviewed_changed_paths
+    git.changed_path_digest_values[pair] = item.changed_paths_sha256
+    git.name_status_values[pair] = item.name_status_sha256
+    git.locked_semantic_values[pair] = item.locked_semantic_patch_sha256
+    git.locked_name_status_values[pair] = item.locked_name_status_sha256
     git.exact_values[pair] = "f" * 64
 
     with pytest.raises(integration.HarnessError, match="provenance drift"):
@@ -1162,37 +1541,405 @@ def test_original_reviewed_head_still_requires_exact_diff_provenance(
 
 
 @pytest.mark.parametrize(
-    ("binding_name", "message"),
+    "binding_name",
     [
-        ("semantic", "semantic patch drift"),
-        ("patch", "stable patch ID drift"),
-        ("paths", "changed-path digest drift"),
-        ("name_status", "name-status digest drift"),
+        "semantic",
+        "patch",
+        "paths",
+        "name_status",
     ],
 )
-def test_candidate_rejects_each_content_binding_drift(
-    tmp_path: Path, binding_name: str, message: str
+def test_candidate_requires_refresh_certificate_for_each_overall_binding_drift(
+    tmp_path: Path, binding_name: str
 ) -> None:
     subject, git, _github, _state = harness(tmp_path)
     if binding_name == "semantic":
         git.semantic_values[(BASE, HEAD)] = "f" * 64
     elif binding_name == "patch":
-        original = git.bindings[(BASE, HEAD)]
-        git.bindings[(BASE, HEAD)] = integration.dataclasses.replace(
-            original, stable_patch_id="f" * 40
-        )
+        git.stable_values[(BASE, HEAD)] = "f" * 40
     elif binding_name == "paths":
-        original = git.bindings[(BASE, HEAD)]
-        git.bindings[(BASE, HEAD)] = integration.dataclasses.replace(
-            original, changed_paths_sha256="f" * 64
-        )
+        git.changed_path_digest_values[(BASE, HEAD)] = "f" * 64
     else:
-        original = git.bindings[(BASE, HEAD)]
-        git.bindings[(BASE, HEAD)] = integration.dataclasses.replace(
-            original, name_status_sha256="f" * 64
+        git.name_status_values[(BASE, HEAD)] = "f" * 64
+    with pytest.raises(integration.HarnessError, match="refresh certificate"):
+        subject.preflight(75, BASE, HEAD)
+
+
+def test_candidate_rejects_non_refreshable_semantic_drift(tmp_path: Path) -> None:
+    subject, git, _github, _state = harness(tmp_path)
+    git.locked_semantic_values[(BASE, HEAD)] = "f" * 64
+
+    with pytest.raises(integration.HarnessError, match="non-refreshable semantic"):
+        subject._validate_content_binding(policy().item(75), BASE, HEAD)
+
+
+def test_candidate_rejects_non_refreshable_name_status_drift(
+    tmp_path: Path,
+) -> None:
+    subject, git, _github, _state = harness(tmp_path)
+    git.locked_name_status_values[(BASE, HEAD)] = "f" * 64
+
+    with pytest.raises(integration.HarnessError, match="non-refreshable name-status"):
+        subject._validate_content_binding(policy().item(75), BASE, HEAD)
+
+
+def test_attest_refresh_records_exact_certificate_and_owner_binding(
+    tmp_path: Path,
+) -> None:
+    subject, git, github, _state = harness(tmp_path)
+    git.semantic_values[(BASE, HEAD)] = "f" * 64
+    git.stable_values[(BASE, HEAD)] = "e" * 40
+    github.comment_values[75] = []
+    item = policy().item(75)
+    binding = subject._validate_content_binding(item, BASE, HEAD)
+    receipt_json = independent_review_receipt_json(subject, item, binding)
+
+    evidence = subject.attest_refresh(
+        75,
+        BASE,
+        HEAD,
+        review_receipt_json=receipt_json,
+    )
+
+    assert evidence.binding_mode == "refreshed-generation-1"
+    assert evidence.semantic_patch_sha256 == "f" * 64
+    assert evidence.refresh_certificate_comment_id is not None
+    assert evidence.review_receipt_sha256 == hashlib.sha256(
+        receipt_json.encode("utf-8")
+    ).hexdigest()
+    bodies = [str(comment["body"]) for comment in github.comment_values[75]]
+    assert any(integration.subject_refresh_marker(75, HEAD) in body for body in bodies)
+    assert any(integration.owner_attestation_marker(75, HEAD) in body for body in bodies)
+
+
+def test_attest_refresh_rejects_invalid_independent_review_identity(
+    tmp_path: Path,
+) -> None:
+    subject, git, github, _state = harness(tmp_path)
+    git.semantic_values[(BASE, HEAD)] = "f" * 64
+    github.comment_values[75] = []
+    item = policy().item(75)
+    binding = subject._validate_content_binding(item, BASE, HEAD)
+    receipt_json = independent_review_receipt_json(
+        subject,
+        item,
+        binding,
+        reviewer_task="/root",
+    )
+
+    with pytest.raises(integration.HarnessError, match="reviewer task"):
+        subject.attest_refresh(
+            75,
+            BASE,
+            HEAD,
+            review_receipt_json=receipt_json,
         )
+    assert github.comment_values[75] == []
+
+
+@pytest.mark.parametrize(
+    ("reviewed_at", "message"),
+    [
+        ("2026-02-30T00:00:00Z", "real calendar"),
+        ("9999-12-31T23:59:59Z", "future"),
+    ],
+)
+def test_attest_refresh_rejects_invalid_review_time_before_comment_write(
+    tmp_path: Path,
+    reviewed_at: str,
+    message: str,
+) -> None:
+    subject, git, github, _state = harness(tmp_path)
+    git.semantic_values[(BASE, HEAD)] = "f" * 64
+    github.comment_values[75] = []
+    item = policy().item(75)
+    binding = subject._validate_content_binding(item, BASE, HEAD)
+    receipt_json = independent_review_receipt_json(
+        subject,
+        item,
+        binding,
+        reviewed_at=reviewed_at,
+    )
+
+    with pytest.raises(integration.HarnessError, match=message):
+        subject.attest_refresh(
+            75,
+            BASE,
+            HEAD,
+            review_receipt_json=receipt_json,
+        )
+    assert github.comment_values[75] == []
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("subject_refresh_generation", True),
+        ("external_contact_performed", 0),
+    ],
+)
+def test_attest_refresh_rejects_receipt_type_confusion_before_comment_write(
+    tmp_path: Path,
+    key: str,
+    value: object,
+) -> None:
+    subject, git, github, _state = harness(tmp_path)
+    git.semantic_values[(BASE, HEAD)] = "f" * 64
+    github.comment_values[75] = []
+    item = policy().item(75)
+    binding = subject._validate_content_binding(item, BASE, HEAD)
+    receipt = json.loads(
+        independent_review_receipt_json(subject, item, binding)
+    )
+    receipt[key] = value
+
+    with pytest.raises(integration.HarnessError, match=f"receipt {key} drift"):
+        subject.attest_refresh(
+            75,
+            BASE,
+            HEAD,
+            review_receipt_json=integration.canonical_json(receipt),
+        )
+    assert github.comment_values[75] == []
+
+
+def test_attest_refresh_rejects_noncanonical_receipt_before_comment_write(
+    tmp_path: Path,
+) -> None:
+    subject, git, github, _state = harness(tmp_path)
+    git.semantic_values[(BASE, HEAD)] = "f" * 64
+    github.comment_values[75] = []
+    item = policy().item(75)
+    binding = subject._validate_content_binding(item, BASE, HEAD)
+    receipt = json.loads(
+        independent_review_receipt_json(subject, item, binding)
+    )
+
+    with pytest.raises(integration.HarnessError, match="canonical JSON"):
+        subject.attest_refresh(
+            75,
+            BASE,
+            HEAD,
+            review_receipt_json=json.dumps(receipt, indent=2),
+        )
+    assert github.comment_values[75] == []
+
+
+@pytest.mark.parametrize("failure", ["checks", "topology"])
+def test_attest_refresh_completes_all_gates_before_first_comment(
+    tmp_path: Path,
+    failure: str,
+) -> None:
+    subject, git, github, _state = harness(tmp_path)
+    git.semantic_values[(BASE, HEAD)] = "f" * 64
+    github.comment_values[75] = []
+    item = policy().item(75)
+    binding = subject._validate_content_binding(item, BASE, HEAD)
+    if failure == "checks":
+        github.checks[HEAD]["check_runs"][0]["conclusion"] = "failure"
+        message = "completed with"
+    else:
+        github.collaborator_values = []
+        message = "collaborator"
+
+    with pytest.raises(integration.HarnessError, match=message):
+        subject.attest_refresh(
+            75,
+            BASE,
+            HEAD,
+            review_receipt_json=independent_review_receipt_json(
+                subject,
+                item,
+                binding,
+            ),
+        )
+    assert github.comment_values[75] == []
+
+
+def _record_fake_refresh(
+    subject: Any, git: FakeGit, github: FakeGitHub
+) -> None:
+    git.semantic_values[(BASE, HEAD)] = "f" * 64
+    github.comment_values[75] = []
+    item = policy().item(75)
+    binding = subject._validate_content_binding(item, BASE, HEAD)
+    subject.attest_refresh(
+        75,
+        BASE,
+        HEAD,
+        review_receipt_json=independent_review_receipt_json(
+            subject,
+            item,
+            binding,
+        ),
+    )
+
+
+def test_refresh_certificate_rejects_generation_drift(tmp_path: Path) -> None:
+    subject, git, github, _state = harness(tmp_path)
+    _record_fake_refresh(subject, git, github)
+    marker = integration.subject_refresh_marker(75, HEAD)
+    refresh = next(
+        comment
+        for comment in github.comment_values[75]
+        if marker in str(comment["body"])
+    )
+    refresh["body"] = str(refresh["body"]).replace(
+        '"refresh_generation":1', '"refresh_generation":2'
+    )
+
+    with pytest.raises(integration.HarnessError, match="refresh_generation drift"):
+        subject.preflight(75, BASE, HEAD)
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "message"),
+    [
+        ('"refresh_generation":1', '"refresh_generation":true', "refresh_generation"),
+        (
+            '"external_contact_performed":false',
+            '"external_contact_performed":0',
+            "external_contact_performed",
+        ),
+    ],
+)
+def test_refresh_certificate_rejects_json_type_confusion(
+    tmp_path: Path,
+    old: str,
+    new: str,
+    message: str,
+) -> None:
+    subject, git, github, _state = harness(tmp_path)
+    _record_fake_refresh(subject, git, github)
+    marker = integration.subject_refresh_marker(75, HEAD)
+    refresh = next(
+        comment
+        for comment in github.comment_values[75]
+        if marker in str(comment["body"])
+    )
+    refresh["body"] = str(refresh["body"]).replace(old, new, 1)
+
     with pytest.raises(integration.HarnessError, match=message):
         subject.preflight(75, BASE, HEAD)
+
+
+def test_refresh_certificate_rejects_wrong_owner_and_noncanonical_payload(
+    tmp_path: Path,
+) -> None:
+    subject, git, github, _state = harness(tmp_path)
+    _record_fake_refresh(subject, git, github)
+    marker = integration.subject_refresh_marker(75, HEAD)
+    refresh = next(
+        comment
+        for comment in github.comment_values[75]
+        if marker in str(comment["body"])
+    )
+    refresh["user"] = {"id": 999, "login": "impostor", "type": "User"}
+    with pytest.raises(integration.HarnessError, match="author collision"):
+        subject.preflight(75, BASE, HEAD)
+
+    refresh["user"] = {
+        "id": OWNER_ID,
+        "login": "ycpiglet",
+        "type": "User",
+    }
+    prefix = (
+        f"{marker}\n"
+        "Protected integration v1 subject refresh certificate\n\n"
+    )
+    refresh["body"] = str(refresh["body"]).replace(prefix + "{", prefix + "{ ", 1)
+    with pytest.raises(integration.HarnessError, match="not canonical JSON"):
+        subject.preflight(75, BASE, HEAD)
+
+
+def test_refresh_certificate_rejects_edit_or_duplicate(tmp_path: Path) -> None:
+    subject, git, github, _state = harness(tmp_path)
+    _record_fake_refresh(subject, git, github)
+    marker = integration.subject_refresh_marker(75, HEAD)
+    refresh = next(
+        comment
+        for comment in github.comment_values[75]
+        if marker in str(comment["body"])
+    )
+    refresh["updated_at"] = "2026-07-27T00:00:01Z"
+    with pytest.raises(integration.HarnessError, match="immutable timestamp"):
+        subject.preflight(75, BASE, HEAD)
+
+    refresh["updated_at"] = refresh["created_at"]
+    github.comment_values[75].append({**refresh, "id": 999})
+    with pytest.raises(integration.HarnessError, match="absent or duplicated"):
+        subject.preflight(75, BASE, HEAD)
+
+
+def test_refresh_certificate_rejects_predelegation_comment_time(
+    tmp_path: Path,
+) -> None:
+    subject, git, github, _state = harness(tmp_path)
+    _record_fake_refresh(subject, git, github)
+    marker = integration.subject_refresh_marker(75, HEAD)
+    refresh = next(
+        comment
+        for comment in github.comment_values[75]
+        if marker in str(comment["body"])
+    )
+    refresh["created_at"] = "2026-07-26T23:59:59Z"
+    refresh["updated_at"] = refresh["created_at"]
+
+    with pytest.raises(integration.HarnessError, match="predates"):
+        subject.preflight(75, BASE, HEAD)
+
+
+def test_refresh_rejects_disappearing_locked_path(tmp_path: Path) -> None:
+    subject, git, _github, _state = harness(tmp_path)
+    item = policy().item(75)
+    git.changed_path_values[(BASE, HEAD)] = tuple(
+        path
+        for path in item.reviewed_changed_paths
+        if path != item.locked_paths[0]
+    )
+
+    with pytest.raises(integration.HarnessError, match="locked reviewed paths"):
+        subject._validate_content_binding(item, BASE, HEAD)
+
+
+def test_refresh_requires_exact_base_subsumption_for_disappearing_reviewed_path(
+    tmp_path: Path,
+) -> None:
+    subject, git, _github, _state = harness(tmp_path, number=72)
+    item = policy().item(72)
+    removed = item.reviewed_changed_paths[0]
+    git.changed_path_values[(BASE, HEAD)] = tuple(
+        path for path in item.reviewed_changed_paths if path != removed
+    )
+    git.changed_path_digest_values[(BASE, HEAD)] = "f" * 64
+
+    with pytest.raises(integration.HarnessError, match="base subsumption"):
+        subject._validate_content_binding(item, BASE, HEAD)
+
+    git.path_identity_values[(BASE, removed)] = item.reviewed_result_entries[
+        removed
+    ]
+    binding = subject._validate_content_binding(item, BASE, HEAD)
+    assert binding.removed_reviewed_paths == (removed,)
+
+
+def test_refresh_rejects_allowed_path_outside_exact_partition(
+    tmp_path: Path,
+) -> None:
+    subject, git, _github, _state = harness(tmp_path)
+    item = policy().item(75)
+    extra_path = "docs/new-reconciliation-note.md"
+    expanded_item = integration.dataclasses.replace(
+        item,
+        allowed_paths=(*item.allowed_paths, extra_path),
+    )
+    git.changed_path_values[(BASE, HEAD)] = (
+        *item.reviewed_changed_paths,
+        extra_path,
+    )
+
+    with pytest.raises(integration.HarnessError, match="exact refresh partition"):
+        subject._validate_content_binding(expanded_item, BASE, HEAD)
 
 
 def test_candidate_rejects_symlink_or_submodule_modes(tmp_path: Path) -> None:
@@ -1205,6 +1952,34 @@ def test_candidate_rejects_symlink_or_submodule_modes(tmp_path: Path) -> None:
         else original_modes(base, head)
     )
     with pytest.raises(integration.HarnessError, match="symlink, submodule"):
+        subject.preflight(75, BASE, HEAD)
+
+
+@pytest.mark.parametrize(
+    ("old_mode", "new_mode"),
+    [
+        ("100644", "100755"),
+        ("100644", "000000"),
+    ],
+)
+def test_candidate_rejects_executable_bit_or_deletion_drift(
+    tmp_path: Path,
+    old_mode: str,
+    new_mode: str,
+) -> None:
+    subject, git, _github, _state = harness(tmp_path)
+    path = git.changed_paths(BASE, HEAD)[0]
+    original_modes = git.changed_file_modes
+    git.changed_file_modes = lambda base, head: (
+        [(path, old_mode, new_mode)]
+        if (base, head) == (BASE, HEAD)
+        else original_modes(base, head)
+    )
+
+    with pytest.raises(
+        integration.HarnessError,
+        match="deletion, executable-bit drift",
+    ):
         subject.preflight(75, BASE, HEAD)
 
 
@@ -1448,6 +2223,49 @@ def test_predecessor_rejects_repo_branch_head_and_merge_identity_drift(
     github.pulls[74]["merge_commit_sha"] = "f" * 40
     with pytest.raises(integration.HarnessError, match="bootstrap pin"):
         subject.preflight(75, BASE, HEAD)
+
+
+def test_refreshed_predecessor_revalidates_certificate_owner_and_postmerge(
+    tmp_path: Path,
+) -> None:
+    subject, git, github, _state = harness(tmp_path, number=72)
+    configure_refreshed_pr75_predecessor(subject, git, github)
+
+    evidence = subject.preflight(72, BASE, HEAD)
+
+    assert evidence.number == 72
+    assert any(
+        integration.subject_refresh_marker(75, P75_HEAD)
+        in str(comment.get("body"))
+        for comment in github.comment_values[75]
+    )
+
+
+@pytest.mark.parametrize("tamper", ["certificate", "postmerge"])
+def test_refreshed_predecessor_rejects_missing_durable_evidence(
+    tmp_path: Path,
+    tamper: str,
+) -> None:
+    subject, git, github, _state = harness(tmp_path, number=72)
+    configure_refreshed_pr75_predecessor(subject, git, github)
+    if tamper == "certificate":
+        marker = integration.subject_refresh_marker(75, P75_HEAD)
+        github.comment_values[75] = [
+            comment
+            for comment in github.comment_values[75]
+            if marker not in str(comment.get("body"))
+        ]
+        message = "refresh certificate"
+    else:
+        github.comment_values[75] = [
+            comment
+            for comment in github.comment_values[75]
+            if "exact post-merge evidence" not in str(comment.get("body"))
+        ]
+        message = "post-merge evidence"
+
+    with pytest.raises(integration.HarnessError, match=message):
+        subject.preflight(72, BASE, HEAD)
 
 
 def test_mark_ready_is_separate_settled_and_comment_idempotent(
@@ -1800,7 +2618,13 @@ def test_state_paths_reject_symlinks_without_touching_targets(tmp_path: Path) ->
 def test_cli_has_no_expansive_or_destructive_operation() -> None:
     parser = integration.build_parser()
     choices = parser._subparsers._group_actions[0].choices
-    assert set(choices) == {"validate-policy", "preflight", "mark-ready", "merge"}
+    assert set(choices) == {
+        "validate-policy",
+        "preflight",
+        "attest-refresh",
+        "mark-ready",
+        "merge",
+    }
     source = SCRIPT_PATH.read_text(encoding="utf-8")
     assert "artifacts/" not in source
     assert "outputs/" not in source
@@ -1871,21 +2695,52 @@ def test_review_threads_requires_exact_complete_page(
         client.review_threads(75)
 
 
-def test_comment_writer_cannot_fabricate_attestation_and_verifies_owner() -> None:
+def test_comment_writers_are_typed_and_verify_owner() -> None:
     runner = RecordingRunner([])
     client = integration.GitHubClient(
         runner, "ycpiglet/manipulator-control-tutorial"
     )
-    owner_marker = integration.owner_attestation_marker(75, HEAD)
-    with pytest.raises(integration.HarnessError, match="pre/post evidence"):
-        client.ensure_comment(75, owner_marker, owner_marker + "\nforged")
+    assert not hasattr(client, "ensure_comment")
     assert runner.calls == []
 
-    marker = (
-        f"<!-- protected-integration:v1:pr-75:{HEAD}:premerge:"
-        f"{'f' * 64} -->"
+    current_policy = policy()
+    item = current_policy.item(75)
+    evidence = integration.CandidateEvidence(
+        number=75,
+        work_id=item.work_id,
+        base_sha=BASE,
+        head_sha=HEAD,
+        head_tree=HEAD_TREE,
+        synthetic_merge_sha=SYNTHETIC,
+        changed_paths=item.reviewed_changed_paths,
+        stable_patch_id=item.stable_patch_id,
+        semantic_patch_sha256=item.semantic_patch_sha256,
+        changed_paths_sha256=item.changed_paths_sha256,
+        exact_diff_sha256=item.reviewed_exact_diff_sha256,
+        name_status_sha256=item.name_status_sha256,
+        binding_mode="original-reviewed-subject",
+        refreshed_paths=(),
+        removed_reviewed_paths=(),
+        refresh_certificate_comment_id=None,
+        refresh_certificate_body_sha256=None,
+        review_receipt_sha256=None,
+        check_runs={
+            context: 900 + index
+            for index, context in enumerate(current_policy.required_checks)
+        },
+        ruleset_id=current_policy.ruleset_id,
     )
-    body = marker + "\nevidence"
+    marker = integration.governed_evidence_marker(
+        75,
+        HEAD,
+        "premerge",
+        evidence.as_dict(),
+    )
+    body = integration.premerge_evidence_body(
+        current_policy,
+        marker,
+        evidence,
+    )
     created = {
         "id": 10,
         "body": body,
@@ -1896,7 +2751,7 @@ def test_comment_writer_cannot_fabricate_attestation_and_verifies_owner() -> Non
     client = integration.GitHubClient(
         runner, "ycpiglet/manipulator-control-tutorial"
     )
-    assert client.ensure_comment(75, marker, body) is True
+    assert client.ensure_premerge_evidence(current_policy, evidence) is True
 
     forged = dict(created)
     forged["user"] = {"id": 999, "login": "impostor", "type": "User"}
@@ -1905,7 +2760,7 @@ def test_comment_writer_cannot_fabricate_attestation_and_verifies_owner() -> Non
         runner, "ycpiglet/manipulator-control-tutorial"
     )
     with pytest.raises(integration.CommandError, match="did not confirm"):
-        client.ensure_comment(75, marker, body)
+        client.ensure_premerge_evidence(current_policy, evidence)
 
 
 def test_authenticated_user_endpoint_is_exactly_allowlisted() -> None:

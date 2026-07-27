@@ -1,22 +1,23 @@
 # Current State
 
-Updated: 2026-07-26 KST
+Updated: 2026-07-27 KST
 
 ## Current Objective
 
-Accept the fail-closed protected-main integration harness, then use it to
-integrate the fixed remaining queue in strict order: PR #75 OPS-01A, PR #72
-EDU-01A, PR #73 PKG-01B, PR #70 E2E-01, and PR #76 MAINT-01A. The owner's
-2026-07-26 standing delegation activates only after the policy, script, and
-tests are accepted on protected `main`; the harness cannot accept or amend
-itself.
+Accept the bounded GOV-03 subject-refresh extension through an ordinary
+protected PR, then use the already accepted fail-closed protected-main harness
+to integrate the fixed remaining queue in strict order: PR #75 OPS-01A, PR #72
+EDU-01A, PR #73 PKG-01B, PR #70 E2E-01, and PR #76 MAINT-01A. The harness
+cannot accept or amend GOV-03 or its authority documents.
 
-Each delegated transaction remains bound to the reviewed patch/path digests,
-an independent read-only agent attestation, exact base/head SHAs, live
-ruleset/application/six-check verification, zero unresolved threads, synthetic
-merge parent/tree equivalence, an exact-head guarded merge, and post-merge
-required checks 6/6. SHA, scope, policy, review, or evidence drift stops the
-transaction.
+Each delegated transaction remains bound to exact base/head SHAs, reviewed,
+locked, and refreshable path sets, locked content/status digests, one
+generation-1 canonical independent-agent review receipt, immutable owner
+certificate and attestation, live ruleset/application/six-check verification,
+zero unresolved threads, synthetic merge parent/tree equivalence, an
+exact-head guarded merge, and post-merge required checks 6/6. Unattested
+refresh, generation 2, locked content/status, SHA, scope, policy, review, or
+evidence drift stops the transaction.
 
 This objective does **not** authorize promotion or public beta; package or
 signed distribution; tag/release creation; signing, notarization, or
@@ -30,6 +31,9 @@ or bypass; or repository/layout moves.
 
 - Accepted protected `main` subject: LIC-01B merge
   `9ba5e8e7bfae9ea46e0f9217c07861a4f188ce88` (PR #74).
+- GOV-02 protected-integration harness is accepted on protected `main` at
+  merge `957d2edf219db7cbfd29789b4ea4348de04b33e6` (PR #77). Its fixed queue
+  remains #75 -> #72 -> #73 -> #70 -> #76, serialized without skips.
 - PR #74 source head/tree:
   `6cd191f0b87bb582bfde4764234a570a7f601da4` /
   `e5625718c0bcd1030bba9ea938a438d927d4033e`; the accepted merge has the
@@ -40,12 +44,12 @@ or bypass; or repository/layout moves.
 - LIC-01B is accepted only for its bounded reviewed notice-corpus and
   safe-main development scope. Aggregate LIC-01, G3, legal approval, and
   public or package distribution remain open.
-- Activation rule for the 2026-07-26 standing delegation: it is inactive while
-  the protected-integration policy/script/tests are absent from protected
-  `main`, and activates automatically once this exact harness candidate is
-  accepted there. The candidate cannot accept itself. Its only remaining queue
-  is #75 -> #72 -> #73 -> #70 -> #76, serialized without skips; it has no
-  self-amendment authority.
+- The 2026-07-26 fixed-queue standing delegation is active through accepted
+  GOV-02. The owner's 2026-07-27 extension authorizes one generation of
+  source-only reconciliation on exact predeclared refreshable paths without
+  another human prompt, but activates only after the GOV-03 policy, script,
+  tests, current-state record, and execution-plan overlay are accepted through
+  an ordinary protected PR. `self_amendment_authority` remains false.
 - PR #69 source head/tree:
   `aeabf3a852774fc198d56426f4cb507ada498f1d` /
   `2d897fa81506887df863106f118ddeb660880cfd`; the accepted merge has the
@@ -90,6 +94,10 @@ or bypass; or repository/layout moves.
 
 ## Completed Since Last Snapshot
 
+- PR #77 accepted the fail-closed GOV-02 protected-integration harness on
+  protected `main` at merge
+  `957d2edf219db7cbfd29789b4ea4348de04b33e6`. It grants only the fixed serial
+  queue and cannot amend its own policy, script, tests, or authority documents.
 - PR #74 accepted LIC-01B exact head
   `6cd191f0b87bb582bfde4764234a570a7f601da4`, merge
   `9ba5e8e7bfae9ea46e0f9217c07861a4f188ce88`, and common tree
@@ -190,14 +198,15 @@ or bypass; or repository/layout moves.
 
 ## Next Actions
 
-1. If the protected-integration policy, script, tests, and authority overlay
-   are not yet on protected `main`, accept them through an ordinary protected
-   PR with independent read-only review, exact-head checks 6/6, exact-head
-   guarded merge, and post-merge checks 6/6. The harness may not perform this
-   step itself.
-2. Once that activation condition is true, process only #75 OPS-01A -> #72
-   EDU-01A -> #73 PKG-01B -> #70 E2E-01 -> #76 MAINT-01A. Rebind each reviewed
-   patch to the then-current `main`; stop on any digest, path, SHA, ruleset,
+1. Accept the 2026-07-27 GOV-03 generation-1 subject-refresh policy, script,
+   tests, current state, and execution-plan overlay through an ordinary
+   protected PR with independent read-only review, exact-head checks 6/6,
+   exact-head guarded merge, and post-merge checks 6/6. The harness may not
+   perform this step itself.
+2. Once GOV-03 is active, process only #75 OPS-01A -> #72 EDU-01A -> #73
+   PKG-01B -> #70 E2E-01 -> #76 MAINT-01A. Preserve every locked path/digest;
+   require an exact canonical receipt and owner certificate for any bounded
+   refresh; stop on any envelope, generation, digest, path, SHA, ruleset,
    check, thread, review, or synthetic-tree mismatch.
 3. Preserve aggregate LIC-01/G3/legal/distribution, REL-01/02, HUM-01, PUB-01,
    actual-output/cleanup, artifact/package content, external-contact,
