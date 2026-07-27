@@ -655,7 +655,7 @@ EXPECTED_SOURCE_INVENTORY = {
     ],
     "inventory_version": 1,
     "manifest_path": str(SOURCE_MANIFEST_PATH),
-    "manifest_sha256": "7ea8109ffe5488b8837927e943190fba4fbe058195b5555f9f26f6f702efd8d5",
+    "manifest_sha256": "138f6def4e0fa54b4e8f9eac8f8f46b2980621d881659a48b2941e0638c58768",
     "scope": (
         "all-python-sources-under-packaging-scripts-and-src-mclab-except-exact-"
         "protected-main-governance-authority"

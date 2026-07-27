@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import ctypes
 import errno
 import hashlib
 import json
@@ -13,7 +14,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, call, patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -320,17 +321,23 @@ class InstallLockedTests(unittest.TestCase):
         pip_check.assert_not_called()
 
     def test_editable_source_must_point_to_this_repository(self) -> None:
-        direct_url = json.dumps(
-            {"url": Path("/somewhere/else").as_uri(), "dir_info": {"editable": True}}
-        )
-        distribution = SimpleNamespace(
-            version=install_locked.PROJECT_VERSION,
-            read_text=lambda name: direct_url if name == "direct_url.json" else None,
-        )
-        with patch.object(
-            install_locked.importlib.metadata, "distribution", return_value=distribution
-        ):
-            self.assertIn("expected", install_locked._editable_error() or "")
+        with tempfile.TemporaryDirectory() as tmp:
+            direct_url = json.dumps(
+                {
+                    "url": (Path(tmp).resolve() / "somewhere-else").as_uri(),
+                    "dir_info": {"editable": True},
+                }
+            )
+            distribution = SimpleNamespace(
+                version=install_locked.PROJECT_VERSION,
+                read_text=lambda name: direct_url if name == "direct_url.json" else None,
+            )
+            with patch.object(
+                install_locked.importlib.metadata,
+                "distribution",
+                return_value=distribution,
+            ):
+                self.assertIn("expected", install_locked._editable_error() or "")
 
     def test_record_integrity_detects_installed_file_tampering(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -709,6 +716,154 @@ class InstallLockedTests(unittest.TestCase):
         with first:
             with self.assertRaisesRegex(install_locked.LockedInstallError, "Timed out"):
                 second.__enter__()
+
+    def test_windows_create_file_uses_reparse_safe_dispositions(self) -> None:
+        for create_new, expected_disposition in ((True, 1), (False, 3)):
+            with self.subTest(create_new=create_new):
+                create_file = Mock(return_value=123)
+                close_handle = Mock(return_value=True)
+                kernel32 = SimpleNamespace(
+                    CreateFileW=create_file,
+                    CloseHandle=close_handle,
+                )
+                open_osfhandle = Mock(return_value=17)
+                fake_msvcrt = SimpleNamespace(open_osfhandle=open_osfhandle)
+
+                with (
+                    patch.object(ctypes, "WinDLL", return_value=kernel32, create=True),
+                    patch.dict(sys.modules, {"msvcrt": fake_msvcrt}),
+                ):
+                    descriptor = install_locked._windows_create_file_descriptor(
+                        Path("synthetic.lock"),
+                        create_new=create_new,
+                    )
+
+                self.assertEqual(descriptor, 17)
+                create_file.assert_called_once_with(
+                    "synthetic.lock",
+                    0xC0000000,
+                    0x00000003,
+                    None,
+                    expected_disposition,
+                    0x00200080,
+                    None,
+                )
+                expected_descriptor_flags = (
+                    os.O_RDWR | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOINHERIT", 0)
+                )
+                open_osfhandle.assert_called_once_with(123, expected_descriptor_flags)
+                close_handle.assert_not_called()
+
+    def test_windows_create_file_closes_unadopted_handle_once(self) -> None:
+        create_file = Mock(return_value=123)
+        close_handle = Mock(return_value=True)
+        kernel32 = SimpleNamespace(
+            CreateFileW=create_file,
+            CloseHandle=close_handle,
+        )
+        open_osfhandle = Mock(side_effect=OSError(errno.EMFILE, "fixture descriptor failure"))
+        fake_msvcrt = SimpleNamespace(open_osfhandle=open_osfhandle)
+
+        with (
+            patch.object(ctypes, "WinDLL", return_value=kernel32, create=True),
+            patch.dict(sys.modules, {"msvcrt": fake_msvcrt}),
+            self.assertRaisesRegex(OSError, "fixture descriptor failure"),
+        ):
+            install_locked._windows_create_file_descriptor(
+                Path("synthetic.lock"),
+                create_new=False,
+            )
+
+        close_handle.assert_called_once_with(123)
+
+    def test_windows_create_file_rejects_invalid_handle_before_adoption(self) -> None:
+        invalid_handle = ctypes.c_void_p(-1).value
+        create_file = Mock(return_value=invalid_handle)
+        close_handle = Mock(return_value=True)
+        kernel32 = SimpleNamespace(
+            CreateFileW=create_file,
+            CloseHandle=close_handle,
+        )
+        open_osfhandle = Mock()
+        fake_msvcrt = SimpleNamespace(open_osfhandle=open_osfhandle)
+        win_error = OSError(errno.EACCES, "fixture CreateFileW failure")
+
+        with (
+            patch.object(ctypes, "WinDLL", return_value=kernel32, create=True),
+            patch.object(ctypes, "get_last_error", return_value=5, create=True),
+            patch.object(ctypes, "WinError", return_value=win_error, create=True),
+            patch.dict(sys.modules, {"msvcrt": fake_msvcrt}),
+            self.assertRaisesRegex(OSError, "fixture CreateFileW failure"),
+        ):
+            install_locked._windows_create_file_descriptor(
+                Path("synthetic.lock"),
+                create_new=True,
+            )
+
+        open_osfhandle.assert_not_called()
+        close_handle.assert_not_called()
+
+    def test_windows_existing_lock_fallback_is_limited_to_exists_errors(self) -> None:
+        lock = install_locked._EnvironmentLock()
+        lock.path.write_bytes(b"\0")
+        exists_error = OSError(errno.EEXIST, "fixture exists")
+        exists_error.winerror = 80
+
+        with patch.object(
+            install_locked,
+            "_windows_create_file_descriptor",
+            side_effect=(exists_error, 17),
+        ) as opener:
+            descriptor = install_locked._open_windows_environment_lock_descriptor(lock.path)
+
+        self.assertEqual(descriptor, 17)
+        self.assertEqual(
+            opener.call_args_list,
+            [
+                call(lock.path, create_new=True),
+                call(lock.path, create_new=False),
+            ],
+        )
+
+    def test_windows_create_failure_never_reopens_a_created_regular_file(self) -> None:
+        lock = install_locked._EnvironmentLock()
+        lock.path.write_bytes(b"\0")
+        adoption_error = OSError(errno.EMFILE, "fixture descriptor failure")
+
+        with (
+            patch.object(
+                install_locked,
+                "_windows_create_file_descriptor",
+                side_effect=adoption_error,
+            ) as opener,
+            self.assertRaisesRegex(
+                install_locked.LockedInstallError,
+                "Could not create dependency install lock",
+            ),
+        ):
+            install_locked._open_windows_environment_lock_descriptor(lock.path)
+
+        opener.assert_called_once_with(lock.path, create_new=True)
+
+    def test_windows_nonexistent_create_error_never_falls_back_to_existing(self) -> None:
+        lock = install_locked._EnvironmentLock()
+        create_error = OSError(errno.EACCES, "fixture access failure")
+        create_error.winerror = 5
+
+        with (
+            patch.object(
+                install_locked,
+                "_windows_create_file_descriptor",
+                side_effect=create_error,
+            ) as opener,
+            self.assertRaisesRegex(
+                install_locked.LockedInstallError,
+                "Could not create dependency install lock",
+            ),
+        ):
+            install_locked._open_windows_environment_lock_descriptor(lock.path)
+
+        opener.assert_called_once_with(lock.path, create_new=True)
 
     def test_environment_lock_path_uses_effective_temp_and_environment_digest(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

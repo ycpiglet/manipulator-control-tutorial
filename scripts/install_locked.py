@@ -921,6 +921,26 @@ class _EnvironmentLock(AbstractContextManager["_EnvironmentLock"]):
 
 
 def _open_environment_lock(path: Path) -> Any:
+    if os.name == "nt":
+        descriptor = _open_windows_environment_lock_descriptor(path)
+    else:
+        descriptor = _open_posix_environment_lock_descriptor(path)
+
+    try:
+        _validate_owned_environment_lock_file(
+            descriptor,
+            path,
+            phase="validate identity",
+        )
+        _narrow_environment_lock_permissions(descriptor, path)
+        _validate_environment_lock_file(descriptor, path, phase="validate")
+        return os.fdopen(descriptor, "r+b")
+    except BaseException:
+        os.close(descriptor)
+        raise
+
+
+def _open_posix_environment_lock_descriptor(path: Path) -> int:
     flags = (
         os.O_RDWR
         | getattr(os, "O_BINARY", 0)
@@ -940,18 +960,84 @@ def _open_environment_lock(path: Path) -> Any:
             ) from exc
     except OSError as exc:
         raise LockedInstallError(f"Could not open dependency install lock {path}: {exc}") from exc
+    return descriptor
 
+
+def _open_windows_environment_lock_descriptor(path: Path) -> int:
     try:
-        _validate_owned_environment_lock_file(
-            descriptor,
-            path,
-            phase="validate identity",
-        )
-        _narrow_environment_lock_permissions(descriptor, path)
-        _validate_environment_lock_file(descriptor, path, phase="validate")
-        return os.fdopen(descriptor, "r+b")
+        return _windows_create_file_descriptor(path, create_new=True)
+    except OSError as exc:
+        if getattr(exc, "winerror", None) not in {80, 183}:
+            try:
+                attached = os.lstat(path)
+            except OSError:
+                raise LockedInstallError(
+                    f"Could not create dependency install lock {path}: {exc}"
+                ) from exc
+            if not _is_owned_environment_lock_metadata(attached):
+                raise LockedInstallError(
+                    f"Dependency install lock is not a private current-user physical file: {path}"
+                ) from exc
+            raise LockedInstallError(
+                f"Could not create dependency install lock {path}: {exc}"
+            ) from exc
+        _validate_environment_lock_path(path, phase="inspect existing")
+        try:
+            return _windows_create_file_descriptor(path, create_new=False)
+        except OSError as exc:
+            raise LockedInstallError(
+                f"Could not open existing dependency install lock {path}: {exc}"
+            ) from exc
+
+
+def _windows_create_file_descriptor(path: Path, *, create_new: bool) -> int:
+    """Open a Windows lock without following a reparse point."""
+
+    import ctypes
+    import msvcrt
+    from ctypes import wintypes
+
+    create_file = ctypes.WinDLL("kernel32", use_last_error=True).CreateFileW
+    create_file.argtypes = (
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.LPVOID,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.HANDLE,
+    )
+    create_file.restype = wintypes.HANDLE
+
+    generic_read = 0x80000000
+    generic_write = 0x40000000
+    file_share_read = 0x00000001
+    file_share_write = 0x00000002
+    create_new_disposition = 1
+    open_existing_disposition = 3
+    file_attribute_normal = 0x00000080
+    file_flag_open_reparse_point = 0x00200000
+    handle = create_file(
+        os.fspath(path),
+        generic_read | generic_write,
+        file_share_read | file_share_write,
+        None,
+        create_new_disposition if create_new else open_existing_disposition,
+        file_attribute_normal | file_flag_open_reparse_point,
+        None,
+    )
+    invalid_handle = ctypes.c_void_p(-1).value
+    if handle == invalid_handle:
+        raise ctypes.WinError(ctypes.get_last_error())
+
+    descriptor_flags = os.O_RDWR | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOINHERIT", 0)
+    try:
+        return msvcrt.open_osfhandle(handle, descriptor_flags)
     except BaseException:
-        os.close(descriptor)
+        close_handle = ctypes.WinDLL("kernel32", use_last_error=True).CloseHandle
+        close_handle.argtypes = (wintypes.HANDLE,)
+        close_handle.restype = wintypes.BOOL
+        close_handle(handle)
         raise
 
 
