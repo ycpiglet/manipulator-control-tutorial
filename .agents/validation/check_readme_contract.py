@@ -31,6 +31,7 @@ KOREAN_README = Path("README.md")
 ENGLISH_README = Path("README.en.md")
 DOC_MAP = Path("docs/README.md")
 STRUCTURE_GUIDE = Path("docs/repository_structure.md")
+LOCAL_DATA_POLICY = Path("docs/local_data_and_privacy.md")
 
 SECTION_CONTRACT = (
     ("이 저장소가 하는 일", "What this repository does"),
@@ -247,9 +248,16 @@ REQUIRED_INLINE_IDENTIFIERS = (
     "RECEIPT_ID_FROM_LIST",
 )
 
-LINK_DOCUMENTS = (KOREAN_README, ENGLISH_README, DOC_MAP, STRUCTURE_GUIDE)
+LINK_DOCUMENTS = (
+    KOREAN_README,
+    ENGLISH_README,
+    DOC_MAP,
+    STRUCTURE_GUIDE,
+    LOCAL_DATA_POLICY,
+)
 REQUIRED_SHARED_LINKS = (
     "docs/installation.md",
+    "docs/local_data_and_privacy.md",
     "docs/learner_guide.md",
     "docs/educator_guide.md",
     "docs/developer_guide.md",
@@ -275,6 +283,7 @@ DOC_MAP_REQUIRED_LINKS = (
     "docs/developer_guide.md",
     "docs/repository_structure.md",
     "docs/installation.md",
+    "docs/local_data_and_privacy.md",
     "docs/troubleshooting.md",
     "docs/lab01_mass_spring_damper.md",
     "docs/lab02_pid_control.md",
