@@ -36,7 +36,7 @@ OPEN_SUPPORTS_DIR_FD = os.open in os.supports_dir_fd
 STAT_SUPPORTS_DIR_FD = os.stat in os.supports_dir_fd
 STAT_SUPPORTS_NOFOLLOW = os.stat in os.supports_follow_symlinks
 LISTDIR_SUPPORTS_FD = os.listdir in os.supports_fd
-SCHEMA_SHA256 = "8539a4fb6150461f1d6d704665c728bac7a17ff7392791062d43fdca1f224814"
+SCHEMA_SHA256 = "d92ab4467fa24019667f255d1bfa835f56d57f147c9a8fa45a3c4050ae47d5a9"
 
 POLICY_HEADINGS = (
     "Scope / 범위",
@@ -546,16 +546,38 @@ EXPECTED_DOCUMENTATION = {
 }
 
 EXPECTED_SOURCE_INVENTORY = {
+    "governance_exclusions": [
+        {
+            "path": "scripts/protected_integration.py",
+            "reason": (
+                "protected-main authority is self-pinned and is not an "
+                "ordinary product, packaging, or learner-runtime source"
+            ),
+        }
+    ],
     "inventory_version": 1,
     "manifest_path": str(SOURCE_MANIFEST_PATH),
-    "manifest_sha256": "92f6d220f7905904fc60fc4afba5f0c03bcda5d998904bbd2faaf97933bc0b02",
-    "scope": "all-python-sources-under-packaging-scripts-and-src-mclab",
+    "manifest_sha256": "aeb10bb8e8749fe9cf2f5ea9106117eeeb4c6680124061f052f6418217ac975e",
+    "scope": (
+        "all-python-sources-under-packaging-scripts-and-src-mclab-except-exact-"
+        "protected-main-governance-authority"
+    ),
 }
 
 EXPECTED_SOURCE_ROOTS = (
     {"extensions": [".py"], "path": "packaging"},
     {"extensions": [".py"], "path": "scripts"},
     {"extensions": [".py"], "path": "src/mclab"},
+)
+
+EXPECTED_SOURCE_EXCLUSIONS = (
+    {
+        "path": "scripts/protected_integration.py",
+        "reason": (
+            "protected-main authority is self-pinned and is not an ordinary product, "
+            "packaging, or learner-runtime source"
+        ),
+    },
 )
 
 EXPECTED_VALIDATION_ONLY_EXCLUSIONS = (
@@ -1651,6 +1673,14 @@ def _source_inventory_errors(
     if not _json_values_equal(roots, EXPECTED_SOURCE_ROOTS):
         errors.append("SOURCE_INVENTORY_ROOTS")
 
+    exclusions_value = manifest.get("excluded_sources")
+    exclusions = tuple(exclusions_value) if isinstance(exclusions_value, list) else ()
+    if not _json_values_equal(exclusions, EXPECTED_SOURCE_EXCLUSIONS):
+        errors.append("SOURCE_INVENTORY_EXCLUSIONS")
+        excluded_paths: set[str] = set()
+    else:
+        excluded_paths = {record["path"] for record in exclusions}
+
     sources_value = manifest.get("sources")
     if not isinstance(sources_value, list):
         return 0, [*errors, "SOURCE_INVENTORY_SOURCES"]
@@ -1686,6 +1716,11 @@ def _source_inventory_errors(
 
     discovered, discovery_errors = _discover_source_paths(root, roots)
     errors.extend(discovery_errors)
+    for path_value in sorted(excluded_paths - discovered):
+        errors.append(f"SOURCE_INVENTORY_EXCLUSION_MISSING {path_value}")
+    for path_value in sorted(excluded_paths & set(declared)):
+        errors.append(f"SOURCE_INVENTORY_EXCLUSION_DECLARED {path_value}")
+    discovered -= excluded_paths
     declared_paths = set(declared)
     for path_value in sorted(declared_paths - discovered):
         errors.append(f"SOURCE_INVENTORY_MISSING {path_value}")
@@ -1875,7 +1910,8 @@ def validate_repository(
             (
                 "canonical version-1 manifest; no-follow, stable-identity, bounded "
                 "repository reads; exact Python path set and SHA-256 bytes under "
-                "packaging, scripts, and src/mclab; real outputs accessed 0"
+                "packaging, scripts, and src/mclab except the exact self-pinned "
+                "protected-main governance authority; real outputs accessed 0"
             ),
             (
                 f"{source_count} declared sources; {len(source_errors)} errors; "

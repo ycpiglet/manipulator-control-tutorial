@@ -276,6 +276,15 @@
     "source_inventory": {
       "additionalProperties": false,
       "properties": {
+        "governance_exclusions": {
+          "items": {
+            "$ref": "#/$defs/sourceGovernanceExclusion"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
         "inventory_version": {
           "const": 1,
           "type": "integer"
@@ -290,11 +299,12 @@
           "type": "string"
         },
         "scope": {
-          "const": "all-python-sources-under-packaging-scripts-and-src-mclab",
+          "const": "all-python-sources-under-packaging-scripts-and-src-mclab-except-exact-protected-main-governance-authority",
           "type": "string"
         }
       },
       "required": [
+        "governance_exclusions",
         "inventory_version",
         "manifest_path",
         "manifest_sha256",
@@ -476,6 +486,15 @@
           "const": "sha256-file-bytes",
           "type": "string"
         },
+        "excluded_sources": {
+          "items": {
+            "$ref": "#/$defs/sourceGovernanceExclusion"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
         "inventory_version": {
           "const": 1,
           "type": "integer"
@@ -501,9 +520,28 @@
       "required": [
         "algorithm",
         "digest_format",
+        "excluded_sources",
         "inventory_version",
         "roots",
         "sources"
+      ],
+      "type": "object"
+    },
+    "sourceGovernanceExclusion": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "const": "scripts/protected_integration.py",
+          "type": "string"
+        },
+        "reason": {
+          "const": "protected-main authority is self-pinned and is not an ordinary product, packaging, or learner-runtime source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "reason"
       ],
       "type": "object"
     },

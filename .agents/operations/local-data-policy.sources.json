@@ -1,6 +1,12 @@
 {
   "algorithm": "sha256",
   "digest_format": "sha256-file-bytes",
+  "excluded_sources": [
+    {
+      "path": "scripts/protected_integration.py",
+      "reason": "protected-main authority is self-pinned and is not an ordinary product, packaging, or learner-runtime source"
+    }
+  ],
   "inventory_version": 1,
   "roots": [
     {
@@ -32,6 +38,10 @@
       "sha256": "f1cc0f16324bf41148fef2d0ba9d864280c0262dd6457b9486b1d49c612e1f3a"
     },
     {
+      "path": "packaging/hooks/hook-mclab.py",
+      "sha256": "7dfc41b48c6dd5a1ccdf52387fca46d09923582b65c635756a6fa7e99ef304a5"
+    },
+    {
       "path": "scripts/audit_app_startup.py",
       "sha256": "a5dea1d93839b8de83d927e1377b9f76bf4b03bdbeb645946f6a00841c5e48a1"
     },
@@ -61,15 +71,23 @@
     },
     {
       "path": "scripts/build_desktop.py",
-      "sha256": "c27776d8216bf930e31b7ff379ba5e4e128d8f7e2c7734c100385590f5e79f67"
+      "sha256": "baa818bb09a0dfa848e2b66897cd330774db53757c5ebba63ec923e150a7cfc0"
     },
     {
       "path": "scripts/generate_license_inventory.py",
       "sha256": "a2de47aaf79d5e99637dade63afb019c5d86972697a7e9bb9d683f1367e36ec0"
     },
     {
+      "path": "scripts/generate_license_review.py",
+      "sha256": "3baf54eace299293670702145a24c881db239b4b52c03c8cd058dae4429f4ca8"
+    },
+    {
       "path": "scripts/generate_sbom_inputs.py",
       "sha256": "5ba1307ea4379d0a432e385e06e21069fcf6d3d61fefb78135e4dadca8327e42"
+    },
+    {
+      "path": "scripts/import_license_corpus.py",
+      "sha256": "5da9ef371e45d58ee25ab3f214041faaa8d91612a668ebea831ed5be09b14eee"
     },
     {
       "path": "scripts/install_locked.py",

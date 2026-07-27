@@ -264,10 +264,16 @@
     "support_submission_is_user_initiated": true
   },
   "source_inventory": {
+    "governance_exclusions": [
+      {
+        "path": "scripts/protected_integration.py",
+        "reason": "protected-main authority is self-pinned and is not an ordinary product, packaging, or learner-runtime source"
+      }
+    ],
     "inventory_version": 1,
     "manifest_path": ".agents/operations/local-data-policy.sources.json",
-    "manifest_sha256": "92f6d220f7905904fc60fc4afba5f0c03bcda5d998904bbd2faaf97933bc0b02",
-    "scope": "all-python-sources-under-packaging-scripts-and-src-mclab"
+    "manifest_sha256": "aeb10bb8e8749fe9cf2f5ea9106117eeeb4c6680124061f052f6418217ac975e",
+    "scope": "all-python-sources-under-packaging-scripts-and-src-mclab-except-exact-protected-main-governance-authority"
   },
   "storage_locations": [
     {

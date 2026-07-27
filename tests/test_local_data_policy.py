@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import importlib.util
 import json
 import os
@@ -32,6 +33,9 @@ checker = _load_checker()
 def _copy_repository_fixture(destination: Path) -> Path:
     source_manifest = json.loads((ROOT / checker.SOURCE_MANIFEST_PATH).read_text(encoding="utf-8"))
     source_paths = {Path(item["path"]) for item in source_manifest["sources"]}
+    excluded_source_paths = {
+        Path(item["path"]) for item in source_manifest["excluded_sources"]
+    }
     controlled = {
         checker.SCHEMA_PATH,
         checker.POLICY_PATH,
@@ -40,6 +44,7 @@ def _copy_repository_fixture(destination: Path) -> Path:
         *checker.REQUIRED_POLICY_LINKS,
         *checker.REQUIRED_DOCUMENT_MARKERS,
         *source_paths,
+        *excluded_source_paths,
     }
     for relative in sorted(controlled, key=str):
         source = ROOT / relative
@@ -841,6 +846,101 @@ def test_new_python_source_is_rejected(repository: Path) -> None:
     )
 
     assert "SOURCE_INVENTORY_UNDECLARED src/mclab/new_persistence_sink.py" in _errors(repository)
+
+
+def test_only_exact_self_pinned_governance_source_is_excluded(
+    repository: Path,
+) -> None:
+    manifest_path = repository / checker.SOURCE_MANIFEST_PATH
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["excluded_sources"][0]["path"] = "scripts/build_desktop.py"
+    manifest_path.write_bytes(checker.canonical_json_bytes(manifest))
+    policy = _policy(repository)
+    policy["source_inventory"]["manifest_sha256"] = hashlib.sha256(
+        manifest_path.read_bytes()
+    ).hexdigest()
+    _write_policy(repository, policy)
+
+    assert "SOURCE_INVENTORY_EXCLUSIONS" in _errors(repository)
+
+
+def test_new_governance_exclusion_is_rejected(repository: Path) -> None:
+    manifest_path = repository / checker.SOURCE_MANIFEST_PATH
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["excluded_sources"].append(
+        {
+            "path": "scripts/build_desktop.py",
+            "reason": manifest["excluded_sources"][0]["reason"],
+        }
+    )
+    manifest_path.write_bytes(checker.canonical_json_bytes(manifest))
+    policy = _policy(repository)
+    policy["source_inventory"]["manifest_sha256"] = hashlib.sha256(
+        manifest_path.read_bytes()
+    ).hexdigest()
+    _write_policy(repository, policy)
+
+    assert "SOURCE_INVENTORY_EXCLUSIONS" in _errors(repository)
+
+
+def test_missing_exact_governance_exclusion_is_rejected(repository: Path) -> None:
+    excluded = repository / "scripts" / "protected_integration.py"
+    excluded.unlink()
+
+    assert (
+        "SOURCE_INVENTORY_EXCLUSION_MISSING scripts/protected_integration.py"
+        in _errors(repository)
+    )
+
+
+def test_exact_governance_exclusion_symlink_is_rejected(
+    repository: Path, tmp_path: Path
+) -> None:
+    excluded = repository / "scripts" / "protected_integration.py"
+    target = tmp_path / "outside-protected-integration.py"
+    shutil.copy2(excluded, target)
+    excluded.unlink()
+    try:
+        excluded.symlink_to(target)
+    except OSError as exc:
+        pytest.skip(f"symlink creation unavailable: {exc}")
+
+    errors = _errors(repository)
+    assert "SYMLINK_SOURCE_ENTRY scripts/protected_integration.py" in errors
+    assert (
+        "SOURCE_INVENTORY_EXCLUSION_MISSING scripts/protected_integration.py"
+        in errors
+    )
+
+
+def test_exact_governance_exclusion_reparse_point_is_rejected(
+    repository: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    original_lstat = checker._entry_lstat
+
+    def reparse_exclusion_lstat(parent: object, name: str) -> object:
+        value = original_lstat(parent, name)
+        if name != "protected_integration.py":
+            return value
+        return SimpleNamespace(
+            st_ctime_ns=value.st_ctime_ns,
+            st_dev=value.st_dev,
+            st_file_attributes=checker.WINDOWS_REPARSE_ATTRIBUTE,
+            st_ino=value.st_ino,
+            st_mode=value.st_mode,
+            st_mtime_ns=value.st_mtime_ns,
+            st_reparse_tag=0xA0000003,
+            st_size=value.st_size,
+        )
+
+    monkeypatch.setattr(checker, "_entry_lstat", reparse_exclusion_lstat)
+
+    errors = _errors(repository)
+    assert "REPARSE_SOURCE_ENTRY scripts/protected_integration.py" in errors
+    assert (
+        "SOURCE_INVENTORY_EXCLUSION_MISSING scripts/protected_integration.py"
+        in errors
+    )
 
 
 def test_missing_declared_source_is_rejected(repository: Path) -> None:

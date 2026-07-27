@@ -501,10 +501,14 @@ cross-platform 목록과 승인된 정리 절차도 technical·owner·기관 검
 
 The machine contract, schema, documentation links, and temporary-fixture behavior and
 cleanup/restore tests are automated. A canonical version-1 source manifest pins the exact
-path set and SHA-256 bytes of every Python file under `packaging/`, `scripts/`, and
-`src/mclab/`; additions, removals, links, and byte drift fail validation. This is source
-integrity for those declared repository roots, not a general proof about unlisted file
-types or external services. Contract validation checks the declared storage records,
+path set and SHA-256 bytes of every product, packaging, and validation Python file under
+`packaging/`, `scripts/`, and `src/mclab/`; additions, removals, links, and byte drift fail
+validation. The sole exact source-inventory exclusion is
+`scripts/protected_integration.py`: it is protected-main governance authority, not learner
+or product runtime, and its own fail-closed authority pin and protected-main tests control
+it. No path pattern or second excluded source is accepted. This is source integrity for
+those declared repository roots, not a general proof about unlisted file types or external
+services. Contract validation checks the declared storage records,
 including the three confirmed caches; it does not discover or prove the absence of other
 runtime, dependency, OS, or driver caches. Controlled repository reads use no-follow file
 descriptors, reject POSIX links, Windows reparse points, and special files, compare directory
@@ -520,10 +524,14 @@ rule, or erasure process.
 
 machine contract와 schema, 문서 링크, 임시 fixture 기반 동작 및 cleanup/restore 시험은
 자동화됩니다. canonical version-1 source manifest는 `packaging/`, `scripts/`,
-`src/mclab/` 아래 모든 Python 파일의 정확한 경로 집합과 SHA-256 byte를 고정하며, 파일
-추가·제거·link·byte 변경은 검증에 실패합니다. 이는 선언된 저장소 root의 source integrity
-근거이지 목록 밖 파일 형식이나 외부 서비스를 포괄적으로 입증하는 것은 아닙니다. 이 정책을
-위한 검증은 세 가지 확인된 cache를 포함한 선언 storage record를 검사하지만, 다른
+`src/mclab/` 아래 제품·패키징·검증 Python 파일의 정확한 경로 집합과 SHA-256 byte를
+고정하며, 파일 추가·제거·link·byte 변경은 검증에 실패합니다. 유일한 정확한
+source-inventory 제외는 `scripts/protected_integration.py`입니다. 이 파일은 학습자 또는
+제품 runtime이 아니라 protected-main governance authority이며 자체 fail-closed authority
+pin과 protected-main test로 통제됩니다. path pattern이나 두 번째 제외 파일은 허용하지
+않습니다. 이는 선언된 저장소 root의 source integrity 근거이지 목록 밖 파일 형식이나 외부
+서비스를 포괄적으로 입증하는 것은 아닙니다. 이 정책을 위한 검증은 세 가지 확인된 cache를
+포함한 선언 storage record를 검사하지만, 다른
 runtime, dependency, OS 또는 driver cache가 없다는 사실을 찾아내거나 입증하지 않습니다.
 통제된 저장소 읽기는 no-follow file descriptor를 사용하고 POSIX link, Windows
 reparse point와 특수 파일을 거부하며 check/open/read 전후의 폴더·파일 identity와 byte
