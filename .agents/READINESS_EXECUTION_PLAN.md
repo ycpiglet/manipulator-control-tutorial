@@ -154,12 +154,14 @@ ordinary protected PR로 `main`에 accepted된 뒤에만 활성화되며 harness
 
 1. 남은 순서는 PR #75 OPS-01A -> PR #72 EDU-01A -> PR #73 PKG-01B ->
    PR #70 E2E-01 -> PR #76 MAINT-01A로 고정하며, 건너뛰거나 병렬 병합하지 않는다.
-2. 각 transaction은 고정된 reviewed patch/path digest, 독립 read-only agent
-   attestation, clean worktree, exact base/head, live ruleset `19209773`, GitHub
-   Actions app `15368`, 정확한 required context 6개, unresolved thread 0,
-   active changes-requested review 0, synthetic parent/tree equivalence,
-   exact-head guarded merge, post-merge parent/tree와 required checks 6/6을 모두
-   재검증한다. 어느 하나라도 drift, missing, red이면 fail closed한다.
+2. 각 unchanged-subject transaction은 고정된 reviewed patch/path digest, 독립
+   read-only agent attestation, clean worktree, exact base/head, live ruleset
+   `19209773`, GitHub Actions app `15368`, 정확한 required context 6개,
+   unresolved thread 0, active changes-requested review 0, synthetic parent/tree
+   equivalence, exact-head guarded merge, post-merge parent/tree와 required
+   checks 6/6을 모두 재검증한다. 아래의 2026-07-27 overlay가 명시적으로 허용한
+   generation-1 refresh를 제외하고 어느 하나라도 drift, missing, red이면 fail
+   closed한다.
 3. 현재 direct collaborator는 1명이고 required approvals는 0이며 formal
    independent human approval은 false다. Owner는 이 residual을 이 고정 queue의
    bounded safe-main 통합에 한해서만 수용했다; 독립 agent 검토를 human approval로
@@ -174,6 +176,45 @@ ordinary protected PR로 `main`에 accepted된 뒤에만 활성화되며 harness
 
 이 overlay는 현재 실행 순서에 대해 아래의 과거 queue 설명보다 우선한다. 감사 원문,
 과거 archive, append-only finding/declaration snapshot은 수정하지 않는다.
+
+### 2026-07-27 bounded subject-refresh overlay
+
+Owner는 2026-07-27에 위 fixed queue의 serial integration 과정에서 이미 검토된
+subject가 then-current `main`과 충돌해 필요한 source-only reconciliation을 agent가
+추가 승인 질문 없이 수행하도록 명시적으로 승인했다. 이 추가 위임은 아래 경계를
+모두 만족하는 **generation 1 한 번**에만 적용한다.
+
+1. Queue와 순서는 #75 -> #72 -> #73 -> #70 -> #76 그대로이며, 각 PR의
+   `reviewed_changed_paths`, `locked_paths`, `refreshable_paths`, locked semantic
+   digest, locked name-status digest, reviewed-result blob/mode identity,
+   completion claim은
+   `integration/protected-main-v1.json`의 exact 값으로 고정한다. Pattern이나 새
+   경로를 runtime에 추가할 수 없고, locked path는 사라지거나 내용/status가 바뀔
+   수 없다.
+2. Refreshable path만 추가·reconcile하거나 reviewed diff에서 사라질 수 있다.
+   Base file 삭제, executable-bit 변경, symlink, submodule, binary patch, denied
+   path, envelope 밖 변경은 중단한다. Generation 2는 지원하지 않는다.
+3. Refresh는 exact candidate를 검토한 별도 `/root/<agent>` read-only task가 반환한
+   canonical JSON receipt 전체를 요구한다. Receipt는 PASS, blocker 0, exact
+   base/head/tree, effective digests와 path 목록, 금지 content 접근 0, external
+   contact 0을 결합하며 harness가 그 SHA-256을 계산해 immutable owner certificate와
+   matching owner attestation에 함께 보존한다. 별도 principal이나 서명키가 없으므로
+   agent identity는 cryptographic human approval이 아니라 trusted orchestrator가
+   전달하는 procedural evidence라는 한계를 명시한다.
+4. 이 추가 위임은 policy, script, tests, `CURRENT_STATE.md`, 이 plan이 ordinary
+   protected PR로 `main`에 accepted된 뒤에만 활성화된다. Harness의
+   `self_amendment_authority`는 계속 false이고, harness는 이 authority 변경을
+   수용·수정·병합할 수 없다.
+5. Direct collaborator 1명, required approvals 0, formal independent human
+   approval absent라는 residual은 bounded safe-main development baseline에
+   한해서만 수용한다. Public beta/promotion, participant recruitment,
+   package/signed distribution, tag/release/DOI/publication, signing credential,
+   artifact/package content, learner outputs, cleanup dry-run/apply,
+   ruleset/security setting, external contact, repository/layout move는 계속
+   금지한다.
+
+이 overlay는 위 2026-07-26 overlay의 digest-drift 규칙만 좁게 보완하며, 다른
+gate와 금지 범위는 축소하지 않는다.
 
 ## 1. 결론
 
@@ -862,14 +903,17 @@ Single next action:
 
 ## 13. 지금 수행할 정확한 다음 작업
 
-1. Protected-integration policy, script, tests, and authority overlay가 아직
-   protected `main`에 없다면 ordinary protected PR로 수용한다. Harness는 이
-   acceptance를 직접 수행할 수 없으며 independent read-only attestation,
-   exact-head 6/6, exact-head guarded merge, source/merge tree equivalence,
-   post-merge 6/6을 모두 기록한다.
-2. Activation 뒤 PR #75 OPS-01A -> #72 EDU-01A -> #73 PKG-01B -> #70
-   E2E-01 -> #76 MAINT-01A 순서로만 처리한다. 각 PR은 reviewed patch/path
-   digest를 then-current exact `main`에 rebind하고 모든 live gate를 다시 통과해야 한다.
+1. GOV-02 protected-integration harness는 protected `main`에 accepted됐다.
+   2026-07-27 generation-1 subject-refresh policy, script, tests, current state,
+   이 authority overlay가 아직 protected `main`에 없다면 ordinary protected
+   GOV-03 PR로 수용한다. Harness는 이 acceptance를 직접 수행할 수 없으며
+   independent read-only review, exact-head 6/6, exact-head guarded merge,
+   source/merge tree equivalence, post-merge 6/6을 모두 기록한다.
+2. GOV-03 activation 뒤 PR #75 OPS-01A -> #72 EDU-01A -> #73 PKG-01B ->
+   #70 E2E-01 -> #76 MAINT-01A 순서로만 처리한다. 각 PR은 locked content를
+   보존하고 exact refresh envelope, canonical review receipt, owner certificate,
+   matching attestation과 모든 live gate를 통과한 뒤 then-current exact `main`에
+   serial merge한다.
 3. PR #74/LIC-01B는 bounded safe-main corpus acceptance일 뿐이다. Aggregate LIC,
    G3, legal, Qt/PySide distribution, public/package distribution은 open으로 유지한다.
 4. Final per-OS SBOM/provenance, hosted base-image/native-transitive inventory,

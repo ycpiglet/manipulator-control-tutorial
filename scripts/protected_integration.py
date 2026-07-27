@@ -2,8 +2,9 @@
 """Fail-closed protected-main integration transactions.
 
 The command surface is intentionally narrow: validate-policy, preflight,
-mark-ready, and merge. It never reads build/package/output artifacts and has
-no release, tag, cleanup, external-contact, or ruleset-bypass operation.
+attest-refresh, mark-ready, and merge. It never reads build/package/output
+artifacts and has no release, tag, cleanup, external-contact, or
+ruleset-bypass operation.
 """
 
 from __future__ import annotations
@@ -34,6 +35,19 @@ EVIDENCE_MARKER = re.compile(
     r"(?P<head>[0-9a-f]{40}):(?P<stage>premerge|postmerge):"
     r"(?P<fingerprint>[0-9a-f]{64}) -->$"
 )
+INDEPENDENT_REVIEWER_ID = re.compile(r"^/root/[a-z0-9][a-z0-9_]{0,63}$")
+UTC_TIMESTAMP = re.compile(
+    r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T"
+    r"[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]{1,6})?Z$"
+)
+REVIEWED_RESULT_ENTRY = re.compile(
+    r"^100644 blob [0-9a-f]{40}$"
+)
+MAX_REVIEW_RECEIPT_BYTES = 16 * 1024
+REVIEW_CLOCK_SKEW = dt.timedelta(minutes=5)
+SUBJECT_REFRESH_NOT_BEFORE = dt.datetime(
+    2026, 7, 27, tzinfo=dt.timezone.utc
+)
 SEMANTIC_INDEX_LINE = re.compile(
     rb"^index [0-9a-f]{4,64}\.\.[0-9a-f]{4,64}(?: [0-7]{6})?\r?\n?$"
 )
@@ -60,7 +74,7 @@ REPOSITORY_KEYS = {
 POLICY_RELATIVE = Path(".agents/integration/protected-main-v1.json")
 SCRIPT_RELATIVE = Path("scripts/protected_integration.py")
 CANONICAL_POLICY_SHA256 = (
-    "7c2a24f69a332c5edb343370d5197e7c7eb526a6e8282a1f14e25e6914513098"
+    "424865e9dea0568f98ac5f4f9cf3bde55e01901530945c0ad13dd1da7705d235"
 )
 STATE_SCHEMA = 1
 STATE_DIR = Path("codex/protected-integration/v1")
@@ -273,6 +287,11 @@ def _exact_int(value: object, label: str) -> int:
     return value
 
 
+def _require_exact_value(value: object, expected: object, label: str) -> None:
+    if type(value) is not type(expected) or value != expected:
+        raise HarnessError(f"{label} drift: {value!r} != {expected!r}")
+
+
 def _nonempty_string(value: object, label: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise HarnessError(f"{label} must be a non-empty string")
@@ -291,6 +310,39 @@ def canonical_json(value: object) -> str:
 
 def utc_now() -> str:
     return dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def parse_utc_timestamp(value: object, label: str) -> dt.datetime:
+    if not isinstance(value, str) or UTC_TIMESTAMP.fullmatch(value) is None:
+        raise HarnessError(f"{label} must be an exact UTC timestamp ending in Z")
+    try:
+        parsed = dt.datetime.fromisoformat(value[:-1] + "+00:00")
+    except ValueError as exc:
+        raise HarnessError(f"{label} is not a real calendar timestamp") from exc
+    if parsed.tzinfo != dt.timezone.utc:
+        raise HarnessError(f"{label} is not UTC")
+    return parsed
+
+
+def parse_canonical_review_receipt(value: object) -> Mapping[str, Any]:
+    if not isinstance(value, str):
+        raise HarnessError("review receipt must be canonical JSON text")
+    try:
+        encoded = value.encode("utf-8", errors="strict")
+    except UnicodeEncodeError as exc:
+        raise HarnessError("review receipt is not valid UTF-8") from exc
+    if not encoded or len(encoded) > MAX_REVIEW_RECEIPT_BYTES:
+        raise HarnessError(
+            "review receipt must be non-empty and at most "
+            f"{MAX_REVIEW_RECEIPT_BYTES} UTF-8 bytes"
+        )
+    try:
+        document = json.loads(value)
+    except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise HarnessError("review receipt is malformed JSON") from exc
+    if not isinstance(document, dict) or canonical_json(document) != value:
+        raise HarnessError("review receipt must be a canonical JSON object")
+    return document
 
 
 def _diff_file_sections(raw_diff: bytes) -> list[tuple[bytes, bytes]]:
@@ -432,6 +484,115 @@ def owner_attestation_body(
     )
 
 
+def subject_refresh_marker(number: int, head: str) -> str:
+    return (
+        "<!-- protected-integration:v1:subject-refresh:"
+        f"pr-{number}:{head} -->"
+    )
+
+
+@dataclasses.dataclass(frozen=True)
+class IndependentReviewReceipt:
+    payload: Mapping[str, Any]
+    sha256: str
+    reviewer_id: str
+    reviewed_at: str
+
+
+def subject_refresh_body(
+    policy: "Policy",
+    item: "QueueItem",
+    binding: "ContentBinding",
+    head_tree: str,
+    receipt: IndependentReviewReceipt,
+) -> str:
+    marker = subject_refresh_marker(item.number, binding.head_sha)
+    payload = {
+        "accessed": {
+            "artifact_or_package_content": False,
+            "credentials": False,
+            "learner_outputs": False,
+        },
+        "binding_mode": binding.binding_mode,
+        "changed_paths_sha256": binding.changed_paths_sha256,
+        "exact_base": binding.base_sha,
+        "exact_diff_sha256": binding.exact_diff_sha256,
+        "exact_head": binding.head_sha,
+        "exact_head_tree": head_tree,
+        "external_contact_performed": False,
+        "formal_independent_human_approval": "absent",
+        "independent_read_only_agent_review": "PASS",
+        "name_status_sha256": binding.name_status_sha256,
+        "policy_id": policy.policy_id,
+        "policy_reviewed_subject_base": item.reviewed_subject_base,
+        "policy_reviewed_subject_head": item.reviewed_subject_head,
+        "pull_request": item.number,
+        "refresh_generation": 1,
+        "refresh_reason": "serial-integration-reconciliation",
+        "refreshed_paths": list(binding.refreshed_paths),
+        "removed_reviewed_paths": list(binding.removed_reviewed_paths),
+        "repository": policy.repository,
+        "review_receipt": dict(receipt.payload),
+        "review_receipt_sha256": receipt.sha256,
+        "semantic_patch_sha256": binding.semantic_patch_sha256,
+        "stable_patch_id": binding.stable_patch_id,
+        "subject_refresh_accepted_date": policy.delegation[
+            "subject_refresh_accepted_date"
+        ],
+        "work_id": item.work_id,
+    }
+    return (
+        f"{marker}\n"
+        "Protected integration v1 subject refresh certificate\n\n"
+        f"{canonical_json(payload)}"
+    )
+
+
+def refreshed_owner_attestation_body(
+    policy: "Policy",
+    item: "QueueItem",
+    binding: "ContentBinding",
+    head_tree: str,
+    refresh: "RefreshCertificate",
+) -> str:
+    topology = policy.review_topology
+    marker = owner_attestation_marker(item.number, binding.head_sha)
+    return (
+        f"{marker}\n"
+        "Protected integration v1 owner attestation\n\n"
+        f"- Pull request: `#{item.number}`\n"
+        f"- Work item: `{item.work_id}`\n"
+        f"- Exact base: `{binding.base_sha}`\n"
+        f"- Exact head: `{binding.head_sha}`\n"
+        f"- Exact head tree: `{head_tree}`\n"
+        f"- Reviewed subject base: `{item.reviewed_subject_base}`\n"
+        f"- Reviewed subject head: `{item.reviewed_subject_head}`\n"
+        f"- Binding mode: `{binding.binding_mode}`\n"
+        f"- Stable patch ID: `{binding.stable_patch_id}`\n"
+        f"- Semantic patch SHA-256: `{binding.semantic_patch_sha256}`\n"
+        f"- Current exact diff SHA-256: `{binding.exact_diff_sha256}`\n"
+        f"- Sorted-NUL changed-path SHA-256: `{binding.changed_paths_sha256}`\n"
+        f"- Name-status SHA-256: `{binding.name_status_sha256}`\n"
+        f"- Subject refresh comment ID: `{refresh.comment_id}`\n"
+        f"- Subject refresh body SHA-256: `{refresh.body_sha256}`\n"
+        f"- Independent review receipt SHA-256: `{refresh.review_receipt_sha256}`\n"
+        "- Subject-refresh authority: "
+        f"`accepted {policy.delegation['subject_refresh_accepted_date']}; "
+        f"generation {policy.delegation['subject_refresh_generation']}`\n"
+        "- Independent read-only agent exact-candidate review: `PASS`\n"
+        "- Formal independent human approval: `absent`\n"
+        "- Required approvals under the single-collaborator exception: `0`\n"
+        "- Standing owner risk acceptance: "
+        f"`accepted {topology['owner_risk_acceptance_date']}`\n"
+        "- Delegated scope: `fixed protected-main integration queue only`\n\n"
+        "This attestation does not authorize public beta or promotion, participant "
+        "recruitment, release/tag/DOI, signed or package distribution, signing "
+        "or release credential acquisition/use, artifact/package content access, "
+        "learner-output access, cleanup dry-run/apply, repository moves, external "
+        "contact, or repository ruleset/security-setting changes."
+    )
+
+
 @dataclasses.dataclass(frozen=True)
 class QueueItem:
     number: int
@@ -446,6 +607,13 @@ class QueueItem:
     name_status_sha256: str
     accepted_integration: Mapping[str, Any] | None
     allowed_paths: tuple[str, ...]
+    reviewed_changed_paths: tuple[str, ...]
+    reviewed_result_entries: Mapping[str, str | None]
+    refreshable_paths: tuple[str, ...]
+    locked_paths: tuple[str, ...]
+    locked_semantic_patch_sha256: str
+    locked_name_status_sha256: str
+    completion_claim: str
 
 
 @dataclasses.dataclass(frozen=True)
@@ -510,6 +678,9 @@ class Policy:
                 "activation",
                 "already_integrated_prefix_allowed",
                 "self_amendment_authority",
+                "subject_refresh_accepted_date",
+                "subject_refresh_generation",
+                "subject_refresh_human_reprompt_required",
             },
             "standing_owner_delegation",
         )
@@ -526,6 +697,20 @@ class Policy:
             raise HarnessError("already-integrated queue prefix must remain allowed")
         if delegation["self_amendment_authority"] is not False:
             raise HarnessError("the harness cannot authorize its own amendment")
+        if delegation["subject_refresh_accepted_date"] != "2026-07-27":
+            raise HarnessError("subject-refresh delegation date drift")
+        if (
+            _exact_int(
+                delegation["subject_refresh_generation"],
+                "standing_owner_delegation.subject_refresh_generation",
+            )
+            != 1
+        ):
+            raise HarnessError("only subject-refresh generation 1 is authorized")
+        if delegation["subject_refresh_human_reprompt_required"] is not False:
+            raise HarnessError(
+                "fixed-queue subject refresh must not require another human prompt"
+            )
 
         review_topology = document["review_topology"]
         if not isinstance(review_topology, dict):
@@ -616,12 +801,36 @@ class Policy:
                     "name_status_sha256",
                     "accepted_integration",
                     "allowed_paths",
+                    "reviewed_changed_paths",
+                    "reviewed_result_entries",
+                    "refreshable_paths",
+                    "locked_paths",
+                    "locked_semantic_patch_sha256",
+                    "locked_name_status_sha256",
+                    "completion_claim",
                 },
                 f"queue[{index}]",
             )
             allowed = raw_item["allowed_paths"]
             if not isinstance(allowed, list) or not allowed:
                 raise HarnessError(f"queue[{index}].allowed_paths must be non-empty")
+            reviewed_paths_raw = raw_item["reviewed_changed_paths"]
+            reviewed_result_entries_raw = raw_item["reviewed_result_entries"]
+            refreshable_raw = raw_item["refreshable_paths"]
+            locked_raw = raw_item["locked_paths"]
+            if not isinstance(reviewed_paths_raw, list) or not reviewed_paths_raw:
+                raise HarnessError(
+                    f"queue[{index}].reviewed_changed_paths must be non-empty"
+                )
+            if (
+                not isinstance(reviewed_result_entries_raw, dict)
+                or not isinstance(refreshable_raw, list)
+                or not isinstance(locked_raw, list)
+            ):
+                raise HarnessError(
+                    f"queue[{index}] reviewed_result_entries must be an object "
+                    "and refreshable_paths/locked_paths must be arrays"
+                )
             number = _exact_int(raw_item["number"], f"queue[{index}].number")
             reviewed_subject_base = _nonempty_string(
                 raw_item["reviewed_subject_base"],
@@ -650,6 +859,14 @@ class Policy:
                 raw_item["name_status_sha256"],
                 f"queue[{index}].name_status_sha256",
             )
+            locked_semantic_patch_sha256 = _nonempty_string(
+                raw_item["locked_semantic_patch_sha256"],
+                f"queue[{index}].locked_semantic_patch_sha256",
+            )
+            locked_name_status_sha256 = _nonempty_string(
+                raw_item["locked_name_status_sha256"],
+                f"queue[{index}].locked_name_status_sha256",
+            )
             if not HEX40.fullmatch(reviewed_subject_base):
                 raise HarnessError(
                     f"queue[{index}] reviewed subject base must be 40-hex"
@@ -673,6 +890,77 @@ class Policy:
             if not HEX64.fullmatch(name_status_sha256):
                 raise HarnessError(
                     f"queue[{index}] name-status digest must be 64-hex"
+                )
+            if not HEX64.fullmatch(locked_semantic_patch_sha256):
+                raise HarnessError(
+                    f"queue[{index}] locked semantic digest must be 64-hex"
+                )
+            if not HEX64.fullmatch(locked_name_status_sha256):
+                raise HarnessError(
+                    f"queue[{index}] locked name-status digest must be 64-hex"
+                )
+            reviewed_changed_paths = tuple(
+                _validated_exact_path(
+                    value, f"queue[{index}].reviewed_changed_paths"
+                )
+                for value in reviewed_paths_raw
+            )
+            refreshable_paths = tuple(
+                _validated_exact_path(value, f"queue[{index}].refreshable_paths")
+                for value in refreshable_raw
+            )
+            locked_paths = tuple(
+                _validated_exact_path(value, f"queue[{index}].locked_paths")
+                for value in locked_raw
+            )
+            reviewed_result_entries: dict[str, str | None] = {}
+            if list(reviewed_result_entries_raw) != sorted(
+                reviewed_result_entries_raw
+            ):
+                raise HarnessError(
+                    f"queue[{index}].reviewed_result_entries keys must be sorted"
+                )
+            for raw_path, raw_entry in reviewed_result_entries_raw.items():
+                path = _validated_exact_path(
+                    raw_path,
+                    f"queue[{index}].reviewed_result_entries",
+                )
+                if raw_entry is not None and (
+                    not isinstance(raw_entry, str)
+                    or REVIEWED_RESULT_ENTRY.fullmatch(raw_entry) is None
+                ):
+                    raise HarnessError(
+                        f"queue[{index}].reviewed_result_entries[{path!r}] "
+                        "must be null or an exact non-executable blob identity"
+                    )
+                reviewed_result_entries[path] = raw_entry
+            for label, values in (
+                ("reviewed_changed_paths", reviewed_changed_paths),
+                ("refreshable_paths", refreshable_paths),
+                ("locked_paths", locked_paths),
+            ):
+                if len(values) != len(set(values)) or tuple(sorted(values)) != values:
+                    raise HarnessError(
+                        f"queue[{index}].{label} must be sorted and unique"
+                    )
+            if set(locked_paths) & set(refreshable_paths):
+                raise HarnessError(
+                    f"queue[{index}] locked and refreshable paths overlap"
+                )
+            if set(reviewed_changed_paths) != (
+                set(locked_paths) | (set(reviewed_changed_paths) & set(refreshable_paths))
+            ):
+                raise HarnessError(
+                    f"queue[{index}] reviewed paths are not partitioned by "
+                    "locked/refreshable paths"
+                )
+            expected_result_paths = set(reviewed_changed_paths) & set(
+                refreshable_paths
+            )
+            if set(reviewed_result_entries) != expected_result_paths:
+                raise HarnessError(
+                    f"queue[{index}] reviewed result entries do not equal the "
+                    "refreshable reviewed-path set"
                 )
             accepted_raw = raw_item["accepted_integration"]
             accepted: Mapping[str, Any] | None
@@ -774,6 +1062,16 @@ class Policy:
                     _validated_pattern(pattern, f"queue[{index}].allowed_paths")
                     for pattern in allowed
                 ),
+                reviewed_changed_paths=reviewed_changed_paths,
+                reviewed_result_entries=reviewed_result_entries,
+                refreshable_paths=refreshable_paths,
+                locked_paths=locked_paths,
+                locked_semantic_patch_sha256=locked_semantic_patch_sha256,
+                locked_name_status_sha256=locked_name_status_sha256,
+                completion_claim=_nonempty_string(
+                    raw_item["completion_claim"],
+                    f"queue[{index}].completion_claim",
+                ),
             )
             queue.append(item)
         expected_queue = [
@@ -810,6 +1108,24 @@ class Policy:
             raise HarnessError("PR #74 accepted-integration bootstrap pin drift")
         if any(item.accepted_integration is not None for item in queue[1:]):
             raise HarnessError("pending queue items must not claim accepted integration")
+        if queue[0].refreshable_paths:
+            raise HarnessError("accepted bootstrap item cannot be subject-refreshable")
+        if any(not item.refreshable_paths for item in queue[1:]):
+            raise HarnessError(
+                "every pending fixed-queue item must have an exact refresh envelope"
+            )
+        expected_completion_claims = {
+            74: "LIC-01B bounded safe-main development baseline",
+            75: "OPS-01A bounded safe-main development baseline",
+            72: "EDU-01A bounded safe-main development baseline",
+            73: "PKG-01 aggregate bounded safe-main development baseline",
+            70: "E2E-01 bounded safe-main development baseline",
+            76: "MAINT-01A bounded safe-main development baseline",
+        }
+        if {
+            item.number: item.completion_claim for item in queue
+        } != expected_completion_claims:
+            raise HarnessError("fixed-queue completion claims drift")
 
         denied_raw = document["denied_paths"]
         capabilities_raw = document["denied_capabilities"]
@@ -834,6 +1150,23 @@ class Policy:
                 raise HarnessError(
                     f"queue item {item.number} grants self-amendment paths: {overlap}"
                 )
+            for path in (
+                *item.reviewed_changed_paths,
+                *item.refreshable_paths,
+                *item.locked_paths,
+            ):
+                if any(path_matches(path, pattern) for pattern in denied_paths):
+                    raise HarnessError(
+                        f"queue item {item.number} refresh metadata includes denied "
+                        f"path: {path}"
+                    )
+                if not any(
+                    path_matches(path, pattern) for pattern in item.allowed_paths
+                ):
+                    raise HarnessError(
+                        f"queue item {item.number} refresh metadata exceeds its "
+                        f"allowed path envelope: {path}"
+                    )
         return cls(
             policy_id=document["policy_id"],
             repository=repository,
@@ -866,6 +1199,17 @@ def _validated_pattern(value: object, label: str) -> str:
     ):
         raise HarnessError(f"{label} contains an unsafe path pattern: {pattern!r}")
     return pattern
+
+
+def _validated_exact_path(value: object, label: str) -> str:
+    path = _validated_pattern(value, label)
+    if (
+        any(character in path for character in "*?[")
+        or path != PurePosixPath(path).as_posix()
+        or path in {".", ""}
+    ):
+        raise HarnessError(f"{label} must be an exact path, not a pattern: {path!r}")
+    return path
 
 
 def path_matches(path: str, pattern: str) -> bool:
@@ -1083,7 +1427,34 @@ class GitHubGateway(Protocol):
 
     def merge(self, number: int, expected_head: str) -> Mapping[str, Any]: ...
 
-    def ensure_comment(self, number: int, marker: str, body: str) -> bool: ...
+    def ensure_premerge_evidence(
+        self, policy: Policy, evidence: CandidateEvidence
+    ) -> bool: ...
+
+    def ensure_postmerge_evidence(
+        self,
+        number: int,
+        head: str,
+        evidence: Mapping[str, Any],
+    ) -> bool: ...
+
+    def ensure_subject_refresh_comment(
+        self,
+        policy: Policy,
+        item: QueueItem,
+        binding: ContentBinding,
+        head_tree: str,
+        receipt: IndependentReviewReceipt,
+    ) -> bool: ...
+
+    def ensure_refreshed_owner_attestation(
+        self,
+        policy: Policy,
+        item: QueueItem,
+        binding: ContentBinding,
+        head_tree: str,
+        refresh: RefreshCertificate,
+    ) -> bool: ...
 
 
 class GitHubClient:
@@ -1217,7 +1588,10 @@ class GitHubClient:
                 rf"repos/{repository}/pulls/{number}/merge",
             ),
         }
-        if not any(method == candidate and re.fullmatch(pattern, endpoint) for candidate, pattern in allowed):
+        if not any(
+            method == candidate and re.fullmatch(pattern, endpoint)
+            for candidate, pattern in allowed
+        ):
             raise HarnessError(f"GitHub API endpoint is not allowlisted: {method} {endpoint}")
 
     def pull(self, number: int) -> Mapping[str, Any]:
@@ -1294,16 +1668,71 @@ class GitHubClient:
             raise CommandError("merge response is not an object")
         return result
 
-    def ensure_comment(self, number: int, marker: str, body: str) -> bool:
-        match = EVIDENCE_MARKER.fullmatch(marker)
-        if (
-            match is None
-            or int(match.group("number")) != number
-            or not body.startswith(marker + "\n")
-        ):
-            raise HarnessError(
-                "comment creation is restricted to exact pre/post evidence markers"
-            )
+    def ensure_premerge_evidence(
+        self, policy: Policy, evidence: CandidateEvidence
+    ) -> bool:
+        payload = evidence.as_dict()
+        marker = governed_evidence_marker(
+            evidence.number,
+            evidence.head_sha,
+            "premerge",
+            payload,
+        )
+        body = premerge_evidence_body(policy, marker, evidence)
+        return self._ensure_exact_comment(evidence.number, marker, body)
+
+    def ensure_postmerge_evidence(
+        self,
+        number: int,
+        head: str,
+        evidence: Mapping[str, Any],
+    ) -> bool:
+        marker = governed_evidence_marker(
+            number,
+            head,
+            "postmerge",
+            evidence,
+        )
+        body = postmerge_evidence_body(marker, evidence)
+        return self._ensure_exact_comment(number, marker, body)
+
+    def ensure_subject_refresh_comment(
+        self,
+        policy: Policy,
+        item: QueueItem,
+        binding: ContentBinding,
+        head_tree: str,
+        receipt: IndependentReviewReceipt,
+    ) -> bool:
+        marker = subject_refresh_marker(item.number, binding.head_sha)
+        body = subject_refresh_body(
+            policy,
+            item,
+            binding,
+            head_tree,
+            receipt,
+        )
+        return self._ensure_exact_comment(item.number, marker, body)
+
+    def ensure_refreshed_owner_attestation(
+        self,
+        policy: Policy,
+        item: QueueItem,
+        binding: ContentBinding,
+        head_tree: str,
+        refresh: RefreshCertificate,
+    ) -> bool:
+        marker = owner_attestation_marker(item.number, binding.head_sha)
+        body = refreshed_owner_attestation_body(
+            policy,
+            item,
+            binding,
+            head_tree,
+            refresh,
+        )
+        return self._ensure_exact_comment(item.number, marker, body)
+
+    def _ensure_exact_comment(self, number: int, marker: str, body: str) -> bool:
         comments = self.comments(number)
         if not isinstance(comments, list):
             raise CommandError("issue comments response is not an array")
@@ -1413,11 +1842,21 @@ class GitGateway(Protocol):
 
     def semantic_patch_digest(self, base: str, head: str) -> str: ...
 
+    def semantic_patch_digest_for_paths(
+        self, base: str, head: str, paths: Sequence[str]
+    ) -> str: ...
+
     def changed_paths_digest(self, base: str, head: str) -> str: ...
 
     def exact_diff_digest(self, base: str, head: str) -> str: ...
 
     def name_status_digest(self, base: str, head: str) -> str: ...
+
+    def name_status_digest_for_paths(
+        self, base: str, head: str, paths: Sequence[str]
+    ) -> str: ...
+
+    def path_identity(self, commit: str, path: str) -> str | None: ...
 
     def tree(self, commit: str) -> str: ...
 
@@ -1629,6 +2068,17 @@ class GitRepository:
         )
         return semantic_patch_sha256(raw)
 
+    def semantic_patch_digest_for_paths(
+        self, base: str, head: str, paths: Sequence[str]
+    ) -> str:
+        if not paths:
+            return hashlib.sha256(b"").hexdigest()
+        raw = self._git_bytes(
+            *self._canonical_patch_arguments(base, head, unified=0),
+            *(self._literal_pathspec(path) for path in sorted(paths)),
+        )
+        return semantic_patch_sha256(raw)
+
     def changed_paths_digest(self, base: str, head: str) -> str:
         raw = self._git_bytes(
             "-c",
@@ -1656,6 +2106,20 @@ class GitRepository:
 
     def name_status_digest(self, base: str, head: str) -> str:
         entries = self._name_status_entries(base, head)
+        return self._name_status_entries_digest(entries)
+
+    def name_status_digest_for_paths(
+        self, base: str, head: str, paths: Sequence[str]
+    ) -> str:
+        if not paths:
+            return hashlib.sha256(b"").hexdigest()
+        entries = self._name_status_entries(base, head, paths=paths)
+        return self._name_status_entries_digest(entries)
+
+    @staticmethod
+    def _name_status_entries_digest(
+        entries: Sequence[tuple[bytes, bytes]],
+    ) -> str:
         payload = b"".join(
             status + b"\t" + path + b"\n"
             for status, path in sorted(entries, key=lambda entry: entry[1])
@@ -1663,7 +2127,11 @@ class GitRepository:
         return hashlib.sha256(payload).hexdigest()
 
     def _name_status_entries(
-        self, base: str, head: str
+        self,
+        base: str,
+        head: str,
+        *,
+        paths: Sequence[str] = (),
     ) -> tuple[tuple[bytes, bytes], ...]:
         raw = self._git_bytes(
             "-c",
@@ -1680,6 +2148,7 @@ class GitRepository:
             "-z",
             f"{base}..{head}",
             "--",
+            *(self._literal_pathspec(path) for path in sorted(paths)),
         )
         fields = raw.split(b"\x00")
         if fields and fields[-1] == b"":
@@ -1696,6 +2165,41 @@ class GitRepository:
         if len(paths) != len(set(paths)):
             raise HarnessError("name-status diff contains duplicate paths")
         return tuple(entries)
+
+    def path_identity(self, commit: str, path: str) -> str | None:
+        raw = self._git_bytes(
+            "ls-tree",
+            "-z",
+            commit,
+            "--",
+            self._literal_pathspec(path),
+        )
+        if not raw:
+            return None
+        fields = raw.split(b"\x00")
+        if fields[-1] == b"":
+            fields.pop()
+        if len(fields) != 1 or b"\t" not in fields[0]:
+            raise HarnessError(f"ambiguous reviewed-result tree entry: {path}")
+        metadata, raw_path = fields[0].split(b"\t", 1)
+        try:
+            decoded_path = raw_path.decode("utf-8", errors="strict")
+            decoded_metadata = metadata.decode("ascii", errors="strict")
+        except UnicodeDecodeError as exc:
+            raise HarnessError(
+                f"reviewed-result tree entry is not valid text: {path}"
+            ) from exc
+        if decoded_path != path or REVIEWED_RESULT_ENTRY.fullmatch(
+            decoded_metadata
+        ) is None:
+            raise HarnessError(
+                f"reviewed-result tree entry identity is invalid: {path}"
+            )
+        return decoded_metadata
+
+    @staticmethod
+    def _literal_pathspec(path: str) -> str:
+        return f":(top,literal){path}"
 
     @staticmethod
     def _canonical_patch_arguments(
@@ -2033,6 +2537,30 @@ def validate_state_shape(document: Mapping[str, Any]) -> None:
 
 
 @dataclasses.dataclass(frozen=True)
+class ContentBinding:
+    base_sha: str
+    head_sha: str
+    changed_paths: tuple[str, ...]
+    stable_patch_id: str
+    semantic_patch_sha256: str
+    changed_paths_sha256: str
+    exact_diff_sha256: str
+    name_status_sha256: str
+    binding_mode: str
+    refreshed_paths: tuple[str, ...]
+    removed_reviewed_paths: tuple[str, ...]
+
+
+@dataclasses.dataclass(frozen=True)
+class RefreshCertificate:
+    comment_id: int
+    body_sha256: str
+    review_receipt_sha256: str
+    reviewer_id: str
+    reviewed_at: str
+
+
+@dataclasses.dataclass(frozen=True)
 class CandidateEvidence:
     number: int
     work_id: str
@@ -2046,11 +2574,90 @@ class CandidateEvidence:
     changed_paths_sha256: str
     exact_diff_sha256: str
     name_status_sha256: str
+    binding_mode: str
+    refreshed_paths: tuple[str, ...]
+    removed_reviewed_paths: tuple[str, ...]
+    refresh_certificate_comment_id: int | None
+    refresh_certificate_body_sha256: str | None
+    review_receipt_sha256: str | None
     check_runs: Mapping[str, int]
     ruleset_id: int
 
     def as_dict(self) -> dict[str, Any]:
         return dataclasses.asdict(self)
+
+
+def governed_evidence_marker(
+    number: int,
+    head: str,
+    stage: str,
+    evidence: Mapping[str, Any],
+) -> str:
+    if stage not in {"premerge", "postmerge"}:
+        raise HarnessError(f"governed evidence stage is invalid: {stage!r}")
+    fingerprint = hashlib.sha256(
+        canonical_json(evidence).encode("utf-8")
+    ).hexdigest()
+    return f"{EVIDENCE_PREFIX}pr-{number}:{head}:{stage}:{fingerprint} -->"
+
+
+def premerge_evidence_body(
+    policy: Policy,
+    marker: str,
+    evidence: CandidateEvidence,
+) -> str:
+    checks = "\n".join(
+        f"- `{name}`: check run `{check_id}`"
+        for name, check_id in evidence.check_runs.items()
+    )
+    refresh_authority = (
+        "- Subject-refresh authority: "
+        f"`accepted {policy.delegation['subject_refresh_accepted_date']}; "
+        f"generation {policy.delegation['subject_refresh_generation']}`\n"
+        if evidence.binding_mode == "refreshed-generation-1"
+        else ""
+    )
+    return (
+        f"{marker}\n"
+        "Protected integration v1 pre-merge evidence (standing owner delegation "
+        "accepted 2026-07-26; fixed queue only).\n\n"
+        f"- Work item: `{evidence.work_id}` / PR `#{evidence.number}`\n"
+        f"- Completion claim: `{policy.item(evidence.number).completion_claim}`\n"
+        f"- Exact base: `{evidence.base_sha}`\n"
+        f"- Exact head: `{evidence.head_sha}`\n"
+        f"- Exact head tree: `{evidence.head_tree}`\n"
+        f"- Binding mode: `{evidence.binding_mode}`\n"
+        f"{refresh_authority}"
+        f"- Semantic patch SHA-256: `{evidence.semantic_patch_sha256}`\n"
+        f"- Current exact diff SHA-256: `{evidence.exact_diff_sha256}`\n"
+        f"- Subject refresh comment ID: "
+        f"`{evidence.refresh_certificate_comment_id}`\n"
+        f"- Independent review receipt SHA-256: "
+        f"`{evidence.review_receipt_sha256}`\n"
+        f"- Synthetic merge: `{evidence.synthetic_merge_sha}` with exact "
+        "base/head parents and head-equivalent tree\n"
+        f"- Live ruleset: `{evidence.ruleset_id}`\n"
+        f"- Changed paths inside fixed envelope: `{len(evidence.changed_paths)}`\n"
+        f"{checks}\n\n"
+        "Threads are resolved, no active changes-requested review exists, and "
+        "the pull remained ready after settlement. This is not release, signing, "
+        "DOI, artifact, learner-output, cleanup, or external-contact authority."
+    )
+
+
+def postmerge_evidence_body(marker: str, evidence: Mapping[str, Any]) -> str:
+    return (
+        f"{marker}\n"
+        "Protected integration v1 exact post-merge evidence\n\n"
+        "```json\n"
+        f"{canonical_json(evidence)}\n"
+        "```\n\n"
+        "This fixed transaction is not authority for public beta/promotion, "
+        "participant recruitment, release/tag/DOI, signed or package "
+        "distribution, signing/release credentials, artifact/package content, "
+        "cleanup, repository moves, external contact, or ruleset/security "
+        "setting changes."
+    )
 
 
 class IntegrationHarness:
@@ -2093,16 +2700,7 @@ class IntegrationHarness:
                 "expected base"
             )
         self._validate_queue(item, expected_base)
-        (
-            changed_paths,
-            stable_patch_id,
-            semantic_patch_digest,
-            changed_paths_sha256,
-            exact_diff_sha256,
-            name_status_sha256,
-        ) = self._validate_content_binding(
-            item, expected_base, expected_head
-        )
+        binding = self._validate_content_binding(item, expected_base, expected_head)
         head_tree = self.git.tree(expected_head)
         synthetic_merge = self.git.merge_sha(item)
         if tuple(self.git.parents(synthetic_merge)) != (expected_base, expected_head):
@@ -2112,12 +2710,14 @@ class IntegrationHarness:
 
         validate_ruleset(self.github.ruleset(self.policy.ruleset_id), self.policy)
         self._validate_reviews(number)
+        refresh = self._validate_subject_refresh_certificate(
+            item, binding, head_tree
+        )
         self._validate_review_topology_and_attestation(
             item,
-            expected_base,
-            expected_head,
+            binding,
             head_tree,
-            exact_diff_sha256,
+            refresh,
         )
         checks = validate_check_runs(
             self.github.check_runs(expected_head), expected_head, self.policy
@@ -2129,15 +2729,117 @@ class IntegrationHarness:
             head_sha=expected_head,
             head_tree=head_tree,
             synthetic_merge_sha=synthetic_merge,
-            changed_paths=changed_paths,
-            stable_patch_id=stable_patch_id,
-            semantic_patch_sha256=semantic_patch_digest,
-            changed_paths_sha256=changed_paths_sha256,
-            exact_diff_sha256=exact_diff_sha256,
-            name_status_sha256=name_status_sha256,
+            changed_paths=binding.changed_paths,
+            stable_patch_id=binding.stable_patch_id,
+            semantic_patch_sha256=binding.semantic_patch_sha256,
+            changed_paths_sha256=binding.changed_paths_sha256,
+            exact_diff_sha256=binding.exact_diff_sha256,
+            name_status_sha256=binding.name_status_sha256,
+            binding_mode=binding.binding_mode,
+            refreshed_paths=binding.refreshed_paths,
+            removed_reviewed_paths=binding.removed_reviewed_paths,
+            refresh_certificate_comment_id=(
+                refresh.comment_id if refresh is not None else None
+            ),
+            refresh_certificate_body_sha256=(
+                refresh.body_sha256 if refresh is not None else None
+            ),
+            review_receipt_sha256=(
+                refresh.review_receipt_sha256 if refresh is not None else None
+            ),
             check_runs=checks,
             ruleset_id=self.policy.ruleset_id,
         )
+
+    def attest_refresh(
+        self,
+        number: int,
+        expected_base: str,
+        expected_head: str,
+        *,
+        review_receipt_json: str,
+    ) -> CandidateEvidence:
+        receipt_document = parse_canonical_review_receipt(review_receipt_json)
+        with self.state.lock():
+            self._validate_authenticated_actor()
+            item = self.policy.item(number)
+            self.git.assert_environment(self.policy.repository)
+            pull = self.github.pull(number)
+            self._validate_open_pull(pull, item, expected_base, expected_head)
+            self.git.fetch_candidate(item)
+            if self.git.base_sha() != expected_base:
+                raise HarnessError("fetched origin/main differs from expected base")
+            if self.git.branch_sha(item) != expected_head:
+                raise HarnessError("fetched queued branch differs from expected head")
+            if not self.git.authority_matches(expected_base):
+                raise HarnessError(
+                    "running policy/harness is not the version accepted at "
+                    "expected base"
+                )
+            if not self.git.is_first_parent_ancestor(expected_base, expected_head):
+                raise HarnessError(
+                    "candidate head is not strictly first-parent up to date with "
+                    "expected base"
+                )
+            self._validate_queue(item, expected_base)
+            binding = self._validate_content_binding(
+                item, expected_base, expected_head
+            )
+            if binding.binding_mode != "refreshed-generation-1":
+                raise HarnessError(
+                    "attest-refresh is only valid for a bounded refreshed subject"
+                )
+            head_tree = self.git.tree(expected_head)
+            synthetic_merge = self.git.merge_sha(item)
+            if tuple(self.git.parents(synthetic_merge)) != (
+                expected_base,
+                expected_head,
+            ):
+                raise HarnessError(
+                    "synthetic merge parents do not equal exact base/head"
+                )
+            if self.git.tree(synthetic_merge) != head_tree:
+                raise HarnessError(
+                    "synthetic merge tree differs from exact head tree"
+                )
+            receipt = self._validate_independent_review_receipt(
+                receipt_document,
+                item,
+                binding,
+                head_tree,
+            )
+            validate_ruleset(
+                self.github.ruleset(self.policy.ruleset_id), self.policy
+            )
+            self._validate_reviews(number)
+            validate_check_runs(
+                self.github.check_runs(expected_head),
+                expected_head,
+                self.policy,
+            )
+            self._validate_collaborator_topology()
+            self._validate_authenticated_actor()
+            self.github.ensure_subject_refresh_comment(
+                self.policy,
+                item,
+                binding,
+                head_tree,
+                receipt,
+            )
+            refresh = self._validate_subject_refresh_certificate(
+                item, binding, head_tree
+            )
+            if refresh is None:
+                raise HarnessError("subject refresh certificate was not persisted")
+            self._validate_authenticated_actor()
+            self.github.ensure_refreshed_owner_attestation(
+                self.policy,
+                item,
+                binding,
+                head_tree,
+                refresh,
+            )
+            return self.preflight(number, expected_base, expected_head)
 
     def mark_ready(
         self,
@@ -2195,13 +2897,8 @@ class IntegrationHarness:
                     "stage": "ready-validated",
                 },
             )
-            marker = self._marker(
-                number, expected_head, "premerge", settled.as_dict()
-            )
             self._validate_authenticated_actor()
-            self.github.ensure_comment(
-                number, marker, self._premerge_comment(marker, settled)
-            )
+            self.github.ensure_premerge_evidence(self.policy, settled)
             return settled
 
     def merge(
@@ -2243,15 +2940,12 @@ class IntegrationHarness:
                 refreshed = dict(stored)
                 refreshed["post_merge_checks"] = checks
                 self.state.save(number, refreshed)
-                marker = self._marker(
+                post_evidence = self._post_evidence_payload(refreshed)
+                self._validate_authenticated_actor()
+                self.github.ensure_postmerge_evidence(
                     number,
                     expected_head,
-                    "postmerge",
-                    self._post_evidence_payload(refreshed),
-                )
-                self._validate_authenticated_actor()
-                self.github.ensure_comment(
-                    number, marker, self._postmerge_comment(marker, refreshed)
+                    post_evidence,
                 )
                 self._require_postmerge_evidence_comment(
                     item,
@@ -2288,13 +2982,8 @@ class IntegrationHarness:
                 )
                 if pull.get("draft") is not False:
                     raise HarnessError("pull returned to draft before merge")
-                marker = self._marker(
-                    number, expected_head, "premerge", evidence.as_dict()
-                )
                 self._validate_authenticated_actor()
-                self.github.ensure_comment(
-                    number, marker, self._premerge_comment(marker, evidence)
-                )
+                self.github.ensure_premerge_evidence(self.policy, evidence)
                 stored = {
                     "policy_id": self.policy.policy_id,
                     "repository": self.policy.repository,
@@ -2356,17 +3045,12 @@ class IntegrationHarness:
                 }
             )
             self.state.save(number, completed)
-            marker = self._marker(
+            post_evidence = self._post_evidence_payload(completed)
+            self._validate_authenticated_actor()
+            self.github.ensure_postmerge_evidence(
                 number,
                 expected_head,
-                "postmerge",
-                self._post_evidence_payload(completed),
-            )
-            self._validate_authenticated_actor()
-            self.github.ensure_comment(
-                number,
-                marker,
-                self._postmerge_comment(marker, completed),
+                post_evidence,
             )
             self._require_postmerge_evidence_comment(
                 item,
@@ -2394,12 +3078,17 @@ class IntegrationHarness:
         )
         validate_ruleset(self.github.ruleset(self.policy.ruleset_id), self.policy)
         self._validate_reviews(item.number)
+        binding = self._validate_content_binding(
+            item, expected_base, expected_head
+        )
+        refresh = self._validate_subject_refresh_certificate(
+            item, binding, head_tree
+        )
         self._validate_review_topology_and_attestation(
             item,
-            expected_base,
-            expected_head,
+            binding,
             head_tree,
-            current_exact_diff_sha256,
+            refresh,
         )
         validate_check_runs(
             self.github.check_runs(expected_head), expected_head, self.policy
@@ -2431,12 +3120,17 @@ class IntegrationHarness:
         )
         validate_ruleset(self.github.ruleset(self.policy.ruleset_id), self.policy)
         self._validate_reviews(item.number)
+        refreshed_binding = self._validate_content_binding(
+            item, expected_base, expected_head
+        )
+        refreshed_refresh = self._validate_subject_refresh_certificate(
+            item, refreshed_binding, refreshed_tree
+        )
         self._validate_review_topology_and_attestation(
             item,
-            expected_base,
-            expected_head,
+            refreshed_binding,
             refreshed_tree,
-            refreshed_exact_diff,
+            refreshed_refresh,
         )
         return refreshed_tree, checks
 
@@ -2471,7 +3165,7 @@ class IntegrationHarness:
         content_binding = self._validate_content_binding(
             item, expected_base, expected_head
         )
-        current_exact_diff_sha256 = content_binding[4]
+        current_exact_diff_sha256 = content_binding.exact_diff_sha256
         head_tree = self.git.tree(expected_head)
         if tuple(self.git.parents(merge_sha)) != (expected_base, expected_head):
             raise HarnessError("accepted merge parents differ from exact base/head")
@@ -2583,7 +3277,7 @@ class IntegrationHarness:
         content_binding = self._validate_content_binding(
             item, source_base, source_head
         )
-        current_exact_diff_sha256 = content_binding[4]
+        current_exact_diff_sha256 = content_binding.exact_diff_sha256
         head_tree = self.git.tree(source_head)
         if tuple(self.git.parents(merge_sha)) != (source_base, source_head):
             raise HarnessError(
@@ -2612,12 +3306,14 @@ class IntegrationHarness:
         if accepted is not None:
             self._validate_bootstrap_completion_comment(item, accepted)
         else:
+            refresh = self._validate_subject_refresh_certificate(
+                item, content_binding, head_tree
+            )
             self._validate_review_topology_and_attestation(
                 item,
-                source_base,
-                source_head,
+                content_binding,
                 head_tree,
-                current_exact_diff_sha256,
+                refresh,
             )
             self._require_postmerge_evidence_comment(
                 item,
@@ -2663,11 +3359,14 @@ class IntegrationHarness:
 
     def _validate_content_binding(
         self, item: QueueItem, source_base: str, source_head: str
-    ) -> tuple[tuple[str, ...], str, str, str, str, str]:
+    ) -> ContentBinding:
         changed_paths = tuple(self.git.changed_paths(source_base, source_head))
         validate_changed_paths(changed_paths, item, self.policy.denied_paths)
         changed_path_set = set(changed_paths)
-        allowed_modes = {"000000", "100644", "100755"}
+        allowed_mode_transitions = {
+            ("000000", "100644"),
+            ("100644", "100644"),
+        }
         for path, old_mode, new_mode in self.git.changed_file_modes(
             source_base, source_head
         ):
@@ -2675,29 +3374,15 @@ class IntegrationHarness:
                 raise HarnessError(
                     f"PR #{item.number} raw-diff path is absent from path binding: {path}"
                 )
-            if old_mode not in allowed_modes or new_mode not in allowed_modes:
+            if (old_mode, new_mode) not in allowed_mode_transitions:
                 raise HarnessError(
-                    f"PR #{item.number} uses a symlink, submodule, or unsupported "
-                    f"Git mode at {path}: {old_mode}->{new_mode}"
+                    f"PR #{item.number} uses a deletion, executable-bit drift, "
+                    "symlink, submodule, or unsupported Git mode at "
+                    f"{path}: {old_mode}->{new_mode}"
                 )
         patch_id = self.git.stable_patch_id(source_base, source_head)
-        if patch_id != item.stable_patch_id:
-            raise HarnessError(
-                f"PR #{item.number} stable patch ID drift: "
-                f"{patch_id} != {item.stable_patch_id}"
-            )
         semantic_digest = self.git.semantic_patch_digest(source_base, source_head)
-        if semantic_digest != item.semantic_patch_sha256:
-            raise HarnessError(
-                f"PR #{item.number} whitespace-preserving semantic patch drift: "
-                f"{semantic_digest} != {item.semantic_patch_sha256}"
-            )
         path_digest = self.git.changed_paths_digest(source_base, source_head)
-        if path_digest != item.changed_paths_sha256:
-            raise HarnessError(
-                f"PR #{item.number} changed-path digest drift: "
-                f"{path_digest} != {item.changed_paths_sha256}"
-            )
         exact_diff_digest = self.git.exact_diff_digest(source_base, source_head)
         if (
             source_head == item.reviewed_subject_head
@@ -2716,18 +3401,89 @@ class IntegrationHarness:
                 f"{exact_diff_digest} != {item.reviewed_exact_diff_sha256}"
             )
         name_status_digest = self.git.name_status_digest(source_base, source_head)
-        if name_status_digest != item.name_status_sha256:
+        locked_path_set = set(item.locked_paths)
+        refreshable_path_set = set(item.refreshable_paths)
+        unexpected_refresh_paths = sorted(
+            changed_path_set - locked_path_set - refreshable_path_set
+        )
+        if unexpected_refresh_paths:
             raise HarnessError(
-                f"PR #{item.number} name-status digest drift: "
-                f"{name_status_digest} != {item.name_status_sha256}"
+                f"PR #{item.number} changed paths are outside the exact refresh "
+                f"partition: {unexpected_refresh_paths}"
             )
-        return (
-            changed_paths,
-            patch_id,
-            semantic_digest,
-            path_digest,
-            exact_diff_digest,
-            name_status_digest,
+        missing_locked_paths = sorted(locked_path_set - changed_path_set)
+        if missing_locked_paths:
+            raise HarnessError(
+                f"PR #{item.number} locked reviewed paths disappeared: "
+                f"{missing_locked_paths}"
+            )
+        locked_semantic_digest = self.git.semantic_patch_digest_for_paths(
+            source_base, source_head, item.locked_paths
+        )
+        if locked_semantic_digest != item.locked_semantic_patch_sha256:
+            raise HarnessError(
+                f"PR #{item.number} non-refreshable semantic content drift: "
+                f"{locked_semantic_digest} != "
+                f"{item.locked_semantic_patch_sha256}"
+            )
+        locked_name_status_digest = self.git.name_status_digest_for_paths(
+            source_base, source_head, item.locked_paths
+        )
+        if locked_name_status_digest != item.locked_name_status_sha256:
+            raise HarnessError(
+                f"PR #{item.number} non-refreshable name-status drift: "
+                f"{locked_name_status_digest} != "
+                f"{item.locked_name_status_sha256}"
+            )
+        original_binding = (
+            patch_id == item.stable_patch_id
+            and semantic_digest == item.semantic_patch_sha256
+            and path_digest == item.changed_paths_sha256
+            and name_status_digest == item.name_status_sha256
+        )
+        if item.accepted_integration is not None and not original_binding:
+            raise HarnessError(
+                f"PR #{item.number} accepted bootstrap content cannot be refreshed"
+            )
+        binding_mode = (
+            "original-reviewed-subject"
+            if original_binding
+            else "refreshed-generation-1"
+        )
+        refreshed_paths = tuple(
+            sorted(changed_path_set & refreshable_path_set)
+            if not original_binding
+            else ()
+        )
+        removed_reviewed_paths = tuple(
+            sorted(
+                (set(item.reviewed_changed_paths) & refreshable_path_set)
+                - changed_path_set
+            )
+            if not original_binding
+            else ()
+        )
+        for path in removed_reviewed_paths:
+            expected_result = item.reviewed_result_entries[path]
+            observed_base_result = self.git.path_identity(source_base, path)
+            if observed_base_result != expected_result:
+                raise HarnessError(
+                    f"PR #{item.number} reviewed path disappeared without exact "
+                    f"base subsumption at {path}: {observed_base_result!r} != "
+                    f"{expected_result!r}"
+                )
+        return ContentBinding(
+            base_sha=source_base,
+            head_sha=source_head,
+            changed_paths=changed_paths,
+            stable_patch_id=patch_id,
+            semantic_patch_sha256=semantic_digest,
+            changed_paths_sha256=path_digest,
+            exact_diff_sha256=exact_diff_digest,
+            name_status_sha256=name_status_digest,
+            binding_mode=binding_mode,
+            refreshed_paths=refreshed_paths,
+            removed_reviewed_paths=removed_reviewed_paths,
         )
 
     def _pull_source_identity(
@@ -2837,36 +3593,322 @@ class IntegrationHarness:
                 f"active approvals from {approvals}"
             )
 
+    def _validate_independent_review_receipt(
+        self,
+        document: Mapping[str, Any],
+        item: QueueItem,
+        binding: ContentBinding,
+        head_tree: str,
+        *,
+        certificate_created_at: str | None = None,
+    ) -> IndependentReviewReceipt:
+        expected_keys = {
+            "accessed",
+            "binding_mode",
+            "blocking_findings",
+            "changed_paths",
+            "changed_paths_sha256",
+            "completion_claim",
+            "exact_base",
+            "exact_diff_sha256",
+            "exact_head",
+            "exact_head_tree",
+            "external_contact_performed",
+            "formal_independent_human_approval",
+            "name_status_sha256",
+            "policy_id",
+            "pull_request",
+            "refreshed_paths",
+            "removed_reviewed_paths",
+            "repository",
+            "result",
+            "review_scope",
+            "reviewed_at",
+            "reviewer_task",
+            "role",
+            "schema_version",
+            "semantic_patch_sha256",
+            "stable_patch_id",
+            "subject_refresh_generation",
+            "work_id",
+        }
+        _exact_keys(document, expected_keys, "independent review receipt")
+        accessed = document["accessed"]
+        if not isinstance(accessed, dict):
+            raise HarnessError("independent review receipt accessed must be an object")
+        _exact_keys(
+            accessed,
+            {"artifact_or_package_content", "credentials", "learner_outputs"},
+            "independent review receipt accessed",
+        )
+        for key, value in accessed.items():
+            if value is not False:
+                raise HarnessError(
+                    "independent review receipt records prohibited content access: "
+                    f"{key}"
+                )
+        reviewer_id = document["reviewer_task"]
+        if (
+            not isinstance(reviewer_id, str)
+            or INDEPENDENT_REVIEWER_ID.fullmatch(reviewer_id) is None
+        ):
+            raise HarnessError(
+                "reviewer task must name a bounded independent /root/<agent> task"
+            )
+        reviewed_at = document["reviewed_at"]
+        reviewed_timestamp = parse_utc_timestamp(
+            reviewed_at, "independent review receipt reviewed_at"
+        )
+        now = dt.datetime.now(dt.timezone.utc)
+        if reviewed_timestamp < SUBJECT_REFRESH_NOT_BEFORE:
+            raise HarnessError(
+                "independent review predates the subject-refresh delegation"
+            )
+        if reviewed_timestamp > now + REVIEW_CLOCK_SKEW:
+            raise HarnessError("independent review timestamp is in the future")
+        if certificate_created_at is not None:
+            certificate_timestamp = parse_utc_timestamp(
+                certificate_created_at,
+                "subject refresh certificate created_at",
+            )
+            if reviewed_timestamp > certificate_timestamp + REVIEW_CLOCK_SKEW:
+                raise HarnessError(
+                    "independent review occurs after its refresh certificate"
+                )
+        expected_values = {
+            "binding_mode": "refreshed-generation-1",
+            "blocking_findings": [],
+            "changed_paths": list(binding.changed_paths),
+            "changed_paths_sha256": binding.changed_paths_sha256,
+            "completion_claim": item.completion_claim,
+            "exact_base": binding.base_sha,
+            "exact_diff_sha256": binding.exact_diff_sha256,
+            "exact_head": binding.head_sha,
+            "exact_head_tree": head_tree,
+            "external_contact_performed": False,
+            "formal_independent_human_approval": "absent",
+            "name_status_sha256": binding.name_status_sha256,
+            "policy_id": self.policy.policy_id,
+            "pull_request": item.number,
+            "refreshed_paths": list(binding.refreshed_paths),
+            "removed_reviewed_paths": list(binding.removed_reviewed_paths),
+            "repository": self.policy.repository,
+            "result": "PASS",
+            "review_scope": "exact-candidate-source-only",
+            "role": "independent-read-only",
+            "schema_version": 1,
+            "semantic_patch_sha256": binding.semantic_patch_sha256,
+            "stable_patch_id": binding.stable_patch_id,
+            "subject_refresh_generation": 1,
+            "work_id": item.work_id,
+        }
+        for key, expected in expected_values.items():
+            _require_exact_value(
+                document[key],
+                expected,
+                f"independent review receipt {key}",
+            )
+        payload = dict(document)
+        payload_json = canonical_json(payload)
+        return IndependentReviewReceipt(
+            payload=payload,
+            sha256=hashlib.sha256(payload_json.encode("utf-8")).hexdigest(),
+            reviewer_id=reviewer_id,
+            reviewed_at=reviewed_at,
+        )
+
+    def _validate_subject_refresh_certificate(
+        self,
+        item: QueueItem,
+        binding: ContentBinding,
+        head_tree: str,
+    ) -> RefreshCertificate | None:
+        marker = subject_refresh_marker(item.number, binding.head_sha)
+        matching = []
+        for comment in self.github.comments(item.number):
+            body = comment.get("body")
+            if marker not in str(body):
+                continue
+            matching.append(comment)
+        if binding.binding_mode == "original-reviewed-subject":
+            if matching:
+                raise HarnessError(
+                    "an original reviewed-subject binding cannot claim refresh evidence"
+                )
+            return None
+        if len(matching) != 1:
+            raise HarnessError(
+                "exact owner-authored generation-1 subject refresh certificate "
+                "is absent or duplicated"
+            )
+        comment = matching[0]
+        body = comment.get("body")
+        user = comment.get("user")
+        prefix = (
+            f"{marker}\n"
+            "Protected integration v1 subject refresh certificate\n\n"
+        )
+        if (
+            not isinstance(body, str)
+            or not body.startswith(prefix)
+            or not isinstance(user, dict)
+            or user.get("id") != self.policy.review_topology["owner_id"]
+            or user.get("login") != self.policy.review_topology["owner_login"]
+            or user.get("type") != "User"
+            or comment.get("author_association") != "OWNER"
+        ):
+            raise HarnessError("subject refresh marker/body/author collision")
+        comment_id = comment.get("id")
+        created_at = comment.get("created_at")
+        updated_at = comment.get("updated_at")
+        if (
+            type(comment_id) is not int
+            or comment_id <= 0
+            or not isinstance(created_at, str)
+            or created_at != updated_at
+        ):
+            raise HarnessError(
+                "subject refresh comment identity or immutable timestamp is invalid"
+            )
+        created_timestamp = parse_utc_timestamp(
+            created_at, "subject refresh certificate created_at"
+        )
+        if created_timestamp < SUBJECT_REFRESH_NOT_BEFORE:
+            raise HarnessError(
+                "subject refresh certificate predates its delegation"
+            )
+        if created_timestamp > dt.datetime.now(dt.timezone.utc) + REVIEW_CLOCK_SKEW:
+            raise HarnessError("subject refresh certificate timestamp is in the future")
+        try:
+            payload = json.loads(body[len(prefix) :])
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise HarnessError("subject refresh payload is malformed") from exc
+        if not isinstance(payload, dict) or canonical_json(payload) != body[len(prefix) :]:
+            raise HarnessError("subject refresh payload is not canonical JSON")
+        expected_keys = {
+            "accessed",
+            "binding_mode",
+            "changed_paths_sha256",
+            "exact_base",
+            "exact_diff_sha256",
+            "exact_head",
+            "exact_head_tree",
+            "external_contact_performed",
+            "formal_independent_human_approval",
+            "independent_read_only_agent_review",
+            "name_status_sha256",
+            "policy_id",
+            "policy_reviewed_subject_base",
+            "policy_reviewed_subject_head",
+            "pull_request",
+            "refresh_generation",
+            "refresh_reason",
+            "refreshed_paths",
+            "removed_reviewed_paths",
+            "repository",
+            "review_receipt",
+            "review_receipt_sha256",
+            "semantic_patch_sha256",
+            "stable_patch_id",
+            "subject_refresh_accepted_date",
+            "work_id",
+        }
+        _exact_keys(payload, expected_keys, "subject refresh payload")
+        accessed = payload["accessed"]
+        if not isinstance(accessed, dict):
+            raise HarnessError("subject refresh accessed record must be an object")
+        _exact_keys(
+            accessed,
+            {"artifact_or_package_content", "credentials", "learner_outputs"},
+            "subject refresh accessed",
+        )
+        if any(value is not False for value in accessed.values()):
+            raise HarnessError("subject refresh records prohibited content access")
+        receipt_raw = payload["review_receipt"]
+        if not isinstance(receipt_raw, dict):
+            raise HarnessError("subject refresh review receipt must be an object")
+        receipt = self._validate_independent_review_receipt(
+            receipt_raw,
+            item,
+            binding,
+            head_tree,
+            certificate_created_at=created_at,
+        )
+        receipt_digest = payload["review_receipt_sha256"]
+        if (
+            not isinstance(receipt_digest, str)
+            or HEX64.fullmatch(receipt_digest) is None
+            or receipt_digest != receipt.sha256
+        ):
+            raise HarnessError("subject refresh review receipt digest is invalid")
+        expected_values = {
+            "binding_mode": "refreshed-generation-1",
+            "changed_paths_sha256": binding.changed_paths_sha256,
+            "exact_base": binding.base_sha,
+            "exact_diff_sha256": binding.exact_diff_sha256,
+            "exact_head": binding.head_sha,
+            "exact_head_tree": head_tree,
+            "external_contact_performed": False,
+            "formal_independent_human_approval": "absent",
+            "independent_read_only_agent_review": "PASS",
+            "name_status_sha256": binding.name_status_sha256,
+            "policy_id": self.policy.policy_id,
+            "policy_reviewed_subject_base": item.reviewed_subject_base,
+            "policy_reviewed_subject_head": item.reviewed_subject_head,
+            "pull_request": item.number,
+            "refresh_generation": 1,
+            "refresh_reason": "serial-integration-reconciliation",
+            "refreshed_paths": list(binding.refreshed_paths),
+            "removed_reviewed_paths": list(binding.removed_reviewed_paths),
+            "repository": self.policy.repository,
+            "semantic_patch_sha256": binding.semantic_patch_sha256,
+            "stable_patch_id": binding.stable_patch_id,
+            "subject_refresh_accepted_date": self.policy.delegation[
+                "subject_refresh_accepted_date"
+            ],
+            "work_id": item.work_id,
+        }
+        for key, expected in expected_values.items():
+            _require_exact_value(
+                payload[key],
+                expected,
+                f"subject refresh payload {key}",
+            )
+        return RefreshCertificate(
+            comment_id=comment_id,
+            body_sha256=hashlib.sha256(body.encode("utf-8")).hexdigest(),
+            review_receipt_sha256=receipt_digest,
+            reviewer_id=receipt.reviewer_id,
+            reviewed_at=receipt.reviewed_at,
+        )
+
     def _validate_review_topology_and_attestation(
         self,
         item: QueueItem,
-        expected_base: str,
-        expected_head: str,
+        binding: ContentBinding,
         head_tree: str,
-        current_exact_diff_sha256: str,
+        refresh: RefreshCertificate | None,
     ) -> None:
-        collaborators = self.github.direct_collaborators()
+        self._validate_collaborator_topology()
         topology = self.policy.review_topology
-        if len(collaborators) != topology["direct_collaborators"]:
-            raise HarnessError("live direct-collaborator count drift")
-        collaborator = collaborators[0]
-        permissions = collaborator.get("permissions")
-        if (
-            collaborator.get("id") != topology["owner_id"]
-            or collaborator.get("login") != topology["owner_login"]
-            or collaborator.get("type") != "User"
-            or not isinstance(permissions, dict)
-            or permissions.get("admin") is not True
-        ):
-            raise HarnessError("live direct-collaborator owner/admin topology drift")
-        expected_marker = owner_attestation_marker(item.number, expected_head)
-        expected_body = owner_attestation_body(
-            self.policy,
-            item,
-            expected_base,
-            expected_head,
-            head_tree,
-            current_exact_diff_sha256,
+        expected_marker = owner_attestation_marker(item.number, binding.head_sha)
+        expected_body = (
+            owner_attestation_body(
+                self.policy,
+                item,
+                binding.base_sha,
+                binding.head_sha,
+                head_tree,
+                binding.exact_diff_sha256,
+            )
+            if refresh is None
+            else refreshed_owner_attestation_body(
+                self.policy,
+                item,
+                binding,
+                head_tree,
+                refresh,
+            )
         )
         matches = []
         for comment in self.github.comments(item.number):
@@ -2889,6 +3931,22 @@ class IntegrationHarness:
                 "exact owner-authored independent-agent/risk attestation is absent "
                 "or duplicated"
             )
+
+    def _validate_collaborator_topology(self) -> None:
+        collaborators = self.github.direct_collaborators()
+        topology = self.policy.review_topology
+        if len(collaborators) != topology["direct_collaborators"]:
+            raise HarnessError("live direct-collaborator count drift")
+        collaborator = collaborators[0]
+        permissions = collaborator.get("permissions")
+        if (
+            collaborator.get("id") != topology["owner_id"]
+            or collaborator.get("login") != topology["owner_login"]
+            or collaborator.get("type") != "User"
+            or not isinstance(permissions, dict)
+            or permissions.get("admin") is not True
+        ):
+            raise HarnessError("live direct-collaborator owner/admin topology drift")
 
     def _validate_authenticated_actor(self) -> None:
         actor = self.github.authenticated_user()
@@ -2945,15 +4003,6 @@ class IntegrationHarness:
             ):
                 raise HarnessError("complete state required-check context drift")
 
-    @staticmethod
-    def _marker(
-        number: int, head: str, stage: str, evidence: Mapping[str, Any]
-    ) -> str:
-        fingerprint = hashlib.sha256(
-            canonical_json(evidence).encode("utf-8")
-        ).hexdigest()
-        return f"{EVIDENCE_PREFIX}pr-{number}:{head}:{stage}:{fingerprint} -->"
-
     def _post_evidence_payload(
         self, document: Mapping[str, Any]
     ) -> dict[str, Any]:
@@ -2964,24 +4013,46 @@ class IntegrationHarness:
         expected_head = _nonempty_string(
             document.get("expected_head"), "evidence expected head"
         )
+        head_tree = _nonempty_string(
+            document.get("head_tree"), "evidence head tree"
+        )
+        binding = self._validate_content_binding(
+            item, expected_base, expected_head
+        )
+        refresh = self._validate_subject_refresh_certificate(
+            item, binding, head_tree
+        )
         return {
             "policy_id": self.policy.policy_id,
             "number": document.get("number"),
             "work_id": item.work_id,
+            "completion_claim": item.completion_claim,
             "expected_base": expected_base,
             "expected_head": expected_head,
-            "head_tree": document.get("head_tree"),
+            "head_tree": head_tree,
             "merge_sha": document.get("merge_sha"),
-            "reviewed_subject_base": item.reviewed_subject_base,
-            "reviewed_subject_head": item.reviewed_subject_head,
-            "stable_patch_id": item.stable_patch_id,
-            "semantic_patch_sha256": item.semantic_patch_sha256,
-            "changed_paths_sha256": item.changed_paths_sha256,
-            "reviewed_exact_diff_sha256": item.reviewed_exact_diff_sha256,
-            "current_exact_diff_sha256": self.git.exact_diff_digest(
-                expected_base, expected_head
+            "policy_reviewed_subject_base": item.reviewed_subject_base,
+            "policy_reviewed_subject_head": item.reviewed_subject_head,
+            "policy_semantic_patch_sha256": item.semantic_patch_sha256,
+            "policy_changed_paths_sha256": item.changed_paths_sha256,
+            "policy_name_status_sha256": item.name_status_sha256,
+            "binding_mode": binding.binding_mode,
+            "stable_patch_id": binding.stable_patch_id,
+            "semantic_patch_sha256": binding.semantic_patch_sha256,
+            "changed_paths_sha256": binding.changed_paths_sha256,
+            "current_exact_diff_sha256": binding.exact_diff_sha256,
+            "name_status_sha256": binding.name_status_sha256,
+            "refreshed_paths": list(binding.refreshed_paths),
+            "removed_reviewed_paths": list(binding.removed_reviewed_paths),
+            "refresh_certificate_comment_id": (
+                refresh.comment_id if refresh is not None else None
             ),
-            "name_status_sha256": item.name_status_sha256,
+            "refresh_certificate_body_sha256": (
+                refresh.body_sha256 if refresh is not None else None
+            ),
+            "review_receipt_sha256": (
+                refresh.review_receipt_sha256 if refresh is not None else None
+            ),
             "ruleset_id": self.policy.ruleset_id,
             "post_merge_checks": document.get("post_merge_checks"),
         }
@@ -2995,24 +4066,41 @@ class IntegrationHarness:
         merge_sha: str,
         checks: Mapping[str, int],
     ) -> dict[str, Any]:
+        binding = self._validate_content_binding(item, source_base, source_head)
+        refresh = self._validate_subject_refresh_certificate(
+            item, binding, head_tree
+        )
         return {
             "policy_id": self.policy.policy_id,
             "number": item.number,
             "work_id": item.work_id,
+            "completion_claim": item.completion_claim,
             "expected_base": source_base,
             "expected_head": source_head,
             "head_tree": head_tree,
             "merge_sha": merge_sha,
-            "reviewed_subject_base": item.reviewed_subject_base,
-            "reviewed_subject_head": item.reviewed_subject_head,
-            "stable_patch_id": item.stable_patch_id,
-            "semantic_patch_sha256": item.semantic_patch_sha256,
-            "changed_paths_sha256": item.changed_paths_sha256,
-            "reviewed_exact_diff_sha256": item.reviewed_exact_diff_sha256,
-            "current_exact_diff_sha256": self.git.exact_diff_digest(
-                source_base, source_head
+            "policy_reviewed_subject_base": item.reviewed_subject_base,
+            "policy_reviewed_subject_head": item.reviewed_subject_head,
+            "policy_semantic_patch_sha256": item.semantic_patch_sha256,
+            "policy_changed_paths_sha256": item.changed_paths_sha256,
+            "policy_name_status_sha256": item.name_status_sha256,
+            "binding_mode": binding.binding_mode,
+            "stable_patch_id": binding.stable_patch_id,
+            "semantic_patch_sha256": binding.semantic_patch_sha256,
+            "changed_paths_sha256": binding.changed_paths_sha256,
+            "current_exact_diff_sha256": binding.exact_diff_sha256,
+            "name_status_sha256": binding.name_status_sha256,
+            "refreshed_paths": list(binding.refreshed_paths),
+            "removed_reviewed_paths": list(binding.removed_reviewed_paths),
+            "refresh_certificate_comment_id": (
+                refresh.comment_id if refresh is not None else None
             ),
-            "name_status_sha256": item.name_status_sha256,
+            "refresh_certificate_body_sha256": (
+                refresh.body_sha256 if refresh is not None else None
+            ),
+            "review_receipt_sha256": (
+                refresh.review_receipt_sha256 if refresh is not None else None
+            ),
             "ruleset_id": self.policy.ruleset_id,
             "post_merge_checks": dict(checks),
         }
@@ -3034,8 +4122,13 @@ class IntegrationHarness:
             merge_sha,
             checks,
         )
-        marker = self._marker(item.number, source_head, "postmerge", evidence)
-        expected_body = self._postmerge_comment_from_evidence(marker, evidence)
+        marker = governed_evidence_marker(
+            item.number,
+            source_head,
+            "postmerge",
+            evidence,
+        )
+        expected_body = postmerge_evidence_body(marker, evidence)
         topology = self.policy.review_topology
         matches = []
         for comment in self.github.comments(item.number):
@@ -3058,55 +4151,6 @@ class IntegrationHarness:
                 f"PR #{item.number} exact post-merge evidence comment is absent "
                 "or duplicated"
             )
-
-    def _premerge_comment(self, marker: str, evidence: CandidateEvidence) -> str:
-        checks = "\n".join(
-            f"- `{name}`: check run `{check_id}`"
-            for name, check_id in evidence.check_runs.items()
-        )
-        return (
-            f"{marker}\n"
-            "Protected integration v1 pre-merge evidence (standing owner delegation "
-            "accepted 2026-07-26; fixed queue only).\n\n"
-            f"- Work item: `{evidence.work_id}` / PR `#{evidence.number}`\n"
-            f"- Exact base: `{evidence.base_sha}`\n"
-            f"- Exact head: `{evidence.head_sha}`\n"
-            f"- Exact head tree: `{evidence.head_tree}`\n"
-            f"- Semantic patch SHA-256: `{evidence.semantic_patch_sha256}`\n"
-            f"- Current exact diff SHA-256: `{evidence.exact_diff_sha256}`\n"
-            f"- Synthetic merge: `{evidence.synthetic_merge_sha}` with exact "
-            "base/head parents and head-equivalent tree\n"
-            f"- Live ruleset: `{evidence.ruleset_id}`\n"
-            f"- Changed paths inside fixed envelope: `{len(evidence.changed_paths)}`\n"
-            f"{checks}\n\n"
-            "Threads are resolved, no active changes-requested review exists, and "
-            "the pull remained ready after settlement. This is not release, signing, "
-            "DOI, artifact, learner-output, cleanup, or external-contact authority."
-        )
-
-    def _postmerge_comment(
-        self, marker: str, completed: Mapping[str, Any]
-    ) -> str:
-        evidence = self._post_evidence_payload(completed)
-        return self._postmerge_comment_from_evidence(marker, evidence)
-
-    @staticmethod
-    def _postmerge_comment_from_evidence(
-        marker: str, evidence: Mapping[str, Any]
-    ) -> str:
-        return (
-            f"{marker}\n"
-            "Protected integration v1 exact post-merge evidence\n\n"
-            "```json\n"
-            f"{canonical_json(evidence)}\n"
-            "```\n\n"
-            "This fixed transaction is not authority for public beta/promotion, "
-            "participant recruitment, release/tag/DOI, signed or package "
-            "distribution, signing/release credentials, artifact/package content, "
-            "cleanup, repository moves, external contact, or ruleset/security "
-            "setting changes."
-        )
-
 
 def _positive_float(value: str) -> float:
     try:
@@ -3164,6 +4208,18 @@ def build_parser() -> argparse.ArgumentParser:
         return child
 
     transaction("preflight", "run read-only exact candidate gates")
+    attest = transaction(
+        "attest-refresh",
+        "record an independently reviewed generation-1 subject refresh",
+    )
+    attest.add_argument(
+        "--review-receipt-json",
+        required=True,
+        help=(
+            "canonical JSON receipt returned by the independent read-only "
+            "exact-candidate reviewer"
+        ),
+    )
     ready = transaction("mark-ready", "mark ready, settle, and revalidate")
     ready.add_argument("--settle-seconds", type=_settle_seconds, default=5.0)
     merge = transaction("merge", "exact-head merge and post-merge validation")
@@ -3229,6 +4285,13 @@ def main(argv: Sequence[str] | None = None) -> int:
                 result: object = harness.preflight(
                     arguments.pr, arguments.expected_base, arguments.expected_head
                 ).as_dict()
+        elif arguments.command == "attest-refresh":
+            result = harness.attest_refresh(
+                arguments.pr,
+                arguments.expected_base,
+                arguments.expected_head,
+                review_receipt_json=arguments.review_receipt_json,
+            ).as_dict()
         elif arguments.command == "mark-ready":
             result = harness.mark_ready(
                 arguments.pr,
