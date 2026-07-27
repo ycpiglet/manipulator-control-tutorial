@@ -195,9 +195,9 @@ operations:
     evidence: "workflow files and final report"
   local_data_contract:
     metric: "bounded local-data/privacy schema, canonical declared surfaces, source behavior, bilingual policy, and documentation links"
-    threshold: "all checker metrics pass; validation errors 0; confirmed CPython, Qt QML, and Matplotlib effective path selection including overrides/fallback explicit; broader platform cache boundary open; real learner outputs accessed 0"
+    threshold: "all checker metrics pass; validation errors 0; persistent link/reparse-safe and identity-bound asset/dependency install locks, POSIX dependency-lock permission narrowing, stable-path advisory assumption with detected release violations, project-venv dependency state, crash-remnant state staging, writer-managed replacement/failure behavior, and manual-cleanup nonauthority explicit; confirmed CPython, Qt QML, and Matplotlib effective path selection including overrides/fallback explicit; enumerated absolute imports and supported literal-dynamic forms (positional/keyword names, literal-string entries in list/tuple/set/dict __import__ fromlists, and literal-package relative import_module calls) fail closed except the exact asset installer urllib request; broader platform cache boundary open; real learner outputs accessed 0"
     command: "python .agents/validation/check_local_data_policy.py"
-    evidence: "tests/test_local_data_policy.py, tests/test_batch.py, tests/test_logging.py, and tests/test_output_cleanup.py with explicit temporary roots"
+    evidence: "tests/test_local_data_policy.py, tests/test_assets.py, tests/test_install_locked.py, tests/test_application.py, tests/test_batch.py, tests/test_logging.py, and tests/test_output_cleanup.py with explicit temporary roots"
   cleanup_safety:
     metric: "cleanup candidates classified before deletion"
     threshold: "100 percent classified"

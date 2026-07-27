@@ -3,6 +3,21 @@
   "data_classes": [
     {
       "artifacts": [
+        "<effective-temporary-directory>/mclab-assets-<project-device-inode-sha256>.lock",
+        "<effective-temporary-directory>/mclab-install-<environment-prefix-sha256-prefix>.lock",
+        "<repository>/.venv/..mclab-lock-state.json.<random>.tmp",
+        "<repository>/.venv/.mclab-lock-state.json"
+      ],
+      "content": "Local setup coordination and dependency state metadata. An empty coordination lock, whether new or pre-existing, receives one NUL marker, while an existing non-empty lock is not truncated. The asset lock filename hashes the physical project root device and inode; the dependency lock hashes the normalized resolved environment prefix. Both reject link or reparse, non-regular, and multi-link entries plus foreign owners where ownership metadata is available; the dependency lock also narrows POSIX group and other permissions before use. Both remain after normal unlock. Advisory serialization assumes cooperating actors do not unlink or replace a held lock pathname; release validation reports a detected violation but cannot prevent the temporary overlap. The project-venv state records its schema, requested and effective profiles, capabilities, absolute project root, platform fingerprint, input hashes, package inventory, inventory SHA-256, and record integrity. An explicit mutating install removes prior state before package work, so failure can leave it absent; success writes replacement state. Its atomic staging sibling is normally replaced or removed, but process interruption can leave it.",
+      "derived_copies": [],
+      "id": "asset-and-dependency-installation-metadata",
+      "learner_authored": false,
+      "may_contain_private_data": true,
+      "sharing": "sanitize-before-sharing",
+      "status": "persistent"
+    },
+    {
+      "artifacts": [
         "outputs/.mclab-trash/<receipt>/entries/<run>",
         "outputs/.mclab-trash/<receipt>/receipt.json"
       ],
@@ -196,6 +211,7 @@
   },
   "lifecycle_controls": {
     "automatic_deletion": false,
+    "automatic_deletion_scope": "saved-learner-artifacts-only-setup-writer-lifecycle-excluded",
     "backup_policy_status": "not-defined",
     "cleanup_apply_authorized_by_this_contract": false,
     "cleanup_default": "read-only-plan",
@@ -209,7 +225,10 @@
     "restore_scope": "source-or-venv-cli-on-local-filesystem",
     "retention_policy_status": "not-defined",
     "rpo_rto_status": "not-defined",
-    "secure_erasure_status": "not-provided-by-mclab"
+    "secure_erasure_status": "not-provided-by-mclab",
+    "setup_installation_lock_path_stability_assumption": "cooperating-processes-do-not-unlink-or-replace-held-lock-path",
+    "setup_installation_metadata_manual_cleanup_authorized_by_this_contract": false,
+    "setup_installation_metadata_writer_lifecycle": "locks-persist-explicit-install-removes-prior-state-before-mutation-failure-may-leave-state-absent-staging-cleaned-best-effort"
   },
   "network_behavior": {
     "automatic_learner_data_transfer": false,
@@ -272,10 +291,18 @@
     ],
     "inventory_version": 1,
     "manifest_path": ".agents/operations/local-data-policy.sources.json",
-    "manifest_sha256": "aeb10bb8e8749fe9cf2f5ea9106117eeeb4c6680124061f052f6418217ac975e",
+    "manifest_sha256": "7ea8109ffe5488b8837927e943190fba4fbe058195b5555f9f26f6f702efd8d5",
     "scope": "all-python-sources-under-packaging-scripts-and-src-mclab-except-exact-protected-main-governance-authority"
   },
   "storage_locations": [
+    {
+      "applies_when": "python -m mclab assets install reaches lock acquisition for a physical project root, including already-valid assets or a later failed install",
+      "code_reference": "src/mclab/application/assets.py:_exclusive_asset_install_lock",
+      "id": "asset-install-coordination-lock",
+      "parent_source": "the effective platform temporary directory selected by tempfile.gettempdir()",
+      "path_template": "<effective-temporary-directory>/mclab-assets-<project-device-inode-sha256>.lock",
+      "relative_child": "derived-project-identity-lock-file"
+    },
     {
       "applies_when": "Python imports a .py module with bytecode writing enabled and its effective bytecode cache destination is writable",
       "code_reference": "CPython:import-bytecode-cache",
@@ -283,6 +310,30 @@
       "parent_source": "effective sys.pycache_prefix selected by -X pycache_prefix or PYTHONPYCACHEPREFIX; otherwise each writable source or import root __pycache__ directory",
       "path_template": "<effective-CPython-bytecode-cache-root>/**/*.pyc",
       "relative_child": "runtime-selected-cache-files"
+    },
+    {
+      "applies_when": "python scripts/install_locked.py <profile> enters the environment lock, including an already-valid environment or a later failed install",
+      "code_reference": "scripts/install_locked.py:_EnvironmentLock",
+      "id": "dependency-install-coordination-lock",
+      "parent_source": "the effective platform temporary directory selected by tempfile.gettempdir()",
+      "path_template": "<effective-temporary-directory>/mclab-install-<environment-prefix-sha256-prefix>.lock",
+      "relative_child": "derived-environment-identity-lock-file"
+    },
+    {
+      "applies_when": "a successful locked dependency install records a verified project-local .venv",
+      "code_reference": "scripts/install_locked.py:_write_state",
+      "id": "dependency-install-state-file",
+      "parent_source": "the repository-local project virtual environment selected by scripts/install_locked.py",
+      "path_template": "<repository>/.venv/.mclab-lock-state.json",
+      "relative_child": "project-venv-lock-state"
+    },
+    {
+      "applies_when": "a project-local locked dependency install atomically stages its verified state; normal replacement or error cleanup removes it, but process interruption can leave it",
+      "code_reference": "scripts/install_locked.py:_write_state",
+      "id": "dependency-install-state-staging-file",
+      "parent_source": "the repository-local project virtual environment selected by scripts/install_locked.py",
+      "path_template": "<repository>/.venv/..mclab-lock-state.json.<random>.tmp",
+      "relative_child": "atomic-project-venv-lock-state-staging-file"
     },
     {
       "applies_when": "the desktop starts without MCLAB_INSTANCE_LOCK",

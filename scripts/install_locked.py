@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import errno
 import hashlib
 import importlib.metadata
 import json
@@ -829,7 +830,9 @@ class _EnvironmentLock(AbstractContextManager["_EnvironmentLock"]):
     def __init__(self, timeout: float = 180.0) -> None:
         # The Python environment is the mutation target. Different worktrees may
         # intentionally share one activated external venv, so ROOT must not split
-        # the advisory-lock namespace.
+        # the advisory-lock namespace. Advisory serialization also requires
+        # cooperating actors to keep the pathname attached while the lock is held;
+        # the local-data contract records that residual platform assumption.
         identity = os.path.normcase(str(Path(sys.prefix).resolve()))
         digest = hashlib.sha256(identity.encode("utf-8")).hexdigest()[:24]
         self.path = Path(tempfile.gettempdir()) / f"mclab-install-{digest}.lock"
@@ -837,24 +840,43 @@ class _EnvironmentLock(AbstractContextManager["_EnvironmentLock"]):
         self._stream: Any = None
 
     def __enter__(self) -> _EnvironmentLock:
-        self._stream = self.path.open("a+b")
-        self._stream.seek(0, os.SEEK_END)
-        if self._stream.tell() == 0:
-            self._stream.write(b"\0")
-            self._stream.flush()
-        deadline = time.monotonic() + self.timeout
-        while True:
+        self._stream = _open_environment_lock(self.path)
+        locked = False
+        try:
+            self._stream.seek(0, os.SEEK_END)
+            if self._stream.tell() == 0:
+                self._stream.write(b"\0")
+                self._stream.flush()
+            deadline = time.monotonic() + self.timeout
+            while True:
+                try:
+                    self._lock_nonblocking()
+                    locked = True
+                    break
+                except OSError as exc:
+                    if not _environment_lock_is_busy(exc):
+                        raise LockedInstallError(
+                            f"Could not acquire dependency install lock {self.path}: {exc}"
+                        ) from exc
+                    if time.monotonic() >= deadline:
+                        raise LockedInstallError(
+                            f"Timed out waiting for another dependency install: {self.path}"
+                        )
+                    time.sleep(0.1)
+            _validate_environment_lock_file(
+                self._stream.fileno(),
+                self.path,
+                phase="revalidate",
+            )
+            return self
+        except BaseException:
             try:
-                self._lock_nonblocking()
-                return self
-            except (BlockingIOError, OSError):
-                if time.monotonic() >= deadline:
-                    self._stream.close()
-                    self._stream = None
-                    raise LockedInstallError(
-                        f"Timed out waiting for another dependency install: {self.path}"
-                    )
-                time.sleep(0.1)
+                if locked:
+                    self._unlock()
+            finally:
+                self._stream.close()
+                self._stream = None
+            raise
 
     def _lock_nonblocking(self) -> None:
         assert self._stream is not None
@@ -871,6 +893,22 @@ class _EnvironmentLock(AbstractContextManager["_EnvironmentLock"]):
     def __exit__(self, exc_type: Any, exc: Any, traceback: Any) -> None:
         if self._stream is None:
             return None
+        try:
+            _validate_environment_lock_file(
+                self._stream.fileno(),
+                self.path,
+                phase="release",
+            )
+        finally:
+            try:
+                self._unlock()
+            finally:
+                self._stream.close()
+                self._stream = None
+        return None
+
+    def _unlock(self) -> None:
+        assert self._stream is not None
         self._stream.seek(0)
         if os.name == "nt":  # pragma: no cover - exercised by Windows CI
             import msvcrt
@@ -880,9 +918,156 @@ class _EnvironmentLock(AbstractContextManager["_EnvironmentLock"]):
             import fcntl
 
             fcntl.flock(self._stream.fileno(), fcntl.LOCK_UN)
-        self._stream.close()
-        self._stream = None
-        return None
+
+
+def _open_environment_lock(path: Path) -> Any:
+    flags = (
+        os.O_RDWR
+        | getattr(os, "O_BINARY", 0)
+        | getattr(os, "O_CLOEXEC", 0)
+        | getattr(os, "O_NOFOLLOW", 0)
+        | getattr(os, "O_NONBLOCK", 0)
+    )
+    try:
+        descriptor = os.open(path, flags | os.O_CREAT | os.O_EXCL, 0o600)
+    except FileExistsError:
+        _validate_environment_lock_path(path, phase="inspect existing")
+        try:
+            descriptor = os.open(path, flags)
+        except OSError as exc:
+            raise LockedInstallError(
+                f"Could not open existing dependency install lock {path}: {exc}"
+            ) from exc
+    except OSError as exc:
+        raise LockedInstallError(f"Could not open dependency install lock {path}: {exc}") from exc
+
+    try:
+        _validate_owned_environment_lock_file(
+            descriptor,
+            path,
+            phase="validate identity",
+        )
+        _narrow_environment_lock_permissions(descriptor, path)
+        _validate_environment_lock_file(descriptor, path, phase="validate")
+        return os.fdopen(descriptor, "r+b")
+    except BaseException:
+        os.close(descriptor)
+        raise
+
+
+def _validate_environment_lock_path(path: Path, *, phase: str) -> os.stat_result:
+    try:
+        attached = os.lstat(path)
+    except OSError as exc:
+        raise LockedInstallError(
+            f"Could not {phase} dependency install lock {path}: {exc}"
+        ) from exc
+    if not _is_owned_environment_lock_metadata(attached):
+        raise LockedInstallError(
+            f"Dependency install lock is not a private current-user physical file: {path}"
+        )
+    return attached
+
+
+def _validate_environment_lock_file(
+    descriptor: int,
+    path: Path,
+    *,
+    phase: str,
+) -> os.stat_result:
+    try:
+        opened = os.fstat(descriptor)
+        attached = os.lstat(path)
+    except OSError as exc:
+        raise LockedInstallError(
+            f"Could not {phase} dependency install lock {path}: {exc}"
+        ) from exc
+    if (
+        not _is_private_environment_lock_metadata(opened)
+        or not _is_private_environment_lock_metadata(attached)
+        or not _same_environment_lock_identity(opened, attached)
+    ):
+        raise LockedInstallError(
+            f"Dependency install lock is not a private current-user physical file: {path}"
+        )
+    return opened
+
+
+def _validate_owned_environment_lock_file(
+    descriptor: int,
+    path: Path,
+    *,
+    phase: str,
+) -> os.stat_result:
+    try:
+        opened = os.fstat(descriptor)
+        attached = os.lstat(path)
+    except OSError as exc:
+        raise LockedInstallError(
+            f"Could not {phase} dependency install lock {path}: {exc}"
+        ) from exc
+    if (
+        not _is_owned_environment_lock_metadata(opened)
+        or not _is_owned_environment_lock_metadata(attached)
+        or not _same_environment_lock_identity(opened, attached)
+    ):
+        raise LockedInstallError(
+            f"Dependency install lock is not a private current-user physical file: {path}"
+        )
+    return opened
+
+
+def _is_private_environment_lock_metadata(metadata: os.stat_result) -> bool:
+    private_permissions = os.name == "nt" or stat.S_IMODE(metadata.st_mode) & 0o077 == 0
+    return _is_owned_environment_lock_metadata(metadata) and private_permissions
+
+
+def _is_owned_environment_lock_metadata(metadata: os.stat_result) -> bool:
+    current_user = getattr(os, "geteuid", None)
+    expected_user = current_user() if current_user is not None else None
+    return (
+        not _is_reparse_point(metadata)
+        and stat.S_ISREG(metadata.st_mode)
+        and metadata.st_nlink == 1
+        and (expected_user is None or metadata.st_uid == expected_user)
+    )
+
+
+def _narrow_environment_lock_permissions(descriptor: int, path: Path) -> None:
+    if os.name == "nt" or not hasattr(os, "fchmod"):
+        return
+    try:
+        os.fchmod(descriptor, 0o600)
+    except OSError as exc:
+        raise LockedInstallError(
+            f"Could not restrict dependency install lock permissions {path}: {exc}"
+        ) from exc
+
+
+def _environment_lock_is_busy(exc: OSError) -> bool:
+    return (
+        isinstance(exc, BlockingIOError)
+        or exc.errno in {errno.EACCES, errno.EAGAIN, errno.EDEADLK}
+        or getattr(exc, "winerror", None) in {33, 36}
+    )
+
+
+def _same_environment_lock_identity(
+    left: os.stat_result,
+    right: os.stat_result,
+) -> bool:
+    reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+    return (
+        left.st_dev,
+        left.st_ino,
+        stat.S_IFMT(left.st_mode),
+        getattr(left, "st_file_attributes", 0) & reparse_flag,
+    ) == (
+        right.st_dev,
+        right.st_ino,
+        stat.S_IFMT(right.st_mode),
+        getattr(right, "st_file_attributes", 0) & reparse_flag,
+    )
 
 
 def _install(requested: str) -> None:

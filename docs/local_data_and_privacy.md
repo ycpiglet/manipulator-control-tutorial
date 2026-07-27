@@ -80,10 +80,16 @@ boundary: filesystem/drive/share roots, the home/repository/temporary roots or t
 ancestors, mount points, link or reparse components, and unsafe run-shaped roots are
 rejected. It is therefore not a promise to write in every writable directory.
 
-The desktop also creates local coordination artifacts:
+MCLab also creates local coordination artifacts:
 
 | Surface | Location and lifecycle |
 |---|---|
+| Asset-install coordination lock | `<effective-temporary-directory>/mclab-assets-<project-device-inode-sha256>.lock`; `tempfile.gettempdir()` selects the parent and the filename hashes the physical project root device and inode; an empty file, whether new or pre-existing, receives a NUL marker, an existing non-empty lock is not truncated, and the file remains after normal unlock |
+| Dependency-install coordination lock | `<effective-temporary-directory>/mclab-install-<environment-prefix-sha256-prefix>.lock`; the filename uses the first 24 hexadecimal characters of the SHA-256 of the normalized resolved `sys.prefix`, so worktrees using the same resolved environment share it; an empty file, whether new or pre-existing, receives a NUL marker, an existing non-empty lock is not truncated, and the file remains after normal unlock |
+| Coordination-lock safety | Both lock writers reject link or reparse, non-regular, and multi-link entries, plus a foreign owner where the platform exposes ownership metadata; descriptor/path identity is rechecked before use; the dependency lock narrows POSIX group and other permission bits before use and rechecks identity on release, while Python's standard library does not establish an equivalent Windows ACL claim |
+| Advisory pathname assumption | Cooperating processes, the same user, administrators, and temporary-directory cleaners must not unlink or replace a held lock pathname; dependency-lock release validation reports a detected violation, but advisory file locking cannot prevent the temporary overlap after unlink/recreation |
+| Project-venv dependency state | `<repository>/.venv/.mclab-lock-state.json`; a successful locked install into the project-local environment records the state schema, requested and effective profiles, capabilities, absolute project root, platform fingerprint, input hashes, package inventory, inventory SHA-256, and record integrity; an external environment does not receive this file; a mutating install removes prior state before package work, so failure can leave it absent and success writes replacement state |
+| Atomic dependency-state staging file | `<repository>/.venv/..mclab-lock-state.json.<random>.tmp`; the state writer normally replaces or removes it, but process interruption can leave a complete or partial staging file |
 | Default instance lock | `<Qt-AppLocalDataLocation>/mclab-desktop.lock`; unlocked on a normal app exit, but a stale file can remain after abnormal termination |
 | Lock override | The exact `MCLAB_INSTANCE_LOCK` path; a relative override uses the process current working directory |
 | Unix-like local activation socket | `<Qt-local-server-runtime-directory>/mclab-<lock-path-sha256-prefix>` when Qt uses a filesystem socket; the previous entry is removed before listening, while an abnormal exit can leave an entry for the next startup to remove |
@@ -153,10 +159,16 @@ application-data 상위 폴더가 아니라 process의 현재 작업 폴더를 �
 home·repository·temporary root 또는 그 상위, mount point, link/reparse component와 안전하지
 않은 run 형태 root는 거부되므로 모든 쓰기 가능한 폴더를 지원한다는 뜻이 아닙니다.
 
-Desktop은 다음 로컬 조정 artifact도 만듭니다.
+MCLab은 다음 로컬 조정 artifact도 만듭니다.
 
 | 표면 | 위치와 lifecycle |
 |---|---|
+| Asset 설치 조정 lock | `<effective-temporary-directory>/mclab-assets-<project-device-inode-sha256>.lock`; `tempfile.gettempdir()`가 상위 위치를 선택하고 filename은 실제 project root의 device와 inode를 hash함; 새 file 또는 기존 file 여부와 관계없이 empty file에는 NUL marker를 쓰고 기존 non-empty lock을 truncate하지 않으며 정상 unlock 뒤에도 남음 |
+| Dependency 설치 조정 lock | `<effective-temporary-directory>/mclab-install-<environment-prefix-sha256-prefix>.lock`; filename은 normalize한 resolved `sys.prefix` SHA-256의 앞 24개 16진수를 사용하므로 같은 resolved 환경을 쓰는 worktree가 공유함; 새 file 또는 기존 file 여부와 관계없이 empty file에는 NUL marker를 쓰고 기존 non-empty lock을 truncate하지 않으며 정상 unlock 뒤에도 남음 |
+| 조정 lock 안전성 | 두 lock writer 모두 link 또는 reparse, non-regular, multi-link entry와 platform이 ownership metadata를 제공할 때 foreign owner를 거부하며 사용 전에 descriptor/path identity를 다시 확인함; dependency lock은 사용 전에 POSIX group·other permission bit를 제한하고 release 때 identity를 다시 확인하지만 Python 표준 라이브러리는 동등한 Windows ACL 보장을 제공하지 않음 |
+| Advisory pathname 가정 | 협력 process, 같은 사용자, 관리자와 temporary-directory cleaner는 보유 중인 lock pathname을 unlink 또는 replace하면 안 됨; dependency-lock release 검증은 발견된 위반을 오류로 보고하지만 advisory file locking은 unlink/recreation 뒤의 일시적 overlap을 막을 수 없음 |
+| Project-venv dependency state | `<repository>/.venv/.mclab-lock-state.json`; project-local 환경의 성공한 locked install이 state schema, 요청·적용 profile, capability, 절대 project root, platform fingerprint, input hash, package inventory, inventory SHA-256와 record integrity를 기록함; external 환경에는 만들지 않음; 변경 install은 package 작업 전에 이전 state를 제거하므로 실패하면 absent 상태로 남을 수 있고 성공하면 replacement state를 기록함 |
+| Atomic dependency-state staging file | `<repository>/.venv/..mclab-lock-state.json.<random>.tmp`; state writer가 정상적으로 replace 또는 remove하지만 process가 중단되면 완전하거나 부분적인 staging file이 남을 수 있음 |
 | 기본 instance lock | `<Qt-AppLocalDataLocation>/mclab-desktop.lock`; 정상 종료 시 unlock되지만 비정상 종료 뒤 stale file이 남을 수 있음 |
 | Lock override | 정확한 `MCLAB_INSTANCE_LOCK` 경로; 상대 override는 process 현재 작업 폴더 기준 |
 | Unix 계열 local activation socket | Qt가 filesystem socket을 사용할 때 `<Qt-local-server-runtime-directory>/mclab-<lock-path-sha256-prefix>`; listen 전에 이전 entry를 제거하지만 비정상 종료 시 다음 시작에서 제거할 entry가 남을 수 있음 |
@@ -302,6 +314,17 @@ Ubuntu CI step installs a controlled system-package set. These are explicit acqu
 actions; they do not upload learner runs. Opening or attaching material to a GitHub issue
 is also an explicit user action.
 
+Repository validation treats standard-library socket and HTTP clients, plus the enumerated
+third-party remote clients, as network-capable imports. Only `urllib.request` in the pinned
+asset installer is allowed. This is a static source-review gate, not a runtime firewall.
+Its literal dynamic-import analysis covers positional and keyword module names,
+`__import__` fromlists whose list, tuple, set, or dictionary contains literal string
+entries, and relative `importlib.import_module` calls with a literal package.
+The binding analysis is intentionally conservative and file-wide. Computed module names,
+context-dependent relative `__import__` calls, indirect callable construction, subprocess
+tools such as `curl` or `wget`, native or Qt networking, and dependency import side effects
+remain outside this static proof; a shadowed import alias can require manual review.
+
 The single-instance channel uses a local Qt socket or Windows named pipe. Its server name
 is derived from the lock path and it exchanges only activation messages; it is not an
 Internet or learner-data upload channel. A Unix-like filesystem socket entry is normally
@@ -317,6 +340,18 @@ analytics.
 관리자용 Ubuntu CI 단계는 통제된 system package 묶음을 설치합니다. 모두 사용자가
 명시적으로 시작하는 획득 동작이며 학습자 실행 결과를 업로드하지 않습니다. GitHub
 issue를 열거나 자료를 첨부하는 것도 사용자가 명시적으로 수행하는 동작입니다.
+
+저장소 검증은 표준 라이브러리 socket 및 HTTP client와 열거된 third-party remote
+client를 network-capable import로 취급합니다. 고정된 asset installer의
+`urllib.request`만 허용합니다. 이는 정적 source-review gate이며 runtime firewall은
+아닙니다.
+Literal dynamic-import 분석은 positional·keyword module name, literal string entry가
+있는 list·tuple·set·dictionary `__import__` fromlist와 literal package를 쓰는 상대
+`importlib.import_module` call을 다룹니다.
+Binding 분석은 의도적으로 보수적이며 file 전체를 기준으로 합니다. 계산된 module name,
+context-dependent 상대 `__import__` call, 간접 callable 구성, `curl`·`wget` 같은
+subprocess tool, native·Qt networking과 dependency import side effect는 이 정적
+증명의 범위 밖이며, shadow된 import alias는 수동 검토가 필요할 수 있습니다.
 
 single-instance 통신은 로컬 Qt socket 또는 Windows named pipe를 사용합니다. Server
 이름은 lock 경로에서 파생되고 activation message만 교환하므로 Internet 또는 학습자
@@ -370,7 +405,14 @@ written directly under a caller-selected, safety-validated root is a derived fil
 cleanup run candidate, and can likewise persist until it is regenerated, sanitized, or
 removed through an approved local process. Cleanup also does not reset QSettings
 `language` or `tourComplete`, and it does not clear interpreter, Qt, Matplotlib, or other
-dependency caches.
+dependency caches. It does not manage the persistent asset- or dependency-install
+coordination locks, the project-venv dependency state, or a crash-remnant atomic staging
+file. The explicit dependency installer manages its own state lifecycle: it removes prior
+state before mutation, can leave state absent on failure, writes replacement state on
+success, and normally replaces or removes the atomic staging file. Outside that bounded
+writer lifecycle, this contract does not authorize manual cleanup, removal, or truncation
+of setup installation metadata. In particular, do not unlink, replace, chmod, or truncate
+a coordination lock while any asset or dependency installer may be running.
 
 This contract does not authorize cache clearing. On a shared PC, first close MCLab, use
 the applicable runtime/OS tooling to resolve each effective current-user cache location,
@@ -399,6 +441,14 @@ MCLab은 영구 purge를 제공하지 않습니다. 격리된 실행, receipt와
 파일이지 cleanup run 후보가 아니므로, 승인된 로컬 절차로 재생성·익명화·제거할 때까지
 남을 수 있습니다. Cleanup은 QSettings `language` 또는 `tourComplete`도 초기화하지
 않으며 interpreter, Qt, Matplotlib 또는 다른 dependency cache도 정리하지 않습니다.
+또한 effective temporary directory의 영속 asset·dependency 설치 조정 lock,
+project-venv dependency state 또는 crash 뒤 남은 atomic staging file을 관리하지
+않습니다. 명시적인 dependency installer는 자체 state lifecycle을 관리합니다. 변경
+전에 이전 state를 제거하고 실패 시 state가 absent로 남을 수 있으며 성공 시 replacement
+state를 기록하고 atomic staging file은 정상적으로 replace 또는 remove합니다. 이
+제한된 writer lifecycle 밖에서 이 계약은 setup installation metadata의 수동 cleanup,
+삭제 또는 truncate를 승인하지 않습니다. 특히 asset 또는 dependency installer가 실행
+중일 수 있으면 coordination lock을 unlink, replace, chmod 또는 truncate하지 마세요.
 
 이 계약은 cache 정리를 승인하지 않습니다. 공용 PC에서는 먼저 MCLab을 닫고 해당
 runtime/OS 도구로 현재 사용자에게 적용되는 각 effective cache 위치와 정확한 대상을
@@ -419,10 +469,16 @@ handing the device to another user. If `--output-dir` was used, include its pare
 removed; do the same for `MCLAB_OUTPUT_DIR` when its parent index was successfully
 refreshed. Also review a standalone-index root, QSettings preferences, validation-only
 destinations used by an administrator, and the potentially private QLockFile and local
-filesystem-socket or named-pipe endpoint. Include the confirmed CPython, Matplotlib, and
-Qt QML caches in that review. Closing the app normally is not proof that a prior crash
-left no stale filesystem coordination artifact or that dependency-managed caches were
-cleared.
+filesystem-socket or named-pipe endpoint. For each physical checkout and resolved Python
+environment used on the device, include its exact asset- and dependency-install lock in
+the effective temporary directory; also include that checkout's project-venv dependency
+state and any exact crash-remnant staging sibling. Do not use a broad
+`mclab-assets-*.lock` or `mclab-install-*.lock` match as ownership or deletion authority.
+Confirm that no asset or dependency installer is running before reviewing those exact
+setup targets; a held lock pathname must remain attached throughout installation.
+Include the confirmed CPython, Matplotlib, and Qt QML caches in the review. Closing the
+app normally is not proof that a prior crash left no stale filesystem coordination
+artifact or that dependency-managed caches were cleared.
 
 The device or institution administrator must separately decide account isolation,
 retention, backup, and secure-erasure procedures. MCLab's quarantine is not a substitute
@@ -441,9 +497,16 @@ does not provide complete shared-PC clearance.
 `index.html`을 검토 대상에 포함하세요. `MCLAB_OUTPUT_DIR` parent index가 실제 갱신된
 경우에도 같습니다. 독립 실행형 index root, QSettings preference, 관리자가 사용한 검증
 전용 대상과 개인정보 가능 QLockFile 및 local filesystem-socket 또는 named-pipe
-endpoint, 확인된 CPython·Matplotlib·Qt QML cache도 검토하세요. 앱을 정상 종료했다는
-사실만으로 이전 crash의 stale filesystem 조정 artifact가 없거나 dependency 관리
-cache가 정리되었다고 단정하면 안 됩니다.
+endpoint를 검토하세요. 기기에서 사용한 각 physical checkout과 resolved Python
+environment에 대해 effective temporary directory의 정확한 asset·dependency 설치
+lock도 검토하고, 해당 checkout의 project-venv dependency state와 정확한 crash-remnant
+staging sibling도 포함하세요. 광범위한 `mclab-assets-*.lock` 또는
+`mclab-install-*.lock` match를 소유권이나 삭제 권한으로 사용하면 안 됩니다. 확인된
+setup 대상을 검토하기 전에 asset 또는 dependency installer가 실행 중이지 않은지
+확인하고, 보유 중인 lock pathname은 설치 내내 연결된 상태로 유지하세요. 확인된
+CPython·Matplotlib·Qt QML cache도 검토하세요. 앱을 정상 종료했다는 사실만으로 이전
+crash의 stale filesystem 조정 artifact가 없거나 dependency 관리 cache가 정리되었다고
+단정하면 안 됩니다.
 
 기기 또는 기관 관리자는 계정 분리, 보존, backup과 안전한 영구 삭제 절차를 별도로
 결정해야 합니다. MCLab의 quarantine은 이런 통제를 대신하지 않습니다.

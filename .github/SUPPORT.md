@@ -36,6 +36,20 @@ target, and use only the approved local process. Cache removal is not secure
 erasure. Use the applicable interpreter, Qt, Matplotlib, and OS tooling to
 resolve each effective cache location at runtime; do not assume the default
 path when an override or temporary fallback may apply.
+The setup inventory also includes the exact
+`mclab-assets-<project-device-inode-sha256>.lock` and
+`mclab-install-<environment-prefix-sha256-prefix>.lock` in the effective
+temporary directory, plus `.venv/.mclab-lock-state.json` and a possible atomic
+staging sibling in each used checkout. Review only exact targets for the
+physical checkout and resolved environment; broad lock-name matches do not
+establish ownership. The explicit dependency installer removes prior state
+before mutation, can leave it absent on failure, writes replacement state on
+success, and normally removes atomic staging. Outside that writer lifecycle,
+the local-data contract does not authorize manual cleanup, removal, or
+truncation of this setup metadata. Confirm that no asset or dependency
+installer is running first: a held lock pathname must not be unlinked or
+replaced. POSIX dependency locks narrow group/other permission bits; the
+standard-library implementation makes no equivalent Windows ACL claim.
 
 ## 한국어 안내
 
@@ -55,3 +69,16 @@ config, 재현 절차, 기대 결과와 실제 결과를 알려 주세요. 설�
 삭제가 아닙니다. Override 또는 temporary fallback이 적용될 수 있으므로 interpreter,
 Qt, Matplotlib과 OS 도구로 runtime에서 각 effective cache 위치를 확인하고 default
 경로를 가정하지 마세요.
+Setup inventory에는 effective temporary directory의 정확한
+`mclab-assets-<project-device-inode-sha256>.lock`,
+`mclab-install-<environment-prefix-sha256-prefix>.lock`과 각 사용 checkout의
+`.venv/.mclab-lock-state.json` 및 남아 있을 수 있는 atomic staging sibling도
+포함됩니다. Physical checkout과 resolved environment에 대응하는 정확한 대상만
+검토하고 광범위한 lock 이름 match를 소유권 근거로 사용하면 안 됩니다. 로컬 데이터
+계약은 explicit dependency installer가 변경 전에 prior state를 제거하고 실패 시
+absent로 남기거나 성공 시 replacement state를 기록하며 atomic staging을 정상 제거하는
+writer lifecycle을 인정합니다. 그 밖에서는 이 setup metadata의 수동 cleanup, 삭제
+또는 truncate를 승인하지 않습니다. 먼저 asset 또는 dependency installer가 실행 중이지
+않은지 확인해야 하며 보유 중인 lock pathname을 unlink 또는 replace하면 안 됩니다.
+POSIX dependency lock은 group/other permission bit를 제한하지만 표준 라이브러리
+구현은 동등한 Windows ACL 보장을 주장하지 않습니다.

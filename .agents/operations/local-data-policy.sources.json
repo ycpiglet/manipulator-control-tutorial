@@ -91,7 +91,7 @@
     },
     {
       "path": "scripts/install_locked.py",
-      "sha256": "85bbfb01cfe3d38c28f26cba37f9e53cd79927581ab621a92b3b4bf0aa1deda2"
+      "sha256": "adbb2a40288f08f86a13e58e0f23b11337b0c683f1b66ab1b23bdd396d20bba1"
     },
     {
       "path": "scripts/install_ubuntu_system_packages.py",

@@ -36,7 +36,7 @@ OPEN_SUPPORTS_DIR_FD = os.open in os.supports_dir_fd
 STAT_SUPPORTS_DIR_FD = os.stat in os.supports_dir_fd
 STAT_SUPPORTS_NOFOLLOW = os.stat in os.supports_follow_symlinks
 LISTDIR_SUPPORTS_FD = os.listdir in os.supports_fd
-SCHEMA_SHA256 = "d92ab4467fa24019667f255d1bfa835f56d57f147c9a8fa45a3c4050ae47d5a9"
+SCHEMA_SHA256 = "1b745115bc93e8e31d2cb50f359bf0517d31cce2645d2eb6ea010c993cd26076"
 
 POLICY_HEADINGS = (
     "Scope / 범위",
@@ -69,6 +69,21 @@ EXPECTED_SCOPE = {
 EXPECTED_STORAGE_LOCATIONS = (
     {
         "applies_when": (
+            "python -m mclab assets install reaches lock acquisition for a physical "
+            "project root, including already-valid assets or a later failed install"
+        ),
+        "code_reference": ("src/mclab/application/assets.py:_exclusive_asset_install_lock"),
+        "id": "asset-install-coordination-lock",
+        "parent_source": (
+            "the effective platform temporary directory selected by tempfile.gettempdir()"
+        ),
+        "path_template": (
+            "<effective-temporary-directory>/mclab-assets-<project-device-inode-sha256>.lock"
+        ),
+        "relative_child": "derived-project-identity-lock-file",
+    },
+    {
+        "applies_when": (
             "Python imports a .py module with bytecode writing enabled and its effective "
             "bytecode cache destination is writable"
         ),
@@ -81,6 +96,47 @@ EXPECTED_STORAGE_LOCATIONS = (
         ),
         "path_template": "<effective-CPython-bytecode-cache-root>/**/*.pyc",
         "relative_child": "runtime-selected-cache-files",
+    },
+    {
+        "applies_when": (
+            "python scripts/install_locked.py <profile> enters the environment lock, "
+            "including an already-valid environment or a later failed install"
+        ),
+        "code_reference": "scripts/install_locked.py:_EnvironmentLock",
+        "id": "dependency-install-coordination-lock",
+        "parent_source": (
+            "the effective platform temporary directory selected by tempfile.gettempdir()"
+        ),
+        "path_template": (
+            "<effective-temporary-directory>/mclab-install-<environment-prefix-sha256-prefix>.lock"
+        ),
+        "relative_child": "derived-environment-identity-lock-file",
+    },
+    {
+        "applies_when": (
+            "a successful locked dependency install records a verified project-local .venv"
+        ),
+        "code_reference": "scripts/install_locked.py:_write_state",
+        "id": "dependency-install-state-file",
+        "parent_source": (
+            "the repository-local project virtual environment selected by scripts/install_locked.py"
+        ),
+        "path_template": "<repository>/.venv/.mclab-lock-state.json",
+        "relative_child": "project-venv-lock-state",
+    },
+    {
+        "applies_when": (
+            "a project-local locked dependency install atomically stages its verified "
+            "state; normal replacement or error cleanup removes it, but process "
+            "interruption can leave it"
+        ),
+        "code_reference": "scripts/install_locked.py:_write_state",
+        "id": "dependency-install-state-staging-file",
+        "parent_source": (
+            "the repository-local project virtual environment selected by scripts/install_locked.py"
+        ),
+        "path_template": ("<repository>/.venv/..mclab-lock-state.json.<random>.tmp"),
+        "relative_child": "atomic-project-venv-lock-state-staging-file",
     },
     {
         "applies_when": "the desktop starts without MCLAB_INSTANCE_LOCK",
@@ -262,6 +318,39 @@ EXPECTED_STORAGE_LOCATIONS = (
 )
 
 EXPECTED_DATA_CLASSES = {
+    "asset-and-dependency-installation-metadata": {
+        "artifacts": (
+            "<effective-temporary-directory>/mclab-assets-<project-device-inode-sha256>.lock",
+            "<effective-temporary-directory>/mclab-install-<environment-prefix-sha256-prefix>.lock",
+            "<repository>/.venv/..mclab-lock-state.json.<random>.tmp",
+            "<repository>/.venv/.mclab-lock-state.json",
+        ),
+        "content": (
+            "Local setup coordination and dependency state metadata. An empty "
+            "coordination lock, whether new or pre-existing, receives one NUL marker, "
+            "while an existing non-empty lock is not truncated. The asset lock filename "
+            "hashes the physical project root device and inode; the dependency lock "
+            "hashes the normalized resolved environment prefix. Both reject link or "
+            "reparse, non-regular, and multi-link entries plus foreign owners where "
+            "ownership metadata is available; the dependency lock also narrows POSIX "
+            "group and other permissions before use. Both remain after normal unlock. "
+            "Advisory serialization assumes cooperating actors do not unlink or replace "
+            "a held lock pathname; release validation reports a detected violation but "
+            "cannot prevent the temporary overlap. The "
+            "project-venv state records its schema, requested and effective profiles, "
+            "capabilities, absolute project root, platform fingerprint, input hashes, "
+            "package inventory, inventory SHA-256, and record integrity. An explicit "
+            "mutating install removes prior state before package work, so failure can "
+            "leave it absent; success writes replacement state. Its atomic staging "
+            "sibling is normally replaced or removed, but process interruption can leave "
+            "it."
+        ),
+        "derived_copies": (),
+        "learner_authored": False,
+        "may_contain_private_data": True,
+        "sharing": "sanitize-before-sharing",
+        "status": "persistent",
+    },
     "cleanup-quarantine-and-receipts": {
         "artifacts": (
             "outputs/.mclab-trash/<receipt>/entries/<run>",
@@ -505,6 +594,7 @@ EXPECTED_NETWORK_ACTIONS = (
 
 EXPECTED_LIFECYCLE_CONTROLS = {
     "automatic_deletion": False,
+    "automatic_deletion_scope": ("saved-learner-artifacts-only-setup-writer-lifecycle-excluded"),
     "backup_policy_status": "not-defined",
     "cleanup_apply_authorized_by_this_contract": False,
     "cleanup_default": "read-only-plan",
@@ -519,6 +609,14 @@ EXPECTED_LIFECYCLE_CONTROLS = {
     "retention_policy_status": "not-defined",
     "rpo_rto_status": "not-defined",
     "secure_erasure_status": "not-provided-by-mclab",
+    "setup_installation_lock_path_stability_assumption": (
+        "cooperating-processes-do-not-unlink-or-replace-held-lock-path"
+    ),
+    "setup_installation_metadata_manual_cleanup_authorized_by_this_contract": False,
+    "setup_installation_metadata_writer_lifecycle": (
+        "locks-persist-explicit-install-removes-prior-state-before-mutation-"
+        "failure-may-leave-state-absent-staging-cleaned-best-effort"
+    ),
 }
 
 EXPECTED_SHARING_RULES = {
@@ -557,7 +655,7 @@ EXPECTED_SOURCE_INVENTORY = {
     ],
     "inventory_version": 1,
     "manifest_path": str(SOURCE_MANIFEST_PATH),
-    "manifest_sha256": "aeb10bb8e8749fe9cf2f5ea9106117eeeb4c6680124061f052f6418217ac975e",
+    "manifest_sha256": "7ea8109ffe5488b8837927e943190fba4fbe058195b5555f9f26f6f702efd8d5",
     "scope": (
         "all-python-sources-under-packaging-scripts-and-src-mclab-except-exact-"
         "protected-main-governance-authority"
@@ -687,6 +785,33 @@ REQUIRED_POLICY_MARKERS = (
     "QML_DISK_CACHE_PATH",
     "resolve the effective location at runtime before review",
     "검토 전에 runtime에서 effective 위치를 확인",
+    "<effective-temporary-directory>/mclab-assets-<project-device-inode-sha256>.lock",
+    "<effective-temporary-directory>/mclab-install-<environment-prefix-sha256-prefix>.lock",
+    "<repository>/.venv/.mclab-lock-state.json",
+    "<repository>/.venv/..mclab-lock-state.json.<random>.tmp",
+    "whether new or pre-existing",
+    "새 file 또는 기존 file 여부와 관계없이",
+    "existing non-empty lock is not truncated",
+    "기존 non-empty lock을 truncate하지",
+    "Both lock writers reject link or reparse",
+    "두 lock writer 모두 link 또는 reparse",
+    "narrows POSIX group and other permission bits",
+    "POSIX group·other permission bit를 제한",
+    "advisory file locking cannot prevent the temporary overlap",
+    "advisory file locking은 unlink/recreation 뒤의 일시적 overlap을 막을 수 없음",
+    "inventory SHA-256",
+    "failure can leave it absent",
+    "실패하면 absent 상태로 남을 수 있고",
+    "remains after normal unlock",
+    "정상 unlock 뒤에도 남음",
+    "does not authorize manual cleanup, removal, or truncation",
+    "제한된 writer lifecycle 밖에서",
+    "standard-library socket and HTTP clients",
+    "표준 라이브러리 socket 및 HTTP client",
+    "`__import__` fromlists",
+    "fromlist와 literal package",
+    "Computed module names,",
+    "계산된 module name",
     "mclab.local-data.v1",
 )
 
@@ -719,28 +844,56 @@ REQUIRED_DOCUMENT_MARKERS = {
         "confirmed CPython, Qt QML, and Matplotlib cache list is bounded",
         "Cache removal is not secure erasure.",
         "resolve each effective cache location at runtime",
+        "`mclab-assets-<project-device-inode-sha256>.lock`",
+        "`mclab-install-<environment-prefix-sha256-prefix>.lock`",
+        "`.venv/.mclab-lock-state.json`",
+        "broad lock-name matches do not establish ownership",
+        "does not authorize manual cleanup, removal, or",
+        "a held lock pathname must not be unlinked or replaced",
+        "makes no equivalent Windows ACL claim",
         "사용자명, 홈 경로, 비밀정보, 학습자 예측·메모를 제거한 뒤 필요한 부분만 공유해 주세요.",
         "확인된 cache 목록은 제한된 범위이며",
         "runtime에서 각 effective cache 위치를 확인",
+        "광범위한 lock 이름 match를 소유권 근거로 사용하면 안 됩니다",
+        "setup metadata의 수동 cleanup, 삭제",
+        "보유 중인 lock pathname을 unlink 또는 replace하면 안 됩니다",
+        "동등한 Windows ACL 보장을 주장하지 않습니다",
     ),
 }
 
-REMOTE_IMPORTS = frozenset(
+THIRD_PARTY_REMOTE_IMPORTS = frozenset(
     {
         "aiohttp",
         "boto3",
         "botocore",
-        "ftplib",
         "httpx",
         "paramiko",
         "requests",
-        "smtplib",
-        "urllib.request",
     }
 )
-ALLOWED_REMOTE_IMPORTS = {
-    (Path("src/mclab/application/assets.py"), "urllib.request"),
-}
+STDLIB_NETWORK_IMPORTS = frozenset(
+    {
+        "ftplib",
+        "http.client",
+        "http.server",
+        "imaplib",
+        "nntplib",
+        "poplib",
+        "smtplib",
+        "socket",
+        "socketserver",
+        "telnetlib",
+        "urllib.request",
+        "xmlrpc.client",
+        "xmlrpc.server",
+    }
+)
+REMOTE_IMPORTS = THIRD_PARTY_REMOTE_IMPORTS | STDLIB_NETWORK_IMPORTS
+ALLOWED_REMOTE_IMPORTS = frozenset(
+    {
+        (Path("src/mclab/application/assets.py"), "urllib.request"),
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -1740,16 +1893,130 @@ def _source_inventory_errors(
     return len(declared), errors
 
 
-def _import_names(tree: ast.AST) -> set[str]:
+def _absolute_import_names(tree: ast.AST) -> set[str]:
     names: set[str] = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             names.update(alias.name for alias in node.names)
-        elif isinstance(node, ast.ImportFrom):
+        elif isinstance(node, ast.ImportFrom) and node.level == 0:
             module = node.module or ""
             for alias in node.names:
                 names.add(f"{module}.{alias.name}" if module else alias.name)
     return names
+
+
+def _call_argument(
+    node: ast.Call,
+    position: int,
+    keyword_name: str,
+) -> ast.expr | None:
+    if len(node.args) > position:
+        return node.args[position]
+    return next(
+        (keyword.value for keyword in node.keywords if keyword.arg == keyword_name),
+        None,
+    )
+
+
+def _literal_string(node: ast.expr | None) -> str | None:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    return None
+
+
+def _literal_string_items(node: ast.expr | None) -> tuple[str, ...]:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return (node.value,)
+    if isinstance(node, ast.Dict):
+        candidates = tuple(key for key in node.keys if key is not None)
+    elif isinstance(node, (ast.List, ast.Set, ast.Tuple)):
+        candidates = tuple(node.elts)
+    else:
+        return ()
+    return tuple(value for item in candidates if (value := _literal_string(item)) is not None)
+
+
+def _resolve_relative_module_name(name: str, package: str) -> str | None:
+    level = len(name) - len(name.lstrip("."))
+    if level == 0:
+        return name
+    package_parts = package.split(".")
+    if not package or any(not part for part in package_parts) or level > len(package_parts):
+        return None
+    parent = ".".join(package_parts[: len(package_parts) - level + 1])
+    suffix = name[level:]
+    return f"{parent}.{suffix}" if suffix else parent
+
+
+def _dynamic_literal_imports(tree: ast.AST) -> tuple[tuple[str, int], ...]:
+    bindings: dict[str, str] = {"__import__": "builtins.__import__"}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                root_name = alias.name.split(".", maxsplit=1)[0]
+                if root_name not in {"builtins", "importlib"}:
+                    continue
+                if alias.asname is None:
+                    bindings[root_name] = root_name
+                else:
+                    bindings[alias.asname] = alias.name
+        elif (
+            isinstance(node, ast.ImportFrom)
+            and node.level == 0
+            and node.module in {"builtins", "importlib"}
+        ):
+            for alias in node.names:
+                bindings[alias.asname or alias.name] = f"{node.module}.{alias.name}"
+
+    imports: list[tuple[str, int]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        function_name: str | None = None
+        if isinstance(node.func, ast.Name):
+            function_name = bindings.get(node.func.id)
+        elif isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name):
+            owner = bindings.get(node.func.value.id)
+            if owner is not None:
+                function_name = f"{owner}.{node.func.attr}"
+        if function_name not in {
+            "builtins.__import__",
+            "importlib.__import__",
+            "importlib.import_module",
+        }:
+            continue
+        module_name = _literal_string(_call_argument(node, 0, "name"))
+        if module_name is None:
+            continue
+        candidates = [module_name]
+        if function_name == "importlib.import_module" and module_name.startswith("."):
+            package = _literal_string(_call_argument(node, 1, "package"))
+            resolved = (
+                _resolve_relative_module_name(module_name, package) if package is not None else None
+            )
+            candidates = [resolved] if resolved is not None else []
+        elif function_name in {
+            "builtins.__import__",
+            "importlib.__import__",
+        }:
+            for child in _literal_string_items(_call_argument(node, 3, "fromlist")):
+                if child == "*":
+                    candidates.extend(
+                        remote_name
+                        for remote_name in sorted(REMOTE_IMPORTS)
+                        if remote_name.startswith(f"{module_name}.")
+                    )
+                else:
+                    candidates.append(f"{module_name}.{child}")
+        imports.extend((candidate, node.lineno) for candidate in dict.fromkeys(candidates))
+    return tuple(imports)
+
+
+def _remote_import_root(import_name: str) -> str | None:
+    for remote_name in sorted(REMOTE_IMPORTS, key=lambda value: (-len(value), value)):
+        if import_name == remote_name or import_name.startswith(f"{remote_name}."):
+            return remote_name
+    return None
 
 
 def _network_boundary_errors(root: Path) -> list[str]:
@@ -1765,15 +2032,19 @@ def _network_boundary_errors(root: Path) -> list[str]:
         except (ContractInputError, SyntaxError) as exc:
             errors.append(f"NETWORK_SCAN_INPUT {relative}: {exc}")
             continue
-        reviewed_imports = _import_names(tree)
-        for remote_name in sorted(REMOTE_IMPORTS):
-            if not any(
-                name == remote_name or name.startswith(f"{remote_name}.")
-                for name in reviewed_imports
-            ):
-                continue
+        reviewed_imports = _absolute_import_names(tree)
+        reviewed_remote_roots = {
+            remote_name
+            for name in reviewed_imports
+            if (remote_name := _remote_import_root(name)) is not None
+        }
+        for remote_name in sorted(reviewed_remote_roots):
             if (relative, remote_name) not in ALLOWED_REMOTE_IMPORTS:
                 errors.append(f"UNREVIEWED_REMOTE_IMPORT {relative}: {remote_name}")
+        for dynamic_name, line in _dynamic_literal_imports(tree):
+            remote_name = _remote_import_root(dynamic_name)
+            if remote_name is not None and (relative, remote_name) not in ALLOWED_REMOTE_IMPORTS:
+                errors.append(f"UNREVIEWED_DYNAMIC_REMOTE_IMPORT {relative}:{line}: {remote_name}")
         for node in ast.walk(tree):
             if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
                 if node.func.attr == "open_url":

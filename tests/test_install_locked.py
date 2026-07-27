@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import base64
+import errno
 import hashlib
 import json
 import os
 import platform
+import stat
 import subprocess
 import sys
 import tempfile
@@ -20,6 +22,17 @@ from scripts import install_locked  # noqa: E402
 
 
 class InstallLockedTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self._environment_lock_temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._environment_lock_temp.cleanup)
+        self._environment_lock_temp_patch = patch.object(
+            install_locked.tempfile,
+            "gettempdir",
+            return_value=self._environment_lock_temp.name,
+        )
+        self._environment_lock_temp_patch.start()
+        self.addCleanup(self._environment_lock_temp_patch.stop)
+
     def test_profiles_form_the_expected_capability_lattice(self) -> None:
         self.assertEqual(
             set(install_locked.PROFILE_LOCKS),
@@ -696,12 +709,413 @@ class InstallLockedTests(unittest.TestCase):
             with self.assertRaisesRegex(install_locked.LockedInstallError, "Timed out"):
                 second.__enter__()
 
+    def test_environment_lock_path_uses_effective_temp_and_environment_digest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            environment = base / "environment"
+            environment.mkdir()
+            effective_temp = base / "effective-temp"
+            effective_temp.mkdir()
+            identity = os.path.normcase(str(environment.resolve()))
+            digest = hashlib.sha256(identity.encode("utf-8")).hexdigest()[:24]
+
+            with (
+                patch.object(install_locked.sys, "prefix", os.fspath(environment)),
+                patch.object(
+                    install_locked.tempfile,
+                    "gettempdir",
+                    return_value=os.fspath(effective_temp),
+                ),
+            ):
+                lock = install_locked._EnvironmentLock()
+
+            self.assertEqual(lock.path, effective_temp / f"mclab-install-{digest}.lock")
+
+    def test_environment_lock_persists_with_nul_marker_after_normal_release(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            environment = base / "environment"
+            environment.mkdir()
+            effective_temp = base / "effective-temp"
+            effective_temp.mkdir()
+
+            with (
+                patch.object(install_locked.sys, "prefix", os.fspath(environment)),
+                patch.object(
+                    install_locked.tempfile,
+                    "gettempdir",
+                    return_value=os.fspath(effective_temp),
+                ),
+            ):
+                lock = install_locked._EnvironmentLock()
+                with lock:
+                    pass
+
+            self.assertTrue(lock.path.is_file())
+            self.assertEqual(lock.path.read_bytes(), b"\0")
+
+    def test_environment_lock_marks_existing_empty_file(self) -> None:
+        lock = install_locked._EnvironmentLock()
+        lock.path.write_bytes(b"")
+
+        with lock:
+            pass
+
+        self.assertEqual(lock.path.read_bytes(), b"\0")
+
+    def test_environment_lock_preserves_existing_nonempty_content(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            environment = base / "environment"
+            environment.mkdir()
+            effective_temp = base / "effective-temp"
+            effective_temp.mkdir()
+
+            with (
+                patch.object(install_locked.sys, "prefix", os.fspath(environment)),
+                patch.object(
+                    install_locked.tempfile,
+                    "gettempdir",
+                    return_value=os.fspath(effective_temp),
+                ),
+            ):
+                lock = install_locked._EnvironmentLock()
+                original = b"pre-existing-marker\n"
+                lock.path.write_bytes(original)
+                with lock:
+                    pass
+
+            self.assertEqual(lock.path.read_bytes(), original)
+
+    @unittest.skipIf(
+        os.name == "nt" or not hasattr(os, "fchmod"),
+        "POSIX descriptor permission narrowing is unavailable",
+    )
+    def test_environment_lock_narrows_legacy_permissions_without_truncating(self) -> None:
+        lock = install_locked._EnvironmentLock()
+        original = b"legacy-marker\n"
+        lock.path.write_bytes(original)
+        lock.path.chmod(0o666)
+
+        with lock:
+            self.assertEqual(lock.path.stat().st_mode & 0o077, 0)
+
+        self.assertEqual(lock.path.read_bytes(), original)
+        self.assertEqual(lock.path.stat().st_mode & 0o077, 0)
+
+    def test_environment_lock_rejects_symlink_before_writing_without_nofollow(self) -> None:
+        lock = install_locked._EnvironmentLock()
+        foreign = Path(self._environment_lock_temp.name) / "foreign-target"
+        foreign.write_bytes(b"")
+        try:
+            lock.path.symlink_to(foreign)
+        except OSError as exc:
+            self.skipTest(f"symlinks are unavailable: {exc}")
+
+        with (
+            patch.object(install_locked.os, "O_NOFOLLOW", 0, create=True),
+            self.assertRaisesRegex(
+                install_locked.LockedInstallError,
+                "private current-user physical file",
+            ),
+        ):
+            with lock:
+                self.fail("unsafe dependency lock path was acquired")
+
+        self.assertEqual(foreign.read_bytes(), b"")
+
+    def test_environment_lock_rejects_synthetic_windows_reparse_metadata(self) -> None:
+        reparse_flag = 0x0400
+        metadata = SimpleNamespace(
+            st_dev=1,
+            st_file_attributes=reparse_flag,
+            st_ino=2,
+            st_mode=stat.S_IFREG | 0o600,
+            st_nlink=1,
+            st_uid=0,
+        )
+
+        with (
+            patch.object(
+                install_locked.stat,
+                "FILE_ATTRIBUTE_REPARSE_POINT",
+                reparse_flag,
+                create=True,
+            ),
+            patch.object(install_locked.os, "fstat", return_value=metadata),
+            patch.object(install_locked.os, "lstat", return_value=metadata),
+            self.assertRaisesRegex(
+                install_locked.LockedInstallError,
+                "private current-user physical file",
+            ),
+        ):
+            install_locked._validate_owned_environment_lock_file(
+                123,
+                Path("synthetic.lock"),
+                phase="validate synthetic reparse",
+            )
+
+    def test_environment_lock_rejects_synthetic_windows_file_id_mismatch(self) -> None:
+        opened = SimpleNamespace(
+            st_dev=1,
+            st_file_attributes=0,
+            st_ino=2,
+            st_mode=stat.S_IFREG | 0o600,
+            st_nlink=1,
+            st_uid=0,
+        )
+        attached = SimpleNamespace(
+            st_dev=1,
+            st_file_attributes=0,
+            st_ino=3,
+            st_mode=stat.S_IFREG | 0o600,
+            st_nlink=1,
+            st_uid=0,
+        )
+
+        with (
+            patch.object(install_locked.os, "fstat", return_value=opened),
+            patch.object(install_locked.os, "lstat", return_value=attached),
+            self.assertRaisesRegex(
+                install_locked.LockedInstallError,
+                "private current-user physical file",
+            ),
+        ):
+            install_locked._validate_owned_environment_lock_file(
+                123,
+                Path("synthetic.lock"),
+                phase="validate synthetic identity",
+            )
+
+    @unittest.skipIf(
+        os.name == "nt" or not hasattr(os, "fchmod"),
+        "POSIX fallback permission regression",
+    )
+    def test_environment_lock_validates_swapped_identity_before_fchmod(self) -> None:
+        lock = install_locked._EnvironmentLock()
+        lock.path.write_bytes(b"")
+        lock.path.chmod(0o600)
+        foreign = Path(self._environment_lock_temp.name) / "foreign-target"
+        foreign.write_bytes(b"")
+        foreign.chmod(0o666)
+        real_open = os.open
+        calls = 0
+
+        def swap_before_existing_open(
+            path: str | os.PathLike[str],
+            flags: int,
+            mode: int = 0o777,
+        ) -> int:
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                lock.path.unlink()
+                lock.path.symlink_to(foreign)
+            return real_open(path, flags, mode)
+
+        with (
+            patch.object(install_locked.os, "O_NOFOLLOW", 0, create=True),
+            patch.object(
+                install_locked.os,
+                "open",
+                side_effect=swap_before_existing_open,
+            ),
+            self.assertRaisesRegex(
+                install_locked.LockedInstallError,
+                "private current-user physical file",
+            ),
+        ):
+            with lock:
+                self.fail("swapped dependency lock path was acquired")
+
+        self.assertEqual(foreign.read_bytes(), b"")
+        self.assertEqual(foreign.stat().st_mode & 0o777, 0o666)
+
+    def test_environment_lock_does_not_create_dangling_symlink_referent(self) -> None:
+        lock = install_locked._EnvironmentLock()
+        foreign = Path(self._environment_lock_temp.name) / "missing-foreign-target"
+        try:
+            lock.path.symlink_to(foreign)
+        except OSError as exc:
+            self.skipTest(f"symlinks are unavailable: {exc}")
+
+        with (
+            patch.object(install_locked.os, "O_NOFOLLOW", 0, create=True),
+            self.assertRaisesRegex(
+                install_locked.LockedInstallError,
+                "private current-user physical file",
+            ),
+        ):
+            with lock:
+                self.fail("unsafe dependency lock path was acquired")
+
+        self.assertFalse(foreign.exists())
+
+    def test_environment_lock_rejects_hardlink_before_writing(self) -> None:
+        lock = install_locked._EnvironmentLock()
+        foreign = Path(self._environment_lock_temp.name) / "foreign-target"
+        foreign.write_bytes(b"")
+        try:
+            os.link(foreign, lock.path)
+        except OSError as exc:
+            self.skipTest(f"hard links are unavailable: {exc}")
+
+        with self.assertRaisesRegex(
+            install_locked.LockedInstallError,
+            "private current-user physical file",
+        ):
+            with lock:
+                self.fail("unsafe dependency lock path was acquired")
+
+        self.assertEqual(foreign.read_bytes(), b"")
+
+    def test_environment_lock_rejects_nonregular_path_before_writing(self) -> None:
+        lock = install_locked._EnvironmentLock()
+        lock.path.mkdir()
+
+        with self.assertRaisesRegex(
+            install_locked.LockedInstallError,
+            "private current-user physical file",
+        ):
+            with lock:
+                self.fail("nonregular dependency lock path was acquired")
+
+    @unittest.skipUnless(hasattr(os, "geteuid"), "POSIX ownership metadata is unavailable")
+    def test_environment_lock_rejects_foreign_owner_before_writing(self) -> None:
+        lock = install_locked._EnvironmentLock()
+        lock.path.write_bytes(b"")
+        foreign_uid = os.geteuid() + 1
+
+        with (
+            patch.object(install_locked.os, "geteuid", return_value=foreign_uid),
+            self.assertRaisesRegex(
+                install_locked.LockedInstallError,
+                "private current-user physical file",
+            ),
+        ):
+            with lock:
+                self.fail("foreign-owned dependency lock path was acquired")
+
+        self.assertEqual(lock.path.read_bytes(), b"")
+
+    def test_environment_lock_reports_noncontention_error_without_timeout(self) -> None:
+        lock = install_locked._EnvironmentLock(timeout=60.0)
+
+        with (
+            patch.object(
+                lock,
+                "_lock_nonblocking",
+                side_effect=OSError(errno.EIO, "fixture I/O failure"),
+            ),
+            self.assertRaisesRegex(
+                install_locked.LockedInstallError,
+                "Could not acquire dependency install lock",
+            ),
+        ):
+            with lock:
+                self.fail("non-contention failure was treated as an acquired lock")
+
+        self.assertIsNone(lock._stream)
+
+    @unittest.skipIf(os.name == "nt", "open lock files cannot be unlinked on Windows")
+    def test_environment_lock_detects_stable_path_violation_on_release(self) -> None:
+        first = install_locked._EnvironmentLock()
+
+        with self.assertRaisesRegex(
+            install_locked.LockedInstallError,
+            "private current-user physical file",
+        ):
+            with first:
+                assert first._stream is not None
+                first_inode = os.fstat(first._stream.fileno()).st_ino
+                first.path.unlink()
+                second = install_locked._EnvironmentLock()
+                with second:
+                    assert second._stream is not None
+                    second_inode = os.fstat(second._stream.fileno()).st_ino
+                    self.assertNotEqual(first_inode, second_inode)
+
+        self.assertIsNone(first._stream)
+
     def test_environment_lock_is_shared_across_worktrees_for_one_venv(self) -> None:
         first = install_locked._EnvironmentLock()
         with patch.object(install_locked, "ROOT", Path("/a/different/worktree")):
             second = install_locked._EnvironmentLock()
 
         self.assertEqual(first.path, second.path)
+
+    def test_write_state_uses_atomic_sibling_and_records_private_path_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "project"
+            state_file = root / ".venv" / ".mclab-lock-state.json"
+            calls: list[tuple[str, str, Path]] = []
+            real_mkstemp = tempfile.mkstemp
+
+            def capture_mkstemp(
+                *,
+                prefix: str,
+                suffix: str,
+                dir: str | os.PathLike[str],
+            ) -> tuple[int, str]:
+                calls.append((prefix, suffix, Path(dir)))
+                return real_mkstemp(prefix=prefix, suffix=suffix, dir=dir)
+
+            inventory = [{"name": "example", "version": "1.0"}]
+            integrity = {"example": {"sha256": "0" * 64}}
+            with (
+                patch.object(install_locked, "ROOT", root),
+                patch.object(install_locked, "STATE_FILE", state_file),
+                patch.object(
+                    install_locked,
+                    "_platform_fingerprint",
+                    return_value={"system": "fixture"},
+                ),
+                patch.object(
+                    install_locked,
+                    "_state_inputs",
+                    return_value={"runtime": {"sha256": "1" * 64}},
+                ),
+                patch.object(
+                    install_locked.tempfile,
+                    "mkstemp",
+                    side_effect=capture_mkstemp,
+                ),
+            ):
+                install_locked._write_state(
+                    "runtime",
+                    "runtime",
+                    inventory,
+                    integrity,
+                )
+
+            self.assertEqual(
+                calls,
+                [
+                    (
+                        "..mclab-lock-state.json.",
+                        ".tmp",
+                        state_file.parent,
+                    )
+                ],
+            )
+            payload = json.loads(state_file.read_text(encoding="utf-8"))
+            self.assertEqual(payload["schema"], install_locked.STATE_SCHEMA)
+            self.assertEqual(payload["project_root"], str(root.resolve()))
+            self.assertEqual(payload["requested_profile"], "runtime")
+            self.assertEqual(payload["effective_profile"], "runtime")
+            self.assertEqual(
+                payload["capabilities"],
+                sorted(install_locked.PROFILE_CAPABILITIES["runtime"]),
+            )
+            self.assertEqual(payload["platform"], {"system": "fixture"})
+            self.assertEqual(payload["inputs"], {"runtime": {"sha256": "1" * 64}})
+            self.assertEqual(payload["inventory"], inventory)
+            self.assertEqual(
+                payload["inventory_sha256"],
+                install_locked._inventory_hash(inventory),
+            )
+            self.assertEqual(payload["record_integrity"], integrity)
+            self.assertFalse(list(state_file.parent.glob("..mclab-lock-state.json.*.tmp")))
 
     @staticmethod
     def _state(profile: str) -> dict[str, object]:
