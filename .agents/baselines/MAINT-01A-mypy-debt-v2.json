@@ -1,0 +1,1263 @@
+{
+  "schema_version": 2,
+  "baseline_id": "MAINT-01A-mypy-debt-v2",
+  "purpose": "Exact current mypy-debt baseline; improvements require monotonic migration.",
+  "history": [
+    {
+      "baseline_id": "MAINT-01A-mypy-debt-v1",
+      "path": ".agents/baselines/MAINT-01A-mypy-debt-v1.json",
+      "sha256": "3c27e9e88da45954529443f8d9c3439dfe2c66362fd8f65e8b2b3df41f4bc612",
+      "relationship": "diagnostics and context-projected suppressions are multisets contained in the immutable previous baseline"
+    }
+  ],
+  "subject": {
+    "commit": "96702b09d7e2b0e3b381b86c5e6e51f95682d346",
+    "tree": "2d897fa81506887df863106f118ddeb660880cfd"
+  },
+  "environment": {
+    "profile": "exact-dev-interpreter-prefix",
+    "runtime": {
+      "implementation": "cpython",
+      "platform": "linux",
+      "machine": "x86_64",
+      "pointer_bits": 64,
+      "python_versions": [
+        "3.10",
+        "3.11",
+        "3.12"
+      ],
+      "prefix_scope": "selected interpreter prefix; not necessarily a virtual environment",
+      "distribution_scope": "every expected distribution root and metadata origin resolves under sys.prefix"
+    },
+    "inputs": [
+      {
+        "path": ".agents/baselines/MAINT-01A-mypy-v2.ini",
+        "sha256": "22c94d4c69c83f0f219a5c13535f255f28107784e3f74e6c69dc2810e5f736d8",
+        "purpose": "standalone strict-definition mypy configuration"
+      },
+      {
+        "path": "pyproject.toml",
+        "sha256": "3e778ccd63a0d42e799f95681fa9bb1fccc5846b89b6aaa0ba5ba1e06e75c7c8",
+        "purpose": "project metadata and dev-extra semantics"
+      },
+      {
+        "path": "requirements/locks/build.txt",
+        "sha256": "a5665dc6290d9cdc25bb20a984fa4e40197697194e834d422baa71db3326b6e1",
+        "purpose": "pinned bootstrap and build distributions"
+      },
+      {
+        "path": "requirements/locks/dev.txt",
+        "sha256": "e5e6237f17b9b8abcc1ace2603edbece97c636244a2d23d96190bb9b758fcdde",
+        "purpose": "pinned runtime and dev distributions"
+      }
+    ],
+    "local_project_distribution": {
+      "name": "mujoco-manipulator-control-lab",
+      "version": "0.1.0"
+    },
+    "bootstrap_distribution_allowlist": []
+  },
+  "tool": {
+    "name": "mypy",
+    "version": "2.3.0",
+    "dependency_profile": "exact dev inventory with resolved distribution provenance under the selected interpreter prefix",
+    "platform": "linux",
+    "source_root": "src/mclab",
+    "controlled_import_roots": [
+      "src"
+    ],
+    "canonical_python_version": "3.11",
+    "supported_python_versions": [
+      "3.10",
+      "3.11",
+      "3.12"
+    ],
+    "canonical_argv": [
+      "<python>",
+      "-I",
+      "-m",
+      "mypy",
+      "--no-incremental",
+      "--config-file",
+      ".agents/baselines/MAINT-01A-mypy-v2.ini",
+      "--python-version",
+      "<3.10|3.11|3.12>",
+      "--platform",
+      "linux",
+      "--output",
+      "json",
+      "src/mclab"
+    ]
+  },
+  "baseline": {
+    "source_file_count": 87,
+    "error_count": 264,
+    "error_file_count": 29,
+    "by_code": [
+      {
+        "code": "arg-type",
+        "count": 66
+      },
+      {
+        "code": "assignment",
+        "count": 22
+      },
+      {
+        "code": "attr-defined",
+        "count": 67
+      },
+      {
+        "code": "call-overload",
+        "count": 1
+      },
+      {
+        "code": "has-type",
+        "count": 32
+      },
+      {
+        "code": "import-not-found",
+        "count": 13
+      },
+      {
+        "code": "import-untyped",
+        "count": 4
+      },
+      {
+        "code": "index",
+        "count": 8
+      },
+      {
+        "code": "misc",
+        "count": 29
+      },
+      {
+        "code": "return-value",
+        "count": 4
+      },
+      {
+        "code": "union-attr",
+        "count": 12
+      },
+      {
+        "code": "valid-type",
+        "count": 5
+      },
+      {
+        "code": "var-annotated",
+        "count": 1
+      }
+    ],
+    "by_file": [
+      {
+        "file": "src/mclab/application/adapters.py",
+        "count": 12
+      },
+      {
+        "file": "src/mclab/application/assets.py",
+        "count": 4
+      },
+      {
+        "file": "src/mclab/application/lab03_adapter.py",
+        "count": 49
+      },
+      {
+        "file": "src/mclab/application/lab04_adapter.py",
+        "count": 39
+      },
+      {
+        "file": "src/mclab/application/presentation.py",
+        "count": 4
+      },
+      {
+        "file": "src/mclab/application/qt_app.py",
+        "count": 19
+      },
+      {
+        "file": "src/mclab/application/qt_evidence.py",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/qt_smoke.py",
+        "count": 3
+      },
+      {
+        "file": "src/mclab/application/qt_smoke_input.py",
+        "count": 3
+      },
+      {
+        "file": "src/mclab/application/qt_worker.py",
+        "count": 3
+      },
+      {
+        "file": "src/mclab/application/readiness.py",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/rendering.py",
+        "count": 4
+      },
+      {
+        "file": "src/mclab/application/session.py",
+        "count": 3
+      },
+      {
+        "file": "src/mclab/application/single_instance.py",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/batch.py",
+        "count": 6
+      },
+      {
+        "file": "src/mclab/cli.py",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/completion.py",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/doctor.py",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/labs/lab01_msd.py",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/labs/lab02_pid.py",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/labs/lab03_2dof.py",
+        "count": 5
+      },
+      {
+        "file": "src/mclab/labs/lab04_panda.py",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/learner_menu.py",
+        "count": 70
+      },
+      {
+        "file": "src/mclab/output_cleanup.py",
+        "count": 4
+      },
+      {
+        "file": "src/mclab/output_windows.py",
+        "count": 11
+      },
+      {
+        "file": "src/mclab/sim/interaction.py",
+        "count": 7
+      },
+      {
+        "file": "src/mclab/sim/logging.py",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/sim/mujoco_utils.py",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/sim/reporting.py",
+        "count": 2
+      }
+    ],
+    "diagnostics": [
+      {
+        "file": "src/mclab/application/adapters.py",
+        "code": "arg-type",
+        "message": "Argument \"interaction_events\" to \"save_with_artifacts\" of \"RunLogger\" has incompatible type \"list[dict[str, Any]] | None\"; expected \"list[Mapping[str, Any]] | None\"",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/application/adapters.py",
+        "code": "arg-type",
+        "message": "Argument 3 to \"add_box\" has incompatible type \"float\"; expected \"Sequence[float]\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/adapters.py",
+        "code": "arg-type",
+        "message": "Argument 4 to \"add_dashed_segment\" has incompatible type \"float\"; expected \"Sequence[float]\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/adapters.py",
+        "code": "assignment",
+        "message": "Incompatible types in assignment (expression has type \"list[float]\", variable has type \"float\")",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/adapters.py",
+        "code": "union-attr",
+        "message": "Item \"None\" of \"Any | None\" has no attribute \"evaluate\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/adapters.py",
+        "code": "union-attr",
+        "message": "Item \"None\" of \"Any | None\" has no attribute \"mj_forward\"",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/application/adapters.py",
+        "code": "union-attr",
+        "message": "Item \"None\" of \"Any | None\" has no attribute \"mj_resetData\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/adapters.py",
+        "code": "union-attr",
+        "message": "Item \"None\" of \"Any | None\" has no attribute \"mj_step\"",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/application/adapters.py",
+        "code": "union-attr",
+        "message": "Item \"None\" of \"Any | None\" has no attribute \"qpos_adr\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/assets.py",
+        "code": "attr-defined",
+        "message": "Module has no attribute \"LK_NBLCK\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/assets.py",
+        "code": "attr-defined",
+        "message": "Module has no attribute \"LK_UNLCK\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/assets.py",
+        "code": "attr-defined",
+        "message": "Module has no attribute \"locking\"",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/application/lab03_adapter.py",
+        "code": "arg-type",
+        "message": "Argument \"live_tuning\" to \"_dls_task_space_command\" has incompatible type \"None\"; expected \"LiveTuning\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/lab03_adapter.py",
+        "code": "arg-type",
+        "message": "Argument \"live_tuning\" to \"_joint_space_command\" has incompatible type \"None\"; expected \"LiveTuning\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/lab03_adapter.py",
+        "code": "arg-type",
+        "message": "Argument \"live_tuning\" to \"_task_space_command\" has incompatible type \"None\"; expected \"LiveTuning\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/lab03_adapter.py",
+        "code": "arg-type",
+        "message": "Argument \"live_tuning\" to \"_two_link_target_xy_command\" has incompatible type \"None\"; expected \"LiveTuning\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/lab03_adapter.py",
+        "code": "arg-type",
+        "message": "Argument 2 to \"_set_two_link_state\" has incompatible type \"None\"; expected \"dict[str, Any]\"",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/application/lab03_adapter.py",
+        "code": "arg-type",
+        "message": "Argument 2 to \"_slider_learner_tuned_updates\" has incompatible type \"None\"; expected \"LiveTuning\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/lab03_adapter.py",
+        "code": "arg-type",
+        "message": "Argument 2 to \"_two_link_learner_tuned_updates\" has incompatible type \"None\"; expected \"LiveTuning\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/lab03_adapter.py",
+        "code": "arg-type",
+        "message": "Argument 2 to \"_two_link_state\" has incompatible type \"None\"; expected \"dict[str, Any]\"",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/application/lab03_adapter.py",
+        "code": "arg-type",
+        "message": "Argument 2 to \"slider_state\" has incompatible type \"None\"; expected \"SliderHandles\"",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/application/lab03_adapter.py",
+        "code": "arg-type",
+        "message": "Argument 4 to \"reset_slider_plant_state\" has incompatible type \"None\"; expected \"SliderHandles\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/lab03_adapter.py",
+        "code": "assignment",
+        "message": "Incompatible types in assignment (expression has type \"LiveTuning\", variable has type \"None\")",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/application/lab03_adapter.py",
+        "code": "assignment",
+        "message": "Incompatible types in assignment (expression has type \"RunLogger\", variable has type \"None\")",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/application/lab03_adapter.py",
+        "code": "assignment",
+        "message": "Incompatible types in assignment (expression has type \"SliderHandles\", variable has type \"None\")",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/lab03_adapter.py",
+        "code": "assignment",
+        "message": "Incompatible types in assignment (expression has type \"Trajectory\", variable has type \"None\")",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/application/lab03_adapter.py",
+        "code": "assignment",
+        "message": "Incompatible types in assignment (expression has type \"dict[str, Any]\", variable has type \"None\")",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/lab03_adapter.py",
+        "code": "attr-defined",
+        "message": "\"None\" has no attribute \"actuator_id\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/lab03_adapter.py",
+        "code": "attr-defined",
+        "message": "\"None\" has no attribute \"evaluate\"",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/application/lab03_adapter.py",
+        "code": "attr-defined",
+        "message": "\"None\" has no attribute \"finalize_artifacts\"",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/application/lab03_adapter.py",
+        "code": "attr-defined",
+        "message": "\"None\" has no attribute \"record\"",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/application/lab03_adapter.py",
+        "code": "attr-defined",
+        "message": "\"None\" has no attribute \"replay\"",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/application/lab03_adapter.py",
+        "code": "attr-defined",
+        "message": "\"None\" has no attribute \"reset\"",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/application/lab03_adapter.py",
+        "code": "attr-defined",
+        "message": "\"None\" has no attribute \"rows\"",
+        "count": 4
+      },
+      {
+        "file": "src/mclab/application/lab03_adapter.py",
+        "code": "attr-defined",
+        "message": "\"None\" has no attribute \"save_with_artifacts\"",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/application/lab03_adapter.py",
+        "code": "attr-defined",
+        "message": "\"None\" has no attribute \"set_value\"",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/application/lab03_adapter.py",
+        "code": "attr-defined",
+        "message": "\"None\" has no attribute \"snapshot\"",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/application/lab03_adapter.py",
+        "code": "attr-defined",
+        "message": "\"None\" has no attribute \"specs\"",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/application/lab03_adapter.py",
+        "code": "attr-defined",
+        "message": "\"None\" has no attribute \"value\"",
+        "count": 4
+      },
+      {
+        "file": "src/mclab/application/lab03_adapter.py",
+        "code": "index",
+        "message": "Value of type \"None\" is not indexable",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/lab04_adapter.py",
+        "code": "arg-type",
+        "message": "Argument 2 to \"_cartesian_target_position\" has incompatible type \"None\"; expected \"LiveTuning\"",
+        "count": 3
+      },
+      {
+        "file": "src/mclab/application/lab04_adapter.py",
+        "code": "arg-type",
+        "message": "Argument 2 to \"_learner_tuned_updates\" has incompatible type \"None\"; expected \"LiveTuning\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/lab04_adapter.py",
+        "code": "arg-type",
+        "message": "Argument 2 to \"_wall_config\" has incompatible type \"None\"; expected \"LiveTuning\"",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/application/lab04_adapter.py",
+        "code": "arg-type",
+        "message": "Argument 3 to \"_learner_tuned_updates\" has incompatible type \"_TargetOffset\"; expected \"TargetOffsetControl\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/lab04_adapter.py",
+        "code": "arg-type",
+        "message": "Argument 4 to \"_end_effector_state\" has incompatible type \"None\"; expected \"dict[str, Any]\"",
+        "count": 3
+      },
+      {
+        "file": "src/mclab/application/lab04_adapter.py",
+        "code": "arg-type",
+        "message": "Argument 5 to \"_apply_cartesian_target_offset\" has incompatible type \"None\"; expected \"LiveTuning\"",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/application/lab04_adapter.py",
+        "code": "assignment",
+        "message": "Incompatible types in assignment (expression has type \"LiveTuning\", variable has type \"None\")",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/lab04_adapter.py",
+        "code": "assignment",
+        "message": "Incompatible types in assignment (expression has type \"RunLogger\", variable has type \"None\")",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/lab04_adapter.py",
+        "code": "assignment",
+        "message": "Incompatible types in assignment (expression has type \"Trajectory\", variable has type \"None\")",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/lab04_adapter.py",
+        "code": "assignment",
+        "message": "Incompatible types in assignment (expression has type \"dict[str, Any]\", variable has type \"None\")",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/lab04_adapter.py",
+        "code": "attr-defined",
+        "message": "\"None\" has no attribute \"evaluate\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/lab04_adapter.py",
+        "code": "attr-defined",
+        "message": "\"None\" has no attribute \"finalize_artifacts\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/lab04_adapter.py",
+        "code": "attr-defined",
+        "message": "\"None\" has no attribute \"record\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/lab04_adapter.py",
+        "code": "attr-defined",
+        "message": "\"None\" has no attribute \"replay\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/lab04_adapter.py",
+        "code": "attr-defined",
+        "message": "\"None\" has no attribute \"reset\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/lab04_adapter.py",
+        "code": "attr-defined",
+        "message": "\"None\" has no attribute \"rows\"",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/application/lab04_adapter.py",
+        "code": "attr-defined",
+        "message": "\"None\" has no attribute \"save_with_artifacts\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/lab04_adapter.py",
+        "code": "attr-defined",
+        "message": "\"None\" has no attribute \"set_value\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/lab04_adapter.py",
+        "code": "attr-defined",
+        "message": "\"None\" has no attribute \"snapshot\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/lab04_adapter.py",
+        "code": "attr-defined",
+        "message": "\"None\" has no attribute \"specs\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/lab04_adapter.py",
+        "code": "attr-defined",
+        "message": "\"None\" has no attribute \"value\"",
+        "count": 5
+      },
+      {
+        "file": "src/mclab/application/lab04_adapter.py",
+        "code": "index",
+        "message": "Value of type \"None\" is not indexable",
+        "count": 7
+      },
+      {
+        "file": "src/mclab/application/presentation.py",
+        "code": "arg-type",
+        "message": "Argument 1 to \"assess_target_completion\" has incompatible type \"BatchDefinition\"; expected \"CompletionTarget\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/presentation.py",
+        "code": "arg-type",
+        "message": "Argument 1 to \"build_completion_assessment_index\" has incompatible type \"tuple[ScenarioDefinition, ...]\"; expected \"Iterable[CompletionTarget]\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/presentation.py",
+        "code": "arg-type",
+        "message": "Argument 2 to \"assess_target_completion\" has incompatible type \"tuple[ArtifactRecord, ...]\"; expected \"Iterable[CompletionRecord]\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/presentation.py",
+        "code": "arg-type",
+        "message": "Argument 2 to \"build_completion_assessment_index\" has incompatible type \"tuple[ArtifactRecord, ...]\"; expected \"Iterable[CompletionRecord]\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/qt_app.py",
+        "code": "attr-defined",
+        "message": "FrameProvider? has no attribute \"update\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/qt_app.py",
+        "code": "attr-defined",
+        "message": "SessionWorker? has no attribute \"completed_event\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/qt_app.py",
+        "code": "attr-defined",
+        "message": "SessionWorker? has no attribute \"error_event\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/qt_app.py",
+        "code": "attr-defined",
+        "message": "SessionWorker? has no attribute \"finished\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/qt_app.py",
+        "code": "attr-defined",
+        "message": "SessionWorker? has no attribute \"frame_event\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/qt_app.py",
+        "code": "attr-defined",
+        "message": "SessionWorker? has no attribute \"idle_event\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/qt_app.py",
+        "code": "attr-defined",
+        "message": "SessionWorker? has no attribute \"start\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/qt_app.py",
+        "code": "attr-defined",
+        "message": "SessionWorker? has no attribute \"state_event\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/qt_app.py",
+        "code": "attr-defined",
+        "message": "SessionWorker? has no attribute \"telemetry_event\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/qt_app.py",
+        "code": "import-not-found",
+        "message": "Cannot find implementation or library stub for module named \"PySide6.QtCore\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/qt_app.py",
+        "code": "import-not-found",
+        "message": "Cannot find implementation or library stub for module named \"PySide6.QtGui\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/qt_app.py",
+        "code": "import-not-found",
+        "message": "Cannot find implementation or library stub for module named \"PySide6.QtQml\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/qt_app.py",
+        "code": "import-not-found",
+        "message": "Cannot find implementation or library stub for module named \"PySide6.QtQuick\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/qt_app.py",
+        "code": "misc",
+        "message": "Invalid base class \"EvidenceBackend\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/qt_app.py",
+        "code": "valid-type",
+        "message": "Variable \"EvidenceBackend\" is not valid as a type",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/qt_app.py",
+        "code": "valid-type",
+        "message": "Variable \"FrameProvider\" is not valid as a type",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/qt_app.py",
+        "code": "valid-type",
+        "message": "Variable \"SessionWorker\" is not valid as a type",
+        "count": 3
+      },
+      {
+        "file": "src/mclab/application/qt_evidence.py",
+        "code": "var-annotated",
+        "message": "Need type annotation for \"_observation\" (hint: \"_observation: dict[<type>, <type>] = ...\")",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/qt_smoke.py",
+        "code": "import-not-found",
+        "message": "Cannot find implementation or library stub for module named \"PySide6.QtCore\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/qt_smoke.py",
+        "code": "import-not-found",
+        "message": "Cannot find implementation or library stub for module named \"PySide6.QtGui\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/qt_smoke.py",
+        "code": "import-not-found",
+        "message": "Cannot find implementation or library stub for module named \"PySide6.QtTest\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/qt_smoke_input.py",
+        "code": "import-not-found",
+        "message": "Cannot find implementation or library stub for module named \"PySide6.QtCore\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/qt_smoke_input.py",
+        "code": "import-not-found",
+        "message": "Cannot find implementation or library stub for module named \"PySide6.QtGui\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/qt_smoke_input.py",
+        "code": "import-not-found",
+        "message": "Cannot find implementation or library stub for module named \"PySide6.QtTest\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/qt_worker.py",
+        "code": "assignment",
+        "message": "Incompatible types in assignment (expression has type \"RetainedRenderResources | None\", variable has type \"None\")",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/qt_worker.py",
+        "code": "assignment",
+        "message": "Incompatible types in assignment (expression has type \"tuple[Any, Any, Any, Any, bool] | None\", variable has type \"tuple[Any, Any, Any, Any, bool, bool]\")",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/qt_worker.py",
+        "code": "return-value",
+        "message": "Incompatible return value type (got \"tuple[Any, Any, Any, Any, bool, bool] | None\", expected \"tuple[Any, Any, Any, Any, bool] | None\")",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/readiness.py",
+        "code": "import-not-found",
+        "message": "Cannot find implementation or library stub for module named \"PySide6\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/rendering.py",
+        "code": "import-untyped",
+        "message": "Skipping analyzing \"OpenGL.GL\": module is installed, but missing library stubs or py.typed marker",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/rendering.py",
+        "code": "import-untyped",
+        "message": "Skipping analyzing \"mujoco\": module is installed, but missing library stubs or py.typed marker",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/rendering.py",
+        "code": "import-untyped",
+        "message": "Skipping analyzing \"mujoco.egl\": module is installed, but missing library stubs or py.typed marker",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/rendering.py",
+        "code": "import-untyped",
+        "message": "Skipping analyzing \"mujoco.rendering.classic\": module is installed, but missing library stubs or py.typed marker",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/session.py",
+        "code": "union-attr",
+        "message": "Item \"None\" of \"Any | None\" has no attribute \"clear\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/session.py",
+        "code": "union-attr",
+        "message": "Item \"None\" of \"Any | None\" has no attribute \"record\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/session.py",
+        "code": "union-attr",
+        "message": "Item \"None\" of \"Any | None\" has no attribute \"set_time\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/single_instance.py",
+        "code": "import-not-found",
+        "message": "Cannot find implementation or library stub for module named \"PySide6.QtCore\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/application/single_instance.py",
+        "code": "import-not-found",
+        "message": "Cannot find implementation or library stub for module named \"PySide6.QtNetwork\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/batch.py",
+        "code": "arg-type",
+        "message": "Argument \"key\" to \"max\" has incompatible type \"Callable[[tuple[str, float | None]], float | None]\"; expected \"Callable[[tuple[str, float | None]], SupportsDunderLT[Any] | SupportsDunderGT[Any]]\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/batch.py",
+        "code": "arg-type",
+        "message": "Argument \"key\" to \"min\" has incompatible type \"Callable[[tuple[str, float | None]], float | None]\"; expected \"Callable[[tuple[str, float | None]], SupportsDunderLT[Any] | SupportsDunderGT[Any]]\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/batch.py",
+        "code": "arg-type",
+        "message": "Argument 1 to \"assess_target_completion\" has incompatible type \"BatchDefinition\"; expected \"CompletionTarget\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/batch.py",
+        "code": "arg-type",
+        "message": "Argument 2 to \"assess_target_completion\" has incompatible type \"tuple[ArtifactRecord, ...]\"; expected \"Iterable[CompletionRecord]\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/batch.py",
+        "code": "return-value",
+        "message": "Incompatible return value type (got \"float | None\", expected \"SupportsDunderLT[Any] | SupportsDunderGT[Any]\")",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/cli.py",
+        "code": "arg-type",
+        "message": "Argument 1 to \"learning_path_progress_text\" has incompatible type \"object\"; expected \"LearningPathStep\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/cli.py",
+        "code": "arg-type",
+        "message": "Argument 2 to \"learning_path_progress_text\" has incompatible type \"object\"; expected \"LearningPathProgress | None\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/completion.py",
+        "code": "call-overload",
+        "message": "No overload variant of \"get\" of \"dict\" matches argument types \"object\", \"CompletionReason\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/doctor.py",
+        "code": "arg-type",
+        "message": "Argument 1 to \"batch_readiness\" has incompatible type \"MenuAction\"; expected \"BatchMenuAction\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/doctor.py",
+        "code": "assignment",
+        "message": "Incompatible types in assignment (expression has type \"BatchMenuAction\", variable has type \"MenuAction\")",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/labs/lab01_msd.py",
+        "code": "arg-type",
+        "message": "Argument \"interaction_events\" to \"save_with_artifacts\" of \"RunLogger\" has incompatible type \"list[dict[str, Any]] | None\"; expected \"list[Mapping[str, Any]] | None\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/labs/lab02_pid.py",
+        "code": "arg-type",
+        "message": "Argument \"interaction_events\" to \"save_with_artifacts\" of \"RunLogger\" has incompatible type \"list[dict[str, Any]] | None\"; expected \"list[Mapping[str, Any]] | None\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/labs/lab03_2dof.py",
+        "code": "arg-type",
+        "message": "Argument \"interaction_events\" to \"save_with_artifacts\" of \"RunLogger\" has incompatible type \"list[dict[str, Any]] | None\"; expected \"list[Mapping[str, Any]] | None\"",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/labs/lab03_2dof.py",
+        "code": "arg-type",
+        "message": "Argument 1 to \"float\" has incompatible type \"Any | None\"; expected \"str | Buffer | SupportsFloat | SupportsIndex\"",
+        "count": 3
+      },
+      {
+        "file": "src/mclab/labs/lab04_panda.py",
+        "code": "arg-type",
+        "message": "Argument \"interaction_events\" to \"save_with_artifacts\" of \"RunLogger\" has incompatible type \"list[dict[str, Any]] | None\"; expected \"list[Mapping[str, Any]] | None\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/labs/lab04_panda.py",
+        "code": "arg-type",
+        "message": "Argument 1 to \"float\" has incompatible type \"Any | None\"; expected \"str | Buffer | SupportsFloat | SupportsIndex\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/learner_menu.py",
+        "code": "arg-type",
+        "message": "Argument 1 to \"assess_target_completion\" has incompatible type \"ScenarioDefinition | BatchDefinition\"; expected \"CompletionTarget\"",
+        "count": 5
+      },
+      {
+        "file": "src/mclab/learner_menu.py",
+        "code": "arg-type",
+        "message": "Argument 1 to \"build_completion_assessment_index\" has incompatible type \"tuple[ScenarioDefinition | BatchDefinition, ...]\"; expected \"Iterable[CompletionTarget]\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/learner_menu.py",
+        "code": "arg-type",
+        "message": "Argument 1 to \"completion_target_id\" has incompatible type \"object\"; expected \"MenuAction | BatchMenuAction\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/learner_menu.py",
+        "code": "arg-type",
+        "message": "Argument 2 to \"assess_target_completion\" has incompatible type \"Sequence[ArtifactRecord]\"; expected \"Iterable[CompletionRecord]\"",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/learner_menu.py",
+        "code": "arg-type",
+        "message": "Argument 2 to \"assess_target_completion\" has incompatible type \"tuple[ArtifactRecord, ...]\"; expected \"Iterable[CompletionRecord]\"",
+        "count": 2
+      },
+      {
+        "file": "src/mclab/learner_menu.py",
+        "code": "arg-type",
+        "message": "Argument 2 to \"assess_target_completion\" has incompatible type \"tuple[ArtifactRecord]\"; expected \"Iterable[CompletionRecord]\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/learner_menu.py",
+        "code": "arg-type",
+        "message": "Argument 2 to \"build_completion_assessment_index\" has incompatible type \"tuple[ArtifactRecord, ...]\"; expected \"Iterable[CompletionRecord]\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/learner_menu.py",
+        "code": "assignment",
+        "message": "Incompatible types in assignment (expression has type \"MenuAction\", variable has type \"BatchMenuAction\")",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/learner_menu.py",
+        "code": "assignment",
+        "message": "Incompatible types in assignment (expression has type \"tuple[BatchScenario, ...] | None\", variable has type \"tuple[BatchScenario, ...]\")",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/learner_menu.py",
+        "code": "has-type",
+        "message": "Cannot determine type of \"latest_button\"",
+        "count": 6
+      },
+      {
+        "file": "src/mclab/learner_menu.py",
+        "code": "has-type",
+        "message": "Cannot determine type of \"latest_folder_button\"",
+        "count": 6
+      },
+      {
+        "file": "src/mclab/learner_menu.py",
+        "code": "has-type",
+        "message": "Cannot determine type of \"latest_handoff_button\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/learner_menu.py",
+        "code": "has-type",
+        "message": "Cannot determine type of \"latest_plot_button\"",
+        "count": 6
+      },
+      {
+        "file": "src/mclab/learner_menu.py",
+        "code": "has-type",
+        "message": "Cannot determine type of \"latest_replay_button\"",
+        "count": 7
+      },
+      {
+        "file": "src/mclab/learner_menu.py",
+        "code": "has-type",
+        "message": "Cannot determine type of \"latest_worksheet_button\"",
+        "count": 6
+      },
+      {
+        "file": "src/mclab/learner_menu.py",
+        "code": "misc",
+        "message": "Cannot infer type of lambda",
+        "count": 22
+      },
+      {
+        "file": "src/mclab/learner_menu.py",
+        "code": "return-value",
+        "message": "Incompatible return value type (got \"object\", expected \"MenuAction | BatchMenuAction | None\")",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/output_cleanup.py",
+        "code": "assignment",
+        "message": "Incompatible types in assignment (expression has type \"RunIdentity\", variable has type \"CleanupEntry | None\")",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/output_cleanup.py",
+        "code": "assignment",
+        "message": "Incompatible types in assignment (expression has type \"tuple[str, ...]\", variable has type \"tuple[str, str, str, str]\")",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/output_cleanup.py",
+        "code": "assignment",
+        "message": "Incompatible types in assignment (expression has type \"tuple[str, ...]\", variable has type \"tuple[str]\")",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/output_cleanup.py",
+        "code": "union-attr",
+        "message": "Item \"None\" of \"CleanupEntry | None\" has no attribute \"token\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/output_windows.py",
+        "code": "attr-defined",
+        "message": "Module has no attribute \"WinError\"",
+        "count": 4
+      },
+      {
+        "file": "src/mclab/output_windows.py",
+        "code": "attr-defined",
+        "message": "Module has no attribute \"windll\"",
+        "count": 7
+      },
+      {
+        "file": "src/mclab/sim/interaction.py",
+        "code": "arg-type",
+        "message": "Argument 1 to \"float\" has incompatible type \"Any | None\"; expected \"str | Buffer | SupportsFloat | SupportsIndex\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/sim/interaction.py",
+        "code": "assignment",
+        "message": "Incompatible types in assignment (expression has type \"StatusSpec\", variable has type \"SliderSpec\")",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/sim/interaction.py",
+        "code": "misc",
+        "message": "Cannot infer type of lambda",
+        "count": 5
+      },
+      {
+        "file": "src/mclab/sim/logging.py",
+        "code": "arg-type",
+        "message": "Argument 2 to \"savez_compressed\" has incompatible type \"**dict[str, ndarray[tuple[int, ...], dtype[Any]]]\"; expected \"bool\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/sim/mujoco_utils.py",
+        "code": "misc",
+        "message": "Generator has incompatible item type \"tuple[float, ...]\"; expected \"tuple[float, float, float]\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/sim/mujoco_utils.py",
+        "code": "union-attr",
+        "message": "Item \"None\" of \"Any | None\" has no attribute \"user_scn\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/sim/reporting.py",
+        "code": "arg-type",
+        "message": "Argument 1 to \"build_completion_assessment_index\" has incompatible type \"tuple[ScenarioDefinition | BatchDefinition, ...]\"; expected \"Iterable[CompletionTarget]\"",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/sim/reporting.py",
+        "code": "arg-type",
+        "message": "Argument 2 to \"build_completion_assessment_index\" has incompatible type \"tuple[ArtifactRecord, ...]\"; expected \"Iterable[CompletionRecord]\"",
+        "count": 1
+      }
+    ]
+  },
+  "suppressions": {
+    "comparison": "normal validation requires the exact active typing-suppression multiset",
+    "migration_comparison": "a deliberate next suppression multiset must be a subset of the active baseline",
+    "fingerprint_fields": [
+      "file",
+      "kind",
+      "directive",
+      "context"
+    ],
+    "context_definition": "normalized AST plus line-insensitive parent/field/index path for ignores/decorators; module AST hash for file directives; raw-byte hash for stubs",
+    "kinds": [
+      "file-mypy-directive",
+      "inline-type-ignore",
+      "no-type-check",
+      "stub-file"
+    ],
+    "line_and_column_ignored": true,
+    "removals_require_migration": true,
+    "additions_are_forbidden": true,
+    "entries": [
+      {
+        "file": "src/mclab/application/platform.py",
+        "kind": "inline-type-ignore",
+        "directive": "# type: ignore[attr-defined]",
+        "context": "statement-context-sha256:46f3b7eed41b6d339b9d40e126e507c97535e6aad006d031bcc0fc9060b6b4c0",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/batch.py",
+        "kind": "inline-type-ignore",
+        "directive": "# type: ignore",
+        "context": "statement-context-sha256:590cfb3004f78ef3b5be885a7e823f30e06341668c146641ba46b1aa6376362d",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/config.py",
+        "kind": "inline-type-ignore",
+        "directive": "# type: ignore",
+        "context": "statement-context-sha256:9cc6bc58e982c935ebfd26f997fb6f67080adbf3b4e135e07b81a8e00eb65ef0",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/output_windows.py",
+        "kind": "inline-type-ignore",
+        "directive": "# type: ignore[no-untyped-def]",
+        "context": "statement-context-sha256:fa06676714414d0a7141420a8794f2e1b291bfbf61329817f82735823236449a",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/sim/logging.py",
+        "kind": "inline-type-ignore",
+        "directive": "# type: ignore",
+        "context": "statement-context-sha256:c9251c4d9f3c0d2acf8908c250363e828356beba8e892bdbeaac569bce35d72e",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/sim/mujoco_utils.py",
+        "kind": "inline-type-ignore",
+        "directive": "# type: ignore",
+        "context": "statement-context-sha256:751246893ed91a1255b474b37c8b7b079008dead542ef1acb7ebc3edca889995",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/sim/mujoco_utils.py",
+        "kind": "inline-type-ignore",
+        "directive": "# type: ignore",
+        "context": "statement-context-sha256:b21388adc1390e88112fd79449aef198da0841e5d6fe2b1bd9453354e544ed8b",
+        "count": 1
+      },
+      {
+        "file": "src/mclab/sim/plotting.py",
+        "kind": "inline-type-ignore",
+        "directive": "# type: ignore",
+        "context": "statement-context-sha256:ca1bf60e616bfd99c869c9e3d6a5ef1c546c9c8b3c8561d9310adaa41394c4e6",
+        "count": 1
+      }
+    ]
+  },
+  "policy": {
+    "comparison": "normal validation requires exact baseline multisets",
+    "migration_comparison": "a deliberate next baseline may record debt removal or a source-file inventory change and may not increase the active diagnostic or suppression multiset",
+    "fingerprint_fields": [
+      "file",
+      "code",
+      "message"
+    ],
+    "line_and_column_ignored": true,
+    "removals_are_improvements": true,
+    "additions_are_forbidden": true,
+    "per_file_increases_are_forbidden": true,
+    "explicit_any_residual": "disallow_any_explicit remains disabled: 781 inherited explicit-Any diagnostics are a named residual and are not absorbed into the 264-diagnostic baseline."
+  }
+}

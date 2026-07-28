@@ -28,6 +28,12 @@ code_quality:
     metric: "ruff check exit code"
     threshold: 0
     command: "python -m ruff check ."
+  mypy_exact_debt:
+    metric: "exact mypy diagnostic/all-src-source/contextual-suppression multisets under strict-definition config and prefix-rooted dependency provenance"
+    threshold: "264 diagnostics across 29 error files and 87 source .py files; 8 contextual typing suppressions; 0 additions, removals, reintroductions, or multiplicity drift in normal validation"
+    command: "python .agents/validation/check_mypy_baseline.py --python-version 3.11"
+    evidence: ".agents/baselines/MAINT-01A-mypy-debt-v2.json, alias/re-export/structural-path/sibling-package/outside-prefix regressions, and native CPython 3.10/3.11/3.12 CI steps"
+    named_residual: "disallow_any_explicit remains disabled; its 781 inherited diagnostics are not included in the 264-diagnostic active baseline"
   package_import:
     metric: "CLI import/list command exit code"
     threshold: 0
