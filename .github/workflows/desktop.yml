@@ -54,11 +54,11 @@ jobs:
 
       - name: Audit package-profile licenses
         shell: bash
-        run: python scripts/audit_supply_chain.py licenses --target-python "$MCLAB_PACKAGE_PYTHON" --profile package --output "build/validation/supply-chain-${RUNNER_OS}/python-licenses.json"
+        run: python scripts/audit_supply_chain.py licenses --target-python "$MCLAB_PACKAGE_PYTHON" --profile package --output build/validation/supply-chain-${RUNNER_OS}/python-licenses.json
 
       - name: Validate package-profile license inventory
         shell: bash
-        run: python .agents/validation/check_license_inventory.py --evidence "build/validation/supply-chain-${RUNNER_OS}/python-licenses.json" --runner-os "$RUNNER_OS"
+        run: python .agents/validation/check_license_inventory.py --evidence build/validation/supply-chain-${RUNNER_OS}/python-licenses.json --runner-os "$RUNNER_OS"
 
       - name: Upload target supply-chain evidence
         if: always()
