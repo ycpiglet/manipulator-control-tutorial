@@ -15,7 +15,8 @@ concurrency:
 jobs:
   simulator:
     name: Simulator lint and tests
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, linux, x64, manipulator-control-tutorial-linux]
     env:
       MPLBACKEND: Agg
     steps:
@@ -121,7 +122,8 @@ jobs:
 
   paper-gates:
     name: Paper citation and formula gates
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, linux, x64, manipulator-control-tutorial-linux]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -154,7 +156,8 @@ jobs:
 
   paper-build:
     name: Paper LaTeX build
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, linux, x64, manipulator-control-tutorial-linux]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

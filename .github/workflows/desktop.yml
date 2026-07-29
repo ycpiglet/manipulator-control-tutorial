@@ -3,29 +3,91 @@ name: Desktop app smoke and unsigned builds
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: desktop-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  platform-policy:
+    name: Desktop platform policy
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, linux, x64, manipulator-control-tutorial-linux]
+    outputs:
+      matrix: ${{ steps.detect.outputs.matrix }}
+      full-platform: ${{ steps.detect.outputs.full-platform }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Select deferred gates or real native runners
+        id: detect
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          full=false
+          if [[ "$EVENT_NAME" == "workflow_dispatch" || "$GITHUB_REF" == refs/tags/* ]]; then
+            full=true
+          elif [[ ",$LABELS," == *",ci:full-platform,"* ]]; then
+            full=true
+          else
+            if [[ "$EVENT_NAME" == "pull_request" ]]; then
+              files="$(git diff --name-only "$BASE_SHA...$HEAD_SHA")"
+            elif [[ -n "$BEFORE_SHA" && "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]]; then
+              files="$(git diff --name-only "$BEFORE_SHA...$GITHUB_SHA")"
+            else
+              files="$(git diff-tree --no-commit-id --name-only -r "$GITHUB_SHA")"
+            fi
+            if grep -Eq '^(\.github/workflows/|pyproject\.toml$|requirements/(locks/(build|package)\.txt|system/)|scripts/(build_desktop|install_locked|install_ubuntu_system_packages)\.py$|run_mclab\.cmd$|START_HERE\.(cmd|command)$|start_here\.sh$|src/mclab/(app|desktop|ui)/)' <<<"$files"; then
+              full=true
+            fi
+          fi
+
+          if [[ "$full" == true ]]; then
+            matrix='{"include":[{"os":"windows-2025","runner":"windows-2025","execute":true},{"os":"ubuntu-24.04","runner":"ubuntu-24.04","execute":true},{"os":"macos-15","runner":"macos-15","execute":true}]}'
+          else
+            matrix='{"include":[{"os":"windows-2025","runner":"manipulator-control-tutorial-linux","execute":false},{"os":"ubuntu-24.04","runner":"manipulator-control-tutorial-linux","execute":false},{"os":"macos-15","runner":"manipulator-control-tutorial-linux","execute":false}]}'
+          fi
+          echo "full-platform=$full" >> "$GITHUB_OUTPUT"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "full-platform=$full"
+
   desktop:
+    needs: platform-policy
     name: Unsigned development build (${{ matrix.os }})
     strategy:
       fail-fast: false
-      matrix:
-        os: [windows-2025, ubuntu-24.04, macos-15]
-    runs-on: ${{ matrix.os }}
+      matrix: ${{ fromJSON(needs.platform-policy.outputs.matrix) }}
+    runs-on: ${{ matrix.runner }}
     env:
       QT_QPA_PLATFORM: offscreen
       MPLBACKEND: Agg
     steps:
+      - name: Record deferred native-platform validation
+        if: matrix.execute != true
+        run: echo "Native ${{ matrix.os }} validation is deferred; add ci:full-platform, dispatch manually, change a platform/toolchain file, or push a tag."
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: matrix.execute
         with:
           persist-credentials: false
 
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        if: matrix.execute
         with:
           python-version: "3.11"
           cache: pip
@@ -36,28 +98,32 @@ jobs:
             requirements/locks/package.txt
 
       - name: Install pinned Linux Qt runtime libraries
-        if: runner.os == 'Linux'
+        if: matrix.execute && runner.os == 'Linux'
         run: |
           mkdir -p build/validation/supply-chain-Linux
           sudo /usr/bin/python3 scripts/install_ubuntu_system_packages.py --install --output build/validation/supply-chain-Linux/ubuntu-system-packages.json
 
       - name: Install desktop, test, and packaging dependencies
+        if: matrix.execute
         run: python scripts/install_locked.py --allow-external-env package
 
       - name: Select package-profile Python
+        if: matrix.execute
         shell: bash
         run: echo "MCLAB_PACKAGE_PYTHON=$(python -c 'import sys; print(sys.executable)')" >> "$GITHUB_ENV"
 
       - name: Audit package-profile licenses
+        if: matrix.execute
         shell: bash
-        run: python scripts/audit_supply_chain.py licenses --target-python "$MCLAB_PACKAGE_PYTHON" --profile package --output build/validation/supply-chain-${RUNNER_OS}/python-licenses.json
+        run: python scripts/audit_supply_chain.py licenses --target-python "$MCLAB_PACKAGE_PYTHON" --profile package --output "build/validation/supply-chain-${RUNNER_OS}/python-licenses.json"
 
       - name: Validate package-profile license inventory
+        if: matrix.execute
         shell: bash
-        run: python .agents/validation/check_license_inventory.py --evidence build/validation/supply-chain-${RUNNER_OS}/python-licenses.json --runner-os "$RUNNER_OS"
+        run: python .agents/validation/check_license_inventory.py --evidence "build/validation/supply-chain-${RUNNER_OS}/python-licenses.json" --runner-os "$RUNNER_OS"
 
       - name: Upload target supply-chain evidence
-        if: always()
+        if: always() && matrix.execute
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: mclab-supply-chain-${{ runner.os }}
@@ -66,12 +132,13 @@ jobs:
           retention-days: 14
 
       - name: Install and verify pinned Panda assets
+        if: matrix.execute
         run: |
           python -m mclab assets install
           python -m mclab assets verify
 
       - name: Windows compatibility launcher repair matrix
-        if: runner.os == 'Windows'
+        if: matrix.execute && runner.os == 'Windows'
         shell: pwsh
         env:
           MCLAB_SELF_TEST: "1"
@@ -146,21 +213,22 @@ jobs:
           }
 
       - name: Windows recommended launcher setup smoke
-        if: runner.os == 'Windows'
+        if: matrix.execute && runner.os == 'Windows'
         shell: cmd
         run: call START_HERE.cmd --setup-only
 
       - name: Linux recommended launcher setup smoke
-        if: runner.os == 'Linux'
+        if: matrix.execute && runner.os == 'Linux'
         shell: bash
         run: ./start_here.sh --setup-only
 
       - name: macOS recommended launcher setup smoke
-        if: runner.os == 'macOS'
+        if: matrix.execute && runner.os == 'macOS'
         shell: bash
         run: ./START_HERE.command --setup-only
 
       - name: Select recommended-launcher Python
+        if: matrix.execute
         shell: bash
         run: |
           if [[ "$RUNNER_OS" == "Windows" ]]; then
@@ -170,18 +238,22 @@ jobs:
           fi
 
       - name: Newcomer source setup diagnostics
+        if: matrix.execute
         shell: bash
         run: '"$MCLAB_NEWCOMER_PYTHON" -m mclab doctor --json'
 
       - name: Newcomer README and runtime CLI contract
+        if: matrix.execute
         shell: bash
         run: '"$MCLAB_NEWCOMER_PYTHON" .agents/validation/check_readme_contract.py --runtime-cli'
 
       - name: Desktop catalog and Qt offscreen smoke
+        if: matrix.execute
         shell: bash
         run: '"$MCLAB_NEWCOMER_PYTHON" -m mclab app --self-test --lang en'
 
       - name: Lab01 headless replay artifact smoke
+        if: matrix.execute
         shell: bash
         run: >-
           "$MCLAB_NEWCOMER_PYTHON" -m mclab run lab01
@@ -190,6 +262,7 @@ jobs:
           --output-dir outputs/ci_lab01
 
       - name: Verify newcomer report and plot contract
+        if: matrix.execute
         shell: bash
         run: >-
           "$MCLAB_NEWCOMER_PYTHON" -c "from pathlib import Path;
@@ -197,7 +270,7 @@ jobs:
           verify_output_artifacts(Path('outputs/ci_lab01'), expect_plots=True)"
 
       - name: Report responsive and axe audit
-        if: runner.os == 'Linux'
+        if: matrix.execute && runner.os == 'Linux'
         run: >-
           python scripts/audit_report_ui.py
           --report run=outputs/ci_lab01/report.html
@@ -205,6 +278,7 @@ jobs:
           --output /tmp/mclab-report-ui-audit
 
       - name: Desktop foundation tests
+        if: matrix.execute
         run: >-
           python -m pytest -q -rs
           tests/test_application.py
@@ -215,7 +289,7 @@ jobs:
           tests/test_install_locked.py
 
       - name: Saved-run cleanup confirmation audit
-        if: runner.os == 'Linux'
+        if: matrix.execute && runner.os == 'Linux'
         env:
           QT_QPA_PLATFORM: xcb
         run: >-
@@ -241,7 +315,7 @@ jobs:
           --case batch_running_rerun_backend_guard_640_ko
 
       - name: Upload cleanup UI audit evidence
-        if: always() && runner.os == 'Linux'
+        if: always() && matrix.execute && runner.os == 'Linux'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: mclab-cleanup-ui-audit
@@ -249,6 +323,7 @@ jobs:
           retention-days: 7
 
       - name: Create isolated package-build environment
+        if: matrix.execute
         shell: bash
         run: |
           package_env="$RUNNER_TEMP/mclab-package-build"
@@ -262,10 +337,12 @@ jobs:
           echo "MCLAB_BUILD_PYTHON=$package_python" >> "$GITHUB_ENV"
 
       - name: Build unsigned one-folder app
+        if: matrix.execute
         shell: bash
         run: '"$MCLAB_BUILD_PYTHON" scripts/build_desktop.py --clean'
 
       - name: Verify packaged app and diagnostics
+        if: matrix.execute
         shell: bash
         run: |
           if [[ "${{ runner.os }}" == "Windows" ]]; then
@@ -277,10 +354,12 @@ jobs:
           "$app" doctor --json
 
       - name: Verify package identity and size evidence
+        if: matrix.execute
         shell: bash
         run: '"$MCLAB_BUILD_PYTHON" scripts/build_desktop.py --verify-only'
 
       - name: Upload bounded package metrics
+        if: matrix.execute
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: mclab-package-metrics-${{ runner.os }}
@@ -289,6 +368,7 @@ jobs:
           retention-days: 14
 
       - name: Upload unsigned development package
+        if: matrix.execute
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: MCLab-${{ runner.os }}-unsigned-development

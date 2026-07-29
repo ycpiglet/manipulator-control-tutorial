@@ -1,0 +1,25 @@
+name: Trusted source policy
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  source-policy:
+    name: Trusted source policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require review and internal promotion for fork changes
+        env:
+          BASE_REPOSITORY: ${{ github.repository }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+        run: |
+          if [ "$HEAD_REPOSITORY" != "$BASE_REPOSITORY" ]; then
+            echo "::error::Fork code must be reviewed and promoted to review/fork-pr-N; direct fork workflows never use the self-hosted runner."
+            exit 1
+          fi
+          echo "Same-repository pull request: local CI is allowed."
