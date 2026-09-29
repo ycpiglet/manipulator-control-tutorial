@@ -1,0 +1,678 @@
+{
+  "$id": "https://github.com/ycpiglet/manipulator-control-tutorial/blob/main/.agents/operations/local-data-policy.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "contract_id": {
+      "const": "mclab.local-data.v1"
+    },
+    "data_classes": {
+      "items": {
+        "$ref": "#/$defs/dataClass"
+      },
+      "maxItems": 9,
+      "minItems": 9,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "documentation": {
+      "additionalProperties": false,
+      "properties": {
+        "bilingual_policy": {
+          "const": "docs/local_data_and_privacy.md"
+        },
+        "documentation_map": {
+          "const": "docs/README.md"
+        },
+        "english_readme": {
+          "const": "README.en.md"
+        },
+        "korean_readme": {
+          "const": "README.md"
+        },
+        "learner_guide": {
+          "const": "docs/learner_guide.md"
+        },
+        "security_policy": {
+          "const": ".github/SECURITY.md"
+        },
+        "support_policy": {
+          "const": ".github/SUPPORT.md"
+        }
+      },
+      "required": [
+        "bilingual_policy",
+        "documentation_map",
+        "english_readme",
+        "korean_readme",
+        "learner_guide",
+        "security_policy",
+        "support_policy"
+      ],
+      "type": "object"
+    },
+    "lifecycle_controls": {
+      "additionalProperties": false,
+      "properties": {
+        "automatic_deletion": {
+          "const": false,
+          "type": "boolean"
+        },
+        "backup_policy_status": {
+          "const": "not-defined"
+        },
+        "cleanup_apply_authorized_by_this_contract": {
+          "const": false,
+          "type": "boolean"
+        },
+        "cleanup_default": {
+          "const": "read-only-plan"
+        },
+        "cleanup_effect": {
+          "const": "recoverable-quarantine-not-erasure"
+        },
+        "derived_index_may_persist_until_regenerated": {
+          "const": true,
+          "type": "boolean"
+        },
+        "hold_marker": {
+          "const": ".mclab-preserve"
+        },
+        "network_filesystem_support": {
+          "const": "unsupported"
+        },
+        "permanent_purge_available": {
+          "const": false,
+          "type": "boolean"
+        },
+        "real_output_validation": {
+          "const": "not-run-not-authorized"
+        },
+        "restore_scope": {
+          "const": "source-or-venv-cli-on-local-filesystem"
+        },
+        "retention_policy_status": {
+          "const": "not-defined"
+        },
+        "rpo_rto_status": {
+          "const": "not-defined"
+        },
+        "secure_erasure_status": {
+          "const": "not-provided-by-mclab"
+        }
+      },
+      "required": [
+        "automatic_deletion",
+        "backup_policy_status",
+        "cleanup_apply_authorized_by_this_contract",
+        "cleanup_default",
+        "cleanup_effect",
+        "derived_index_may_persist_until_regenerated",
+        "hold_marker",
+        "network_filesystem_support",
+        "permanent_purge_available",
+        "real_output_validation",
+        "restore_scope",
+        "retention_policy_status",
+        "rpo_rto_status",
+        "secure_erasure_status"
+      ],
+      "type": "object"
+    },
+    "network_behavior": {
+      "additionalProperties": false,
+      "properties": {
+        "automatic_learner_data_transfer": {
+          "const": false,
+          "type": "boolean"
+        },
+        "explicit_network_actions": {
+          "items": {
+            "$ref": "#/$defs/networkAction"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "local_socket_is_remote_network": {
+          "const": false,
+          "type": "boolean"
+        },
+        "ordinary_run_network_required": {
+          "const": false,
+          "type": "boolean"
+        },
+        "support_sharing": {
+          "const": "user-initiated-sanitized-only"
+        },
+        "telemetry_is_remote_analytics": {
+          "const": false,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "automatic_learner_data_transfer",
+        "explicit_network_actions",
+        "local_socket_is_remote_network",
+        "ordinary_run_network_required",
+        "support_sharing",
+        "telemetry_is_remote_analytics"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "const": 1,
+      "type": "integer"
+    },
+    "scope": {
+      "additionalProperties": false,
+      "properties": {
+        "account_required": {
+          "const": false,
+          "type": "boolean"
+        },
+        "automatic_learner_data_upload": {
+          "const": false,
+          "type": "boolean"
+        },
+        "distribution_scope": {
+          "const": "supervised-source-development-only"
+        },
+        "local_first": {
+          "const": true,
+          "type": "boolean"
+        },
+        "ordinary_run_network_required": {
+          "const": false,
+          "type": "boolean"
+        },
+        "remote_usage_analytics": {
+          "const": false,
+          "type": "boolean"
+        },
+        "repository_only": {
+          "const": true,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "account_required",
+        "automatic_learner_data_upload",
+        "distribution_scope",
+        "local_first",
+        "ordinary_run_network_required",
+        "remote_usage_analytics",
+        "repository_only"
+      ],
+      "type": "object"
+    },
+    "sharing_rules": {
+      "additionalProperties": false,
+      "properties": {
+        "minimum_necessary_only": {
+          "const": true,
+          "type": "boolean"
+        },
+        "private_security_channel": {
+          "const": ".github/SECURITY.md"
+        },
+        "public_support_channel": {
+          "const": ".github/SUPPORT.md"
+        },
+        "remove_before_sharing": {
+          "items": {
+            "enum": [
+              "credentials-and-tokens",
+              "learner-predictions-and-notes",
+              "live-batch-handoff-secrets",
+              "private-output-content",
+              "unsanitized-absolute-paths"
+            ],
+            "type": "string"
+          },
+          "maxItems": 5,
+          "minItems": 5,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "support_submission_is_user_initiated": {
+          "const": true,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "minimum_necessary_only",
+        "private_security_channel",
+        "public_support_channel",
+        "remove_before_sharing",
+        "support_submission_is_user_initiated"
+      ],
+      "type": "object"
+    },
+    "storage_locations": {
+      "items": {
+        "$ref": "#/$defs/storageLocation"
+      },
+      "maxItems": 15,
+      "minItems": 15,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "source_inventory": {
+      "additionalProperties": false,
+      "properties": {
+        "inventory_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "manifest_path": {
+          "const": ".agents/operations/local-data-policy.sources.json",
+          "type": "string"
+        },
+        "manifest_sha256": {
+          "maxLength": 64,
+          "minLength": 64,
+          "type": "string"
+        },
+        "scope": {
+          "const": "all-python-sources-under-packaging-scripts-and-src-mclab",
+          "type": "string"
+        }
+      },
+      "required": [
+        "inventory_version",
+        "manifest_path",
+        "manifest_sha256",
+        "scope"
+      ],
+      "type": "object"
+    },
+    "unresolved_decisions": {
+      "items": {
+        "$ref": "#/$defs/unresolvedDecision"
+      },
+      "maxItems": 6,
+      "minItems": 6,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "validation_only_exclusions": {
+      "items": {
+        "$ref": "#/$defs/validationOnlyExclusion"
+      },
+      "maxItems": 4,
+      "minItems": 4,
+      "type": "array",
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "contract_id",
+    "data_classes",
+    "documentation",
+    "lifecycle_controls",
+    "network_behavior",
+    "schema_version",
+    "scope",
+    "sharing_rules",
+    "source_inventory",
+    "storage_locations",
+    "unresolved_decisions",
+    "validation_only_exclusions"
+  ],
+  "type": "object",
+  "$defs": {
+    "dataClass": {
+      "additionalProperties": false,
+      "properties": {
+        "artifacts": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "content": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "derived_copies": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "id": {
+          "enum": [
+            "cleanup-quarantine-and-receipts",
+            "comparison-batch",
+            "cumulative-index",
+            "desktop-persistent-preferences",
+            "diagnostic-provenance",
+            "learner-evidence",
+            "optional-progress-preferences",
+            "saved-run",
+            "transient-application-controls"
+          ],
+          "type": "string"
+        },
+        "learner_authored": {
+          "type": "boolean"
+        },
+        "may_contain_private_data": {
+          "type": "boolean"
+        },
+        "sharing": {
+          "enum": [
+            "do-not-share-raw",
+            "generated-course-content",
+            "sanitize-before-sharing",
+            "never-share-live-control-token"
+          ],
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "defined-storage-surface-no-current-writer",
+            "derived",
+            "persistent",
+            "quarantined-recoverable",
+            "transient"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifacts",
+        "content",
+        "derived_copies",
+        "id",
+        "learner_authored",
+        "may_contain_private_data",
+        "sharing",
+        "status"
+      ],
+      "type": "object"
+    },
+    "networkAction": {
+      "additionalProperties": false,
+      "properties": {
+        "command": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "id": {
+          "enum": [
+            "asset-install",
+            "locked-dependency-install",
+            "ubuntu-ci-system-install"
+          ],
+          "type": "string"
+        },
+        "purpose": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "source_reference": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "command",
+        "id",
+        "purpose",
+        "source_reference"
+      ],
+      "type": "object"
+    },
+    "sourceDigest": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "sha256": {
+          "maxLength": 64,
+          "minLength": 64,
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "sourceInventoryManifest": {
+      "additionalProperties": false,
+      "properties": {
+        "algorithm": {
+          "const": "sha256",
+          "type": "string"
+        },
+        "digest_format": {
+          "const": "sha256-file-bytes",
+          "type": "string"
+        },
+        "inventory_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "roots": {
+          "items": {
+            "$ref": "#/$defs/sourceRoot"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/sourceDigest"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "algorithm",
+        "digest_format",
+        "inventory_version",
+        "roots",
+        "sources"
+      ],
+      "type": "object"
+    },
+    "sourceRoot": {
+      "additionalProperties": false,
+      "properties": {
+        "extensions": {
+          "items": {
+            "const": ".py",
+            "type": "string"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "path": {
+          "enum": [
+            "packaging",
+            "scripts",
+            "src/mclab"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "extensions",
+        "path"
+      ],
+      "type": "object"
+    },
+    "storageLocation": {
+      "additionalProperties": false,
+      "properties": {
+        "applies_when": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "code_reference": {
+          "enum": [
+            "src/mclab/application/single_instance.py:acquire_instance_lock",
+            "src/mclab/application/single_instance.py:start_activation_server",
+            "src/mclab/application/qt_app.py:AppBackend",
+            "src/mclab/application/qt_app.py:AppBackend._start_scenario",
+            "src/mclab/cli.py:index",
+            "src/mclab/config.py:default_outputs_root",
+            "src/mclab/config.py:resolve_output_path",
+            "src/mclab/sim/reporting.py:write_outputs_index"
+          ],
+          "type": "string"
+        },
+        "id": {
+          "enum": [
+            "desktop-instance-lock-default",
+            "desktop-instance-lock-override",
+            "desktop-local-named-pipe-windows",
+            "desktop-local-socket-filesystem",
+            "desktop-output-directory-override",
+            "desktop-output-parent-index",
+            "desktop-qsettings-user-preferences",
+            "environment-override",
+            "explicit-output-parent-index",
+            "explicit-run-output-directory",
+            "frozen-linux",
+            "frozen-macos",
+            "frozen-windows",
+            "source-default",
+            "standalone-index-output-root"
+          ],
+          "type": "string"
+        },
+        "parent_source": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "path_template": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "relative_child": {
+          "enum": [
+            "derived-local-named-pipe-endpoint",
+            "derived-local-socket-entry",
+            "index.html-in-parent",
+            "index.html-in-selected-root",
+            "mclab-desktop.lock",
+            "native-settings-store",
+            "not-appended",
+            "outputs"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "applies_when",
+        "code_reference",
+        "id",
+        "parent_source",
+        "path_template",
+        "relative_child"
+      ],
+      "type": "object"
+    },
+    "unresolvedDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "enum": [
+            "backup-owner-location-cadence",
+            "institution-retention-period",
+            "release-evidence-retention",
+            "rpo-rto",
+            "secure-erasure-method",
+            "shared-pc-account-admin-policy"
+          ],
+          "type": "string"
+        },
+        "status": {
+          "const": "unresolved-external-policy"
+        }
+      },
+      "required": [
+        "id",
+        "status"
+      ],
+      "type": "object"
+    },
+    "validationOnlyExclusion": {
+      "additionalProperties": false,
+      "properties": {
+        "activation": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "artifacts": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "exclusion_scope": {
+          "enum": [
+            "not-created-by-an-ordinary-learner-run",
+            "self-test-evidence-not-ordinary-learner-storage",
+            "validation-capture-not-ordinary-learner-storage",
+            "validation-probe-not-ordinary-learner-storage"
+          ],
+          "type": "string"
+        },
+        "id": {
+          "enum": [
+            "maintainer-audit-output-roots",
+            "qt-activation-probe",
+            "qt-screenshot-capture",
+            "qt-self-test-traces"
+          ],
+          "type": "string"
+        },
+        "may_contain_private_data": {
+          "const": true,
+          "type": "boolean"
+        },
+        "source_references": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "activation",
+        "artifacts",
+        "exclusion_scope",
+        "id",
+        "may_contain_private_data",
+        "source_references"
+      ],
+      "type": "object"
+    }
+  }
+}

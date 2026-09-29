@@ -180,6 +180,38 @@ class LoggingTests(unittest.TestCase):
             self.assertTrue(path.name.endswith("_lab01_msd"))
             self.assertTrue((path / "plots").is_dir())
 
+    def test_explicit_run_output_writes_selected_tree_and_sibling_parent_index(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp).resolve() / "explicit-collection"
+            output = parent / "selected-run"
+            logger = RunLogger("lab01_msd", {"mass": 1.0}, output_dir=output)
+            logger.record(time=0.0, position=0.1)
+            logger.save()
+
+            self.assertEqual(
+                {path.name for path in parent.iterdir()},
+                {"selected-run", "index.html"},
+            )
+            self.assertTrue((parent / "index.html").is_file())
+            self.assertTrue((output / "report.html").is_file())
+
+    def test_parent_index_refresh_failure_does_not_undo_terminal_run(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp).resolve() / "collection" / "selected-run"
+            logger = RunLogger("lab01_msd", {"mass": 1.0}, output_dir=output)
+            logger.record(time=0.0, position=0.1)
+
+            with patch(
+                "mclab.sim.logging.write_outputs_index",
+                side_effect=RuntimeError("injected parent-index failure"),
+            ):
+                saved_output = logger.save()
+
+            payload = json.loads((saved_output / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(payload["status"], "completed")
+            self.assertTrue((output / "report.html").is_file())
+            self.assertFalse((output.parent / "index.html").exists())
+
     def test_plot_priorities_follow_lesson_context(self) -> None:
         dls_priorities = plot_priorities_for_context(
             config_path="configs/lab03_2dof/condition_aware_dls_adaptive_speed_retarget_2dof.yaml",
