@@ -63,7 +63,7 @@ jobs:
 
       - name: Upload universal supply-chain evidence
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: mclab-supply-chain-universal
           path: |
@@ -161,7 +161,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Tectonic
-        uses: WtfJoke/setup-tectonic@eb29fd68b7d3f76011906b6e45ea4320c8de5d2f # v4.0.5
+        uses: WtfJoke/setup-tectonic@5e1ba6e10229bd876c6594189bdab1a62b9d0b1c # v4.0.6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           tectonic-version: "0.16.9"
@@ -177,7 +177,7 @@ jobs:
           test "$size" -gt 100000
 
       - name: Upload PDF artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: paper-main-pdf
           path: paper/main.pdf
