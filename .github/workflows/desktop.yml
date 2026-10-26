@@ -25,7 +25,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.11"
           cache: pip
@@ -58,7 +58,7 @@ jobs:
 
       - name: Upload target supply-chain evidence
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: mclab-supply-chain-${{ runner.os }}
           path: build/validation/supply-chain-${{ runner.os }}
@@ -242,7 +242,7 @@ jobs:
 
       - name: Upload cleanup UI audit evidence
         if: always() && runner.os == 'Linux'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: mclab-cleanup-ui-audit
           path: /tmp/mclab-cleanup-ui-audit
@@ -281,7 +281,7 @@ jobs:
         run: '"$MCLAB_BUILD_PYTHON" scripts/build_desktop.py --verify-only'
 
       - name: Upload bounded package metrics
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: mclab-package-metrics-${{ runner.os }}
           path: dist/MCLab-package/package-metrics.json
@@ -289,7 +289,7 @@ jobs:
           retention-days: 14
 
       - name: Upload unsigned development package
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: MCLab-${{ runner.os }}-unsigned-development
           path: |
